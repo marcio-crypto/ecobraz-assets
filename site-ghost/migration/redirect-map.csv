@@ -1,0 +1,21 @@
+prioridade,url_antiga,destino_novo,cliques_90d,impressoes_90d,acao,motivo
+P0,https://ecobraz.org/,/,125,3198,manter,Homepage principal
+P0,http://www.ecobraz.org/,https://ecobraz.org/,31,2772,canonicalizar,Consolidar protocolo e host
+P0,https://ecobraz.org/contato,/agendamento/,9,1304,301,Intenção de contato direcionada ao agendamento
+P0,https://ecobraz.org/eletronicos,/coleta-de-lixo-eletronico/,2,1070,301,Landing geral equivalente
+P0,https://ecobraz.org/como-funciona,/como-funciona/,14,961,manter,URL de autoridade já posicionada
+P0,https://ecobraz.org/agendamento,/agendamento/,7,770,manter,Conversão principal
+P0,https://ecobraz.org/pt_BR/agendamento,/agendamento/,3,543,301,Consolidação de idioma
+P0,https://ecobraz.org/descarte/equipamentos-hospitalares,/descarte-de-equipamentos-hospitalares/,20,448,301,Página equivalente aprimorada
+P1,https://ecobraz.org/pontos-de-coleta,/pontos-de-coleta/,3,411,manter,Demanda local existente
+P0,https://ecobraz.org/descarte/ar-condicionado,/descarte-de-ar-condicionado/,8,376,301,Página equivalente aprimorada
+P0,https://ecobraz.org/descarte/baterias,/descarte-de-baterias-e-nobreaks/,2,376,301,Página equivalente aprimorada
+P1,https://ecobraz.org/descarte/data-center,/descarte-de-servidores-e-data-center/,4,210,301,Página equivalente aprimorada
+P1,https://ecobraz.org/descarte/maquinas-e-equipamentos-industriais,/descarte-de-maquinas-e-equipamentos-industriais/,7,205,301,Página equivalente aprimorada
+P1,https://ecobraz.org/ativo-desmobilizado,/descarte-corporativo-de-ti/,0,165,301,Consolidar intenção corporativa
+P1,https://ecobraz.org/descarte/impressao,/descarte-de-impressoras-e-toners/,0,123,301,Página equivalente aprimorada
+P1,https://ecobraz.org/descarte/pecas,/descarte-corporativo-de-ti/,0,121,301,Consolidar intenção de ativos e componentes
+P1,https://ecobraz.org/sanitizacao-de-hd,/destruicao-de-dados/,1,84,301,Página equivalente aprimorada
+P1,https://ecobraz.org/descarte/eletronicos,/coleta-de-lixo-eletronico/,0,76,301,Landing geral equivalente
+P1,https://ecobraz.org/visita-tecnica,/agendamento/,0,68,301,Entrada de conversão
+P1,https://ecobraz.org/descarte/informatica,/coleta-de-computadores-e-notebooks/,0,65,301,Página equivalente aprimorada
