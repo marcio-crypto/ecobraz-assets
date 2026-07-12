@@ -51,10 +51,35 @@ for (const requiredField of ['profile', 'material_category', 'volume', 'material
   if (!form.includes(`name="${requiredField}"`)) errors.push(`Collection form missing required field: ${requiredField}`);
 }
 
+const redirectsText = fs.readFileSync(path.join(root, 'redirects.yaml'), 'utf8');
+const redirectSources = new Set();
+for (const line of redirectsText.split(/\r?\n/)) {
+  const match = line.match(/^\s{2}(\/[^:]*):\s+(\/\S+)\s*$/);
+  if (!match) continue;
+  const [, source, target] = match;
+  if (redirectSources.has(source)) errors.push(`Duplicate redirect source: ${source}`);
+  redirectSources.add(source);
+  const targetRoute = target.split(/[?#]/)[0].replace(/^\/+|\/+$/g, '');
+  if (targetRoute && !knownSlugs.has(targetRoute)) errors.push(`Redirect target does not exist: ${source} -> ${target}`);
+}
+
+const redirectMapPath = path.join(siteRoot, 'migration', 'redirect-map.csv');
+if (fs.existsSync(redirectMapPath)) {
+  const rows = fs.readFileSync(redirectMapPath, 'utf8').trim().split(/\r?\n/).slice(1);
+  for (const row of rows) {
+    const columns = row.split(',');
+    if (columns[5] !== '301') continue;
+    const sourcePath = new URL(columns[1]).pathname.replace(/\/$/, '') || '/';
+    if (!redirectSources.has(sourcePath) && !redirectSources.has(`${sourcePath}/`)) {
+      errors.push(`Backlink map requires missing redirect: ${sourcePath}`);
+    }
+  }
+}
+
 console.log(`Audited ${pages.length} managed pages across ${files.length} files.`);
 for (const warning of [...new Set(warnings)]) console.warn(`WARN: ${warning}`);
 if (errors.length) {
   for (const error of errors) console.error(`ERROR: ${error}`);
   process.exit(1);
 }
-console.log('Content, internal-link and collection-form checks passed.');
+console.log(`Content, internal-link, collection-form and ${redirectSources.size} redirect checks passed.`);
