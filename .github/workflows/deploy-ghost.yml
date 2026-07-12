@@ -8,7 +8,9 @@ on:
       - 'site-ghost/theme/**'
       - 'site-ghost/scripts/deploy-theme.mjs'
       - 'site-ghost/scripts/sync-pages.mjs'
+      - 'site-ghost/scripts/deploy-redirects.mjs'
       - 'site-ghost/content/**'
+      - 'site-ghost/theme/redirects.yaml'
 
 permissions:
   contents: read
@@ -31,4 +33,13 @@ jobs:
           GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
           GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
         run: node site-ghost/scripts/sync-pages.mjs site-ghost/content/pages.json
-
+      - name: Sync material landing pages
+        env:
+          GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
+          GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
+        run: node site-ghost/scripts/sync-pages.mjs site-ghost/content/material-pages.json
+      - name: Upload backlink redirects
+        env:
+          GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
+          GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
+        run: node site-ghost/scripts/deploy-redirects.mjs site-ghost/theme/redirects.yaml
