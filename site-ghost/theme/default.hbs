@@ -12,6 +12,47 @@
     <link rel="stylesheet" href="{{asset "css/flow.css"}}">
     <title>{{meta_title}}</title>
     {{ghost_head}}
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "{{@site.url}}/#organization",
+          "name": "Ecobraz Emigre",
+          "legalName": "Associação Auxílio à Reciclagem de Eletrônicos e Inclusão Digital – Ecobraz",
+          "url": "{{@site.url}}/",
+          "telephone": "+55-11-4329-2001",
+          "address": {
+            "@type": "PostalAddress",
+            "streetAddress": "Rua Dona Maria Quedas, 230",
+            "addressLocality": "São Paulo",
+            "addressRegion": "SP",
+            "postalCode": "02175-010",
+            "addressCountry": "BR"
+          },
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "contactType": "atendimento de coleta",
+            "telephone": "+55-11-4329-2001",
+            "email": "contato@ecobraz.org.br",
+            "availableLanguage": ["pt-BR"]
+          },
+          "sameAs": [
+            "https://pt.wikipedia.org/wiki/ONG_Ecobraz_Emigre"
+          ]
+        },
+        {
+          "@type": "WebSite",
+          "@id": "{{@site.url}}/#website",
+          "url": "{{@site.url}}/",
+          "name": "Ecobraz Emigre",
+          "publisher": {"@id": "{{@site.url}}/#organization"},
+          "inLanguage": "pt-BR"
+        }
+      ]
+    }
+    </script>
 </head>
 <body class="{{body_class}}">
     <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
