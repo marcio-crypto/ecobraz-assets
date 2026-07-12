@@ -5,9 +5,11 @@ on:
   push:
     branches: [main]
     paths:
+      - '.github/workflows/deploy-ghost.yml'
       - 'site-ghost/theme/**'
       - 'site-ghost/scripts/deploy-theme.mjs'
       - 'site-ghost/scripts/sync-pages.mjs'
+      - 'site-ghost/scripts/audit-content.mjs'
       - 'site-ghost/content/**'
       - 'site-ghost/theme/redirects.yaml'
 
@@ -19,6 +21,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Audit content, links and collection form
+        run: node site-ghost/scripts/audit-content.mjs
       - name: Build Ghost theme ZIP
         working-directory: site-ghost/theme
         run: zip -r ../ecobraz-conversion.zip . -x '.DS_Store' '*.git*'
