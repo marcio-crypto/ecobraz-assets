@@ -1,4 +1,8 @@
 {{!< default}}
 
+{{#contentFor "head"}}
+<meta name="description" content="Conteúdos da Ecobraz sobre coleta de lixo eletrônico, descarte de equipamentos, logística reversa, dados e reciclagem.">
+{{/contentFor}}
+
 <header class="archive-header"><div class="container"><span class="eyebrow">Ecobraz Informa</span><h1>{{#is "tag"}}{{tag.name}}{{else}}Conteúdo técnico sobre descarte eletrônico{{/is}}</h1><p>Orientação objetiva sobre logística reversa, descarte de TI, rastreabilidade e documentação.</p></div></header>
 <section class="section"><div class="container post-grid">{{#foreach posts}}{{> "post-card"}}{{/foreach}}</div><div class="container pagination-wrap">{{pagination}}</div></section>
