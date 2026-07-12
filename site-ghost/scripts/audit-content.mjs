@@ -1,8 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const root = path.resolve(import.meta.dirname, '..');
-const contentDir = path.join(root, 'content');
+const siteRoot = path.resolve(import.meta.dirname, '..');
+const root = fs.existsSync(path.join(siteRoot, 'theme')) ? path.join(siteRoot, 'theme') : siteRoot;
+const contentDir = path.join(siteRoot, 'content');
 const files = fs.readdirSync(contentDir).filter((name) => name.endsWith('.json')).sort();
 const pages = files.flatMap((name) => {
   const parsed = JSON.parse(fs.readFileSync(path.join(contentDir, name), 'utf8'));
