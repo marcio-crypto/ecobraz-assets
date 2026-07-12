@@ -7,5 +7,8 @@
 .material-icon{display:grid;width:44px;height:44px;place-items:center;color:var(--green);background:rgba(126,188,43,.12);border-radius:13px;font-size:21px;font-weight:800}
 .material-grid .material-cta{color:#fff;background:var(--teal);border-color:var(--teal)}
 .material-grid .material-cta p{color:#c8dad6}
+.popular-collection-links{display:flex;flex-wrap:wrap;align-items:center;gap:10px 13px;margin-top:20px;padding:16px 18px;border:1px solid var(--line);border-radius:16px;background:#fff;color:var(--muted);font-size:14px}
+.popular-collection-links strong{color:var(--ink)}
+.popular-collection-links a{color:var(--teal);text-decoration:underline;text-decoration-color:rgba(125,193,31,.6);text-underline-offset:3px}
 @media(max-width:900px){.material-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:620px){.material-grid{grid-template-columns:1fr}.material-grid>a{min-height:0}}
