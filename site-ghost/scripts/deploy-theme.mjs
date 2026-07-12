@@ -28,4 +28,14 @@ const response = await fetch(`${adminUrl}/ghost/api/admin/themes/upload/`, {
 
 const text = await response.text();
 if (!response.ok) throw new Error(`Ghost theme upload failed (${response.status}): ${text.slice(0,500)}`);
-console.log('Theme uploaded successfully to', adminUrl);
+const uploaded = JSON.parse(text);
+const themeName = uploaded.themes?.[0]?.name || uploaded.themes?.[0]?.package?.name;
+if (!themeName) throw new Error(`Ghost theme upload returned no theme name: ${text.slice(0,500)}`);
+
+const activation = await fetch(`${adminUrl}/ghost/api/admin/themes/${encodeURIComponent(themeName)}/activate/`, {
+  method: 'PUT',
+  headers: {Authorization: `Ghost ${token}`, 'Accept-Version': 'v5.0'}
+});
+const activationText = await activation.text();
+if (!activation.ok) throw new Error(`Ghost theme activation failed (${activation.status}): ${activationText.slice(0,500)}`);
+console.log('Theme uploaded and activated successfully:', themeName);
