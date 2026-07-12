@@ -1,0 +1,120 @@
+{{!< default}}
+
+<section class="hero"{{#if @custom.hero_image}} style="--hero-image:url('{{@custom.hero_image}}')"{{/if}}>
+    <div class="hero-overlay"></div>
+    <div class="container hero-grid">
+        <div class="hero-copy">
+            <span class="eyebrow">Coleta de resíduos eletrônicos</span>
+            <h1>{{@custom.hero_title}}</h1>
+            <p>{{@custom.hero_subtitle}}</p>
+            <div class="hero-actions">
+                <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa" data-track="hero_empresa">Agendar coleta empresarial</a>
+                <a class="button button-secondary" href="{{@site.url}}/agendamento/?perfil=pessoa-fisica" data-track="hero_pessoa_fisica">Sou pessoa física</a>
+            </div>
+            <ul class="trust-list" aria-label="Diferenciais">
+                <li>Atendimento técnico</li>
+                <li>Rastreabilidade operacional</li>
+                <li>Documentação conforme o serviço contratado</li>
+            </ul>
+        </div>
+        <aside class="hero-card">
+            <span class="hero-card-label">Solicitação rápida</span>
+            <h2>Precisa retirar equipamentos?</h2>
+            <p>Informe o local, o tipo de material e o volume estimado. A equipe avaliará a viabilidade da coleta.</p>
+            <a class="text-link" href="{{@site.url}}/agendamento/">Começar solicitação <span aria-hidden="true">→</span></a>
+        </aside>
+    </div>
+</section>
+
+<section class="section segment-section">
+    <div class="container">
+        <div class="section-heading">
+            <span class="eyebrow">Escolha seu atendimento</span>
+            <h2>Uma rota objetiva para cada tipo de descarte</h2>
+        </div>
+        <div class="segment-grid">
+            <a class="segment-card segment-primary" href="{{@site.url}}/agendamento/?perfil=empresa">
+                <span class="segment-number">01</span><h3>Empresas e instituições</h3>
+                <p>Ativos de TI, equipamentos, lotes, desmobilizações e operações recorrentes.</p><strong>Solicitar avaliação empresarial →</strong>
+            </a>
+            <a class="segment-card" href="{{@site.url}}/agendamento/?perfil=pessoa-fisica">
+                <span class="segment-number">02</span><h3>Pessoas físicas</h3>
+                <p>Pequenos volumes, eletroeletrônicos domésticos e orientação sobre pontos de coleta.</p><strong>Ver opções disponíveis →</strong>
+            </a>
+            <a class="segment-card" href="{{@site.url}}/coletas-recorrentes/">
+                <span class="segment-number">03</span><h3>Operações recorrentes</h3>
+                <p>Fluxos programados para empresas com geração contínua de materiais.</p><strong>Estruturar operação →</strong>
+            </a>
+        </div>
+    </div>
+</section>
+
+<section class="section section-dark" id="como-funciona">
+    <div class="container process-grid">
+        <div class="section-heading light">
+            <span class="eyebrow">Como funciona</span>
+            <h2>Da solicitação à documentação</h2>
+            <p>O escopo técnico, logístico e documental é definido conforme os materiais, a localidade e as necessidades do gerador.</p>
+        </div>
+        <ol class="process-list">
+            <li><span>1</span><div><h3>Solicitação</h3><p>Você informa materiais, volume e local.</p></div></li>
+            <li><span>2</span><div><h3>Avaliação</h3><p>A Ecobraz verifica viabilidade, requisitos e escopo.</p></div></li>
+            <li><span>3</span><div><h3>Coleta</h3><p>A retirada é programada conforme a operação aprovada.</p></div></li>
+            <li><span>4</span><div><h3>Processamento e registros</h3><p>Os materiais seguem o fluxo técnico contratado.</p></div></li>
+        </ol>
+    </div>
+</section>
+
+<section class="section" id="solucoes">
+    <div class="container">
+        <div class="section-heading split-heading">
+            <div><span class="eyebrow">Soluções</span><h2>Descarte tratado como risco operacional</h2></div>
+            <p>Atendimento para empresas que precisam retirar materiais, proteger dados, organizar registros e demonstrar destinação compatível com a operação executada.</p>
+        </div>
+        <div class="service-grid">
+            <a href="{{@site.url}}/descarte-corporativo-de-ti/"><h3>Descarte corporativo de TI</h3><p>Computadores, servidores, rede, telecom e ativos desmobilizados.</p></a>
+            <a href="{{@site.url}}/destruicao-de-dados/"><h3>Proteção e destruição de dados</h3><p>Fluxos específicos para mídias e equipamentos com dados corporativos.</p></a>
+            <a href="{{@site.url}}/logistica-reversa/"><h3>Logística reversa</h3><p>Planejamento de retirada, movimentação e encaminhamento técnico.</p></a>
+            <a href="{{@site.url}}/documentacao-e-rastreabilidade/"><h3>Documentação e rastreabilidade</h3><p>Registros proporcionais ao serviço e ao fluxo efetivamente realizado.</p></a>
+        </div>
+    </div>
+</section>
+
+<section class="section proof-section">
+    <div class="container proof-grid">
+        <div>
+            <span class="eyebrow">Evidência antes de promessa</span>
+            <h2>Critérios verificáveis para decisões de descarte</h2>
+            <p>A nova infraestrutura da Ecobraz prioriza documentos, escopo técnico, cadeia de custódia e limites operacionais claros.</p>
+            <a class="text-link" href="{{@site.url}}/evidencias/">Consultar evidências institucionais →</a>
+        </div>
+        <div class="proof-panel">
+            <div><strong>Escopo definido</strong><span>Materiais, localidade e requisitos registrados.</span></div>
+            <div><strong>Fluxo documentado</strong><span>Evidências compatíveis com a execução.</span></div>
+            <div><strong>Responsabilidade técnica</strong><span>Sem promessas absolutas ou alegações não comprovadas.</span></div>
+        </div>
+    </div>
+</section>
+
+{{#get "posts" limit="3" include="tags,authors"}}
+<section class="section insights-section">
+    <div class="container">
+        <div class="section-heading split-heading">
+            <div><span class="eyebrow">Ecobraz Informa</span><h2>Orientação técnica para geradores</h2></div>
+            <a class="text-link" href="{{@site.url}}/blog/">Ver todos os conteúdos →</a>
+        </div>
+        <div class="post-grid">
+            {{#foreach posts}}
+                {{> "post-card"}}
+            {{/foreach}}
+        </div>
+    </div>
+</section>
+{{/get}}
+
+<section class="section final-cta">
+    <div class="container final-cta-inner">
+        <div><span class="eyebrow">Próxima etapa</span><h2>Transforme o material parado em uma coleta estruturada</h2></div>
+        <a class="button button-light" href="{{@site.url}}/agendamento/" data-track="home_final_agendamento">Agendar coleta</a>
+    </div>
+</section>
