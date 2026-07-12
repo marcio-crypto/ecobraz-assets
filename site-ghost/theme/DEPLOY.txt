@@ -1,1 +1,1 @@
-Automated Ghost staging deployment marker.
+Deploy Ghost staging theme and priority pages — version 0.4.0.
