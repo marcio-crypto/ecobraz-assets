@@ -10,8 +10,17 @@
     <link rel="stylesheet" href="{{asset "css/screen.css"}}">
     <link rel="stylesheet" href="{{asset "css/materials.css"}}">
     <link rel="stylesheet" href="{{asset "css/flow.css"}}">
-    <title>{{meta_title}}</title>
+    {{#is "home"}}
+    <title>Coleta e descarte de lixo eletrônico | Ecobraz</title>
+    {{else}}
+      {{#is "index"}}
+      <title>Conteúdos sobre lixo eletrônico e reciclagem | Ecobraz</title>
+      {{else}}
+      <title>{{meta_title}}</title>
+      {{/is}}
+    {{/is}}
     {{ghost_head}}
+    {{{block "head"}}}
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
