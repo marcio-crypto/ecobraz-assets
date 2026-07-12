@@ -30,6 +30,9 @@
     const profile = params.get('perfil');
     const profileInput = profile && form.querySelector(`[name="profile"][value="${profile === 'pessoa-fisica' ? 'pessoa_fisica' : profile}"]`);
     if (profileInput) profileInput.checked = true;
+    const material = params.get('material');
+    const materialInput = form.querySelector('[name="material_category"]');
+    if (material && materialInput && Array.from(materialInput.options).some((option) => option.value === material)) materialInput.value = material;
 
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
