@@ -5,13 +5,13 @@ on:
   push:
     branches: [main]
     paths:
-      - '.github/workflows/deploy-ghost.yml'
       - 'site-ghost/theme/**'
       - 'site-ghost/scripts/deploy-theme.mjs'
       - 'site-ghost/scripts/sync-pages.mjs'
-      - 'site-ghost/scripts/audit-content.mjs'
+      - 'site-ghost/scripts/deploy-redirects.mjs'
       - 'site-ghost/content/**'
       - 'site-ghost/theme/redirects.yaml'
+      - 'site-ghost/migration/**'
 
 permissions:
   contents: read
@@ -21,8 +21,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Audit content, links and collection form
-        run: node site-ghost/scripts/audit-content.mjs
       - name: Build Ghost theme ZIP
         working-directory: site-ghost/theme
         run: zip -r ../ecobraz-conversion.zip . -x '.DS_Store' '*.git*'
@@ -41,21 +39,13 @@ jobs:
           GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
           GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
         run: node site-ghost/scripts/sync-pages.mjs site-ghost/content/material-pages.json
-      - name: Sync high-intent search landing pages
-        env:
-          GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
-          GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
-        run: node site-ghost/scripts/sync-pages.mjs site-ghost/content/search-intent-pages.json
       - name: Sync institutional conversion pages
         env:
           GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
           GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
         run: node site-ghost/scripts/sync-pages.mjs site-ghost/content/institutional-pages.json
-      - name: Validate backlink redirects package
-        run: test -s site-ghost/theme/redirects.yaml
-      - name: Preserve backlink redirects for owner import
-        uses: actions/upload-artifact@v4
-        with:
-          name: ecobraz-backlink-redirects
-          path: site-ghost/theme/redirects.yaml
-          if-no-files-found: error
+      - name: Upload backlink redirects
+        env:
+          GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
+          GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
+        run: node site-ghost/scripts/deploy-redirects.mjs site-ghost/theme/redirects.yaml
