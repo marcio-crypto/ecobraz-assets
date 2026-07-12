@@ -38,6 +38,11 @@ jobs:
           GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
           GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
         run: node site-ghost/scripts/sync-pages.mjs site-ghost/content/material-pages.json
+      - name: Sync institutional conversion pages
+        env:
+          GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
+          GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
+        run: node site-ghost/scripts/sync-pages.mjs site-ghost/content/institutional-pages.json
       - name: Upload backlink redirects
         env:
           GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
