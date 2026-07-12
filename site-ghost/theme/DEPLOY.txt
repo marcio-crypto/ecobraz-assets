@@ -1,1 +1,1 @@
-Deploy Ghost staging theme, conversion pages and protected redirect package — version 0.5.0.
+Deploy Ghost staging theme, conversion pages, high-intent landing pages and protected redirect package — version 0.6.0.
