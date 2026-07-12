@@ -1,4 +1,30 @@
 301:
+  /contato: /agendamento/
+  /contato/: /agendamento/
+  /eletronicos: /coleta-de-lixo-eletronico/
+  /eletronicos/: /coleta-de-lixo-eletronico/
+  /descarte/eletronicos: /coleta-de-lixo-eletronico/
+  /descarte/eletronicos/: /coleta-de-lixo-eletronico/
+  /descarte/informatica: /coleta-de-computadores-e-notebooks/
+  /descarte/informatica/: /coleta-de-computadores-e-notebooks/
+  /descarte/data-center: /descarte-de-servidores-e-data-center/
+  /descarte/data-center/: /descarte-de-servidores-e-data-center/
+  /descarte/impressao: /descarte-de-impressoras-e-toners/
+  /descarte/impressao/: /descarte-de-impressoras-e-toners/
+  /descarte/baterias: /descarte-de-baterias-e-nobreaks/
+  /descarte/baterias/: /descarte-de-baterias-e-nobreaks/
+  /descarte/equipamentos-hospitalares: /descarte-de-equipamentos-hospitalares/
+  /descarte/equipamentos-hospitalares/: /descarte-de-equipamentos-hospitalares/
+  /descarte/ar-condicionado: /descarte-de-ar-condicionado/
+  /descarte/ar-condicionado/: /descarte-de-ar-condicionado/
+  /descarte/maquinas-e-equipamentos-industriais: /descarte-de-maquinas-e-equipamentos-industriais/
+  /descarte/maquinas-e-equipamentos-industriais/: /descarte-de-maquinas-e-equipamentos-industriais/
+  /ativo-desmobilizado: /descarte-corporativo-de-ti/
+  /ativo-desmobilizado/: /descarte-corporativo-de-ti/
+  /descarte/pecas: /descarte-corporativo-de-ti/
+  /descarte/pecas/: /descarte-corporativo-de-ti/
+  /visita-tecnica: /agendamento/
+  /visita-tecnica/: /agendamento/
   /pt_BR/agendamento: /agendamento/
   /pt_BR/agendamento/: /agendamento/
   /pt_BR/eletronicos: /agendamento/
