@@ -1,0 +1,26 @@
+name: Deploy Ghost staging
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'site-ghost/theme/**'
+      - 'site-ghost/scripts/deploy-theme.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-theme:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Ghost theme ZIP
+        working-directory: site-ghost/theme
+        run: zip -r ../ecobraz-conversion.zip . -x '.DS_Store' '*.git*'
+      - name: Upload theme to Ghost staging
+        env:
+          GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
+          GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
+        run: node site-ghost/scripts/deploy-theme.mjs site-ghost/ecobraz-conversion.zip
