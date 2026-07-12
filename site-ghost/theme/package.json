@@ -1,0 +1,43 @@
+{
+  "name": "ecobraz-conversion",
+  "description": "Tema oficial Ecobraz orientado a agendamentos de coleta e conversão B2B.",
+  "version": "0.3.0",
+  "engines": {
+    "ghost": ">=5.0.0"
+  },
+  "license": "UNLICENSED",
+  "author": {
+    "name": "Ecobraz Emigre",
+    "email": "contato@ecobraz.org.br",
+    "url": "https://ecobraz.org"
+  },
+  "config": {
+    "posts_per_page": 12,
+    "card_assets": true,
+    "custom": {
+      "hero_title": {
+        "type": "text",
+        "default": "Agende a coleta dos seus resíduos eletrônicos"
+      },
+      "hero_subtitle": {
+        "type": "text",
+        "default": "Coleta técnica, rastreabilidade e documentação compatível com a operação realizada."
+      },
+      "hero_image": {
+        "type": "image"
+      },
+      "collection_endpoint": {
+        "type": "text",
+        "description": "Endpoint seguro que integra o formulário ao Ploomes e ao E-goi."
+      },
+      "whatsapp_url": {
+        "type": "text",
+        "default": "https://wa.me/5511912728412"
+      },
+      "phone": {
+        "type": "text",
+        "default": "+55 11 4329-2001"
+      }
+    }
+  }
+}
