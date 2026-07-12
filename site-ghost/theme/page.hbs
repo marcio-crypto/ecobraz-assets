@@ -1,0 +1,26 @@
+{{!< default}}
+{{#post}}
+<article class="page-article">
+    <header class="page-hero">
+        <div class="container page-hero-grid">
+            <div>
+                <span class="eyebrow">Solução Ecobraz</span>
+                <h1>{{title}}</h1>
+                {{#if custom_excerpt}}<p>{{custom_excerpt}}</p>{{/if}}
+                <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem={{slug}}">Solicitar avaliação de coleta</a>
+            </div>
+            <aside class="page-hero-card">
+                <strong>Atendimento orientado à operação</strong>
+                <span>Materiais, localidade, volume, riscos e documentação são avaliados antes da confirmação.</span>
+            </aside>
+        </div>
+    </header>
+    <div class="page-content-wrap">
+        <div class="article-content container-narrow gh-content">{{content}}</div>
+        <aside class="page-conversion container-narrow">
+            <div><span class="eyebrow">Solicite atendimento</span><h2>Precisa retirar equipamentos ou resíduos eletrônicos?</h2><p>Envie os dados iniciais para análise técnica e logística.</p></div>
+            <a class="button" href="{{@site.url}}/agendamento/?origem={{slug}}">Agendar coleta</a>
+        </aside>
+    </div>
+</article>
+{{/post}}
