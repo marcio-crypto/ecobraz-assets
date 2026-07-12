@@ -7,6 +7,7 @@ if (!adminUrl || !adminKey.includes(':')) throw new Error('Missing Ghost Admin c
 const targets = {
   pages: [
     'about',
+    'blog',
     'sobre-2',
     'evidencias-2',
     'descarte-corporativo-de-ti-2',
