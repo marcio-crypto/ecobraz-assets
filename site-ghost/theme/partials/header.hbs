@@ -1,0 +1,23 @@
+<header class="site-header" data-header>
+    <div class="container header-inner">
+        <a class="brand" href="{{@site.url}}" aria-label="Ecobraz — página inicial">
+            {{#if @site.logo}}
+                <img src="{{@site.logo}}" alt="{{@site.title}}" width="190" height="64">
+            {{else}}
+                <span class="brand-word">ecobraz</span><span class="brand-mark">emigre</span>
+            {{/if}}
+        </a>
+        <button class="nav-toggle" type="button" aria-controls="primary-nav" aria-expanded="false" data-nav-toggle>
+            <span class="sr-only">Abrir menu</span><span></span><span></span><span></span>
+        </button>
+        <nav id="primary-nav" class="primary-nav" aria-label="Navegação principal" data-nav>
+            <ul>
+                <li><a href="{{@site.url}}/">Início</a></li>
+                <li><a href="{{@site.url}}/#solucoes">Soluções</a></li>
+                <li><a href="{{@site.url}}/#como-funciona">Como funciona</a></li>
+                <li><a href="{{@site.url}}/blog/">Conteúdos</a></li>
+            </ul>
+        </nav>
+        <a class="button button-small header-cta" href="{{@site.url}}/agendamento/" data-track="header_agendamento">Agendar coleta</a>
+    </div>
+</header>
