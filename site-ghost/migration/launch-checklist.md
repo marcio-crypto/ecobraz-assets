@@ -13,10 +13,13 @@ Este documento protege conversão, autoridade orgânica e continuidade operacion
 - [ ] Confirmar criação do contato e negócio no Ploomes.
 - [ ] Confirmar entrada no E-goi apenas quando o consentimento de marketing estiver marcado.
 - [ ] Confirmar telefone, WhatsApp, e-mail, CNPJ e endereço institucional.
-- [ ] Importar `redirects.yaml` no Ghost usando a sessão do proprietário.
+- [ ] Importar `redirects.yaml` no Ghost seguindo `migration/IMPORTAR-REDIRECTS.md`.
+- [ ] Executar a auditoria de redirecionamentos e exigir zero falhas antes de trocar o domínio.
 - [ ] Registrar o horário da troca e reduzir o TTL do DNS com antecedência, se aplicável.
 
 ## 2. Troca do domínio
+
+> **Bloqueio de segurança:** não iniciar esta etapa enquanto a importação e a auditoria dos redirecionamentos não estiverem concluídas.
 
 - [ ] Adicionar `ecobraz.org` como domínio personalizado no Ghost.
 - [ ] Aplicar no Cloudflare somente os registros DNS fornecidos pelo Ghost.
