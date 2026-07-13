@@ -1,9 +1,57 @@
+.gh-content,
+body {
+    font-family: var(--gh-font-body, Manrope), Arial, sans-serif;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: var(--gh-font-heading, Manrope), Arial, sans-serif;
+}
+
+.gh-content .kg-width-wide {
+    position: relative;
+    left: 50%;
+    width: min(1000px, calc(100vw - 40px));
+    max-width: none;
+    transform: translateX(-50%);
+}
+
+.gh-content .kg-width-full {
+    position: relative;
+    left: 50%;
+    width: 100vw;
+    max-width: none;
+    transform: translateX(-50%);
+}
+
+.gh-content figure.kg-width-wide,
+.gh-content figure.kg-width-full {
+    margin-top: 2.25rem;
+    margin-bottom: 2.25rem;
+}
+
+.gh-content .kg-width-wide img,
+.gh-content .kg-width-full img {
+    width: 100%;
+    height: auto;
+}
+
 .post-conversion {
     margin: 52px 0 26px;
     padding: 30px;
     border-radius: 14px;
     background: var(--teal);
     color: #fff;
+}
+
+@media (max-width: 620px) {
+    .gh-content .kg-width-wide {
+        width: calc(100vw - 28px);
+    }
 }
 
 .post-conversion h2 {
