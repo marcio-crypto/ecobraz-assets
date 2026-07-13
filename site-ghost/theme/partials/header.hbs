@@ -1,11 +1,16 @@
+<style>
+    .brand-logo { display: block; width: 190px; height: auto; max-height: 64px; object-fit: contain; }
+    .footer-brand { display: inline-flex !important; align-items: center; margin: 0 0 18px !important; padding: 10px 14px; border-radius: 12px; background: #fff; }
+    .footer-brand-logo { display: block; width: 190px; height: auto; }
+    @media (max-width: 620px) {
+        .brand-logo { width: 165px; }
+        .footer-brand-logo { width: 175px; }
+    }
+</style>
 <header class="site-header" data-header>
     <div class="container header-inner">
-        <a class="brand" href="{{@site.url}}" aria-label="Ecobraz — página inicial">
-            {{#if @site.logo}}
-                <img src="{{@site.logo}}" alt="{{@site.title}}" width="190" height="64">
-            {{else}}
-                <span class="brand-word">ecobraz</span><span class="brand-mark">emigre</span>
-            {{/if}}
+        <a class="brand" href="{{@site.url}}" aria-label="Ecobraz Emigre — página inicial">
+            <img class="brand-logo" src="{{asset "images/ecobraz-emigre-logo.png"}}" alt="Ecobraz Emigre" width="2048" height="681">
         </a>
         <button class="nav-toggle" type="button" aria-controls="primary-nav" aria-expanded="false" data-nav-toggle>
             <span class="sr-only">Abrir menu</span><span></span><span></span><span></span>
