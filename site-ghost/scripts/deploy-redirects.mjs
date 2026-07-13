@@ -17,6 +17,8 @@ const signature = crypto.createHmac('sha256', Buffer.from(secret, 'hex')).update
 const token = `${unsigned}.${signature}`;
 
 const bytes = await fs.readFile(redirectsPath);
+const sourceText = bytes.toString('utf8');
+const expectedEntries = countEntries(sourceText);
 const form = new FormData();
 form.append('redirects', new Blob([bytes], {type:'application/yaml'}), 'redirects.yaml');
 
@@ -28,4 +30,29 @@ const response = await fetch(`${adminUrl}/ghost/api/admin/redirects/upload/`, {
 
 const text = await response.text();
 if (!response.ok) throw new Error(`Ghost redirects upload failed (${response.status}): ${text.slice(0,500)}`);
-console.log('Redirects uploaded successfully to', adminUrl);
+
+const download = await fetch(`${adminUrl}/ghost/api/admin/redirects/download/`, {
+  headers: {Authorization: `Ghost ${token}`, 'Accept-Version': 'v5.0'}
+});
+const installedText = await download.text();
+if (!download.ok) {
+  throw new Error(`Ghost redirects verification failed (${download.status}): ${installedText.slice(0,500)}`);
+}
+
+const installedEntries = countEntries(installedText);
+const sentinels = ['sobre-nos', 'ecobraz_carbon', 'integracao-de-iot-e-blockchain'];
+const missingSentinels = sentinels.filter((value) => !installedText.includes(value));
+
+console.log(`Redirects upload verified: ${installedEntries}/${expectedEntries} rules returned by Ghost.`);
+if (installedEntries !== expectedEntries || missingSentinels.length) {
+  throw new Error(
+    `Ghost did not retain the complete redirects file: expected ${expectedEntries}, received ${installedEntries}; ` +
+    `missing sentinels: ${missingSentinels.join(', ') || 'none'}`
+  );
+}
+
+console.log('Redirects installed and verified successfully on', adminUrl);
+
+function countEntries(yaml) {
+  return yaml.split(/\r?\n/).filter((line) => /^\s{2}(?:["']|\^)/.test(line) && line.includes(':')).length;
+}
