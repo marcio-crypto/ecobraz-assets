@@ -1,6 +1,7 @@
 {{!< default}}
 {{#post}}
 <article class="page-article">
+    {{#match @page.show_title_and_feature_image}}
     <header class="page-hero">
         <div class="container page-hero-grid">
             <div>
@@ -15,6 +16,7 @@
             </aside>
         </div>
     </header>
+    {{/match}}
     <div class="page-content-wrap">
         <div class="article-content container-narrow gh-content">{{content}}</div>
         <aside class="page-conversion container-narrow">
