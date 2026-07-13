@@ -128,7 +128,7 @@ for url, metrics in records.items():
         'caminho_original': source_path,
         'caminho_canonico': canonical,
         'acao': action,
-        'destino_novo': canonical + '/' if action == 'manter' else target,
+        'destino_novo': ('/' if canonical == '/' else canonical + '/') if action == 'manter' else target,
     })
 
 rows.sort(key=lambda row: (-row['cliques_90d'], -row['impressoes_90d'], row['url_antiga']))
