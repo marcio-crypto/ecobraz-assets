@@ -8,7 +8,6 @@ on:
       - '.github/workflows/deploy-ghost.yml'
       - 'site-ghost/theme/**'
       - 'site-ghost/scripts/deploy-theme.mjs'
-      - 'site-ghost/scripts/deploy-redirects.mjs'
       - 'site-ghost/scripts/sync-pages.mjs'
       - 'site-ghost/scripts/sync-posts.mjs'
       - 'site-ghost/scripts/audit-content.mjs'
@@ -65,18 +64,31 @@ jobs:
           GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
           GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
         run: node site-ghost/scripts/cleanup-staging.mjs
-      - name: Validate backlink redirects package
-        run: test -s site-ghost/theme/redirects.yaml
-      - name: Attempt backlink redirects import in Ghost staging
-        continue-on-error: true
-        env:
-          GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
-          GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
-        run: node site-ghost/scripts/deploy-redirects.mjs site-ghost/theme/redirects.yaml
+      - name: Validate owner redirect package
+        shell: bash
+        run: |
+          test -s site-ghost/theme/redirects.yaml
+          RULES="$(grep -Ec '^  ' site-ghost/theme/redirects.yaml)"
+          test "$RULES" -ge 7900
+          echo "Pacote validado com $RULES redirecionamentos."
+      - name: Record required owner action
+        shell: bash
+        run: |
+          echo "::warning title=Ação única do proprietário::Antes de trocar o domínio, importe o artefato ecobraz-backlink-redirects-OWNER-IMPORT no Ghost Admin em Configurações > Labs > Redirects. A chave de integração do Ghost não tem permissão para fazer essa operação."
+          {
+            echo "## Proteção obrigatória dos backlinks"
+            echo ""
+            echo "O tema e o conteúdo foram publicados, mas a troca do domínio continua bloqueada até a importação manual dos redirecionamentos."
+            echo ""
+            echo "1. Baixe o artefato **ecobraz-backlink-redirects-OWNER-IMPORT** desta execução."
+            echo "2. No Ghost Admin, abra **Configurações > Labs > Redirects**."
+            echo "3. Envie o arquivo **redirects.yaml**."
+            echo "4. Execute a auditoria e só então altere o DNS."
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Preserve backlink redirects for owner import
-        if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: ecobraz-backlink-redirects
+          name: ecobraz-backlink-redirects-OWNER-IMPORT
           path: site-ghost/theme/redirects.yaml
           if-no-files-found: error
+          retention-days: 30
