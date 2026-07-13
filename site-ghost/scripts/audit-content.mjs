@@ -30,7 +30,13 @@ for (const page of pages) {
   if (/<h1\b/i.test(page.html || '')) errors.push(`${label}: content must not add a second H1`);
 }
 
-const knownSlugs = new Set([...seen.keys(), ...fixedRoutes]);
+const priorityPosts = pages.filter((page) => page.sourceFile === 'priority-posts.json');
+const managedPages = pages.filter((page) => page.sourceFile !== 'priority-posts.json');
+const knownSlugs = new Set([...managedPages.map((page) => page.slug), ...fixedRoutes]);
+const knownRoutes = new Set([
+  ...knownSlugs,
+  ...priorityPosts.map((post) => `blog/${post.slug}`)
+]);
 const sourceText = [
   ...pages.map((page) => page.html),
   fs.readFileSync(path.join(root, 'home.hbs'), 'utf8'),
@@ -38,7 +44,7 @@ const sourceText = [
   fs.readFileSync(path.join(root, 'partials', 'footer.hbs'), 'utf8')
 ].join('\n');
 
-for (const match of sourceText.matchAll(/href=["'](?:{{@site\.url}})?\/([^?#"']+?)(?:\/)?(?:\?[^"']*)?["']/g)) {
+for (const match of sourceText.matchAll(/href=["'](?:{{@site\.url}})?\/([^?#"'\s]+?)(?:\/)?(?:\?[^"'\s]*)?["']/g)) {
   const route = match[1].replace(/^\/+|\/+$/g, '');
   if (route && !knownSlugs.has(route)) warnings.push(`Internal link target not managed by page sync: /${route}/`);
 }
@@ -54,23 +60,27 @@ for (const requiredField of ['profile', 'material_category', 'volume', 'material
 const redirectsText = fs.readFileSync(path.join(root, 'redirects.yaml'), 'utf8');
 const redirectSources = new Set();
 for (const line of redirectsText.split(/\r?\n/)) {
-  const match = line.match(/^\s{2}(\/[^:]*):\s+(\/\S+)\s*$/);
+  const match = line.match(/^\s{2}("(?:[^"\\]|\\.)*"):\s+("(?:[^"\\]|\\.)*")\s*$/);
   if (!match) continue;
-  const [, source, target] = match;
+  const source = JSON.parse(match[1]);
+  const target = JSON.parse(match[2]);
   if (redirectSources.has(source)) errors.push(`Duplicate redirect source: ${source}`);
   redirectSources.add(source);
   const targetRoute = target.split(/[?#]/)[0].replace(/^\/+|\/+$/g, '');
-  if (targetRoute && !knownSlugs.has(targetRoute)) errors.push(`Redirect target does not exist: ${source} -> ${target}`);
+  if (targetRoute && !knownRoutes.has(targetRoute)) errors.push(`Redirect target does not exist: ${source} -> ${target}`);
 }
 
-const redirectMapPath = path.join(siteRoot, 'migration', 'redirect-map.csv');
-if (fs.existsSync(redirectMapPath)) {
-  const rows = fs.readFileSync(redirectMapPath, 'utf8').trim().split(/\r?\n/).slice(1);
+const exactRedirectSource = (value) => `^${value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\/$/, '') || '/'}\/?$`;
+const inventoryPath = path.join(siteRoot, 'migration', 'legacy-url-inventory.csv');
+if (fs.existsSync(inventoryPath)) {
+  const rows = fs.readFileSync(inventoryPath, 'utf8').trim().split(/\r?\n/).slice(1);
   for (const row of rows) {
     const columns = row.split(',');
-    if (columns[5] !== '301') continue;
-    const sourcePath = new URL(columns[1]).pathname.replace(/\/$/, '') || '/';
-    if (!redirectSources.has(sourcePath) && !redirectSources.has(`${sourcePath}/`)) {
+    if (columns[6] !== '301') continue;
+    const sourcePath = decodeURIComponent(columns[4]).replace(/\/$/, '') || '/';
+    const targetPath = columns[7].replace(/\/$/, '') || '/';
+    if (sourcePath === targetPath) continue;
+    if (!redirectSources.has(exactRedirectSource(sourcePath))) {
       errors.push(`Backlink map requires missing redirect: ${sourcePath}`);
     }
   }
