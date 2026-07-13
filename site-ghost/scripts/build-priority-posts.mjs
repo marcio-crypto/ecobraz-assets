@@ -88,7 +88,7 @@ const absoluteToLocal = (html) => html
   .replace(/\s(?:class|style|id)=("[^"]*"|'[^']*')/gi, '')
   .replace(/\s+target=("[^"]*"|'[^']*')/gi, '');
 
-const cta = '<aside class="post-conversion"><h2>Precisa descartar equipamentos eletrônicos?</h2><p>Informe os materiais, o volume e a localidade. A equipe da Ecobraz avaliará a viabilidade, o escopo e a documentação aplicável à operação.</p><p><a href="/agendamento/">Solicitar avaliação de coleta</a></p></aside><p><small>Conteúdo informativo. Classificações, obrigações, documentos e condições operacionais devem ser confirmados conforme o material, a localidade e a legislação vigente.</small></p>';
+const cta = '<p><small>Conteúdo informativo. Classificações, obrigações, documentos e condições operacionais devem ser confirmados conforme o material, a localidade e a legislação vigente.</small></p>';
 
 const posts = [];
 for (const slug of slugs) {
