@@ -11,7 +11,6 @@ on:
       - 'site-ghost/scripts/sync-pages.mjs'
       - 'site-ghost/scripts/audit-content.mjs'
       - 'site-ghost/scripts/cleanup-staging.mjs'
-      - 'site-ghost/scripts/sync-settings.mjs'
       - 'site-ghost/content/**'
       - 'site-ghost/theme/redirects.yaml'
       - 'site-ghost/migration/**'
@@ -59,11 +58,6 @@ jobs:
           GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
           GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
         run: node site-ghost/scripts/cleanup-staging.mjs
-      - name: Synchronize publication search description
-        env:
-          GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
-          GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
-        run: node site-ghost/scripts/sync-settings.mjs
       - name: Validate backlink redirects package
         run: test -s site-ghost/theme/redirects.yaml
       - name: Preserve backlink redirects for owner import
