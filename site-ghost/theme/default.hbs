@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{@site.locale}}">
+<html lang="pt-BR">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -13,10 +13,10 @@
     {{#is "home"}}
     <title>Coleta e descarte de lixo eletrônico | Ecobraz</title>
     {{else}}
-      {{#is "index, collection"}}
-      <title>Conteúdos sobre lixo eletrônico e reciclagem | Ecobraz</title>
-      {{else}}
+      {{#is "post, page, tag, author, error"}}
       <title>{{meta_title}}</title>
+      {{else}}
+      <title>Conteúdos sobre lixo eletrônico e reciclagem | Ecobraz</title>
       {{/is}}
     {{/is}}
     {{ghost_head}}
