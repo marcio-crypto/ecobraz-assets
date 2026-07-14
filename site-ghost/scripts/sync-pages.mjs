@@ -13,6 +13,8 @@ const unsigned = `${enc({alg:'HS256',typ:'JWT',kid:id})}.${enc({iat:now,exp:now+
 const token = `${unsigned}.${crypto.createHmac('sha256',Buffer.from(secret,'hex')).update(unsigned).digest('base64url')}`;
 const headers = {Authorization:`Ghost ${token}`,'Accept-Version':'v5.0','Content-Type':'application/json'};
 const pages = JSON.parse(await fs.readFile(file,'utf8'));
+const syncedSlugs = [];
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 for (const page of pages) {
   const lookup = await fetch(`${adminUrl}/ghost/api/admin/pages/?filter=slug:${encodeURIComponent(page.slug)}&limit=1`, {headers});
@@ -22,5 +24,32 @@ for (const page of pages) {
   const endpoint = existing ? `${adminUrl}/ghost/api/admin/pages/${existing.id}/?source=html` : `${adminUrl}/ghost/api/admin/pages/?source=html`;
   const response = await fetch(endpoint,{method:existing?'PUT':'POST',headers,body:JSON.stringify(payload)});
   if (!response.ok) throw new Error(`Sync failed for ${page.slug}: ${response.status} ${(await response.text()).slice(0,600)}`);
+  const synced = (await response.json()).pages?.[0];
+  if (!synced || synced.status !== 'published' || synced.slug !== page.slug) {
+    throw new Error(`Ghost did not publish the expected page: ${page.slug}`);
+  }
+  syncedSlugs.push(page.slug);
   console.log(existing ? 'Updated' : 'Created', page.slug);
 }
+
+async function verifyPublicPage(slug) {
+  const url = `${adminUrl}/${slug}/`;
+  let lastStatus = 0;
+
+  for (let attempt = 1; attempt <= 6; attempt += 1) {
+    const response = await fetch(url, {
+      redirect: 'follow',
+      headers: {'User-Agent': 'Ecobraz deployment verification'}
+    });
+    lastStatus = response.status;
+    if (response.ok) {
+      console.log('Verified', url, response.status);
+      return;
+    }
+    if (attempt < 6) await wait(2000);
+  }
+
+  throw new Error(`Public verification failed for ${url}: ${lastStatus}`);
+}
+
+for (const slug of syncedSlugs) await verifyPublicPage(slug);
