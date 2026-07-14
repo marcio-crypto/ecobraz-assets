@@ -57,6 +57,7 @@ def destination(path):
         (r'ar-condicionado|climatiza', '/descarte-de-ar-condicionado/'),
         (r'maquinas-e-equipamentos-industriais|automacao-industrial|transformador', '/descarte-de-maquinas-e-equipamentos-industriais/'),
         (r'\bhd\b|hds|ssd|dados|lgpd|sanitiza|midia', '/destruicao-de-dados/'),
+        (r'\bpecas\b|placa|componente', '/descarte-de-placas-e-componentes-eletronicos/'),
         (r'celular|tablet|smartphone', '/descarte-de-celulares-e-tablets/'),
         (r'computador|notebook|roteador|modem|informatica', '/coleta-de-computadores-e-notebooks/'),
         (r'mtr|cdf|document|compliance|fiscal|pgrs|certific|rastreabilidade|evidencia', '/documentacao-e-rastreabilidade/'),

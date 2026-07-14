@@ -77,10 +77,6 @@ jobs:
           GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
           GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
         run: node site-ghost/scripts/deploy-redirects.mjs site-ghost/theme/redirects.yaml
-      - name: Audit live priority redirects (traffic map)
-        run: node site-ghost/scripts/audit-live-redirects.mjs https://ecobraz-emigre.ghost.io site-ghost/migration/redirect-map.csv 100
-      - name: Audit live redirects sample (installed package)
-        run: node site-ghost/scripts/audit-live-redirects.mjs https://ecobraz-emigre.ghost.io site-ghost/theme/redirects.yaml 250
       - name: Preserve backlink redirects for owner import
         uses: actions/upload-artifact@v4
         with:
@@ -88,3 +84,7 @@ jobs:
           path: site-ghost/theme/redirects.yaml
           if-no-files-found: error
           retention-days: 30
+      - name: Audit live priority redirects (traffic map)
+        run: node site-ghost/scripts/audit-live-redirects.mjs https://ecobraz-emigre.ghost.io site-ghost/migration/redirect-map.csv 100
+      - name: Audit live redirects sample (installed package)
+        run: node site-ghost/scripts/audit-live-redirects.mjs https://ecobraz-emigre.ghost.io site-ghost/theme/redirects.yaml 250
