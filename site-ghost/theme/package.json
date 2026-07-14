@@ -1,7 +1,7 @@
 {
   "name": "ecobraz-conversion",
   "description": "Tema oficial Ecobraz orientado a agendamentos de coleta e conversão B2B.",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "engines": {
     "ghost": ">=5.0.0"
   },
@@ -43,6 +43,10 @@
       "phone": {
         "type": "text",
         "default": "+55 11 4329-2001"
+      },
+      "ceo_photo": {
+        "type": "image",
+        "description": "Foto oficial de Marcio Villanova exibida no bloco de liderança da página inicial."
       }
     }
   }

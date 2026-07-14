@@ -1,6 +1,6 @@
 .gh-content,
 body {
-    font-family: var(--gh-font-body, Manrope), Arial, sans-serif;
+    font-family: var(--gh-font-body, Montserrat), Arial, sans-serif;
 }
 
 h1,
@@ -9,7 +9,7 @@ h3,
 h4,
 h5,
 h6 {
-    font-family: var(--gh-font-heading, Manrope), Arial, sans-serif;
+    font-family: var(--gh-font-heading, Montserrat), Arial, sans-serif;
 }
 
 .gh-content .kg-width-wide {

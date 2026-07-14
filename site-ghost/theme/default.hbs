@@ -3,10 +3,10 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#073b3a">
+    <meta name="theme-color" content="#00333B">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{asset "css/screen.css"}}">
     <link rel="stylesheet" href="{{asset "css/materials.css"}}">
     <link rel="stylesheet" href="{{asset "css/flow.css"}}">
@@ -27,12 +27,22 @@
       "@context": "https://schema.org",
       "@graph": [
         {
-          "@type": "Organization",
+          "@type": "NGO",
           "@id": "{{@site.url}}/#organization",
           "name": "Ecobraz Emigre",
+          "alternateName": "Ecobraz",
           "legalName": "Associação Auxílio à Reciclagem de Eletrônicos e Inclusão Digital – Ecobraz",
+          "taxID": "14.197.457/0001-42",
+          "foundingDate": "2011",
           "url": "{{@site.url}}/",
           "telephone": "+55-11-4329-2001",
+          "email": "contato@ecobraz.org.br",
+          "description": "Associação brasileira dedicada à coleta e reciclagem de resíduos eletroeletrônicos e à inclusão digital, com rastreabilidade e documentação de destinação para empresas e pessoas físicas.",
+          "areaServed": {
+            "@type": "AdministrativeArea",
+            "name": "São Paulo e região metropolitana, com operações corporativas avaliadas em outras regiões do Brasil"
+          },
+          "employee": {"@id": "{{@site.url}}/#marcio-villanova"},
           "address": {
             "@type": "PostalAddress",
             "streetAddress": "Rua Dona Maria Quedas, 230",
@@ -49,7 +59,19 @@
             "availableLanguage": ["pt-BR"]
           },
           "sameAs": [
-            "https://pt.wikipedia.org/wiki/ONG_Ecobraz_Emigre"
+            "https://esango.un.org/civilsociety/showProfileDetail.do?method=showProfileDetails&profileCode=708794",
+            "https://circulareconomy.europa.eu/platform/en/good-practices/ecobrazs-adote-um-bairro-adopt-neighborhood-programme",
+            "https://www.gov.br/cetem/pt-br/pesquisa-e-desenvolvimento/reminare/operadores"
+          ]
+        },
+        {
+          "@type": "Person",
+          "@id": "{{@site.url}}/#marcio-villanova",
+          "name": "Marcio Villanova",
+          "jobTitle": "CEO",
+          "worksFor": {"@id": "{{@site.url}}/#organization"},
+          "sameAs": [
+            "https://orcid.org/0009-0001-8072-6287"
           ]
         },
         {
