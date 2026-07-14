@@ -1,0 +1,26 @@
+name: Verificar migração de domínio
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'URL a validar (ex.: https://ecobraz.org)'
+        type: string
+        default: 'https://ecobraz.org'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Páginas, links internos e SEO técnico
+        run: node site-ghost/scripts/audit-live-site.mjs "${{ inputs.base_url }}"
+      - name: Redirects de maior tráfego (mapa de backlinks)
+        run: node site-ghost/scripts/audit-live-redirects.mjs "${{ inputs.base_url }}" site-ghost/migration/redirect-map.csv 100
+      - name: Amostra do pacote de redirects instalado
+        run: node site-ghost/scripts/audit-live-redirects.mjs "${{ inputs.base_url }}" site-ghost/theme/redirects.yaml 250
+      - name: Origens autorizadas no formulário
+        run: node site-ghost/scripts/check-origins.mjs https://ecobraz-coletas.ti-0ab.workers.dev https://ecobraz.org https://www.ecobraz.org
