@@ -13,36 +13,56 @@ const unsigned = `${enc({alg:'HS256',typ:'JWT',kid:id})}.${enc({iat:now,exp:now+
 const token = `${unsigned}.${crypto.createHmac('sha256',Buffer.from(secret,'hex')).update(unsigned).digest('base64url')}`;
 const headers = {Authorization:`Ghost ${token}`,'Accept-Version':'v5.0','Content-Type':'application/json'};
 
-const response = await fetch(`${adminUrl}/ghost/api/admin/settings/`, {
-  method:'PUT',
-  headers,
-  body:JSON.stringify({settings:[{
-    key:'description',
-    value:'Coleta, logística reversa e descarte responsável de resíduos eletrônicos para empresas, instituições e pessoas físicas.'
-  }]})
-});
-const text = await response.text();
-if (!response.ok) throw new Error(`Ghost settings update failed (${response.status}): ${text.slice(0,600)}`);
-console.log('Ghost publication description updated.');
+// O Ghost(Pro) nega alguns endpoints administrativos a tokens de integração
+// (403 NoPermissionError). Nesses casos degradamos com aviso em vez de falhar,
+// e registramos o passo manual no resumo do workflow.
+const manualSteps = [];
+async function tolerantPut(url, body, okMessage, manualStep) {
+  const response = await fetch(url, {method:'PUT', headers, body:JSON.stringify(body)});
+  if (response.ok) { console.log(okMessage); return true; }
+  const text = await response.text();
+  if (response.status === 403 && text.includes('API tokens do not have permission')) {
+    console.warn(`AVISO: sem permissão para ${new URL(url).pathname} — requer ação manual do proprietário.`);
+    manualSteps.push(manualStep);
+    return false;
+  }
+  throw new Error(`Ghost update failed (${response.status}) at ${url}: ${text.slice(0,600)}`);
+}
+
+await tolerantPut(
+  `${adminUrl}/ghost/api/admin/settings/`,
+  {settings:[{key:'description', value:'Coleta, logística reversa e descarte responsável de resíduos eletrônicos para empresas, instituições e pessoas físicas.'}]},
+  'Ghost publication description updated.',
+  'Configurações → Título e descrição: conferir a descrição da publicação.'
+);
 
 // O ID da tag do Google é governado pelo repositório: um valor salvo no painel
 // (mesmo vazio) sobrepõe o default do tema, então forçamos o valor aqui.
 const themePackage = JSON.parse(await fs.readFile(path.resolve(import.meta.dirname, '..', 'theme', 'package.json'), 'utf8'));
 const gaTagId = themePackage.config.custom.ga_measurement_id.default;
 const current = await fetch(`${adminUrl}/ghost/api/admin/custom_theme_settings/`, {headers});
-if (!current.ok) throw new Error(`Custom theme settings lookup failed (${current.status}): ${(await current.text()).slice(0,600)}`);
-const settings = (await current.json()).custom_theme_settings || [];
-const gaSetting = settings.find((setting) => setting.key === 'ga_measurement_id');
-if (!gaSetting) {
-  console.log('ga_measurement_id not exposed by the active theme yet; skipping.');
-} else if (gaSetting.value === gaTagId) {
-  console.log(`ga_measurement_id already set to ${gaTagId}.`);
+if (!current.ok) {
+  console.warn(`AVISO: sem acesso de leitura a custom_theme_settings (${current.status}); a auditoria ao vivo valida o ID publicado.`);
+  manualSteps.push(`Design → configurações do tema: deixar "Ga measurement id" vazio ou igual a ${gaTagId}.`);
 } else {
-  const update = await fetch(`${adminUrl}/ghost/api/admin/custom_theme_settings/`, {
-    method:'PUT',
-    headers,
-    body:JSON.stringify({custom_theme_settings:[{key:'ga_measurement_id', value:gaTagId}]})
-  });
-  if (!update.ok) throw new Error(`Custom theme settings update failed (${update.status}): ${(await update.text()).slice(0,600)}`);
-  console.log(`ga_measurement_id updated to ${gaTagId} (was: ${gaSetting.value || '(vazio)'}).`);
+  const settings = (await current.json()).custom_theme_settings || [];
+  const gaSetting = settings.find((setting) => setting.key === 'ga_measurement_id');
+  if (!gaSetting) {
+    console.log('ga_measurement_id not exposed by the active theme yet; skipping.');
+  } else if (!gaSetting.value || gaSetting.value === gaTagId) {
+    console.log(`ga_measurement_id ok (${gaSetting.value || `vazio — vale o default ${gaTagId}`}).`);
+  } else {
+    await tolerantPut(
+      `${adminUrl}/ghost/api/admin/custom_theme_settings/`,
+      {custom_theme_settings:[{key:'ga_measurement_id', value:gaTagId}]},
+      `ga_measurement_id updated to ${gaTagId} (was: ${gaSetting.value}).`,
+      `Design → configurações do tema: trocar "Ga measurement id" para ${gaTagId}.`
+    );
+  }
+}
+
+if (manualSteps.length && process.env.GITHUB_STEP_SUMMARY) {
+  const fsSync = await import('node:fs');
+  fsSync.appendFileSync(process.env.GITHUB_STEP_SUMMARY,
+    `## Ajustes manuais pendentes no painel do Ghost\n\n${manualSteps.map((step) => `- [ ] ${step}`).join('\n')}\n`);
 }
