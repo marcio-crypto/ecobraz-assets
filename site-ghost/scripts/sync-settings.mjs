@@ -61,6 +61,30 @@ if (!current.ok) {
   }
 }
 
+// Descrição da tag do blog: sem ela, a página da tag sai sem meta description.
+const tagDescriptions = {
+  'conteudos-lixo-eletronico': 'Artigos e guias da Ecobraz sobre coleta de lixo eletrônico, descarte de equipamentos, logística reversa e destruição segura de dados.'
+};
+for (const [slug, description] of Object.entries(tagDescriptions)) {
+  const lookup = await fetch(`${adminUrl}/ghost/api/admin/tags/slug/${slug}/`, {headers});
+  if (!lookup.ok) {
+    console.warn(`AVISO: tag ${slug} não encontrada (${lookup.status}); pulando.`);
+    continue;
+  }
+  const tag = (await lookup.json()).tags?.[0];
+  if (!tag) continue;
+  if (tag.description === description) {
+    console.log(`Tag ${slug}: descrição já correta.`);
+    continue;
+  }
+  await tolerantPut(
+    `${adminUrl}/ghost/api/admin/tags/${tag.id}/`,
+    {tags:[{id: tag.id, name: tag.name, slug: tag.slug, description, updated_at: tag.updated_at}]},
+    `Tag ${slug}: descrição atualizada.`,
+    `Tags → ${tag.name}: preencher a descrição da tag.`
+  );
+}
+
 if (manualSteps.length && process.env.GITHUB_STEP_SUMMARY) {
   const fsSync = await import('node:fs');
   fsSync.appendFileSync(process.env.GITHUB_STEP_SUMMARY,
