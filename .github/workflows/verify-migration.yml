@@ -24,3 +24,5 @@ jobs:
         run: node site-ghost/scripts/audit-live-redirects.mjs "${{ inputs.base_url }}" site-ghost/theme/redirects.yaml 250
       - name: Origens autorizadas no formulário
         run: node site-ghost/scripts/check-origins.mjs https://ecobraz-coletas.ti-0ab.workers.dev https://ecobraz.org https://www.ecobraz.org
+      - name: Espelho lp.ecobraz.org redirecionando para o site oficial
+        run: node site-ghost/scripts/check-lp-redirects.mjs
