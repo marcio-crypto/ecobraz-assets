@@ -65,6 +65,7 @@ for (const route of routes) {
   if (route === '/') {
     if (!html.includes('application/ld+json')) errors.push('/: missing JSON-LD structured data');
     if (!/wa\.me\//.test(html)) errors.push('/: missing WhatsApp link');
+    if (!html.includes('googletagmanager.com/gtag/js?id=G-')) errors.push('/: Google Analytics (gtag) not installed');
     const hrefs = [...html.matchAll(/<a\s[^>]*href=["']([^"'#]+)["']/gi)].map((m) => m[1]);
     const internal = [...new Set(hrefs
       .filter((href) => href.startsWith(baseUrl) || (href.startsWith('/') && !href.startsWith('//')))

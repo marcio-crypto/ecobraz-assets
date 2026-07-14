@@ -20,6 +20,16 @@
       <title>Conteúdos sobre lixo eletrônico e reciclagem | Ecobraz</title>
       {{/is}}
     {{/is}}
+    {{#if @custom.ga_measurement_id}}
+    <link rel="preconnect" href="https://www.googletagmanager.com">
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{@custom.ga_measurement_id}}"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', '{{@custom.ga_measurement_id}}');
+    </script>
+    {{/if}}
     {{ghost_head}}
     {{{block "head"}}}
     <script type="application/ld+json">
