@@ -1,4 +1,28 @@
 (() => {
+    const track = (name, params) => { if (typeof window.gtag === 'function') window.gtag('event', name, params || {}); };
+
+    // Persistência de UTMs: a origem da campanha sobrevive à navegação até o formulário.
+    const UTM_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
+    const landingParams = new URLSearchParams(window.location.search);
+    try {
+        if (UTM_KEYS.some((key) => landingParams.get(key))) {
+            UTM_KEYS.forEach((key) => sessionStorage.setItem(`ecb_${key}`, landingParams.get(key) || ''));
+        }
+    } catch (_) { /* armazenamento indisponível não deve quebrar a página */ }
+    const storedUtm = (key) => { try { return sessionStorage.getItem(`ecb_${key}`) || ''; } catch (_) { return ''; } };
+
+    // Micro-conversões: WhatsApp, telefone, e-mail e todos os CTAs identificados.
+    document.addEventListener('click', (event) => {
+        const link = event.target.closest('a, button');
+        if (!link) return;
+        const ctaId = link.dataset.track || '';
+        const href = link.getAttribute('href') || '';
+        if (href.includes('wa.me') || href.includes('api.whatsapp.com')) track('contact_whatsapp', {cta_id: ctaId || 'whatsapp', page_path: window.location.pathname});
+        else if (href.startsWith('tel:')) track('contact_phone', {cta_id: ctaId || 'telefone', page_path: window.location.pathname});
+        else if (href.startsWith('mailto:')) track('contact_email', {cta_id: ctaId || 'email', page_path: window.location.pathname});
+        else if (ctaId) track('cta_click', {cta_id: ctaId, page_path: window.location.pathname});
+    }, {capture: true});
+
     const toggle = document.querySelector('[data-nav-toggle]');
     const nav = document.querySelector('[data-nav]');
     if (toggle && nav) toggle.addEventListener('click', () => {
@@ -26,7 +50,15 @@
     form.querySelectorAll('[data-prev-step]').forEach((button) => button.addEventListener('click', () => showStep(activeStep - 1)));
     const params = new URLSearchParams(window.location.search);
     form.querySelector('[data-page-url]').value = window.location.href;
-    form.querySelectorAll('[data-utm]').forEach((input) => { input.value = params.get(input.dataset.utm) || ''; });
+    form.querySelectorAll('[data-utm]').forEach((input) => { input.value = params.get(input.dataset.utm) || storedUtm(input.dataset.utm); });
+
+    // form_start_coleta: dispara uma única vez, na primeira interação real com o formulário.
+    let formStarted = false;
+    form.addEventListener('input', () => {
+        if (formStarted) return;
+        formStarted = true;
+        track('form_start_coleta', {page_path: window.location.pathname});
+    }, {once: false});
     const profile = params.get('perfil');
     const profileInput = profile && form.querySelector(`[name="profile"][value="${profile === 'pessoa-fisica' ? 'pessoa_fisica' : profile}"]`);
     if (profileInput) profileInput.checked = true;
@@ -49,9 +81,18 @@
             const response = await fetch(endpoint, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
             if (!response.ok) throw new Error('submission_failed');
             form.reset(); status.textContent = 'Solicitação recebida. Nossa equipe analisará os dados e entrará em contato.'; status.className = 'form-status is-success';
+            // Conversão principal: só dispara quando o CRM confirmou o recebimento do lead.
+            track('generate_lead', {
+                method: 'formulario_site',
+                profile: payload.profile,
+                material_category: payload.material_category,
+                state: payload.state,
+                volume: payload.volume
+            });
             window.dataLayer = window.dataLayer || []; window.dataLayer.push({event:'collection_request_submitted',profile:payload.profile,material_category:payload.material_category,state:payload.state});
         } catch (_) {
             status.textContent = 'Não foi possível enviar agora. Tente novamente ou fale com a equipe pelo WhatsApp.'; status.className = 'form-status is-error';
+            track('form_error_coleta', {page_path: window.location.pathname});
         } finally { button.disabled = false; button.textContent = 'Enviar solicitação de coleta'; }
     });
 })();

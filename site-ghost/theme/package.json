@@ -1,7 +1,7 @@
 {
   "name": "ecobraz-conversion",
   "description": "Tema oficial Ecobraz orientado a agendamentos de coleta e conversão B2B.",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "engines": {
     "ghost": ">=5.0.0"
   },
@@ -48,6 +48,11 @@
       "ceo_photo": {
         "type": "image",
         "description": "Foto oficial de Marcio Villanova exibida no bloco de liderança da página inicial."
+      },
+      "ga_measurement_id": {
+        "type": "text",
+        "default": "G-HWPRWHCH8J",
+        "description": "ID de medição do Google Analytics 4. Deixe em branco para desativar a medição."
       }
     }
   }
