@@ -14,7 +14,8 @@ const targets = {
     'destruicao-de-dados-2',
     'logistica-reversa-2',
     'documentacao-e-rastreabilidade-2',
-    'coletas-recorrentes-2'
+    'coletas-recorrentes-2',
+    'descarte-de-impressoras-e-toners'
   ],
   posts: ['coming-soon']
 };
