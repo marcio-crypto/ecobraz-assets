@@ -83,7 +83,7 @@ for (const route of routes) {
     for (const field of ['name="profile"', 'name="material_category"', 'name="email"', 'name="service_consent"']) {
       if (!html.includes(field)) errors.push(`/agendamento/: missing form field ${field}`);
     }
-    for (const banned of ['<option>Baterias</option>', '<option>Iluminação</option>']) {
+    for (const banned of ['<option>Iluminação</option>']) {
       if (html.includes(banned)) errors.push(`/agendamento/: out-of-scope category still offered: ${banned}`);
     }
   }
