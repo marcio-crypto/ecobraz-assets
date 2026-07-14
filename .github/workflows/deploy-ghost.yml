@@ -2,6 +2,11 @@ name: Deploy Ghost staging
 
 on:
   workflow_dispatch:
+    inputs:
+      test_integrations:
+        description: 'Enviar lead de teste real para Ploomes/E-goi'
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths:
@@ -88,3 +93,8 @@ jobs:
         run: node site-ghost/scripts/audit-live-redirects.mjs https://ecobraz-emigre.ghost.io site-ghost/migration/redirect-map.csv 100
       - name: Audit live redirects sample (installed package)
         run: node site-ghost/scripts/audit-live-redirects.mjs https://ecobraz-emigre.ghost.io site-ghost/theme/redirects.yaml 250
+      - name: Audit live site (pages, links, SEO wiring)
+        run: node site-ghost/scripts/audit-live-site.mjs https://ecobraz-emigre.ghost.io
+      - name: Test Ploomes/E-goi integrations with a labelled lead
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.test_integrations }}
+        run: node site-ghost/scripts/test-collection-endpoint.mjs https://ecobraz-coletas.ti-0ab.workers.dev https://ecobraz-emigre.ghost.io
