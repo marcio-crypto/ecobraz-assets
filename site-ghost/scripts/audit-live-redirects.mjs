@@ -54,17 +54,32 @@ for (let index = 0; index < redirects.length; index += 8) {
   const batch = redirects.slice(index, index + 8);
   await Promise.all(batch.map(async ({source,target}) => {
     try {
-      const response = await fetch(`${baseUrl}${source}`, {redirect:'manual'});
-      const location = response.headers.get('location');
-      const actual = location ? normalizePath(new URL(location, baseUrl).pathname) : '';
       const expected = normalizePath(new URL(target, baseUrl).pathname);
-      if (response.status !== 301) errors.push(`${source}: expected 301, received ${response.status}`);
-      if (actual !== expected) errors.push(`${source}: expected ${expected}, received ${actual || '(no location)'}`);
-      if (response.status === 301 && actual === expected) {
-        const targetResponse = await fetch(`${baseUrl}${expected}`, {redirect:'follow'});
-        if (!targetResponse.ok) errors.push(`${source}: target ${expected} returned ${targetResponse.status}`);
-        else console.log(`PASS ${source} -> ${expected}`);
+      let currentUrl = `${baseUrl}${source}`;
+      let hops = 0;
+      let response = await fetch(currentUrl, {redirect:'manual'});
+      // Segue a cadeia de redirecionamentos (até 5 saltos), exigindo 301 no primeiro.
+      if (response.status !== 301) {
+        errors.push(`${source}: expected 301, received ${response.status}`);
+        return;
       }
+      let actual = '';
+      while (response.status >= 300 && response.status < 400 && hops < 5) {
+        const location = response.headers.get('location');
+        if (!location) break;
+        currentUrl = new URL(location, currentUrl).href;
+        actual = normalizePath(new URL(currentUrl).pathname);
+        hops += 1;
+        if (actual === expected) break;
+        response = await fetch(currentUrl, {redirect:'manual'});
+      }
+      if (actual !== expected) {
+        errors.push(`${source}: expected ${expected}, received ${actual || '(no location)'} after ${hops} hop(s)`);
+        return;
+      }
+      const targetResponse = await fetch(currentUrl, {redirect:'follow'});
+      if (!targetResponse.ok) errors.push(`${source}: target ${expected} returned ${targetResponse.status}`);
+      else console.log(`PASS ${source} -> ${expected}${hops > 1 ? ` (cadeia de ${hops} saltos)` : ''}`);
     } catch (error) {
       errors.push(`${source}: ${error.message}`);
     }
