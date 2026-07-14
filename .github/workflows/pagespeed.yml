@@ -1,0 +1,55 @@
+name: PageSpeed Insights
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'URL a analisar'
+        required: false
+        default: 'https://ecobraz.org'
+      strategy:
+        description: 'mobile ou desktop'
+        required: false
+        default: 'mobile'
+
+jobs:
+  pagespeed:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Consulta a API do PageSpeed e resume os problemas
+        run: |
+          curl -s --max-time 120 "https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=$(printf '%s' '${{ inputs.url }}' | sed 's/:/%3A/g;s|/|%2F|g')&strategy=${{ inputs.strategy }}&hl=pt-BR&category=PERFORMANCE&category=ACCESSIBILITY&category=BEST_PRACTICES&category=SEO" -o psi.json
+          node - <<'EOF'
+          const data = require('./psi.json');
+          if (data.error) { console.error('ERRO DA API:', JSON.stringify(data.error).slice(0,500)); process.exit(1); }
+          const lh = data.lighthouseResult;
+          console.log(`URL: ${lh.finalUrl} | estratégia: ${lh.configSettings.emulatedFormFactor || ''}`);
+          console.log('== NOTAS ==');
+          for (const [key, cat] of Object.entries(lh.categories)) console.log(`  ${cat.title}: ${Math.round(cat.score*100)}`);
+          const metrics = ['first-contentful-paint','largest-contentful-paint','total-blocking-time','cumulative-layout-shift','speed-index','interactive'];
+          console.log('== MÉTRICAS ==');
+          for (const id of metrics) { const a = lh.audits[id]; if (a) console.log(`  ${a.title}: ${a.displayValue} (score ${a.score})`); }
+          console.log('== AUDITORIAS REPROVADAS (score < 0.9) ==');
+          const rows = [];
+          for (const [id, audit] of Object.entries(lh.audits)) {
+            if (audit.score !== null && audit.score < 0.9 && audit.scoreDisplayMode !== 'informative') {
+              const savings = audit.details && (audit.details.overallSavingsMs ? `${audit.details.overallSavingsMs}ms` : audit.details.overallSavingsBytes ? `${Math.round(audit.details.overallSavingsBytes/1024)}KB` : '');
+              rows.push({id, score: audit.score, title: audit.title, savings, display: audit.displayValue || ''});
+            }
+          }
+          rows.sort((a,b) => a.score - b.score);
+          for (const r of rows) console.log(`  [${r.score}] ${r.id} — ${r.title} ${r.display} ${r.savings}`);
+          console.log('== DETALHE DOS 12 PIORES ==');
+          for (const r of rows.slice(0, 12)) {
+            const audit = lh.audits[r.id];
+            const items = (audit.details && audit.details.items || []).slice(0, 8);
+            console.log(`-- ${r.id}`);
+            for (const item of items) console.log('   ' + JSON.stringify(item).slice(0, 300));
+          }
+          EOF
+      - name: Guarda o JSON completo
+        uses: actions/upload-artifact@v4
+        with:
+          name: psi-${{ inputs.strategy }}
+          path: psi.json
+          retention-days: 7
