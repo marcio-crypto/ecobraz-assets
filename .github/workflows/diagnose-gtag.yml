@@ -1,0 +1,32 @@
+name: Diagnóstico gtag (GA4)
+
+on:
+  workflow_dispatch:
+    inputs:
+      measurement_id:
+        description: 'ID de medição GA4 a testar'
+        required: false
+        default: 'G-HWPRWHCH8J'
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Testa gtag.js com o ID do site, um ID inválido e um controle válido
+        run: |
+          BROWSER_UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36'
+          for id in "${{ inputs.measurement_id }}" G-INVALID000X; do
+            echo "== $id =="
+            curl -s -o /dev/null -w "  padrao:      status=%{http_code} bytes=%{size_download}\n" "https://www.googletagmanager.com/gtag/js?id=$id"
+            curl -s -o /dev/null -w "  navegador:   status=%{http_code} bytes=%{size_download}\n" -A "$BROWSER_UA" "https://www.googletagmanager.com/gtag/js?id=$id"
+            curl -s -o /dev/null -w "  destination: status=%{http_code} bytes=%{size_download}\n" -A "$BROWSER_UA" "https://www.googletagmanager.com/gtag/destination?id=$id"
+          done
+          echo "== controle: ID real extraído de um site público =="
+          for site in https://ghost.org/ https://www.hubspot.com/ https://www.cloudflare.com/ https://www.shopify.com/; do
+            ctrl=$(curl -sL -A "$BROWSER_UA" "$site" | grep -o 'gtag/js?id=G-[A-Za-z0-9]*' | head -1 | cut -d= -f2 || true)
+            if [ -n "$ctrl" ]; then
+              echo "  controle $ctrl (de $site)"
+              curl -s -o /dev/null -w "  controle:    status=%{http_code} bytes=%{size_download}\n" "https://www.googletagmanager.com/gtag/js?id=$ctrl"
+              break
+            fi
+          done
