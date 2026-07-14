@@ -1,6 +1,6 @@
 <style>
     .brand-logo { display: block; width: 190px; height: auto; max-height: 64px; object-fit: contain; }
-    .footer-brand { display: inline-flex !important; align-items: center; margin: 0 0 18px !important; padding: 10px 14px; border-radius: 12px; background: #fff; }
+    .footer-brand { display: inline-flex !important; align-items: center; margin: 0 0 18px !important; padding: 0; background: transparent; }
     .footer-brand-logo { display: block; width: 190px; height: auto; }
     @media (max-width: 620px) {
         .brand-logo { width: 165px; }
@@ -17,12 +17,13 @@
         </button>
         <nav id="primary-nav" class="primary-nav" aria-label="Navegação principal" data-nav>
             <ul>
-                <li><a href="{{@site.url}}/">Início</a></li>
                 <li><a href="{{@site.url}}/#solucoes">Soluções</a></li>
-                <li><a href="{{@site.url}}/#como-funciona">Como funciona</a></li>
+                <li><a href="{{@site.url}}/#materiais">Materiais</a></li>
+                <li><a href="{{@site.url}}/evidencias/">Evidências</a></li>
+                <li><a href="{{@site.url}}/como-funciona/">Como funciona</a></li>
                 <li><a href="{{@site.url}}/blog/">Conteúdos</a></li>
             </ul>
         </nav>
-        <a class="button button-small header-cta" href="{{@site.url}}/agendamento/" data-track="header_agendamento">Agendar coleta</a>
+        <a class="button button-small header-cta" href="{{@site.url}}/agendamento/" data-track="header_agendamento">Solicitar coleta</a>
     </div>
 </header>
