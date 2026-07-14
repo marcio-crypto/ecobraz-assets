@@ -65,7 +65,7 @@ for (const route of routes) {
   if (route === '/') {
     if (!html.includes('application/ld+json')) errors.push('/: missing JSON-LD structured data');
     if (!/wa\.me\//.test(html)) errors.push('/: missing WhatsApp link');
-    const hrefs = [...html.matchAll(/href=["']([^"'#]+)["']/g)].map((m) => m[1]);
+    const hrefs = [...html.matchAll(/<a\s[^>]*href=["']([^"'#]+)["']/gi)].map((m) => m[1]);
     const internal = [...new Set(hrefs
       .filter((href) => href.startsWith(baseUrl) || (href.startsWith('/') && !href.startsWith('//')))
       .map((href) => href.replace(baseUrl, ''))

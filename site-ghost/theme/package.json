@@ -1,7 +1,7 @@
 {
   "name": "ecobraz-conversion",
   "description": "Tema oficial Ecobraz orientado a agendamentos de coleta e conversão B2B.",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "engines": {
     "ghost": ">=5.0.0"
   },
@@ -34,7 +34,8 @@
       },
       "collection_endpoint": {
         "type": "text",
-        "description": "Endpoint seguro que integra o formulário ao Ploomes e ao E-goi."
+        "description": "Endpoint seguro que integra o formulário ao Ploomes e ao E-goi.",
+        "default": "https://ecobraz-coletas.ti-0ab.workers.dev/api/coletas"
       },
       "whatsapp_url": {
         "type": "text",
