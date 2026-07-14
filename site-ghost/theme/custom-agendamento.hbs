@@ -5,7 +5,7 @@
 {{/contentFor}}
 <section class="form-hero"><div class="container form-hero-grid"><div><span class="eyebrow">Agendamento de coleta</span><h1>Solicite uma avaliação de coleta</h1><p>Informe os dados iniciais da operação. O envio não confirma automaticamente a coleta; nossa equipe avaliará localidade, materiais, volume e requisitos.</p></div><div class="form-trust"><strong>O que acontece depois?</strong><ol><li>Recebemos a solicitação.</li><li>A equipe verifica a viabilidade.</li><li>Entramos em contato para confirmar o escopo.</li></ol></div></div></section>
 <section class="section form-section"><div class="container form-layout">
-    <form class="collection-form" data-collection-form data-endpoint="{{@custom.collection_endpoint}}" novalidate>
+    <form class="collection-form" data-collection-form data-endpoint="{{#if @custom.collection_endpoint}}{{@custom.collection_endpoint}}{{else}}https://ecobraz-coletas.ti-0ab.workers.dev/api/coletas{{/if}}" novalidate>
         <input type="hidden" name="source" value="website">
         <input type="hidden" name="page_url" data-page-url>
         <input type="hidden" name="utm_source" data-utm="utm_source"><input type="hidden" name="utm_medium" data-utm="utm_medium"><input type="hidden" name="utm_campaign" data-utm="utm_campaign"><input type="hidden" name="utm_content" data-utm="utm_content"><input type="hidden" name="utm_term" data-utm="utm_term">
