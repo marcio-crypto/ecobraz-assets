@@ -16,19 +16,22 @@ jobs:
   pagespeed:
     runs-on: ubuntu-latest
     steps:
-      - name: Consulta a API do PageSpeed e resume os problemas
+      - name: Roda o Lighthouse (mesmo motor do PageSpeed, sem cota de API)
         run: |
-          curl -s --max-time 120 "https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=$(printf '%s' '${{ inputs.url }}' | sed 's/:/%3A/g;s|/|%2F|g')&strategy=${{ inputs.strategy }}&hl=pt-BR&category=PERFORMANCE&category=ACCESSIBILITY&category=BEST_PRACTICES&category=SEO" -o psi.json
+          PRESET=''
+          if [ "${{ inputs.strategy }}" = "desktop" ]; then PRESET='--preset=desktop'; fi
+          npx --yes lighthouse '${{ inputs.url }}' $PRESET --output=json --output-path=psi.json --quiet --chrome-flags='--headless --no-sandbox' --only-categories=performance,accessibility,best-practices,seo
+      - name: Resume notas, métricas e auditorias reprovadas
+        run: |
           node - <<'EOF'
           const data = require('./psi.json');
-          if (data.error) { console.error('ERRO DA API:', JSON.stringify(data.error).slice(0,500)); process.exit(1); }
-          const lh = data.lighthouseResult;
-          console.log(`URL: ${lh.finalUrl} | estratégia: ${lh.configSettings.emulatedFormFactor || ''}`);
+          const lh = data.lighthouseResult || data;
+          console.log(`URL: ${lh.finalDisplayedUrl || lh.finalUrl}`);
           console.log('== NOTAS ==');
-          for (const [key, cat] of Object.entries(lh.categories)) console.log(`  ${cat.title}: ${Math.round(cat.score*100)}`);
+          for (const cat of Object.values(lh.categories)) console.log(`  ${cat.title}: ${Math.round(cat.score*100)}`);
           const metrics = ['first-contentful-paint','largest-contentful-paint','total-blocking-time','cumulative-layout-shift','speed-index','interactive'];
           console.log('== MÉTRICAS ==');
-          for (const id of metrics) { const a = lh.audits[id]; if (a) console.log(`  ${a.title}: ${a.displayValue} (score ${a.score})`); }
+          for (const id of metrics) { const a = lh.audits[id]; if (a && a.displayValue) console.log(`  ${a.title}: ${a.displayValue} (score ${a.score})`); }
           console.log('== AUDITORIAS REPROVADAS (score < 0.9) ==');
           const rows = [];
           for (const [id, audit] of Object.entries(lh.audits)) {
