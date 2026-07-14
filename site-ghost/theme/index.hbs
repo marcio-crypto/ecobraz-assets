@@ -6,6 +6,16 @@
 <meta name="description" content="Conteúdos da Ecobraz sobre coleta de lixo eletrônico, descarte de equipamentos, logística reversa, dados e reciclagem.">
 <meta property="og:description" content="Conteúdos da Ecobraz sobre coleta de lixo eletrônico, descarte de equipamentos, logística reversa, dados e reciclagem.">
 {{/is}}
+{{#if pagination.prev}}
+{{! Nas páginas 2+ dos arquivos o Ghost não emite metadados sociais nem description — completamos o conjunto aqui. }}
+<meta property="og:title" content="{{meta_title}}">
+<meta property="og:type" content="website">
+<meta name="twitter:title" content="{{meta_title}}">
+{{#is "tag, author"}}
+<meta name="description" content="Conteúdos da Ecobraz sobre coleta de lixo eletrônico, descarte de equipamentos, logística reversa, dados e reciclagem.">
+<meta property="og:description" content="Conteúdos da Ecobraz sobre coleta de lixo eletrônico, descarte de equipamentos, logística reversa, dados e reciclagem.">
+{{/is}}
+{{/if}}
 <meta property="og:image" content="{{asset "images/og-ecobraz.png"}}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="{{asset "images/og-ecobraz.png"}}">
