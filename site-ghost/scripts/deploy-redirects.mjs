@@ -29,6 +29,23 @@ const response = await fetch(`${adminUrl}/ghost/api/admin/redirects/upload/`, {
 });
 
 const text = await response.text();
+if (response.status === 403 && text.includes('API tokens do not have permission')) {
+  const notice = [
+    '## Proteção dos backlinks — ação manual pendente',
+    '',
+    `O Ghost bloqueia a importação de redirects por chave de integração (403), portanto os ${expectedEntries} redirecionamentos NÃO foram instalados automaticamente.`,
+    '',
+    'O proprietário precisa importar o arquivo pelo painel, seguindo o guia `site-ghost/migration/IMPORTAR-REDIRECTS.md`:',
+    '',
+    '1. Baixe o artefato **ecobraz-backlink-redirects-OWNER-IMPORT** desta execução.',
+    '2. No Ghost Admin, abra **Settings → Labs → Redirects → Upload redirects** e envie o `redirects.yaml`.',
+    '3. Depois rode a auditoria ao vivo (`audit-live-redirects.mjs`) antes de qualquer troca de domínio.',
+    ''
+  ].join('\n');
+  console.warn(`Ghost blocked the redirects API import for integration tokens (403). Manual owner import of ${expectedEntries} rules is still required — see site-ghost/migration/IMPORTAR-REDIRECTS.md.`);
+  if (process.env.GITHUB_STEP_SUMMARY) await fs.appendFile(process.env.GITHUB_STEP_SUMMARY, `${notice}\n`);
+  process.exit(0);
+}
 if (!response.ok) throw new Error(`Ghost redirects upload failed (${response.status}): ${text.slice(0,500)}`);
 
 const download = await fetch(`${adminUrl}/ghost/api/admin/redirects/download/`, {
@@ -52,6 +69,12 @@ if (installedEntries !== expectedEntries || missingSentinels.length) {
 }
 
 console.log('Redirects installed and verified successfully on', adminUrl);
+if (process.env.GITHUB_STEP_SUMMARY) {
+  await fs.appendFile(
+    process.env.GITHUB_STEP_SUMMARY,
+    `## Proteção dos backlinks\n\nO pacote completo (${expectedEntries} redirecionamentos) foi instalado e verificado automaticamente no Ghost.\n\nA troca de domínio continua condicionada à auditoria ao vivo dos endereços antigos.\n`
+  );
+}
 
 function countEntries(yaml) {
   return yaml.split(/\r?\n/).filter((line) => /^\s{2}(?:["']|\^)/.test(line) && line.includes(':')).length;

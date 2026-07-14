@@ -77,20 +77,10 @@ jobs:
           GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
           GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
         run: node site-ghost/scripts/deploy-redirects.mjs site-ghost/theme/redirects.yaml
-      - name: Record backlink protection status
-        shell: bash
-        run: |
-          {
-            echo "## Proteção dos backlinks"
-            echo ""
-            echo "O pacote completo foi instalado e verificado automaticamente no Ghost."
-            echo ""
-            echo "A troca de domínio continua condicionada à auditoria ao vivo dos endereços antigos."
-          } >> "$GITHUB_STEP_SUMMARY"
-      - name: Preserve backlink redirects backup
+      - name: Preserve backlink redirects for owner import
         uses: actions/upload-artifact@v4
         with:
-          name: ecobraz-backlink-redirects-BACKUP
+          name: ecobraz-backlink-redirects-OWNER-IMPORT
           path: site-ghost/theme/redirects.yaml
           if-no-files-found: error
           retention-days: 30
