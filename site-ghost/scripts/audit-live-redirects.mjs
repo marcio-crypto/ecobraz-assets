@@ -3,21 +3,51 @@ import fs from 'node:fs/promises';
 const baseUrl = String(process.argv[2] || 'https://ecobraz-emigre.ghost.io').replace(/\/$/, '');
 const file = process.argv[3] || 'migration/legacy-url-inventory.csv';
 const limit = Number(process.argv[4] || 250);
-const rows = parseCsv(await fs.readFile(file, 'utf8'));
-const headers = rows.shift();
-const column = Object.fromEntries(headers.map((name, index) => [name, index]));
-const seen = new Set();
-const redirects = rows
-  .filter((columns) => columns[column.acao] === '301')
-  .map((columns) => ({
-    source: decodeURIComponent(columns[column.caminho_original]),
-    target: columns[column.destino_novo],
-    clicks: Number(columns[column.cliques_90d] || 0),
-    impressions: Number(columns[column.impressoes_90d] || 0),
-  }))
-  .filter(({source}) => !seen.has(source) && seen.add(source))
-  .sort((a,b) => b.clicks-a.clicks || b.impressions-a.impressions || a.source.localeCompare(b.source))
-  .slice(0,limit);
+const redirects = file.endsWith('.yaml')
+  ? loadFromRedirectsYaml(await fs.readFile(file, 'utf8'), limit)
+  : loadFromCsv(await fs.readFile(file, 'utf8'), limit);
+
+function loadFromCsv(text, max) {
+  const rows = parseCsv(text);
+  const headers = rows.shift();
+  const column = Object.fromEntries(headers.map((name, index) => [name, index]));
+  const sourceOf = (columns) => {
+    if (column.caminho_original !== undefined) return decodeURIComponent(columns[column.caminho_original]);
+    return decodeURIComponent(new URL(columns[column.url_antiga]).pathname);
+  };
+  const seen = new Set();
+  return rows
+    .filter((columns) => columns[column.acao] === '301')
+    .map((columns) => ({
+      source: sourceOf(columns),
+      target: columns[column.destino_novo],
+      clicks: Number(columns[column.cliques_90d] || 0),
+      impressions: Number(columns[column.impressoes_90d] || 0),
+    }))
+    .filter(({source}) => !seen.has(source) && seen.add(source))
+    .sort((a,b) => b.clicks-a.clicks || b.impressions-a.impressions || a.source.localeCompare(b.source))
+    .slice(0, max);
+}
+
+function loadFromRedirectsYaml(text, max) {
+  const rules = [];
+  for (const line of text.split(/\r?\n/)) {
+    const match = line.match(/^\s{2}("(?:[^"\\]|\\.)*"):\s+("(?:[^"\\]|\\.)*")\s*$/);
+    if (!match) continue;
+    const pattern = JSON.parse(match[1]);
+    const target = JSON.parse(match[2]);
+    const literal = pattern.match(/^\^((?:\\.|[^\\.*+?^${}()|[\]])*)\/\?\$$/);
+    if (!literal) continue;
+    const source = literal[1].replace(/\\(.)/g, '$1');
+    if (!source.startsWith('/')) continue;
+    rules.push({source, target, clicks: 0, impressions: 0});
+  }
+  if (rules.length <= max) return rules;
+  const step = rules.length / max;
+  const sample = [];
+  for (let index = 0; index < max; index += 1) sample.push(rules[Math.floor(index * step)]);
+  return sample;
+}
 
 const errors = [];
 for (let index = 0; index < redirects.length; index += 8) {
