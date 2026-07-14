@@ -304,7 +304,8 @@
     <div class="hx-person">
       <div class="hx-person-inner{{#unless @custom.ceo_photo}} hx-person-nophoto{{/unless}}">
         {{#if @custom.ceo_photo}}
-        <img class="hx-person-photo" src="{{@custom.ceo_photo}}" alt="Marcio Villanova, CEO da Ecobraz" loading="lazy">
+        {{! img_url com size pede ao Ghost a variante redimensionada — evita servir o arquivo original em tamanho cheio. }}
+        <img class="hx-person-photo" src="{{img_url @custom.ceo_photo size="s"}}" srcset="{{img_url @custom.ceo_photo size="s"}} 480w, {{img_url @custom.ceo_photo size="m"}} 760w" sizes="(max-width: 620px) 90vw, 420px" alt="Marcio Villanova, CEO da Ecobraz" loading="lazy">
         {{/if}}
         <div>
           <span class="hx-label on-dark">Liderança técnica</span>

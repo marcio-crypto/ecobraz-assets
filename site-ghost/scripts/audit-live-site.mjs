@@ -57,15 +57,23 @@ for (const route of routes) {
     if (canonical !== expected) warnings.push(`${route}: canonical is ${canonical}, expected ${expected}`);
   }
 
-  const descriptionTag = (html.match(/<meta[^>]+name=["']description["'][^>]*>/i) || [])[0];
-  if (!descriptionTag || !attr(descriptionTag, 'content').trim()) {
+  const descriptionTags = html.match(/<meta[^>]+name=["']description["'][^>]*>/gi) || [];
+  if (!descriptionTags.length || !attr(descriptionTags[0], 'content').trim()) {
     warnings.push(`${route}: missing meta description`);
+  } else if (descriptionTags.length > 1) {
+    errors.push(`${route}: ${descriptionTags.length} meta description tags (must be exactly 1)`);
   }
 
   if (route === '/') {
     if (!html.includes('application/ld+json')) errors.push('/: missing JSON-LD structured data');
     if (!/wa\.me\//.test(html)) errors.push('/: missing WhatsApp link');
-    if (!html.includes('googletagmanager.com/gtag/js?id=G-')) errors.push('/: Google Analytics (gtag) not installed');
+    const gtagMatch = html.match(/googletagmanager\.com\/gtag\/js\?id=(G-[A-Z0-9]+)/);
+    if (!gtagMatch) errors.push('/: Google Analytics (gtag) not installed');
+    else {
+      // O endpoint do gtag devolve 404 quando o ID de medição não existe no GA4.
+      const gtagResponse = await fetch(`https://www.googletagmanager.com/gtag/js?id=${gtagMatch[1]}`);
+      if (!gtagResponse.ok) errors.push(`/: GA4 measurement ID ${gtagMatch[1]} appears invalid (gtag.js returned ${gtagResponse.status}) — no data reaches Google Analytics`);
+    }
     const hrefs = [...html.matchAll(/<a\s[^>]*href=["']([^"'#]+)["']/gi)].map((m) => m[1]);
     const internal = [...new Set(hrefs
       .filter((href) => href.startsWith(baseUrl) || (href.startsWith('/') && !href.startsWith('//')))
