@@ -53,7 +53,7 @@ def destination(path):
         (r'televis|tv-antiga|tvs-antigas', '/descarte-de-televisao/'),
         (r'cabos|fios|cobre', '/descarte-de-cabos-e-fios/'),
         (r'servidor|data-center|datacenter|storage|rack', '/descarte-de-servidores-e-data-center/'),
-        (r'impress|toner|cartucho', '/descarte-de-impressoras-e-toners/'),
+        (r'impress|toner|cartucho', '/descarte-de-impressoras/'),
         (r'ar-condicionado|climatiza', '/descarte-de-ar-condicionado/'),
         (r'maquinas-e-equipamentos-industriais|automacao-industrial|transformador', '/descarte-de-maquinas-e-equipamentos-industriais/'),
         (r'\bhd\b|hds|ssd|dados|lgpd|sanitiza|midia', '/destruicao-de-dados/'),
