@@ -1,0 +1,20 @@
+name: Verificar origens do formulário
+
+on:
+  workflow_dispatch:
+    inputs:
+      origins:
+        description: 'Domínios a verificar (separados por espaço)'
+        type: string
+        default: 'https://ecobraz.org https://www.ecobraz.org https://ecobraz-emigre.ghost.io'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Consultar a lista de origens permitidas do Worker
+        run: node site-ghost/scripts/check-origins.mjs https://ecobraz-coletas.ti-0ab.workers.dev ${{ inputs.origins }}
