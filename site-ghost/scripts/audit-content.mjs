@@ -37,11 +37,13 @@ const knownRoutes = new Set([
   ...knownSlugs,
   ...priorityPosts.map((post) => `blog/${post.slug}`)
 ]);
+const landingTemplates = fs.readdirSync(root).filter((name) => name.startsWith('page-') && name.endsWith('.hbs'));
 const sourceText = [
   ...pages.map((page) => page.html),
   fs.readFileSync(path.join(root, 'home.hbs'), 'utf8'),
   fs.readFileSync(path.join(root, 'partials', 'header.hbs'), 'utf8'),
-  fs.readFileSync(path.join(root, 'partials', 'footer.hbs'), 'utf8')
+  fs.readFileSync(path.join(root, 'partials', 'footer.hbs'), 'utf8'),
+  ...landingTemplates.map((name) => fs.readFileSync(path.join(root, name), 'utf8'))
 ].join('\n');
 
 for (const match of sourceText.matchAll(/href=["'](?:{{@site\.url}})?\/([^?#"'\s]+?)(?:\/)?(?:\?[^"'\s]*)?["']/g)) {

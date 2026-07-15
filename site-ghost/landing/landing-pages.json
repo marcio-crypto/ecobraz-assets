@@ -1,0 +1,87 @@
+[
+  {
+    "slug": "descarte-de-ativos-de-ti-desmobilizados",
+    "title": "Descarte de ativos de TI desmobilizados, com inventário e custódia",
+    "crumb": "Ativos de TI desmobilizados",
+    "serviceType": "Retirada, inventário, custódia e destinação de ativos de TI desmobilizados",
+    "custom_excerpt": "Retirada planejada de ativos de TI que saíram de operação — com inventário, cadeia de custódia e tratamento de dados quando aplicável, mediante avaliação técnica do lote.",
+    "meta_title": "Descarte de ativos de TI desmobilizados | Ecobraz",
+    "meta_description": "Retirada, inventário, custódia e destinação de ativos de TI desmobilizados — com tratamento de dados e documentação, mediante avaliação técnica do lote.",
+    "hub": {"title": "Descarte corporativo de TI", "href": "/descarte-corporativo-de-ti/"},
+    "hero": {
+      "eyebrow": "Troca de parque · Fim de contrato · Encerramento de unidade",
+      "sub": "A Ecobraz retira ativos de TI que saíram de operação com inventário na origem, cadeia de custódia até a destinação e tratamento de dados quando o lote contém mídias — tudo definido em avaliação técnica antes de qualquer confirmação.",
+      "cta": "Solicitar avaliação técnica",
+      "band": [
+        {"title": "Inventário na origem", "text": "cada ativo registrado antes de sair"},
+        {"title": "Dados tratados", "text": "sanitização ou destruição, conforme escopo"},
+        {"title": "Documentação", "text": "inventário, MTR e CDF quando aplicáveis"}
+      ]
+    },
+    "form": {
+      "title": "Descreva o lote em 1 minuto",
+      "hint": "A equipe retorna com escopo, condições e documentação aplicável.",
+      "material": "Informática e TI",
+      "describeLabel": "O que precisa retirar?",
+      "describePlaceholder": "Ex.: 120 notebooks e 30 monitores em depósito"
+    },
+    "painsTitle": "Equipamento parado não é neutro: é passivo",
+    "painsSub": "Três riscos crescem em silêncio enquanto o lote espera num depósito.",
+    "pains": [
+      {"icon": "lock", "title": "Dados esquecidos em discos", "text": "Notebooks e servidores fora de uso ainda carregam dados corporativos. Sem tratamento registrado, cada mídia é uma exposição em aberto."},
+      {"icon": "building", "title": "Patrimônio sem baixa", "text": "Ativos acumulados ocupam espaço, seguram baixa patrimonial e viram pendência de inventário a cada auditoria interna."},
+      {"icon": "alert", "title": "Destinação sem prova", "text": "Se o lote sai sem inventário e sem cadeia de custódia, não há como responder a uma auditoria de cliente, certificação ou órgão ambiental."}
+    ],
+    "scope": {
+      "in": [
+        "Notebooks, desktops e monitores",
+        "Servidores, storages e ativos de rede",
+        "Telefonia e equipamentos de telecom",
+        "Nobreaks e baterias associadas ao parque",
+        "Periféricos e eletrônicos corporativos"
+      ],
+      "out": [
+        "Pilhas domésticas avulsas",
+        "Toner e cartuchos",
+        "Lâmpadas, óleo, isopor e embalagens",
+        "Resíduos químicos, biológicos, radioativos ou contaminados"
+      ],
+      "conditions": "A viabilidade depende de tipo de ativo, volume, localidade, acesso ao local e documentação solicitada. Cada lote é avaliado antes da confirmação."
+    },
+    "steps": [
+      {"title": "Descreva o lote", "text": "Tipos de ativo, quantidade aproximada, localidade e necessidade documental."},
+      {"title": "Avaliação técnica", "text": "Analisamos escopo, logística e o tratamento de dados aplicável."},
+      {"title": "Escopo definido", "text": "O que será retirado, o método para as mídias e os documentos da operação."},
+      {"title": "Retirada registrada", "text": "Coleta na origem com inventário dos ativos e cadeia de custódia."},
+      {"title": "Destinação e registros", "text": "Encaminhamento para destinação e entrega da documentação executada."}
+    ],
+    "evidenceTitle": "O que a sua auditoria vai receber",
+    "evidence": [
+      {"title": "Inventário do lote", "text": "Relação dos ativos retirados, registrada na origem."},
+      {"title": "MTR e CDF", "text": "Manifesto de transporte e certificado de destinação, quando aplicáveis ao material."},
+      {"title": "Relatório de dados", "text": "Sanitização lógica ou destruição física de mídias, conforme o escopo contratado."},
+      {"title": "Cadeia de custódia", "text": "Registro do percurso do lote, da origem à destinação."},
+      {"title": "Escopo documentado", "text": "Condições, exclusões e responsabilidades definidas antes da retirada."},
+      {"title": "Evidência com fonte", "text": "Alegações institucionais com registro público e limite declarado."}
+    ],
+    "authority": "Atuação registrada em plataformas públicas de referência internacional. Cada alegação do site tem fonte, data e escopo declarados na página de evidências.",
+    "faqTitle": "O que gerentes de TI e facilities perguntam",
+    "faq": [
+      {"q": "Vocês apagam os dados dos equipamentos?", "a": "Quando o ativo contém mídias de dados, o tratamento é definido no escopo: sanitização lógica, quando tecnicamente aplicável, ou destruição física da mídia. O método escolhido é registrado em relatório."},
+      {"q": "Emitem documentação para auditoria?", "a": "Sim, conforme o serviço executado: inventário, MTR e CDF quando aplicáveis ao material, relatório de tratamento de dados e registro de cadeia de custódia. A documentação reflete o que foi efetivamente realizado."},
+      {"q": "Atendem fora de São Paulo?", "a": "A operação é sediada em São Paulo e região; coletas corporativas em outras regiões são avaliadas conforme volume, logística e prazo. Descreva o lote e a localidade para verificarmos a viabilidade."},
+      {"q": "Existe volume mínimo?", "a": "Avaliamos desde lotes pontuais até desmobilizações de grande porte. A definição depende do tipo de ativo, da localidade e da logística envolvida."},
+      {"q": "A coleta tem custo?", "a": "As condições comerciais dependem do tipo de ativo, volume, localidade e logística. A avaliação técnica define o modelo — sem promessa de gratuidade e sem surpresa depois."}
+    ],
+    "related": [
+      {"title": "Sanitização e destruição de dados", "href": "/destruicao-de-dados/", "icon": "lock", "text": "Tratamento de mídias com relatório, para lotes com exigência de TI ou DPO."},
+      {"title": "Servidores e data center", "href": "/descarte-de-servidores-e-data-center/", "icon": "chart", "text": "Desativação de infraestrutura crítica com retirada planejada."},
+      {"title": "Coletas recorrentes", "href": "/coletas-recorrentes/", "icon": "truck", "text": "Calendário de retirada contínua para operações com fluxo constante."}
+    ],
+    "final": {
+      "eyebrow": "Avaliação técnica sem compromisso",
+      "title": "Descreva o lote hoje. Receba escopo, condições e documentação aplicável.",
+      "text": "Tipos de ativo, volume aproximado e localidade — é o que a equipe precisa para responder com uma proposta séria."
+    }
+  }
+]
