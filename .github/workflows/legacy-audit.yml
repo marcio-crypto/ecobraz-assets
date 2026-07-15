@@ -1,0 +1,21 @@
+name: Auditoria de legado e alegações
+
+on:
+  workflow_dispatch:
+
+jobs:
+  legacy-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verifica URLs críticas e inventaria conteúdo não gerenciado
+        env:
+          GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
+          GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
+        run: node site-ghost/scripts/audit-legacy-claims.mjs
+      - name: Guarda o inventário detalhado
+        uses: actions/upload-artifact@v4
+        with:
+          name: legacy-audit
+          path: legacy-audit.json
+          retention-days: 14
