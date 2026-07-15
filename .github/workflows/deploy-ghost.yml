@@ -20,6 +20,8 @@ on:
       - 'site-ghost/scripts/cleanup-staging.mjs'
       - 'site-ghost/scripts/sync-settings.mjs'
       - 'site-ghost/content/**'
+      - 'site-ghost/landing/**'
+      - 'site-ghost/scripts/build-landing-pages.mjs'
       - 'site-ghost/theme/redirects.yaml'
       - 'site-ghost/migration/**'
 
@@ -31,6 +33,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Build commercial landing pages from data
+        run: node site-ghost/scripts/build-landing-pages.mjs
       - name: Audit content, links and collection form
         run: node site-ghost/scripts/audit-content.mjs
       - name: Build Ghost theme ZIP
