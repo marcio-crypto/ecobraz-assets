@@ -72,9 +72,9 @@ function renderTemplate(p) {
         <label for="lp-local">CEP ou cidade da retirada</label>
         <input id="lp-local" name="local" placeholder="Ex.: 02175-010 ou São Paulo">
       </div>
-      <button class="button" type="submit" data-track="${slug}_hero_form">Solicitar avaliação técnica →</button>
+      <button class="button" type="submit" data-track="${slug}_hero_form">${esc(p.form.button || 'Solicitar avaliação técnica')} →</button>
       <div class="hx-or-wa">ou <a href="{{@custom.whatsapp_url}}" rel="noopener" data-track="${slug}_hero_whatsapp">${wa} falar com a equipe no WhatsApp</a></div>
-      <p class="hx-micro">A coleta é confirmada após a avaliação de material, volume, localidade e documentação.</p>
+      <p class="hx-micro">${esc(p.form.micro || 'A coleta é confirmada após a avaliação de material, volume, localidade e documentação.')}</p>
     </form>
   </div>
 </section>
@@ -94,12 +94,12 @@ function renderTemplate(p) {
 <section class="hx-block alt">
   <div class="container">
     <div class="hx-head-split">
-      <div><span class="hx-label">Escopo claro</span><h2>O que entra — e o que não entra</h2></div>
-      <p>Escopo declarado antes do agendamento reduz retrabalho e surpresa. Cada lote é avaliado tecnicamente.</p>
+      <div><span class="hx-label">Escopo claro</span><h2>${esc(p.scope.title || 'O que entra — e o que não entra')}</h2></div>
+      <p>${esc(p.scope.sub || 'Escopo declarado antes do agendamento reduz retrabalho e surpresa. Cada lote é avaliado tecnicamente.')}</p>
     </div>
     <div class="hx-scope">
-      <div class="hx-yes"><h3>Dentro do escopo</h3><ul>${scopeIn}</ul><p>${esc(p.scope.conditions)}</p></div>
-      <div class="hx-not"><h3>Fora do escopo</h3><ul>${scopeOut}</ul><p>Materiais fora do escopo exigem cadeias específicas e não fazem parte deste serviço.</p></div>
+      <div class="hx-yes"><h3>${esc(p.scope.inTitle || 'Dentro do escopo')}</h3><ul>${scopeIn}</ul><p>${esc(p.scope.conditions)}</p></div>
+      <div class="hx-not"><h3>${esc(p.scope.outTitle || 'Fora do escopo')}</h3><ul>${scopeOut}</ul><p>${esc(p.scope.outNote || 'Materiais fora do escopo exigem cadeias específicas e não fazem parte deste serviço.')}</p></div>
     </div>
   </div>
 </section>
@@ -107,8 +107,8 @@ function renderTemplate(p) {
 <section class="hx-block" id="como-funciona">
   <div class="container">
     <div class="hx-head-split">
-      <div><span class="hx-label">Processo</span><h2>Como funciona, do contato à destinação</h2></div>
-      <p>Nenhuma retirada é confirmada sem avaliação técnica. É isso que mantém a operação previsível e documentável.</p>
+      <div><span class="hx-label">Processo</span><h2>${esc(p.stepsTitle || 'Como funciona, do contato à destinação')}</h2></div>
+      <p>${esc(p.stepsSub || 'Nenhuma retirada é confirmada sem avaliação técnica. É isso que mantém a operação previsível e documentável.')}</p>
     </div>
     <div class="hx-steps${p.steps.length === 4 ? ' four' : ''}">
         ${steps}
