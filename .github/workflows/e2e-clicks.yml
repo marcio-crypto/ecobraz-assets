@@ -1,0 +1,30 @@
+name: Teste de cliques (navegador real)
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'URL base do site'
+        required: false
+        default: 'https://ecobraz.org'
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instala o Playwright e o Chromium
+        run: |
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund playwright >/dev/null
+          npx playwright install --with-deps chromium
+      - name: Roda a jornada completa de cliques
+        run: node site-ghost/scripts/e2e-click-test.mjs '${{ inputs.base_url }}'
+      - name: Guarda capturas de tela das falhas
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-capturas
+          path: e2e-shots/
+          if-no-files-found: ignore
+          retention-days: 7
