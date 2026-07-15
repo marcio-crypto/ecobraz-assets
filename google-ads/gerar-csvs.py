@@ -408,9 +408,11 @@ w("01-campanha.csv",
     "Presence (people in or regularly in)", "70.00", "Maximize clicks (max CPC R$4,00)",
     "Seg-Sex 07:00-19:00", SUFFIX]])
 
+# Sem coluna de URL: no nível do grupo ela torna o tipo de linha ambíguo na
+# importação do Editor. As URLs finais ficam nos anúncios (CSV 05).
 w("02-grupos-de-anuncio.csv",
-  ["Campaign", "Ad Group", "Ad Group Type", "Final URL"],
-  [[CAMPAIGN, g[0], "Standard", BASE + g[1]] for g in GROUPS.values()])
+  ["Campaign", "Ad Group", "Ad Group Type", "Status", "Max CPC"],
+  [[CAMPAIGN, g[0], "Standard", "Enabled", "3.00"] for g in GROUPS.values()])
 
 w("03-palavras-chave.csv",
   ["Campaign", "Ad Group", "Keyword", "Match Type"],
