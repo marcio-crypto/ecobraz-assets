@@ -1,0 +1,217 @@
+{{!< default}}
+{{! Gerado por scripts/build-landing-pages.mjs a partir de landing/landing-pages.json — não edite à mão. }}
+{{#contentFor "head"}}
+<link rel="stylesheet" href="{{asset "css/landing.css"}}">
+{{/contentFor}}
+
+<section class="hx-hero">
+  <div class="container hx-crumbs"><a href="{{@site.url}}/">Início</a> › <a href="{{@site.url}}/solucoes-corporativas/">Soluções corporativas</a> › Fabricantes e importadores</div>
+  <div class="container hx-hero-grid">
+    <div>
+      <span class="hx-label on-dark">Pós-consumo · Garantia · Obrigação legal</span>
+      <h1>Logística reversa para fabricantes e importadores</h1>
+      <p class="hx-sub">Quem fabrica ou importa eletroeletrônicos carrega a obrigação de logística reversa — e um fluxo permanente de trocas de garantia, recolhas e produto sem revenda. A Ecobraz executa o elo operacional: recebe, descaracteriza quando exigido e destina, com a comprovação que sustenta seus números.</p>
+      <div class="hx-hero-ctas">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=logistica-reversa-para-fabricantes-e-importadores&amp;material=Eletr%C3%B4nicos" data-track="logistica-reversa-para-fabricantes-e-importadores_hero_cta">Solicitar avaliação técnica</a>
+        <a class="button hx-btn-outline-dark" href="#como-funciona" data-track="logistica-reversa-para-fabricantes-e-importadores_hero_como">Como funciona</a>
+      </div>
+      <div class="hx-hero-band">
+        <span><strong>Obrigação atendida com prova</strong>destinação documentada lote a lote</span>
+        <span><strong>Garantia sem segunda vida</strong>produto trocado não volta ao mercado</span>
+        <span><strong>Fluxo contínuo</strong>calendário para pós-venda e recolhas</span>
+      </div>
+    </div>
+    <form class="hx-quote" id="avaliacao" method="get" action="{{@site.url}}/agendamento/">
+      <span class="hx-label">Avaliação técnica</span>
+      <h2>Descreva o fluxo em 1 minuto</h2>
+      <p class="hx-hint">A equipe retorna com escopo, calendário e documentação.</p>
+      <input type="hidden" name="perfil" value="empresa">
+      <input type="hidden" name="origem" value="logistica-reversa-para-fabricantes-e-importadores">
+      <input type="hidden" name="material" value="Eletrônicos">
+      <div class="hx-field">
+        <label for="lp-desc">O que precisa destinar?</label>
+        <input id="lp-desc" name="descricao" placeholder="Ex.: 2 mil unidades/ano de trocas de garantia">
+      </div>
+      <div class="hx-field">
+        <label for="lp-local">CEP ou cidade da retirada</label>
+        <input id="lp-local" name="local" placeholder="Ex.: 02175-010 ou São Paulo">
+      </div>
+      <button class="button" type="submit" data-track="logistica-reversa-para-fabricantes-e-importadores_hero_form">Solicitar avaliação técnica →</button>
+      <div class="hx-or-wa">ou <a href="{{@custom.whatsapp_url}}" rel="noopener" data-track="logistica-reversa-para-fabricantes-e-importadores_hero_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> falar com a equipe no WhatsApp</a></div>
+      <p class="hx-micro">A coleta é confirmada após a avaliação de material, volume, localidade e documentação.</p>
+    </form>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container hx-reco">
+    <div>
+      <span class="hx-label">Você se reconhece?</span>
+      <h2>O dia a dia de quem responde pelo pós-venda da marca</h2>
+      <p class="hx-reco-cta">Bastou um item da lista ser verdade aí dentro? Então esta página foi escrita para você — <a href="#avaliacao">descreva a situação em 1 minuto</a> e receba um retorno técnico, não um telemarketing.</p>
+    </div>
+    <ul class="hx-reco-list"><li>O galpão de trocas de garantia cresce todo mês — e ninguém quer assinar o destino</li><li>A empresa tem meta de logística reversa para reportar e os números não têm lastro</li><li>Produto trocado em garantia apareceu recondicionado à venda — competindo com o novo</li><li>Importou, o lote veio com defeito, e a devolução ao exterior não compensa</li><li>Auditoria de compliance pediu a trilha do pós-consumo e a resposta foi um contrato antigo</li></ul>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">O que está em jogo</span><h2>A obrigação legal não termina na venda — e a marca também não</h2></div>
+      <p>Três frentes que cobram o fabricante muito depois do produto sair da fábrica.</p>
+    </div>
+    <div class="hx-sol-grid">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18h.01"/></svg></span><h3>A obrigação de logística reversa é sua — por lei</h3><p>A Política Nacional de Resíduos Sólidos atribui a fabricantes e importadores a responsabilidade pela logística reversa de eletroeletrônicos. Sem operação estruturada e sem prova, a obrigação vira passivo regulatório.</p><span class="hx-cost">Custo real: cobrança em fiscalização e números de reversa reportados sem lastro — indefensáveis quando questionados.</span></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><h3>Garantia trocada que renasce no mercado</h3><p>O produto substituído em garantia que escapa inteiro reaparece recondicionado — competindo com o produto novo, quebrando de novo e acionando a assistência de novo.</p><span class="hx-cost">Custo real: a mesma unidade custando duas, três vezes — em garantia, assistência e reputação.</span></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Meta reportada sem trilha auditável</h3><p>Relatório de sustentabilidade e metas de reversa exigem trilha: quanto voltou, de onde, para onde foi. Contrato de gaveta com recicladora não constrói esse número.</p><span class="hx-cost">Custo real: indicador público da empresa vulnerável a questionamento — o pior lugar para descobrir a fragilidade.</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">A virada</span><h2>Do passivo de pós-venda ao ciclo fechado com prova</h2></div>
+      <p>O fluxo reverso vira operação de rotina — e o número reportado ganha lastro.</p>
+    </div>
+    <div class="hx-contrast">
+      <div class="hx-before"><h3>Como está hoje</h3><ul><li>Galpão de garantia acumulando sem destino</li><li>Produto trocado escapando inteiro para o mercado</li><li>Números de reversa sem trilha documental</li><li>Cada recolha negociada do zero</li><li>Compliance perguntando e o pós-venda improvisando</li></ul></div>
+      <div class="hx-after"><h3>Com a Ecobraz</h3><ul><li>Calendário de destinação para o fluxo de pós-venda</li><li>Descaracterização registrada — a unidade morre documentada</li><li>Inventário, MTR e CDF quando aplicáveis, por lote</li><li>Consolidação por período para reporte e auditoria</li><li>Um fornecedor, um padrão, uma trilha</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">O que você ganha</span><h2>O que a marca ganha com o ciclo fechado</h2></div>
+      <p>Obrigação legal, proteção de marca e reporte — resolvidos no mesmo fluxo.</p>
+    </div>
+    <div class="hx-sol-grid g4">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span><h3>Obrigação com lastro</h3><p>A logística reversa deixa de ser risco regulatório e vira número defensável.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>Marca protegida</h3><p>Produto trocado ou reprovado não reaparece competindo com o novo.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>Reporte pronto</h3><p>Consolidação por período alimenta relatório de sustentabilidade e metas.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><h3>Galpão girando</h3><p>O estoque de pós-venda flui em calendário — sem acúmulo nem decisão adiada.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Escopo claro</span><h2>O que entra — e o que não entra</h2></div>
+      <p>Escopo declarado antes do agendamento reduz retrabalho e surpresa. Cada lote é avaliado tecnicamente.</p>
+    </div>
+    <div class="hx-scope">
+      <div class="hx-yes"><h3>Dentro do escopo</h3><ul><li>Trocas de garantia e recolhas de pós-venda</li><li>Produtos de pós-consumo recebidos de canais e clientes</li><li>Lotes importados com defeito ou sem condição de revenda</li><li>Amostras, protótipos e itens de mostruário eletrônicos</li><li>Fluxos recorrentes com calendário por origem</li></ul><p>A viabilidade depende de categorias, volume por período, origens e exigências de descaracterização e reporte. Cada fluxo é avaliado antes do calendário.</p></div>
+      <div class="hx-not"><h3>Fora do escopo</h3><ul><li>Pilhas domésticas avulsas</li><li>Toner e cartuchos</li><li>Lâmpadas, óleo, isopor e embalagens</li><li>Resíduos químicos, biológicos, radioativos ou contaminados</li></ul><p>Materiais fora do escopo exigem cadeias específicas e não fazem parte deste serviço.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt" id="como-funciona">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Processo</span><h2>Como funciona, do contato à destinação</h2></div>
+      <p>Nenhuma retirada é confirmada sem avaliação técnica. É isso que mantém a operação previsível e documentável.</p>
+    </div>
+    <div class="hx-steps">
+        <div class="hx-step"><h3>Descreva o fluxo</h3><p>Categorias, volume por período, origens e o que a meta ou auditoria exige.</p></div>
+        <div class="hx-step"><h3>Avaliação técnica</h3><p>Analisamos materiais, logística e o nível de descaracterização e prova.</p></div>
+        <div class="hx-step"><h3>Escopo e calendário</h3><p>Ciclos de destinação, responsabilidades e documentos acordados.</p></div>
+        <div class="hx-step"><h3>Destinação registrada</h3><p>Recebimento ou retirada com inventário e descaracterização conforme escopo.</p></div>
+        <div class="hx-step"><h3>Consolidação e reporte</h3><p>Documentação por lote e consolidação por período para suas metas.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Evidência da operação</span><h2>O lastro dos seus números de reversa</h2></div>
+      <p>A documentação reflete o que foi efetivamente executado em cada lote — sem promessa genérica.</p>
+    </div>
+    <div class="hx-docs">
+        <div class="hx-doc"><h3>Inventário por lote</h3><p>O que entrou no fluxo reverso, registrado na origem.</p></div>
+        <div class="hx-doc"><h3>Descaracterização registrada</h3><p>A unidade inutilizada de forma documentada, quando contratada.</p></div>
+        <div class="hx-doc"><h3>MTR e CDF</h3><p>Transporte e destinação certificados, quando aplicáveis ao material.</p></div>
+        <div class="hx-doc"><h3>Cadeia de custódia</h3><p>O percurso de cada lote até a destinação final.</p></div>
+        <div class="hx-doc"><h3>Consolidação por período</h3><p>Os totais que alimentam metas, relatórios e auditorias.</p></div>
+        <div class="hx-doc"><h3>Escopo documentado</h3><p>Responsabilidades e condições definidas antes da operação.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Por que a Ecobraz</span><h2>Por que a Ecobraz no elo reverso da marca</h2></div>
+      <p>O fabricante precisa de um operador que gere prova — não de um comprador de sucata.</p>
+    </div>
+    <div class="hx-sol-grid g4">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>Sem conflito de interesse</h3><p>Não revendemos o que você quer eliminar: o fluxo termina em descaracterização e destinação registradas.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span><h3>15 anos de operação</h3><p>Associação fundada em 2011, com reconhecimento em plataformas da UE e da ONU — escopo declarado na página de evidências.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Prova no formato do reporte</h3><p>Documentação por lote e consolidação por período — o formato que metas e auditorias pedem.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M1 7h13v10H1zM14 10h4l4 4v3h-8z"/><circle cx="6" cy="19" r="1.6"/><circle cx="18" cy="19" r="1.6"/></svg></span><h3>Recorrência nativa</h3><p>Calendário, origens múltiplas e padrão único — desenhado para fluxo permanente de pós-venda.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-authority">
+      <div>
+        <span class="hx-label on-dark">Autoridade verificável</span>
+        <strong>Associação Auxílio à Reciclagem de Eletrônicos e Inclusão Digital — CNPJ 14.197.457/0001-42</strong>
+        <p>Atuação registrada em plataformas públicas de referência internacional. Cada alegação do site tem fonte, data e escopo declarados na página de evidências.</p>
+      </div>
+      <a href="{{@site.url}}/evidencias/" data-track="logistica-reversa-para-fabricantes-e-importadores_evidencias">Ver evidências públicas →</a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Perguntas frequentes</span><h2>O que pós-venda, compliance e supply perguntam</h2></div>
+    </div>
+    <div class="hx-faq">
+        <details><summary>Isso atende à obrigação legal de logística reversa?</summary><p>A Ecobraz executa o elo operacional — recebimento, descaracterização e destinação documentadas — que dá lastro ao seu programa de reversa. O desenho do programa e o enquadramento regulatório permanecem com a empresa; nós entregamos a operação e a prova.</p></details>
+        <details><summary>Como garantem que o produto trocado não volta ao mercado?</summary><p>Quando a descaracterização integra o escopo, ela é executada e registrada, e o lote segue em cadeia de custódia até a destinação — o conjunto documentado que protege a marca.</p></details>
+        <details><summary>Atendem fluxo contínuo, não só lotes pontuais?</summary><p>Sim — calendário por período e por origem, com consolidação documental. É o desenho ideal para pós-venda e recolhas permanentes.</p></details>
+        <details><summary>Recebem produtos com baterias?</summary><p>Sim. Baterias e produtos que as contêm têm requisitos próprios de acondicionamento e transporte, definidos na avaliação técnica.</p></details>
+        <details><summary>Como funciona o custo?</summary><p>As condições dependem de categorias, volume, origens e nível de descaracterização e prova. A avaliação técnica define o modelo — sem promessa de gratuidade.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Soluções relacionadas</span><h2>Também pode fazer parte da sua operação</h2></div>
+    </div>
+    <div class="hx-sol-grid">
+        <a class="hx-sol" href="{{@site.url}}/logistica-reversa-para-marketplaces-e-ecommerce/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M1 7h13v10H1zM14 10h4l4 4v3h-8z"/><circle cx="6" cy="19" r="1.6"/><circle cx="18" cy="19" r="1.6"/></svg></span><h3>Marketplaces e e-commerce</h3><p>Devoluções e avarias em escala, com calendário por CD.</p><span class="hx-go">Ver solução →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/descarte-de-produtos-danificados-e-fora-de-garantia/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><h3>Produtos danificados e fora de garantia</h3><p>Avarias, devoluções e estoque sem revenda com proteção de marca.</p><span class="hx-go">Ver solução →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/documentacao-e-rastreabilidade/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Documentação e rastreabilidade</h3><p>Como cada operação gera a evidência que sustenta o reporte.</p><span class="hx-go">Ver solução →</span></a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-final">
+      <div>
+        <span class="hx-label on-dark">Avaliação técnica sem compromisso</span>
+        <h2>Sua meta de logística reversa tem lastro para ser auditada hoje?</h2>
+        <p>Descreva categorias, volume por período e origens. A equipe retorna com calendário, escopo e o padrão de prova — por escrito.</p>
+      </div>
+      <div class="hx-actions">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=logistica-reversa-para-fabricantes-e-importadores&amp;material=Eletr%C3%B4nicos" data-track="logistica-reversa-para-fabricantes-e-importadores_final_cta">Solicitar avaliação técnica</a>
+        <a class="button hx-btn-wa" href="{{@custom.whatsapp_url}}" rel="noopener" data-track="logistica-reversa-para-fabricantes-e-importadores_final_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> WhatsApp</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<a class="hx-wa-float" href="{{@custom.whatsapp_url}}" rel="noopener" aria-label="Falar no WhatsApp" data-track="logistica-reversa-para-fabricantes-e-importadores_whatsapp_flutuante"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg><span>Falar no WhatsApp</span></a>

@@ -1,0 +1,87 @@
+{{!< default}}
+{{! Gerado por scripts/build-landing-pages.mjs a partir de landing/landing-pages.json — não edite à mão. }}
+{{#contentFor "head"}}
+<link rel="stylesheet" href="{{asset "css/landing.css"}}">
+{{/contentFor}}
+
+<section class="hx-hero">
+  <div class="container hx-crumbs"><a href="{{@site.url}}/">Início</a> › Materiais e equipamentos</div>
+  <div class="container hx-hero-grid" style="grid-template-columns:1fr">
+    <div>
+      <span class="hx-label on-dark">O que coletamos — e o que não coletamos</span>
+      <h1>Materiais e equipamentos que a Ecobraz coleta</h1>
+      <p class="hx-sub">Cada material tem requisitos próprios de manuseio, transporte e destinação. Encontre o seu na lista, veja o escopo exato na página dedicada — e note que as exclusões também estão declaradas, porque escopo honesto evita retrabalho dos dois lados.</p>
+      <div class="hx-hero-ctas">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=materiais-e-equipamentos-coletados" data-track="materiais-e-equipamentos-coletados_hero_cta">Solicitar avaliação técnica</a>
+        <a class="button hx-btn-outline-dark" href="{{@custom.whatsapp_url}}" rel="noopener" data-track="materiais-e-equipamentos-coletados_hero_whatsapp">Falar no WhatsApp</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">TI e eletrônicos</span><h2>Tecnologia e infraestrutura</h2></div>
+      <p>Do periférico ao data center — com tratamento de dados quando o equipamento carrega mídias.</p>
+    </div>
+    <div class="hx-sol-grid">
+        <a class="hx-sol" href="{{@site.url}}/coleta-de-lixo-eletronico/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><h3>Lixo eletrônico em geral</h3><p>A entrada geral para resíduos eletroeletrônicos de empresas e residências.</p><span class="hx-go">Ver página →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/coleta-de-computadores-e-notebooks/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>Computadores e notebooks</h3><p>TI de usuário e periféricos, com tratamento de dados quando aplicável.</p><span class="hx-go">Ver página →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/descarte-de-servidores-e-data-center/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="3" width="16" height="18"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2M10 21v-3h4v3"/></svg></span><h3>Servidores, racks e storages</h3><p>Infraestrutura de data center e sala de servidores.</p><span class="hx-go">Ver página →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/descarte-de-celulares-e-tablets/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>Celulares e tablets</h3><p>Dispositivos móveis corporativos, com atenção às mídias.</p><span class="hx-go">Ver página →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/descarte-de-impressoras/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Impressoras</h3><p>Equipamentos de impressão — sem toner e cartuchos avulsos.</p><span class="hx-go">Ver página →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/descarte-de-placas-e-componentes-eletronicos/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>Placas e componentes</h3><p>Placas, componentes e sucata de informática.</p><span class="hx-go">Ver página →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/descarte-de-equipamentos-de-telecomunicacoes/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M1 7h13v10H1zM14 10h4l4 4v3h-8z"/><circle cx="6" cy="19" r="1.6"/><circle cx="18" cy="19" r="1.6"/></svg></span><h3>Telecomunicações</h3><p>Redes, telefonia e infraestrutura desmobilizada.</p><span class="hx-go">Ver página →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/descarte-de-cabos-e-fios/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><h3>Cabos e fios</h3><p>Cabeamento elétrico e de rede, avaliado por volume.</p><span class="hx-go">Ver página →</span></a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Energia, clima e grande porte</span><h2>Baterias, linha branca e indústria</h2></div>
+      <p>Categorias com logística e requisitos próprios — sempre definidos na avaliação técnica.</p>
+    </div>
+    <div class="hx-sol-grid">
+        <a class="hx-sol" href="{{@site.url}}/descarte-de-baterias-e-nobreaks/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18h.01"/></svg></span><h3>Baterias e nobreaks</h3><p>Lítio, chumbo-ácido, estacionárias, tracionárias, automotivas e de veículos elétricos.</p><span class="hx-go">Ver página →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/descarte-de-eletrodomesticos/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><h3>Eletrodomésticos</h3><p>Linha branca: geladeiras, freezers, lavadoras e secadoras.</p><span class="hx-go">Ver página →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/descarte-de-ar-condicionado/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="3" width="16" height="18"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2M10 21v-3h4v3"/></svg></span><h3>Ar-condicionado</h3><p>Climatização, com logística e riscos operacionais próprios.</p><span class="hx-go">Ver página →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/descarte-de-televisao/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>Televisões e monitores</h3><p>TVs, monitores e telas de qualquer geração.</p><span class="hx-go">Ver página →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/descarte-de-maquinas-e-equipamentos-industriais/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M1 7h13v10H1zM14 10h4l4 4v3h-8z"/><circle cx="6" cy="19" r="1.6"/><circle cx="18" cy="19" r="1.6"/></svg></span><h3>Máquinas industriais</h3><p>Grande porte: painéis, motores e linhas desmobilizadas.</p><span class="hx-go">Ver página →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/descarte-de-equipamentos-hospitalares/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span><h3>Equipamentos hospitalares</h3><p>Somente eletrônicos não contaminados e sujeitos à declaração.</p><span class="hx-go">Ver página →</span></a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-authority">
+      <div>
+        <span class="hx-label on-dark">Escopo negativo — declarado sempre</span>
+        <strong>O que NÃO coletamos, em nenhuma hipótese</strong>
+        <p>Pilhas domésticas avulsas (AA, AAA e similares), toner e cartuchos, lâmpadas, óleo, isopor, embalagens e resíduos químicos, biológicos, radioativos ou contaminados. Esses materiais exigem cadeias específicas e não fazem parte dos nossos serviços.</p>
+      </div>
+      <a href="{{@site.url}}/agendamento/" data-track="materiais-e-equipamentos-coletados_note">Solicitar coleta do que coletamos →</a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-final">
+      <div>
+        <span class="hx-label on-dark">Material misto ou fora da lista?</span>
+        <h2>Descreva o lote — a avaliação separa o que entra do que não entra.</h2>
+        <p>Tipo, volume e localidade: com isso a equipe retorna com o escopo aplicável e as condições, por escrito.</p>
+      </div>
+      <div class="hx-actions">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=materiais-e-equipamentos-coletados" data-track="materiais-e-equipamentos-coletados_final_cta">Solicitar avaliação técnica</a>
+        <a class="button hx-btn-wa" href="{{@custom.whatsapp_url}}" rel="noopener" data-track="materiais-e-equipamentos-coletados_final_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> WhatsApp</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<a class="hx-wa-float" href="{{@custom.whatsapp_url}}" rel="noopener" aria-label="Falar no WhatsApp" data-track="materiais-e-equipamentos-coletados_whatsapp_flutuante"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg><span>Falar no WhatsApp</span></a>
