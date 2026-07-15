@@ -30,6 +30,23 @@
         toggle.setAttribute('aria-expanded', String(!open)); nav.classList.toggle('is-open', !open);
     });
 
+    // Banner de consentimento (Consent Mode v2): mostra quando não há escolha
+    // guardada; atualiza o gtag e persiste a decisão. Reabre pelo link do rodapé.
+    const consentBar = document.querySelector('[data-consent-bar]');
+    if (consentBar) {
+        const readConsent = () => { try { return localStorage.getItem('ecb_consent'); } catch (_) { return 'unavailable'; } };
+        const applyConsent = (state) => {
+            try { localStorage.setItem('ecb_consent', state); } catch (_) {}
+            if (typeof window.gtag === 'function') window.gtag('consent', 'update', {ad_storage: state, ad_user_data: state, ad_personalization: state, analytics_storage: state});
+            consentBar.hidden = true;
+            track('consent_choice', {choice: state});
+        };
+        if (!readConsent() || readConsent() === null) consentBar.hidden = false;
+        consentBar.querySelector('[data-consent-accept]').addEventListener('click', () => applyConsent('granted'));
+        consentBar.querySelector('[data-consent-decline]').addEventListener('click', () => applyConsent('denied'));
+        document.querySelectorAll('[data-consent-open]').forEach((el) => el.addEventListener('click', (event) => { event.preventDefault(); consentBar.hidden = false; }));
+    }
+
     const form = document.querySelector('[data-collection-form]');
     if (!form) return;
     const status = form.querySelector('[data-form-status]');

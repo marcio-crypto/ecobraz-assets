@@ -28,6 +28,22 @@
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
+      // Modo de Consentimento v2: UE/EEE/Reino Unido começam negados até o aceite
+      // no banner; demais regiões começam permitidas, com recusa disponível.
+      (function () {
+        var stored = null;
+        try { stored = localStorage.getItem('ecb_consent'); } catch (e) {}
+        var all = function (value) { return {ad_storage: value, ad_user_data: value, ad_personalization: value, analytics_storage: value}; };
+        if (stored === 'granted' || stored === 'denied') {
+          gtag('consent', 'default', all(stored));
+        } else {
+          gtag('consent', 'default', all('granted'));
+          var eea = all('denied');
+          eea.region = ['AT','BE','BG','HR','CY','CZ','DK','EE','FI','FR','DE','GR','HU','IE','IT','LV','LT','LU','MT','NL','PL','PT','RO','SK','SI','ES','SE','IS','LI','NO','GB','CH'];
+          eea.wait_for_update = 500;
+          gtag('consent', 'default', eea);
+        }
+      })();
       gtag('js', new Date());
       gtag('config', '{{@custom.ga_measurement_id}}');
     </script>
@@ -104,6 +120,13 @@
         {{{body}}}
     </main>
     {{> "footer"}}
+    <div class="consent-bar" data-consent-bar hidden role="dialog" aria-label="Preferências de cookies">
+        <p><strong>Cookies e medição.</strong> Usamos cookies para medir o uso do site e melhorar a sua experiência. Você pode aceitar ou recusar — a escolha fica guardada para as próximas visitas. <a href="{{@site.url}}/politica-de-privacidade/">Política de privacidade</a></p>
+        <div class="consent-actions">
+            <button type="button" class="button button-small" data-consent-accept>Aceitar</button>
+            <button type="button" class="button button-small consent-decline" data-consent-decline>Recusar</button>
+        </div>
+    </div>
     <script src="{{asset "js/main.js"}}" defer></script>
     {{ghost_foot}}
 </body>
