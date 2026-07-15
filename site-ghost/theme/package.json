@@ -1,7 +1,7 @@
 {
   "name": "ecobraz-conversion",
   "description": "Tema oficial Ecobraz orientado a agendamentos de coleta e conversão B2B.",
-  "version": "0.10.2",
+  "version": "0.10.3",
   "engines": {
     "ghost": ">=5.0.0"
   },
@@ -46,8 +46,8 @@
       },
       "ga_measurement_id": {
         "type": "text",
-        "default": "G-WRQSPMQ8KD",
-        "description": "ID da tag do Google (gtag) que carrega o GA4. É o ID do snippet oficial em Fluxos de dados → Instruções da tag, e pode diferir do ID da métrica. Deixe em branco para desativar a medição."
+        "default": "G-Y1ERW8GNPR",
+        "description": "ID da tag do Google (gtag) que carrega o GA4. Conta Ecobraz criada em 15/07/2026 (fluxo Ecobraz — Site). Deixe em branco para desativar a medição."
       }
     }
   }

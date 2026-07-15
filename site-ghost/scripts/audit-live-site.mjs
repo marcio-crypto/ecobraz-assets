@@ -70,6 +70,11 @@ for (const route of routes) {
     const gtagMatch = html.match(/googletagmanager\.com\/gtag\/js\?id=(G-[A-Z0-9]+)/);
     if (!gtagMatch) errors.push('/: Google Analytics (gtag) not installed');
     else {
+      // O ID publicado deve ser exatamente o oficial do repositório (o painel do
+      // Ghost pode sobrepor o default do tema sem ninguém perceber).
+      const themePackage = JSON.parse(await fs.readFile(path.resolve(import.meta.dirname, '..', 'theme', 'package.json'), 'utf8'));
+      const officialId = themePackage.config.custom.ga_measurement_id.default;
+      if (gtagMatch[1] !== officialId) errors.push(`/: published GA4 tag is ${gtagMatch[1]}, expected ${officialId} — fix "Ga measurement id" in Ghost Design settings`);
       // O endpoint do gtag devolve 404 quando o ID de medição não existe no GA4.
       const gtagResponse = await fetch(`https://www.googletagmanager.com/gtag/js?id=${gtagMatch[1]}`);
       if (!gtagResponse.ok) errors.push(`/: GA4 measurement ID ${gtagMatch[1]} appears invalid (gtag.js returned ${gtagResponse.status}) — no data reaches Google Analytics`);
