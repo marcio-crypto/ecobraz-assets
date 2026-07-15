@@ -96,7 +96,6 @@
         try {
             const response = await fetch(endpoint, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
             if (!response.ok) throw new Error('submission_failed');
-            form.reset(); status.textContent = 'Solicitação recebida. Nossa equipe analisará os dados e entrará em contato.'; status.className = 'form-status is-success';
             // Conversão principal: só dispara quando o CRM confirmou o recebimento do lead.
             track('generate_lead', {
                 method: 'formulario_site',
@@ -106,6 +105,17 @@
                 volume: payload.volume
             });
             window.dataLayer = window.dataLayer || []; window.dataLayer.push({event:'collection_request_submitted',profile:payload.profile,material_category:payload.material_category,state:payload.state});
+            // A tela de confirmação substitui o formulário: evita reenvios em duplicidade.
+            const done = document.createElement('div');
+            done.className = 'form-done';
+            done.setAttribute('role', 'status');
+            done.innerHTML = '<span class="form-done-icon" aria-hidden="true">✓</span>' +
+                '<h2>Solicitação recebida!</h2>' +
+                '<p>Obrigado. Nossa equipe vai analisar as informações e entrar em contato pelo e-mail ou telefone que você informou.</p>' +
+                '<p class="form-done-note">Não é necessário enviar novamente. Se preferir adiantar a conversa, chame a equipe no WhatsApp.</p>';
+            form.replaceWith(done);
+            done.scrollIntoView({behavior:'smooth', block:'center'});
+            return;
         } catch (_) {
             status.textContent = 'Não foi possível enviar agora. Tente novamente ou fale com a equipe pelo WhatsApp.'; status.className = 'form-status is-error';
             track('form_error_coleta', {page_path: window.location.pathname});
