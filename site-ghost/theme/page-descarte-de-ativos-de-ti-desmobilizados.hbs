@@ -10,7 +10,7 @@
     <div>
       <span class="hx-label on-dark">Troca de parque · Fim de contrato · Encerramento de unidade</span>
       <h1>Descarte de ativos de TI desmobilizados, com inventário e custódia</h1>
-      <p class="hx-sub">A Ecobraz retira ativos de TI que saíram de operação com inventário na origem, cadeia de custódia até a destinação e tratamento de dados quando o lote contém mídias — tudo definido em avaliação técnica antes de qualquer confirmação.</p>
+      <p class="hx-sub">Notebooks empilhados no depósito, servidores sem destino e o financeiro cobrando a baixa? A Ecobraz retira, inventaria e destina cada ativo — e você recebe a documentação que encerra o assunto: inventário, tratamento de dados registrado, MTR e CDF quando aplicáveis.</p>
       <div class="hx-hero-ctas">
         <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=descarte-de-ativos-de-ti-desmobilizados&amp;material=Inform%C3%A1tica%20e%20TI" data-track="descarte-de-ativos-de-ti-desmobilizados_hero_cta">Solicitar avaliação técnica</a>
         <a class="button hx-btn-outline-dark" href="#como-funciona" data-track="descarte-de-ativos-de-ti-desmobilizados_hero_como">Como funciona</a>
@@ -21,7 +21,7 @@
         <span><strong>Documentação</strong>inventário, MTR e CDF quando aplicáveis</span>
       </div>
     </div>
-    <form class="hx-quote" method="get" action="{{@site.url}}/agendamento/">
+    <form class="hx-quote" id="avaliacao" method="get" action="{{@site.url}}/agendamento/">
       <span class="hx-label">Avaliação técnica</span>
       <h2>Descreva o lote em 1 minuto</h2>
       <p class="hx-hint">A equipe retorna com escopo, condições e documentação aplicável.</p>
@@ -44,20 +44,59 @@
 </section>
 
 <section class="hx-block">
+  <div class="container hx-reco">
+    <div>
+      <span class="hx-label">Você se reconhece?</span>
+      <h2>Se um destes cenários existe aí, o problema já começou</h2>
+      <p class="hx-reco-cta">Bastou um item da lista ser verdade aí dentro? Então esta página foi escrita para você — <a href="#avaliacao">descreva a situação em 1 minuto</a> e receba um retorno técnico, não um telemarketing.</p>
+    </div>
+    <ul class="hx-reco-list"><li>A sala de TI virou depósito: pilhas de notebooks, monitores e servidores que ninguém usa há meses</li><li>A auditoria pediu a lista do que saiu na última desmobilização — e não existe nem uma foto</li><li>O financeiro cobra a baixa patrimonial, mas ninguém assina a saída sem saber o destino</li><li>Um 'sucateiro' ofereceu retirar tudo de graça — e você ficou com medo de onde aquilo ia parar</li><li>Tem HD com dado de cliente em máquina que já nem liga mais</li></ul>
+  </div>
+</section>
+
+<section class="hx-block alt">
   <div class="container">
     <div class="hx-head-split">
-      <div><span class="hx-label">O risco de não resolver</span><h2>Equipamento parado não é neutro: é passivo</h2></div>
+      <div><span class="hx-label">O que está em jogo</span><h2>Equipamento parado não é neutro: é passivo</h2></div>
       <p>Três riscos crescem em silêncio enquanto o lote espera num depósito.</p>
     </div>
     <div class="hx-sol-grid">
-        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>Dados esquecidos em discos</h3><p>Notebooks e servidores fora de uso ainda carregam dados corporativos. Sem tratamento registrado, cada mídia é uma exposição em aberto.</p></div>
-        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="3" width="16" height="18"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2M10 21v-3h4v3"/></svg></span><h3>Patrimônio sem baixa</h3><p>Ativos acumulados ocupam espaço, seguram baixa patrimonial e viram pendência de inventário a cada auditoria interna.</p></div>
-        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18h.01"/></svg></span><h3>Destinação sem prova</h3><p>Se o lote sai sem inventário e sem cadeia de custódia, não há como responder a uma auditoria de cliente, certificação ou órgão ambiental.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>O HD esquecido é um vazamento agendado</h3><p>Cada notebook parado no depósito carrega e-mails, contratos e dados de clientes. Se sair pela porta errada, vira incidente de segurança com nome e CNPJ da sua empresa.</p><span class="hx-cost">Custo real: sanções da LGPD chegam a 2% do faturamento (teto de R$ 50 milhões por infração) — além da comunicação pública do incidente.</span></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18h.01"/></svg></span><h3>A lei não aceita 'entreguei para alguém levar'</h3><p>Pela Política Nacional de Resíduos Sólidos, a responsabilidade do gerador é compartilhada: se o lote da sua empresa aparecer despejado ou em canal irregular, quem responde é você.</p><span class="hx-cost">Custo real: autuação ambiental, passivo jurídico e a manchete com a sua marca — anos depois do descarte.</span></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="3" width="16" height="18"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2M10 21v-3h4v3"/></svg></span><h3>Ativo parado trava patrimônio e espaço</h3><p>Sem destinação documentada, o financeiro não dá baixa, o inventário não fecha e o depósito segue pagando aluguel para guardar sucata.</p><span class="hx-cost">Custo real: metros quadrados ocupados, balanço distorcido e retrabalho a cada ciclo de auditoria interna.</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">A virada</span><h2>O que muda quando a Ecobraz assume o lote</h2></div>
+      <p>A diferença entre 'alguém levou' e uma operação encerrada por escrito.</p>
+    </div>
+    <div class="hx-contrast">
+      <div class="hx-before"><h3>Como está hoje</h3><ul><li>Ninguém sabe listar o que existe no depósito</li><li>Destino do último lote: desconhecido</li><li>Dados 'provavelmente' apagados — sem registro</li><li>Baixa patrimonial travada há meses</li><li>Nada para mostrar quando a auditoria perguntar</li></ul></div>
+      <div class="hx-after"><h3>Depois da operação</h3><ul><li>Cada ativo listado em inventário antes de sair</li><li>Cadeia de custódia da porta ao destino final</li><li>Sanitização ou destruição de mídias com relatório</li><li>MTR e CDF quando aplicáveis, no seu e-mail</li><li>Resposta pronta para qualquer auditoria — em minutos</li></ul></div>
     </div>
   </div>
 </section>
 
 <section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">O que você ganha</span><h2>O que a sua operação ganha de volta</h2></div>
+      <p>Não é só tirar equipamento velho — é encerrar pendências que custam caro.</p>
+    </div>
+    <div class="hx-sol-grid g4">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="3" width="16" height="18"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2M10 21v-3h4v3"/></svg></span><h3>Depósito liberado</h3><p>O espaço que guardava sucata volta a servir à operação — sem mudança de contrato.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>Baixa destravada</h3><p>Documentação que o financeiro aceita para dar baixa e fechar o inventário.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>Risco de dados encerrado</h3><p>Mídias tratadas com registro. O 'será que apagaram?' sai da sua lista de preocupações.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Auditoria sem susto</h3><p>Chegou o questionário? A resposta já existe: inventário, custódia e certificados arquivados.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
   <div class="container">
     <div class="hx-head-split">
       <div><span class="hx-label">Escopo claro</span><h2>O que entra — e o que não entra</h2></div>
@@ -70,7 +109,7 @@
   </div>
 </section>
 
-<section class="hx-block" id="como-funciona">
+<section class="hx-block alt" id="como-funciona">
   <div class="container">
     <div class="hx-head-split">
       <div><span class="hx-label">Processo</span><h2>Como funciona, do contato à destinação</h2></div>
@@ -86,7 +125,7 @@
   </div>
 </section>
 
-<section class="hx-block alt">
+<section class="hx-block">
   <div class="container">
     <div class="hx-head-split">
       <div><span class="hx-label">Evidência da operação</span><h2>O que a sua auditoria vai receber</h2></div>
@@ -99,6 +138,21 @@
         <div class="hx-doc"><h3>Cadeia de custódia</h3><p>Registro do percurso do lote, da origem à destinação.</p></div>
         <div class="hx-doc"><h3>Escopo documentado</h3><p>Condições, exclusões e responsabilidades definidas antes da retirada.</p></div>
         <div class="hx-doc"><h3>Evidência com fonte</h3><p>Alegações institucionais com registro público e limite declarado.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Por que a Ecobraz</span><h2>Por que a Ecobraz — e não o sucateiro mais barato</h2></div>
+      <p>O barato do descarte irregular custa caro no dia em que alguém pergunta onde o lote foi parar.</p>
+    </div>
+    <div class="hx-sol-grid g4">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span><h3>15 anos de operação</h3><p>Associação fundada em 2011, dedicada a reciclagem de eletrônicos e inclusão digital — não um atravessador de sucata.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>Reconhecimento internacional</h3><p>Prática listada na plataforma de economia circular da União Europeia e registro em plataforma da ONU — com escopo declarado.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Documentação é o padrão</h3><p>Inventário, custódia e certificados não são 'serviço extra': são como toda operação nossa termina.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M1 7h13v10H1zM14 10h4l4 4v3h-8z"/><circle cx="6" cy="19" r="1.6"/><circle cx="18" cy="19" r="1.6"/></svg></span><h3>Avaliação antes de promessa</h3><p>Quem promete coleta grátis por telefone esconde o custo em outro lugar. Aqui o escopo vem por escrito, antes da confirmação.</p></div>
     </div>
   </div>
 </section>
@@ -149,8 +203,8 @@
     <div class="hx-final">
       <div>
         <span class="hx-label on-dark">Avaliação técnica sem compromisso</span>
-        <h2>Descreva o lote hoje. Receba escopo, condições e documentação aplicável.</h2>
-        <p>Tipos de ativo, volume aproximado e localidade — é o que a equipe precisa para responder com uma proposta séria.</p>
+        <h2>Cada semana com o lote parado é risco correndo por conta da sua empresa.</h2>
+        <p>Descreva os ativos, o volume e a localidade. A equipe retorna com escopo, condições e a documentação aplicável — por escrito.</p>
       </div>
       <div class="hx-actions">
         <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=descarte-de-ativos-de-ti-desmobilizados&amp;material=Inform%C3%A1tica%20e%20TI" data-track="descarte-de-ativos-de-ti-desmobilizados_final_cta">Solicitar avaliação técnica</a>

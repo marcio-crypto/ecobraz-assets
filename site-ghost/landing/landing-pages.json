@@ -13,7 +13,7 @@
     },
     "hero": {
       "eyebrow": "Troca de parque · Fim de contrato · Encerramento de unidade",
-      "sub": "A Ecobraz retira ativos de TI que saíram de operação com inventário na origem, cadeia de custódia até a destinação e tratamento de dados quando o lote contém mídias — tudo definido em avaliação técnica antes de qualquer confirmação.",
+      "sub": "Notebooks empilhados no depósito, servidores sem destino e o financeiro cobrando a baixa? A Ecobraz retira, inventaria e destina cada ativo — e você recebe a documentação que encerra o assunto: inventário, tratamento de dados registrado, MTR e CDF quando aplicáveis.",
       "cta": "Solicitar avaliação técnica",
       "band": [
         {
@@ -42,18 +42,21 @@
     "pains": [
       {
         "icon": "lock",
-        "title": "Dados esquecidos em discos",
-        "text": "Notebooks e servidores fora de uso ainda carregam dados corporativos. Sem tratamento registrado, cada mídia é uma exposição em aberto."
-      },
-      {
-        "icon": "building",
-        "title": "Patrimônio sem baixa",
-        "text": "Ativos acumulados ocupam espaço, seguram baixa patrimonial e viram pendência de inventário a cada auditoria interna."
+        "title": "O HD esquecido é um vazamento agendado",
+        "text": "Cada notebook parado no depósito carrega e-mails, contratos e dados de clientes. Se sair pela porta errada, vira incidente de segurança com nome e CNPJ da sua empresa.",
+        "consequence": "Custo real: sanções da LGPD chegam a 2% do faturamento (teto de R$ 50 milhões por infração) — além da comunicação pública do incidente."
       },
       {
         "icon": "alert",
-        "title": "Destinação sem prova",
-        "text": "Se o lote sai sem inventário e sem cadeia de custódia, não há como responder a uma auditoria de cliente, certificação ou órgão ambiental."
+        "title": "A lei não aceita 'entreguei para alguém levar'",
+        "text": "Pela Política Nacional de Resíduos Sólidos, a responsabilidade do gerador é compartilhada: se o lote da sua empresa aparecer despejado ou em canal irregular, quem responde é você.",
+        "consequence": "Custo real: autuação ambiental, passivo jurídico e a manchete com a sua marca — anos depois do descarte."
+      },
+      {
+        "icon": "building",
+        "title": "Ativo parado trava patrimônio e espaço",
+        "text": "Sem destinação documentada, o financeiro não dá baixa, o inventário não fecha e o depósito segue pagando aluguel para guardar sucata.",
+        "consequence": "Custo real: metros quadrados ocupados, balanço distorcido e retrabalho a cada ciclo de auditoria interna."
       }
     ],
     "scope": {
@@ -167,8 +170,94 @@
     ],
     "final": {
       "eyebrow": "Avaliação técnica sem compromisso",
-      "title": "Descreva o lote hoje. Receba escopo, condições e documentação aplicável.",
-      "text": "Tipos de ativo, volume aproximado e localidade — é o que a equipe precisa para responder com uma proposta séria."
+      "title": "Cada semana com o lote parado é risco correndo por conta da sua empresa.",
+      "text": "Descreva os ativos, o volume e a localidade. A equipe retorna com escopo, condições e a documentação aplicável — por escrito."
+    },
+    "recognize": {
+      "title": "Se um destes cenários existe aí, o problema já começou",
+      "items": [
+        "A sala de TI virou depósito: pilhas de notebooks, monitores e servidores que ninguém usa há meses",
+        "A auditoria pediu a lista do que saiu na última desmobilização — e não existe nem uma foto",
+        "O financeiro cobra a baixa patrimonial, mas ninguém assina a saída sem saber o destino",
+        "Um 'sucateiro' ofereceu retirar tudo de graça — e você ficou com medo de onde aquilo ia parar",
+        "Tem HD com dado de cliente em máquina que já nem liga mais"
+      ]
+    },
+    "contrast": {
+      "title": "O que muda quando a Ecobraz assume o lote",
+      "sub": "A diferença entre 'alguém levou' e uma operação encerrada por escrito.",
+      "before": {
+        "title": "Como está hoje",
+        "items": [
+          "Ninguém sabe listar o que existe no depósito",
+          "Destino do último lote: desconhecido",
+          "Dados 'provavelmente' apagados — sem registro",
+          "Baixa patrimonial travada há meses",
+          "Nada para mostrar quando a auditoria perguntar"
+        ]
+      },
+      "after": {
+        "title": "Depois da operação",
+        "items": [
+          "Cada ativo listado em inventário antes de sair",
+          "Cadeia de custódia da porta ao destino final",
+          "Sanitização ou destruição de mídias com relatório",
+          "MTR e CDF quando aplicáveis, no seu e-mail",
+          "Resposta pronta para qualquer auditoria — em minutos"
+        ]
+      }
+    },
+    "gains": {
+      "title": "O que a sua operação ganha de volta",
+      "sub": "Não é só tirar equipamento velho — é encerrar pendências que custam caro.",
+      "items": [
+        {
+          "icon": "building",
+          "title": "Depósito liberado",
+          "text": "O espaço que guardava sucata volta a servir à operação — sem mudança de contrato."
+        },
+        {
+          "icon": "chart",
+          "title": "Baixa destravada",
+          "text": "Documentação que o financeiro aceita para dar baixa e fechar o inventário."
+        },
+        {
+          "icon": "lock",
+          "title": "Risco de dados encerrado",
+          "text": "Mídias tratadas com registro. O 'será que apagaram?' sai da sua lista de preocupações."
+        },
+        {
+          "icon": "file",
+          "title": "Auditoria sem susto",
+          "text": "Chegou o questionário? A resposta já existe: inventário, custódia e certificados arquivados."
+        }
+      ]
+    },
+    "why": {
+      "title": "Por que a Ecobraz — e não o sucateiro mais barato",
+      "sub": "O barato do descarte irregular custa caro no dia em que alguém pergunta onde o lote foi parar.",
+      "items": [
+        {
+          "icon": "shield",
+          "title": "15 anos de operação",
+          "text": "Associação fundada em 2011, dedicada a reciclagem de eletrônicos e inclusão digital — não um atravessador de sucata."
+        },
+        {
+          "icon": "chart",
+          "title": "Reconhecimento internacional",
+          "text": "Prática listada na plataforma de economia circular da União Europeia e registro em plataforma da ONU — com escopo declarado."
+        },
+        {
+          "icon": "file",
+          "title": "Documentação é o padrão",
+          "text": "Inventário, custódia e certificados não são 'serviço extra': são como toda operação nossa termina."
+        },
+        {
+          "icon": "truck",
+          "title": "Avaliação antes de promessa",
+          "text": "Quem promete coleta grátis por telefone esconde o custo em outro lugar. Aqui o escopo vem por escrito, antes da confirmação."
+        }
+      ]
     }
   },
   {
@@ -185,7 +274,7 @@
     },
     "hero": {
       "eyebrow": "Devoluções · Avarias · Estoque sem revenda",
-      "sub": "A Ecobraz destina eletrônicos devolvidos, avariados e sem condição de revenda para operações de e-commerce — com retirada programada em centros de distribuição, inventário por lote, descaracterização quando exigida e documentação por ciclo. Escopo definido em avaliação técnica.",
+      "sub": "Devoluções e avarias crescendo mais rápido que as vendas, CD virando depósito e auditoria pedindo prova de destinação? A Ecobraz monta o fluxo reverso com calendário por CD, descaracterização registrada e evidência por ciclo — o produto destinado não volta para assombrar a sua marca.",
       "cta": "Solicitar avaliação técnica",
       "band": [
         {
@@ -213,19 +302,22 @@
     "painsSub": "Três problemas crescem junto com o volume de devoluções e avarias.",
     "pains": [
       {
-        "icon": "box",
-        "title": "Estoque morto ocupando CD",
-        "text": "Cada posição de porta-palete ocupada por avaria é espaço que não gira. O acúmulo vira inventário bloqueado e custo fixo sem retorno."
+        "icon": "alert",
+        "title": "Produto 'descartado' à venda em canal paralelo",
+        "text": "Item reprovado que volta ao mercado gera acionamento de garantia de um produto que você já deu baixa, disputa com seller e caso público nas redes.",
+        "consequence": "Custo real: garantia paga duas vezes, marca exposta e relação com sellers e fabricantes desgastada."
       },
       {
-        "icon": "alert",
-        "title": "Produto descartado voltando ao mercado",
-        "text": "Item reprovado que reaparece em canal paralelo gera caso de garantia, disputa com seller e dano de reputação. Sem descaracterização e custódia registradas, o risco é permanente."
+        "icon": "box",
+        "title": "Avaria parada é aluguel jogado fora",
+        "text": "Cada posição de palete ocupada por devolução sem destino é espaço que não gira estoque vendável — no metro quadrado mais caro da operação.",
+        "consequence": "Custo real: capital imobilizado, CD saturado e expansão de armazenagem antecipada sem necessidade."
       },
       {
         "icon": "file",
-        "title": "Política de garantia sem lastro",
-        "text": "Auditoria, seller e fabricante pedem prova de destinação por lote. Planilha interna não sustenta a resposta."
+        "title": "Auditoria de destinação sem lastro",
+        "text": "Contratos com marketplaces, sellers e fabricantes cobram prova do fim de linha. Planilha interna não sustenta auditoria — documento de destinação sustenta.",
+        "consequence": "Custo real: não conformidade contratual e risco de perder a conta que sustenta o volume."
       }
     ],
     "scope": {
@@ -339,8 +431,94 @@
     ],
     "final": {
       "eyebrow": "Avaliação técnica sem compromisso",
-      "title": "Transforme devolução parada em fluxo com prova de destinação.",
-      "text": "Categorias, volume por ciclo e localidades dos CDs — é o que a equipe precisa para desenhar o calendário e responder com uma proposta séria."
+      "title": "Quantos paletes de devolução estão pagando aluguel no seu CD agora?",
+      "text": "Descreva categorias, volume por ciclo e localidades. A equipe desenha o calendário e retorna com escopo e condições — por escrito."
+    },
+    "recognize": {
+      "title": "O dia a dia de quem opera devolução em escala",
+      "items": [
+        "A quarentena de avarias já toma corredores inteiros do CD — e segue crescendo a cada Black Friday",
+        "Produto que deveria ter sido destruído apareceu anunciado em outro canal",
+        "O marketplace ou o seller pediu evidência de destinação e a resposta foi uma planilha interna",
+        "Cada CD resolve o descarte do seu jeito, e nenhum padrão fecha com o jurídico",
+        "O time joga fora horas negociando com sucateiro local a cada ciclo"
+      ]
+    },
+    "contrast": {
+      "title": "Do acúmulo caótico ao fluxo com prova",
+      "sub": "A operação reversa vira rotina previsível — com evidência a cada ciclo.",
+      "before": {
+        "title": "Como está hoje",
+        "items": [
+          "Quarentena crescendo sem data para esvaziar",
+          "Cada CD com um 'jeitinho' de descarte diferente",
+          "Nenhuma garantia de que o item não volta ao mercado",
+          "Prova de destinação: uma planilha que ninguém audita",
+          "Horas do time queimadas com sucateiro a cada ciclo"
+        ]
+      },
+      "after": {
+        "title": "Com o fluxo Ecobraz",
+        "items": [
+          "Calendário de retirada por CD — semanal, quinzenal ou mensal",
+          "Um padrão nacional de processo e documento",
+          "Descaracterização registrada: o item morre documentado",
+          "Inventário, MTR e CDF quando aplicáveis, por ciclo",
+          "Um contato, um contrato, um relatório por período"
+        ]
+      }
+    },
+    "gains": {
+      "title": "O que a operação ganha com o fluxo rodando",
+      "sub": "Devolução deixa de ser passivo acumulando e vira processo com dono.",
+      "items": [
+        {
+          "icon": "box",
+          "title": "CD girando de novo",
+          "text": "Posições de palete liberadas para estoque que vende — não para avaria que espera."
+        },
+        {
+          "icon": "shield",
+          "title": "Marca protegida",
+          "text": "Item destinado com descaracterização registrada não reaparece em canal paralelo."
+        },
+        {
+          "icon": "file",
+          "title": "Resposta de auditoria pronta",
+          "text": "Seller, marketplace ou fabricante pede evidência? O relatório do ciclo já existe."
+        },
+        {
+          "icon": "truck",
+          "title": "Rotina sem fricção",
+          "text": "Calendário definido, equipe que conhece o processo e documentação chegando sozinha."
+        }
+      ]
+    },
+    "why": {
+      "title": "Por que a Ecobraz para operação em escala",
+      "sub": "Volume recorrente exige processo — não improviso ciclo a ciclo.",
+      "items": [
+        {
+          "icon": "truck",
+          "title": "Feita para recorrência",
+          "text": "Coleta programada com inventário por lote e consolidação por período — desenhada para fluxo contínuo, não para retirada avulsa."
+        },
+        {
+          "icon": "shield",
+          "title": "15 anos de operação",
+          "text": "Associação fundada em 2011 — reconhecimento em plataformas da UE e da ONU, com escopo declarado na página de evidências."
+        },
+        {
+          "icon": "file",
+          "title": "Documento por padrão",
+          "text": "Cada ciclo fecha com inventário e certificados aplicáveis. É o lastro do seu contrato com sellers e marketplaces."
+        },
+        {
+          "icon": "lock",
+          "title": "Fim de linha controlado",
+          "text": "Descaracterização e cadeia de custódia registradas — o compromisso é o item não voltar ao mercado."
+        }
+      ]
     }
   },
   {
@@ -357,7 +535,7 @@
     },
     "hero": {
       "eyebrow": "Sinistros · Salvados · Descaracterização",
-      "sub": "A Ecobraz executa inventário, registro fotográfico, descaracterização e destinação de bens eletroeletrônicos sinistrados e salvados — com cadeia de custódia e controle contra retorno indevido ao mercado. Operações avaliadas por localidade e volume.",
+      "sub": "Galpão do segurado com prazo para devolver, salvados sem destino e o processo exigindo evidência? A Ecobraz inventaria, fotografa, descaracteriza e destina bens eletroeletrônicos sinistrados — com cadeia de custódia que blinda o processo e impede o bem indenizado de reaparecer no mercado.",
       "cta": "Solicitar avaliação técnica",
       "band": [
         {
@@ -386,18 +564,21 @@
     "pains": [
       {
         "icon": "alert",
-        "title": "Bem indenizado de volta ao mercado",
-        "text": "Salvado que reaparece à venda gera disputa com o segurado, questionamento de fraude e dano de imagem. Sem descaracterização registrada, o risco fica em aberto."
+        "title": "O salvado que volta para assombrar o processo",
+        "text": "Bem indenizado que reaparece à venda abre questionamento de fraude, disputa com o segurado e fragiliza o processo inteiro — meses depois de encerrado.",
+        "consequence": "Custo real: reabertura de discussão judicial, dano de imagem e precedente interno difícil de explicar."
       },
       {
         "icon": "building",
-        "title": "Sinistros em múltiplas praças",
-        "text": "Incêndio, alagamento e avaria de transporte não escolhem cidade. Sem operação coordenada, cada praça vira um processo diferente, com padrão de evidência diferente."
+        "title": "Cada praça, um padrão — nenhum defensável",
+        "text": "Sinistro não escolhe cidade. Sem operação coordenada, cada caso sai com um nível de registro diferente, e o padrão da companhia vira loteria.",
+        "consequence": "Custo real: dossiês desiguais, retrabalho de regulação e exposição em auditoria interna."
       },
       {
         "icon": "file",
-        "title": "Processo sem lastro documental",
-        "text": "O dossiê do sinistro precisa registrar o que era, onde estava e o que foi feito. Destinação sem inventário e custódia enfraquece o processo inteiro."
+        "title": "Destinação sem evidência enfraquece a regulação",
+        "text": "O processo precisa provar o que era, onde estava, o que foi feito e onde terminou. Sem inventário, foto e custódia, essa cadeia quebra no elo final.",
+        "consequence": "Custo real: processo vulnerável a contestação — justamente na etapa mais barata de documentar."
       }
     ],
     "scope": {
@@ -511,8 +692,94 @@
     ],
     "final": {
       "eyebrow": "Avaliação técnica sem compromisso",
-      "title": "Tem um caso com bens sinistrados aguardando destinação?",
-      "text": "Descreva o sinistro, a localidade e o volume estimado. A equipe retorna com escopo, prazo e o padrão de evidência do caso."
+      "title": "Tem um caso aberto com bens esperando destino?",
+      "text": "Descreva o sinistro, a praça e o volume estimado. A equipe retorna com escopo, prazo e o padrão de evidência do caso — antes de qualquer compromisso."
+    },
+    "recognize": {
+      "title": "Cenas que todo time de sinistro e salvados conhece",
+      "items": [
+        "O imóvel do segurado precisa ser devolvido e os bens sinistrados continuam ocupando o galpão",
+        "Salvado vendido 'no lote' apareceu funcionando no mercado — e virou questionamento no processo",
+        "Cada reguladora entrega um padrão de evidência diferente, e o dossiê nunca fecha igual",
+        "Sinistro em praça onde não há operação de confiança — e o prazo do processo correndo",
+        "Bens com mídias de dados no meio do lote, e ninguém quer assinar o destino deles"
+      ]
+    },
+    "contrast": {
+      "title": "Do lote abandonado ao caso encerrado com dossiê",
+      "sub": "O elo final do sinistro tratado com o mesmo rigor da regulação.",
+      "before": {
+        "title": "Como costuma terminar",
+        "items": [
+          "Bens sinistrados esperando enquanto o aluguel do galpão corre",
+          "Venda 'no lote' sem controle do que volta ao mercado",
+          "Registro fotográfico incompleto ou inexistente",
+          "Evidência de destinação: nota fiscal de sucata",
+          "Padrão diferente a cada praça e a cada caso"
+        ]
+      },
+      "after": {
+        "title": "Com a Ecobraz no caso",
+        "items": [
+          "Inventário e registro fotográfico bem a bem, na origem",
+          "Descaracterização registrada — o salvado morre documentado",
+          "Cadeia de custódia do galpão à destinação final",
+          "MTR, CDF e relatório final anexáveis ao processo",
+          "Mesmo padrão de evidência em qualquer praça avaliada"
+        ]
+      }
+    },
+    "gains": {
+      "title": "O que a companhia ganha em cada caso",
+      "sub": "Menos exposição no elo que costuma ficar sem dono.",
+      "items": [
+        {
+          "icon": "shield",
+          "title": "Processo blindado",
+          "text": "Evidência de ponta a ponta no destino dos bens — o elo final para de ser o ponto fraco."
+        },
+        {
+          "icon": "building",
+          "title": "Galpão devolvido no prazo",
+          "text": "Retirada planejada libera o imóvel do segurado sem estourar o cronograma do caso."
+        },
+        {
+          "icon": "file",
+          "title": "Dossiê padronizado",
+          "text": "O mesmo pacote documental, caso após caso — fácil de auditar, fácil de defender."
+        },
+        {
+          "icon": "lock",
+          "title": "Dados do segurado protegidos",
+          "text": "Mídias tratadas com registro, mesmo quando o sinistro atinge equipamentos com dados."
+        }
+      ]
+    },
+    "why": {
+      "title": "Por que a Ecobraz no fluxo de salvados",
+      "sub": "Uma oferta desenhada para o rigor que o processo de sinistro exige.",
+      "items": [
+        {
+          "icon": "file",
+          "title": "Evidência como produto",
+          "text": "Inventário, foto, custódia e certificados não são acessório: são o que entregamos junto com a destinação."
+        },
+        {
+          "icon": "shield",
+          "title": "15 anos de operação",
+          "text": "Associação fundada em 2011, com reconhecimento em plataformas da UE e da ONU — escopo declarado na página de evidências."
+        },
+        {
+          "icon": "lock",
+          "title": "Controle contra retorno",
+          "text": "Descaracterização registrada e custódia até o fim — desenhadas para o salvado não reaparecer."
+        },
+        {
+          "icon": "building",
+          "title": "Multi-praças sob avaliação",
+          "text": "Casos fora de São Paulo entram em avaliação técnica de viabilidade — com o mesmo padrão documental."
+        }
+      ]
     }
   },
   {
@@ -529,7 +796,7 @@
     },
     "hero": {
       "eyebrow": "Avarias · Devoluções · Pós-venda",
-      "sub": "A Ecobraz destina produtos eletroeletrônicos danificados, devolvidos ou fora de garantia para fabricantes, importadores e varejo — com descaracterização quando exigida, inventário por lote e documentação que sustenta a baixa de estoque e protege a marca.",
+      "sub": "Quarentena de avarias tomando o CD, produto reprovado reaparecendo à venda com a sua marca e o fiscal pedindo lastro da baixa? A Ecobraz destina o que não pode voltar ao mercado — com descaracterização registrada, inventário por lote e a prova documental que sustenta a baixa de estoque.",
       "cta": "Solicitar avaliação técnica",
       "band": [
         {
@@ -558,18 +825,21 @@
     "pains": [
       {
         "icon": "alert",
-        "title": "Item da marca em canal paralelo",
-        "text": "Produto reprovado que volta ao mercado sem controle vira caso de garantia, custo de assistência e dano de reputação — com o nome da sua marca na etiqueta."
+        "title": "Sua marca à venda onde não deveria existir",
+        "text": "O item que a qualidade reprovou volta ao mercado por canal paralelo, quebra na mão do consumidor e aciona a SUA garantia — de um produto que você já tinha tirado de linha.",
+        "consequence": "Custo real: garantia e assistência pagas em dobro, reclamação pública e o consumidor culpando a marca, não o atravessador."
       },
       {
         "icon": "box",
-        "title": "Quarentena que não gira",
-        "text": "Avarias e devoluções acumuladas bloqueiam espaço e capital. Sem fluxo de destinação, a quarentena só cresce."
+        "title": "Quarentena é capital parado se deteriorando",
+        "text": "Avaria acumulada bloqueia espaço nobre do CD e capital que a contabilidade não consegue liberar — enquanto o lote só perde valor e ganha poeira.",
+        "consequence": "Custo real: metros quadrados sem giro, balanço carregando estoque morto e decisão adiada a cada trimestre."
       },
       {
         "icon": "file",
-        "title": "Baixa de estoque sem prova",
-        "text": "A saída definitiva do item precisa de lastro documental. Sem inventário e destinação registrada, a baixa fica frágil em auditoria."
+        "title": "Baixa de estoque sem lastro é convite à glosa",
+        "text": "A saída definitiva do item precisa de trilha documental: o que saiu, quando, para onde e com que prova. Sem isso, a baixa vira fragilidade fiscal e de auditoria.",
+        "consequence": "Custo real: questionamento fiscal, retrabalho contábil e a baixa contestada anos depois."
       }
     ],
     "scope": {
@@ -683,8 +953,94 @@
     ],
     "final": {
       "eyebrow": "Avaliação técnica sem compromisso",
-      "title": "Zere a quarentena com destinação documentada.",
-      "text": "Categorias, volume e origem do lote — é o que a equipe precisa para retornar com escopo, condições e o padrão de prova."
+      "title": "Quanto vale tirar a sua marca do canal paralelo ainda neste trimestre?",
+      "text": "Descreva categorias, volume e origem do lote. A equipe retorna com escopo, nível de descaracterização e o padrão de prova — por escrito."
+    },
+    "recognize": {
+      "title": "Se a sua quarentena conta essa história, você está no lugar certo",
+      "items": [
+        "A área de avarias e devoluções já ocupa um corredor inteiro — e ninguém tem coragem de decidir o destino",
+        "Produto reprovado pela qualidade apareceu anunciado num marketplace, com a sua marca na caixa",
+        "A auditoria fiscal pediu lastro da baixa de estoque e o processo travou",
+        "A rede de assistência técnica acumula placas e carcaças sem destino definido",
+        "O jurídico vetou o 'compramos seu refugo' do atravessador — mas não apontou alternativa"
+      ]
+    },
+    "contrast": {
+      "title": "Da quarentena eterna à baixa documentada",
+      "sub": "O refugo sai, a prova entra — e a marca fica protegida.",
+      "before": {
+        "title": "Como está hoje",
+        "items": [
+          "Corredores de avaria crescendo a cada inventário",
+          "Refugo vendido 'no peso' sem controle de destino",
+          "Marca exposta a ressurgir em canal paralelo",
+          "Baixa travada por falta de lastro documental",
+          "Assistências acumulando placas sem processo"
+        ]
+      },
+      "after": {
+        "title": "Com a Ecobraz",
+        "items": [
+          "Retirada por lote, pontual ou recorrente, com inventário",
+          "Descaracterização registrada — o item morre documentado",
+          "Controle de custódia até a destinação final",
+          "MTR, CDF e relatório do lote para sustentar a baixa",
+          "Fábrica, CD e assistências no mesmo padrão"
+        ]
+      }
+    },
+    "gains": {
+      "title": "O que muda para a marca e para o estoque",
+      "sub": "Proteção de marca e higiene contábil no mesmo movimento.",
+      "items": [
+        {
+          "icon": "shield",
+          "title": "Marca fora do canal paralelo",
+          "text": "O reprovado destinado com registro não reaparece à venda com o seu nome."
+        },
+        {
+          "icon": "box",
+          "title": "Quarentena zerada",
+          "text": "O corredor de avarias volta a ser espaço de operação, não cemitério de produto."
+        },
+        {
+          "icon": "chart",
+          "title": "Baixa com lastro",
+          "text": "Trilha documental completa para contabilidade e auditoria assinarem sem medo."
+        },
+        {
+          "icon": "truck",
+          "title": "Rede inteira no padrão",
+          "text": "Fábrica, CDs e assistências com o mesmo processo e o mesmo documento."
+        }
+      ]
+    },
+    "why": {
+      "title": "Por que a Ecobraz e não o comprador de refugo",
+      "sub": "Quem paga pelo seu refugo precisa revendê-lo. Nós existimos para o caminho contrário.",
+      "items": [
+        {
+          "icon": "lock",
+          "title": "Sem conflito de interesse",
+          "text": "Atravessador lucra revendendo o que você quer eliminar. Nosso processo termina em descaracterização e destinação registradas."
+        },
+        {
+          "icon": "shield",
+          "title": "15 anos de operação",
+          "text": "Associação fundada em 2011, com reconhecimento em plataformas da UE e da ONU — escopo declarado na página de evidências."
+        },
+        {
+          "icon": "file",
+          "title": "Prova em cada lote",
+          "text": "Inventário, custódia e certificados aplicáveis fecham cada operação — é o lastro da sua baixa."
+        },
+        {
+          "icon": "truck",
+          "title": "Escala com padrão",
+          "text": "De um lote pontual ao fluxo recorrente de pós-venda, o processo e o documento são os mesmos."
+        }
+      ]
     }
   },
   {
@@ -701,7 +1057,7 @@
     },
     "hero": {
       "eyebrow": "ATMs · Terminais · Infraestrutura de agências",
-      "sub": "A Ecobraz retira e destina ATMs, terminais de autoatendimento, servidores e equipamentos sensíveis do setor financeiro — com inventário por unidade, cadeia de custódia ponta a ponta e destruição de mídias conforme o escopo. Requisitos de segurança do contratante entram na avaliação técnica.",
+      "sub": "Agências encerradas com ATMs no salão, compliance exigindo laudo de destruição por disco e prazo para devolver o imóvel? A Ecobraz retira equipamentos do setor financeiro com custódia ponta a ponta, destruição de mídias registrada e consolidação documental por agência — dentro das janelas e regras da sua segurança.",
       "cta": "Solicitar avaliação técnica",
       "band": [
         {
@@ -730,18 +1086,21 @@
     "pains": [
       {
         "icon": "lock",
-        "title": "Mídias e módulos sensíveis",
-        "text": "ATMs e terminais carregam discos, módulos de segurança e registros de operação. Nada disso pode sair de uma agência sem custódia e tratamento registrados."
+        "title": "O disco do ATM é o ativo mais sensível do lote",
+        "text": "Terminais e servidores de agência carregam registros de operação e módulos de segurança. Uma mídia extraviada no descarte é incidente de segurança bancária — não sucata perdida.",
+        "consequence": "Custo real: incidente reportável, investigação interna e a confiança da diretoria de segurança em xeque."
       },
       {
         "icon": "building",
-        "title": "Agência com prazo de devolução",
-        "text": "Encerramento de agência tem data para entregar o imóvel. Equipamento parado no salão atrasa a desmobilização inteira."
+        "title": "Imóvel esperando o equipamento sair",
+        "text": "Encerramento de agência tem cronograma contratual. ATM parado no salão segura a entrega das chaves e estica aluguel e multa contratual.",
+        "consequence": "Custo real: cada semana de atraso na desmobilização é dinheiro pago por um imóvel que já deveria ter sido devolvido."
       },
       {
         "icon": "alert",
-        "title": "Ativo de segurança sem rastro",
-        "text": "Equipamento do setor financeiro sem inventário e destinação registrada é apontamento certo em auditoria interna e externa."
+        "title": "Ativo de segurança sem rastro de saída",
+        "text": "Equipamento do setor financeiro que sai sem inventário, custódia e destino registrado é apontamento garantido em auditoria interna e externa.",
+        "consequence": "Custo real: não conformidade em auditoria, plano de ação forçado e desgaste entre áreas."
       }
     ],
     "scope": {
@@ -855,8 +1214,94 @@
     ],
     "final": {
       "eyebrow": "Avaliação técnica sem compromisso",
-      "title": "Desmobilize agências e parques com custódia documentada.",
-      "text": "Tipos de equipamento, unidades e praças — é o que a equipe precisa para responder com escopo, janelas e o padrão de evidência."
+      "title": "Quantas agências estão esperando o equipamento sair para fechar o ciclo?",
+      "text": "Descreva o parque, as unidades e os prazos. A equipe retorna com escopo, janelas e o padrão de evidência — por escrito."
+    },
+    "recognize": {
+      "title": "O checklist de quem desmobiliza infraestrutura bancária",
+      "items": [
+        "Agências encerradas com ATMs e terminais parados — e data marcada para entregar o imóvel",
+        "Compliance exige evidência de destruição de cada disco, por número de série",
+        "O fornecedor de descarte atual não passa no crivo da segurança corporativa",
+        "Equipamento de autoatendimento não pode simplesmente 'descer para a sucata'",
+        "Dezenas de unidades, várias praças — e a auditoria quer um relatório só"
+      ]
+    },
+    "contrast": {
+      "title": "Da agência travada à desmobilização auditável",
+      "sub": "Segurança, prazo e documento no mesmo fluxo.",
+      "before": {
+        "title": "Sem processo dedicado",
+        "items": [
+          "ATMs parados segurando a devolução do imóvel",
+          "Discos 'que alguém disse que apagou'",
+          "Fornecedor sem credenciamento para ambiente bancário",
+          "Cada agência gera um papel diferente",
+          "Auditoria pedindo rastro que não existe"
+        ]
+      },
+      "after": {
+        "title": "Com a Ecobraz",
+        "items": [
+          "Retirada planejada dentro da janela de cada agência",
+          "Destruição de mídias executada e registrada por unidade",
+          "Equipe e processo ajustados ao crivo da segurança",
+          "Consolidação documental por agência e por praça",
+          "Inventário, custódia, MTR e CDF no padrão da auditoria"
+        ]
+      }
+    },
+    "gains": {
+      "title": "O que o banco ganha com o fluxo dedicado",
+      "sub": "Desmobilização deixa de ser risco operacional e vira item concluído.",
+      "items": [
+        {
+          "icon": "building",
+          "title": "Imóvel entregue no prazo",
+          "text": "A retirada acompanha o cronograma do encerramento — sem estourar contrato."
+        },
+        {
+          "icon": "lock",
+          "title": "Mídias mortas por escrito",
+          "text": "Laudo de destruição por unidade encerra a pergunta do compliance."
+        },
+        {
+          "icon": "file",
+          "title": "Um relatório, todas as praças",
+          "text": "Consolidação por agência e período — auditoria lê tudo num documento só."
+        },
+        {
+          "icon": "shield",
+          "title": "Segurança sem atrito",
+          "text": "Credenciamento, janelas e procedimentos acordados antes — zero surpresa na porta."
+        }
+      ]
+    },
+    "why": {
+      "title": "Por que a Ecobraz em ambiente financeiro",
+      "sub": "O setor mais auditado do país precisa de um descarte com o mesmo nível de exigência.",
+      "items": [
+        {
+          "icon": "lock",
+          "title": "Custódia como fundamento",
+          "text": "Cadeia de custódia registrada do recolhimento à destinação — o requisito básico do ambiente bancário."
+        },
+        {
+          "icon": "shield",
+          "title": "15 anos de operação",
+          "text": "Associação fundada em 2011, com reconhecimento em plataformas da UE e da ONU — escopo declarado na página de evidências."
+        },
+        {
+          "icon": "file",
+          "title": "Documento no padrão da auditoria",
+          "text": "Inventário por unidade, laudo de mídias e certificados aplicáveis — organizados para quem audita."
+        },
+        {
+          "icon": "building",
+          "title": "Multi-agências por avaliação",
+          "text": "Operações com várias unidades e praças entram em avaliação técnica com consolidação única."
+        }
+      ]
     }
   },
   {
@@ -873,7 +1318,7 @@
     },
     "hero": {
       "eyebrow": "Execução no Brasil · Evidência legível na Europa",
-      "sub": "A Ecobraz executa coleta, inventário, custódia e destinação no Brasil, com registro em cada etapa. A Villanova ESG estrutura essa execução em evidência documental organizada — preparada para leitura de procurement, compliance, finanças e conselho em cadeias Brasil-Europa.",
+      "sub": "A matriz europeia pediu evidência de destinação e a resposta virou uma força-tarefa de e-mails? A Ecobraz executa e registra a operação no Brasil; a Villanova ESG transforma esses registros num dossiê que procurement, compliance e conselho conseguem ler — antes do prazo do questionário estourar.",
       "cta": "Solicitar diagnóstico",
       "band": [
         {
@@ -904,18 +1349,21 @@
     "pains": [
       {
         "icon": "chart",
-        "title": "Exigência sem tradução local",
-        "text": "O pedido chega em linguagem de compliance europeu — e a operação local responde com documentos avulsos que não conversam com o questionário."
+        "title": "A exigência chega em outra língua — a do compliance",
+        "text": "O pedido da matriz vem estruturado em critérios de due diligence europeia. Responder com MTRs avulsos e fotos de galpão é falar outra língua — mesmo fazendo tudo certo.",
+        "consequence": "Custo real: resposta reprovada ou devolvida com ressalvas, e a subsidiária marcada como elo frágil da cadeia."
       },
       {
         "icon": "file",
-        "title": "Evidência espalhada",
-        "text": "MTRs, CDFs e inventários existem, mas não contam uma história auditável por lote e por período. O auditor precisa montar o quebra-cabeça sozinho."
+        "title": "Evidência que existe mas não se sustenta",
+        "text": "Os documentos estão aí — espalhados. Sem organização por lote, período e operação, o auditor não consegue reconstruir a história, e o benefício da dúvida joga contra você.",
+        "consequence": "Custo real: horas de retrabalho a cada questionário e credibilidade decrescente a cada resposta improvisada."
       },
       {
         "icon": "alert",
-        "title": "Resposta improvisada",
-        "text": "Sem organização prévia, cada questionário de fornecedor ou due diligence vira um projeto de emergência, com prazo curto e risco de resposta frágil."
+        "title": "O prazo é curto e a régua só sobe",
+        "text": "Due diligence de cadeia deixou de ser formalidade: cada rodada pede mais rastreabilidade que a anterior. Quem estrutura a evidência depois do pedido, responde sempre atrasado.",
+        "consequence": "Custo real: posição comercial fragilizada na renovação de contrato com o comprador europeu."
       }
     ],
     "scope": {
@@ -1036,8 +1484,94 @@
     ],
     "final": {
       "eyebrow": "Diagnóstico inicial",
-      "title": "Recebeu uma exigência da matriz? Comece pelo diagnóstico.",
-      "text": "Traga a exigência como ela chegou. O retorno mapeia o que a operação já cobre e o que falta estruturar — antes de qualquer proposta."
+      "title": "O próximo questionário da matriz já tem data. A sua base está pronta?",
+      "text": "Traga a exigência como ela chegou. O diagnóstico mapeia o que a operação já cobre, o que falta e o escopo proposto — antes de qualquer compromisso."
+    },
+    "recognize": {
+      "title": "Sinais de que a exigência já chegou — ou está a caminho",
+      "items": [
+        "A matriz mandou um questionário de fornecedor com dezenas de perguntas sobre resíduos e fim de vida",
+        "A auditoria de cadeia está marcada e a evidência está espalhada em e-mails e pastas de rede",
+        "O comprador europeu pediu 'evidence of end-of-life treatment' e a tradução literal não convenceu",
+        "Sua operação faz a coisa certa — mas não consegue provar no formato que a Europa lê",
+        "Cada nova exigência vira um projeto de emergência com prazo de duas semanas"
+      ]
+    },
+    "contrast": {
+      "title": "Da força-tarefa de última hora ao dossiê pronto",
+      "sub": "A mesma operação, contada de um jeito que a matriz entende.",
+      "before": {
+        "title": "Como a resposta sai hoje",
+        "items": [
+          "E-mails, PDFs e planilhas caçados às pressas",
+          "Documentos técnicos sem tradução para leitura executiva",
+          "Cada questionário respondido do zero",
+          "Alegações genéricas de 'descarte sustentável'",
+          "Prazo estourando e resposta com ressalvas"
+        ]
+      },
+      "after": {
+        "title": "Com Ecobraz + Villanova ESG",
+        "items": [
+          "Operação executada e registrada lote a lote no Brasil",
+          "Evidência organizada por período, operação e material",
+          "Dossiê estruturado para procurement, compliance e conselho",
+          "Cada alegação com fonte, escopo e data de corte",
+          "Questionário respondido a partir de base pronta"
+        ]
+      }
+    },
+    "gains": {
+      "title": "O que a subsidiária ganha com a base estruturada",
+      "sub": "Responder deixa de ser projeto de emergência e vira consulta ao dossiê.",
+      "items": [
+        {
+          "icon": "chart",
+          "title": "Resposta no prazo",
+          "text": "Questionários e due diligences respondidos a partir de base organizada — não de caça a e-mails."
+        },
+        {
+          "icon": "file",
+          "title": "Leitura executiva",
+          "text": "A evidência técnica traduzida para quem decide: procurement, compliance, finanças e conselho."
+        },
+        {
+          "icon": "shield",
+          "title": "Posição defensável",
+          "text": "Alegações com fonte e limite declarados — nada que um auditor derrube na primeira pergunta."
+        },
+        {
+          "icon": "building",
+          "title": "Elo forte da cadeia",
+          "text": "A operação brasileira apresentada no padrão que a matriz reconhece — e valoriza."
+        }
+      ]
+    },
+    "why": {
+      "title": "Por que essa dupla — e não uma consultoria genérica",
+      "sub": "Quem só escreve relatório não executa; quem só executa não traduz. Aqui as duas pontas se fecham.",
+      "items": [
+        {
+          "icon": "truck",
+          "title": "Execução própria no Brasil",
+          "text": "A evidência nasce da operação real da Ecobraz — coleta, custódia e destinação registradas na fonte."
+        },
+        {
+          "icon": "chart",
+          "title": "Tradução para a Europa",
+          "text": "A Villanova ESG estrutura os registros no formato que due diligence e procurement europeus leem."
+        },
+        {
+          "icon": "shield",
+          "title": "Base pública verificável",
+          "text": "Prática listada na plataforma de economia circular da UE e registro em plataforma da ONU — com escopo declarado."
+        },
+        {
+          "icon": "file",
+          "title": "Barreira de alegação",
+          "text": "Sem promessa de certificação ou aceite: cada afirmação tem fonte, limite e data de corte. É isso que sobrevive à auditoria."
+        }
+      ]
     }
   }
 ]

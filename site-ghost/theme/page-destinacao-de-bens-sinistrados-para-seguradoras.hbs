@@ -10,7 +10,7 @@
     <div>
       <span class="hx-label on-dark">Sinistros · Salvados · Descaracterização</span>
       <h1>Destinação de bens sinistrados para seguradoras</h1>
-      <p class="hx-sub">A Ecobraz executa inventário, registro fotográfico, descaracterização e destinação de bens eletroeletrônicos sinistrados e salvados — com cadeia de custódia e controle contra retorno indevido ao mercado. Operações avaliadas por localidade e volume.</p>
+      <p class="hx-sub">Galpão do segurado com prazo para devolver, salvados sem destino e o processo exigindo evidência? A Ecobraz inventaria, fotografa, descaracteriza e destina bens eletroeletrônicos sinistrados — com cadeia de custódia que blinda o processo e impede o bem indenizado de reaparecer no mercado.</p>
       <div class="hx-hero-ctas">
         <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=destinacao-de-bens-sinistrados-para-seguradoras&amp;material=Eletr%C3%B4nicos" data-track="destinacao-de-bens-sinistrados-para-seguradoras_hero_cta">Solicitar avaliação técnica</a>
         <a class="button hx-btn-outline-dark" href="#como-funciona" data-track="destinacao-de-bens-sinistrados-para-seguradoras_hero_como">Como funciona</a>
@@ -21,7 +21,7 @@
         <span><strong>Evidência por caso</strong>documentação conforme o serviço executado</span>
       </div>
     </div>
-    <form class="hx-quote" method="get" action="{{@site.url}}/agendamento/">
+    <form class="hx-quote" id="avaliacao" method="get" action="{{@site.url}}/agendamento/">
       <span class="hx-label">Avaliação técnica</span>
       <h2>Descreva o caso em 1 minuto</h2>
       <p class="hx-hint">A equipe retorna com escopo, condições e documentação aplicável.</p>
@@ -44,20 +44,59 @@
 </section>
 
 <section class="hx-block">
+  <div class="container hx-reco">
+    <div>
+      <span class="hx-label">Você se reconhece?</span>
+      <h2>Cenas que todo time de sinistro e salvados conhece</h2>
+      <p class="hx-reco-cta">Bastou um item da lista ser verdade aí dentro? Então esta página foi escrita para você — <a href="#avaliacao">descreva a situação em 1 minuto</a> e receba um retorno técnico, não um telemarketing.</p>
+    </div>
+    <ul class="hx-reco-list"><li>O imóvel do segurado precisa ser devolvido e os bens sinistrados continuam ocupando o galpão</li><li>Salvado vendido 'no lote' apareceu funcionando no mercado — e virou questionamento no processo</li><li>Cada reguladora entrega um padrão de evidência diferente, e o dossiê nunca fecha igual</li><li>Sinistro em praça onde não há operação de confiança — e o prazo do processo correndo</li><li>Bens com mídias de dados no meio do lote, e ninguém quer assinar o destino deles</li></ul>
+  </div>
+</section>
+
+<section class="hx-block alt">
   <div class="container">
     <div class="hx-head-split">
-      <div><span class="hx-label">O risco de não resolver</span><h2>Salvado sem controle vira passivo da seguradora</h2></div>
+      <div><span class="hx-label">O que está em jogo</span><h2>Salvado sem controle vira passivo da seguradora</h2></div>
       <p>Três riscos que o processo de sinistro carrega quando a destinação não é rastreável.</p>
     </div>
     <div class="hx-sol-grid">
-        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18h.01"/></svg></span><h3>Bem indenizado de volta ao mercado</h3><p>Salvado que reaparece à venda gera disputa com o segurado, questionamento de fraude e dano de imagem. Sem descaracterização registrada, o risco fica em aberto.</p></div>
-        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="3" width="16" height="18"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2M10 21v-3h4v3"/></svg></span><h3>Sinistros em múltiplas praças</h3><p>Incêndio, alagamento e avaria de transporte não escolhem cidade. Sem operação coordenada, cada praça vira um processo diferente, com padrão de evidência diferente.</p></div>
-        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Processo sem lastro documental</h3><p>O dossiê do sinistro precisa registrar o que era, onde estava e o que foi feito. Destinação sem inventário e custódia enfraquece o processo inteiro.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18h.01"/></svg></span><h3>O salvado que volta para assombrar o processo</h3><p>Bem indenizado que reaparece à venda abre questionamento de fraude, disputa com o segurado e fragiliza o processo inteiro — meses depois de encerrado.</p><span class="hx-cost">Custo real: reabertura de discussão judicial, dano de imagem e precedente interno difícil de explicar.</span></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="3" width="16" height="18"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2M10 21v-3h4v3"/></svg></span><h3>Cada praça, um padrão — nenhum defensável</h3><p>Sinistro não escolhe cidade. Sem operação coordenada, cada caso sai com um nível de registro diferente, e o padrão da companhia vira loteria.</p><span class="hx-cost">Custo real: dossiês desiguais, retrabalho de regulação e exposição em auditoria interna.</span></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Destinação sem evidência enfraquece a regulação</h3><p>O processo precisa provar o que era, onde estava, o que foi feito e onde terminou. Sem inventário, foto e custódia, essa cadeia quebra no elo final.</p><span class="hx-cost">Custo real: processo vulnerável a contestação — justamente na etapa mais barata de documentar.</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">A virada</span><h2>Do lote abandonado ao caso encerrado com dossiê</h2></div>
+      <p>O elo final do sinistro tratado com o mesmo rigor da regulação.</p>
+    </div>
+    <div class="hx-contrast">
+      <div class="hx-before"><h3>Como costuma terminar</h3><ul><li>Bens sinistrados esperando enquanto o aluguel do galpão corre</li><li>Venda 'no lote' sem controle do que volta ao mercado</li><li>Registro fotográfico incompleto ou inexistente</li><li>Evidência de destinação: nota fiscal de sucata</li><li>Padrão diferente a cada praça e a cada caso</li></ul></div>
+      <div class="hx-after"><h3>Com a Ecobraz no caso</h3><ul><li>Inventário e registro fotográfico bem a bem, na origem</li><li>Descaracterização registrada — o salvado morre documentado</li><li>Cadeia de custódia do galpão à destinação final</li><li>MTR, CDF e relatório final anexáveis ao processo</li><li>Mesmo padrão de evidência em qualquer praça avaliada</li></ul></div>
     </div>
   </div>
 </section>
 
 <section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">O que você ganha</span><h2>O que a companhia ganha em cada caso</h2></div>
+      <p>Menos exposição no elo que costuma ficar sem dono.</p>
+    </div>
+    <div class="hx-sol-grid g4">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span><h3>Processo blindado</h3><p>Evidência de ponta a ponta no destino dos bens — o elo final para de ser o ponto fraco.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="3" width="16" height="18"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2M10 21v-3h4v3"/></svg></span><h3>Galpão devolvido no prazo</h3><p>Retirada planejada libera o imóvel do segurado sem estourar o cronograma do caso.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Dossiê padronizado</h3><p>O mesmo pacote documental, caso após caso — fácil de auditar, fácil de defender.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>Dados do segurado protegidos</h3><p>Mídias tratadas com registro, mesmo quando o sinistro atinge equipamentos com dados.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
   <div class="container">
     <div class="hx-head-split">
       <div><span class="hx-label">Escopo claro</span><h2>O que entra — e o que não entra</h2></div>
@@ -70,7 +109,7 @@
   </div>
 </section>
 
-<section class="hx-block" id="como-funciona">
+<section class="hx-block alt" id="como-funciona">
   <div class="container">
     <div class="hx-head-split">
       <div><span class="hx-label">Processo</span><h2>Como funciona, do contato à destinação</h2></div>
@@ -86,7 +125,7 @@
   </div>
 </section>
 
-<section class="hx-block alt">
+<section class="hx-block">
   <div class="container">
     <div class="hx-head-split">
       <div><span class="hx-label">Evidência da operação</span><h2>O que o dossiê do sinistro recebe</h2></div>
@@ -99,6 +138,21 @@
         <div class="hx-doc"><h3>Cadeia de custódia</h3><p>Registro do percurso dos bens, da origem à destinação.</p></div>
         <div class="hx-doc"><h3>MTR e CDF</h3><p>Manifesto de transporte e certificado de destinação, quando aplicáveis ao material.</p></div>
         <div class="hx-doc"><h3>Relatório final por caso</h3><p>Consolidação da operação para anexar ao processo do sinistro.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Por que a Ecobraz</span><h2>Por que a Ecobraz no fluxo de salvados</h2></div>
+      <p>Uma oferta desenhada para o rigor que o processo de sinistro exige.</p>
+    </div>
+    <div class="hx-sol-grid g4">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Evidência como produto</h3><p>Inventário, foto, custódia e certificados não são acessório: são o que entregamos junto com a destinação.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span><h3>15 anos de operação</h3><p>Associação fundada em 2011, com reconhecimento em plataformas da UE e da ONU — escopo declarado na página de evidências.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>Controle contra retorno</h3><p>Descaracterização registrada e custódia até o fim — desenhadas para o salvado não reaparecer.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="3" width="16" height="18"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2M10 21v-3h4v3"/></svg></span><h3>Multi-praças sob avaliação</h3><p>Casos fora de São Paulo entram em avaliação técnica de viabilidade — com o mesmo padrão documental.</p></div>
     </div>
   </div>
 </section>
@@ -149,8 +203,8 @@
     <div class="hx-final">
       <div>
         <span class="hx-label on-dark">Avaliação técnica sem compromisso</span>
-        <h2>Tem um caso com bens sinistrados aguardando destinação?</h2>
-        <p>Descreva o sinistro, a localidade e o volume estimado. A equipe retorna com escopo, prazo e o padrão de evidência do caso.</p>
+        <h2>Tem um caso aberto com bens esperando destino?</h2>
+        <p>Descreva o sinistro, a praça e o volume estimado. A equipe retorna com escopo, prazo e o padrão de evidência do caso — antes de qualquer compromisso.</p>
       </div>
       <div class="hx-actions">
         <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=destinacao-de-bens-sinistrados-para-seguradoras&amp;material=Eletr%C3%B4nicos" data-track="destinacao-de-bens-sinistrados-para-seguradoras_final_cta">Solicitar avaliação técnica</a>
