@@ -1,0 +1,217 @@
+{{!< default}}
+{{! Gerado por scripts/build-landing-pages.mjs a partir de landing/landing-pages.json — não edite à mão. }}
+{{#contentFor "head"}}
+<link rel="stylesheet" href="{{asset "css/landing.css"}}">
+{{/contentFor}}
+
+<section class="hx-hero">
+  <div class="container hx-crumbs"><a href="{{@site.url}}/">Início</a> › <a href="{{@site.url}}/destruicao-de-dados/">Destruição e sanitização de dados</a> › Sanitização segura de dados</div>
+  <div class="container hx-hero-grid">
+    <div>
+      <span class="hx-label on-dark">Devolução de leasing · Reuso · Doação</span>
+      <h1>Sanitização segura de dados, com relatório por mídia</h1>
+      <p class="hx-sub">O contrato de locação venceu e as máquinas precisam voltar sem nenhum dado dentro? A Ecobraz executa sanitização lógica com método documentado e relatório por mídia — o equipamento continua utilizável, e o risco sai por escrito. Quando a sanitização não é tecnicamente aplicável, dizemos na avaliação e indicamos a destruição física.</p>
+      <div class="hx-hero-ctas">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=sanitizacao-segura-de-dados&amp;material=Inform%C3%A1tica%20e%20TI" data-track="sanitizacao-segura-de-dados_hero_cta">Solicitar avaliação técnica</a>
+        <a class="button hx-btn-outline-dark" href="#como-funciona" data-track="sanitizacao-segura-de-dados_hero_como">Como funciona</a>
+      </div>
+      <div class="hx-hero-band">
+        <span><strong>Equipamento preservado</strong>a mídia sobrevive; o dado, não</span>
+        <span><strong>Método documentado</strong>processo registrado por mídia tratada</span>
+        <span><strong>Limite declarado</strong>quando não é aplicável, nós avisamos</span>
+      </div>
+    </div>
+    <form class="hx-quote" id="avaliacao" method="get" action="{{@site.url}}/agendamento/">
+      <span class="hx-label">Avaliação técnica</span>
+      <h2>Descreva o parque em 1 minuto</h2>
+      <p class="hx-hint">A equipe retorna com aplicabilidade, escopo e documentação.</p>
+      <input type="hidden" name="perfil" value="empresa">
+      <input type="hidden" name="origem" value="sanitizacao-segura-de-dados">
+      <input type="hidden" name="material" value="Informática e TI">
+      <div class="hx-field">
+        <label for="lp-desc">O que precisa sanitizar?</label>
+        <input id="lp-desc" name="descricao" placeholder="Ex.: 200 notebooks de leasing para devolver em agosto">
+      </div>
+      <div class="hx-field">
+        <label for="lp-local">CEP ou cidade da retirada</label>
+        <input id="lp-local" name="local" placeholder="Ex.: 02175-010 ou São Paulo">
+      </div>
+      <button class="button" type="submit" data-track="sanitizacao-segura-de-dados_hero_form">Solicitar avaliação técnica →</button>
+      <div class="hx-or-wa">ou <a href="{{@custom.whatsapp_url}}" rel="noopener" data-track="sanitizacao-segura-de-dados_hero_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> falar com a equipe no WhatsApp</a></div>
+      <p class="hx-micro">A coleta é confirmada após a avaliação de material, volume, localidade e documentação.</p>
+    </form>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container hx-reco">
+    <div>
+      <span class="hx-label">Você se reconhece?</span>
+      <h2>Situações em que formatar não resolve — e sanitizar resolve</h2>
+      <p class="hx-reco-cta">Bastou um item da lista ser verdade aí dentro? Então esta página foi escrita para você — <a href="#avaliacao">descreva a situação em 1 minuto</a> e receba um retorno técnico, não um telemarketing.</p>
+    </div>
+    <ul class="hx-reco-list"><li>O leasing venceu e a locadora vai receber de volta máquinas com anos de dados da empresa</li><li>A doação de computadores está travada porque ninguém garante o que ficou nos discos</li><li>A política interna exige remoção verificável de dados antes de qualquer equipamento sair</li><li>A auditoria pediu evidência de sanitização e o que existe é um print de formatação</li><li>O parque vai para redeployment interno, mas o time não tem ferramenta nem tempo para tratar disco a disco</li></ul>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">O que está em jogo</span><h2>Formatar não é sanitizar — e a diferença custa caro</h2></div>
+      <p>O dado 'apagado' de qualquer jeito continua recuperável com ferramenta comum.</p>
+    </div>
+    <div class="hx-sol-grid">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>O disco formatado que continua falando</h3><p>Formatação simples não remove dados: remove o índice. Quem receber a máquina — locadora, comprador ou donatário — consegue recuperar arquivos com software gratuito.</p><span class="hx-cost">Custo real: incidente LGPD com sanção de até 2% do faturamento (teto de R$ 50 milhões) — nascido de um equipamento que saiu 'limpo'.</span></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="3" width="16" height="18"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2M10 21v-3h4v3"/></svg></span><h3>A devolução de leasing que leva seus dados junto</h3><p>A máquina devolvida é recondicionada e vai para a próxima empresa. Sem sanitização registrada, seus contratos e planilhas vão no pacote.</p><span class="hx-cost">Custo real: dados estratégicos circulando fora do seu controle — sem nem contar como vazamento detectável.</span></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18h.01"/></svg></span><h3>A doação que vira manchete</h3><p>Doar computadores é excelente — até um dado sensível aparecer na máquina doada. O gesto social vira crise de imagem e caso jurídico.</p><span class="hx-cost">Custo real: o projeto social da empresa suspenso e a marca associada a vazamento — pelo motivo errado.</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">A virada</span><h2>De 'acho que apagaram' para 'está no relatório'</h2></div>
+      <p>A diferença entre confiar e poder provar.</p>
+    </div>
+    <div class="hx-contrast">
+      <div class="hx-before"><h3>Como sai hoje</h3><ul><li>Formatação simples, sem método definido</li><li>Nenhum registro de qual mídia foi tratada</li><li>Devolução e doação travadas pela dúvida</li><li>Auditoria respondida com print de tela</li><li>Cada técnico faz de um jeito</li></ul></div>
+      <div class="hx-after"><h3>Com a sanitização Ecobraz</h3><ul><li>Método documentado, aplicado mídia a mídia</li><li>Relatório com identificação das mídias tratadas</li><li>Equipamento liberado para devolver, reusar ou doar</li><li>Evidência pronta para auditoria e para o DPO</li><li>Mídia não aplicável? Indicamos destruição física — por escrito</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">O que você ganha</span><h2>O que a sanitização destrava</h2></div>
+      <p>O valor do equipamento é preservado; o risco do dado é eliminado.</p>
+    </div>
+    <div class="hx-sol-grid g4">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M1 7h13v10H1zM14 10h4l4 4v3h-8z"/><circle cx="6" cy="19" r="1.6"/><circle cx="18" cy="19" r="1.6"/></svg></span><h3>Leasing devolvido sem medo</h3><p>As máquinas voltam para a locadora limpas e com relatório — contrato encerrado sem pendência.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>Reuso e redeployment</h3><p>O parque circula internamente sem carregar dados de um setor para outro.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span><h3>Doação destravada</h3><p>O projeto social anda com segurança jurídica — e a empresa colhe o benefício da imagem.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>DPO e auditoria satisfeitos</h3><p>Evidência por mídia, no formato que a política interna e a LGPD pedem.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Escopo claro</span><h2>O que entra — e o que não entra</h2></div>
+      <p>Escopo declarado antes do agendamento reduz retrabalho e surpresa. Cada lote é avaliado tecnicamente.</p>
+    </div>
+    <div class="hx-scope">
+      <div class="hx-yes"><h3>Dentro do escopo</h3><ul><li>HDs e SSDs em notebooks, desktops e servidores</li><li>Mídias avulsas: discos externos, unidades de storage</li><li>Parques inteiros em devolução de leasing ou redeployment</li><li>Equipamentos destinados a doação corporativa</li><li>Verificação de aplicabilidade mídia a mídia na avaliação</li></ul><p>A sanitização é oferecida quando tecnicamente aplicável — a avaliação verifica mídia, estado e exigência. Quando não for o caminho, você recebe a indicação de destruição física com a mesma clareza.</p></div>
+      <div class="hx-not"><h3>Fora do escopo</h3><ul><li>Mídias danificadas ou criptografadas sem chave — vão para destruição física</li><li>Exigências de inutilização definitiva — página de destruição física</li><li>Pilhas domésticas, toner, lâmpadas e demais exclusões padrão</li><li>Resíduos químicos, biológicos, radioativos ou contaminados</li></ul><p>Sanitização e destruição física são serviços distintos, com métodos e entregáveis próprios — misturá-los é impreciso tecnicamente.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt" id="como-funciona">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Processo</span><h2>Como funciona, do contato à destinação</h2></div>
+      <p>Nenhuma retirada é confirmada sem avaliação técnica. É isso que mantém a operação previsível e documentável.</p>
+    </div>
+    <div class="hx-steps">
+        <div class="hx-step"><h3>Descreva o parque</h3><p>Quantidade, tipos de mídia, destino pretendido (devolução, reuso, doação) e prazo.</p></div>
+        <div class="hx-step"><h3>Avaliação técnica</h3><p>Verificamos aplicabilidade mídia a mídia e o nível de evidência exigido.</p></div>
+        <div class="hx-step"><h3>Escopo definido</h3><p>Método, local de execução, registros e o que acontece com mídias não aplicáveis.</p></div>
+        <div class="hx-step"><h3>Execução registrada</h3><p>Sanitização aplicada com registro por mídia tratada.</p></div>
+        <div class="hx-step"><h3>Relatório final</h3><p>Documento com identificação das mídias e método aplicado — pronto para auditoria.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Evidência da operação</span><h2>O que sobra quando o dado se vai</h2></div>
+      <p>A documentação reflete o que foi efetivamente executado em cada lote — sem promessa genérica.</p>
+    </div>
+    <div class="hx-docs">
+        <div class="hx-doc"><h3>Relatório de sanitização</h3><p>Identificação das mídias tratadas e método aplicado, por mídia.</p></div>
+        <div class="hx-doc"><h3>Registro de aplicabilidade</h3><p>Quais mídias foram sanitizadas e quais seguiram para destruição física — sem zona cinzenta.</p></div>
+        <div class="hx-doc"><h3>Cadeia de custódia</h3><p>Quando a operação inclui retirada, o percurso é registrado de ponta a ponta.</p></div>
+        <div class="hx-doc"><h3>Escopo documentado</h3><p>Método, local e responsabilidades definidos antes da execução.</p></div>
+        <div class="hx-doc"><h3>Integração com destinação</h3><p>MTR e CDF quando o serviço inclui descarte de equipamentos, conforme aplicável.</p></div>
+        <div class="hx-doc"><h3>Evidência com limite</h3><p>O relatório diz o que foi feito — e não promete o que não foi.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Por que a Ecobraz</span><h2>Por que sanitizar com a Ecobraz</h2></div>
+      <p>Honestidade técnica é o diferencial: nem todo disco pode ser sanitizado — e você saberá quais.</p>
+    </div>
+    <div class="hx-sol-grid g4">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span><h3>Limite técnico declarado</h3><p>Quando a sanitização não é aplicável, dizemos na avaliação e indicamos destruição física — por escrito, não por conveniência.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Relatório por mídia</h3><p>Não é declaração genérica: cada mídia tratada aparece identificada no relatório.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>15 anos de operação</h3><p>Associação fundada em 2011, com reconhecimento em plataformas da UE e da ONU — escopo declarado na página de evidências.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M1 7h13v10H1zM14 10h4l4 4v3h-8z"/><circle cx="6" cy="19" r="1.6"/><circle cx="18" cy="19" r="1.6"/></svg></span><h3>Fluxo completo se precisar</h3><p>Sanitização pode se integrar à retirada, destinação e documentação do lote inteiro — um fornecedor, uma operação.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-authority">
+      <div>
+        <span class="hx-label on-dark">Autoridade verificável</span>
+        <strong>Associação Auxílio à Reciclagem de Eletrônicos e Inclusão Digital — CNPJ 14.197.457/0001-42</strong>
+        <p>Atuação registrada em plataformas públicas de referência internacional. Cada alegação do site tem fonte, data e escopo declarados na página de evidências.</p>
+      </div>
+      <a href="{{@site.url}}/evidencias/" data-track="sanitizacao-segura-de-dados_evidencias">Ver evidências públicas →</a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Perguntas frequentes</span><h2>O que TI, segurança e DPO perguntam</h2></div>
+    </div>
+    <div class="hx-faq">
+        <details><summary>Qual a diferença entre sanitização e formatação?</summary><p>Formatação remove o índice dos arquivos; os dados continuam no disco e são recuperáveis com ferramentas comuns. Sanitização aplica método documentado de remoção lógica para tornar os dados irrecuperáveis — com registro do processo por mídia.</p></details>
+        <details><summary>O equipamento continua utilizável depois?</summary><p>Sim — essa é a diferença para a destruição física. A mídia sanitizada segue funcional, pronta para devolução de leasing, reuso interno ou doação.</p></details>
+        <details><summary>E se a mídia estiver danificada ou criptografada?</summary><p>A avaliação identifica mídias em que a sanitização não é tecnicamente aplicável. Nesses casos, indicamos a destruição física, com o mesmo padrão de registro.</p></details>
+        <details><summary>O relatório identifica cada mídia?</summary><p>Sim, conforme o escopo: as mídias tratadas aparecem identificadas no relatório, com o método aplicado — é o formato que auditorias e DPOs pedem.</p></details>
+        <details><summary>Vocês também retiram e destinam os equipamentos?</summary><p>Sim. A sanitização pode ser contratada isolada ou integrada à retirada, destinação e documentação do lote — inventário, MTR e CDF quando aplicáveis.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Soluções relacionadas</span><h2>Também pode fazer parte da sua operação</h2></div>
+    </div>
+    <div class="hx-sol-grid">
+        <a class="hx-sol" href="{{@site.url}}/destruicao-fisica-de-dados-e-midias/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>Destruição física de dados e mídias</h3><p>Quando a exigência é inutilização definitiva, com custódia e registro.</p><span class="hx-go">Ver solução →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/descarte-de-ativos-de-ti-desmobilizados/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><h3>Ativos de TI desmobilizados</h3><p>Retirada planejada do parque com inventário e custódia.</p><span class="hx-go">Ver solução →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/documentacao-e-rastreabilidade/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Documentação e rastreabilidade</h3><p>Como cada operação gera a evidência que sustenta auditorias.</p><span class="hx-go">Ver solução →</span></a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-final">
+      <div>
+        <span class="hx-label on-dark">Avaliação técnica sem compromisso</span>
+        <h2>Quantas máquinas estão esperando para sair — e o que ainda mora nos discos delas?</h2>
+        <p>Descreva o parque, o destino pretendido e o prazo. A equipe retorna com aplicabilidade, escopo e o modelo de relatório.</p>
+      </div>
+      <div class="hx-actions">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=sanitizacao-segura-de-dados&amp;material=Inform%C3%A1tica%20e%20TI" data-track="sanitizacao-segura-de-dados_final_cta">Solicitar avaliação técnica</a>
+        <a class="button hx-btn-wa" href="{{@custom.whatsapp_url}}" rel="noopener" data-track="sanitizacao-segura-de-dados_final_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> WhatsApp</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<a class="hx-wa-float" href="{{@custom.whatsapp_url}}" rel="noopener" aria-label="Falar no WhatsApp" data-track="sanitizacao-segura-de-dados_whatsapp_flutuante"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg><span>Falar no WhatsApp</span></a>
