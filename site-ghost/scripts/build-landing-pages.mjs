@@ -236,6 +236,118 @@ ${p.why ? `<section class="hx-block alt">
 `;
 }
 
+function renderHubTemplate(p) {
+  const slug = p.slug;
+  const groups = p.groups.map((g) => `<section class="hx-block${g.alt ? ' alt' : ''}">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">${esc(g.eyebrow)}</span><h2>${esc(g.title)}</h2></div>
+      <p>${esc(g.sub)}</p>
+    </div>
+    <div class="hx-sol-grid">
+        ${g.items.map((i) => `<a class="hx-sol" href="{{@site.url}}${i.href}"><span class="hx-icon">${icons[i.icon] || icons.box}</span><h3>${esc(i.title)}</h3><p>${esc(i.text)}</p><span class="hx-go">Ver página →</span></a>`).join('\n        ')}
+    </div>
+  </div>
+</section>`).join('\n\n');
+
+  return `{{!< default}}
+{{! Gerado por scripts/build-landing-pages.mjs a partir de landing/landing-pages.json — não edite à mão. }}
+{{#contentFor "head"}}
+<link rel="stylesheet" href="{{asset "css/landing.css"}}">
+{{/contentFor}}
+
+<section class="hx-hero">
+  <div class="container hx-crumbs"><a href="{{@site.url}}/">Início</a> › ${esc(p.crumb)}</div>
+  <div class="container hx-hero-grid" style="grid-template-columns:1fr">
+    <div>
+      <span class="hx-label on-dark">${esc(p.hero.eyebrow)}</span>
+      <h1>${esc(p.title)}</h1>
+      <p class="hx-sub">${esc(p.hero.sub)}</p>
+      <div class="hx-hero-ctas">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=${slug}" data-track="${slug}_hero_cta">${esc(p.hero.cta)}</a>
+        <a class="button hx-btn-outline-dark" href="{{@custom.whatsapp_url}}" rel="noopener" data-track="${slug}_hero_whatsapp">Falar no WhatsApp</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+${groups}
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-authority">
+      <div>
+        <span class="hx-label on-dark">${esc(p.note.eyebrow)}</span>
+        <strong>${esc(p.note.title)}</strong>
+        <p>${esc(p.note.text)}</p>
+      </div>
+      <a href="{{@site.url}}${p.note.href}" data-track="${slug}_note">${esc(p.note.linkLabel)} →</a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-final">
+      <div>
+        <span class="hx-label on-dark">${esc(p.final.eyebrow)}</span>
+        <h2>${esc(p.final.title)}</h2>
+        <p>${esc(p.final.text)}</p>
+      </div>
+      <div class="hx-actions">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=${slug}" data-track="${slug}_final_cta">${esc(p.hero.cta)}</a>
+        <a class="button hx-btn-wa" href="{{@custom.whatsapp_url}}" rel="noopener" data-track="${slug}_final_whatsapp">${wa} WhatsApp</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<a class="hx-wa-float" href="{{@custom.whatsapp_url}}" rel="noopener" aria-label="Falar no WhatsApp" data-track="${slug}_whatsapp_flutuante">${wa}<span>Falar no WhatsApp</span></a>
+`;
+}
+
+function renderHubSyncEntry(p) {
+  const ld = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'CollectionPage',
+        name: p.title,
+        url: `${base}/${p.slug}/`,
+        description: p.meta_description,
+        isPartOf: {'@id': `${base}/#website`},
+        about: {'@id': `${base}/#organization`}
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          {'@type': 'ListItem', position: 1, name: 'Início', item: `${base}/`},
+          {'@type': 'ListItem', position: 2, name: p.crumb, item: `${base}/${p.slug}/`}
+        ]
+      },
+      {
+        '@type': 'ItemList',
+        itemListElement: p.groups.flatMap((g) => g.items).map((i, index) => ({'@type': 'ListItem', position: index + 1, name: i.title, url: `${base}${i.href}`}))
+      }
+    ]
+  };
+  const html = [
+    `<p>${esc(p.hero.sub)}</p>`,
+    ...p.groups.map((g) => `<h2>${esc(g.title)}</h2><ul>${g.items.map((i) => `<li><a href="${i.href}">${esc(i.title)}</a> — ${esc(i.text)}</li>`).join('')}</ul>`),
+    `<p>${esc(p.note.text)} <a href="${p.note.href}">${esc(p.note.linkLabel)}</a>.</p>`,
+    `<p><a href="/agendamento/?perfil=empresa&amp;origem=${p.slug}">${esc(p.hero.cta)}</a>.</p>`
+  ].join('');
+  return {
+    title: p.title,
+    slug: p.slug,
+    custom_excerpt: p.custom_excerpt,
+    meta_title: p.meta_title,
+    meta_description: p.meta_description,
+    codeinjection_head: `<script type="application/ld+json">${JSON.stringify(ld)}</script>`,
+    html
+  };
+}
+
 function renderSyncEntry(p) {
   const ld = {
     '@context': 'https://schema.org',
@@ -286,10 +398,11 @@ function renderSyncEntry(p) {
 
 const syncEntries = [];
 for (const p of pages) {
-  const template = renderTemplate(p);
+  const isHub = p.type === 'hub';
+  const template = isHub ? renderHubTemplate(p) : renderTemplate(p);
   await fs.writeFile(path.join(root, 'theme', `page-${p.slug}.hbs`), template);
-  syncEntries.push(renderSyncEntry(p));
-  console.log('Gerado page-%s.hbs', p.slug);
+  syncEntries.push(isHub ? renderHubSyncEntry(p) : renderSyncEntry(p));
+  console.log('Gerado page-%s.hbs%s', p.slug, isHub ? ' (hub)' : '');
 }
 await fs.writeFile(path.join(root, 'content', 'commercial-pages.json'), JSON.stringify(syncEntries, null, 2) + '\n');
 console.log('Gerado content/commercial-pages.json com %d páginas.', syncEntries.length);

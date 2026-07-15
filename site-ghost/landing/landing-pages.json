@@ -8,8 +8,8 @@
     "meta_title": "Descarte de ativos de TI desmobilizados | Ecobraz",
     "meta_description": "Retirada, inventário, custódia e destinação de ativos de TI desmobilizados — com tratamento de dados e documentação, mediante avaliação técnica do lote.",
     "hub": {
-      "title": "Descarte corporativo de TI",
-      "href": "/descarte-corporativo-de-ti/"
+      "title": "Soluções corporativas",
+      "href": "/solucoes-corporativas/"
     },
     "hero": {
       "eyebrow": "Troca de parque · Fim de contrato · Encerramento de unidade",
@@ -269,8 +269,8 @@
     "meta_title": "Logística reversa para marketplaces e e-commerce | Ecobraz",
     "meta_description": "Destinação de devoluções, avarias e estoque sem revenda em e-commerce: retirada programada em CDs, inventário por lote, descaracterização e documentação.",
     "hub": {
-      "title": "Logística reversa",
-      "href": "/logistica-reversa/"
+      "title": "Soluções corporativas",
+      "href": "/solucoes-corporativas/"
     },
     "hero": {
       "eyebrow": "Devoluções · Avarias · Estoque sem revenda",
@@ -530,8 +530,8 @@
     "meta_title": "Destinação de bens sinistrados para seguradoras | Ecobraz",
     "meta_description": "Bens sinistrados e salvados eletroeletrônicos: inventário, registro fotográfico, descaracterização, custódia e destinação com evidência conforme o escopo.",
     "hub": {
-      "title": "Logística reversa",
-      "href": "/logistica-reversa/"
+      "title": "Soluções por setor",
+      "href": "/solucoes-por-setor/"
     },
     "hero": {
       "eyebrow": "Sinistros · Salvados · Descaracterização",
@@ -791,8 +791,8 @@
     "meta_title": "Descarte de produtos danificados e fora de garantia | Ecobraz",
     "meta_description": "Avarias, devoluções e estoque sem revenda: destinação com descaracterização quando exigida, inventário por lote e documentação para fabricantes e varejo.",
     "hub": {
-      "title": "Logística reversa",
-      "href": "/logistica-reversa/"
+      "title": "Soluções corporativas",
+      "href": "/solucoes-corporativas/"
     },
     "hero": {
       "eyebrow": "Avarias · Devoluções · Pós-venda",
@@ -1052,8 +1052,8 @@
     "meta_title": "Descarte de ATM e equipamentos bancários | Ecobraz",
     "meta_description": "ATMs, terminais, servidores e equipamentos sensíveis: retirada com custódia, destruição de mídias conforme escopo e documentação para auditoria bancária.",
     "hub": {
-      "title": "Descarte corporativo de TI",
-      "href": "/descarte-corporativo-de-ti/"
+      "title": "Soluções por setor",
+      "href": "/solucoes-por-setor/"
     },
     "hero": {
       "eyebrow": "ATMs · Terminais · Infraestrutura de agências",
@@ -2107,8 +2107,8 @@
     "meta_title": "Desmobilização de data center | Ecobraz",
     "meta_description": "Desativação de data center com inventário por rack, tratamento de mídias, retirada em janelas definidas e documentação — do decomissionamento ao imóvel livre.",
     "hub": {
-      "title": "Descarte corporativo de TI",
-      "href": "/descarte-corporativo-de-ti/"
+      "title": "Soluções corporativas",
+      "href": "/solucoes-corporativas/"
     },
     "hero": {
       "eyebrow": "Migração para nuvem · Fechamento de site · Colocation",
@@ -2357,6 +2357,1110 @@
       "eyebrow": "Avaliação técnica sem compromisso",
       "title": "Quanto custa mais um trimestre da sala morta no seu orçamento?",
       "text": "Descreva o site, os racks e os prazos do imóvel. A equipe retorna com cronograma, escopo e a documentação do projeto — por escrito."
+    }
+  },
+  {
+    "type": "hub",
+    "slug": "solucoes-corporativas",
+    "title": "Soluções corporativas de descarte, dados e logística reversa",
+    "crumb": "Soluções corporativas",
+    "custom_excerpt": "O ponto de partida para empresas: soluções organizadas por evento operacional — desmobilização, dados, devoluções, recorrência — cada uma com escopo, processo e documentação próprios.",
+    "meta_title": "Soluções corporativas de descarte e dados | Ecobraz",
+    "meta_description": "Desmobilização de TI, tratamento de dados, devoluções e fluxos recorrentes: as soluções corporativas da Ecobraz organizadas por evento operacional.",
+    "hero": {
+      "eyebrow": "Para empresas e instituições",
+      "sub": "O comprador corporativo não procura 'descarte de lixo eletrônico' — procura resolver um evento: uma desmobilização, um risco de dados, um estoque de devoluções, uma auditoria chegando. Cada solução abaixo ataca um desses eventos, com escopo, processo e documentação próprios.",
+      "cta": "Solicitar avaliação técnica"
+    },
+    "groups": [
+      {
+        "eyebrow": "Dados e infraestrutura de TI",
+        "title": "Quando o problema envolve equipamentos e dados",
+        "sub": "Do notebook no depósito ao data center inteiro — com o tratamento de dados registrado em cada etapa.",
+        "items": [
+          {
+            "title": "Ativos de TI desmobilizados",
+            "href": "/descarte-de-ativos-de-ti-desmobilizados/",
+            "icon": "box",
+            "text": "Troca de parque, fim de contrato e encerramento de unidade — com inventário e custódia."
+          },
+          {
+            "title": "Sanitização segura de dados",
+            "href": "/sanitizacao-segura-de-dados/",
+            "icon": "chart",
+            "text": "Remoção lógica com relatório por mídia — para leasing, reuso e doação."
+          },
+          {
+            "title": "Destruição física de dados e mídias",
+            "href": "/destruicao-fisica-de-dados-e-midias/",
+            "icon": "lock",
+            "text": "Inutilização definitiva com custódia — para políticas sem reuso."
+          },
+          {
+            "title": "Desmobilização de data center",
+            "href": "/desmobilizacao-de-data-center/",
+            "icon": "building",
+            "text": "Do rack ao imóvel entregue, como projeto com cronograma."
+          },
+          {
+            "title": "Descarte corporativo de TI",
+            "href": "/descarte-corporativo-de-ti/",
+            "icon": "shield",
+            "text": "A entrada geral para parques de TI de empresas e instituições."
+          },
+          {
+            "title": "Documentação e rastreabilidade",
+            "href": "/documentacao-e-rastreabilidade/",
+            "icon": "file",
+            "text": "Inventário, MTR, CDF e cadeia de custódia — como a prova é construída."
+          }
+        ]
+      },
+      {
+        "alt": true,
+        "eyebrow": "Fluxos comerciais e reversos",
+        "title": "Quando o problema é volume que não para de chegar",
+        "sub": "Devoluções, avarias, pós-venda e obrigações de logística reversa — tratados como fluxo, não como emergência.",
+        "items": [
+          {
+            "title": "Marketplaces e e-commerce",
+            "href": "/logistica-reversa-para-marketplaces-e-ecommerce/",
+            "icon": "truck",
+            "text": "Devoluções e avarias em escala, com calendário por CD e prova por ciclo."
+          },
+          {
+            "title": "Fabricantes e importadores",
+            "href": "/logistica-reversa-para-fabricantes-e-importadores/",
+            "icon": "building",
+            "text": "Pós-consumo, garantia e produtos sem revenda — com comprovação."
+          },
+          {
+            "title": "Produtos danificados e fora de garantia",
+            "href": "/descarte-de-produtos-danificados-e-fora-de-garantia/",
+            "icon": "box",
+            "text": "Proteção de marca e lastro documental para a baixa de estoque."
+          },
+          {
+            "title": "Coletas recorrentes",
+            "href": "/coletas-recorrentes/",
+            "icon": "chart",
+            "text": "Calendário contínuo para operações com fluxo constante de resíduos."
+          },
+          {
+            "title": "Logística reversa",
+            "href": "/logistica-reversa/",
+            "icon": "truck",
+            "text": "A visão geral dos fluxos reversos documentados de ponta a ponta."
+          },
+          {
+            "title": "Bens sinistrados para seguradoras",
+            "href": "/destinacao-de-bens-sinistrados-para-seguradoras/",
+            "icon": "alert",
+            "text": "Salvados com registro fotográfico, descaracterização e custódia."
+          }
+        ]
+      }
+    ],
+    "note": {
+      "eyebrow": "Escopo com limite declarado",
+      "title": "O que não coletamos — em nenhuma solução",
+      "text": "Pilhas domésticas avulsas, toner e cartuchos, lâmpadas, óleo, isopor, embalagens e resíduos químicos, biológicos, radioativos ou contaminados. Cada página declara seu escopo — e toda coleta passa por avaliação técnica antes da confirmação.",
+      "href": "/evidencias/",
+      "linkLabel": "Ver evidências públicas"
+    },
+    "final": {
+      "eyebrow": "Não achou o seu caso?",
+      "title": "Descreva o evento — a avaliação técnica aponta a solução.",
+      "text": "Material, volume, localidade e exigência documental: com isso a equipe retorna com o escopo aplicável, por escrito."
+    }
+  },
+  {
+    "type": "hub",
+    "slug": "solucoes-por-setor",
+    "title": "Soluções por setor: a prova que o seu mercado exige",
+    "crumb": "Soluções por setor",
+    "custom_excerpt": "Seguradoras, bancos, varejo, saúde, telecom e indústria: cada setor tem exigências, riscos e padrões de evidência próprios — e uma página dedicada a eles.",
+    "meta_title": "Soluções por setor | Ecobraz",
+    "meta_description": "Descarte e destinação com o padrão de prova de cada setor: seguradoras, bancos, varejo, saúde, telecomunicações e indústria.",
+    "hero": {
+      "eyebrow": "Seguros · Financeiro · Varejo · Saúde · Telecom · Indústria",
+      "sub": "Auditoria bancária não aceita a mesma prova que um processo de sinistro. Reforma de loja não tem a logística de um hospital. Cada setor abaixo tem uma página com a linguagem, os requisitos e o padrão de evidência que o seu comprador — e o seu auditor — esperam.",
+      "cta": "Solicitar avaliação técnica"
+    },
+    "groups": [
+      {
+        "eyebrow": "Setores atendidos",
+        "title": "Escolha o seu mercado",
+        "sub": "Cada página fala a língua do setor: riscos específicos, requisitos de segurança e o formato de prova que fecha o processo.",
+        "items": [
+          {
+            "title": "Seguradoras",
+            "href": "/destinacao-de-bens-sinistrados-para-seguradoras/",
+            "icon": "shield",
+            "text": "Bens sinistrados e salvados: inventário, registro fotográfico, descaracterização e custódia."
+          },
+          {
+            "title": "Bancos e financeiras",
+            "href": "/descarte-de-atm-e-equipamentos-bancarios/",
+            "icon": "lock",
+            "text": "ATMs, terminais e mídias sensíveis com custódia ponta a ponta e laudo por unidade."
+          },
+          {
+            "title": "Varejo e PDV",
+            "href": "/descarte-de-equipamentos-de-varejo-e-pdv/",
+            "icon": "box",
+            "text": "Reformas de loja, troca de PDV e totens — consolidação por loja e por regional."
+          },
+          {
+            "title": "Saúde",
+            "href": "/descarte-de-equipamentos-hospitalares/",
+            "icon": "alert",
+            "text": "Eletrônicos hospitalares não contaminados, com declaração e documentação."
+          },
+          {
+            "title": "Telecomunicações",
+            "href": "/descarte-de-equipamentos-de-telecomunicacoes/",
+            "icon": "chart",
+            "text": "Redes, telefonia e infraestrutura desmobilizada."
+          },
+          {
+            "title": "Indústria",
+            "href": "/descarte-de-maquinas-e-equipamentos-industriais/",
+            "icon": "building",
+            "text": "Máquinas, painéis, motores e linhas inteiras de grande porte."
+          }
+        ]
+      }
+    ],
+    "note": {
+      "eyebrow": "Seu setor não está aqui?",
+      "title": "A avaliação técnica cobre qualquer operação corporativa",
+      "text": "As páginas setoriais organizam requisitos frequentes — mas toda operação passa pela mesma avaliação: material, volume, localidade, exigência documental e viabilidade. Descreva o seu caso e receba o escopo aplicável.",
+      "href": "/solucoes-corporativas/",
+      "linkLabel": "Ver soluções por evento"
+    },
+    "final": {
+      "eyebrow": "Fale com quem entende o seu setor",
+      "title": "Descreva a operação no formato do seu mercado.",
+      "text": "Sinistro, agência, loja, hospital, site de telecom ou planta industrial — a equipe retorna com o padrão de prova do seu setor."
+    }
+  },
+  {
+    "type": "hub",
+    "slug": "materiais-e-equipamentos-coletados",
+    "title": "Materiais e equipamentos que a Ecobraz coleta",
+    "crumb": "Materiais e equipamentos",
+    "custom_excerpt": "De notebooks a linhas industriais inteiras: os materiais e equipamentos aceitos, cada um com sua página de escopo, requisitos e avaliação — e as exclusões declaradas.",
+    "meta_title": "Materiais e equipamentos coletados | Ecobraz",
+    "meta_description": "O que a Ecobraz coleta: TI, servidores, baterias, telecom, eletrodomésticos, máquinas industriais e mais — com escopo declarado e avaliação técnica.",
+    "hero": {
+      "eyebrow": "O que coletamos — e o que não coletamos",
+      "sub": "Cada material tem requisitos próprios de manuseio, transporte e destinação. Encontre o seu na lista, veja o escopo exato na página dedicada — e note que as exclusões também estão declaradas, porque escopo honesto evita retrabalho dos dois lados.",
+      "cta": "Solicitar avaliação técnica"
+    },
+    "groups": [
+      {
+        "eyebrow": "TI e eletrônicos",
+        "title": "Tecnologia e infraestrutura",
+        "sub": "Do periférico ao data center — com tratamento de dados quando o equipamento carrega mídias.",
+        "items": [
+          {
+            "title": "Lixo eletrônico em geral",
+            "href": "/coleta-de-lixo-eletronico/",
+            "icon": "box",
+            "text": "A entrada geral para resíduos eletroeletrônicos de empresas e residências."
+          },
+          {
+            "title": "Computadores e notebooks",
+            "href": "/coleta-de-computadores-e-notebooks/",
+            "icon": "chart",
+            "text": "TI de usuário e periféricos, com tratamento de dados quando aplicável."
+          },
+          {
+            "title": "Servidores, racks e storages",
+            "href": "/descarte-de-servidores-e-data-center/",
+            "icon": "building",
+            "text": "Infraestrutura de data center e sala de servidores."
+          },
+          {
+            "title": "Celulares e tablets",
+            "href": "/descarte-de-celulares-e-tablets/",
+            "icon": "lock",
+            "text": "Dispositivos móveis corporativos, com atenção às mídias."
+          },
+          {
+            "title": "Impressoras",
+            "href": "/descarte-de-impressoras/",
+            "icon": "file",
+            "text": "Equipamentos de impressão — sem toner e cartuchos avulsos."
+          },
+          {
+            "title": "Placas e componentes",
+            "href": "/descarte-de-placas-e-componentes-eletronicos/",
+            "icon": "chart",
+            "text": "Placas, componentes e sucata de informática."
+          },
+          {
+            "title": "Telecomunicações",
+            "href": "/descarte-de-equipamentos-de-telecomunicacoes/",
+            "icon": "truck",
+            "text": "Redes, telefonia e infraestrutura desmobilizada."
+          },
+          {
+            "title": "Cabos e fios",
+            "href": "/descarte-de-cabos-e-fios/",
+            "icon": "box",
+            "text": "Cabeamento elétrico e de rede, avaliado por volume."
+          }
+        ]
+      },
+      {
+        "alt": true,
+        "eyebrow": "Energia, clima e grande porte",
+        "title": "Baterias, linha branca e indústria",
+        "sub": "Categorias com logística e requisitos próprios — sempre definidos na avaliação técnica.",
+        "items": [
+          {
+            "title": "Baterias e nobreaks",
+            "href": "/descarte-de-baterias-e-nobreaks/",
+            "icon": "alert",
+            "text": "Lítio, chumbo-ácido, estacionárias, tracionárias, automotivas e de veículos elétricos."
+          },
+          {
+            "title": "Eletrodomésticos",
+            "href": "/descarte-de-eletrodomesticos/",
+            "icon": "box",
+            "text": "Linha branca: geladeiras, freezers, lavadoras e secadoras."
+          },
+          {
+            "title": "Ar-condicionado",
+            "href": "/descarte-de-ar-condicionado/",
+            "icon": "building",
+            "text": "Climatização, com logística e riscos operacionais próprios."
+          },
+          {
+            "title": "Televisões e monitores",
+            "href": "/descarte-de-televisao/",
+            "icon": "chart",
+            "text": "TVs, monitores e telas de qualquer geração."
+          },
+          {
+            "title": "Máquinas industriais",
+            "href": "/descarte-de-maquinas-e-equipamentos-industriais/",
+            "icon": "truck",
+            "text": "Grande porte: painéis, motores e linhas desmobilizadas."
+          },
+          {
+            "title": "Equipamentos hospitalares",
+            "href": "/descarte-de-equipamentos-hospitalares/",
+            "icon": "shield",
+            "text": "Somente eletrônicos não contaminados e sujeitos à declaração."
+          }
+        ]
+      }
+    ],
+    "note": {
+      "eyebrow": "Escopo negativo — declarado sempre",
+      "title": "O que NÃO coletamos, em nenhuma hipótese",
+      "text": "Pilhas domésticas avulsas (AA, AAA e similares), toner e cartuchos, lâmpadas, óleo, isopor, embalagens e resíduos químicos, biológicos, radioativos ou contaminados. Esses materiais exigem cadeias específicas e não fazem parte dos nossos serviços.",
+      "href": "/agendamento/",
+      "linkLabel": "Solicitar coleta do que coletamos"
+    },
+    "final": {
+      "eyebrow": "Material misto ou fora da lista?",
+      "title": "Descreva o lote — a avaliação separa o que entra do que não entra.",
+      "text": "Tipo, volume e localidade: com isso a equipe retorna com o escopo aplicável e as condições, por escrito."
+    }
+  },
+  {
+    "slug": "logistica-reversa-para-fabricantes-e-importadores",
+    "title": "Logística reversa para fabricantes e importadores",
+    "crumb": "Fabricantes e importadores",
+    "serviceType": "Destinação de produtos de pós-consumo, garantia e estoque sem revenda para fabricantes e importadores de eletroeletrônicos",
+    "custom_excerpt": "Pós-consumo, trocas de garantia e produtos sem revenda destinados com descaracterização, inventário e comprovação — o elo operacional da obrigação de logística reversa.",
+    "meta_title": "Logística reversa para fabricantes e importadores | Ecobraz",
+    "meta_description": "Pós-consumo, garantia e produtos sem revenda para fabricantes e importadores de eletroeletrônicos — destinação com descaracterização e comprovação.",
+    "hub": {
+      "title": "Soluções corporativas",
+      "href": "/solucoes-corporativas/"
+    },
+    "hero": {
+      "eyebrow": "Pós-consumo · Garantia · Obrigação legal",
+      "sub": "Quem fabrica ou importa eletroeletrônicos carrega a obrigação de logística reversa — e um fluxo permanente de trocas de garantia, recolhas e produto sem revenda. A Ecobraz executa o elo operacional: recebe, descaracteriza quando exigido e destina, com a comprovação que sustenta seus números.",
+      "cta": "Solicitar avaliação técnica",
+      "band": [
+        {
+          "title": "Obrigação atendida com prova",
+          "text": "destinação documentada lote a lote"
+        },
+        {
+          "title": "Garantia sem segunda vida",
+          "text": "produto trocado não volta ao mercado"
+        },
+        {
+          "title": "Fluxo contínuo",
+          "text": "calendário para pós-venda e recolhas"
+        }
+      ]
+    },
+    "form": {
+      "title": "Descreva o fluxo em 1 minuto",
+      "hint": "A equipe retorna com escopo, calendário e documentação.",
+      "material": "Eletrônicos",
+      "describeLabel": "O que precisa destinar?",
+      "describePlaceholder": "Ex.: 2 mil unidades/ano de trocas de garantia"
+    },
+    "recognize": {
+      "title": "O dia a dia de quem responde pelo pós-venda da marca",
+      "items": [
+        "O galpão de trocas de garantia cresce todo mês — e ninguém quer assinar o destino",
+        "A empresa tem meta de logística reversa para reportar e os números não têm lastro",
+        "Produto trocado em garantia apareceu recondicionado à venda — competindo com o novo",
+        "Importou, o lote veio com defeito, e a devolução ao exterior não compensa",
+        "Auditoria de compliance pediu a trilha do pós-consumo e a resposta foi um contrato antigo"
+      ]
+    },
+    "painsTitle": "A obrigação legal não termina na venda — e a marca também não",
+    "painsSub": "Três frentes que cobram o fabricante muito depois do produto sair da fábrica.",
+    "pains": [
+      {
+        "icon": "alert",
+        "title": "A obrigação de logística reversa é sua — por lei",
+        "text": "A Política Nacional de Resíduos Sólidos atribui a fabricantes e importadores a responsabilidade pela logística reversa de eletroeletrônicos. Sem operação estruturada e sem prova, a obrigação vira passivo regulatório.",
+        "consequence": "Custo real: cobrança em fiscalização e números de reversa reportados sem lastro — indefensáveis quando questionados."
+      },
+      {
+        "icon": "box",
+        "title": "Garantia trocada que renasce no mercado",
+        "text": "O produto substituído em garantia que escapa inteiro reaparece recondicionado — competindo com o produto novo, quebrando de novo e acionando a assistência de novo.",
+        "consequence": "Custo real: a mesma unidade custando duas, três vezes — em garantia, assistência e reputação."
+      },
+      {
+        "icon": "file",
+        "title": "Meta reportada sem trilha auditável",
+        "text": "Relatório de sustentabilidade e metas de reversa exigem trilha: quanto voltou, de onde, para onde foi. Contrato de gaveta com recicladora não constrói esse número.",
+        "consequence": "Custo real: indicador público da empresa vulnerável a questionamento — o pior lugar para descobrir a fragilidade."
+      }
+    ],
+    "contrast": {
+      "title": "Do passivo de pós-venda ao ciclo fechado com prova",
+      "sub": "O fluxo reverso vira operação de rotina — e o número reportado ganha lastro.",
+      "before": {
+        "title": "Como está hoje",
+        "items": [
+          "Galpão de garantia acumulando sem destino",
+          "Produto trocado escapando inteiro para o mercado",
+          "Números de reversa sem trilha documental",
+          "Cada recolha negociada do zero",
+          "Compliance perguntando e o pós-venda improvisando"
+        ]
+      },
+      "after": {
+        "title": "Com a Ecobraz",
+        "items": [
+          "Calendário de destinação para o fluxo de pós-venda",
+          "Descaracterização registrada — a unidade morre documentada",
+          "Inventário, MTR e CDF quando aplicáveis, por lote",
+          "Consolidação por período para reporte e auditoria",
+          "Um fornecedor, um padrão, uma trilha"
+        ]
+      }
+    },
+    "gains": {
+      "title": "O que a marca ganha com o ciclo fechado",
+      "sub": "Obrigação legal, proteção de marca e reporte — resolvidos no mesmo fluxo.",
+      "items": [
+        {
+          "icon": "shield",
+          "title": "Obrigação com lastro",
+          "text": "A logística reversa deixa de ser risco regulatório e vira número defensável."
+        },
+        {
+          "icon": "lock",
+          "title": "Marca protegida",
+          "text": "Produto trocado ou reprovado não reaparece competindo com o novo."
+        },
+        {
+          "icon": "chart",
+          "title": "Reporte pronto",
+          "text": "Consolidação por período alimenta relatório de sustentabilidade e metas."
+        },
+        {
+          "icon": "box",
+          "title": "Galpão girando",
+          "text": "O estoque de pós-venda flui em calendário — sem acúmulo nem decisão adiada."
+        }
+      ]
+    },
+    "scope": {
+      "in": [
+        "Trocas de garantia e recolhas de pós-venda",
+        "Produtos de pós-consumo recebidos de canais e clientes",
+        "Lotes importados com defeito ou sem condição de revenda",
+        "Amostras, protótipos e itens de mostruário eletrônicos",
+        "Fluxos recorrentes com calendário por origem"
+      ],
+      "out": [
+        "Pilhas domésticas avulsas",
+        "Toner e cartuchos",
+        "Lâmpadas, óleo, isopor e embalagens",
+        "Resíduos químicos, biológicos, radioativos ou contaminados"
+      ],
+      "conditions": "A viabilidade depende de categorias, volume por período, origens e exigências de descaracterização e reporte. Cada fluxo é avaliado antes do calendário."
+    },
+    "steps": [
+      {
+        "title": "Descreva o fluxo",
+        "text": "Categorias, volume por período, origens e o que a meta ou auditoria exige."
+      },
+      {
+        "title": "Avaliação técnica",
+        "text": "Analisamos materiais, logística e o nível de descaracterização e prova."
+      },
+      {
+        "title": "Escopo e calendário",
+        "text": "Ciclos de destinação, responsabilidades e documentos acordados."
+      },
+      {
+        "title": "Destinação registrada",
+        "text": "Recebimento ou retirada com inventário e descaracterização conforme escopo."
+      },
+      {
+        "title": "Consolidação e reporte",
+        "text": "Documentação por lote e consolidação por período para suas metas."
+      }
+    ],
+    "evidenceTitle": "O lastro dos seus números de reversa",
+    "evidence": [
+      {
+        "title": "Inventário por lote",
+        "text": "O que entrou no fluxo reverso, registrado na origem."
+      },
+      {
+        "title": "Descaracterização registrada",
+        "text": "A unidade inutilizada de forma documentada, quando contratada."
+      },
+      {
+        "title": "MTR e CDF",
+        "text": "Transporte e destinação certificados, quando aplicáveis ao material."
+      },
+      {
+        "title": "Cadeia de custódia",
+        "text": "O percurso de cada lote até a destinação final."
+      },
+      {
+        "title": "Consolidação por período",
+        "text": "Os totais que alimentam metas, relatórios e auditorias."
+      },
+      {
+        "title": "Escopo documentado",
+        "text": "Responsabilidades e condições definidas antes da operação."
+      }
+    ],
+    "why": {
+      "title": "Por que a Ecobraz no elo reverso da marca",
+      "sub": "O fabricante precisa de um operador que gere prova — não de um comprador de sucata.",
+      "items": [
+        {
+          "icon": "lock",
+          "title": "Sem conflito de interesse",
+          "text": "Não revendemos o que você quer eliminar: o fluxo termina em descaracterização e destinação registradas."
+        },
+        {
+          "icon": "shield",
+          "title": "15 anos de operação",
+          "text": "Associação fundada em 2011, com reconhecimento em plataformas da UE e da ONU — escopo declarado na página de evidências."
+        },
+        {
+          "icon": "file",
+          "title": "Prova no formato do reporte",
+          "text": "Documentação por lote e consolidação por período — o formato que metas e auditorias pedem."
+        },
+        {
+          "icon": "truck",
+          "title": "Recorrência nativa",
+          "text": "Calendário, origens múltiplas e padrão único — desenhado para fluxo permanente de pós-venda."
+        }
+      ]
+    },
+    "authority": "Atuação registrada em plataformas públicas de referência internacional. Cada alegação do site tem fonte, data e escopo declarados na página de evidências.",
+    "faqTitle": "O que pós-venda, compliance e supply perguntam",
+    "faq": [
+      {
+        "q": "Isso atende à obrigação legal de logística reversa?",
+        "a": "A Ecobraz executa o elo operacional — recebimento, descaracterização e destinação documentadas — que dá lastro ao seu programa de reversa. O desenho do programa e o enquadramento regulatório permanecem com a empresa; nós entregamos a operação e a prova."
+      },
+      {
+        "q": "Como garantem que o produto trocado não volta ao mercado?",
+        "a": "Quando a descaracterização integra o escopo, ela é executada e registrada, e o lote segue em cadeia de custódia até a destinação — o conjunto documentado que protege a marca."
+      },
+      {
+        "q": "Atendem fluxo contínuo, não só lotes pontuais?",
+        "a": "Sim — calendário por período e por origem, com consolidação documental. É o desenho ideal para pós-venda e recolhas permanentes."
+      },
+      {
+        "q": "Recebem produtos com baterias?",
+        "a": "Sim. Baterias e produtos que as contêm têm requisitos próprios de acondicionamento e transporte, definidos na avaliação técnica."
+      },
+      {
+        "q": "Como funciona o custo?",
+        "a": "As condições dependem de categorias, volume, origens e nível de descaracterização e prova. A avaliação técnica define o modelo — sem promessa de gratuidade."
+      }
+    ],
+    "related": [
+      {
+        "title": "Marketplaces e e-commerce",
+        "href": "/logistica-reversa-para-marketplaces-e-ecommerce/",
+        "icon": "truck",
+        "text": "Devoluções e avarias em escala, com calendário por CD."
+      },
+      {
+        "title": "Produtos danificados e fora de garantia",
+        "href": "/descarte-de-produtos-danificados-e-fora-de-garantia/",
+        "icon": "box",
+        "text": "Avarias, devoluções e estoque sem revenda com proteção de marca."
+      },
+      {
+        "title": "Documentação e rastreabilidade",
+        "href": "/documentacao-e-rastreabilidade/",
+        "icon": "file",
+        "text": "Como cada operação gera a evidência que sustenta o reporte."
+      }
+    ],
+    "final": {
+      "eyebrow": "Avaliação técnica sem compromisso",
+      "title": "Sua meta de logística reversa tem lastro para ser auditada hoje?",
+      "text": "Descreva categorias, volume por período e origens. A equipe retorna com calendário, escopo e o padrão de prova — por escrito."
+    }
+  },
+  {
+    "slug": "descarte-de-equipamentos-de-varejo-e-pdv",
+    "title": "Descarte de equipamentos de varejo e PDV",
+    "crumb": "Varejo e PDV",
+    "serviceType": "Retirada e destinação de PDVs, totens, caixas e infraestrutura de lojas, com consolidação multi-lojas",
+    "custom_excerpt": "Reforma de lojas, troca de PDV e desativação de unidades: retirada por loja, tratamento de mídias de pagamento e consolidação documental por regional.",
+    "meta_title": "Descarte de equipamentos de varejo e PDV | Ecobraz",
+    "meta_description": "PDVs, totens, caixas e infraestrutura de lojas: retirada por unidade, tratamento de mídias e consolidação documental por regional para redes de varejo.",
+    "hub": {
+      "title": "Soluções por setor",
+      "href": "/solucoes-por-setor/"
+    },
+    "hero": {
+      "eyebrow": "Reforma de lojas · Troca de PDV · Fechamento de unidades",
+      "sub": "Rede em reforma é equipamento saindo aos lotes: PDVs, totens, leitores, caixas e infraestrutura inteira de loja. A Ecobraz retira por unidade dentro do cronograma da obra, trata as mídias dos terminais de pagamento e consolida a documentação por loja e por regional.",
+      "cta": "Solicitar avaliação técnica",
+      "band": [
+        {
+          "title": "No ritmo da obra",
+          "text": "retirada casada com o cronograma da reforma"
+        },
+        {
+          "title": "Mídias de pagamento tratadas",
+          "text": "terminais com registro de tratamento"
+        },
+        {
+          "title": "Consolidação por regional",
+          "text": "uma trilha documental para toda a rede"
+        }
+      ]
+    },
+    "form": {
+      "title": "Descreva a operação em 1 minuto",
+      "hint": "A equipe retorna com escopo, cronograma e documentação.",
+      "material": "Eletrônicos",
+      "describeLabel": "O que precisa retirar?",
+      "describePlaceholder": "Ex.: troca de PDV em 40 lojas até dezembro"
+    },
+    "recognize": {
+      "title": "Toda rede em transformação conhece essas cenas",
+      "items": [
+        "O rollout do novo PDV começou e ninguém definiu o destino dos terminais antigos",
+        "A reforma tem data para inaugurar e o estoque velho está no meio do canteiro",
+        "Fechou unidade — e o equipamento da loja virou problema do gerente regional",
+        "Terminais de pagamento antigos guardados 'por segurança' em dezenas de lojas",
+        "Cada loja descarta de um jeito e a rede não tem uma trilha única para auditoria"
+      ]
+    },
+    "painsTitle": "Equipamento de loja parado atrapalha a obra — e expõe a rede",
+    "painsSub": "Três problemas que escalam com o número de unidades.",
+    "pains": [
+      {
+        "icon": "building",
+        "title": "A obra não espera o descarte",
+        "text": "Reforma e rollout têm cronograma de inauguração. Equipamento antigo no canteiro atrasa a obra, ocupa o estoque e vira custo de armazenagem improvisada.",
+        "consequence": "Custo real: dias de obra parada e inauguração adiada — o custo mais caro do varejo."
+      },
+      {
+        "icon": "lock",
+        "title": "Terminal de pagamento é mídia sensível",
+        "text": "PDVs e terminais carregam configurações, registros de transação e componentes de segurança. Descartá-los como sucata comum é abrir uma porta desnecessária.",
+        "consequence": "Custo real: questionamento de segurança de pagamento — num setor onde a confiança do cliente é o ativo."
+      },
+      {
+        "icon": "file",
+        "title": "Cem lojas, cem jeitos de descartar",
+        "text": "Sem padrão único, cada gerente resolve como dá. Quando a auditoria pergunta pela rede inteira, não existe uma resposta — existem cem.",
+        "consequence": "Custo real: horas de retrabalho consolidando papéis díspares — ou a admissão de que não há trilha."
+      }
+    ],
+    "contrast": {
+      "title": "Da loja improvisando ao padrão da rede",
+      "sub": "O descarte entra no cronograma — e a rede inteira responde com um documento só.",
+      "before": {
+        "title": "Como está hoje",
+        "items": [
+          "Equipamento antigo disputando espaço com a obra",
+          "Terminais guardados em fundos de loja 'por precaução'",
+          "Cada unidade com um descarte diferente",
+          "Nenhuma consolidação por regional",
+          "Auditoria respondida loja a loja, no improviso"
+        ]
+      },
+      "after": {
+        "title": "Com a Ecobraz",
+        "items": [
+          "Retirada agendada por loja, casada com o cronograma",
+          "Mídias de pagamento tratadas com registro",
+          "Um padrão único de processo e documento",
+          "Consolidação por loja, regional e período",
+          "A rede inteira em uma trilha auditável"
+        ]
+      }
+    },
+    "gains": {
+      "title": "O que a rede ganha com o padrão único",
+      "sub": "Escala sem improviso: o mesmo processo da primeira à centésima loja.",
+      "items": [
+        {
+          "icon": "building",
+          "title": "Obra no prazo",
+          "text": "O equipamento antigo sai quando a obra precisa — sem virar gargalo de inauguração."
+        },
+        {
+          "icon": "lock",
+          "title": "Pagamento protegido",
+          "text": "Terminais tratados com registro — a segurança da rede não termina no caixa."
+        },
+        {
+          "icon": "file",
+          "title": "Uma resposta para a rede",
+          "text": "Consolidação por regional: a auditoria pergunta uma vez, você responde uma vez."
+        },
+        {
+          "icon": "truck",
+          "title": "Rollout escalável",
+          "text": "O mesmo fluxo atende 5 ou 500 lojas — com avaliação de praças e calendário."
+        }
+      ]
+    },
+    "scope": {
+      "in": [
+        "PDVs, caixas e terminais de autoatendimento",
+        "Totens, leitores, balanças eletrônicas e impressoras fiscais",
+        "Infraestrutura de loja: rede, CFTV eletrônico, som e telas",
+        "Terminais de pagamento, com tratamento de mídias conforme escopo",
+        "Operações multi-lojas, avaliadas por praça e cronograma"
+      ],
+      "out": [
+        "Mobiliário e materiais de obra não eletrônicos",
+        "Pilhas domésticas, toner, lâmpadas e demais exclusões padrão",
+        "Resíduos químicos, biológicos, radioativos ou contaminados",
+        "Numerário e valores — nunca fazem parte do serviço"
+      ],
+      "conditions": "A viabilidade considera número de lojas, praças, cronograma da obra ou rollout, acesso e exigências documentais. Cada operação é avaliada antes do calendário."
+    },
+    "steps": [
+      {
+        "title": "Descreva a operação",
+        "text": "Lojas envolvidas, tipos de equipamento, cronograma e exigências."
+      },
+      {
+        "title": "Avaliação técnica",
+        "text": "Analisamos praças, logística por loja e tratamento de mídias aplicável."
+      },
+      {
+        "title": "Calendário por loja",
+        "text": "Retiradas casadas com a obra ou o rollout, com responsabilidades definidas."
+      },
+      {
+        "title": "Retirada registrada",
+        "text": "Inventário por unidade e cadeia de custódia em cada loja."
+      },
+      {
+        "title": "Consolidação da rede",
+        "text": "Destinação documentada e relatório consolidado por regional e período."
+      }
+    ],
+    "evidenceTitle": "A trilha documental da rede inteira",
+    "evidence": [
+      {
+        "title": "Inventário por loja",
+        "text": "O que saiu de cada unidade, registrado na retirada."
+      },
+      {
+        "title": "Tratamento de mídias",
+        "text": "Terminais e equipamentos com dados tratados e registrados, conforme escopo."
+      },
+      {
+        "title": "MTR e CDF",
+        "text": "Transporte e destinação certificados, quando aplicáveis ao material."
+      },
+      {
+        "title": "Cadeia de custódia",
+        "text": "O percurso de cada lote, da loja à destinação."
+      },
+      {
+        "title": "Consolidação por regional",
+        "text": "A visão agregada que a auditoria e o ESG da rede pedem."
+      },
+      {
+        "title": "Escopo documentado",
+        "text": "Cronograma, responsabilidades e condições por escrito."
+      }
+    ],
+    "why": {
+      "title": "Por que a Ecobraz para redes de varejo",
+      "sub": "Varejo é escala e prazo — o descarte precisa acompanhar os dois.",
+      "items": [
+        {
+          "icon": "truck",
+          "title": "Multi-lojas por desenho",
+          "text": "Calendário por praça e consolidação por regional — o fluxo nasce preparado para rede, não para loja única."
+        },
+        {
+          "icon": "building",
+          "title": "Respeito ao cronograma",
+          "text": "A retirada entra no plano da obra ou do rollout — não o contrário."
+        },
+        {
+          "icon": "shield",
+          "title": "15 anos de operação",
+          "text": "Associação fundada em 2011, com reconhecimento em plataformas da UE e da ONU — escopo declarado na página de evidências."
+        },
+        {
+          "icon": "file",
+          "title": "Documento no padrão da rede",
+          "text": "Da loja ao consolidado regional, a mesma trilha — pronta para auditoria e reporte ESG."
+        }
+      ]
+    },
+    "authority": "Atuação registrada em plataformas públicas de referência internacional. Cada alegação do site tem fonte, data e escopo declarados na página de evidências.",
+    "faqTitle": "O que operações e expansão perguntam",
+    "faq": [
+      {
+        "q": "Conseguem acompanhar o cronograma de um rollout?",
+        "a": "Sim — o calendário de retiradas é desenhado sobre o cronograma do rollout ou da reforma, loja a loja, com janelas acordadas na avaliação."
+      },
+      {
+        "q": "Como tratam os terminais de pagamento?",
+        "a": "Terminais e PDVs com mídias recebem tratamento definido no escopo — sanitização ou destruição — com registro que integra o relatório da operação."
+      },
+      {
+        "q": "Atendem lojas em várias cidades?",
+        "a": "Operações multi-praças são avaliadas conforme número de lojas, logística e cronograma — com o mesmo padrão documental em todas."
+      },
+      {
+        "q": "E o que não é eletrônico na reforma?",
+        "a": "Nosso escopo são os eletroeletrônicos. Mobiliário e resíduos de obra seguem outras cadeias — e o escopo declarado evita mistura que contamina a trilha documental."
+      },
+      {
+        "q": "Como funciona o custo?",
+        "a": "As condições dependem do número de lojas, praças, volume e exigências. A avaliação técnica define o modelo por operação — sem promessa de gratuidade."
+      }
+    ],
+    "related": [
+      {
+        "title": "ATM e equipamentos bancários",
+        "href": "/descarte-de-atm-e-equipamentos-bancarios/",
+        "icon": "lock",
+        "text": "Terminais e equipamentos sensíveis com custódia ponta a ponta."
+      },
+      {
+        "title": "Coletas recorrentes",
+        "href": "/coletas-recorrentes/",
+        "icon": "truck",
+        "text": "Fluxo contínuo para redes com volume constante."
+      },
+      {
+        "title": "Ativos de TI desmobilizados",
+        "href": "/descarte-de-ativos-de-ti-desmobilizados/",
+        "icon": "box",
+        "text": "A retaguarda administrativa da rede: escritórios e CDs."
+      }
+    ],
+    "final": {
+      "eyebrow": "Avaliação técnica sem compromisso",
+      "title": "Quantas lojas vão trocar de equipamento neste ano?",
+      "text": "Descreva a rede, o cronograma e os equipamentos. A equipe retorna com calendário, escopo e a trilha documental — por escrito."
+    }
+  },
+  {
+    "slug": "programa-adote-um-bairro",
+    "title": "Programa Adote um Bairro: patrocine impacto com registro público",
+    "crumb": "Programa Adote um Bairro",
+    "serviceType": "Programa de adoção de bairros para coleta de resíduos eletrônicos e inclusão digital, com patrocínio corporativo e parcerias institucionais",
+    "custom_excerpt": "Empresas, municípios e instituições adotam bairros para coleta de e-lixo e inclusão digital — um programa listado como boa prática na plataforma de economia circular da União Europeia.",
+    "meta_title": "Programa Adote um Bairro | Ecobraz",
+    "meta_description": "Patrocine a adoção de um bairro: coleta de e-lixo e inclusão digital com execução documentada — programa listado na plataforma de economia circular da UE.",
+    "hub": {
+      "title": "Sobre a Ecobraz",
+      "href": "/sobre/"
+    },
+    "hero": {
+      "eyebrow": "Patrocinadores · Municípios · Instituições",
+      "sub": "O Adote um Bairro leva coleta de resíduos eletrônicos e inclusão digital a um território definido — com a marca do patrocinador vinculada a uma execução real e documentada, não a um selo genérico. O programa está listado como boa prática na plataforma de economia circular da União Europeia.",
+      "cta": "Falar sobre parceria",
+      "band": [
+        {
+          "title": "Território definido",
+          "text": "um bairro, metas e execução visíveis"
+        },
+        {
+          "title": "Execução documentada",
+          "text": "relatórios do que foi coletado e realizado"
+        },
+        {
+          "title": "Registro público na UE",
+          "text": "boa prática listada, com escopo declarado"
+        }
+      ]
+    },
+    "form": {
+      "title": "Conte como quer participar",
+      "hint": "Retornamos com o desenho de adoção, contrapartidas e próximos passos.",
+      "material": "",
+      "describeLabel": "Como você quer participar?",
+      "describePlaceholder": "Ex.: patrocinar a adoção de um bairro em São Paulo",
+      "button": "Quero apoiar o programa",
+      "micro": "Proposta de parceria sem compromisso — escopo e contrapartidas definidos em conversa."
+    },
+    "recognize": {
+      "title": "Para quem o programa faz sentido",
+      "items": [
+        "Sua empresa quer ESG com endereço: impacto que dá para visitar, fotografar e auditar — não um selo comprado",
+        "O município precisa de solução para o e-lixo domiciliar sem orçamento para operação própria",
+        "A marca patrocina causas, mas cansou de logotipo em evento sem entrega mensurável",
+        "A instituição de ensino ou o coletivo local quer um programa estruturado para chamar de seu",
+        "O relatório de sustentabilidade precisa de um caso concreto, com números e fonte"
+      ]
+    },
+    "painsTitle": "O problema do ESG sem endereço",
+    "painsSub": "Por que tanta iniciativa social de marca não convence mais ninguém.",
+    "pains": [
+      {
+        "icon": "alert",
+        "title": "Selo genérico não sustenta relatório",
+        "text": "Patrocínio difuso vira uma linha no relatório de sustentabilidade que auditor nenhum consegue verificar — e stakeholder nenhum consegue sentir.",
+        "consequence": "Custo real: verba social gasta sem evidência utilizável — e ceticismo crescente a cada ciclo."
+      },
+      {
+        "icon": "building",
+        "title": "O e-lixo doméstico não tem para onde ir",
+        "text": "Nos bairros, o resíduo eletrônico acumula em casa ou vai para o lixo comum — contaminando solo e água com metais pesados. Falta estrutura de coleta local.",
+        "consequence": "Custo real (para o território): contaminação silenciosa e uma lacuna que políticas públicas sozinhas não fecham."
+      },
+      {
+        "icon": "chart",
+        "title": "Impacto sem medição é história, não resultado",
+        "text": "Sem território definido, metas e registro do que foi coletado e realizado, a iniciativa social não gera dado — gera narrativa.",
+        "consequence": "Custo real: impossível comparar, melhorar ou defender o investimento no ano seguinte."
+      }
+    ],
+    "contrast": {
+      "title": "Patrocínio genérico vs. bairro adotado",
+      "sub": "A diferença entre apoiar uma causa e assinar um resultado.",
+      "before": {
+        "title": "Patrocínio comum",
+        "items": [
+          "Logotipo em material de evento",
+          "Impacto difuso, sem território",
+          "Nenhum relatório verificável",
+          "Sem vínculo com a comunidade",
+          "Uma linha genérica no relatório ESG"
+        ]
+      },
+      "after": {
+        "title": "Bairro adotado",
+        "items": [
+          "Um território com o nome do patrocinador",
+          "Coleta de e-lixo e ações de inclusão digital no local",
+          "Relatórios do que foi coletado e realizado",
+          "Comunidade, escolas e coletivos envolvidos",
+          "Caso concreto, com registro público na plataforma da UE"
+        ]
+      }
+    },
+    "gains": {
+      "title": "O que o patrocinador leva",
+      "sub": "Entregáveis definidos no desenho da adoção — descritos pelo que é executado.",
+      "items": [
+        {
+          "icon": "chart",
+          "title": "Caso ESG com dados",
+          "text": "Números do território adotado para relatório e comunicação — com fonte."
+        },
+        {
+          "icon": "shield",
+          "title": "Associação verificável",
+          "text": "A marca vinculada a um programa listado publicamente na plataforma da UE."
+        },
+        {
+          "icon": "building",
+          "title": "Presença no território",
+          "text": "Ações locais com comunidade e escolas — impacto que se visita."
+        },
+        {
+          "icon": "file",
+          "title": "Prestação de contas",
+          "text": "Relatórios periódicos da execução — transparência que sustenta a parceria."
+        }
+      ]
+    },
+    "scope": {
+      "title": "O que o programa entrega — e o que não promete",
+      "inTitle": "Entrega",
+      "outTitle": "Não promete",
+      "in": [
+        "Estrutura de coleta de resíduos eletrônicos no bairro adotado",
+        "Ações de educação ambiental e inclusão digital no território",
+        "Relatórios periódicos do que foi coletado e realizado",
+        "Envolvimento de escolas, coletivos e comunidade local",
+        "Uso da listagem pública do programa, com escopo exato"
+      ],
+      "out": [
+        "Certificação institucional da Comissão Europeia — a listagem comprova publicação como boa prática, não certificação",
+        "Créditos, selos ou compensações não lastreados",
+        "Números de impacto sem registro que os sustente",
+        "Exclusividade territorial sem acordo formal"
+      ],
+      "conditions": "O desenho de cada adoção — território, metas, contrapartidas e calendário — é definido com o patrocinador ou parceiro antes do início.",
+      "outNote": "A regra do programa é a mesma do site inteiro: alegação só com fonte, escopo exato e registro — é isso que protege a marca do patrocinador."
+    },
+    "stepsTitle": "Como uma adoção acontece",
+    "stepsSub": "Do primeiro contato ao bairro em operação.",
+    "steps": [
+      {
+        "title": "Conversa inicial",
+        "text": "Você conta o objetivo — marca, território de interesse, orçamento e prazo."
+      },
+      {
+        "title": "Desenho da adoção",
+        "text": "Definimos bairro, metas, ações, contrapartidas e calendário."
+      },
+      {
+        "title": "Acordo formal",
+        "text": "Escopo, responsabilidades e uso de marca documentados."
+      },
+      {
+        "title": "Operação no território",
+        "text": "Coleta, educação ambiental e inclusão digital em execução."
+      },
+      {
+        "title": "Prestação de contas",
+        "text": "Relatórios periódicos do realizado — a base do seu caso ESG."
+      }
+    ],
+    "evidenceTitle": "A base pública do programa",
+    "evidence": [
+      {
+        "title": "Listagem na plataforma da UE",
+        "text": "O Adote um Bairro está publicado como boa prática na European Circular Economy Stakeholder Platform — veja o registro e seu escopo exato na página de evidências."
+      },
+      {
+        "title": "Execução da Ecobraz",
+        "text": "Quem opera o território é a associação que executa coleta e destinação desde 2011."
+      },
+      {
+        "title": "Relatórios por período",
+        "text": "O realizado no bairro documentado e entregue ao patrocinador."
+      },
+      {
+        "title": "Registro fotográfico",
+        "text": "As ações no território registradas — material para comunicação com fonte."
+      },
+      {
+        "title": "Projeto Reciclando",
+        "text": "A vertente de inclusão digital que destina equipamentos recuperados a quem precisa."
+      },
+      {
+        "title": "Limites declarados",
+        "text": "O que cada registro comprova — e o que não comprova — está escrito."
+      }
+    ],
+    "why": {
+      "title": "Por que adotar com a Ecobraz",
+      "sub": "Impacto social com a mesma régua de prova das operações corporativas.",
+      "items": [
+        {
+          "icon": "shield",
+          "title": "Quem executa é quem assina",
+          "text": "O programa é operado pela própria associação — sem intermediário entre a verba e o território."
+        },
+        {
+          "icon": "chart",
+          "title": "Registro público internacional",
+          "text": "Boa prática listada na plataforma de economia circular da UE, com escopo declarado."
+        },
+        {
+          "icon": "file",
+          "title": "Prestação de contas nativa",
+          "text": "A mesma disciplina documental das operações corporativas, aplicada ao social."
+        },
+        {
+          "icon": "building",
+          "title": "15 anos no território",
+          "text": "Desde 2011 unindo coleta de eletrônicos e inclusão digital — o programa é a expansão de uma prática, não uma ideia nova."
+        }
+      ]
+    },
+    "authority": "O Adote um Bairro está listado como boa prática na plataforma de economia circular da União Europeia — a listagem comprova a publicação na plataforma, com escopo declarado, e não equivale a certificação institucional. Registros e limites na página de evidências.",
+    "faqTitle": "O que patrocinadores e parceiros perguntam",
+    "faq": [
+      {
+        "q": "O que significa estar listado na plataforma da UE?",
+        "a": "Significa que o programa foi publicado como boa prática na European Circular Economy Stakeholder Platform, com escopo declarado. É um registro público verificável — e não equivale a certificação institucional da Comissão Europeia. O link oficial está na página de evidências."
+      },
+      {
+        "q": "O que a minha marca pode comunicar?",
+        "a": "O que estiver documentado: a adoção do território, as ações realizadas e os números dos relatórios, além da referência à listagem pública com seu escopo exato. O uso de marca é definido no acordo."
+      },
+      {
+        "q": "Qual o investimento para adotar um bairro?",
+        "a": "Depende do território, das metas e do desenho das ações. A conversa inicial define o escopo e a proposta — sem compromisso."
+      },
+      {
+        "q": "Municípios e instituições também podem participar?",
+        "a": "Sim — além de patrocinadores corporativos, o programa desenha parcerias com prefeituras, escolas e instituições que queiram estruturar a coleta e a inclusão digital no seu território."
+      },
+      {
+        "q": "Como acompanho o que foi feito?",
+        "a": "Por relatórios periódicos do realizado no bairro — coleta, ações e registros. É a prestação de contas que sustenta o seu caso ESG."
+      }
+    ],
+    "related": [
+      {
+        "title": "Ecobraz + Villanova ESG",
+        "href": "/ecobraz-villanova-esg/",
+        "icon": "chart",
+        "text": "Evidência estruturada para cadeias Brasil-Europa."
+      },
+      {
+        "title": "Sobre a Ecobraz",
+        "href": "/sobre/",
+        "icon": "building",
+        "text": "A associação, o propósito e a trajetória desde 2011."
+      },
+      {
+        "title": "Evidências públicas",
+        "href": "/evidencias/",
+        "icon": "file",
+        "text": "Registros, fontes e limites de cada alegação — com data de corte."
+      }
+    ],
+    "final": {
+      "eyebrow": "Comece a conversa",
+      "title": "Que bairro a sua marca vai adotar?",
+      "text": "Conte o objetivo e o território de interesse. Retornamos com o desenho da adoção, contrapartidas e a proposta — sem compromisso."
     }
   }
 ]
