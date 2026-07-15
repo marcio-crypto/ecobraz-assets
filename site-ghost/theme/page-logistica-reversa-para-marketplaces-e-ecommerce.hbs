@@ -1,0 +1,163 @@
+{{!< default}}
+{{! Gerado por scripts/build-landing-pages.mjs a partir de landing/landing-pages.json — não edite à mão. }}
+{{#contentFor "head"}}
+<link rel="stylesheet" href="{{asset "css/landing.css"}}">
+{{/contentFor}}
+
+<section class="hx-hero">
+  <div class="container hx-crumbs"><a href="{{@site.url}}/">Início</a> › <a href="{{@site.url}}/logistica-reversa/">Logística reversa</a> › Marketplaces e e-commerce</div>
+  <div class="container hx-hero-grid">
+    <div>
+      <span class="hx-label on-dark">Devoluções · Avarias · Estoque sem revenda</span>
+      <h1>Logística reversa para marketplaces e e-commerce</h1>
+      <p class="hx-sub">A Ecobraz destina eletrônicos devolvidos, avariados e sem condição de revenda para operações de e-commerce — com retirada programada em centros de distribuição, inventário por lote, descaracterização quando exigida e documentação por ciclo. Escopo definido em avaliação técnica.</p>
+      <div class="hx-hero-ctas">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=logistica-reversa-para-marketplaces-e-ecommerce&amp;material=Eletr%C3%B4nicos" data-track="logistica-reversa-para-marketplaces-e-ecommerce_hero_cta">Solicitar avaliação técnica</a>
+        <a class="button hx-btn-outline-dark" href="#como-funciona" data-track="logistica-reversa-para-marketplaces-e-ecommerce_hero_como">Como funciona</a>
+      </div>
+      <div class="hx-hero-band">
+        <span><strong>Recorrência programada</strong>calendário por CD e por fluxo</span>
+        <span><strong>Controle de destino</strong>descaracterização e custódia registradas</span>
+        <span><strong>Documentação por ciclo</strong>inventário, MTR e CDF quando aplicáveis</span>
+      </div>
+    </div>
+    <form class="hx-quote" method="get" action="{{@site.url}}/agendamento/">
+      <span class="hx-label">Avaliação técnica</span>
+      <h2>Descreva o fluxo em 1 minuto</h2>
+      <p class="hx-hint">A equipe retorna com escopo, calendário e documentação aplicável.</p>
+      <input type="hidden" name="perfil" value="empresa">
+      <input type="hidden" name="origem" value="logistica-reversa-para-marketplaces-e-ecommerce">
+      <input type="hidden" name="material" value="Eletrônicos">
+      <div class="hx-field">
+        <label for="lp-desc">O que precisa destinar?</label>
+        <input id="lp-desc" name="descricao" placeholder="Ex.: 3 paletes/mês de devoluções no CD de Cajamar">
+      </div>
+      <div class="hx-field">
+        <label for="lp-local">CEP ou cidade da retirada</label>
+        <input id="lp-local" name="local" placeholder="Ex.: 02175-010 ou São Paulo">
+      </div>
+      <button class="button" type="submit" data-track="logistica-reversa-para-marketplaces-e-ecommerce_hero_form">Solicitar avaliação técnica →</button>
+      <div class="hx-or-wa">ou <a href="{{@custom.whatsapp_url}}" rel="noopener" data-track="logistica-reversa-para-marketplaces-e-ecommerce_hero_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> falar com a equipe no WhatsApp</a></div>
+      <p class="hx-micro">A coleta é confirmada após a avaliação de material, volume, localidade e documentação.</p>
+    </form>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">O risco de não resolver</span><h2>Devolução parada é custo — e risco de marca</h2></div>
+      <p>Três problemas crescem junto com o volume de devoluções e avarias.</p>
+    </div>
+    <div class="hx-sol-grid">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><h3>Estoque morto ocupando CD</h3><p>Cada posição de porta-palete ocupada por avaria é espaço que não gira. O acúmulo vira inventário bloqueado e custo fixo sem retorno.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18h.01"/></svg></span><h3>Produto descartado voltando ao mercado</h3><p>Item reprovado que reaparece em canal paralelo gera caso de garantia, disputa com seller e dano de reputação. Sem descaracterização e custódia registradas, o risco é permanente.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Política de garantia sem lastro</h3><p>Auditoria, seller e fabricante pedem prova de destinação por lote. Planilha interna não sustenta a resposta.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Escopo claro</span><h2>O que entra — e o que não entra</h2></div>
+      <p>Escopo declarado antes do agendamento reduz retrabalho e surpresa. Cada lote é avaliado tecnicamente.</p>
+    </div>
+    <div class="hx-scope">
+      <div class="hx-yes"><h3>Dentro do escopo</h3><ul><li>Eletrônicos devolvidos sem condição de revenda</li><li>Avarias de transporte e de armazenagem</li><li>Celulares, notebooks, acessórios e eletroportáteis eletrônicos</li><li>Produtos com bateria de lítio (com requisitos próprios de manuseio)</li><li>Lotes em CDs, lojas e operações de fulfillment</li></ul><p>A viabilidade depende de categorias, volume por ciclo, localidades dos CDs e documentação exigida. Cada fluxo é avaliado antes da definição do calendário.</p></div>
+      <div class="hx-not"><h3>Fora do escopo</h3><ul><li>Pilhas domésticas avulsas</li><li>Toner e cartuchos</li><li>Lâmpadas, óleo, isopor e embalagens</li><li>Resíduos químicos, biológicos, radioativos ou contaminados</li></ul><p>Materiais fora do escopo exigem cadeias específicas e não fazem parte deste serviço.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block" id="como-funciona">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Processo</span><h2>Como funciona, do contato à destinação</h2></div>
+      <p>Nenhuma retirada é confirmada sem avaliação técnica. É isso que mantém a operação previsível e documentável.</p>
+    </div>
+    <div class="hx-steps">
+        <div class="hx-step"><h3>Descreva o fluxo</h3><p>Categorias, volume médio por ciclo, localidades e exigências de destino.</p></div>
+        <div class="hx-step"><h3>Avaliação técnica</h3><p>Analisamos materiais, logística por CD e requisitos de descaracterização.</p></div>
+        <div class="hx-step"><h3>Escopo e calendário</h3><p>Definimos ciclos de retirada, responsabilidades e documentos por lote.</p></div>
+        <div class="hx-step"><h3>Retirada registrada</h3><p>Coleta programada com inventário por lote e cadeia de custódia.</p></div>
+        <div class="hx-step"><h3>Destinação e prova</h3><p>Descaracterização quando contratada, destinação e documentação por ciclo.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Evidência da operação</span><h2>Prova de destinação por ciclo — não por promessa</h2></div>
+      <p>A documentação reflete o que foi efetivamente executado em cada lote — sem promessa genérica.</p>
+    </div>
+    <div class="hx-docs">
+        <div class="hx-doc"><h3>Inventário por lote</h3><p>Relação dos itens retirados em cada ciclo, registrada na origem.</p></div>
+        <div class="hx-doc"><h3>Descaracterização registrada</h3><p>Quando contratada, a inutilização do produto é executada e documentada.</p></div>
+        <div class="hx-doc"><h3>MTR e CDF</h3><p>Manifesto de transporte e certificado de destinação, quando aplicáveis ao material.</p></div>
+        <div class="hx-doc"><h3>Relatório por ciclo</h3><p>Consolidação por período para conciliação com estoque e auditoria.</p></div>
+        <div class="hx-doc"><h3>Cadeia de custódia</h3><p>Registro do percurso de cada lote, do CD à destinação.</p></div>
+        <div class="hx-doc"><h3>Controle contra retorno</h3><p>Fluxo desenhado para o item destinado não reaparecer no mercado.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-authority">
+      <div>
+        <span class="hx-label on-dark">Autoridade verificável</span>
+        <strong>Associação Auxílio à Reciclagem de Eletrônicos e Inclusão Digital — CNPJ 14.197.457/0001-42</strong>
+        <p>Atuação registrada em plataformas públicas de referência internacional. Cada alegação do site tem fonte, data e escopo declarados na página de evidências.</p>
+      </div>
+      <a href="{{@site.url}}/evidencias/" data-track="logistica-reversa-para-marketplaces-e-ecommerce_evidencias">Ver evidências públicas →</a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Perguntas frequentes</span><h2>O que operações de e-commerce perguntam</h2></div>
+    </div>
+    <div class="hx-faq">
+        <details><summary>Vocês garantem que o produto não volta ao mercado?</summary><p>Quando a descaracterização faz parte do escopo contratado, ela é executada e registrada, e o lote segue em cadeia de custódia até a destinação. O controle é documentado por lote — é isso que sustenta a resposta em auditoria.</p></details>
+        <details><summary>Atendem centros de distribuição em mais de uma cidade?</summary><p>Operações com múltiplas localidades são avaliadas conforme volume por praça, logística e calendário. Descreva os CDs envolvidos para verificarmos a cobertura.</p></details>
+        <details><summary>A coleta pode ser recorrente?</summary><p>Sim. Para fluxo contínuo de devoluções, o escopo define ciclos de retirada — semanais, quinzenais ou mensais — com documentação por ciclo.</p></details>
+        <details><summary>Recebem produtos com bateria de lítio?</summary><p>Sim. Baterias e produtos que as contêm têm requisitos próprios de acondicionamento e transporte, definidos na avaliação técnica.</p></details>
+        <details><summary>Como funciona o custo?</summary><p>As condições comerciais dependem de categorias, volume por ciclo, localidades e exigências de descaracterização. A avaliação técnica define o modelo — sem promessa de gratuidade e sem surpresa depois.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Soluções relacionadas</span><h2>Também pode fazer parte da sua operação</h2></div>
+    </div>
+    <div class="hx-sol-grid">
+        <a class="hx-sol" href="{{@site.url}}/coletas-recorrentes/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M1 7h13v10H1zM14 10h4l4 4v3h-8z"/><circle cx="6" cy="19" r="1.6"/><circle cx="18" cy="19" r="1.6"/></svg></span><h3>Coletas recorrentes</h3><p>Calendário de retirada contínua para operações com fluxo constante.</p><span class="hx-go">Ver solução →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/descarte-de-produtos-danificados-e-fora-de-garantia/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><h3>Produtos danificados e fora de garantia</h3><p>Avarias, devoluções e pós-venda para fabricantes e varejo.</p><span class="hx-go">Ver solução →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/descarte-de-baterias-e-nobreaks/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18h.01"/></svg></span><h3>Baterias e nobreaks</h3><p>Coleta de baterias de lítio e demais químicas, com requisitos próprios.</p><span class="hx-go">Ver solução →</span></a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-final">
+      <div>
+        <span class="hx-label on-dark">Avaliação técnica sem compromisso</span>
+        <h2>Transforme devolução parada em fluxo com prova de destinação.</h2>
+        <p>Categorias, volume por ciclo e localidades dos CDs — é o que a equipe precisa para desenhar o calendário e responder com uma proposta séria.</p>
+      </div>
+      <div class="hx-actions">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=logistica-reversa-para-marketplaces-e-ecommerce&amp;material=Eletr%C3%B4nicos" data-track="logistica-reversa-para-marketplaces-e-ecommerce_final_cta">Solicitar avaliação técnica</a>
+        <a class="button hx-btn-wa" href="{{@custom.whatsapp_url}}" rel="noopener" data-track="logistica-reversa-para-marketplaces-e-ecommerce_final_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> WhatsApp</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<a class="hx-wa-float" href="{{@custom.whatsapp_url}}" rel="noopener" aria-label="Falar no WhatsApp" data-track="logistica-reversa-para-marketplaces-e-ecommerce_whatsapp_flutuante"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg><span>Falar no WhatsApp</span></a>

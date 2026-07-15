@@ -7,15 +7,27 @@
     "custom_excerpt": "Retirada planejada de ativos de TI que saíram de operação — com inventário, cadeia de custódia e tratamento de dados quando aplicável, mediante avaliação técnica do lote.",
     "meta_title": "Descarte de ativos de TI desmobilizados | Ecobraz",
     "meta_description": "Retirada, inventário, custódia e destinação de ativos de TI desmobilizados — com tratamento de dados e documentação, mediante avaliação técnica do lote.",
-    "hub": {"title": "Descarte corporativo de TI", "href": "/descarte-corporativo-de-ti/"},
+    "hub": {
+      "title": "Descarte corporativo de TI",
+      "href": "/descarte-corporativo-de-ti/"
+    },
     "hero": {
       "eyebrow": "Troca de parque · Fim de contrato · Encerramento de unidade",
       "sub": "A Ecobraz retira ativos de TI que saíram de operação com inventário na origem, cadeia de custódia até a destinação e tratamento de dados quando o lote contém mídias — tudo definido em avaliação técnica antes de qualquer confirmação.",
       "cta": "Solicitar avaliação técnica",
       "band": [
-        {"title": "Inventário na origem", "text": "cada ativo registrado antes de sair"},
-        {"title": "Dados tratados", "text": "sanitização ou destruição, conforme escopo"},
-        {"title": "Documentação", "text": "inventário, MTR e CDF quando aplicáveis"}
+        {
+          "title": "Inventário na origem",
+          "text": "cada ativo registrado antes de sair"
+        },
+        {
+          "title": "Dados tratados",
+          "text": "sanitização ou destruição, conforme escopo"
+        },
+        {
+          "title": "Documentação",
+          "text": "inventário, MTR e CDF quando aplicáveis"
+        }
       ]
     },
     "form": {
@@ -28,9 +40,21 @@
     "painsTitle": "Equipamento parado não é neutro: é passivo",
     "painsSub": "Três riscos crescem em silêncio enquanto o lote espera num depósito.",
     "pains": [
-      {"icon": "lock", "title": "Dados esquecidos em discos", "text": "Notebooks e servidores fora de uso ainda carregam dados corporativos. Sem tratamento registrado, cada mídia é uma exposição em aberto."},
-      {"icon": "building", "title": "Patrimônio sem baixa", "text": "Ativos acumulados ocupam espaço, seguram baixa patrimonial e viram pendência de inventário a cada auditoria interna."},
-      {"icon": "alert", "title": "Destinação sem prova", "text": "Se o lote sai sem inventário e sem cadeia de custódia, não há como responder a uma auditoria de cliente, certificação ou órgão ambiental."}
+      {
+        "icon": "lock",
+        "title": "Dados esquecidos em discos",
+        "text": "Notebooks e servidores fora de uso ainda carregam dados corporativos. Sem tratamento registrado, cada mídia é uma exposição em aberto."
+      },
+      {
+        "icon": "building",
+        "title": "Patrimônio sem baixa",
+        "text": "Ativos acumulados ocupam espaço, seguram baixa patrimonial e viram pendência de inventário a cada auditoria interna."
+      },
+      {
+        "icon": "alert",
+        "title": "Destinação sem prova",
+        "text": "Se o lote sai sem inventário e sem cadeia de custódia, não há como responder a uma auditoria de cliente, certificação ou órgão ambiental."
+      }
     ],
     "scope": {
       "in": [
@@ -49,39 +73,971 @@
       "conditions": "A viabilidade depende de tipo de ativo, volume, localidade, acesso ao local e documentação solicitada. Cada lote é avaliado antes da confirmação."
     },
     "steps": [
-      {"title": "Descreva o lote", "text": "Tipos de ativo, quantidade aproximada, localidade e necessidade documental."},
-      {"title": "Avaliação técnica", "text": "Analisamos escopo, logística e o tratamento de dados aplicável."},
-      {"title": "Escopo definido", "text": "O que será retirado, o método para as mídias e os documentos da operação."},
-      {"title": "Retirada registrada", "text": "Coleta na origem com inventário dos ativos e cadeia de custódia."},
-      {"title": "Destinação e registros", "text": "Encaminhamento para destinação e entrega da documentação executada."}
+      {
+        "title": "Descreva o lote",
+        "text": "Tipos de ativo, quantidade aproximada, localidade e necessidade documental."
+      },
+      {
+        "title": "Avaliação técnica",
+        "text": "Analisamos escopo, logística e o tratamento de dados aplicável."
+      },
+      {
+        "title": "Escopo definido",
+        "text": "O que será retirado, o método para as mídias e os documentos da operação."
+      },
+      {
+        "title": "Retirada registrada",
+        "text": "Coleta na origem com inventário dos ativos e cadeia de custódia."
+      },
+      {
+        "title": "Destinação e registros",
+        "text": "Encaminhamento para destinação e entrega da documentação executada."
+      }
     ],
     "evidenceTitle": "O que a sua auditoria vai receber",
     "evidence": [
-      {"title": "Inventário do lote", "text": "Relação dos ativos retirados, registrada na origem."},
-      {"title": "MTR e CDF", "text": "Manifesto de transporte e certificado de destinação, quando aplicáveis ao material."},
-      {"title": "Relatório de dados", "text": "Sanitização lógica ou destruição física de mídias, conforme o escopo contratado."},
-      {"title": "Cadeia de custódia", "text": "Registro do percurso do lote, da origem à destinação."},
-      {"title": "Escopo documentado", "text": "Condições, exclusões e responsabilidades definidas antes da retirada."},
-      {"title": "Evidência com fonte", "text": "Alegações institucionais com registro público e limite declarado."}
+      {
+        "title": "Inventário do lote",
+        "text": "Relação dos ativos retirados, registrada na origem."
+      },
+      {
+        "title": "MTR e CDF",
+        "text": "Manifesto de transporte e certificado de destinação, quando aplicáveis ao material."
+      },
+      {
+        "title": "Relatório de dados",
+        "text": "Sanitização lógica ou destruição física de mídias, conforme o escopo contratado."
+      },
+      {
+        "title": "Cadeia de custódia",
+        "text": "Registro do percurso do lote, da origem à destinação."
+      },
+      {
+        "title": "Escopo documentado",
+        "text": "Condições, exclusões e responsabilidades definidas antes da retirada."
+      },
+      {
+        "title": "Evidência com fonte",
+        "text": "Alegações institucionais com registro público e limite declarado."
+      }
     ],
     "authority": "Atuação registrada em plataformas públicas de referência internacional. Cada alegação do site tem fonte, data e escopo declarados na página de evidências.",
     "faqTitle": "O que gerentes de TI e facilities perguntam",
     "faq": [
-      {"q": "Vocês apagam os dados dos equipamentos?", "a": "Quando o ativo contém mídias de dados, o tratamento é definido no escopo: sanitização lógica, quando tecnicamente aplicável, ou destruição física da mídia. O método escolhido é registrado em relatório."},
-      {"q": "Emitem documentação para auditoria?", "a": "Sim, conforme o serviço executado: inventário, MTR e CDF quando aplicáveis ao material, relatório de tratamento de dados e registro de cadeia de custódia. A documentação reflete o que foi efetivamente realizado."},
-      {"q": "Atendem fora de São Paulo?", "a": "A operação é sediada em São Paulo e região; coletas corporativas em outras regiões são avaliadas conforme volume, logística e prazo. Descreva o lote e a localidade para verificarmos a viabilidade."},
-      {"q": "Existe volume mínimo?", "a": "Avaliamos desde lotes pontuais até desmobilizações de grande porte. A definição depende do tipo de ativo, da localidade e da logística envolvida."},
-      {"q": "A coleta tem custo?", "a": "As condições comerciais dependem do tipo de ativo, volume, localidade e logística. A avaliação técnica define o modelo — sem promessa de gratuidade e sem surpresa depois."}
+      {
+        "q": "Vocês apagam os dados dos equipamentos?",
+        "a": "Quando o ativo contém mídias de dados, o tratamento é definido no escopo: sanitização lógica, quando tecnicamente aplicável, ou destruição física da mídia. O método escolhido é registrado em relatório."
+      },
+      {
+        "q": "Emitem documentação para auditoria?",
+        "a": "Sim, conforme o serviço executado: inventário, MTR e CDF quando aplicáveis ao material, relatório de tratamento de dados e registro de cadeia de custódia. A documentação reflete o que foi efetivamente realizado."
+      },
+      {
+        "q": "Atendem fora de São Paulo?",
+        "a": "A operação é sediada em São Paulo e região; coletas corporativas em outras regiões são avaliadas conforme volume, logística e prazo. Descreva o lote e a localidade para verificarmos a viabilidade."
+      },
+      {
+        "q": "Existe volume mínimo?",
+        "a": "Avaliamos desde lotes pontuais até desmobilizações de grande porte. A definição depende do tipo de ativo, da localidade e da logística envolvida."
+      },
+      {
+        "q": "A coleta tem custo?",
+        "a": "As condições comerciais dependem do tipo de ativo, volume, localidade e logística. A avaliação técnica define o modelo — sem promessa de gratuidade e sem surpresa depois."
+      }
     ],
     "related": [
-      {"title": "Sanitização e destruição de dados", "href": "/destruicao-de-dados/", "icon": "lock", "text": "Tratamento de mídias com relatório, para lotes com exigência de TI ou DPO."},
-      {"title": "Servidores e data center", "href": "/descarte-de-servidores-e-data-center/", "icon": "chart", "text": "Desativação de infraestrutura crítica com retirada planejada."},
-      {"title": "Coletas recorrentes", "href": "/coletas-recorrentes/", "icon": "truck", "text": "Calendário de retirada contínua para operações com fluxo constante."}
+      {
+        "title": "Sanitização e destruição de dados",
+        "href": "/destruicao-de-dados/",
+        "icon": "lock",
+        "text": "Tratamento de mídias com relatório, para lotes com exigência de TI ou DPO."
+      },
+      {
+        "title": "Servidores e data center",
+        "href": "/descarte-de-servidores-e-data-center/",
+        "icon": "chart",
+        "text": "Desativação de infraestrutura crítica com retirada planejada."
+      },
+      {
+        "title": "Coletas recorrentes",
+        "href": "/coletas-recorrentes/",
+        "icon": "truck",
+        "text": "Calendário de retirada contínua para operações com fluxo constante."
+      }
     ],
     "final": {
       "eyebrow": "Avaliação técnica sem compromisso",
       "title": "Descreva o lote hoje. Receba escopo, condições e documentação aplicável.",
       "text": "Tipos de ativo, volume aproximado e localidade — é o que a equipe precisa para responder com uma proposta séria."
+    }
+  },
+  {
+    "slug": "logistica-reversa-para-marketplaces-e-ecommerce",
+    "title": "Logística reversa para marketplaces e e-commerce",
+    "crumb": "Marketplaces e e-commerce",
+    "serviceType": "Destinação de devoluções, avarias e estoque sem revenda para operações de e-commerce",
+    "custom_excerpt": "Destinação de eletrônicos devolvidos, avariados e sem condição de revenda — com retirada programada em CDs, inventário por lote, descaracterização quando exigida e documentação por ciclo.",
+    "meta_title": "Logística reversa para marketplaces e e-commerce | Ecobraz",
+    "meta_description": "Destinação de devoluções, avarias e estoque sem revenda em e-commerce: retirada programada em CDs, inventário por lote, descaracterização e documentação.",
+    "hub": {
+      "title": "Logística reversa",
+      "href": "/logistica-reversa/"
+    },
+    "hero": {
+      "eyebrow": "Devoluções · Avarias · Estoque sem revenda",
+      "sub": "A Ecobraz destina eletrônicos devolvidos, avariados e sem condição de revenda para operações de e-commerce — com retirada programada em centros de distribuição, inventário por lote, descaracterização quando exigida e documentação por ciclo. Escopo definido em avaliação técnica.",
+      "cta": "Solicitar avaliação técnica",
+      "band": [
+        {
+          "title": "Recorrência programada",
+          "text": "calendário por CD e por fluxo"
+        },
+        {
+          "title": "Controle de destino",
+          "text": "descaracterização e custódia registradas"
+        },
+        {
+          "title": "Documentação por ciclo",
+          "text": "inventário, MTR e CDF quando aplicáveis"
+        }
+      ]
+    },
+    "form": {
+      "title": "Descreva o fluxo em 1 minuto",
+      "hint": "A equipe retorna com escopo, calendário e documentação aplicável.",
+      "material": "Eletrônicos",
+      "describeLabel": "O que precisa destinar?",
+      "describePlaceholder": "Ex.: 3 paletes/mês de devoluções no CD de Cajamar"
+    },
+    "painsTitle": "Devolução parada é custo — e risco de marca",
+    "painsSub": "Três problemas crescem junto com o volume de devoluções e avarias.",
+    "pains": [
+      {
+        "icon": "box",
+        "title": "Estoque morto ocupando CD",
+        "text": "Cada posição de porta-palete ocupada por avaria é espaço que não gira. O acúmulo vira inventário bloqueado e custo fixo sem retorno."
+      },
+      {
+        "icon": "alert",
+        "title": "Produto descartado voltando ao mercado",
+        "text": "Item reprovado que reaparece em canal paralelo gera caso de garantia, disputa com seller e dano de reputação. Sem descaracterização e custódia registradas, o risco é permanente."
+      },
+      {
+        "icon": "file",
+        "title": "Política de garantia sem lastro",
+        "text": "Auditoria, seller e fabricante pedem prova de destinação por lote. Planilha interna não sustenta a resposta."
+      }
+    ],
+    "scope": {
+      "in": [
+        "Eletrônicos devolvidos sem condição de revenda",
+        "Avarias de transporte e de armazenagem",
+        "Celulares, notebooks, acessórios e eletroportáteis eletrônicos",
+        "Produtos com bateria de lítio (com requisitos próprios de manuseio)",
+        "Lotes em CDs, lojas e operações de fulfillment"
+      ],
+      "out": [
+        "Pilhas domésticas avulsas",
+        "Toner e cartuchos",
+        "Lâmpadas, óleo, isopor e embalagens",
+        "Resíduos químicos, biológicos, radioativos ou contaminados"
+      ],
+      "conditions": "A viabilidade depende de categorias, volume por ciclo, localidades dos CDs e documentação exigida. Cada fluxo é avaliado antes da definição do calendário."
+    },
+    "steps": [
+      {
+        "title": "Descreva o fluxo",
+        "text": "Categorias, volume médio por ciclo, localidades e exigências de destino."
+      },
+      {
+        "title": "Avaliação técnica",
+        "text": "Analisamos materiais, logística por CD e requisitos de descaracterização."
+      },
+      {
+        "title": "Escopo e calendário",
+        "text": "Definimos ciclos de retirada, responsabilidades e documentos por lote."
+      },
+      {
+        "title": "Retirada registrada",
+        "text": "Coleta programada com inventário por lote e cadeia de custódia."
+      },
+      {
+        "title": "Destinação e prova",
+        "text": "Descaracterização quando contratada, destinação e documentação por ciclo."
+      }
+    ],
+    "evidenceTitle": "Prova de destinação por ciclo — não por promessa",
+    "evidence": [
+      {
+        "title": "Inventário por lote",
+        "text": "Relação dos itens retirados em cada ciclo, registrada na origem."
+      },
+      {
+        "title": "Descaracterização registrada",
+        "text": "Quando contratada, a inutilização do produto é executada e documentada."
+      },
+      {
+        "title": "MTR e CDF",
+        "text": "Manifesto de transporte e certificado de destinação, quando aplicáveis ao material."
+      },
+      {
+        "title": "Relatório por ciclo",
+        "text": "Consolidação por período para conciliação com estoque e auditoria."
+      },
+      {
+        "title": "Cadeia de custódia",
+        "text": "Registro do percurso de cada lote, do CD à destinação."
+      },
+      {
+        "title": "Controle contra retorno",
+        "text": "Fluxo desenhado para o item destinado não reaparecer no mercado."
+      }
+    ],
+    "authority": "Atuação registrada em plataformas públicas de referência internacional. Cada alegação do site tem fonte, data e escopo declarados na página de evidências.",
+    "faqTitle": "O que operações de e-commerce perguntam",
+    "faq": [
+      {
+        "q": "Vocês garantem que o produto não volta ao mercado?",
+        "a": "Quando a descaracterização faz parte do escopo contratado, ela é executada e registrada, e o lote segue em cadeia de custódia até a destinação. O controle é documentado por lote — é isso que sustenta a resposta em auditoria."
+      },
+      {
+        "q": "Atendem centros de distribuição em mais de uma cidade?",
+        "a": "Operações com múltiplas localidades são avaliadas conforme volume por praça, logística e calendário. Descreva os CDs envolvidos para verificarmos a cobertura."
+      },
+      {
+        "q": "A coleta pode ser recorrente?",
+        "a": "Sim. Para fluxo contínuo de devoluções, o escopo define ciclos de retirada — semanais, quinzenais ou mensais — com documentação por ciclo."
+      },
+      {
+        "q": "Recebem produtos com bateria de lítio?",
+        "a": "Sim. Baterias e produtos que as contêm têm requisitos próprios de acondicionamento e transporte, definidos na avaliação técnica."
+      },
+      {
+        "q": "Como funciona o custo?",
+        "a": "As condições comerciais dependem de categorias, volume por ciclo, localidades e exigências de descaracterização. A avaliação técnica define o modelo — sem promessa de gratuidade e sem surpresa depois."
+      }
+    ],
+    "related": [
+      {
+        "title": "Coletas recorrentes",
+        "href": "/coletas-recorrentes/",
+        "icon": "truck",
+        "text": "Calendário de retirada contínua para operações com fluxo constante."
+      },
+      {
+        "title": "Produtos danificados e fora de garantia",
+        "href": "/descarte-de-produtos-danificados-e-fora-de-garantia/",
+        "icon": "box",
+        "text": "Avarias, devoluções e pós-venda para fabricantes e varejo."
+      },
+      {
+        "title": "Baterias e nobreaks",
+        "href": "/descarte-de-baterias-e-nobreaks/",
+        "icon": "alert",
+        "text": "Coleta de baterias de lítio e demais químicas, com requisitos próprios."
+      }
+    ],
+    "final": {
+      "eyebrow": "Avaliação técnica sem compromisso",
+      "title": "Transforme devolução parada em fluxo com prova de destinação.",
+      "text": "Categorias, volume por ciclo e localidades dos CDs — é o que a equipe precisa para desenhar o calendário e responder com uma proposta séria."
+    }
+  },
+  {
+    "slug": "destinacao-de-bens-sinistrados-para-seguradoras",
+    "title": "Destinação de bens sinistrados para seguradoras",
+    "crumb": "Bens sinistrados para seguradoras",
+    "serviceType": "Inventário, registro, descaracterização, custódia e destinação de bens eletroeletrônicos sinistrados e salvados",
+    "custom_excerpt": "Inventário, registro fotográfico, descaracterização e destinação de bens eletroeletrônicos sinistrados e salvados — com cadeia de custódia e controle contra retorno indevido ao mercado.",
+    "meta_title": "Destinação de bens sinistrados para seguradoras | Ecobraz",
+    "meta_description": "Bens sinistrados e salvados eletroeletrônicos: inventário, registro fotográfico, descaracterização, custódia e destinação com evidência conforme o escopo.",
+    "hub": {
+      "title": "Logística reversa",
+      "href": "/logistica-reversa/"
+    },
+    "hero": {
+      "eyebrow": "Sinistros · Salvados · Descaracterização",
+      "sub": "A Ecobraz executa inventário, registro fotográfico, descaracterização e destinação de bens eletroeletrônicos sinistrados e salvados — com cadeia de custódia e controle contra retorno indevido ao mercado. Operações avaliadas por localidade e volume.",
+      "cta": "Solicitar avaliação técnica",
+      "band": [
+        {
+          "title": "Registro fotográfico",
+          "text": "cada bem identificado e inventariado"
+        },
+        {
+          "title": "Descaracterização",
+          "text": "executada e registrada conforme o escopo"
+        },
+        {
+          "title": "Evidência por caso",
+          "text": "documentação conforme o serviço executado"
+        }
+      ]
+    },
+    "form": {
+      "title": "Descreva o caso em 1 minuto",
+      "hint": "A equipe retorna com escopo, condições e documentação aplicável.",
+      "material": "Eletrônicos",
+      "describeLabel": "Descreva o sinistro ou o lote",
+      "describePlaceholder": "Ex.: 400 itens sinistrados em galpão de Barueri"
+    },
+    "painsTitle": "Salvado sem controle vira passivo da seguradora",
+    "painsSub": "Três riscos que o processo de sinistro carrega quando a destinação não é rastreável.",
+    "pains": [
+      {
+        "icon": "alert",
+        "title": "Bem indenizado de volta ao mercado",
+        "text": "Salvado que reaparece à venda gera disputa com o segurado, questionamento de fraude e dano de imagem. Sem descaracterização registrada, o risco fica em aberto."
+      },
+      {
+        "icon": "building",
+        "title": "Sinistros em múltiplas praças",
+        "text": "Incêndio, alagamento e avaria de transporte não escolhem cidade. Sem operação coordenada, cada praça vira um processo diferente, com padrão de evidência diferente."
+      },
+      {
+        "icon": "file",
+        "title": "Processo sem lastro documental",
+        "text": "O dossiê do sinistro precisa registrar o que era, onde estava e o que foi feito. Destinação sem inventário e custódia enfraquece o processo inteiro."
+      }
+    ],
+    "scope": {
+      "in": [
+        "Bens eletroeletrônicos sinistrados — incêndio, alagamento, avaria de transporte",
+        "Salvados eletrônicos sem condição de revenda",
+        "Equipamentos com mídias de dados (com tratamento conforme escopo)",
+        "Lotes em galpões, depósitos, CDs e unidades do segurado",
+        "Operações em múltiplas localidades, avaliadas caso a caso"
+      ],
+      "out": [
+        "Pilhas domésticas avulsas",
+        "Toner e cartuchos",
+        "Lâmpadas, óleo, isopor e embalagens",
+        "Resíduos químicos, biológicos, radioativos ou contaminados"
+      ],
+      "conditions": "A viabilidade depende do tipo de bem, volume, localidade, condições de acesso e exigências do processo. Cada caso é avaliado antes da confirmação — o escopo pode ser definido com a seguradora, a reguladora ou o segurado corporativo."
+    },
+    "steps": [
+      {
+        "title": "Registro do caso",
+        "text": "Tipo de sinistro, quantidade estimada de bens, localidades e prazos do processo."
+      },
+      {
+        "title": "Avaliação técnica",
+        "text": "Analisamos materiais, logística por praça e requisitos de evidência."
+      },
+      {
+        "title": "Escopo definido",
+        "text": "Responsabilidades, método de descaracterização e documentos acordados."
+      },
+      {
+        "title": "Inventário e registro",
+        "text": "Identificação, registro fotográfico e inventário dos bens na origem."
+      },
+      {
+        "title": "Destinação e evidência",
+        "text": "Descaracterização, destinação e entrega da documentação do caso."
+      }
+    ],
+    "evidenceTitle": "O que o dossiê do sinistro recebe",
+    "evidence": [
+      {
+        "title": "Inventário do caso",
+        "text": "Relação dos bens com identificação e localização de origem."
+      },
+      {
+        "title": "Registro fotográfico",
+        "text": "Imagens dos bens no estado em que foram recolhidos."
+      },
+      {
+        "title": "Descaracterização registrada",
+        "text": "Inutilização executada e documentada conforme o escopo."
+      },
+      {
+        "title": "Cadeia de custódia",
+        "text": "Registro do percurso dos bens, da origem à destinação."
+      },
+      {
+        "title": "MTR e CDF",
+        "text": "Manifesto de transporte e certificado de destinação, quando aplicáveis ao material."
+      },
+      {
+        "title": "Relatório final por caso",
+        "text": "Consolidação da operação para anexar ao processo do sinistro."
+      }
+    ],
+    "authority": "Atuação registrada em plataformas públicas de referência internacional. A oferta é apresentada ao mercado segurador de forma genérica e defensável — cada alegação tem fonte e escopo declarados na página de evidências.",
+    "faqTitle": "O que times de sinistro e salvados perguntam",
+    "faq": [
+      {
+        "q": "Como garantem que o salvado não volta ao mercado?",
+        "a": "Pela combinação de descaracterização registrada e cadeia de custódia até a destinação, conforme o escopo contratado. Cada etapa gera evidência que se anexa ao processo do sinistro."
+      },
+      {
+        "q": "Atendem sinistros fora de São Paulo?",
+        "a": "Operações em outras praças são avaliadas conforme volume, logística e prazo do processo. Descreva a localidade e o lote para verificarmos a viabilidade."
+      },
+      {
+        "q": "Trabalham com reguladoras e segurados corporativos?",
+        "a": "Sim. O escopo pode ser definido com a seguradora, a reguladora ou o segurado corporativo, conforme o desenho de cada caso — com responsabilidades documentadas."
+      },
+      {
+        "q": "E quando o bem sinistrado contém dados?",
+        "a": "Equipamentos com mídias entram com tratamento de dados definido no escopo — sanitização lógica quando tecnicamente aplicável, ou destruição física registrada."
+      },
+      {
+        "q": "Qual o prazo de atendimento?",
+        "a": "Depende da praça, do volume e das condições de acesso. A avaliação técnica retorna com prazo e condições antes de qualquer confirmação."
+      }
+    ],
+    "related": [
+      {
+        "title": "Sanitização e destruição de dados",
+        "href": "/destruicao-de-dados/",
+        "icon": "lock",
+        "text": "Tratamento de mídias com relatório, para bens que carregam dados."
+      },
+      {
+        "title": "Documentação e rastreabilidade",
+        "href": "/documentacao-e-rastreabilidade/",
+        "icon": "file",
+        "text": "Como cada operação gera a evidência que sustenta o processo."
+      },
+      {
+        "title": "Produtos danificados e fora de garantia",
+        "href": "/descarte-de-produtos-danificados-e-fora-de-garantia/",
+        "icon": "box",
+        "text": "Avarias e devoluções para fabricantes, varejo e pós-venda."
+      }
+    ],
+    "final": {
+      "eyebrow": "Avaliação técnica sem compromisso",
+      "title": "Tem um caso com bens sinistrados aguardando destinação?",
+      "text": "Descreva o sinistro, a localidade e o volume estimado. A equipe retorna com escopo, prazo e o padrão de evidência do caso."
+    }
+  },
+  {
+    "slug": "descarte-de-produtos-danificados-e-fora-de-garantia",
+    "title": "Descarte de produtos danificados e fora de garantia",
+    "crumb": "Produtos danificados e fora de garantia",
+    "serviceType": "Destinação de produtos eletroeletrônicos danificados, devolvidos e fora de garantia, com descaracterização quando exigida",
+    "custom_excerpt": "Destinação de produtos eletroeletrônicos danificados, devolvidos ou fora de garantia — com descaracterização quando exigida, inventário por lote e documentação que protege a marca.",
+    "meta_title": "Descarte de produtos danificados e fora de garantia | Ecobraz",
+    "meta_description": "Avarias, devoluções e estoque sem revenda: destinação com descaracterização quando exigida, inventário por lote e documentação para fabricantes e varejo.",
+    "hub": {
+      "title": "Logística reversa",
+      "href": "/logistica-reversa/"
+    },
+    "hero": {
+      "eyebrow": "Avarias · Devoluções · Pós-venda",
+      "sub": "A Ecobraz destina produtos eletroeletrônicos danificados, devolvidos ou fora de garantia para fabricantes, importadores e varejo — com descaracterização quando exigida, inventário por lote e documentação que sustenta a baixa de estoque e protege a marca.",
+      "cta": "Solicitar avaliação técnica",
+      "band": [
+        {
+          "title": "Proteção de marca",
+          "text": "produto destinado não volta como problema"
+        },
+        {
+          "title": "Inventário por lote",
+          "text": "cada item registrado antes de sair"
+        },
+        {
+          "title": "Documentação",
+          "text": "descaracterização, MTR e CDF quando aplicáveis"
+        }
+      ]
+    },
+    "form": {
+      "title": "Descreva o lote em 1 minuto",
+      "hint": "A equipe retorna com escopo, condições e documentação aplicável.",
+      "material": "Eletrônicos",
+      "describeLabel": "O que precisa destinar?",
+      "describePlaceholder": "Ex.: 900 itens reprovados na triagem de pós-venda"
+    },
+    "painsTitle": "Produto reprovado sem controle é risco para a marca",
+    "painsSub": "Três problemas que crescem no estoque de avarias e devoluções.",
+    "pains": [
+      {
+        "icon": "alert",
+        "title": "Item da marca em canal paralelo",
+        "text": "Produto reprovado que volta ao mercado sem controle vira caso de garantia, custo de assistência e dano de reputação — com o nome da sua marca na etiqueta."
+      },
+      {
+        "icon": "box",
+        "title": "Quarentena que não gira",
+        "text": "Avarias e devoluções acumuladas bloqueiam espaço e capital. Sem fluxo de destinação, a quarentena só cresce."
+      },
+      {
+        "icon": "file",
+        "title": "Baixa de estoque sem prova",
+        "text": "A saída definitiva do item precisa de lastro documental. Sem inventário e destinação registrada, a baixa fica frágil em auditoria."
+      }
+    ],
+    "scope": {
+      "in": [
+        "Produtos eletroeletrônicos reprovados em triagem ou teste",
+        "Devoluções sem condição de revenda",
+        "Itens fora de garantia e pós-reparo",
+        "Lotes de assistência técnica e centros de reparo",
+        "Placas, componentes e acessórios eletrônicos"
+      ],
+      "out": [
+        "Pilhas domésticas avulsas",
+        "Toner e cartuchos",
+        "Lâmpadas, óleo, isopor e embalagens",
+        "Resíduos químicos, biológicos, radioativos ou contaminados"
+      ],
+      "conditions": "A viabilidade depende de categorias, volume, localidade e exigência de descaracterização. Cada lote é avaliado antes da confirmação."
+    },
+    "steps": [
+      {
+        "title": "Descreva o lote",
+        "text": "Categorias, quantidade, origem (CD, fábrica, assistência) e exigências."
+      },
+      {
+        "title": "Avaliação técnica",
+        "text": "Analisamos materiais, logística e o nível de descaracterização exigido."
+      },
+      {
+        "title": "Escopo definido",
+        "text": "Método de inutilização, responsabilidades e documentos acordados."
+      },
+      {
+        "title": "Retirada registrada",
+        "text": "Coleta com inventário por lote e cadeia de custódia."
+      },
+      {
+        "title": "Destinação e prova",
+        "text": "Descaracterização registrada, destinação e documentação do lote."
+      }
+    ],
+    "evidenceTitle": "A prova que sustenta a baixa e protege a marca",
+    "evidence": [
+      {
+        "title": "Inventário por lote",
+        "text": "Relação dos itens destinados, registrada na origem."
+      },
+      {
+        "title": "Descaracterização registrada",
+        "text": "Inutilização executada e documentada, quando contratada."
+      },
+      {
+        "title": "MTR e CDF",
+        "text": "Manifesto de transporte e certificado de destinação, quando aplicáveis ao material."
+      },
+      {
+        "title": "Cadeia de custódia",
+        "text": "Registro do percurso do lote até a destinação."
+      },
+      {
+        "title": "Relatório de destinação",
+        "text": "Consolidação por lote para conciliação de estoque e auditoria."
+      },
+      {
+        "title": "Controle contra retorno",
+        "text": "Fluxo desenhado para o item destinado não reaparecer no mercado."
+      }
+    ],
+    "authority": "Atuação registrada em plataformas públicas de referência internacional. Cada alegação do site tem fonte, data e escopo declarados na página de evidências.",
+    "faqTitle": "O que fabricantes, importadores e varejo perguntam",
+    "faq": [
+      {
+        "q": "Como garantem que o produto não volta ao mercado?",
+        "a": "Quando a descaracterização integra o escopo, ela é executada e registrada, e o lote segue em cadeia de custódia até a destinação. É esse conjunto documentado que protege a marca."
+      },
+      {
+        "q": "Atendem fábrica, CD e rede de assistências?",
+        "a": "Sim. Origens múltiplas são avaliadas conforme volume por ponto e logística — o escopo pode consolidar retiradas de vários locais."
+      },
+      {
+        "q": "Existe volume mínimo?",
+        "a": "Avaliamos de lotes pontuais a fluxos recorrentes de pós-venda. A definição depende das categorias, da localidade e da logística."
+      },
+      {
+        "q": "A descaracterização pode ser total (trituração)?",
+        "a": "O método de inutilização é definido no escopo conforme o material e a exigência — sempre com registro do que foi executado."
+      },
+      {
+        "q": "Como funciona o custo?",
+        "a": "As condições dependem de categorias, volume, localidade e nível de descaracterização. A avaliação técnica define o modelo — sem promessa de gratuidade."
+      }
+    ],
+    "related": [
+      {
+        "title": "Marketplaces e e-commerce",
+        "href": "/logistica-reversa-para-marketplaces-e-ecommerce/",
+        "icon": "truck",
+        "text": "Devoluções e avarias em escala, com calendário por CD."
+      },
+      {
+        "title": "Placas e componentes",
+        "href": "/descarte-de-placas-e-componentes-eletronicos/",
+        "icon": "chart",
+        "text": "Destinação de placas, componentes e sucata de eletrônicos."
+      },
+      {
+        "title": "Coletas recorrentes",
+        "href": "/coletas-recorrentes/",
+        "icon": "box",
+        "text": "Fluxo contínuo de retirada para operações com volume constante."
+      }
+    ],
+    "final": {
+      "eyebrow": "Avaliação técnica sem compromisso",
+      "title": "Zere a quarentena com destinação documentada.",
+      "text": "Categorias, volume e origem do lote — é o que a equipe precisa para retornar com escopo, condições e o padrão de prova."
+    }
+  },
+  {
+    "slug": "descarte-de-atm-e-equipamentos-bancarios",
+    "title": "Descarte de ATM e equipamentos bancários",
+    "crumb": "ATM e equipamentos bancários",
+    "serviceType": "Retirada, custódia, destruição de mídias e destinação de ATMs, terminais e equipamentos do setor financeiro",
+    "custom_excerpt": "Retirada e destinação de ATMs, terminais de autoatendimento, servidores e equipamentos sensíveis do setor financeiro — com cadeia de custódia, destruição de mídias conforme escopo e documentação para auditoria.",
+    "meta_title": "Descarte de ATM e equipamentos bancários | Ecobraz",
+    "meta_description": "ATMs, terminais, servidores e equipamentos sensíveis: retirada com custódia, destruição de mídias conforme escopo e documentação para auditoria bancária.",
+    "hub": {
+      "title": "Descarte corporativo de TI",
+      "href": "/descarte-corporativo-de-ti/"
+    },
+    "hero": {
+      "eyebrow": "ATMs · Terminais · Infraestrutura de agências",
+      "sub": "A Ecobraz retira e destina ATMs, terminais de autoatendimento, servidores e equipamentos sensíveis do setor financeiro — com inventário por unidade, cadeia de custódia ponta a ponta e destruição de mídias conforme o escopo. Requisitos de segurança do contratante entram na avaliação técnica.",
+      "cta": "Solicitar avaliação técnica",
+      "band": [
+        {
+          "title": "Custódia ponta a ponta",
+          "text": "do recolhimento à destinação"
+        },
+        {
+          "title": "Mídias tratadas",
+          "text": "destruição registrada conforme escopo"
+        },
+        {
+          "title": "Multi-agências",
+          "text": "consolidação por unidade e por praça"
+        }
+      ]
+    },
+    "form": {
+      "title": "Descreva o parque em 1 minuto",
+      "hint": "A equipe retorna com escopo, condições e documentação aplicável.",
+      "material": "Informática e TI",
+      "describeLabel": "O que precisa retirar?",
+      "describePlaceholder": "Ex.: 35 ATMs desativados em 3 agências"
+    },
+    "painsTitle": "Equipamento bancário parado é risco de segurança",
+    "painsSub": "Três exposições que crescem enquanto o ativo desativado espera.",
+    "pains": [
+      {
+        "icon": "lock",
+        "title": "Mídias e módulos sensíveis",
+        "text": "ATMs e terminais carregam discos, módulos de segurança e registros de operação. Nada disso pode sair de uma agência sem custódia e tratamento registrados."
+      },
+      {
+        "icon": "building",
+        "title": "Agência com prazo de devolução",
+        "text": "Encerramento de agência tem data para entregar o imóvel. Equipamento parado no salão atrasa a desmobilização inteira."
+      },
+      {
+        "icon": "alert",
+        "title": "Ativo de segurança sem rastro",
+        "text": "Equipamento do setor financeiro sem inventário e destinação registrada é apontamento certo em auditoria interna e externa."
+      }
+    ],
+    "scope": {
+      "in": [
+        "ATMs e terminais de autoatendimento desativados",
+        "Servidores, storages e ativos de rede de agência e retaguarda",
+        "PDVs, leitores e periféricos de atendimento",
+        "Nobreaks e baterias associadas à infraestrutura",
+        "Mídias e discos, com destruição conforme escopo"
+      ],
+      "out": [
+        "Numerário e valores — nunca fazem parte do serviço",
+        "Pilhas domésticas avulsas, toner e cartuchos",
+        "Lâmpadas, óleo, isopor e embalagens",
+        "Resíduos químicos, biológicos, radioativos ou contaminados"
+      ],
+      "conditions": "A viabilidade considera tipo de equipamento, número de unidades e praças, janelas de acesso, exigências de segurança do contratante e documentação. Cada operação é avaliada antes da confirmação."
+    },
+    "steps": [
+      {
+        "title": "Descreva o parque",
+        "text": "Tipos de equipamento, quantidade, agências envolvidas e prazos."
+      },
+      {
+        "title": "Avaliação e segurança",
+        "text": "Analisamos logística, janelas de acesso e requisitos do contratante."
+      },
+      {
+        "title": "Escopo definido",
+        "text": "Responsabilidades, método para as mídias e documentos acordados."
+      },
+      {
+        "title": "Retirada com custódia",
+        "text": "Recolhimento registrado por unidade, com cadeia de custódia."
+      },
+      {
+        "title": "Destruição e destinação",
+        "text": "Tratamento das mídias, destinação e entrega da documentação."
+      }
+    ],
+    "evidenceTitle": "O que a auditoria do banco recebe",
+    "evidence": [
+      {
+        "title": "Inventário por unidade",
+        "text": "Relação dos equipamentos retirados em cada agência ou site."
+      },
+      {
+        "title": "Cadeia de custódia",
+        "text": "Registro do percurso de cada ativo, do recolhimento à destinação."
+      },
+      {
+        "title": "Relatório de destruição de mídias",
+        "text": "Tratamento executado e registrado conforme o escopo contratado."
+      },
+      {
+        "title": "MTR e CDF",
+        "text": "Manifesto de transporte e certificado de destinação, quando aplicáveis."
+      },
+      {
+        "title": "Consolidação multi-praças",
+        "text": "Visão por agência e por período para conciliação patrimonial."
+      },
+      {
+        "title": "Escopo documentado",
+        "text": "Condições, exclusões e responsabilidades definidas antes da retirada."
+      }
+    ],
+    "authority": "Atuação registrada em plataformas públicas de referência internacional. Cada alegação do site tem fonte, data e escopo declarados na página de evidências.",
+    "faqTitle": "O que segurança, patrimônio e facilities perguntam",
+    "faq": [
+      {
+        "q": "Vocês destroem os discos dos ATMs?",
+        "a": "Sim, conforme o escopo: destruição física registrada ou sanitização lógica quando tecnicamente aplicável. O método e a execução constam do relatório."
+      },
+      {
+        "q": "Atendem várias agências e cidades na mesma operação?",
+        "a": "Operações multi-praças são avaliadas conforme número de unidades, logística e prazos — com consolidação documental por agência e por período."
+      },
+      {
+        "q": "Conseguem trabalhar em janelas restritas?",
+        "a": "Janelas de acesso, horários e procedimentos de segurança do contratante entram na definição do escopo. A operação é planejada dentro dessas condições."
+      },
+      {
+        "q": "Como tratam exigências de segurança do banco?",
+        "a": "Credenciamento de equipe, integração com a segurança local e registros exigidos pelo contratante são acordados no escopo antes da retirada."
+      },
+      {
+        "q": "Qual o prazo e o custo?",
+        "a": "Dependem do número de unidades, praças, janelas e exigências. A avaliação técnica retorna com prazo e condições antes de qualquer confirmação."
+      }
+    ],
+    "related": [
+      {
+        "title": "Sanitização e destruição de dados",
+        "href": "/destruicao-de-dados/",
+        "icon": "lock",
+        "text": "Tratamento de mídias com relatório, para exigências de TI e segurança."
+      },
+      {
+        "title": "Ativos de TI desmobilizados",
+        "href": "/descarte-de-ativos-de-ti-desmobilizados/",
+        "icon": "box",
+        "text": "Retirada planejada de parques de TI com inventário e custódia."
+      },
+      {
+        "title": "Servidores e data center",
+        "href": "/descarte-de-servidores-e-data-center/",
+        "icon": "chart",
+        "text": "Desativação de infraestrutura crítica com retirada planejada."
+      }
+    ],
+    "final": {
+      "eyebrow": "Avaliação técnica sem compromisso",
+      "title": "Desmobilize agências e parques com custódia documentada.",
+      "text": "Tipos de equipamento, unidades e praças — é o que a equipe precisa para responder com escopo, janelas e o padrão de evidência."
+    }
+  },
+  {
+    "slug": "ecobraz-villanova-esg",
+    "title": "Ecobraz + Villanova ESG: evidência para cadeias Brasil-Europa",
+    "crumb": "Ecobraz + Villanova ESG",
+    "serviceType": "Execução operacional no Brasil com estruturação de evidência ambiental para leitura corporativa",
+    "custom_excerpt": "A Ecobraz executa coleta, inventário, custódia e destinação no Brasil. A Villanova ESG estrutura essa execução em evidência documental organizada para leitura de procurement, compliance e finanças em cadeias Brasil-Europa.",
+    "meta_title": "Ecobraz + Villanova ESG: evidência Brasil-Europa",
+    "meta_description": "Execução no Brasil, evidência legível na Europa: coleta e destinação documentadas pela Ecobraz, estruturadas pela Villanova ESG para leitura corporativa.",
+    "hub": {
+      "title": "Evidências públicas",
+      "href": "/evidencias/"
+    },
+    "hero": {
+      "eyebrow": "Execução no Brasil · Evidência legível na Europa",
+      "sub": "A Ecobraz executa coleta, inventário, custódia e destinação no Brasil, com registro em cada etapa. A Villanova ESG estrutura essa execução em evidência documental organizada — preparada para leitura de procurement, compliance, finanças e conselho em cadeias Brasil-Europa.",
+      "cta": "Solicitar diagnóstico",
+      "band": [
+        {
+          "title": "Execução documentada",
+          "text": "coleta, custódia e destinação com registro"
+        },
+        {
+          "title": "Organização por lote",
+          "text": "evidência estruturada por período e operação"
+        },
+        {
+          "title": "Leitura corporativa",
+          "text": "material preparado para quem decide e audita"
+        }
+      ]
+    },
+    "form": {
+      "title": "Descreva a exigência em 1 minuto",
+      "hint": "O diagnóstico mapeia o que a operação já cobre e o que falta estruturar.",
+      "material": "",
+      "describeLabel": "Qual exigência você recebeu?",
+      "describePlaceholder": "Ex.: matriz na Alemanha pediu evidência de destinação",
+      "button": "Solicitar diagnóstico",
+      "micro": "O diagnóstico define escopo, documentos existentes e lacunas — sem compromisso."
+    },
+    "painsTitle": "Quando a matriz pergunta, planilha solta não responde",
+    "painsSub": "Três situações comuns em subsidiárias e fornecedores de cadeias europeias.",
+    "pains": [
+      {
+        "icon": "chart",
+        "title": "Exigência sem tradução local",
+        "text": "O pedido chega em linguagem de compliance europeu — e a operação local responde com documentos avulsos que não conversam com o questionário."
+      },
+      {
+        "icon": "file",
+        "title": "Evidência espalhada",
+        "text": "MTRs, CDFs e inventários existem, mas não contam uma história auditável por lote e por período. O auditor precisa montar o quebra-cabeça sozinho."
+      },
+      {
+        "icon": "alert",
+        "title": "Resposta improvisada",
+        "text": "Sem organização prévia, cada questionário de fornecedor ou due diligence vira um projeto de emergência, com prazo curto e risco de resposta frágil."
+      }
+    ],
+    "scope": {
+      "title": "O que a atuação conjunta entrega — e o que não promete",
+      "sub": "A barreira é deliberada: descrevemos a atuação pelo que é executado e documentado.",
+      "inTitle": "Entregamos",
+      "outTitle": "Não prometemos",
+      "in": [
+        "Execução operacional no Brasil: coleta, inventário, custódia e destinação",
+        "Organização documental por lote, operação e período",
+        "Tradução da evidência para leitura de procurement, compliance e finanças",
+        "Dossiê estruturado para cadeias Brasil-Europa",
+        "Diagnóstico de lacunas entre o que existe e o que a exigência pede"
+      ],
+      "out": [
+        "Certificação, selo ou aprovação regulatória",
+        "Aceitação automática por comprador europeu",
+        "Garantia de conformidade com norma ou legislação",
+        "Alegação institucional sem fonte e escopo declarados"
+      ],
+      "conditions": "O escopo é definido por diagnóstico: o que a operação já gera, o que a exigência pede e o que falta estruturar.",
+      "outNote": "A atuação é descrita pelo que é executado e documentado. O enquadramento regulatório e a aceitação final são sempre do comprador e do esquema aplicável."
+    },
+    "stepsTitle": "Da exigência recebida ao dossiê entregue",
+    "stepsSub": "O diagnóstico vem antes de qualquer promessa — é ele que define o escopo.",
+    "steps": [
+      {
+        "title": "Diagnóstico",
+        "text": "Analisamos a exigência como ela chegou: quem pede, o quê e para quando."
+      },
+      {
+        "title": "Levantamento",
+        "text": "Mapeamos os documentos que a operação já gera e as lacunas."
+      },
+      {
+        "title": "Execução e registro",
+        "text": "A Ecobraz executa e registra coleta, custódia e destinação no Brasil."
+      },
+      {
+        "title": "Estruturação",
+        "text": "A Villanova ESG organiza a evidência por lote, período e operação."
+      },
+      {
+        "title": "Entrega corporativa",
+        "text": "Dossiê preparado para leitura de procurement, compliance e conselho."
+      }
+    ],
+    "evidenceTitle": "A base pública que sustenta a atuação",
+    "evidence": [
+      {
+        "title": "Prática listada na plataforma da UE",
+        "text": "O programa Adote um Bairro está publicado na European Circular Economy Stakeholder Platform — com escopo exato declarado na página de evidências."
+      },
+      {
+        "title": "Registro em plataforma da ONU",
+        "text": "Perfil público da organização em plataforma das Nações Unidas, com limite da alegação declarado."
+      },
+      {
+        "title": "Publicações técnicas com DOI",
+        "text": "Trabalhos publicados com identificador persistente, citáveis e verificáveis."
+      },
+      {
+        "title": "Registros da operação",
+        "text": "Inventários, MTR e CDF quando aplicáveis, relatórios e cadeia de custódia por lote."
+      },
+      {
+        "title": "Dossiê com data de corte",
+        "text": "Cada alegação com fonte, escopo exato e data de verificação."
+      },
+      {
+        "title": "Limites declarados",
+        "text": "O que cada registro comprova — e o que ele não comprova — está escrito."
+      }
+    ],
+    "authority": "A atuação conjunta é descrita pelo que é executado e documentado. Registros públicos, publicações e o limite de cada alegação estão na página de evidências, com data de corte.",
+    "faqTitle": "O que compliance e procurement perguntam",
+    "faq": [
+      {
+        "q": "Isso é uma certificação?",
+        "a": "Não. A atuação conjunta executa e documenta a operação no Brasil e organiza a evidência para leitura corporativa. Certificações e aceites dependem do comprador e do esquema aplicável a cada cadeia."
+      },
+      {
+        "q": "Serve para responder questionário de fornecedor?",
+        "a": "Sim — é um dos usos mais comuns. O dossiê estrutura a base documental que os times usam para responder questionários, due diligences e auditorias de cadeia."
+      },
+      {
+        "q": "Cobre exigências regulatórias europeias?",
+        "a": "Organizamos a evidência que os times de compliance utilizam em seus processos. O enquadramento regulatório é responsabilidade do comprador — não fazemos alegação de conformidade."
+      },
+      {
+        "q": "Quem executa o quê?",
+        "a": "A Ecobraz executa a operação no Brasil: coleta, inventário, custódia, tratamento e destinação. A Villanova ESG estrutura e traduz a evidência dessa execução para leitura corporativa."
+      },
+      {
+        "q": "Como começa?",
+        "a": "Pelo diagnóstico: você traz a exigência como ela chegou, e o retorno mapeia o que a operação já cobre, o que falta e o escopo proposto."
+      }
+    ],
+    "related": [
+      {
+        "title": "Documentação e rastreabilidade",
+        "href": "/documentacao-e-rastreabilidade/",
+        "icon": "file",
+        "text": "Como cada operação gera inventário, MTR, CDF e custódia."
+      },
+      {
+        "title": "Ativos de TI desmobilizados",
+        "href": "/descarte-de-ativos-de-ti-desmobilizados/",
+        "icon": "box",
+        "text": "A execução operacional que alimenta a evidência."
+      },
+      {
+        "title": "Logística reversa",
+        "href": "/logistica-reversa/",
+        "icon": "truck",
+        "text": "Fluxos reversos documentados de ponta a ponta."
+      }
+    ],
+    "final": {
+      "eyebrow": "Diagnóstico inicial",
+      "title": "Recebeu uma exigência da matriz? Comece pelo diagnóstico.",
+      "text": "Traga a exigência como ela chegou. O retorno mapeia o que a operação já cobre e o que falta estruturar — antes de qualquer proposta."
     }
   }
 ]

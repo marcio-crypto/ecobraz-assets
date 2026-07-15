@@ -1,0 +1,163 @@
+{{!< default}}
+{{! Gerado por scripts/build-landing-pages.mjs a partir de landing/landing-pages.json — não edite à mão. }}
+{{#contentFor "head"}}
+<link rel="stylesheet" href="{{asset "css/landing.css"}}">
+{{/contentFor}}
+
+<section class="hx-hero">
+  <div class="container hx-crumbs"><a href="{{@site.url}}/">Início</a> › <a href="{{@site.url}}/descarte-corporativo-de-ti/">Descarte corporativo de TI</a> › ATM e equipamentos bancários</div>
+  <div class="container hx-hero-grid">
+    <div>
+      <span class="hx-label on-dark">ATMs · Terminais · Infraestrutura de agências</span>
+      <h1>Descarte de ATM e equipamentos bancários</h1>
+      <p class="hx-sub">A Ecobraz retira e destina ATMs, terminais de autoatendimento, servidores e equipamentos sensíveis do setor financeiro — com inventário por unidade, cadeia de custódia ponta a ponta e destruição de mídias conforme o escopo. Requisitos de segurança do contratante entram na avaliação técnica.</p>
+      <div class="hx-hero-ctas">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=descarte-de-atm-e-equipamentos-bancarios&amp;material=Inform%C3%A1tica%20e%20TI" data-track="descarte-de-atm-e-equipamentos-bancarios_hero_cta">Solicitar avaliação técnica</a>
+        <a class="button hx-btn-outline-dark" href="#como-funciona" data-track="descarte-de-atm-e-equipamentos-bancarios_hero_como">Como funciona</a>
+      </div>
+      <div class="hx-hero-band">
+        <span><strong>Custódia ponta a ponta</strong>do recolhimento à destinação</span>
+        <span><strong>Mídias tratadas</strong>destruição registrada conforme escopo</span>
+        <span><strong>Multi-agências</strong>consolidação por unidade e por praça</span>
+      </div>
+    </div>
+    <form class="hx-quote" method="get" action="{{@site.url}}/agendamento/">
+      <span class="hx-label">Avaliação técnica</span>
+      <h2>Descreva o parque em 1 minuto</h2>
+      <p class="hx-hint">A equipe retorna com escopo, condições e documentação aplicável.</p>
+      <input type="hidden" name="perfil" value="empresa">
+      <input type="hidden" name="origem" value="descarte-de-atm-e-equipamentos-bancarios">
+      <input type="hidden" name="material" value="Informática e TI">
+      <div class="hx-field">
+        <label for="lp-desc">O que precisa retirar?</label>
+        <input id="lp-desc" name="descricao" placeholder="Ex.: 35 ATMs desativados em 3 agências">
+      </div>
+      <div class="hx-field">
+        <label for="lp-local">CEP ou cidade da retirada</label>
+        <input id="lp-local" name="local" placeholder="Ex.: 02175-010 ou São Paulo">
+      </div>
+      <button class="button" type="submit" data-track="descarte-de-atm-e-equipamentos-bancarios_hero_form">Solicitar avaliação técnica →</button>
+      <div class="hx-or-wa">ou <a href="{{@custom.whatsapp_url}}" rel="noopener" data-track="descarte-de-atm-e-equipamentos-bancarios_hero_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> falar com a equipe no WhatsApp</a></div>
+      <p class="hx-micro">A coleta é confirmada após a avaliação de material, volume, localidade e documentação.</p>
+    </form>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">O risco de não resolver</span><h2>Equipamento bancário parado é risco de segurança</h2></div>
+      <p>Três exposições que crescem enquanto o ativo desativado espera.</p>
+    </div>
+    <div class="hx-sol-grid">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>Mídias e módulos sensíveis</h3><p>ATMs e terminais carregam discos, módulos de segurança e registros de operação. Nada disso pode sair de uma agência sem custódia e tratamento registrados.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="3" width="16" height="18"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2M10 21v-3h4v3"/></svg></span><h3>Agência com prazo de devolução</h3><p>Encerramento de agência tem data para entregar o imóvel. Equipamento parado no salão atrasa a desmobilização inteira.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18h.01"/></svg></span><h3>Ativo de segurança sem rastro</h3><p>Equipamento do setor financeiro sem inventário e destinação registrada é apontamento certo em auditoria interna e externa.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Escopo claro</span><h2>O que entra — e o que não entra</h2></div>
+      <p>Escopo declarado antes do agendamento reduz retrabalho e surpresa. Cada lote é avaliado tecnicamente.</p>
+    </div>
+    <div class="hx-scope">
+      <div class="hx-yes"><h3>Dentro do escopo</h3><ul><li>ATMs e terminais de autoatendimento desativados</li><li>Servidores, storages e ativos de rede de agência e retaguarda</li><li>PDVs, leitores e periféricos de atendimento</li><li>Nobreaks e baterias associadas à infraestrutura</li><li>Mídias e discos, com destruição conforme escopo</li></ul><p>A viabilidade considera tipo de equipamento, número de unidades e praças, janelas de acesso, exigências de segurança do contratante e documentação. Cada operação é avaliada antes da confirmação.</p></div>
+      <div class="hx-not"><h3>Fora do escopo</h3><ul><li>Numerário e valores — nunca fazem parte do serviço</li><li>Pilhas domésticas avulsas, toner e cartuchos</li><li>Lâmpadas, óleo, isopor e embalagens</li><li>Resíduos químicos, biológicos, radioativos ou contaminados</li></ul><p>Materiais fora do escopo exigem cadeias específicas e não fazem parte deste serviço.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block" id="como-funciona">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Processo</span><h2>Como funciona, do contato à destinação</h2></div>
+      <p>Nenhuma retirada é confirmada sem avaliação técnica. É isso que mantém a operação previsível e documentável.</p>
+    </div>
+    <div class="hx-steps">
+        <div class="hx-step"><h3>Descreva o parque</h3><p>Tipos de equipamento, quantidade, agências envolvidas e prazos.</p></div>
+        <div class="hx-step"><h3>Avaliação e segurança</h3><p>Analisamos logística, janelas de acesso e requisitos do contratante.</p></div>
+        <div class="hx-step"><h3>Escopo definido</h3><p>Responsabilidades, método para as mídias e documentos acordados.</p></div>
+        <div class="hx-step"><h3>Retirada com custódia</h3><p>Recolhimento registrado por unidade, com cadeia de custódia.</p></div>
+        <div class="hx-step"><h3>Destruição e destinação</h3><p>Tratamento das mídias, destinação e entrega da documentação.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Evidência da operação</span><h2>O que a auditoria do banco recebe</h2></div>
+      <p>A documentação reflete o que foi efetivamente executado em cada lote — sem promessa genérica.</p>
+    </div>
+    <div class="hx-docs">
+        <div class="hx-doc"><h3>Inventário por unidade</h3><p>Relação dos equipamentos retirados em cada agência ou site.</p></div>
+        <div class="hx-doc"><h3>Cadeia de custódia</h3><p>Registro do percurso de cada ativo, do recolhimento à destinação.</p></div>
+        <div class="hx-doc"><h3>Relatório de destruição de mídias</h3><p>Tratamento executado e registrado conforme o escopo contratado.</p></div>
+        <div class="hx-doc"><h3>MTR e CDF</h3><p>Manifesto de transporte e certificado de destinação, quando aplicáveis.</p></div>
+        <div class="hx-doc"><h3>Consolidação multi-praças</h3><p>Visão por agência e por período para conciliação patrimonial.</p></div>
+        <div class="hx-doc"><h3>Escopo documentado</h3><p>Condições, exclusões e responsabilidades definidas antes da retirada.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-authority">
+      <div>
+        <span class="hx-label on-dark">Autoridade verificável</span>
+        <strong>Associação Auxílio à Reciclagem de Eletrônicos e Inclusão Digital — CNPJ 14.197.457/0001-42</strong>
+        <p>Atuação registrada em plataformas públicas de referência internacional. Cada alegação do site tem fonte, data e escopo declarados na página de evidências.</p>
+      </div>
+      <a href="{{@site.url}}/evidencias/" data-track="descarte-de-atm-e-equipamentos-bancarios_evidencias">Ver evidências públicas →</a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Perguntas frequentes</span><h2>O que segurança, patrimônio e facilities perguntam</h2></div>
+    </div>
+    <div class="hx-faq">
+        <details><summary>Vocês destroem os discos dos ATMs?</summary><p>Sim, conforme o escopo: destruição física registrada ou sanitização lógica quando tecnicamente aplicável. O método e a execução constam do relatório.</p></details>
+        <details><summary>Atendem várias agências e cidades na mesma operação?</summary><p>Operações multi-praças são avaliadas conforme número de unidades, logística e prazos — com consolidação documental por agência e por período.</p></details>
+        <details><summary>Conseguem trabalhar em janelas restritas?</summary><p>Janelas de acesso, horários e procedimentos de segurança do contratante entram na definição do escopo. A operação é planejada dentro dessas condições.</p></details>
+        <details><summary>Como tratam exigências de segurança do banco?</summary><p>Credenciamento de equipe, integração com a segurança local e registros exigidos pelo contratante são acordados no escopo antes da retirada.</p></details>
+        <details><summary>Qual o prazo e o custo?</summary><p>Dependem do número de unidades, praças, janelas e exigências. A avaliação técnica retorna com prazo e condições antes de qualquer confirmação.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Soluções relacionadas</span><h2>Também pode fazer parte da sua operação</h2></div>
+    </div>
+    <div class="hx-sol-grid">
+        <a class="hx-sol" href="{{@site.url}}/destruicao-de-dados/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>Sanitização e destruição de dados</h3><p>Tratamento de mídias com relatório, para exigências de TI e segurança.</p><span class="hx-go">Ver solução →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/descarte-de-ativos-de-ti-desmobilizados/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><h3>Ativos de TI desmobilizados</h3><p>Retirada planejada de parques de TI com inventário e custódia.</p><span class="hx-go">Ver solução →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/descarte-de-servidores-e-data-center/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>Servidores e data center</h3><p>Desativação de infraestrutura crítica com retirada planejada.</p><span class="hx-go">Ver solução →</span></a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-final">
+      <div>
+        <span class="hx-label on-dark">Avaliação técnica sem compromisso</span>
+        <h2>Desmobilize agências e parques com custódia documentada.</h2>
+        <p>Tipos de equipamento, unidades e praças — é o que a equipe precisa para responder com escopo, janelas e o padrão de evidência.</p>
+      </div>
+      <div class="hx-actions">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=descarte-de-atm-e-equipamentos-bancarios&amp;material=Inform%C3%A1tica%20e%20TI" data-track="descarte-de-atm-e-equipamentos-bancarios_final_cta">Solicitar avaliação técnica</a>
+        <a class="button hx-btn-wa" href="{{@custom.whatsapp_url}}" rel="noopener" data-track="descarte-de-atm-e-equipamentos-bancarios_final_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> WhatsApp</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<a class="hx-wa-float" href="{{@custom.whatsapp_url}}" rel="noopener" aria-label="Falar no WhatsApp" data-track="descarte-de-atm-e-equipamentos-bancarios_whatsapp_flutuante"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg><span>Falar no WhatsApp</span></a>
