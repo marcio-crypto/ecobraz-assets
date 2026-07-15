@@ -1,0 +1,48 @@
+name: Monitor mensal de backlinks
+
+on:
+  schedule:
+    - cron: '0 12 1 * *' # dia 1 de cada mês, 12:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  gap-analysis:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Rodar gap-analysis via API Ahrefs
+        env:
+          AHREFS_API_KEY: ${{ secrets.AHREFS_API_KEY }}
+        run: node backlinks/scripts/backlink-gap.mjs
+
+      - name: Abrir PR com o relatório (se houver mudanças)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet; then
+            echo "Sem mudanças de status neste mês."
+            exit 0
+          fi
+          DATA=$(date -u +%Y-%m)
+          BRANCH="backlink-monitor/${DATA}"
+          git config user.name "backlink-monitor"
+          git config user.email "actions@github.com"
+          git checkout -B "$BRANCH"
+          git add backlinks/
+          git commit -m "Monitor de backlinks: relatório ${DATA}"
+          git push -u origin "$BRANCH" --force
+          RELATORIO=$(ls backlinks/relatorios/*-gap.md | sort | tail -1)
+          gh pr create --draft \
+            --title "Monitor de backlinks — ${DATA}" \
+            --body-file "$RELATORIO" \
+            --base main --head "$BRANCH" || \
+          gh pr edit "$BRANCH" --body-file "$RELATORIO"

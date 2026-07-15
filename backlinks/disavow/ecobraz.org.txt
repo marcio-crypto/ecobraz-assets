@@ -1,0 +1,68 @@
+# RASCUNHO de disavow para ecobraz.org — NAO ENVIAR SEM REVISAO HUMANA
+# Gerado em 2026-07-15 a partir dos referring domains marcados como spam pelo Ahrefs
+# (top 100 por DR; a lista completa pode ser maior — rodar o monitor para atualizar).
+# Envio (apenas se decidido): https://search.google.com/search-console/disavow-links
+# Atencao: o Google recomenda disavow somente com padrao claro de links pagos/spam
+# em escala — que e exatamente o caso aqui. Ainda assim, revisar linha a linha.
+domain:itxoft-proven-seo-strategies.site
+domain:itxoft-affordable-seo-solutions.site
+domain:itxoft-organic-seo-growth.site
+domain:itxoft-seo-for-higher-rankings.site
+domain:itxoft-seo-for-modern-business.site
+domain:itxoft-professional-seo-services.site
+domain:itxoft-reliable-seo-services.site
+domain:fiverr-quality-seo-at-affordable-rates.site
+domain:fiverr-seo-for-small-businesses.site
+domain:fiverr-seo-for-business-growth.site
+domain:fiverr-cost-effective-seo.site
+domain:fiverr-affordable-seo-services.site
+domain:rankyour.website
+domain:factmags.com
+domain:rankio.agency
+domain:seogrow.pro
+domain:seogrow.agency
+domain:linkspro.agency
+domain:linkly.agency
+domain:buybacklinks.agency
+domain:kingranks.com
+domain:topbilliondirectory.com
+domain:optimize-instant.website
+domain:rankgrowth.agency
+domain:boost-instant.website
+domain:rank-optimizer.website
+domain:rank-now.website
+domain:grow-fast.website
+domain:rank-top.click
+domain:apsoz.com
+domain:wayranks.com
+domain:thezenweb.com
+domain:onesmablog.com
+domain:blog5.net
+domain:blogdigy.com
+domain:blogofoto.com
+domain:linkrankpro.shop
+domain:rankxlinks.shop
+domain:ranklinkerpro.shop
+domain:seorankflow.shop
+domain:buyseobacklinks.shop
+domain:authoritybacklinks.shop
+domain:backlinker.shop
+domain:pbnseolinks.shop
+domain:linkrankboost.shop
+domain:linkseopro.shop
+domain:ranklinkpro.shop
+domain:seolinkpro.shop
+domain:ranklinkx.shop
+domain:premiumseolinks.shop
+domain:toplinkranker.shop
+domain:linkrankseo.shop
+domain:ampedpages.com
+domain:qowap.com
+domain:blogminds.com
+domain:elbloglibre.com
+domain:blogolize.com
+domain:blogzet.com
+domain:alltdesign.com
+domain:fireblogz.com
+domain:isblog.net
+domain:digiblogbox.com
