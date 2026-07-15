@@ -1,0 +1,217 @@
+{{!< default}}
+{{! Gerado por scripts/build-landing-pages.mjs a partir de landing/landing-pages.json — não edite à mão. }}
+{{#contentFor "head"}}
+<link rel="stylesheet" href="{{asset "css/landing.css"}}">
+{{/contentFor}}
+
+<section class="hx-hero">
+  <div class="container hx-crumbs"><a href="{{@site.url}}/">Início</a> › <a href="{{@site.url}}/descarte-corporativo-de-ti/">Descarte corporativo de TI</a> › Desmobilização de data center</div>
+  <div class="container hx-hero-grid">
+    <div>
+      <span class="hx-label on-dark">Migração para nuvem · Fechamento de site · Colocation</span>
+      <h1>Desmobilização de data center, do rack ao imóvel entregue</h1>
+      <p class="hx-sub">A migração acabou, mas a sala continua lá: racks energizados, storages com dados vivos e um contrato de imóvel correndo. A Ecobraz desmobiliza data centers com inventário por rack, tratamento de mídias registrado e retirada em janelas planejadas — até a sala virar espaço entregue.</p>
+      <div class="hx-hero-ctas">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=desmobilizacao-de-data-center&amp;material=Servidores%20e%20data%20center" data-track="desmobilizacao-de-data-center_hero_cta">Solicitar avaliação técnica</a>
+        <a class="button hx-btn-outline-dark" href="#como-funciona" data-track="desmobilizacao-de-data-center_hero_como">Como funciona</a>
+      </div>
+      <div class="hx-hero-band">
+        <span><strong>Inventário por rack</strong>cada ativo listado antes de sair da sala</span>
+        <span><strong>Mídias tratadas</strong>sanitização ou destruição, registradas</span>
+        <span><strong>Projeto com janelas</strong>cronograma acordado, não 'passamos aí'</span>
+      </div>
+    </div>
+    <form class="hx-quote" id="avaliacao" method="get" action="{{@site.url}}/agendamento/">
+      <span class="hx-label">Avaliação técnica</span>
+      <h2>Descreva o site em 1 minuto</h2>
+      <p class="hx-hint">A equipe retorna com escopo, cronograma e documentação.</p>
+      <input type="hidden" name="perfil" value="empresa">
+      <input type="hidden" name="origem" value="desmobilizacao-de-data-center">
+      <input type="hidden" name="material" value="Servidores e data center">
+      <div class="hx-field">
+        <label for="lp-desc">O que precisa desmobilizar?</label>
+        <input id="lp-desc" name="descricao" placeholder="Ex.: sala com 18 racks após migração para nuvem">
+      </div>
+      <div class="hx-field">
+        <label for="lp-local">CEP ou cidade da retirada</label>
+        <input id="lp-local" name="local" placeholder="Ex.: 02175-010 ou São Paulo">
+      </div>
+      <button class="button" type="submit" data-track="desmobilizacao-de-data-center_hero_form">Solicitar avaliação técnica →</button>
+      <div class="hx-or-wa">ou <a href="{{@custom.whatsapp_url}}" rel="noopener" data-track="desmobilizacao-de-data-center_hero_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> falar com a equipe no WhatsApp</a></div>
+      <p class="hx-micro">A coleta é confirmada após a avaliação de material, volume, localidade e documentação.</p>
+    </form>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container hx-reco">
+    <div>
+      <span class="hx-label">Você se reconhece?</span>
+      <h2>O retrato de quem terminou a migração — mas não o projeto</h2>
+      <p class="hx-reco-cta">Bastou um item da lista ser verdade aí dentro? Então esta página foi escrita para você — <a href="#avaliacao">descreva a situação em 1 minuto</a> e receba um retorno técnico, não um telemarketing.</p>
+    </div>
+    <ul class="hx-reco-list"><li>A migração para nuvem foi concluída há meses e a sala segue intacta, queimando energia e contrato</li><li>O prédio precisa ser devolvido — com um data center inteiro dentro</li><li>Storages desligados guardando dados que ninguém tratou</li><li>O projeto precisa de cronograma e janelas — não de um caminhão que 'passa aí pra buscar'</li><li>A diretoria pergunta quanto custa manter a sala morta — e ninguém quer responder</li></ul>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">O que está em jogo</span><h2>A sala desativada que continua custando como ativa</h2></div>
+      <p>Depois da migração, o data center antigo só gera três coisas: custo, risco e perguntas.</p>
+    </div>
+    <div class="hx-sol-grid">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="3" width="16" height="18"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2M10 21v-3h4v3"/></svg></span><h3>O aluguel do cemitério de racks</h3><p>Sala desmobilizada continua pagando contrato, climatização, seguro e vigilância — para proteger equipamento que nunca mais será ligado.</p><span class="hx-cost">Custo real: meses de despesa integral de um site que já não serve à operação — visível em qualquer revisão de orçamento.</span></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>Dados vivos em máquinas mortas</h3><p>Storage desligado não é storage limpo. Os discos da sala antiga guardam bases inteiras — e ninguém monitora uma sala que 'já era'.</p><span class="hx-cost">Custo real: um acervo completo de dados corporativos protegido apenas por uma porta — na ponta esquecida da segurança.</span></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18h.01"/></svg></span><h3>Desmontagem sem inventário é ativo sumindo</h3><p>Rack desmontado às pressas, sem lista e sem custódia, é convite para o desaparecimento silencioso — e para a auditoria patrimonial sem resposta.</p><span class="hx-cost">Custo real: ativos de valor sem paradeiro, baixa contestada e apontamento de controle interno.</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">A virada</span><h2>Do site parado ao imóvel entregue</h2></div>
+      <p>Desmobilização tratada como projeto — com começo, meio, fim e prova.</p>
+    </div>
+    <div class="hx-contrast">
+      <div class="hx-before"><h3>Como está hoje</h3><ul><li>Sala inteira parada consumindo contrato e energia</li><li>Storages com dados sem tratamento definido</li><li>Nenhum inventário do que existe nos racks</li><li>Prazo do imóvel se aproximando sem plano</li><li>Orçamento de 'retirada de sucata' sem projeto</li></ul></div>
+      <div class="hx-after"><h3>Com a Ecobraz</h3><ul><li>Cronograma de desativação com janelas acordadas</li><li>Mídias sanitizadas ou destruídas, com registro</li><li>Inventário por rack antes da desmontagem</li><li>Retirada, destinação e documentação completas</li><li>Sala vazia e imóvel pronto para devolução</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">O que você ganha</span><h2>O que o projeto entrega no final</h2></div>
+      <p>Não é uma coleta grande — é um decomissionamento fechado com prova.</p>
+    </div>
+    <div class="hx-sol-grid g4">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="3" width="16" height="18"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2M10 21v-3h4v3"/></svg></span><h3>Imóvel liberado</h3><p>A sala esvaziada dentro do prazo do contrato — sem multa nem prorrogação.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>Custo fixo eliminado</h3><p>Energia, climatização e seguro do site morto saem da planilha de despesas.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>Dados encerrados</h3><p>Cada mídia tratada e registrada — a sala antiga deixa de ser risco de segurança.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Dossiê do projeto</h3><p>Inventário, custódia, certificados e relatório final — a desmobilização auditável.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Escopo claro</span><h2>O que entra — e o que não entra</h2></div>
+      <p>Escopo declarado antes do agendamento reduz retrabalho e surpresa. Cada lote é avaliado tecnicamente.</p>
+    </div>
+    <div class="hx-scope">
+      <div class="hx-yes"><h3>Dentro do escopo</h3><ul><li>Servidores, storages, racks e appliances</li><li>Ativos de rede, cabeamento estruturado e PDUs</li><li>Nobreaks e bancos de baterias do site</li><li>Tratamento de mídias: sanitização ou destruição, conforme escopo</li><li>Salas próprias, andares corporativos e posições em colocation</li></ul><p>O escopo considera acesso, janelas permitidas, içamento e desmontagem, tratamento de dados e prazos do imóvel. Cada site é avaliado antes do cronograma.</p></div>
+      <div class="hx-not"><h3>Fora do escopo</h3><ul><li>Infraestrutura civil e climatização fixa (avaliadas caso a caso)</li><li>Pilhas domésticas, toner, lâmpadas e demais exclusões padrão</li><li>Resíduos químicos, biológicos, radioativos ou contaminados</li><li>Equipamentos que permanecerão em produção</li></ul><p>Materiais fora do escopo exigem cadeias específicas e não fazem parte deste serviço.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt" id="como-funciona">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Processo</span><h2>Como funciona, do contato à destinação</h2></div>
+      <p>Nenhuma retirada é confirmada sem avaliação técnica. É isso que mantém a operação previsível e documentável.</p>
+    </div>
+    <div class="hx-steps">
+        <div class="hx-step"><h3>Descreva o site</h3><p>Racks, tipos de ativo, localização, prazos do imóvel e exigências de dados.</p></div>
+        <div class="hx-step"><h3>Avaliação técnica</h3><p>Visita ou levantamento remoto para dimensionar logística, janelas e riscos.</p></div>
+        <div class="hx-step"><h3>Cronograma definido</h3><p>Fases, janelas de trabalho, responsabilidades e documentos acordados.</p></div>
+        <div class="hx-step"><h3>Desativação registrada</h3><p>Inventário por rack, tratamento de mídias e desmontagem com custódia.</p></div>
+        <div class="hx-step"><h3>Entrega e dossiê</h3><p>Sala liberada, resíduos destinados e a documentação completa do projeto.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Evidência da operação</span><h2>A prova de que o site foi encerrado direito</h2></div>
+      <p>A documentação reflete o que foi efetivamente executado em cada lote — sem promessa genérica.</p>
+    </div>
+    <div class="hx-docs">
+        <div class="hx-doc"><h3>Inventário por rack</h3><p>Relação de ativos levantada antes da desmontagem — a base do projeto.</p></div>
+        <div class="hx-doc"><h3>Relatório de mídias</h3><p>Sanitização ou destruição registrada para cada mídia tratada.</p></div>
+        <div class="hx-doc"><h3>Cadeia de custódia</h3><p>O percurso de cada ativo, da sala à destinação.</p></div>
+        <div class="hx-doc"><h3>MTR e CDF</h3><p>Transporte e destinação certificados, quando aplicáveis ao material.</p></div>
+        <div class="hx-doc"><h3>Relatório do projeto</h3><p>Consolidação por fase — o documento que encerra o decomissionamento.</p></div>
+        <div class="hx-doc"><h3>Escopo e cronograma</h3><p>Janelas, responsabilidades e condições acordadas por escrito.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Por que a Ecobraz</span><h2>Por que desmobilizar com a Ecobraz</h2></div>
+      <p>Data center não se desmonta com pressa — se desmonta com plano.</p>
+    </div>
+    <div class="hx-sol-grid g4">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>Projeto, não coleta</h3><p>Cronograma, fases e janelas acordadas — o rigor de projeto que uma sala crítica exige, mesmo desativada.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>Dados dentro do fluxo</h3><p>Sanitização e destruição de mídias integradas à desmobilização — sem contratar três fornecedores.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span><h3>15 anos de operação</h3><p>Associação fundada em 2011, com reconhecimento em plataformas da UE e da ONU — escopo declarado na página de evidências.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Dossiê de encerramento</h3><p>O projeto termina com documentação completa — patrimônio, segurança e auditoria atendidos de uma vez.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-authority">
+      <div>
+        <span class="hx-label on-dark">Autoridade verificável</span>
+        <strong>Associação Auxílio à Reciclagem de Eletrônicos e Inclusão Digital — CNPJ 14.197.457/0001-42</strong>
+        <p>Atuação registrada em plataformas públicas de referência internacional. Cada alegação do site tem fonte, data e escopo declarados na página de evidências.</p>
+      </div>
+      <a href="{{@site.url}}/evidencias/" data-track="desmobilizacao-de-data-center_evidencias">Ver evidências públicas →</a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Perguntas frequentes</span><h2>O que infraestrutura e facilities perguntam</h2></div>
+    </div>
+    <div class="hx-faq">
+        <details><summary>Vocês desmontam os racks e o cabeamento?</summary><p>Sim — desmontagem, organização e retirada fazem parte do escopo, definidos na avaliação conforme o site, o acesso e as janelas permitidas.</p></details>
+        <details><summary>Como tratam os dados dos storages e servidores?</summary><p>Cada mídia recebe o tratamento definido no escopo — sanitização lógica quando aplicável ou destruição física — com registro por mídia no relatório do projeto.</p></details>
+        <details><summary>Trabalham em janelas noturnas ou fins de semana?</summary><p>As janelas de trabalho são acordadas no cronograma, conforme as regras do prédio e da operação — inclusive em horários restritos.</p></details>
+        <details><summary>Atendem sites fora de São Paulo?</summary><p>Projetos em outras praças são avaliados conforme porte, logística e prazos. Descreva o site e a localização para verificarmos a viabilidade.</p></details>
+        <details><summary>E se parte do parque ainda estiver em produção?</summary><p>O escopo separa o que sai do que fica: a desativação é feita em fases, com inventário claro do que pertence a cada uma.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Soluções relacionadas</span><h2>Também pode fazer parte da sua operação</h2></div>
+    </div>
+    <div class="hx-sol-grid">
+        <a class="hx-sol" href="{{@site.url}}/sanitizacao-segura-de-dados/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>Sanitização segura de dados</h3><p>Remoção lógica com relatório, para mídias que seguem utilizáveis.</p><span class="hx-go">Ver solução →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/destruicao-fisica-de-dados-e-midias/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>Destruição física de dados e mídias</h3><p>Inutilização definitiva com custódia, para políticas sem reuso.</p><span class="hx-go">Ver solução →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/descarte-de-servidores-e-data-center/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><h3>Servidores, racks e storages</h3><p>Descarte de equipamentos avulsos de infraestrutura.</p><span class="hx-go">Ver solução →</span></a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-final">
+      <div>
+        <span class="hx-label on-dark">Avaliação técnica sem compromisso</span>
+        <h2>Quanto custa mais um trimestre da sala morta no seu orçamento?</h2>
+        <p>Descreva o site, os racks e os prazos do imóvel. A equipe retorna com cronograma, escopo e a documentação do projeto — por escrito.</p>
+      </div>
+      <div class="hx-actions">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=desmobilizacao-de-data-center&amp;material=Servidores%20e%20data%20center" data-track="desmobilizacao-de-data-center_final_cta">Solicitar avaliação técnica</a>
+        <a class="button hx-btn-wa" href="{{@custom.whatsapp_url}}" rel="noopener" data-track="desmobilizacao-de-data-center_final_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> WhatsApp</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<a class="hx-wa-float" href="{{@custom.whatsapp_url}}" rel="noopener" aria-label="Falar no WhatsApp" data-track="desmobilizacao-de-data-center_whatsapp_flutuante"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg><span>Falar no WhatsApp</span></a>

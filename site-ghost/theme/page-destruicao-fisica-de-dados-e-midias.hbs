@@ -1,0 +1,217 @@
+{{!< default}}
+{{! Gerado por scripts/build-landing-pages.mjs a partir de landing/landing-pages.json — não edite à mão. }}
+{{#contentFor "head"}}
+<link rel="stylesheet" href="{{asset "css/landing.css"}}">
+{{/contentFor}}
+
+<section class="hx-hero">
+  <div class="container hx-crumbs"><a href="{{@site.url}}/">Início</a> › <a href="{{@site.url}}/destruicao-de-dados/">Destruição e sanitização de dados</a> › Destruição física de dados e mídias</div>
+  <div class="container hx-hero-grid">
+    <div>
+      <span class="hx-label on-dark">Política sem exceção · Mídias sensíveis · Compliance</span>
+      <h1>Destruição física de dados e mídias, com custódia e registro</h1>
+      <p class="hx-sub">Quando a política diz 'destruir, sem reuso', não existe meio termo: a mídia precisa morrer — e a morte precisa de atestado. A Ecobraz inutiliza fisicamente HDs, SSDs, fitas e mídias com cadeia de custódia até a destruição e registro por mídia, e destina os resíduos com documentação.</p>
+      <div class="hx-hero-ctas">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=destruicao-fisica-de-dados-e-midias&amp;material=Inform%C3%A1tica%20e%20TI" data-track="destruicao-fisica-de-dados-e-midias_hero_cta">Solicitar avaliação técnica</a>
+        <a class="button hx-btn-outline-dark" href="#como-funciona" data-track="destruicao-fisica-de-dados-e-midias_hero_como">Como funciona</a>
+      </div>
+      <div class="hx-hero-band">
+        <span><strong>Custódia até o fim</strong>a mídia não sai do controle antes de morrer</span>
+        <span><strong>Registro por mídia</strong>evidência da destruição, conforme escopo</span>
+        <span><strong>Resíduo destinado</strong>o que sobra vira e-lixo documentado</span>
+      </div>
+    </div>
+    <form class="hx-quote" id="avaliacao" method="get" action="{{@site.url}}/agendamento/">
+      <span class="hx-label">Avaliação técnica</span>
+      <h2>Descreva as mídias em 1 minuto</h2>
+      <p class="hx-hint">A equipe retorna com método, escopo e documentação.</p>
+      <input type="hidden" name="perfil" value="empresa">
+      <input type="hidden" name="origem" value="destruicao-fisica-de-dados-e-midias">
+      <input type="hidden" name="material" value="Informática e TI">
+      <div class="hx-field">
+        <label for="lp-desc">O que precisa destruir?</label>
+        <input id="lp-desc" name="descricao" placeholder="Ex.: 300 HDs acumulados + fitas LTO do cofre">
+      </div>
+      <div class="hx-field">
+        <label for="lp-local">CEP ou cidade da retirada</label>
+        <input id="lp-local" name="local" placeholder="Ex.: 02175-010 ou São Paulo">
+      </div>
+      <button class="button" type="submit" data-track="destruicao-fisica-de-dados-e-midias_hero_form">Solicitar avaliação técnica →</button>
+      <div class="hx-or-wa">ou <a href="{{@custom.whatsapp_url}}" rel="noopener" data-track="destruicao-fisica-de-dados-e-midias_hero_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> falar com a equipe no WhatsApp</a></div>
+      <p class="hx-micro">A coleta é confirmada após a avaliação de material, volume, localidade e documentação.</p>
+    </form>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container hx-reco">
+    <div>
+      <span class="hx-label">Você se reconhece?</span>
+      <h2>Se o seu cofre conta essa história, é hora de encerrar</h2>
+      <p class="hx-reco-cta">Bastou um item da lista ser verdade aí dentro? Então esta página foi escrita para você — <a href="#avaliacao">descreva a situação em 1 minuto</a> e receba um retorno técnico, não um telemarketing.</p>
+    </div>
+    <ul class="hx-reco-list"><li>Há uma sala ou cofre acumulando HDs 'para destruir um dia' — e esse dia nunca chega</li><li>A política de segurança exige destruição física, sem exceção e sem reuso</li><li>A auditoria pediu evidência da destruição por mídia e só existe uma declaração genérica</li><li>Mídias com falha ou criptografadas que não aceitam sanitização</li><li>O fornecedor anterior levava os discos inteiros embora — e ninguém viu o fim deles</li></ul>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">O que está em jogo</span><h2>Mídia guardada 'para destruir depois' é risco em estoque</h2></div>
+      <p>Cada mês de espera adiciona dados ao passivo — e o elo cego do transporte pode ser pior que a espera.</p>
+    </div>
+    <div class="hx-sol-grid">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>O cofre que virou passivo</h3><p>Anos de discos acumulados são anos de dados sensíveis num único ponto de falha. Um extravio ali não é um incidente — é um histórico inteiro exposto.</p><span class="hx-cost">Custo real: um evento com potencial de atingir dados de todos os exercícios acumulados — e a LGPD não prescreve com o tempo de prateleira.</span></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M1 7h13v10H1zM14 10h4l4 4v3h-8z"/><circle cx="6" cy="19" r="1.6"/><circle cx="18" cy="19" r="1.6"/></svg></span><h3>O elo cego: a mídia que viaja inteira</h3><p>Fornecedor que leva o disco intacto para 'destruir depois' cria a janela perfeita para extravio. Entre a sua porta e o triturador, quem responde é você.</p><span class="hx-cost">Custo real: cadeia de custódia quebrada exatamente no trecho mais vulnerável — e indefensável em auditoria.</span></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Declaração genérica não é evidência</h3><p>'Certificamos a destruição de um lote de mídias' não responde à pergunta do auditor: quais mídias? A evidência precisa ser rastreável até a unidade.</p><span class="hx-cost">Custo real: apontamento em auditoria e retrabalho para reconstruir um histórico que deveria ter nascido pronto.</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">A virada</span><h2>Do cofre cheio ao passivo encerrado</h2></div>
+      <p>A destruição vira um evento documentado — não uma promessa.</p>
+    </div>
+    <div class="hx-contrast">
+      <div class="hx-before"><h3>Como está hoje</h3><ul><li>Mídias acumulando há anos 'aguardando decisão'</li><li>Discos saindo inteiros com terceiros</li><li>Declaração genérica no lugar de evidência</li><li>Ninguém sabe dizer quantas mídias existem</li><li>Compliance repetindo a mesma pergunta a cada ciclo</li></ul></div>
+      <div class="hx-after"><h3>Com a Ecobraz</h3><ul><li>Inventário das mídias antes da destruição</li><li>Custódia registrada até a inutilização</li><li>Registro por mídia, conforme o escopo</li><li>Resíduos destinados com MTR e CDF aplicáveis</li><li>A pergunta do compliance encerrada por escrito</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">O que você ganha</span><h2>O que se encerra junto com as mídias</h2></div>
+      <p>Um passivo acumulado há anos sai do mapa em uma operação.</p>
+    </div>
+    <div class="hx-sol-grid g4">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>Cofre esvaziado</h3><p>O ponto único de falha deixa de existir — junto com os anos de dados que morava nele.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Evidência por unidade</h3><p>Registro rastreável por mídia, no padrão que auditoria e compliance exigem.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span><h3>Elo cego eliminado</h3><p>Custódia registrada da coleta à inutilização — sem janela de extravio.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>Ciclo fechado</h3><p>O resíduo da destruição segue para destinação documentada — nada fica no limbo.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Escopo claro</span><h2>O que entra — e o que não entra</h2></div>
+      <p>Escopo declarado antes do agendamento reduz retrabalho e surpresa. Cada lote é avaliado tecnicamente.</p>
+    </div>
+    <div class="hx-scope">
+      <div class="hx-yes"><h3>Dentro do escopo</h3><ul><li>HDs, SSDs e unidades de storage</li><li>Fitas de backup, cartões e mídias removíveis</li><li>Mídias danificadas ou criptografadas sem chave</li><li>Discos extraídos de servidores, ATMs e equipamentos sensíveis</li><li>Acervos acumulados — de dezenas a milhares de unidades</li></ul><p>Método, local de execução e nível de registro são definidos na avaliação, conforme o volume, o tipo de mídia e a exigência da política.</p></div>
+      <div class="hx-not"><h3>Fora do escopo</h3><ul><li>Necessidade de reuso do equipamento — veja sanitização segura</li><li>Pilhas domésticas, toner, lâmpadas e demais exclusões padrão</li><li>Resíduos químicos, biológicos, radioativos ou contaminados</li><li>Documentos em papel e acervos não eletrônicos</li></ul><p>Destruição física e sanitização são serviços distintos, com métodos e entregáveis próprios — esta página trata de inutilização definitiva.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt" id="como-funciona">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Processo</span><h2>Como funciona, do contato à destinação</h2></div>
+      <p>Nenhuma retirada é confirmada sem avaliação técnica. É isso que mantém a operação previsível e documentável.</p>
+    </div>
+    <div class="hx-steps">
+        <div class="hx-step"><h3>Descreva as mídias</h3><p>Tipos, quantidade estimada, origem e a exigência da política ou auditoria.</p></div>
+        <div class="hx-step"><h3>Avaliação técnica</h3><p>Definimos método, local de execução e o nível de registro necessário.</p></div>
+        <div class="hx-step"><h3>Escopo definido</h3><p>Responsabilidades, custódia e evidência acordadas por escrito.</p></div>
+        <div class="hx-step"><h3>Coleta com custódia</h3><p>As mídias saem inventariadas e sob cadeia de custódia registrada.</p></div>
+        <div class="hx-step"><h3>Destruição e destino</h3><p>Inutilização registrada e destinação dos resíduos com documentação.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Evidência da operação</span><h2>O atestado de óbito das suas mídias</h2></div>
+      <p>A documentação reflete o que foi efetivamente executado em cada lote — sem promessa genérica.</p>
+    </div>
+    <div class="hx-docs">
+        <div class="hx-doc"><h3>Inventário prévio</h3><p>Relação das mídias antes da destruição — a base da rastreabilidade.</p></div>
+        <div class="hx-doc"><h3>Registro de destruição</h3><p>Evidência da inutilização por mídia, conforme o escopo contratado.</p></div>
+        <div class="hx-doc"><h3>Cadeia de custódia</h3><p>O percurso registrado da sua porta até a destruição.</p></div>
+        <div class="hx-doc"><h3>MTR e CDF</h3><p>Destinação dos resíduos da destruição, quando aplicáveis ao material.</p></div>
+        <div class="hx-doc"><h3>Relatório consolidado</h3><p>O pacote completo da operação, pronto para anexar à auditoria.</p></div>
+        <div class="hx-doc"><h3>Escopo documentado</h3><p>Método, local e responsabilidades definidos antes da execução.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Por que a Ecobraz</span><h2>Por que destruir com a Ecobraz</h2></div>
+      <p>A destruição é o serviço em que o 'quase' não existe: ou há evidência, ou há risco.</p>
+    </div>
+    <div class="hx-sol-grid g4">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>Custódia sem intervalo</h3><p>Da coleta à inutilização, a mídia permanece sob controle registrado — o elo cego do transporte não existe no nosso fluxo.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Evidência rastreável</h3><p>Registro por mídia conforme o escopo — não declaração genérica de lote.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span><h3>15 anos de operação</h3><p>Associação fundada em 2011, com reconhecimento em plataformas da UE e da ONU — escopo declarado na página de evidências.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>Precisão técnica</h3><p>Destruição e sanitização tratadas como serviços distintos — como manda a boa prática, sem oferta tecnicamente imprecisa.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-authority">
+      <div>
+        <span class="hx-label on-dark">Autoridade verificável</span>
+        <strong>Associação Auxílio à Reciclagem de Eletrônicos e Inclusão Digital — CNPJ 14.197.457/0001-42</strong>
+        <p>Atuação registrada em plataformas públicas de referência internacional. Cada alegação do site tem fonte, data e escopo declarados na página de evidências.</p>
+      </div>
+      <a href="{{@site.url}}/evidencias/" data-track="destruicao-fisica-de-dados-e-midias_evidencias">Ver evidências públicas →</a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Perguntas frequentes</span><h2>O que segurança e compliance perguntam</h2></div>
+    </div>
+    <div class="hx-faq">
+        <details><summary>A destruição pode ser feita nas minhas instalações?</summary><p>O local de execução — nas suas instalações ou em ambiente controlado — é definido na avaliação técnica, conforme volume, tipo de mídia e exigência da política.</p></details>
+        <details><summary>Recebo evidência por mídia?</summary><p>Sim, conforme o escopo: as mídias são inventariadas antes e a destruição é registrada de forma rastreável — o formato exato do registro é acordado na definição do escopo.</p></details>
+        <details><summary>Qual a diferença para a sanitização?</summary><p>Na sanitização, o dado morre e a mídia sobrevive (reuso, devolução, doação). Na destruição física, mídia e dado morrem juntos — é o caminho para políticas que proíbem reuso e para mídias que não aceitam sanitização.</p></details>
+        <details><summary>O que acontece com o material destruído?</summary><p>Os resíduos seguem para destinação documentada como resíduo eletrônico, com MTR e CDF quando aplicáveis — o ciclo fecha com prova.</p></details>
+        <details><summary>Atendem volumes pequenos?</summary><p>De um cofre com dezenas de discos a acervos com milhares de mídias — a avaliação define a logística e as condições para cada caso.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Soluções relacionadas</span><h2>Também pode fazer parte da sua operação</h2></div>
+    </div>
+    <div class="hx-sol-grid">
+        <a class="hx-sol" href="{{@site.url}}/sanitizacao-segura-de-dados/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>Sanitização segura de dados</h3><p>Quando o equipamento precisa sobreviver: remoção lógica com relatório.</p><span class="hx-go">Ver solução →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/descarte-de-atm-e-equipamentos-bancarios/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="3" width="16" height="18"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2M10 21v-3h4v3"/></svg></span><h3>ATM e equipamentos bancários</h3><p>Desmobilização com destruição de mídias em ambiente financeiro.</p><span class="hx-go">Ver solução →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/descarte-de-ativos-de-ti-desmobilizados/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><h3>Ativos de TI desmobilizados</h3><p>Retirada planejada do parque com inventário e custódia.</p><span class="hx-go">Ver solução →</span></a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-final">
+      <div>
+        <span class="hx-label on-dark">Avaliação técnica sem compromisso</span>
+        <h2>Quantos anos de dados estão guardados no seu cofre agora?</h2>
+        <p>Descreva as mídias, o volume e a exigência da política. A equipe retorna com método, custódia e o modelo de evidência — por escrito.</p>
+      </div>
+      <div class="hx-actions">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=destruicao-fisica-de-dados-e-midias&amp;material=Inform%C3%A1tica%20e%20TI" data-track="destruicao-fisica-de-dados-e-midias_final_cta">Solicitar avaliação técnica</a>
+        <a class="button hx-btn-wa" href="{{@custom.whatsapp_url}}" rel="noopener" data-track="destruicao-fisica-de-dados-e-midias_final_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> WhatsApp</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<a class="hx-wa-float" href="{{@custom.whatsapp_url}}" rel="noopener" aria-label="Falar no WhatsApp" data-track="destruicao-fisica-de-dados-e-midias_whatsapp_flutuante"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg><span>Falar no WhatsApp</span></a>

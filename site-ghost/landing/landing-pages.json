@@ -1573,5 +1573,790 @@
         }
       ]
     }
+  },
+  {
+    "slug": "sanitizacao-segura-de-dados",
+    "title": "Sanitização segura de dados, com relatório por mídia",
+    "crumb": "Sanitização segura de dados",
+    "serviceType": "Sanitização lógica verificável de mídias de dados, quando tecnicamente aplicável",
+    "custom_excerpt": "Remoção lógica de dados em HDs, SSDs e mídias corporativas, com método documentado e relatório por mídia — para devolução de leasing, reuso e doação sem risco.",
+    "meta_title": "Sanitização segura de dados com relatório | Ecobraz",
+    "meta_description": "Sanitização lógica verificável de HDs, SSDs e mídias — método documentado e relatório por mídia, para devolução de leasing, reuso e doação de equipamentos.",
+    "hub": {
+      "title": "Destruição e sanitização de dados",
+      "href": "/destruicao-de-dados/"
+    },
+    "hero": {
+      "eyebrow": "Devolução de leasing · Reuso · Doação",
+      "sub": "O contrato de locação venceu e as máquinas precisam voltar sem nenhum dado dentro? A Ecobraz executa sanitização lógica com método documentado e relatório por mídia — o equipamento continua utilizável, e o risco sai por escrito. Quando a sanitização não é tecnicamente aplicável, dizemos na avaliação e indicamos a destruição física.",
+      "cta": "Solicitar avaliação técnica",
+      "band": [
+        {
+          "title": "Equipamento preservado",
+          "text": "a mídia sobrevive; o dado, não"
+        },
+        {
+          "title": "Método documentado",
+          "text": "processo registrado por mídia tratada"
+        },
+        {
+          "title": "Limite declarado",
+          "text": "quando não é aplicável, nós avisamos"
+        }
+      ]
+    },
+    "form": {
+      "title": "Descreva o parque em 1 minuto",
+      "hint": "A equipe retorna com aplicabilidade, escopo e documentação.",
+      "material": "Informática e TI",
+      "describeLabel": "O que precisa sanitizar?",
+      "describePlaceholder": "Ex.: 200 notebooks de leasing para devolver em agosto"
+    },
+    "recognize": {
+      "title": "Situações em que formatar não resolve — e sanitizar resolve",
+      "items": [
+        "O leasing venceu e a locadora vai receber de volta máquinas com anos de dados da empresa",
+        "A doação de computadores está travada porque ninguém garante o que ficou nos discos",
+        "A política interna exige remoção verificável de dados antes de qualquer equipamento sair",
+        "A auditoria pediu evidência de sanitização e o que existe é um print de formatação",
+        "O parque vai para redeployment interno, mas o time não tem ferramenta nem tempo para tratar disco a disco"
+      ]
+    },
+    "painsTitle": "Formatar não é sanitizar — e a diferença custa caro",
+    "painsSub": "O dado 'apagado' de qualquer jeito continua recuperável com ferramenta comum.",
+    "pains": [
+      {
+        "icon": "lock",
+        "title": "O disco formatado que continua falando",
+        "text": "Formatação simples não remove dados: remove o índice. Quem receber a máquina — locadora, comprador ou donatário — consegue recuperar arquivos com software gratuito.",
+        "consequence": "Custo real: incidente LGPD com sanção de até 2% do faturamento (teto de R$ 50 milhões) — nascido de um equipamento que saiu 'limpo'."
+      },
+      {
+        "icon": "building",
+        "title": "A devolução de leasing que leva seus dados junto",
+        "text": "A máquina devolvida é recondicionada e vai para a próxima empresa. Sem sanitização registrada, seus contratos e planilhas vão no pacote.",
+        "consequence": "Custo real: dados estratégicos circulando fora do seu controle — sem nem contar como vazamento detectável."
+      },
+      {
+        "icon": "alert",
+        "title": "A doação que vira manchete",
+        "text": "Doar computadores é excelente — até um dado sensível aparecer na máquina doada. O gesto social vira crise de imagem e caso jurídico.",
+        "consequence": "Custo real: o projeto social da empresa suspenso e a marca associada a vazamento — pelo motivo errado."
+      }
+    ],
+    "contrast": {
+      "title": "De 'acho que apagaram' para 'está no relatório'",
+      "sub": "A diferença entre confiar e poder provar.",
+      "before": {
+        "title": "Como sai hoje",
+        "items": [
+          "Formatação simples, sem método definido",
+          "Nenhum registro de qual mídia foi tratada",
+          "Devolução e doação travadas pela dúvida",
+          "Auditoria respondida com print de tela",
+          "Cada técnico faz de um jeito"
+        ]
+      },
+      "after": {
+        "title": "Com a sanitização Ecobraz",
+        "items": [
+          "Método documentado, aplicado mídia a mídia",
+          "Relatório com identificação das mídias tratadas",
+          "Equipamento liberado para devolver, reusar ou doar",
+          "Evidência pronta para auditoria e para o DPO",
+          "Mídia não aplicável? Indicamos destruição física — por escrito"
+        ]
+      }
+    },
+    "gains": {
+      "title": "O que a sanitização destrava",
+      "sub": "O valor do equipamento é preservado; o risco do dado é eliminado.",
+      "items": [
+        {
+          "icon": "truck",
+          "title": "Leasing devolvido sem medo",
+          "text": "As máquinas voltam para a locadora limpas e com relatório — contrato encerrado sem pendência."
+        },
+        {
+          "icon": "chart",
+          "title": "Reuso e redeployment",
+          "text": "O parque circula internamente sem carregar dados de um setor para outro."
+        },
+        {
+          "icon": "shield",
+          "title": "Doação destravada",
+          "text": "O projeto social anda com segurança jurídica — e a empresa colhe o benefício da imagem."
+        },
+        {
+          "icon": "file",
+          "title": "DPO e auditoria satisfeitos",
+          "text": "Evidência por mídia, no formato que a política interna e a LGPD pedem."
+        }
+      ]
+    },
+    "scope": {
+      "in": [
+        "HDs e SSDs em notebooks, desktops e servidores",
+        "Mídias avulsas: discos externos, unidades de storage",
+        "Parques inteiros em devolução de leasing ou redeployment",
+        "Equipamentos destinados a doação corporativa",
+        "Verificação de aplicabilidade mídia a mídia na avaliação"
+      ],
+      "out": [
+        "Mídias danificadas ou criptografadas sem chave — vão para destruição física",
+        "Exigências de inutilização definitiva — página de destruição física",
+        "Pilhas domésticas, toner, lâmpadas e demais exclusões padrão",
+        "Resíduos químicos, biológicos, radioativos ou contaminados"
+      ],
+      "conditions": "A sanitização é oferecida quando tecnicamente aplicável — a avaliação verifica mídia, estado e exigência. Quando não for o caminho, você recebe a indicação de destruição física com a mesma clareza.",
+      "outNote": "Sanitização e destruição física são serviços distintos, com métodos e entregáveis próprios — misturá-los é impreciso tecnicamente."
+    },
+    "steps": [
+      {
+        "title": "Descreva o parque",
+        "text": "Quantidade, tipos de mídia, destino pretendido (devolução, reuso, doação) e prazo."
+      },
+      {
+        "title": "Avaliação técnica",
+        "text": "Verificamos aplicabilidade mídia a mídia e o nível de evidência exigido."
+      },
+      {
+        "title": "Escopo definido",
+        "text": "Método, local de execução, registros e o que acontece com mídias não aplicáveis."
+      },
+      {
+        "title": "Execução registrada",
+        "text": "Sanitização aplicada com registro por mídia tratada."
+      },
+      {
+        "title": "Relatório final",
+        "text": "Documento com identificação das mídias e método aplicado — pronto para auditoria."
+      }
+    ],
+    "evidenceTitle": "O que sobra quando o dado se vai",
+    "evidence": [
+      {
+        "title": "Relatório de sanitização",
+        "text": "Identificação das mídias tratadas e método aplicado, por mídia."
+      },
+      {
+        "title": "Registro de aplicabilidade",
+        "text": "Quais mídias foram sanitizadas e quais seguiram para destruição física — sem zona cinzenta."
+      },
+      {
+        "title": "Cadeia de custódia",
+        "text": "Quando a operação inclui retirada, o percurso é registrado de ponta a ponta."
+      },
+      {
+        "title": "Escopo documentado",
+        "text": "Método, local e responsabilidades definidos antes da execução."
+      },
+      {
+        "title": "Integração com destinação",
+        "text": "MTR e CDF quando o serviço inclui descarte de equipamentos, conforme aplicável."
+      },
+      {
+        "title": "Evidência com limite",
+        "text": "O relatório diz o que foi feito — e não promete o que não foi."
+      }
+    ],
+    "why": {
+      "title": "Por que sanitizar com a Ecobraz",
+      "sub": "Honestidade técnica é o diferencial: nem todo disco pode ser sanitizado — e você saberá quais.",
+      "items": [
+        {
+          "icon": "shield",
+          "title": "Limite técnico declarado",
+          "text": "Quando a sanitização não é aplicável, dizemos na avaliação e indicamos destruição física — por escrito, não por conveniência."
+        },
+        {
+          "icon": "file",
+          "title": "Relatório por mídia",
+          "text": "Não é declaração genérica: cada mídia tratada aparece identificada no relatório."
+        },
+        {
+          "icon": "chart",
+          "title": "15 anos de operação",
+          "text": "Associação fundada em 2011, com reconhecimento em plataformas da UE e da ONU — escopo declarado na página de evidências."
+        },
+        {
+          "icon": "truck",
+          "title": "Fluxo completo se precisar",
+          "text": "Sanitização pode se integrar à retirada, destinação e documentação do lote inteiro — um fornecedor, uma operação."
+        }
+      ]
+    },
+    "authority": "Atuação registrada em plataformas públicas de referência internacional. Cada alegação do site tem fonte, data e escopo declarados na página de evidências.",
+    "faqTitle": "O que TI, segurança e DPO perguntam",
+    "faq": [
+      {
+        "q": "Qual a diferença entre sanitização e formatação?",
+        "a": "Formatação remove o índice dos arquivos; os dados continuam no disco e são recuperáveis com ferramentas comuns. Sanitização aplica método documentado de remoção lógica para tornar os dados irrecuperáveis — com registro do processo por mídia."
+      },
+      {
+        "q": "O equipamento continua utilizável depois?",
+        "a": "Sim — essa é a diferença para a destruição física. A mídia sanitizada segue funcional, pronta para devolução de leasing, reuso interno ou doação."
+      },
+      {
+        "q": "E se a mídia estiver danificada ou criptografada?",
+        "a": "A avaliação identifica mídias em que a sanitização não é tecnicamente aplicável. Nesses casos, indicamos a destruição física, com o mesmo padrão de registro."
+      },
+      {
+        "q": "O relatório identifica cada mídia?",
+        "a": "Sim, conforme o escopo: as mídias tratadas aparecem identificadas no relatório, com o método aplicado — é o formato que auditorias e DPOs pedem."
+      },
+      {
+        "q": "Vocês também retiram e destinam os equipamentos?",
+        "a": "Sim. A sanitização pode ser contratada isolada ou integrada à retirada, destinação e documentação do lote — inventário, MTR e CDF quando aplicáveis."
+      }
+    ],
+    "related": [
+      {
+        "title": "Destruição física de dados e mídias",
+        "href": "/destruicao-fisica-de-dados-e-midias/",
+        "icon": "lock",
+        "text": "Quando a exigência é inutilização definitiva, com custódia e registro."
+      },
+      {
+        "title": "Ativos de TI desmobilizados",
+        "href": "/descarte-de-ativos-de-ti-desmobilizados/",
+        "icon": "box",
+        "text": "Retirada planejada do parque com inventário e custódia."
+      },
+      {
+        "title": "Documentação e rastreabilidade",
+        "href": "/documentacao-e-rastreabilidade/",
+        "icon": "file",
+        "text": "Como cada operação gera a evidência que sustenta auditorias."
+      }
+    ],
+    "final": {
+      "eyebrow": "Avaliação técnica sem compromisso",
+      "title": "Quantas máquinas estão esperando para sair — e o que ainda mora nos discos delas?",
+      "text": "Descreva o parque, o destino pretendido e o prazo. A equipe retorna com aplicabilidade, escopo e o modelo de relatório."
+    }
+  },
+  {
+    "slug": "destruicao-fisica-de-dados-e-midias",
+    "title": "Destruição física de dados e mídias, com custódia e registro",
+    "crumb": "Destruição física de dados e mídias",
+    "serviceType": "Inutilização física de mídias de dados com cadeia de custódia e registro por mídia",
+    "custom_excerpt": "Inutilização física de HDs, SSDs, fitas e mídias com cadeia de custódia até a destruição e registro por mídia — para políticas que não admitem reuso.",
+    "meta_title": "Destruição física de dados e mídias | Ecobraz",
+    "meta_description": "Inutilização física de HDs, SSDs, fitas e mídias com custódia até a destruição e registro por mídia — para políticas de segurança que não admitem reuso.",
+    "hub": {
+      "title": "Destruição e sanitização de dados",
+      "href": "/destruicao-de-dados/"
+    },
+    "hero": {
+      "eyebrow": "Política sem exceção · Mídias sensíveis · Compliance",
+      "sub": "Quando a política diz 'destruir, sem reuso', não existe meio termo: a mídia precisa morrer — e a morte precisa de atestado. A Ecobraz inutiliza fisicamente HDs, SSDs, fitas e mídias com cadeia de custódia até a destruição e registro por mídia, e destina os resíduos com documentação.",
+      "cta": "Solicitar avaliação técnica",
+      "band": [
+        {
+          "title": "Custódia até o fim",
+          "text": "a mídia não sai do controle antes de morrer"
+        },
+        {
+          "title": "Registro por mídia",
+          "text": "evidência da destruição, conforme escopo"
+        },
+        {
+          "title": "Resíduo destinado",
+          "text": "o que sobra vira e-lixo documentado"
+        }
+      ]
+    },
+    "form": {
+      "title": "Descreva as mídias em 1 minuto",
+      "hint": "A equipe retorna com método, escopo e documentação.",
+      "material": "Informática e TI",
+      "describeLabel": "O que precisa destruir?",
+      "describePlaceholder": "Ex.: 300 HDs acumulados + fitas LTO do cofre"
+    },
+    "recognize": {
+      "title": "Se o seu cofre conta essa história, é hora de encerrar",
+      "items": [
+        "Há uma sala ou cofre acumulando HDs 'para destruir um dia' — e esse dia nunca chega",
+        "A política de segurança exige destruição física, sem exceção e sem reuso",
+        "A auditoria pediu evidência da destruição por mídia e só existe uma declaração genérica",
+        "Mídias com falha ou criptografadas que não aceitam sanitização",
+        "O fornecedor anterior levava os discos inteiros embora — e ninguém viu o fim deles"
+      ]
+    },
+    "painsTitle": "Mídia guardada 'para destruir depois' é risco em estoque",
+    "painsSub": "Cada mês de espera adiciona dados ao passivo — e o elo cego do transporte pode ser pior que a espera.",
+    "pains": [
+      {
+        "icon": "lock",
+        "title": "O cofre que virou passivo",
+        "text": "Anos de discos acumulados são anos de dados sensíveis num único ponto de falha. Um extravio ali não é um incidente — é um histórico inteiro exposto.",
+        "consequence": "Custo real: um evento com potencial de atingir dados de todos os exercícios acumulados — e a LGPD não prescreve com o tempo de prateleira."
+      },
+      {
+        "icon": "truck",
+        "title": "O elo cego: a mídia que viaja inteira",
+        "text": "Fornecedor que leva o disco intacto para 'destruir depois' cria a janela perfeita para extravio. Entre a sua porta e o triturador, quem responde é você.",
+        "consequence": "Custo real: cadeia de custódia quebrada exatamente no trecho mais vulnerável — e indefensável em auditoria."
+      },
+      {
+        "icon": "file",
+        "title": "Declaração genérica não é evidência",
+        "text": "'Certificamos a destruição de um lote de mídias' não responde à pergunta do auditor: quais mídias? A evidência precisa ser rastreável até a unidade.",
+        "consequence": "Custo real: apontamento em auditoria e retrabalho para reconstruir um histórico que deveria ter nascido pronto."
+      }
+    ],
+    "contrast": {
+      "title": "Do cofre cheio ao passivo encerrado",
+      "sub": "A destruição vira um evento documentado — não uma promessa.",
+      "before": {
+        "title": "Como está hoje",
+        "items": [
+          "Mídias acumulando há anos 'aguardando decisão'",
+          "Discos saindo inteiros com terceiros",
+          "Declaração genérica no lugar de evidência",
+          "Ninguém sabe dizer quantas mídias existem",
+          "Compliance repetindo a mesma pergunta a cada ciclo"
+        ]
+      },
+      "after": {
+        "title": "Com a Ecobraz",
+        "items": [
+          "Inventário das mídias antes da destruição",
+          "Custódia registrada até a inutilização",
+          "Registro por mídia, conforme o escopo",
+          "Resíduos destinados com MTR e CDF aplicáveis",
+          "A pergunta do compliance encerrada por escrito"
+        ]
+      }
+    },
+    "gains": {
+      "title": "O que se encerra junto com as mídias",
+      "sub": "Um passivo acumulado há anos sai do mapa em uma operação.",
+      "items": [
+        {
+          "icon": "lock",
+          "title": "Cofre esvaziado",
+          "text": "O ponto único de falha deixa de existir — junto com os anos de dados que morava nele."
+        },
+        {
+          "icon": "file",
+          "title": "Evidência por unidade",
+          "text": "Registro rastreável por mídia, no padrão que auditoria e compliance exigem."
+        },
+        {
+          "icon": "shield",
+          "title": "Elo cego eliminado",
+          "text": "Custódia registrada da coleta à inutilização — sem janela de extravio."
+        },
+        {
+          "icon": "chart",
+          "title": "Ciclo fechado",
+          "text": "O resíduo da destruição segue para destinação documentada — nada fica no limbo."
+        }
+      ]
+    },
+    "scope": {
+      "in": [
+        "HDs, SSDs e unidades de storage",
+        "Fitas de backup, cartões e mídias removíveis",
+        "Mídias danificadas ou criptografadas sem chave",
+        "Discos extraídos de servidores, ATMs e equipamentos sensíveis",
+        "Acervos acumulados — de dezenas a milhares de unidades"
+      ],
+      "out": [
+        "Necessidade de reuso do equipamento — veja sanitização segura",
+        "Pilhas domésticas, toner, lâmpadas e demais exclusões padrão",
+        "Resíduos químicos, biológicos, radioativos ou contaminados",
+        "Documentos em papel e acervos não eletrônicos"
+      ],
+      "conditions": "Método, local de execução e nível de registro são definidos na avaliação, conforme o volume, o tipo de mídia e a exigência da política.",
+      "outNote": "Destruição física e sanitização são serviços distintos, com métodos e entregáveis próprios — esta página trata de inutilização definitiva."
+    },
+    "steps": [
+      {
+        "title": "Descreva as mídias",
+        "text": "Tipos, quantidade estimada, origem e a exigência da política ou auditoria."
+      },
+      {
+        "title": "Avaliação técnica",
+        "text": "Definimos método, local de execução e o nível de registro necessário."
+      },
+      {
+        "title": "Escopo definido",
+        "text": "Responsabilidades, custódia e evidência acordadas por escrito."
+      },
+      {
+        "title": "Coleta com custódia",
+        "text": "As mídias saem inventariadas e sob cadeia de custódia registrada."
+      },
+      {
+        "title": "Destruição e destino",
+        "text": "Inutilização registrada e destinação dos resíduos com documentação."
+      }
+    ],
+    "evidenceTitle": "O atestado de óbito das suas mídias",
+    "evidence": [
+      {
+        "title": "Inventário prévio",
+        "text": "Relação das mídias antes da destruição — a base da rastreabilidade."
+      },
+      {
+        "title": "Registro de destruição",
+        "text": "Evidência da inutilização por mídia, conforme o escopo contratado."
+      },
+      {
+        "title": "Cadeia de custódia",
+        "text": "O percurso registrado da sua porta até a destruição."
+      },
+      {
+        "title": "MTR e CDF",
+        "text": "Destinação dos resíduos da destruição, quando aplicáveis ao material."
+      },
+      {
+        "title": "Relatório consolidado",
+        "text": "O pacote completo da operação, pronto para anexar à auditoria."
+      },
+      {
+        "title": "Escopo documentado",
+        "text": "Método, local e responsabilidades definidos antes da execução."
+      }
+    ],
+    "why": {
+      "title": "Por que destruir com a Ecobraz",
+      "sub": "A destruição é o serviço em que o 'quase' não existe: ou há evidência, ou há risco.",
+      "items": [
+        {
+          "icon": "lock",
+          "title": "Custódia sem intervalo",
+          "text": "Da coleta à inutilização, a mídia permanece sob controle registrado — o elo cego do transporte não existe no nosso fluxo."
+        },
+        {
+          "icon": "file",
+          "title": "Evidência rastreável",
+          "text": "Registro por mídia conforme o escopo — não declaração genérica de lote."
+        },
+        {
+          "icon": "shield",
+          "title": "15 anos de operação",
+          "text": "Associação fundada em 2011, com reconhecimento em plataformas da UE e da ONU — escopo declarado na página de evidências."
+        },
+        {
+          "icon": "chart",
+          "title": "Precisão técnica",
+          "text": "Destruição e sanitização tratadas como serviços distintos — como manda a boa prática, sem oferta tecnicamente imprecisa."
+        }
+      ]
+    },
+    "authority": "Atuação registrada em plataformas públicas de referência internacional. Cada alegação do site tem fonte, data e escopo declarados na página de evidências.",
+    "faqTitle": "O que segurança e compliance perguntam",
+    "faq": [
+      {
+        "q": "A destruição pode ser feita nas minhas instalações?",
+        "a": "O local de execução — nas suas instalações ou em ambiente controlado — é definido na avaliação técnica, conforme volume, tipo de mídia e exigência da política."
+      },
+      {
+        "q": "Recebo evidência por mídia?",
+        "a": "Sim, conforme o escopo: as mídias são inventariadas antes e a destruição é registrada de forma rastreável — o formato exato do registro é acordado na definição do escopo."
+      },
+      {
+        "q": "Qual a diferença para a sanitização?",
+        "a": "Na sanitização, o dado morre e a mídia sobrevive (reuso, devolução, doação). Na destruição física, mídia e dado morrem juntos — é o caminho para políticas que proíbem reuso e para mídias que não aceitam sanitização."
+      },
+      {
+        "q": "O que acontece com o material destruído?",
+        "a": "Os resíduos seguem para destinação documentada como resíduo eletrônico, com MTR e CDF quando aplicáveis — o ciclo fecha com prova."
+      },
+      {
+        "q": "Atendem volumes pequenos?",
+        "a": "De um cofre com dezenas de discos a acervos com milhares de mídias — a avaliação define a logística e as condições para cada caso."
+      }
+    ],
+    "related": [
+      {
+        "title": "Sanitização segura de dados",
+        "href": "/sanitizacao-segura-de-dados/",
+        "icon": "chart",
+        "text": "Quando o equipamento precisa sobreviver: remoção lógica com relatório."
+      },
+      {
+        "title": "ATM e equipamentos bancários",
+        "href": "/descarte-de-atm-e-equipamentos-bancarios/",
+        "icon": "building",
+        "text": "Desmobilização com destruição de mídias em ambiente financeiro."
+      },
+      {
+        "title": "Ativos de TI desmobilizados",
+        "href": "/descarte-de-ativos-de-ti-desmobilizados/",
+        "icon": "box",
+        "text": "Retirada planejada do parque com inventário e custódia."
+      }
+    ],
+    "final": {
+      "eyebrow": "Avaliação técnica sem compromisso",
+      "title": "Quantos anos de dados estão guardados no seu cofre agora?",
+      "text": "Descreva as mídias, o volume e a exigência da política. A equipe retorna com método, custódia e o modelo de evidência — por escrito."
+    }
+  },
+  {
+    "slug": "desmobilizacao-de-data-center",
+    "title": "Desmobilização de data center, do rack ao imóvel entregue",
+    "crumb": "Desmobilização de data center",
+    "serviceType": "Desativação, inventário, retirada e destinação de infraestrutura de data center, com tratamento de mídias",
+    "custom_excerpt": "Desativação planejada de salas e sites de data center: inventário por rack, tratamento de mídias, retirada em janelas definidas e documentação completa da operação.",
+    "meta_title": "Desmobilização de data center | Ecobraz",
+    "meta_description": "Desativação de data center com inventário por rack, tratamento de mídias, retirada em janelas definidas e documentação — do decomissionamento ao imóvel livre.",
+    "hub": {
+      "title": "Descarte corporativo de TI",
+      "href": "/descarte-corporativo-de-ti/"
+    },
+    "hero": {
+      "eyebrow": "Migração para nuvem · Fechamento de site · Colocation",
+      "sub": "A migração acabou, mas a sala continua lá: racks energizados, storages com dados vivos e um contrato de imóvel correndo. A Ecobraz desmobiliza data centers com inventário por rack, tratamento de mídias registrado e retirada em janelas planejadas — até a sala virar espaço entregue.",
+      "cta": "Solicitar avaliação técnica",
+      "band": [
+        {
+          "title": "Inventário por rack",
+          "text": "cada ativo listado antes de sair da sala"
+        },
+        {
+          "title": "Mídias tratadas",
+          "text": "sanitização ou destruição, registradas"
+        },
+        {
+          "title": "Projeto com janelas",
+          "text": "cronograma acordado, não 'passamos aí'"
+        }
+      ]
+    },
+    "form": {
+      "title": "Descreva o site em 1 minuto",
+      "hint": "A equipe retorna com escopo, cronograma e documentação.",
+      "material": "Servidores e data center",
+      "describeLabel": "O que precisa desmobilizar?",
+      "describePlaceholder": "Ex.: sala com 18 racks após migração para nuvem"
+    },
+    "recognize": {
+      "title": "O retrato de quem terminou a migração — mas não o projeto",
+      "items": [
+        "A migração para nuvem foi concluída há meses e a sala segue intacta, queimando energia e contrato",
+        "O prédio precisa ser devolvido — com um data center inteiro dentro",
+        "Storages desligados guardando dados que ninguém tratou",
+        "O projeto precisa de cronograma e janelas — não de um caminhão que 'passa aí pra buscar'",
+        "A diretoria pergunta quanto custa manter a sala morta — e ninguém quer responder"
+      ]
+    },
+    "painsTitle": "A sala desativada que continua custando como ativa",
+    "painsSub": "Depois da migração, o data center antigo só gera três coisas: custo, risco e perguntas.",
+    "pains": [
+      {
+        "icon": "building",
+        "title": "O aluguel do cemitério de racks",
+        "text": "Sala desmobilizada continua pagando contrato, climatização, seguro e vigilância — para proteger equipamento que nunca mais será ligado.",
+        "consequence": "Custo real: meses de despesa integral de um site que já não serve à operação — visível em qualquer revisão de orçamento."
+      },
+      {
+        "icon": "lock",
+        "title": "Dados vivos em máquinas mortas",
+        "text": "Storage desligado não é storage limpo. Os discos da sala antiga guardam bases inteiras — e ninguém monitora uma sala que 'já era'.",
+        "consequence": "Custo real: um acervo completo de dados corporativos protegido apenas por uma porta — na ponta esquecida da segurança."
+      },
+      {
+        "icon": "alert",
+        "title": "Desmontagem sem inventário é ativo sumindo",
+        "text": "Rack desmontado às pressas, sem lista e sem custódia, é convite para o desaparecimento silencioso — e para a auditoria patrimonial sem resposta.",
+        "consequence": "Custo real: ativos de valor sem paradeiro, baixa contestada e apontamento de controle interno."
+      }
+    ],
+    "contrast": {
+      "title": "Do site parado ao imóvel entregue",
+      "sub": "Desmobilização tratada como projeto — com começo, meio, fim e prova.",
+      "before": {
+        "title": "Como está hoje",
+        "items": [
+          "Sala inteira parada consumindo contrato e energia",
+          "Storages com dados sem tratamento definido",
+          "Nenhum inventário do que existe nos racks",
+          "Prazo do imóvel se aproximando sem plano",
+          "Orçamento de 'retirada de sucata' sem projeto"
+        ]
+      },
+      "after": {
+        "title": "Com a Ecobraz",
+        "items": [
+          "Cronograma de desativação com janelas acordadas",
+          "Mídias sanitizadas ou destruídas, com registro",
+          "Inventário por rack antes da desmontagem",
+          "Retirada, destinação e documentação completas",
+          "Sala vazia e imóvel pronto para devolução"
+        ]
+      }
+    },
+    "gains": {
+      "title": "O que o projeto entrega no final",
+      "sub": "Não é uma coleta grande — é um decomissionamento fechado com prova.",
+      "items": [
+        {
+          "icon": "building",
+          "title": "Imóvel liberado",
+          "text": "A sala esvaziada dentro do prazo do contrato — sem multa nem prorrogação."
+        },
+        {
+          "icon": "chart",
+          "title": "Custo fixo eliminado",
+          "text": "Energia, climatização e seguro do site morto saem da planilha de despesas."
+        },
+        {
+          "icon": "lock",
+          "title": "Dados encerrados",
+          "text": "Cada mídia tratada e registrada — a sala antiga deixa de ser risco de segurança."
+        },
+        {
+          "icon": "file",
+          "title": "Dossiê do projeto",
+          "text": "Inventário, custódia, certificados e relatório final — a desmobilização auditável."
+        }
+      ]
+    },
+    "scope": {
+      "in": [
+        "Servidores, storages, racks e appliances",
+        "Ativos de rede, cabeamento estruturado e PDUs",
+        "Nobreaks e bancos de baterias do site",
+        "Tratamento de mídias: sanitização ou destruição, conforme escopo",
+        "Salas próprias, andares corporativos e posições em colocation"
+      ],
+      "out": [
+        "Infraestrutura civil e climatização fixa (avaliadas caso a caso)",
+        "Pilhas domésticas, toner, lâmpadas e demais exclusões padrão",
+        "Resíduos químicos, biológicos, radioativos ou contaminados",
+        "Equipamentos que permanecerão em produção"
+      ],
+      "conditions": "O escopo considera acesso, janelas permitidas, içamento e desmontagem, tratamento de dados e prazos do imóvel. Cada site é avaliado antes do cronograma."
+    },
+    "steps": [
+      {
+        "title": "Descreva o site",
+        "text": "Racks, tipos de ativo, localização, prazos do imóvel e exigências de dados."
+      },
+      {
+        "title": "Avaliação técnica",
+        "text": "Visita ou levantamento remoto para dimensionar logística, janelas e riscos."
+      },
+      {
+        "title": "Cronograma definido",
+        "text": "Fases, janelas de trabalho, responsabilidades e documentos acordados."
+      },
+      {
+        "title": "Desativação registrada",
+        "text": "Inventário por rack, tratamento de mídias e desmontagem com custódia."
+      },
+      {
+        "title": "Entrega e dossiê",
+        "text": "Sala liberada, resíduos destinados e a documentação completa do projeto."
+      }
+    ],
+    "evidenceTitle": "A prova de que o site foi encerrado direito",
+    "evidence": [
+      {
+        "title": "Inventário por rack",
+        "text": "Relação de ativos levantada antes da desmontagem — a base do projeto."
+      },
+      {
+        "title": "Relatório de mídias",
+        "text": "Sanitização ou destruição registrada para cada mídia tratada."
+      },
+      {
+        "title": "Cadeia de custódia",
+        "text": "O percurso de cada ativo, da sala à destinação."
+      },
+      {
+        "title": "MTR e CDF",
+        "text": "Transporte e destinação certificados, quando aplicáveis ao material."
+      },
+      {
+        "title": "Relatório do projeto",
+        "text": "Consolidação por fase — o documento que encerra o decomissionamento."
+      },
+      {
+        "title": "Escopo e cronograma",
+        "text": "Janelas, responsabilidades e condições acordadas por escrito."
+      }
+    ],
+    "why": {
+      "title": "Por que desmobilizar com a Ecobraz",
+      "sub": "Data center não se desmonta com pressa — se desmonta com plano.",
+      "items": [
+        {
+          "icon": "chart",
+          "title": "Projeto, não coleta",
+          "text": "Cronograma, fases e janelas acordadas — o rigor de projeto que uma sala crítica exige, mesmo desativada."
+        },
+        {
+          "icon": "lock",
+          "title": "Dados dentro do fluxo",
+          "text": "Sanitização e destruição de mídias integradas à desmobilização — sem contratar três fornecedores."
+        },
+        {
+          "icon": "shield",
+          "title": "15 anos de operação",
+          "text": "Associação fundada em 2011, com reconhecimento em plataformas da UE e da ONU — escopo declarado na página de evidências."
+        },
+        {
+          "icon": "file",
+          "title": "Dossiê de encerramento",
+          "text": "O projeto termina com documentação completa — patrimônio, segurança e auditoria atendidos de uma vez."
+        }
+      ]
+    },
+    "authority": "Atuação registrada em plataformas públicas de referência internacional. Cada alegação do site tem fonte, data e escopo declarados na página de evidências.",
+    "faqTitle": "O que infraestrutura e facilities perguntam",
+    "faq": [
+      {
+        "q": "Vocês desmontam os racks e o cabeamento?",
+        "a": "Sim — desmontagem, organização e retirada fazem parte do escopo, definidos na avaliação conforme o site, o acesso e as janelas permitidas."
+      },
+      {
+        "q": "Como tratam os dados dos storages e servidores?",
+        "a": "Cada mídia recebe o tratamento definido no escopo — sanitização lógica quando aplicável ou destruição física — com registro por mídia no relatório do projeto."
+      },
+      {
+        "q": "Trabalham em janelas noturnas ou fins de semana?",
+        "a": "As janelas de trabalho são acordadas no cronograma, conforme as regras do prédio e da operação — inclusive em horários restritos."
+      },
+      {
+        "q": "Atendem sites fora de São Paulo?",
+        "a": "Projetos em outras praças são avaliados conforme porte, logística e prazos. Descreva o site e a localização para verificarmos a viabilidade."
+      },
+      {
+        "q": "E se parte do parque ainda estiver em produção?",
+        "a": "O escopo separa o que sai do que fica: a desativação é feita em fases, com inventário claro do que pertence a cada uma."
+      }
+    ],
+    "related": [
+      {
+        "title": "Sanitização segura de dados",
+        "href": "/sanitizacao-segura-de-dados/",
+        "icon": "chart",
+        "text": "Remoção lógica com relatório, para mídias que seguem utilizáveis."
+      },
+      {
+        "title": "Destruição física de dados e mídias",
+        "href": "/destruicao-fisica-de-dados-e-midias/",
+        "icon": "lock",
+        "text": "Inutilização definitiva com custódia, para políticas sem reuso."
+      },
+      {
+        "title": "Servidores, racks e storages",
+        "href": "/descarte-de-servidores-e-data-center/",
+        "icon": "box",
+        "text": "Descarte de equipamentos avulsos de infraestrutura."
+      }
+    ],
+    "final": {
+      "eyebrow": "Avaliação técnica sem compromisso",
+      "title": "Quanto custa mais um trimestre da sala morta no seu orçamento?",
+      "text": "Descreva o site, os racks e os prazos do imóvel. A equipe retorna com cronograma, escopo e a documentação do projeto — por escrito."
+    }
   }
 ]
