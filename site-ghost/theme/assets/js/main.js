@@ -66,6 +66,18 @@
     const materialInput = form.querySelector('[name="material_category"]');
     if (material && materialInput && Array.from(materialInput.options).some((option) => option.value === material)) materialInput.value = material;
 
+    // Equipamentos hospitalares exigem declaração explícita de ausência de contaminação.
+    const hospitalBlock = form.querySelector('[data-hospital-declaration]');
+    const hospitalCheckbox = hospitalBlock && hospitalBlock.querySelector('input[type="checkbox"]');
+    const syncHospitalDeclaration = () => {
+        if (!hospitalBlock || !materialInput) return;
+        const isHospital = materialInput.value === 'Equipamentos hospitalares';
+        hospitalBlock.hidden = !isHospital;
+        hospitalCheckbox.required = isHospital;
+        if (!isHospital) hospitalCheckbox.checked = false;
+    };
+    if (materialInput) { materialInput.addEventListener('change', syncHospitalDeclaration); syncHospitalDeclaration(); }
+
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
         if (!form.reportValidity()) return;
@@ -76,6 +88,10 @@
         }
         const button = form.querySelector('[type="submit"]');
         const payload = Object.fromEntries(new FormData(form).entries());
+        // Registra a declaração hospitalar na descrição, para constar no CRM.
+        if (payload.hospital_declaration === 'yes') {
+            payload.material_description = `${payload.material_description || ''}\n[Gerador declara ausência de contaminação química, biológica ou radioativa e retirada prévia de fontes/controlados por responsável habilitado.]`;
+        }
         button.disabled = true; button.textContent = 'Enviando…'; status.textContent = '';
         try {
             const response = await fetch(endpoint, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
