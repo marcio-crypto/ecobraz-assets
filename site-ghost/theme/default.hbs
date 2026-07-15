@@ -30,6 +30,9 @@
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
       gtag('config', '{{@custom.ga_measurement_id}}');
+      {{#if @custom.google_ads_conversion_id}}
+      gtag('config', '{{@custom.google_ads_conversion_id}}', {'allow_enhanced_conversions': true});
+      {{/if}}
     </script>
     {{/if}}
     {{ghost_head}}
