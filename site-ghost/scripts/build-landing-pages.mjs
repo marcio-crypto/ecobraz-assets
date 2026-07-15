@@ -28,7 +28,12 @@ function renderTemplate(p) {
   const formAction = '{{@site.url}}/agendamento/';
   const hiddenMaterial = p.form.material ? `<input type="hidden" name="material" value="${esc(p.form.material)}">` : '';
   const heroBand = p.hero.band.map((b) => `<span><strong>${esc(b.title)}</strong>${esc(b.text)}</span>`).join('\n        ');
-  const pains = p.pains.map((c) => `<div class="hx-sol"><span class="hx-icon">${icons[c.icon] || icons.alert}</span><h3>${esc(c.title)}</h3><p>${esc(c.text)}</p></div>`).join('\n        ');
+  const pains = p.pains.map((c) => `<div class="hx-sol"><span class="hx-icon">${icons[c.icon] || icons.alert}</span><h3>${esc(c.title)}</h3><p>${esc(c.text)}</p>${c.consequence ? `<span class="hx-cost">${esc(c.consequence)}</span>` : ''}</div>`).join('\n        ');
+  const recognize = p.recognize ? p.recognize.items.map((i) => `<li>${esc(i)}</li>`).join('') : '';
+  const contrastBefore = p.contrast ? p.contrast.before.items.map((i) => `<li>${esc(i)}</li>`).join('') : '';
+  const contrastAfter = p.contrast ? p.contrast.after.items.map((i) => `<li>${esc(i)}</li>`).join('') : '';
+  const gains = p.gains ? p.gains.items.map((g) => `<div class="hx-sol"><span class="hx-icon">${icons[g.icon] || icons.chart}</span><h3>${esc(g.title)}</h3><p>${esc(g.text)}</p></div>`).join('\n        ') : '';
+  const why = p.why ? p.why.items.map((w) => `<div class="hx-sol"><span class="hx-icon">${icons[w.icon] || icons.shield}</span><h3>${esc(w.title)}</h3><p>${esc(w.text)}</p></div>`).join('\n        ') : '';
   const scopeIn = p.scope.in.map((i) => `<li>${esc(i)}</li>`).join('');
   const scopeOut = p.scope.out.map((i) => `<li>${esc(i)}</li>`).join('');
   const steps = p.steps.map((s) => `<div class="hx-step"><h3>${esc(s.title)}</h3><p>${esc(s.text)}</p></div>`).join('\n        ');
@@ -57,7 +62,7 @@ function renderTemplate(p) {
         ${heroBand}
       </div>
     </div>
-    <form class="hx-quote" method="get" action="${formAction}">
+    <form class="hx-quote" id="avaliacao" method="get" action="${formAction}">
       <span class="hx-label">Avaliação técnica</span>
       <h2>${esc(p.form.title)}</h2>
       <p class="hx-hint">${esc(p.form.hint)}</p>
@@ -79,10 +84,21 @@ function renderTemplate(p) {
   </div>
 </section>
 
-<section class="hx-block">
+${p.recognize ? `<section class="hx-block">
+  <div class="container hx-reco">
+    <div>
+      <span class="hx-label">Você se reconhece?</span>
+      <h2>${esc(p.recognize.title)}</h2>
+      <p class="hx-reco-cta">Bastou um item da lista ser verdade aí dentro? Então esta página foi escrita para você — <a href="#avaliacao">descreva a situação em 1 minuto</a> e receba um retorno técnico, não um telemarketing.</p>
+    </div>
+    <ul class="hx-reco-list">${recognize}</ul>
+  </div>
+</section>
+
+` : ''}<section class="hx-block${p.recognize ? ' alt' : ''}">
   <div class="container">
     <div class="hx-head-split">
-      <div><span class="hx-label">O risco de não resolver</span><h2>${esc(p.painsTitle)}</h2></div>
+      <div><span class="hx-label">O que está em jogo</span><h2>${esc(p.painsTitle)}</h2></div>
       <p>${esc(p.painsSub)}</p>
     </div>
     <div class="hx-sol-grid">
@@ -91,7 +107,32 @@ function renderTemplate(p) {
   </div>
 </section>
 
-<section class="hx-block alt">
+${p.contrast ? `<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">A virada</span><h2>${esc(p.contrast.title)}</h2></div>
+      <p>${esc(p.contrast.sub)}</p>
+    </div>
+    <div class="hx-contrast">
+      <div class="hx-before"><h3>${esc(p.contrast.before.title)}</h3><ul>${contrastBefore}</ul></div>
+      <div class="hx-after"><h3>${esc(p.contrast.after.title)}</h3><ul>${contrastAfter}</ul></div>
+    </div>
+  </div>
+</section>
+
+` : ''}${p.gains ? `<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">O que você ganha</span><h2>${esc(p.gains.title)}</h2></div>
+      <p>${esc(p.gains.sub)}</p>
+    </div>
+    <div class="hx-sol-grid g4">
+        ${gains}
+    </div>
+  </div>
+</section>
+
+` : ''}<section class="hx-block">
   <div class="container">
     <div class="hx-head-split">
       <div><span class="hx-label">Escopo claro</span><h2>${esc(p.scope.title || 'O que entra — e o que não entra')}</h2></div>
@@ -104,7 +145,7 @@ function renderTemplate(p) {
   </div>
 </section>
 
-<section class="hx-block" id="como-funciona">
+<section class="hx-block alt" id="como-funciona">
   <div class="container">
     <div class="hx-head-split">
       <div><span class="hx-label">Processo</span><h2>${esc(p.stepsTitle || 'Como funciona, do contato à destinação')}</h2></div>
@@ -116,7 +157,7 @@ function renderTemplate(p) {
   </div>
 </section>
 
-<section class="hx-block alt">
+<section class="hx-block">
   <div class="container">
     <div class="hx-head-split">
       <div><span class="hx-label">Evidência da operação</span><h2>${esc(p.evidenceTitle)}</h2></div>
@@ -128,7 +169,19 @@ function renderTemplate(p) {
   </div>
 </section>
 
-<section class="hx-block" style="padding-top:0">
+${p.why ? `<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Por que a Ecobraz</span><h2>${esc(p.why.title)}</h2></div>
+      <p>${esc(p.why.sub)}</p>
+    </div>
+    <div class="hx-sol-grid g4">
+        ${why}
+    </div>
+  </div>
+</section>
+
+` : ''}<section class="hx-block" style="padding-top:0">
   <div class="container">
     <div class="hx-authority">
       <div>

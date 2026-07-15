@@ -10,7 +10,7 @@
     <div>
       <span class="hx-label on-dark">Avarias · Devoluções · Pós-venda</span>
       <h1>Descarte de produtos danificados e fora de garantia</h1>
-      <p class="hx-sub">A Ecobraz destina produtos eletroeletrônicos danificados, devolvidos ou fora de garantia para fabricantes, importadores e varejo — com descaracterização quando exigida, inventário por lote e documentação que sustenta a baixa de estoque e protege a marca.</p>
+      <p class="hx-sub">Quarentena de avarias tomando o CD, produto reprovado reaparecendo à venda com a sua marca e o fiscal pedindo lastro da baixa? A Ecobraz destina o que não pode voltar ao mercado — com descaracterização registrada, inventário por lote e a prova documental que sustenta a baixa de estoque.</p>
       <div class="hx-hero-ctas">
         <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=descarte-de-produtos-danificados-e-fora-de-garantia&amp;material=Eletr%C3%B4nicos" data-track="descarte-de-produtos-danificados-e-fora-de-garantia_hero_cta">Solicitar avaliação técnica</a>
         <a class="button hx-btn-outline-dark" href="#como-funciona" data-track="descarte-de-produtos-danificados-e-fora-de-garantia_hero_como">Como funciona</a>
@@ -21,7 +21,7 @@
         <span><strong>Documentação</strong>descaracterização, MTR e CDF quando aplicáveis</span>
       </div>
     </div>
-    <form class="hx-quote" method="get" action="{{@site.url}}/agendamento/">
+    <form class="hx-quote" id="avaliacao" method="get" action="{{@site.url}}/agendamento/">
       <span class="hx-label">Avaliação técnica</span>
       <h2>Descreva o lote em 1 minuto</h2>
       <p class="hx-hint">A equipe retorna com escopo, condições e documentação aplicável.</p>
@@ -44,20 +44,59 @@
 </section>
 
 <section class="hx-block">
+  <div class="container hx-reco">
+    <div>
+      <span class="hx-label">Você se reconhece?</span>
+      <h2>Se a sua quarentena conta essa história, você está no lugar certo</h2>
+      <p class="hx-reco-cta">Bastou um item da lista ser verdade aí dentro? Então esta página foi escrita para você — <a href="#avaliacao">descreva a situação em 1 minuto</a> e receba um retorno técnico, não um telemarketing.</p>
+    </div>
+    <ul class="hx-reco-list"><li>A área de avarias e devoluções já ocupa um corredor inteiro — e ninguém tem coragem de decidir o destino</li><li>Produto reprovado pela qualidade apareceu anunciado num marketplace, com a sua marca na caixa</li><li>A auditoria fiscal pediu lastro da baixa de estoque e o processo travou</li><li>A rede de assistência técnica acumula placas e carcaças sem destino definido</li><li>O jurídico vetou o 'compramos seu refugo' do atravessador — mas não apontou alternativa</li></ul>
+  </div>
+</section>
+
+<section class="hx-block alt">
   <div class="container">
     <div class="hx-head-split">
-      <div><span class="hx-label">O risco de não resolver</span><h2>Produto reprovado sem controle é risco para a marca</h2></div>
+      <div><span class="hx-label">O que está em jogo</span><h2>Produto reprovado sem controle é risco para a marca</h2></div>
       <p>Três problemas que crescem no estoque de avarias e devoluções.</p>
     </div>
     <div class="hx-sol-grid">
-        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18h.01"/></svg></span><h3>Item da marca em canal paralelo</h3><p>Produto reprovado que volta ao mercado sem controle vira caso de garantia, custo de assistência e dano de reputação — com o nome da sua marca na etiqueta.</p></div>
-        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><h3>Quarentena que não gira</h3><p>Avarias e devoluções acumuladas bloqueiam espaço e capital. Sem fluxo de destinação, a quarentena só cresce.</p></div>
-        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Baixa de estoque sem prova</h3><p>A saída definitiva do item precisa de lastro documental. Sem inventário e destinação registrada, a baixa fica frágil em auditoria.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18h.01"/></svg></span><h3>Sua marca à venda onde não deveria existir</h3><p>O item que a qualidade reprovou volta ao mercado por canal paralelo, quebra na mão do consumidor e aciona a SUA garantia — de um produto que você já tinha tirado de linha.</p><span class="hx-cost">Custo real: garantia e assistência pagas em dobro, reclamação pública e o consumidor culpando a marca, não o atravessador.</span></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><h3>Quarentena é capital parado se deteriorando</h3><p>Avaria acumulada bloqueia espaço nobre do CD e capital que a contabilidade não consegue liberar — enquanto o lote só perde valor e ganha poeira.</p><span class="hx-cost">Custo real: metros quadrados sem giro, balanço carregando estoque morto e decisão adiada a cada trimestre.</span></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Baixa de estoque sem lastro é convite à glosa</h3><p>A saída definitiva do item precisa de trilha documental: o que saiu, quando, para onde e com que prova. Sem isso, a baixa vira fragilidade fiscal e de auditoria.</p><span class="hx-cost">Custo real: questionamento fiscal, retrabalho contábil e a baixa contestada anos depois.</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">A virada</span><h2>Da quarentena eterna à baixa documentada</h2></div>
+      <p>O refugo sai, a prova entra — e a marca fica protegida.</p>
+    </div>
+    <div class="hx-contrast">
+      <div class="hx-before"><h3>Como está hoje</h3><ul><li>Corredores de avaria crescendo a cada inventário</li><li>Refugo vendido 'no peso' sem controle de destino</li><li>Marca exposta a ressurgir em canal paralelo</li><li>Baixa travada por falta de lastro documental</li><li>Assistências acumulando placas sem processo</li></ul></div>
+      <div class="hx-after"><h3>Com a Ecobraz</h3><ul><li>Retirada por lote, pontual ou recorrente, com inventário</li><li>Descaracterização registrada — o item morre documentado</li><li>Controle de custódia até a destinação final</li><li>MTR, CDF e relatório do lote para sustentar a baixa</li><li>Fábrica, CD e assistências no mesmo padrão</li></ul></div>
     </div>
   </div>
 </section>
 
 <section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">O que você ganha</span><h2>O que muda para a marca e para o estoque</h2></div>
+      <p>Proteção de marca e higiene contábil no mesmo movimento.</p>
+    </div>
+    <div class="hx-sol-grid g4">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span><h3>Marca fora do canal paralelo</h3><p>O reprovado destinado com registro não reaparece à venda com o seu nome.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><h3>Quarentena zerada</h3><p>O corredor de avarias volta a ser espaço de operação, não cemitério de produto.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>Baixa com lastro</h3><p>Trilha documental completa para contabilidade e auditoria assinarem sem medo.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M1 7h13v10H1zM14 10h4l4 4v3h-8z"/><circle cx="6" cy="19" r="1.6"/><circle cx="18" cy="19" r="1.6"/></svg></span><h3>Rede inteira no padrão</h3><p>Fábrica, CDs e assistências com o mesmo processo e o mesmo documento.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
   <div class="container">
     <div class="hx-head-split">
       <div><span class="hx-label">Escopo claro</span><h2>O que entra — e o que não entra</h2></div>
@@ -70,7 +109,7 @@
   </div>
 </section>
 
-<section class="hx-block" id="como-funciona">
+<section class="hx-block alt" id="como-funciona">
   <div class="container">
     <div class="hx-head-split">
       <div><span class="hx-label">Processo</span><h2>Como funciona, do contato à destinação</h2></div>
@@ -86,7 +125,7 @@
   </div>
 </section>
 
-<section class="hx-block alt">
+<section class="hx-block">
   <div class="container">
     <div class="hx-head-split">
       <div><span class="hx-label">Evidência da operação</span><h2>A prova que sustenta a baixa e protege a marca</h2></div>
@@ -99,6 +138,21 @@
         <div class="hx-doc"><h3>Cadeia de custódia</h3><p>Registro do percurso do lote até a destinação.</p></div>
         <div class="hx-doc"><h3>Relatório de destinação</h3><p>Consolidação por lote para conciliação de estoque e auditoria.</p></div>
         <div class="hx-doc"><h3>Controle contra retorno</h3><p>Fluxo desenhado para o item destinado não reaparecer no mercado.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Por que a Ecobraz</span><h2>Por que a Ecobraz e não o comprador de refugo</h2></div>
+      <p>Quem paga pelo seu refugo precisa revendê-lo. Nós existimos para o caminho contrário.</p>
+    </div>
+    <div class="hx-sol-grid g4">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>Sem conflito de interesse</h3><p>Atravessador lucra revendendo o que você quer eliminar. Nosso processo termina em descaracterização e destinação registradas.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span><h3>15 anos de operação</h3><p>Associação fundada em 2011, com reconhecimento em plataformas da UE e da ONU — escopo declarado na página de evidências.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Prova em cada lote</h3><p>Inventário, custódia e certificados aplicáveis fecham cada operação — é o lastro da sua baixa.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M1 7h13v10H1zM14 10h4l4 4v3h-8z"/><circle cx="6" cy="19" r="1.6"/><circle cx="18" cy="19" r="1.6"/></svg></span><h3>Escala com padrão</h3><p>De um lote pontual ao fluxo recorrente de pós-venda, o processo e o documento são os mesmos.</p></div>
     </div>
   </div>
 </section>
@@ -149,8 +203,8 @@
     <div class="hx-final">
       <div>
         <span class="hx-label on-dark">Avaliação técnica sem compromisso</span>
-        <h2>Zere a quarentena com destinação documentada.</h2>
-        <p>Categorias, volume e origem do lote — é o que a equipe precisa para retornar com escopo, condições e o padrão de prova.</p>
+        <h2>Quanto vale tirar a sua marca do canal paralelo ainda neste trimestre?</h2>
+        <p>Descreva categorias, volume e origem do lote. A equipe retorna com escopo, nível de descaracterização e o padrão de prova — por escrito.</p>
       </div>
       <div class="hx-actions">
         <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=descarte-de-produtos-danificados-e-fora-de-garantia&amp;material=Eletr%C3%B4nicos" data-track="descarte-de-produtos-danificados-e-fora-de-garantia_final_cta">Solicitar avaliação técnica</a>
