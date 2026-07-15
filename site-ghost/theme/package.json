@@ -1,7 +1,7 @@
 {
   "name": "ecobraz-conversion",
   "description": "Tema oficial Ecobraz orientado a agendamentos de coleta e conversão B2B.",
-  "version": "0.10.1",
+  "version": "0.10.2",
   "engines": {
     "ghost": ">=5.0.0"
   },
