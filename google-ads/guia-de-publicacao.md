@@ -11,29 +11,14 @@ Ordem correta: **medição primeiro, campanha depois**. Se a campanha subir ante
 - [ ] Acesso ao **Google Analytics 4** da Ecobraz (ou criar uma propriedade em analytics.google.com).
 - [ ] Acesso de administrador ao **Ghost** (painel do site) para colar o snippet.
 
-## Etapa 1 — Instalar a tag do Google no site (10 min)
+## Etapa 1 — Tag do Google no site: **já está instalada** (só conferir, 5 min)
 
-O site já dispara os eventos certos (`generate_lead`, `contact_whatsapp`, etc.) via `window.gtag` — só falta a tag existir na página.
+O tema do site já carrega a tag do Google com o GA4 **`G-WRQSPMQ8KD`** (configuração `ga_measurement_id` do tema) e já dispara os eventos certos (`generate_lead`, `contact_whatsapp`, etc.). **Não cole nada no Code Injection** — isso duplicaria a medição.
 
-No painel do Ghost: **Settings → Code injection → Site header**, cole:
+O que fazer:
 
-```html
-<!-- Google tag (gtag.js) — Ecobraz -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-XXXXXXXXXX');  // ID da propriedade GA4
-  gtag('config', 'AW-YYYYYYYYYY'); // ID da conta Google Ads (Ferramentas → Gerenciador de tags/Instruções da tag)
-</script>
-```
-
-Substitua:
-- `G-XXXXXXXXXX` → ID de métricas do GA4 (GA4: Admin → Fluxos de dados → seu site → "ID da métrica").
-- `AW-YYYYYYYYYY` → ID de conversão do Google Ads (Google Ads: Metas → Conversões → qualquer ação → "instruções da tag"; ou Ferramentas → configuração da tag do Google).
-
-**Teste:** abra `https://ecobraz.org/agendamento/`, preencha e envie um teste real. Em GA4 → Relatórios → Tempo real, devem aparecer `form_start_coleta` e `generate_lead`. (Depois avise a equipe que foi um lead de teste 🙂)
+1. **Teste do GA4:** abra `https://ecobraz.org/agendamento/`, preencha e envie um teste real. Em GA4 (analytics.google.com, propriedade da Ecobraz) → Relatórios → Tempo real, devem aparecer `form_start_coleta` e `generate_lead`. (Depois avise a equipe que foi um lead de teste 🙂)
+2. **ID do Google Ads:** o tema também aceita o ID de conversão do Ads (configuração `google_ads_conversion_id`, usada para conversões otimizadas e remarketing). Depois de criar/acessar a conta do Google Ads, copie o ID no formato `AW-XXXXXXXXXX` (Metas → Conversões → qualquer ação → "instruções da tag") e preencha no painel do Ghost em **Design & branding → configurações do tema → "Google ads conversion id"**. Salvar — pronto, sem código.
 
 > Melhoria futura (não bloqueia o lançamento): banner de cookies + Modo de Consentimento do Google para reforço LGPD. O formulário já tem consentimento próprio para o lead.
 
