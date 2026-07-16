@@ -84,7 +84,9 @@ for (const route of routes) {
     const internal = [...new Set(hrefs
       .filter((href) => href.startsWith(baseUrl) || (href.startsWith('/') && !href.startsWith('//')))
       .map((href) => href.replace(baseUrl, ''))
-      .filter((href) => href.startsWith('/') && !href.startsWith('/ghost')))];
+      // /cdn-cgi/ são links técnicos injetados pela Cloudflare (ex.: ofuscação
+      // de e-mail), decodificados por JavaScript — não são páginas do site.
+      .filter((href) => href.startsWith('/') && !href.startsWith('/ghost') && !href.startsWith('/cdn-cgi/')))];
     for (const link of internal) {
       const linkResponse = await fetch(`${baseUrl}${link}`, {redirect: 'follow', headers: {'User-Agent': 'Ecobraz site audit'}});
       checkedLinks += 1;
