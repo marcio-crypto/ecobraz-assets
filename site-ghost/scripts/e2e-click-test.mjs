@@ -55,10 +55,11 @@ await check('link "Preferências de cookies" reabre o banner', async () => {
 await check('todos os links internos da home abrem com H1', async () => {
   await page.goto(`${base}/`, {waitUntil: 'domcontentloaded'});
   const hrefs = await page.$$eval('a[href]', (as) => as.map((a) => a.getAttribute('href')));
+  const baseHost = new URL(base).hostname;
   const internal = [...new Set(hrefs
-    .filter((h) => h && !h.startsWith('#') && !h.startsWith('mailto:') && !h.startsWith('tel:'))
-    .map((h) => h.startsWith('http') ? (h.startsWith(location.origin) ? new URL(h).pathname : null) : h.split('#')[0])
-    .filter((h) => h && h.startsWith('/') && !h.startsWith('//')))];
+    .filter((h) => h && !h.startsWith('#') && !h.startsWith('mailto:') && !h.startsWith('tel:') && !h.startsWith('javascript:'))
+    .map((h) => { try { const u = new URL(h, `${base}/`); return u.hostname === baseHost ? u.pathname : null; } catch { return null; } })
+    .filter((h) => h && h.startsWith('/')))];
   const broken = [];
   for (const path of internal) {
     const response = await page.goto(`${base}${path}`, {waitUntil: 'domcontentloaded', timeout: 30000});
@@ -94,8 +95,12 @@ await check('mini-formulário do hero pré-preenche o agendamento', async () => 
   assert(await page.locator('[name="material_category"]').inputValue() === 'Baterias', 'material não pré-selecionado');
 });
 
-// 5. Declaração hospitalar condicional
+// 5. Declaração hospitalar condicional (o campo fica na etapa 2 do formulário,
+// então é preciso avançar a etapa de perfil antes de mexer no seletor de material)
 await check('checkbox de declaração hospitalar aparece e some', async () => {
+  await page.goto(`${base}/agendamento/?perfil=empresa`, {waitUntil: 'domcontentloaded'});
+  await page.waitForTimeout(800);
+  await page.locator('.form-step.is-active [data-next-step]').click();
   const declaration = page.locator('[data-hospital-declaration]');
   await page.locator('[name="material_category"]').selectOption('Equipamentos hospitalares');
   assert(await declaration.isVisible(), 'declaração não apareceu para hospitalares');
