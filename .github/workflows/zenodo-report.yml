@@ -7,6 +7,10 @@ on:
         description: 'IDs dos registros Zenodo (separados por espaço)'
         type: string
         default: '21397950 21398130 21398306 21398390 21398750 21398814 21398879 21398926 21398989 21399040'
+      community:
+        description: 'Slug de comunidade Zenodo para listar (vazio = não listar)'
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -39,3 +43,14 @@ jobs:
           "
             echo
           done
+      - name: Listar registros da comunidade
+        if: ${{ inputs.community != '' }}
+        run: |
+          curl -sSf "https://zenodo.org/api/communities/${{ inputs.community }}/records?size=25" | python3 -c "
+          import json, sys
+          r = json.load(sys.stdin)
+          hits = r.get('hits', {}).get('hits', [])
+          print('TOTAL NA COMUNIDADE:', r.get('hits', {}).get('total'))
+          for h in hits:
+              print('-', h.get('doi'), '|', h.get('metadata', {}).get('title'))
+          "
