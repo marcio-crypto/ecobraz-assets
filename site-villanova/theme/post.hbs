@@ -1,0 +1,33 @@
+{{!< default}}
+
+{{#post}}
+<article class="article">
+  <header class="article-head">
+    <div class="wrap">
+      {{#primary_tag}}<div class="eyebrow">{{name}}</div>{{/primary_tag}}
+      <h1>{{title}}</h1>
+      <div class="article-meta">
+        <span>{{#primary_author}}{{name}}{{/primary_author}}</span>
+        <span class="sep" aria-hidden="true"></span>
+        <time datetime="{{date format="YYYY-MM-DD"}}">{{date format="D MMMM YYYY"}}</time>
+        <span class="sep" aria-hidden="true"></span>
+        <span>{{reading_time}}</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div class="article-body">
+      {{content}}
+    </div>
+
+    <aside class="article-close">
+      <div class="lux-divider in-article" aria-hidden="true"><span></span><svg width="12" height="12" viewBox="0 0 14 14"><path d="M7 0l4.5 7L7 14 2.5 7Z" fill="#C9A24B"/></svg><span></span></div>
+      <p class="close-lead">Received a request like the ones discussed here?</p>
+      <a class="btn btn-ink" href="{{@site.url}}/supplier-evidence-risk-intake/">Submit the buyer request</a>
+      <p class="boundary">Submission starts a scope assessment. It does not create an engagement, legal opinion, certification or guarantee of buyer acceptance.</p>
+      <p class="author-line">By <a href="{{@site.url}}/marcio-villanova/">{{#primary_author}}{{name}}{{/primary_author}}</a> &mdash; founder, Villanova ESG. Analysis reflects sources available at publication; regulatory facts should be checked against current official texts before decisions.</p>
+    </aside>
+  </div>
+</article>
+{{/post}}
