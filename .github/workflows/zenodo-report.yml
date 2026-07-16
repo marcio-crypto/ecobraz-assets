@@ -11,6 +11,10 @@ on:
         description: 'Slug de comunidade Zenodo para listar (vazio = não listar)'
         type: string
         default: ''
+      search_query:
+        description: 'Busca livre na API do Zenodo (vazio = não buscar)'
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -53,4 +57,19 @@ jobs:
           print('TOTAL NA COMUNIDADE:', r.get('hits', {}).get('total'))
           for h in hits:
               print('-', h.get('doi'), '|', h.get('metadata', {}).get('title'))
+          "
+      - name: Buscar registros por consulta
+        if: ${{ inputs.search_query != '' }}
+        run: |
+          curl -sSf -G "https://zenodo.org/api/records" \
+            --data-urlencode "q=${{ inputs.search_query }}" \
+            --data-urlencode "size=60" --data-urlencode "sort=mostrecent" | python3 -c "
+          import json, sys
+          r = json.load(sys.stdin)
+          hits = r.get('hits', {}).get('hits', [])
+          print('TOTAL ENCONTRADO:', r.get('hits', {}).get('total'))
+          for h in hits:
+              m = h.get('metadata', {})
+              autores = '; '.join(c.get('name','') for c in m.get('creators', []))
+              print('-', h.get('doi'), '|', m.get('publication_date'), '|', autores, '|', m.get('title'))
           "
