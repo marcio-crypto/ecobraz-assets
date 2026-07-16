@@ -1,0 +1,29 @@
+{{!< default}}
+
+<section class="listing-head">
+  <div class="wrap">
+    <div class="eyebrow">
+      {{#if tag}}Topic{{else}}{{#if author}}Author{{else}}Analysis{{/if}}{{/if}}
+    </div>
+    <h1>
+      {{#if tag}}{{tag.name}}{{else}}{{#if author}}{{author.name}}{{else}}Knowledge &amp; analysis{{/if}}{{/if}}
+    </h1>
+    {{#if tag.description}}<p class="page-excerpt">{{tag.description}}</p>{{/if}}
+  </div>
+</section>
+
+<section class="listing">
+  <div class="wrap">
+    <div class="post-list">
+      {{#foreach posts}}
+      <a class="post-row" href="{{url}}">
+        {{#primary_tag}}<span class="row-tag">{{name}}</span>{{/primary_tag}}
+        <h2>{{title}}</h2>
+        <p>{{excerpt words="28"}}&hellip;</p>
+        <div class="row-meta"><time datetime="{{date format="YYYY-MM-DD"}}">{{date format="D MMM YYYY"}}</time><span class="sep" aria-hidden="true"></span><span>{{reading_time}}</span></div>
+      </a>
+      {{/foreach}}
+    </div>
+    {{pagination}}
+  </div>
+</section>

@@ -1,0 +1,20 @@
+{
+  "name": "villanova-institutional",
+  "description": "Villanova ESG — institutional advisory theme (navy, serif, gold diamond)",
+  "version": "1.0.0",
+  "engines": {
+    "ghost": ">=5.0.0"
+  },
+  "license": "MIT",
+  "author": {
+    "email": "ti@ecobraz.org"
+  },
+  "config": {
+    "posts_per_page": 12,
+    "image_sizes": {
+      "s": {"width": 480},
+      "m": {"width": 960},
+      "l": {"width": 1600}
+    }
+  }
+}

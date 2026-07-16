@@ -1,0 +1,26 @@
+name: Villanova ESG — implantar tema
+
+on:
+  workflow_dispatch:
+    inputs:
+      activate:
+        description: 'Ativar o tema após o envio'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Empacotar o tema
+        working-directory: site-villanova/theme
+        run: zip -r ../villanova-institutional.zip . -x '.DS_Store' '*.git*'
+      - name: Enviar (e ativar, se solicitado)
+        env:
+          VILLANOVA_GHOST_ADMIN_URL: ${{ secrets.VILLANOVA_GHOST_ADMIN_URL }}
+          VILLANOVA_GHOST_ADMIN_API_KEY: ${{ secrets.VILLANOVA_GHOST_ADMIN_API_KEY }}
+        run: node site-villanova/scripts/deploy-theme.mjs site-villanova/villanova-institutional.zip ${{ inputs.activate && 'activate' || '' }}
