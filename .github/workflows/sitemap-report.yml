@@ -60,3 +60,11 @@ jobs:
           grep -o '<meta[^>]*\(og:image\|og:title\|og:description\|twitter:image\|twitter:card\)[^>]*>' pagina.html || echo "(nenhuma)"
           echo "== title =="
           grep -o '<title>[^<]*</title>' pagina.html | head -1
+          echo "== hreflang =="
+          grep -o '<link[^>]*hreflang[^>]*>' pagina.html || echo "(nenhum)"
+          echo "== consent mode v2 (default negado) =="
+          grep -o "gtag('consent', *'default'" pagina.html || echo "(ausente)"
+          echo "== script do banner de consentimento =="
+          grep -o '<script[^>]*consent\.js[^>]*>' pagina.html || echo "(ausente)"
+          echo "== chave de idioma PT =="
+          grep -o '<a class="lang-switch"[^>]*>' pagina.html || echo "(ausente)"
