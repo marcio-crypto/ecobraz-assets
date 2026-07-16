@@ -1,51 +1,63 @@
 [
  {
   "path": "/noticia/178/bina-a-invencao-brasileira-que-identificou-o-telefone-do-futuro",
-  "status": "sem-snapshot"
+  "status": "ok",
+  "fonte": "amp-cache"
  },
  {
   "path": "/noticia/377/apple-ii-o-micro-que-levou-computador-para-casa",
-  "status": "sem-snapshot"
+  "status": "ok",
+  "fonte": "amp-cache"
  },
  {
   "path": "/noticia/494/altair-8800-1975-a-arquitetura-s100-e-microcomputacao",
-  "status": "sem-snapshot"
+  "status": "ok",
+  "fonte": "amp-cache"
  },
  {
   "path": "/noticia/198/televisao-a-cores-o-espetaculo-visual-do-seculo-xx",
-  "status": "sem-snapshot"
+  "status": "ok",
+  "fonte": "amp-cache"
  },
  {
   "path": "/noticia/343/iphone-5-2012-o-smartphone-que-afinou-a-era-retina",
-  "status": "sem-snapshot"
+  "status": "ok",
+  "fonte": "amp-cache"
  },
  {
   "path": "/noticia/159/radio-experimental-de-nikola-tesla-o-nascimento-da-comunicacao-sem-fio",
-  "status": "sem-snapshot"
+  "status": "ok",
+  "fonte": "amp-cache"
  },
  {
   "path": "/noticia/215/ibm-pc-5150-o-computador-que-definiu-a-era-dos-pcs",
-  "status": "sem-snapshot"
+  "status": "ok",
+  "fonte": "amp-cache"
  },
  {
-  "path": "/noticia/213/sony-playstation-1-o-console-que-mudou-os-games",
-  "status": "sem-snapshot"
+  "path": "/noticia/213/sony-playstation-1-a-revolucao-dos-videogames-em-cd",
+  "status": "ok",
+  "fonte": "amp-cache"
  },
  {
   "path": "/noticia/493/eniac-1945-a-engenharia-do-primeiro-computador-modular",
-  "status": "sem-snapshot"
+  "status": "ok",
+  "fonte": "amp-cache"
  },
  {
   "path": "/noticia/510/magnavox-odyssey-1972-eletronica-discreta-e-patentes",
-  "status": "sem-snapshot"
+  "status": "ok",
+  "fonte": "amp-cache"
  },
  {
   "path": "/noticia/166/fonografo-de-edison-o-som-gravado-pela-primeira-vez",
-  "status": "sem-snapshot"
+  "status": "ok",
+  "fonte": "amp-cache"
  },
  {
   "path": "/noticia/379/zx81-o-micro-de-1-kb-que-colocou-computador-na-sala-estar",
-  "status": "sem-snapshot"
+  "status": "ok",
+  "fonte": "amp-cache"
  },
  {
   "path": "/coluna/203/monitores-quebrados-o-chumbo-e-o-mercurio-exigem-destino-unico",
@@ -66,17 +78,17 @@
  {
   "path": "/noticia/442/descarte-de-ti-venda-sucata-ou-compra-risco",
   "status": "ok",
-  "snapshot": "20251218003907"
+  "fonte": "existente"
  },
  {
   "path": "/noticia/712/adote-um-bairro-a-engenharia-por-tras-do-esg-urbano",
   "status": "ok",
-  "snapshot": "20260308100914"
+  "fonte": "existente"
  },
  {
   "path": "/noticia/753/novo-marco-da-cvm-o-fim-do-esg-de-fachada-nas-empresas",
   "status": "ok",
-  "snapshot": "20260308111958"
+  "fonte": "existente"
  },
  {
   "path": "/noticia/805/o-deficit-que-enterra-43-milhoes-de-arvores-no-brasil",
@@ -84,31 +96,148 @@
  },
  {
   "path": "/noticia/819/auditabilidade-esg-o-fim-da-era-do-greenwashing-em-2026",
-  "status": "sem-snapshot"
+  "status": "ok",
+  "fonte": "amp-cache"
  },
  {
   "path": "/noticia/1228/o-desastre-de-minamata-a-ameaca-do-mercurio-e-alerta-global",
+  "status": "ok",
+  "fonte": "amp-cache"
+ },
+ {
+  "path": "/noticia/187/a-ultracentrifuga-brasileira-e-o-dominio-do-ciclo-nuclear",
+  "status": "ok",
+  "fonte": "amp-cache"
+ },
+ {
+  "path": "/noticia/163/maquina-de-costura-eletrica-singer-o-motor-que-vestiu-mundo",
+  "status": "ok",
+  "fonte": "amp-cache"
+ },
+ {
+  "path": "/noticia/184/o-primeiro-circuito-integrado-brasileiro",
+  "status": "ok",
+  "fonte": "amp-cache"
+ },
+ {
+  "path": "/noticia/219/sony-playstation-2-o-videogame-que-dominou-mundo",
+  "status": "ok",
+  "fonte": "amp-cache"
+ },
+ {
+  "path": "/noticia/164/projetor-dos-irmaos-lumiere-o-nascimento-do-cinema",
+  "status": "ok",
+  "fonte": "amp-cache"
+ },
+ {
+  "path": "/noticia/145/telegrafo-de-morse-o-inicio-da-era-das-mensagens-eletricas",
+  "status": "ok",
+  "fonte": "amp-cache"
+ },
+ {
+  "path": "/noticia/554/sega-master-system-1985-z80a-tec-toy-e-o-pause-no-console",
   "status": "sem-snapshot"
+ },
+ {
+  "path": "/noticia/614/reserva-de-mercado-1984-a-era-da-engenharia-reversa",
+  "status": "sem-snapshot"
+ },
+ {
+  "path": "/noticia/217/atari-2600-o-videogame-que-levou-os-jogos-para-casa",
+  "status": "sem-snapshot"
+ },
+ {
+  "path": "/noticia/565/neo-geo-aes-1990-cartuchos-gigantes-e-hardware-arcade",
+  "status": "ok",
+  "fonte": "amp-cache"
+ },
+ {
+  "path": "/noticia/173/do-microprocessador-ao-computador-pessoal-a-era-digital-comeca",
+  "status": "ok",
+  "fonte": "amp-cache"
+ },
+ {
+  "path": "/noticia/387/pdp11-o-minicomputador-que-moldou-a-computacao-moderna",
+  "status": "ok",
+  "fonte": "amp-cache"
+ },
+ {
+  "path": "/noticia/177/orelhao-design-tecnologia-e-cidadania-urbana",
+  "status": "ok",
+  "fonte": "amp-cache"
+ },
+ {
+  "path": "/noticia/189/o-primeiro-microscopio-eletronico-fabricado-no-brasil",
+  "status": "ok",
+  "fonte": "amp-cache"
+ },
+ {
+  "path": "/noticia/160/fotografo-de-placa-vidro-a-precisao-da-luz-em-cristal",
+  "status": "ok",
+  "fonte": "amp-cache"
+ },
+ {
+  "path": "/noticia/1243/cubatao-chuva-acida-e-o-ar-envenenado-pelo-progresso",
+  "status": "ok",
+  "fonte": "amp-cache"
+ },
+ {
+  "path": "/noticia/1227/agbogbloshie-o-maior-desastre-de-lixo-eletronico-do-mundo",
+  "status": "ok",
+  "fonte": "amp-cache"
+ },
+ {
+  "path": "/noticia/1240/itaiitai-o-cadmio-a-agua-e-agonia-dos-ossos",
+  "status": "ok",
+  "fonte": "amp-cache"
+ },
+ {
+  "path": "/noticia/1245/deepwater-horizon-o-colapso-e-vazamento-toxico",
+  "status": "ok",
+  "fonte": "amp-cache"
+ },
+ {
+  "path": "/noticia/1239/anniston-e-o-pcb-a-tragedia-do-veneno-eterno-lixo-eletronico",
+  "status": "ok",
+  "fonte": "amp-cache"
+ },
+ {
+  "path": "/noticia/86/quais-componentes-de-um-eletronico-podem-ser-reciclados",
+  "status": "ok",
+  "fonte": "amp-cache"
+ },
+ {
+  "path": "/noticia/419/brasil-proibe-exportacao-de-lixo-eletronico-bruto-e-cria-reserva-estrategica",
+  "status": "sem-snapshot"
+ },
+ {
+  "path": "/noticia/481/o-caso-funko-pop-quando-estoque-vira-entulho",
+  "status": "sem-snapshot"
+ },
+ {
+  "path": "/noticia/351/obsolescencia-programada-nos-carros-eletricos",
+  "status": "ok",
+  "fonte": "amp-cache"
  },
  {
   "path": "/colunista/5/ernesto-machado",
   "status": "ok",
-  "snapshot": "20260308100438"
+  "fonte": "existente"
  },
  {
   "path": "/colunista/7/sergio-diniz",
   "status": "ok",
-  "snapshot": "20260115154151"
+  "fonte": "existente"
  },
  {
   "path": "/colunista/8/marcelo-de-oliveira-lopes-aragao",
   "status": "ok",
-  "snapshot": "20251218063047"
+  "fonte": "existente"
  },
  {
   "path": "/colunista/9/marcio-villanova",
   "status": "ok",
-  "snapshot": "20260308110448"
+  "fonte": "existente"
  },
  {
   "path": "/autor/silvana-leite",
