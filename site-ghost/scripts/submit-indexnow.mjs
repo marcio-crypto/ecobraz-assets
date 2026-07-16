@@ -26,7 +26,19 @@ for (const sitemap of childSitemaps.length ? childSitemaps : [`${SITE}/sitemap.x
 }
 if (!urls.size) throw new Error('Nenhuma URL encontrada no sitemap');
 
-const payload = {host: new URL(SITE).hostname, key: KEY, keyLocation: KEY_LOCATION, urlList: [...urls].slice(0, 10000)};
+// O IndexNow exige que todas as URLs sejam do mesmo host da chave; qualquer
+// intruso (outro domínio/subdomínio no sitemap) derruba o envio inteiro.
+const host = new URL(SITE).hostname;
+const sameHost = [];
+const dropped = [];
+for (const loc of urls) {
+  try { (new URL(loc).hostname === host ? sameHost : dropped).push(loc); }
+  catch { dropped.push(loc); }
+}
+if (dropped.length) console.log(`AVISO: ${dropped.length} URL(s) fora de ${host} descartada(s):`, dropped.slice(0, 10));
+if (!sameHost.length) throw new Error(`Nenhuma URL do sitemap pertence a ${host} — exemplos: ${dropped.slice(0, 5).join(', ')}`);
+
+const payload = {host, key: KEY, keyLocation: KEY_LOCATION, urlList: sameHost.slice(0, 10000)};
 const response = await fetch('https://api.indexnow.org/indexnow', {
   method: 'POST',
   headers: {'Content-Type': 'application/json; charset=utf-8'},
