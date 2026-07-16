@@ -64,6 +64,11 @@ jobs:
           GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
           GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
         run: node site-ghost/scripts/sync-pages.mjs site-ghost/content/institutional-pages.json
+      - name: Sync English overview page (/en/)
+        env:
+          GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
+          GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
+        run: node site-ghost/scripts/sync-pages.mjs site-ghost/content/en-hub-page.json
       - name: Sync commercial landing pages (arquitetura de conversão)
         env:
           GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
