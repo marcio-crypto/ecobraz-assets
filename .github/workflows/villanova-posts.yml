@@ -1,0 +1,23 @@
+name: Villanova ESG — publicar posts em lote
+
+on:
+  workflow_dispatch:
+    inputs:
+      arquivo:
+        description: 'Caminho do JSON com a lista de posts'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Criar/atualizar posts no Ghost
+        env:
+          VILLANOVA_GHOST_ADMIN_URL: ${{ secrets.VILLANOVA_GHOST_ADMIN_URL }}
+          VILLANOVA_GHOST_ADMIN_API_KEY: ${{ secrets.VILLANOVA_GHOST_ADMIN_API_KEY }}
+        run: node site-villanova/scripts/sync-posts.mjs "${{ inputs.arquivo }}"

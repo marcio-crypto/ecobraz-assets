@@ -1,7 +1,7 @@
 {
   "name": "villanova-institutional",
   "description": "Villanova ESG — institutional advisory theme (navy, serif, gold diamond)",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "engines": {
     "ghost": ">=5.0.0"
   },

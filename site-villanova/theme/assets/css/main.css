@@ -207,3 +207,28 @@ nav.main a:hover{color:#fff}
 .vn-consent .vn-ok:hover{outline:1px solid #C9A24B;outline-offset:2px}
 .vn-consent .vn-no{background:transparent;color:#C9D4E4;border-color:#4A628A}
 .vn-consent .vn-no:hover{border-color:#fff;color:#fff}
+
+/* ===== Vocabulário de conteúdo — padrão sóbrio dentro de páginas e artigos ===== */
+.article-body h2{position:relative;padding-top:18px}
+.article-body h2::before{content:'';position:absolute;top:0;left:0;width:44px;height:2px;background:var(--gold)}
+.article-body hr{border:0;margin:46px 0;height:15px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14'%3E%3Cpath d='M7 0l4.5 7L7 14 2.5 7Z' fill='%23C9A24B'/%3E%3C/svg%3E") center/13px 13px no-repeat,linear-gradient(var(--hair),var(--hair)) center/100% 1px no-repeat}
+.article-body .vn-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;margin:28px 0}
+.article-body .vn-card{border:1px solid var(--hair);border-top:2px solid var(--gold);background:#fff;padding:20px 22px}
+.article-body .vn-card h3{margin:0 0 8px;font-size:18px}
+.article-body .vn-card p{margin:0;font-size:15px;line-height:1.6}
+.article-body .vn-isnot{font-size:13.5px;color:#8B96A0;border-top:1px dashed var(--hair);padding-top:10px;margin-top:12px}
+.article-body .vn-boundary{font-size:13.5px;color:#8B96A0;font-style:italic}
+.article-body ol.vn-steps{counter-reset:vnstep;margin:30px 0;padding:0;list-style:none}
+.article-body ol.vn-steps>li{counter-increment:vnstep;padding:0 0 6px 60px;position:relative;margin-bottom:22px}
+.article-body ol.vn-steps>li::before{content:counter(vnstep,upper-roman);font-family:var(--serif);color:var(--gold);font-size:24px;line-height:1;position:absolute;left:0;top:2px;border-bottom:2px solid var(--gold);padding-bottom:4px;min-width:34px}
+.article-body ol.vn-steps>li strong:first-child{display:block;font-size:17px;color:var(--ink);margin-bottom:4px}
+.article-body .vn-cta{border:1px solid var(--hair);background:linear-gradient(170deg,#12294a 0%,var(--ink) 70%);color:#E7ECF3;padding:34px 30px;margin:40px 0;text-align:center}
+.article-body .vn-cta p{color:#C7D2E0;max-width:52ch;margin:0 auto 18px}
+.article-body .vn-cta .btn{margin-bottom:6px}
+.article-body .vn-cta .vn-boundary{color:#8FA0B6}
+.article-body .vn-faq details{border:1px solid var(--hair);background:#fff;padding:14px 18px;margin-bottom:10px}
+.article-body .vn-faq summary{font-family:var(--serif);font-weight:400;font-size:17.5px;color:var(--ink);cursor:pointer}
+.article-body .vn-faq details[open] summary{border-bottom:1px solid var(--hair);padding-bottom:10px;margin-bottom:10px}
+.article-body .vn-note{border:1px solid var(--hair);border-left:3px solid var(--green);background:#F4F6F2;padding:16px 20px;margin:26px 0;font-size:15px}
+.article-body .vn-src{font-size:13px;color:#8B96A0}
+.article-body .vn-src a{color:var(--steel)}
