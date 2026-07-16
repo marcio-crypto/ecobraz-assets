@@ -1,0 +1,25 @@
+name: Extrai conteúdo ecobrazinforma (migração)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  extrai:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extrai o conteúdo das páginas a migrar via Wayback Machine
+        run: node migracao-informa/scripts/extrai-conteudo.mjs
+      - name: Publica o conteúdo extraído no repositório
+        run: |
+          git config user.name "ecobraz-bot"
+          git config user.email "ti@ecobraz.org"
+          git add migracao-informa/conteudo/
+          git diff --cached --quiet && echo "Sem mudanças." && exit 0
+          git commit -m "Conteúdo extraído do ecobrazinforma (Wayback) para migração"
+          git pull --rebase origin main
+          git push origin HEAD:main
