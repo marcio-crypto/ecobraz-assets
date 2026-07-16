@@ -38,6 +38,7 @@
         const applyConsent = (state) => {
             try { localStorage.setItem('ecb_consent', state); } catch (_) {}
             if (typeof window.gtag === 'function') window.gtag('consent', 'update', {ad_storage: state, ad_user_data: state, ad_personalization: state, analytics_storage: state});
+            if (typeof window.clarity === 'function') window.clarity('consent', state === 'granted');
             consentBar.hidden = true;
             track('consent_choice', {choice: state});
         };

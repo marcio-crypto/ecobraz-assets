@@ -48,6 +48,23 @@
       gtag('config', '{{@custom.ga_measurement_id}}');
     </script>
     {{/if}}
+    <script>
+      // Microsoft Clarity (mapas de calor) — projeto Ecobraz xn475m41bb.
+      // Segue a mesma escolha do banner de cookies: aceito → ativo; recusado →
+      // sem cookies. Sem escolha registrada, a própria Microsoft aplica a regra
+      // regional (UE/EEE exige aceite prévio).
+      (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+      })(window, document, "clarity", "script", "xn475m41bb");
+      (function () {
+        var stored = null;
+        try { stored = localStorage.getItem('ecb_consent'); } catch (e) {}
+        if (stored === 'granted') window.clarity('consent');
+        else if (stored === 'denied') window.clarity('consent', false);
+      })();
+    </script>
     {{ghost_head}}
     {{{block "head"}}}
     <script type="application/ld+json">
