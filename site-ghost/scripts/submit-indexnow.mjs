@@ -1,11 +1,13 @@
 // IndexNow: avisa o Bing (e demais buscadores participantes) sobre as URLs
 // publicadas do site logo após cada deploy. Lê o sitemap vivo do Ghost, junta
 // todas as URLs e envia em um único POST para api.indexnow.org.
-// A chave é pública por definição do protocolo; o arquivo de verificação é
-// servido pelo tema em /assets/indexnow-<chave>.txt.
+// A chave é pública por definição do protocolo e PRECISA estar na raiz do
+// domínio (o protocolo só aceita URLs no mesmo diretório da chave ou abaixo).
+// O Ghost(Pro) não serve arquivos na raiz, então quem responde por
+// /<chave>.txt é o worker ahrefs-bot-analytics na Cloudflare.
 const SITE = String(process.argv[2] || 'https://ecobraz.org').replace(/\/$/, '');
 const KEY = '12c72def66356cc12abec2a1f93c9e1f';
-const KEY_LOCATION = `${SITE}/assets/indexnow-${KEY}.txt`;
+const KEY_LOCATION = `${SITE}/${KEY}.txt`;
 
 const fetchText = async (url) => {
   const response = await fetch(url, {headers: {'User-Agent': 'EcobrazIndexNow/1.0'}});
