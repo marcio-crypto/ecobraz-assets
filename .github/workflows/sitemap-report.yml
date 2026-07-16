@@ -7,6 +7,10 @@ on:
         description: 'Site a inspecionar'
         type: string
         default: 'https://ecobraz.org'
+      check_paths:
+        description: 'Caminhos extras para checar status/redirect (separados por espaço)'
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -33,3 +37,12 @@ jobs:
             echo
           done < children.txt
           echo "TOTAL DE URLS NO SITEMAP: $TOTAL"
+      - name: Checar status e redirects de caminhos extras
+        if: ${{ inputs.check_paths != '' }}
+        run: |
+          BASE="${{ inputs.base_url }}"
+          for p in ${{ inputs.check_paths }}; do
+            echo "== $BASE$p =="
+            curl -s -o /dev/null -w "  status=%{http_code} location=%{redirect_url}\n" "$BASE$p"
+            curl -s -o /dev/null -L -w "  final=%{url_effective} status=%{http_code}\n" "$BASE$p"
+          done
