@@ -1,0 +1,41 @@
+name: Relatório de registros Zenodo
+
+on:
+  workflow_dispatch:
+    inputs:
+      record_ids:
+        description: 'IDs dos registros Zenodo (separados por espaço)'
+        type: string
+        default: '21397950 21398130 21398306 21398390 21398750 21398814 21398879 21398926 21398989 21399040'
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Buscar metadados de cada registro
+        run: |
+          for id in ${{ inputs.record_ids }}; do
+            echo "================ RECORD $id ================"
+            curl -sSf "https://zenodo.org/api/records/$id" | python3 -c "
+          import json, sys, re
+          r = json.load(sys.stdin)
+          m = r.get('metadata', {})
+          print('DOI:', r.get('doi'))
+          print('Titulo:', m.get('title'))
+          print('Tipo:', m.get('resource_type', {}).get('title'))
+          print('Data:', m.get('publication_date'))
+          print('Licenca:', m.get('license', {}).get('id'))
+          print('Autores:', '; '.join(f\"{c.get('name')} ({c.get('affiliation')})\" for c in m.get('creators', [])))
+          print('Palavras-chave:', ', '.join(m.get('keywords', []) or []))
+          print('Relacionados:', json.dumps(m.get('related_identifiers', []), ensure_ascii=False))
+          print('Arquivos:', ', '.join(f\"{f['key']} ({f['size']} bytes)\" for f in r.get('files', [])))
+          desc = re.sub('<[^>]+>', ' ', m.get('description', '') or '')
+          desc = re.sub(r'\s+', ' ', desc).strip()
+          print('Descricao:', desc[:1200])
+          print('Views/Downloads:', r.get('stats', {}).get('views'), '/', r.get('stats', {}).get('downloads'))
+          "
+            echo
+          done
