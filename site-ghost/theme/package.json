@@ -1,7 +1,7 @@
 {
   "name": "ecobraz-conversion",
   "description": "Tema oficial Ecobraz orientado a agendamentos de coleta e conversão B2B.",
-  "version": "0.11.1",
+  "version": "0.11.2",
   "engines": {
     "ghost": ">=5.0.0"
   },
@@ -21,10 +21,18 @@
     "posts_per_page": 12,
     "card_assets": true,
     "image_sizes": {
-      "xs": {"width": 320},
-      "s": {"width": 480},
-      "m": {"width": 760},
-      "l": {"width": 1200}
+      "xs": {
+        "width": 320
+      },
+      "s": {
+        "width": 480
+      },
+      "m": {
+        "width": 760
+      },
+      "l": {
+        "width": 1200
+      }
     },
     "custom": {
       "collection_endpoint": {
