@@ -80,6 +80,15 @@ jobs:
           GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
           GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
         run: node site-ghost/scripts/sync-posts.mjs site-ghost/content/priority-posts.json
+      - name: Instala o gerador de capas dos posts
+        run: |
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund @napi-rs/canvas >/dev/null
+      - name: Gera e aplica capas ilustradas nos posts
+        env:
+          GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
+          GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
+        run: node site-ghost/scripts/sync-post-covers.mjs site-ghost/content/priority-posts.json
       - name: Remove duplicate and starter content from indexing
         env:
           GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
