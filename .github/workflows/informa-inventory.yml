@@ -1,0 +1,30 @@
+name: Inventário ecobrazinforma (migração)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  inventario:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instala o Playwright e o Chromium
+        run: |
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund playwright >/dev/null
+          npx playwright install --with-deps chromium
+      - name: Varre o ecobrazinforma.org
+        run: node migracao-informa/scripts/inventario.mjs
+      - name: Publica o inventário no repositório
+        run: |
+          git config user.name "ecobraz-bot"
+          git config user.email "ti@ecobraz.org"
+          git add migracao-informa/inventario.json
+          git diff --cached --quiet && echo "Sem mudanças." && exit 0
+          git commit -m "Inventário ecobrazinforma (varredura automatizada)"
+          git pull --rebase origin main
+          git push origin HEAD:main
