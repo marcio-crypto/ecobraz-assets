@@ -1,0 +1,20 @@
+name: Valida virada ecobrazinforma (301 no ar)
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Domínio antigo'
+        required: false
+        default: 'https://ecobrazinforma.org'
+
+jobs:
+  valida:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Regenera o worker a partir do de-para (garante mapa atual)
+        run: node migracao-informa/scripts/gera-worker-redirects.mjs
+      - name: Valida os 301 no ar, origem por origem
+        run: node migracao-informa/scripts/valida-virada.mjs '${{ inputs.base_url }}'
