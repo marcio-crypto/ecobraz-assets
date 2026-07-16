@@ -258,6 +258,10 @@
           "text": "Quem promete coleta grátis por telefone esconde o custo em outro lugar. Aqui o escopo vem por escrito, antes da confirmação."
         }
       ]
+    },
+    "referencia": {
+      "doi": "10.5281/zenodo.21397950",
+      "titulo": "Ativos Eletroeletrônicos Pós-Uso como Risco Corporativo: Governança Ambiental, Patrimonial e Informacional"
     }
   },
   {
@@ -1572,6 +1576,10 @@
           "text": "Sem promessa de certificação ou aceite: cada afirmação tem fonte, limite e data de corte. É isso que sobrevive à auditoria."
         }
       ]
+    },
+    "referencia": {
+      "doi": "10.5281/zenodo.21399040",
+      "titulo": "Indicadores sem Evidência: Limites de Peso, Volume e Percentuais de Reciclagem na Prestação de Contas Corporativa"
     }
   },
   {
@@ -1834,6 +1842,10 @@
       "eyebrow": "Avaliação técnica sem compromisso",
       "title": "Quantas máquinas estão esperando para sair — e o que ainda mora nos discos delas?",
       "text": "Descreva o parque, o destino pretendido e o prazo. A equipe retorna com aplicabilidade, escopo e o modelo de relatório."
+    },
+    "referencia": {
+      "doi": "10.5281/zenodo.21398306",
+      "titulo": "Risco Residual de Dados em Equipamentos Desativados: Governança de Mídias, Sanitização e Prestação de Contas"
     }
   },
   {
@@ -2096,6 +2108,10 @@
       "eyebrow": "Avaliação técnica sem compromisso",
       "title": "Quantos anos de dados estão guardados no seu cofre agora?",
       "text": "Descreva as mídias, o volume e a exigência da política. A equipe retorna com método, custódia e o modelo de evidência — por escrito."
+    },
+    "referencia": {
+      "doi": "10.5281/zenodo.21398306",
+      "titulo": "Risco Residual de Dados em Equipamentos Desativados: Governança de Mídias, Sanitização e Prestação de Contas"
     }
   },
   {
@@ -2357,6 +2373,10 @@
       "eyebrow": "Avaliação técnica sem compromisso",
       "title": "Quanto custa mais um trimestre da sala morta no seu orçamento?",
       "text": "Descreva o site, os racks e os prazos do imóvel. A equipe retorna com cronograma, escopo e a documentação do projeto — por escrito."
+    },
+    "referencia": {
+      "doi": "10.5281/zenodo.21398130",
+      "titulo": "A Baixa Patrimonial Não Encerra o Risco: Responsabilidades e Evidências no Descomissionamento de Ativos de TI"
     }
   },
   {
@@ -2472,6 +2492,10 @@
       "eyebrow": "Não achou o seu caso?",
       "title": "Descreva o evento — a avaliação técnica aponta a solução.",
       "text": "Material, volume, localidade e exigência documental: com isso a equipe retorna com o escopo aplicável, por escrito."
+    },
+    "referencia": {
+      "doi": "10.5281/zenodo.21398926",
+      "titulo": "Logística Reversa Multissite: Controles para Operações Corporativas Distribuídas"
     }
   },
   {
@@ -2931,6 +2955,10 @@
       "eyebrow": "Avaliação técnica sem compromisso",
       "title": "Sua meta de logística reversa tem lastro para ser auditada hoje?",
       "text": "Descreva categorias, volume por período e origens. A equipe retorna com calendário, escopo e o padrão de prova — por escrito."
+    },
+    "referencia": {
+      "doi": "10.5281/zenodo.21398879",
+      "titulo": "Qualificação de Prestadores de Logística Reversa: Due Diligence Baseada em Risco para Compras, Compliance e Auditoria"
     }
   },
   {

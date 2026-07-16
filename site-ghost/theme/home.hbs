@@ -1,5 +1,11 @@
 {{!< default}}
 
+{{#contentFor "head"}}
+<link rel="alternate" hreflang="pt-BR" href="{{@site.url}}/">
+<link rel="alternate" hreflang="en" href="{{@site.url}}/en/">
+<link rel="alternate" hreflang="x-default" href="{{@site.url}}/">
+{{/contentFor}}
+
 <style>
 .hx-label{font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--teal-2);display:block;margin-bottom:12px}
 .hx-label.on-dark{color:var(--green)}

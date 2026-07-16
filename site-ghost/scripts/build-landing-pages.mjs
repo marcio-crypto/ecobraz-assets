@@ -23,6 +23,22 @@ const icons = {
 const wa = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg>';
 const esc = (value) => String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
+// Bloco "Referência técnica" (DOI no Zenodo) — declarado em landing-pages.json
+// no campo opcional `referencia: {doi, titulo}` e renderizado no template
+// visível e no conteúdo de reserva do Ghost.
+const referenciaSection = (p, slug) => !p.referencia ? '' : `<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Referência técnica</span><h2>Base publicada, com identificador permanente</h2></div>
+      <p>Este tema é aprofundado em relatório técnico autoral da Ecobraz Emigre, publicado com DOI no repositório aberto Zenodo.</p>
+    </div>
+    <p style="margin:0">VILLANOVA, Marcio. <em>${esc(p.referencia.titulo)}</em>. Zenodo, 2026. <a class="hx-src" href="https://doi.org/${p.referencia.doi}" rel="noopener" data-track="${slug}_referencia_doi">doi.org/${p.referencia.doi}</a> &nbsp;·&nbsp; <a class="hx-src" href="{{@site.url}}/publicacoes/" data-track="${slug}_referencia_publicacoes">Todas as publicações →</a></p>
+  </div>
+</section>
+
+`;
+const referenciaHtml = (p) => !p.referencia ? '' : `<hr><h2>Referência técnica</h2><p>Este tema é aprofundado em relatório técnico autoral da Ecobraz Emigre, publicado com identificador permanente (DOI) no repositório aberto Zenodo:</p><ul><li>VILLANOVA, Marcio. <em>${esc(p.referencia.titulo)}</em>. Zenodo, 2026. <a href="https://doi.org/${p.referencia.doi}" rel="noopener">doi.org/${p.referencia.doi}</a>.</li></ul><p><a href="/publicacoes/">Conheça todas as publicações técnicas da Ecobraz →</a></p>`;
+
 function renderTemplate(p) {
   const slug = p.slug;
   const formAction = '{{@site.url}}/agendamento/';
@@ -216,7 +232,7 @@ ${p.why ? `<section class="hx-block alt">
   </div>
 </section>
 
-<section class="hx-block" style="padding-top:0">
+${referenciaSection(p, slug)}<section class="hx-block" style="padding-top:0">
   <div class="container">
     <div class="hx-final">
       <div>
@@ -286,7 +302,7 @@ ${groups}
   </div>
 </section>
 
-<section class="hx-block alt">
+${referenciaSection(p, slug)}<section class="hx-block alt">
   <div class="container">
     <div class="hx-final">
       <div>
@@ -336,7 +352,7 @@ function renderHubSyncEntry(p) {
     ...p.groups.map((g) => `<h2>${esc(g.title)}</h2><ul>${g.items.map((i) => `<li><a href="${i.href}">${esc(i.title)}</a> — ${esc(i.text)}</li>`).join('')}</ul>`),
     `<p>${esc(p.note.text)} <a href="${p.note.href}">${esc(p.note.linkLabel)}</a>.</p>`,
     `<p><a href="/agendamento/?perfil=empresa&amp;origem=${p.slug}">${esc(p.hero.cta)}</a>.</p>`
-  ].join('');
+  ].join('') + referenciaHtml(p);
   return {
     title: p.title,
     slug: p.slug,
@@ -384,7 +400,7 @@ function renderSyncEntry(p) {
     `<h2>Escopo</h2><p>${esc(p.scope.conditions)}</p>`,
     `<p>Solução do hub <a href="${p.hub.href}">${esc(p.hub.title)}</a>. Relacionadas: ${p.related.map((r) => `<a href="${r.href}">${esc(r.title)}</a>`).join(', ')}. Comprovação: <a href="/documentacao-e-rastreabilidade/">documentação e rastreabilidade</a> e <a href="/evidencias/">evidências públicas</a>.</p>`,
     `<p><a href="/agendamento/?perfil=empresa&amp;origem=${p.slug}">Solicitar avaliação técnica</a>.</p>`
-  ].join('');
+  ].join('') + referenciaHtml(p);
   return {
     title: p.title,
     slug: p.slug,

@@ -2,9 +2,12 @@
     .brand-logo { display: block; width: 190px; height: auto; max-height: 64px; object-fit: contain; }
     .footer-brand { display: inline-flex !important; align-items: center; margin: 0 0 18px !important; padding: 0; background: transparent; }
     .footer-brand-logo { display: block; width: 190px; height: auto; }
+    .lang-switch { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-decoration: none; color: inherit; border: 1px solid currentColor; border-radius: 4px; padding: 4px 8px; opacity: .75; margin-right: 10px; }
+    .lang-switch:hover { opacity: 1; }
     @media (max-width: 620px) {
         .brand-logo { width: 165px; }
         .footer-brand-logo { width: 175px; }
+        .lang-switch { margin-right: 6px; }
     }
 </style>
 <header class="site-header" data-header>
@@ -27,6 +30,7 @@
                 <li><a href="{{@site.url}}/museu/">Museu</a></li>
             </ul>
         </nav>
+        <a class="lang-switch" href="{{@site.url}}/en/" title="English">EN</a>
         <a class="button button-small header-cta" href="{{@site.url}}/agendamento/" data-track="header_agendamento">Solicitar coleta</a>
     </div>
 </header>

@@ -34,6 +34,12 @@
     // guardada; atualiza o gtag e persiste a decisão. Reabre pelo link do rodapé.
     const consentBar = document.querySelector('[data-consent-bar]');
     if (consentBar) {
+        // Visitante de fora do Brasil/Portugal vê o banner em inglês (GDPR).
+        if ((navigator.language || '').toLowerCase().indexOf('pt') !== 0) {
+            consentBar.querySelector('p').innerHTML = '<strong>Cookies and measurement.</strong> We use cookies to measure site usage and improve your experience. You can accept or decline — your choice is saved for future visits. <a href="/politica-de-privacidade/">Privacy policy</a>';
+            consentBar.querySelector('[data-consent-accept]').textContent = 'Accept';
+            consentBar.querySelector('[data-consent-decline]').textContent = 'Decline';
+        }
         const readConsent = () => { try { return localStorage.getItem('ecb_consent'); } catch (_) { return 'unavailable'; } };
         const applyConsent = (state) => {
             try { localStorage.setItem('ecb_consent', state); } catch (_) {}
