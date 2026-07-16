@@ -5,23 +5,32 @@
     <header class="page-hero">
         <div class="container page-hero-grid">
             <div>
-                <span class="eyebrow">Solução Ecobraz</span>
+                <span class="eyebrow"><span class="only-pt">Solução Ecobraz</span><span class="only-en">Ecobraz solution</span></span>
                 <h1>{{title}}</h1>
                 {{#if custom_excerpt}}<p>{{custom_excerpt}}</p>{{/if}}
-                <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem={{slug}}">Solicitar avaliação de coleta</a>
+                <a class="button only-pt" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem={{slug}}">Solicitar avaliação de coleta</a>
+                <a class="button only-en" href="mailto:contato@ecobraz.org.br">Contact us in English</a>
             </div>
-            <aside class="page-hero-card">
+            <aside class="page-hero-card only-pt">
                 <strong>Atendimento orientado à operação</strong>
                 <span>Materiais, localidade, volume, riscos e documentação são avaliados antes da confirmação.</span>
+            </aside>
+            <aside class="page-hero-card only-en">
+                <strong>Operations-led service</strong>
+                <span>Materials, location, volume, risks and documentation are assessed before any collection is confirmed.</span>
             </aside>
         </div>
     </header>
     {{/match}}
     <div class="page-content-wrap">
         <div class="article-content container-narrow gh-content">{{content}}</div>
-        <aside class="page-conversion container-narrow">
+        <aside class="page-conversion container-narrow only-pt">
             <div><span class="eyebrow">Solicite atendimento</span><h2>Precisa retirar equipamentos ou resíduos eletrônicos?</h2><p>Envie os dados iniciais para análise técnica e logística.</p></div>
             <a class="button" href="{{@site.url}}/agendamento/?origem={{slug}}">Agendar coleta</a>
+        </aside>
+        <aside class="page-conversion container-narrow only-en">
+            <div><span class="eyebrow">Get in touch</span><h2>Need documented collection or disposal in Brazil?</h2><p>Write to us in English or Portuguese — we reply with scope and documentation details.</p></div>
+            <a class="button" href="mailto:contato@ecobraz.org.br">contato@ecobraz.org.br</a>
         </aside>
     </div>
 </article>

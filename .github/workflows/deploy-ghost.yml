@@ -69,6 +69,18 @@ jobs:
           GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
           GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
         run: node site-ghost/scripts/sync-pages.mjs site-ghost/content/en-hub-page.json
+      - name: Sync English pages (versão EN do site)
+        if: ${{ hashFiles('site-ghost/content/en-paginas.json') != '' }}
+        env:
+          GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
+          GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
+        run: node site-ghost/scripts/sync-pages.mjs site-ghost/content/en-paginas.json
+      - name: Sync English posts (versão EN do blog)
+        if: ${{ hashFiles('site-ghost/content/en-posts.json') != '' }}
+        env:
+          GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
+          GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
+        run: node site-ghost/scripts/sync-posts.mjs site-ghost/content/en-posts.json
       - name: Sync commercial landing pages (arquitetura de conversão)
         env:
           GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}

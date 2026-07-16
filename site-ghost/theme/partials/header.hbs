@@ -19,7 +19,7 @@
             <span class="sr-only">Abrir menu</span><span></span><span></span><span></span>
         </button>
         <nav id="primary-nav" class="primary-nav" aria-label="Navegação principal" data-nav>
-            <ul>
+            <ul class="only-pt">
                 <li><a href="{{@site.url}}/solucoes-corporativas/">Soluções</a></li>
                 <li><a href="{{@site.url}}/solucoes-por-setor/">Setores</a></li>
                 <li><a href="{{@site.url}}/materiais-e-equipamentos-coletados/">Materiais</a></li>
@@ -29,8 +29,18 @@
                 <li><a href="{{@site.url}}/noticias-esg/">Notícias</a></li>
                 <li><a href="{{@site.url}}/museu/">Museu</a></li>
             </ul>
+            <ul class="only-en">
+                <li><a href="{{@site.url}}/en/">Overview</a></li>
+                <li><a href="{{@site.url}}/corporate-solutions/">Solutions</a></li>
+                <li><a href="{{@site.url}}/industry-solutions/">Sectors</a></li>
+                <li><a href="{{@site.url}}/materials-we-collect/">Materials</a></li>
+                <li><a href="{{@site.url}}/public-evidence/">Evidence</a></li>
+                <li><a href="{{@site.url}}/how-it-works/">How it works</a></li>
+            </ul>
         </nav>
-        <a class="lang-switch" href="{{@site.url}}/en/" title="English">EN</a>
-        <a class="button button-small header-cta" href="{{@site.url}}/agendamento/" data-track="header_agendamento">Solicitar coleta</a>
+        <a class="lang-switch only-pt" id="lang-to-en" href="{{@site.url}}/en/" title="English">EN</a>
+        <a class="lang-switch only-en" id="lang-to-pt" href="{{@site.url}}/" title="Português">PT</a>
+        <a class="button button-small header-cta only-pt" href="{{@site.url}}/agendamento/" data-track="header_agendamento">Solicitar coleta</a>
+        <a class="button button-small header-cta only-en" href="mailto:contato@ecobraz.org.br" data-track="header_contact_en">Contact us</a>
     </div>
 </header>

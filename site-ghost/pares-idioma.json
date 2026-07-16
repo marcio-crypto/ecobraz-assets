@@ -1,0 +1,186 @@
+{
+ "comment": "Pares de idioma do ecobraz.org. pt e a fonte; en e a traducao. Nav: chaves usadas no header/footer EN.",
+ "pages": [
+  {
+   "pt": "",
+   "en": "en"
+  },
+  {
+   "pt": "descarte-corporativo-de-ti",
+   "en": "corporate-it-disposal"
+  },
+  {
+   "pt": "destruicao-de-dados",
+   "en": "data-destruction-vs-sanitisation"
+  },
+  {
+   "pt": "documentacao-e-rastreabilidade",
+   "en": "documentation-traceability"
+  },
+  {
+   "pt": "coleta-de-lixo-eletronico",
+   "en": "electronic-waste-collection"
+  },
+  {
+   "pt": "coleta-de-computadores-e-notebooks",
+   "en": "computer-laptop-collection"
+  },
+  {
+   "pt": "descarte-de-servidores-e-data-center",
+   "en": "server-data-centre-disposal"
+  },
+  {
+   "pt": "descarte-de-impressoras",
+   "en": "printer-disposal"
+  },
+  {
+   "pt": "descarte-de-celulares-e-tablets",
+   "en": "mobile-phone-tablet-disposal"
+  },
+  {
+   "pt": "descarte-de-equipamentos-hospitalares",
+   "en": "medical-equipment-disposal"
+  },
+  {
+   "pt": "descarte-de-eletrodomesticos",
+   "en": "white-goods-appliance-disposal"
+  },
+  {
+   "pt": "descarte-de-ar-condicionado",
+   "en": "air-conditioning-disposal"
+  },
+  {
+   "pt": "descarte-de-maquinas-e-equipamentos-industriais",
+   "en": "industrial-equipment-disposal"
+  },
+  {
+   "pt": "descarte-de-placas-e-componentes-eletronicos",
+   "en": "circuit-board-component-disposal"
+  },
+  {
+   "pt": "descarte-de-equipamentos-de-telecomunicacoes",
+   "en": "telecoms-equipment-disposal"
+  },
+  {
+   "pt": "descarte-de-baterias-e-nobreaks",
+   "en": "battery-ups-disposal"
+  },
+  {
+   "pt": "descarte-de-geladeira-velha",
+   "en": "old-fridge-disposal"
+  },
+  {
+   "pt": "descarte-de-maquina-de-lavar",
+   "en": "washing-machine-disposal"
+  },
+  {
+   "pt": "descarte-de-televisao",
+   "en": "old-tv-disposal"
+  },
+  {
+   "pt": "descarte-de-cabos-e-fios",
+   "en": "cable-wire-disposal"
+  },
+  {
+   "pt": "coleta-de-lixo-eletronico-para-empresas",
+   "en": "business-e-waste-collection"
+  },
+  {
+   "pt": "coleta-de-lixo-eletronico-em-sao-paulo",
+   "en": "e-waste-collection-sao-paulo"
+  },
+  {
+   "pt": "pontos-de-coleta",
+   "en": "collection-points"
+  },
+  {
+   "pt": "como-funciona",
+   "en": "how-it-works"
+  },
+  {
+   "pt": "coletas-recorrentes",
+   "en": "recurring-collections"
+  },
+  {
+   "pt": "logistica-reversa",
+   "en": "reverse-logistics"
+  },
+  {
+   "pt": "evidencias",
+   "en": "public-evidence"
+  },
+  {
+   "pt": "sobre",
+   "en": "about"
+  },
+  {
+   "pt": "politica-de-privacidade",
+   "en": "privacy-policy"
+  },
+  {
+   "pt": "publicacoes",
+   "en": "technical-publications"
+  },
+  {
+   "pt": "descarte-de-ativos-de-ti-desmobilizados",
+   "en": "decommissioned-it-asset-disposal"
+  },
+  {
+   "pt": "logistica-reversa-para-marketplaces-e-ecommerce",
+   "en": "marketplace-ecommerce-reverse-logistics"
+  },
+  {
+   "pt": "destinacao-de-bens-sinistrados-para-seguradoras",
+   "en": "insurance-salvage-disposal"
+  },
+  {
+   "pt": "descarte-de-produtos-danificados-e-fora-de-garantia",
+   "en": "damaged-out-of-warranty-disposal"
+  },
+  {
+   "pt": "descarte-de-atm-e-equipamentos-bancarios",
+   "en": "atm-banking-equipment-disposal"
+  },
+  {
+   "pt": "ecobraz-villanova-esg",
+   "en": "ecobraz-villanova-esg"
+  },
+  {
+   "pt": "sanitizacao-segura-de-dados",
+   "en": "secure-data-sanitisation"
+  },
+  {
+   "pt": "destruicao-fisica-de-dados-e-midias",
+   "en": "physical-media-destruction"
+  },
+  {
+   "pt": "desmobilizacao-de-data-center",
+   "en": "data-centre-decommissioning"
+  },
+  {
+   "pt": "solucoes-corporativas",
+   "en": "corporate-solutions"
+  },
+  {
+   "pt": "solucoes-por-setor",
+   "en": "industry-solutions"
+  },
+  {
+   "pt": "materiais-e-equipamentos-coletados",
+   "en": "materials-we-collect"
+  },
+  {
+   "pt": "logistica-reversa-para-fabricantes-e-importadores",
+   "en": "manufacturer-importer-reverse-logistics"
+  },
+  {
+   "pt": "descarte-de-equipamentos-de-varejo-e-pdv",
+   "en": "retail-pos-equipment-disposal"
+  },
+  {
+   "pt": "programa-adote-um-bairro",
+   "en": "adopt-a-neighbourhood-programme"
+  }
+ ],
+ "posts": []
+}

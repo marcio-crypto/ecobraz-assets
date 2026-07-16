@@ -10,6 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
     <noscript><link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet"></noscript>
     <link rel="stylesheet" href="{{asset "css/screen.css"}}">
+    <link rel="stylesheet" href="{{asset "css/lang.css"}}">
     <link rel="stylesheet" href="{{asset "css/materials.css"}}">
     <link rel="stylesheet" href="{{asset "css/flow.css"}}">
     <link rel="stylesheet" href="{{asset "css/post.css"}}">
@@ -145,6 +146,17 @@
         </div>
     </div>
     <script src="{{asset "js/main.js"}}" defer></script>
+    <script>
+      // A chave de idioma aponta para a página irmã declarada no hreflang.
+      (function () {
+        var en = document.querySelector('link[rel="alternate"][hreflang="en"]');
+        var pt = document.querySelector('link[rel="alternate"][hreflang="pt-BR"]');
+        var aEn = document.getElementById('lang-to-en');
+        var aPt = document.getElementById('lang-to-pt');
+        if (aEn && en) aEn.href = en.href;
+        if (aPt && pt) aPt.href = pt.href;
+      })();
+    </script>
     {{ghost_foot}}
 </body>
 </html>
