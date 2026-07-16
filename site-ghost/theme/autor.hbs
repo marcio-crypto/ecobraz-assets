@@ -1,0 +1,17 @@
+{{!< default}}
+{{#page}}
+{{#contentFor "head"}}
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"ProfilePage","mainEntity":{"@type":"Person","name":"{{title}}","description":"{{custom_excerpt}}","affiliation":{"@type":"NGO","name":"Ecobraz Emigre","url":"{{@site.url}}"}}}
+</script>
+{{/contentFor}}
+<article class="article">
+    <header class="article-header container-narrow">
+        <span class="post-tag">Colunista</span>
+        <h1>{{title}}</h1>
+        {{#if custom_excerpt}}<p class="article-excerpt">{{custom_excerpt}}</p>{{/if}}
+    </header>
+    <div class="article-content container-narrow gh-content">{{content}}</div>
+    <aside class="article-cta container-narrow"><div><strong>Conteúdo técnico com responsabilidade editorial.</strong><p>As colunas e notícias assinadas integram o acervo editorial da Ecobraz Emigre.</p></div><a class="button" href="{{@site.url}}/noticias-esg/">Ver as notícias ESG</a></aside>
+</article>
+{{/page}}

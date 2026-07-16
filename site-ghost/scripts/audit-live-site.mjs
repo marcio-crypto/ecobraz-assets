@@ -9,11 +9,22 @@ let checkedPages = 0;
 let checkedLinks = 0;
 
 const files = (await fs.readdir(contentDir)).filter((name) => name.endsWith('.json')).sort();
-const routes = ['/', '/agendamento/', '/blog/'];
+// alternates: URLs de transição aceitas enquanto o routes.yaml novo não é
+// importado no painel do Ghost (posts do museu ficam em /blog/ até lá; as
+// páginas de autor respondem na URL "achatada" /autor-<nome>/).
+const routes = ['/', '/agendamento/', '/blog/',
+  {route: '/noticias-esg/', alternates: ['/blog/']},
+  {route: '/museu/', alternates: ['/blog/']}];
 for (const name of files) {
   const items = JSON.parse(await fs.readFile(path.join(contentDir, name), 'utf8'));
   for (const item of items) {
-    routes.push(name === 'priority-posts.json' ? `/blog/${item.slug}/` : `/${item.slug}/`);
+    if (name === 'priority-posts.json') routes.push(`/blog/${item.slug}/`);
+    else if (name === 'migrated-posts.json') {
+      const isMuseu = (item.tags || []).some((tag) => tag.slug === 'museu-do-eletronico');
+      routes.push(isMuseu ? {route: `/museu/${item.slug}/`, alternates: [`/blog/${item.slug}/`]} : `/blog/${item.slug}/`);
+    } else if (name === 'autor-pages.json') {
+      routes.push({route: `/autor/${item.slug.replace(/^autor-/, '')}/`, alternates: [`/${item.slug}/`]});
+    } else routes.push(`/${item.slug}/`);
   }
 }
 
@@ -27,10 +38,18 @@ function attr(tag, name) {
   return match ? match[1] : '';
 }
 
-for (const route of routes) {
+for (const entry of routes) {
+  const route = typeof entry === 'string' ? entry : entry.route;
+  const alternates = typeof entry === 'string' ? [] : (entry.alternates || []);
   let response;
+  let effectiveRoute = route;
   try {
     response = await fetchPage(route);
+    for (const alt of alternates) {
+      if (response.status === 200) break;
+      const altResponse = await fetchPage(alt);
+      if (altResponse.status === 200) { response = altResponse; effectiveRoute = alt; warnings.push(`${route}: ainda respondendo em ${alt} (routes.yaml pendente)`); }
+    }
   } catch (error) {
     errors.push(`${route}: fetch failed (${error.message})`);
     continue;

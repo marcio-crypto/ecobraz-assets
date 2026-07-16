@@ -1,0 +1,23 @@
+{{!< default}}
+
+{{#contentFor "head"}}
+{{#unless pagination.prev}}
+<meta name="description" content="Museu Virtual do Eletrônico da Ecobraz: a história das invenções que moldaram a tecnologia — do telégrafo ao smartphone — e o destino responsável de cada equipamento.">
+<meta property="og:description" content="Museu Virtual do Eletrônico da Ecobraz: a história das invenções que moldaram a tecnologia — do telégrafo ao smartphone.">
+{{/unless}}
+{{#if pagination.prev}}
+<meta property="og:title" content="{{meta_title}}">
+<meta property="og:type" content="website">
+<meta name="twitter:title" content="{{meta_title}}">
+<meta name="description" content="Museu Virtual do Eletrônico da Ecobraz: a história das invenções que moldaram a tecnologia.">
+{{/if}}
+<meta property="og:image" content="{{asset "images/og-ecobraz.png"}}">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"CollectionPage","name":"Museu Virtual do Eletrônico","url":"{{@site.url}}/museu/","description":"Acervo editorial da Ecobraz sobre a história das invenções eletrônicas e da computação.","publisher":{"@type":"NGO","name":"Ecobraz Emigre","url":"{{@site.url}}"}}
+</script>
+{{/contentFor}}
+
+<header class="archive-header"><div class="container"><span class="eyebrow">Museu Virtual do Eletrônico</span><h1>A história viva da tecnologia</h1><p>Do telégrafo de Morse ao iPhone: as invenções que moldaram o mundo eletrônico — e por que preservar essa memória faz parte de dar destino responsável a cada equipamento.</p></div></header>
+<section class="section"><div class="container post-grid">{{#foreach posts}}{{> "post-card"}}{{/foreach}}</div><div class="container pagination-wrap">{{pagination}}</div></section>
+<section class="section"><div class="container"><aside class="article-cta"><div><strong>Tem equipamentos antigos parados?</strong><p>A Ecobraz coleta, documenta e dá destino correto — e as peças históricas podem integrar o acervo do museu.</p></div><a class="button" href="{{@site.url}}/agendamento/?origem=museu">Agendar coleta</a></aside></div></section>
