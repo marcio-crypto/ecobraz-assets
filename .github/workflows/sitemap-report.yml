@@ -11,6 +11,10 @@ on:
         description: 'Caminhos extras para checar status/redirect (separados por espaço)'
         type: string
         default: ''
+      html_meta:
+        description: 'URL para inspecionar favicon e metas sociais (vazio = pular)'
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -46,3 +50,13 @@ jobs:
             curl -s -o /dev/null -w "  status=%{http_code} location=%{redirect_url}\n" "$BASE$p"
             curl -s -o /dev/null -L -w "  final=%{url_effective} status=%{http_code}\n" "$BASE$p"
           done
+      - name: Inspecionar favicon e metadados sociais
+        if: ${{ inputs.html_meta != '' }}
+        run: |
+          curl -s "${{ inputs.html_meta }}" -o pagina.html
+          echo "== link rel=icon =="
+          grep -o '<link[^>]*rel="[^"]*icon[^"]*"[^>]*>' pagina.html || echo "(nenhum)"
+          echo "== metas og/twitter =="
+          grep -o '<meta[^>]*\(og:image\|og:title\|og:description\|twitter:image\|twitter:card\)[^>]*>' pagina.html || echo "(nenhuma)"
+          echo "== title =="
+          grep -o '<title>[^<]*</title>' pagina.html | head -1
