@@ -1,0 +1,119 @@
+origem,destino,acao,motivo
+/,/noticias-esg/,estrutura-nova,"home do informa (284 refdomains, incl. europa.eu dofollow) -> hub de notícias ESG"
+/colunista/7/sergio-diniz,/autor/sergio-diniz/,estrutura-nova,"115 rd (oglobo, dino) -> página de autor"
+/colunista/8/marcelo-de-oliveira-lopes-aragao,/autor/marcelo-aragao/,estrutura-nova,"111 rd (uai) -> página de autor"
+/colunista/9/marcio-villanova,/autor/marcio-villanova/,estrutura-nova,"95 rd (terra, comunique-se dofollow) -> página de autor"
+/colunista/5/ernesto-machado,/autor/ernesto-machado/,estrutura-nova,página de autor
+/autor/marcio-villanova,/autor/marcio-villanova/,estrutura-nova,variação de URL de autor
+/autor/ernesto-machado,/autor/ernesto-machado/,estrutura-nova,variação de URL de autor
+/autor/silvana-leite,/autor/silvana-leite/,estrutura-nova,página de autor
+/noticia/178/bina-a-invencao-brasileira-que-identificou-o-telefone-do-futuro,/museu/bina-a-invencao-brasileira-que-identificou-o-telefone-do-futuro/,migrar,"posição 1 'bina' (1.800 buscas/mês)"
+/noticia/377/apple-ii-o-micro-que-levou-computador-para-casa,/museu/apple-ii-o-micro-que-levou-computador-para-casa/,migrar,"posição 1 'apple 2'/'apple ii' (~1.200 buscas/mês)"
+/noticia/494/altair-8800-1975-a-arquitetura-s100-e-microcomputacao,/museu/altair-8800-1975-a-arquitetura-s100-e-microcomputacao/,migrar,"posição 1 'altair 8800' + posição 2 '8800'"
+/noticia/198/televisao-a-cores-o-espetaculo-visual-do-seculo-xx,/museu/televisao-a-cores-o-espetaculo-visual-do-seculo-xx/,migrar,posição 1 'tv colorida no brasil'
+/noticia/343/iphone-5-2012-o-smartphone-que-afinou-a-era-retina,/museu/iphone-5-2012-o-smartphone-que-afinou-a-era-retina/,migrar,posição 1 'iphone de 2012'
+/noticia/159/radio-experimental-de-nikola-tesla-o-nascimento-da-comunicacao-sem-fio,/museu/radio-experimental-de-nikola-tesla-o-nascimento-da-comunicacao-sem-fio/,migrar,posição 1 'nikola tesla radio'
+/noticia/215/ibm-pc-5150-o-computador-que-definiu-a-era-dos-pcs,/museu/ibm-pc-5150-o-computador-que-definiu-a-era-dos-pcs/,migrar,posição 1 'ibm primeiro pc' + posição 8 'ibm pc 1981'
+/noticia/213/sony-playstation-1-o-console-que-mudou-os-games,/museu/sony-playstation-1-o-console-que-mudou-os-games/,migrar,"posição 5 'playstation 1' (14.000 buscas/mês) — maior potencial"
+/noticia/493/eniac-1945-a-engenharia-do-primeiro-computador-modular,/museu/eniac-1945-a-engenharia-do-primeiro-computador-modular/,migrar,"posição 17/22 'eniac' (2.250 buscas/mês somadas)"
+/noticia/510/magnavox-odyssey-1972-eletronica-discreta-e-patentes,/museu/magnavox-odyssey-1972-eletronica-discreta-e-patentes/,migrar,posição 8 'odyssey 1972' (via /amp)
+/noticia/166/fonografo-de-edison-o-som-gravado-pela-primeira-vez,/museu/fonografo-de-edison-o-som-gravado-pela-primeira-vez/,migrar,posição 6 'invenção de edison que reproduz sons gravados' (100 buscas/mês)
+/noticia/379/zx81-o-micro-de-1-kb-que-colocou-computador-na-sala-estar,/museu/zx81-o-micro-de-1-kb-que-colocou-computador-na-sala-estar/,migrar,1 refdomain + vertical museu
+/coluna/203/monitores-quebrados-o-chumbo-e-o-mercurio-exigem-destino-unico,/blog/monitores-quebrados-o-chumbo-e-o-mercurio-exigem-destino-unico/,migrar,posição 3 'cristal liquido' (300 buscas/mês)
+/coluna/217/mineracao-urbana-a-geopolitica-dos-minerais-criticos-e-o-papel-estrategico-da-sua-empresa-na-economia-circular,/blog/mineracao-urbana-a-geopolitica-dos-minerais-criticos/,migrar,link dofollow da greeneletron.org.br (prioridade do checklist)
+/coluna/188/por-que-criei-o-museu-virtual-do-eletronico-um-manifesto-pessoal-sobre-memoria-tecnologia-e-o-legado-que-deixamos-para-o-futuro,/blog/por-que-criei-o-museu-virtual-do-eletronico/,migrar,manifesto pessoal do fundador — E-E-A-T da vertical museu
+/coluna/198/museu-itinerante-levando-a-historia-da-tecnologia-a-shoppings-e-eventos,/blog/museu-itinerante-levando-a-historia-da-tecnologia-a-shoppings-e-eventos/,migrar,institucional da vertical museu
+/coluna/14/museu-ecobraz-um-acervo-de-eletronicos-antigos-que-despertam-curiosidade-e-nostalgia,/museu-do-eletronico/,equivalente,apresentação do acervo -> hub do museu
+/ver-noticia/15/museu-virtual-do-eletronico,/museu-do-eletronico/,equivalente,1 refdomain -> hub do museu
+/noticia/442/descarte-de-ti-venda-sucata-ou-compra-risco,/blog/descarte-de-ti-venda-sucata-ou-compra-de-risco/,migrar,"111 rd (globo.com) — notícia ESG âncora"
+/noticia/712/adote-um-bairro-a-engenharia-por-tras-do-esg-urbano,/blog/adote-um-bairro-a-engenharia-por-tras-do-esg-urbano/,migrar,"102 rd (tupi.fm dofollow) + link interno forte para /programa-adote-um-bairro/"
+/noticia/753/novo-marco-da-cvm-o-fim-do-esg-de-fachada-nas-empresas,/blog/novo-marco-da-cvm-o-fim-do-esg-de-fachada-nas-empresas/,migrar,"102 rd (correioweb, jornaldeuberaba dofollow)"
+/noticia/805/o-deficit-que-enterra-43-milhoes-de-arvores-no-brasil,/blog/o-deficit-que-enterra-43-milhoes-de-arvores-no-brasil/,migrar,"95 rd (ig.com.br, filantropia.ong dofollow) — REVISAR números antes de publicar"
+/noticia/819/auditabilidade-esg-o-fim-da-era-do-greenwashing-em-2026,/blog/auditabilidade-esg-o-fim-da-era-do-greenwashing-em-2026/,migrar,link dofollow da cortex-intelligence.com (prioridade do checklist)
+/noticia/1652/parceria-digital-ue-brasil-evidencia-operacional,/ecobraz-villanova-esg/,equivalente,parceria UE-Brasil -> página da parceria Villanova
+/conteudo/14/parceria-estrategica-esg-ecobraz,/ecobraz-villanova-esg/,equivalente,"10 rd -> página existente da parceria"
+/noticia/857/esg-na-saude-o-impacto-da-logistica-reversa-em-2026,/descarte-de-equipamentos-hospitalares/,equivalente,1 rd — tema coberto pela landing de saúde
+/noticia/883/geracao-alpha-e-varejo-2026-o-poder-do-impacto-local,/descarte-de-equipamentos-de-varejo-e-pdv/,equivalente,1 rd — tema coberto pela landing de varejo
+/noticia/1111/ue-aperta-cerco-marketplaces-sao-produtores-de-eee,/logistica-reversa-para-marketplaces-e-ecommerce/,equivalente,rankeia 'eee' — tema coberto pela landing de marketplaces
+/noticia/1175/sigormtr-restabelecido-como-evitar-risco-de-conformidade-quando-o-sistema-cai,/blog/passo-a-passo-para-emitir-mtr-e-cdf-no-descarte-de-eletronicos/,equivalente,rankeia 'sigor' — tema MTR/CDF já coberto
+/noticia/1228/o-desastre-de-minamata-a-ameaca-do-mercurio-e-alerta-global,/blog/o-desastre-de-minamata-a-ameaca-do-mercurio-e-alerta-global/,migrar,rankeia 'minamata' (350 buscas/mês) — série desastres ambientais
+/noticia/451/ecobraz-carbon-token-ciencia-logistica-e-apoio-ambiental,/noticias-esg/,regra,"1 rd — conteúdo de token exige revisão de compliance antes de qualquer migração"
+/conteudo/1/politica-de-privacidade,/politica-de-privacidade/,equivalente,institucional
+/conteudo/2/quem-somos,/sobre/,equivalente,institucional
+/conteudo/21/fornecedor-brasileiro-sob-pressao-de-prova,/noticias-esg/,regra,sem equivalente direto
+/contato,/agendamento/,equivalente,conversão
+/colunas,/noticias-esg/,equivalente,listagem editorial
+/busca,/,equivalente,página utilitária
+/termosdeservico,/politica-de-privacidade/,equivalente,institucional
+/relatorios-globais,/evidencias/,equivalente,documental
+/descarte-de-ti-lgpd-e-risco-de-dados,/descarte-de-ativos-de-ti-desmobilizados/,equivalente,landing equivalente direta
+/ecobraz-informa-risco-ambiental-governanca-corporativa,/noticias-esg/,regra,landing editorial sem equivalente
+/ecobraz-villanova-esg-ponte-brasil-europa,/ecobraz-villanova-esg/,equivalente,página da parceria
+/en,/noticias-esg/,regra,seção em inglês descontinuada
+/coluna/101/certificado-ambiental-de-descarte-de-lixo-eletronico,/blog/certificado-de-descarte-de-lixo-eletronico-por-que-sua-empresa-precisa/,equivalente,tema já coberto
+/coluna/87/para-que-serve-o-certificado-ambiental-do-lixo-eletronico,/blog/certificado-de-descarte-de-lixo-eletronico-por-que-sua-empresa-precisa/,equivalente,tema já coberto
+/coluna/234/certificado-de-destinacao-final-cdf-a-unica-blindagem-juridica-real-contra-crimes-ambientais,/blog/passo-a-passo-para-emitir-mtr-e-cdf-no-descarte-de-eletronicos/,equivalente,tema já coberto
+/coluna/98/como-descartar-hds-e-proteger-dados-sigilosos-no-processo,/blog/sanitizacao-de-dados-em-hds-e-ssds-como-fazer-de-forma-certificada/,equivalente,tema já coberto
+/coluna/182/sanitizacao-de-dados-por-que-o-padrao-dod-5220-22-m-morreu-e-como-aplicamos-o-nist-sp-800-88-rev-1-para-garantir-a-destruicao-irreversivel-de-dados-no-brasil,/sanitizacao-segura-de-dados/,equivalente,landing técnica equivalente
+/coluna/216/sanitizacao-de-dados-vs-formatacao-por-que-o-padrao-nist-800-88-e-o-unico-aceitavel-para-o-descarte-de-ativos-de-ti-e-data-centers-na-era-da-lgpd,/sanitizacao-segura-de-dados/,equivalente,landing técnica equivalente
+/coluna/233/formatacao-vs-sanitizacao-por-que-o-reset-nao-protege-sua-empresa,/destruicao-de-dados/,equivalente,tema já coberto
+/coluna/105/os-riscos-ambientais-do-descarte-de-lixo-eletronico,/blog/por-que-nao-jogar-eletronicos-no-lixo-comum-entenda-os-riscos-reais/,equivalente,tema já coberto
+/coluna/106/os-desafios-de-rastrear-e-reciclar-residuos-eletronicos,/documentacao-e-rastreabilidade/,equivalente,tema já coberto
+/coluna/116/como-funciona-a-rastreabilidade-no-descarte-de-lixo-eletronico,/documentacao-e-rastreabilidade/,equivalente,tema já coberto
+/coluna/108/multas-do-decreto-6-514-2008-para-e-lixo-irregular,/blog/empresas-obrigadas-a-fazer-logistica-reversa-lista-completa/,equivalente,categoria compliance
+/coluna/110/o-papel-do-rt-ambiental-no-gerenciamento-de-e-lixo,/blog/licenciamento-ambiental-para-recicladores-de-eletronicos-o-que-verificar-antes-de-contratar/,equivalente,categoria compliance
+/coluna/119/como-preparar-sua-empresa-para-auditorias-esg-envolvendo-lixo-eletronico,/blog/o-papel-da-logistica-reversa-na-certificacao-iso-14001-das-empresas/,equivalente,tema já coberto
+/coluna/123/quanto-custa-descartar-lixo-eletronico-corporativo-de-forma-correta,/coleta-de-lixo-eletronico-para-empresas/,equivalente,landing comercial
+/coluna/85/quanto-custa-descartar-lixo-eletronico-corretamente,/coleta-de-lixo-eletronico-para-empresas/,equivalente,landing comercial
+/coluna/124/o-que-acontece-com-o-lixo-eletronico-depois-que-sai-da-sua-empresa,/blog/como-funciona-a-triagem-do-lixo-eletronico-passo-a-passo/,equivalente,tema já coberto
+/coluna/125/como-armazenar-lixo-eletronico-dentro-da-empresa-antes-da-coleta,/blog/como-montar-um-ponto-de-coleta-de-eletronicos-na-sua-empresa/,equivalente,tema já coberto
+/coluna/130/doacao-de-equipamentos-como-transformar-sucata-em-inclusao-digital-e-materia-prima,/blog/a-diferenca-entre-descarte-reciclagem-reuso-e-remanufatura-e-por-que-isso-importa-no-compliance/,equivalente,tema já coberto
+/coluna/132/o-ultimo-show-acabou-e-o-lixo-tecnologico-da-producao-quem-leva,/solucoes-por-setor/,equivalente,setorial
+/coluna/154/reciclagem-eletronica-em-numeros-o-que-os-dados-revelam-e-por-que-voce-deveria-se-importar,/blog/lixo-eletronico-no-brasil-numeros-atualizados-2025/,equivalente,tema já coberto
+/coluna/158/coleta-corporativa-programada-rotina-previsibilidade-e-conformidade,/coletas-recorrentes/,equivalente,landing equivalente
+/coluna/67/coleta-corporativa-programada-calendario-que-elimina-o-passivo,/coletas-recorrentes/,equivalente,landing equivalente
+/coluna/168/compliance-ambiental-2025-o-fim-da-era-do-papel-e-o-que-muda-na-fiscalizacao-da-logistica-reversa-para-grandes-empresas,/blog/empresas-obrigadas-a-fazer-logistica-reversa-lista-completa/,equivalente,categoria compliance
+/coluna/185/o-fim-da-obsolescencia-programada-o-que-o-direito-ao-reparo-europeu-e-as-novas-leis-de-ecodesign-ensinam-a-industria-brasileira,/blog/reciclagem-de-eletronicos-no-brasil-panorama-atual-desafios-e-oportunidades-para-empresas/,equivalente,categoria panorama
+/coluna/191/preparando-a-casa-o-guia-definitivo-para-passar-na-auditoria-iso-14001-2015-com-foco-na-gestao-de-residuos-e-logistica-reversa,/blog/o-papel-da-logistica-reversa-na-certificacao-iso-14001-das-empresas/,equivalente,tema já coberto
+/coluna/219/iso-14001-2015-e-a-gestao-de-residuos-eletroeletronicos-um-manual-definitivo-para-diretores-e-auditores-sobre-como-implementar-a-perspectiva-de-ciclo-de-vida-e-garantir-conformidade-na-logistica-reversa-corporativa,/blog/o-papel-da-logistica-reversa-na-certificacao-iso-14001-das-empresas/,equivalente,tema já coberto
+/coluna/197/como-descartar-lixo-eletronico-o-guia-anti-multa-de-2025,/blog/lixo-eletronico-lista-completa-do-que-pode-e-nao-pode-descartar/,equivalente,guia equivalente
+/coluna/199/descarte-de-fogao-em-sp-nao-jogue-na-calcada,/descarte-de-eletrodomesticos/,equivalente,material equivalente
+/coluna/211/fones-e-cabos-no-lixo-comum-o-impacto-silencioso-no-seu-bairro,/blog/por-que-fios-e-cabos-eletricos-nao-devem-ser-jogados-no-lixo-comum/,equivalente,tema já coberto
+/coluna/218/gestao-do-ciclo-de-vida-de-ativos-itam-e-o-dilema-da-obsolescencia-como-equilibrar-modernizacao-tecnologica-tco-e-sustentabilidade-em-2025,/descarte-de-ativos-de-ti-desmobilizados/,equivalente,landing equivalente
+/coluna/220/a-economia-do-descarte-analise-financeira-de-capex-vs-opex-na-gestao-de-ativos-de-ti-baixa-contabil-de-bens-obsoletos-e-os-impactos-tributarios-da-destruicao-certificada-no-balanco-patrimonial,/descarte-de-ativos-de-ti-desmobilizados/,equivalente,landing equivalente
+/coluna/223/gestao-de-residuos-de-equipamentos-eletromedicos-desafios-da-rdc-222-18-da-anvisa-riscos-radiologicos-e-a-protecao-de-dados-sensiveis-de-pacientes-no-descomissionamento-de-infraestrutura-hospitalar,/blog/normas-da-anvisa-e-lixo-eletronico-cuidados-especiais-no-descarte-de-equipamentos-eletromedicos-e-hospitalares/,equivalente,tema já coberto
+/coluna/239/normas-da-anvisa-e-o-lixo-eletronico-hospitalar-o-guia-de-descarte-para-gestores-de-saude,/blog/normas-da-anvisa-e-lixo-eletronico-cuidados-especiais-no-descarte-de-equipamentos-eletromedicos-e-hospitalares/,equivalente,tema já coberto
+/coluna/226/descomissionamento-de-ativos-de-automacao-industrial-e-a-protecao-da-propriedade-intelectual-como-o-descarte-incorreto-de-clps-ihms-e-drivers-expoe-o-segredo-de-fabrica-e-cria-passivos-ambientais-na-industria-4-0,/descarte-de-maquinas-e-equipamentos-industriais/,equivalente,landing equivalente
+/coluna/231/descarte-de-geladeira-em-sp-evite-multas-e-riscos-ambientais,/descarte-de-geladeira-velha/,equivalente,material equivalente
+/coluna/241/o-fim-da-despesa-com-descarte-como-o-subsidio-cruzado-zera-seus-custos-de-ti,/coleta-de-lixo-eletronico-para-empresas/,equivalente,landing comercial
+/coluna/242/token-ecobraz-a-tecnologia-blockchain-como-ferramenta-de-financiamento-da-coleta-de-lixo-eletronico,/noticias-esg/,regra,conteúdo de token exige revisão de compliance
+/coluna/267/ecobraz-carbon-token-como-funciona-o-financiamento-da-coleta,/noticias-esg/,regra,conteúdo de token exige revisão de compliance
+/coluna/252/esg-e-o-fim-da-tolerancia-na-gestao-de-residuos-industriais-em-2025,/descarte-de-maquinas-e-equipamentos-industriais/,equivalente,landing equivalente
+/coluna/256/desafios-do-novo-marco-legal-do-saneamento-basico-lei-14-026-2020,/noticias-esg/,regra,fora do escopo de e-lixo
+/coluna/259/o-deficit-logistico-que-ameaca-a-conformidade-do-seu-relatorio-esg-2025,/logistica-reversa/,equivalente,landing equivalente
+/coluna/260/a-gestao-de-residuos-perigosos-classe-i-e-as-exigencias-da-nr-20-e-nr-33,/blog/procedimento-operacional-padrao-pop-coleta-e-descarte-de-elixo/,equivalente,categoria processos
+/coluna/262/canibalizacao-de-hardware-o-risco-oculto-no-itad-corporativo,/descarte-de-ativos-de-ti-desmobilizados/,equivalente,landing equivalente
+/coluna/263/gestao-tecnica-de-residuos-eletronicos-em-servicos-de-saude,/descarte-de-equipamentos-hospitalares/,equivalente,landing equivalente
+/coluna/264/logistica-reversa-de-baterias-de-litio-desafios-2025,/blog/descarte-de-baterias-de-litio-riscos-normas-e-destinacao-segura/,equivalente,tema já coberto
+/coluna/269/feliz-natal-2025-gratidao-na-estrada-com-a-ecobraz,/noticias-esg/,regra,sazonal
+/coluna/272/caminhao-na-rua-ecobraz-inicia-a-operacao-2026,/noticias-esg/,regra,sazonal
+/coluna/273/o-peso-invisivel-de-cada-clique,/noticias-esg/,regra,sem equivalente direto
+/coluna/276/o-que-volta-na-mala-o-lixo-eletronico-invisivel-do-verao,/noticias-esg/,regra,sazonal
+/coluna/277/auditorias-do-sinir-em-2026-o-rigor-no-compliance-de-reee,/documentacao-e-rastreabilidade/,equivalente,tema já coberto
+/coluna/278/nbr-16156-o-rigor-tecnico-na-manufatura-reversa-de-eletronicos-em-2026,/blog/reciclagem-de-eletronicos-no-brasil-panorama-atual-desafios-e-oportunidades-para-empresas/,equivalente,categoria normas
+/coluna/279/second-life-o-renascimento-das-baterias-de-litio-na-matriz-energetica-de-2026,/blog/descarte-de-baterias-de-litio-riscos-normas-e-destinacao-segura/,equivalente,tema já coberto
+/coluna/280/o-desafio-do-ocaso-solar-logistica-reversa-de-paineis-fotovoltaicos-em-2026,/materiais-e-equipamentos-coletados/,equivalente,hub de materiais
+/coluna/281/descomissionamento-de-data-centers-o-desafio-invisivel-da-revolucao-de-ia-em-2026,/desmobilizacao-de-data-center/,equivalente,landing equivalente
+/coluna/282/nbr-10004-o-dna-do-residuo-e-a-seguranca-juridica-em-2026,/blog/tabela-de-classificacao-de-residuos-eletronicos-abntconama-consulta-rapida/,equivalente,tema já coberto
+/coluna/283/o-fim-do-greenwashing-auditorias-de-residuos-e-o-rigor-esg-em-2026,/blog/o-papel-da-logistica-reversa-na-certificacao-iso-14001-das-empresas/,equivalente,categoria compliance
+/coluna/284/lei-de-crimes-ambientais-a-responsabilidade-do-gestor-em-2026,/blog/licenciamento-ambiental-para-recicladores-de-eletronicos-o-que-verificar-antes-de-contratar/,equivalente,categoria compliance
+/coluna/286/logistica-de-risco-o-rigor-do-transporte-de-residuos-perigosos-em-2026,/blog/normas-da-antt-e-abnt-para-transporte-de-baterias-de-litio/,equivalente,tema já coberto
+/coluna/35/ecobraz-busca-aliados-para-expansao-sustentavel,/noticias-esg/,regra,institucional antigo
+/coluna/58/guia-completo-para-o-descarte-correto-de-maquinas-de-lavar,/descarte-de-maquina-de-lavar/,equivalente,material equivalente
+/coluna/77/descarte-de-e-lixo-o-que-a-lei-brasileira-exige,/blog/empresas-obrigadas-a-fazer-logistica-reversa-lista-completa/,equivalente,categoria compliance
+/coluna/82/como-descartar-lixo-eletronico-corretamente-na-empresa,/coleta-de-lixo-eletronico-para-empresas/,equivalente,landing comercial
+/coluna/83/onde-descartar-lixo-eletronico-da-empresa-com-seguranca,/coleta-de-lixo-eletronico-para-empresas/,equivalente,landing comercial
+/coluna/84/o-que-e-permitido-descartar-como-lixo-eletronico-na-empresa,/blog/o-que-e-considerado-lixo-eletronico-exemplos-e-destinos-corretos-com-a-ecobraz/,equivalente,tema já coberto
+/coluna/91/como-descartar-monitores-e-telas-de-forma-correta,/descarte-de-televisao/,equivalente,material equivalente
+/downloads,/evidencias/,equivalente,seção documental
+/downloads/24/qualificacao-como-oscip-ministerio-da-justica-e-seguranca-publica,/evidencias/,equivalente,ATENÇÃO: possível documento do P0-06 (OSCIP) pendente
