@@ -113,6 +113,17 @@
         try {
             const response = await fetch(endpoint, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
             if (!response.ok) throw new Error('submission_failed');
+            // Conversões otimizadas (Google Ads), autorizado pelo Marcio em 15/07/2026
+            // (opção A): entrega e-mail/telefone à tag do Google, que aplica hash antes
+            // de qualquer envio; o Modo de Consentimento v2 governa o uso conforme a
+            // escolha registrada no banner de cookies (UE: só com aceite explícito).
+            if (typeof window.gtag === 'function' && payload.email) {
+                var phoneDigits = String(payload.phone || '').replace(/\D/g, '');
+                if (phoneDigits.length === 10 || phoneDigits.length === 11) phoneDigits = '55' + phoneDigits;
+                var userData = {email: String(payload.email).trim().toLowerCase()};
+                if (phoneDigits.length === 12 || phoneDigits.length === 13) userData.phone_number = '+' + phoneDigits;
+                window.gtag('set', 'user_data', userData);
+            }
             // Conversão principal: só dispara quando o CRM confirmou o recebimento do lead.
             track('generate_lead', {
                 method: 'formulario_site',
