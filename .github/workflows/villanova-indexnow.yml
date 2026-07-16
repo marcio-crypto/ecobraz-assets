@@ -1,0 +1,15 @@
+name: Villanova ESG — enviar sitemap ao IndexNow
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  enviar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validar a chave na raiz e enviar as URLs do sitemap
+        run: node site-villanova/scripts/submit-indexnow.mjs
