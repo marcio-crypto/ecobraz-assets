@@ -193,3 +193,17 @@ nav.main a:hover{color:#fff}
   .steps{gap:28px}
   .brand-tag{display:none}
 }
+
+/* ---------- seletor de idioma + banner de consentimento ---------- */
+.top-right{display:flex;align-items:center;gap:16px}
+.lang-switch{color:#C9D4E4;text-decoration:none;font-size:12.5px;letter-spacing:.08em;border:1px solid #2C4162;padding:6px 10px}
+.lang-switch:hover{border-color:#C9A24B;color:#fff}
+.vn-consent{position:fixed;left:16px;right:16px;bottom:16px;z-index:999;background:#0B1F3A;color:#C9D4E4;border:1px solid rgba(201,162,75,.5);padding:18px 22px;display:flex;gap:22px;align-items:center;justify-content:space-between;flex-wrap:wrap;box-shadow:0 18px 44px rgba(4,12,24,.45);max-width:1108px;margin:0 auto}
+.vn-consent p{font-size:13px;max-width:66ch;margin:0}
+.vn-consent a{color:#D9C289}
+.vn-consent-actions{display:flex;gap:12px}
+.vn-consent button{font-family:inherit;font-size:13px;letter-spacing:.04em;padding:11px 20px;cursor:pointer;border:1px solid transparent}
+.vn-consent .vn-ok{background:#fff;color:#0B1F3A;font-weight:600}
+.vn-consent .vn-ok:hover{outline:1px solid #C9A24B;outline-offset:2px}
+.vn-consent .vn-no{background:transparent;color:#C9D4E4;border-color:#4A628A}
+.vn-consent .vn-no:hover{border-color:#fff;color:#fff}

@@ -1,0 +1,30 @@
+name: Villanova ESG — publicar página avulsa
+
+on:
+  workflow_dispatch:
+    inputs:
+      arquivo:
+        description: 'Caminho do JSON da página (ex.: site-villanova/content/pt-hub-page.json)'
+        required: true
+        type: string
+      status:
+        description: 'draft (pré-visualização) ou published (no ar)'
+        type: choice
+        options:
+          - draft
+          - published
+        default: draft
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Criar/atualizar a página no Ghost
+        env:
+          VILLANOVA_GHOST_ADMIN_URL: ${{ secrets.VILLANOVA_GHOST_ADMIN_URL }}
+          VILLANOVA_GHOST_ADMIN_API_KEY: ${{ secrets.VILLANOVA_GHOST_ADMIN_API_KEY }}
+        run: node site-villanova/scripts/sync-pagina.mjs "${{ inputs.arquivo }}" "${{ inputs.status }}"
