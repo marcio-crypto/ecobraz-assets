@@ -16,8 +16,8 @@ jobs:
         run: node migracao-informa/scripts/inventario.mjs
       - name: Publica o inventário no repositório
         run: |
-          git config user.name "ecobraz-bot"
-          git config user.email "ti@ecobraz.org"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add migracao-informa/inventario.json
           git diff --cached --quiet && echo "Sem mudanças." && exit 0
           git commit -m "Inventário ecobrazinforma (varredura automatizada)"
