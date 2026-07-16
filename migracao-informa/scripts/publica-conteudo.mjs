@@ -44,6 +44,25 @@ console.log(`migrated-posts.json: ${posts.length} posts`);
 
 // Páginas de autor: estrutura factual mínima; as bios entram quando o Marcio
 // enviar (nunca inventar credenciais).
+// Publicações técnicas com DOI (Zenodo, 2026-07-16) — apenas do Marcio Villanova.
+const doisVillanova = [
+  ['10.5281/zenodo.21397950', 'Ativos Eletroeletrônicos Pós-Uso como Risco Corporativo: Governança Ambiental, Patrimonial e Informacional'],
+  ['10.5281/zenodo.21398130', 'A Baixa Patrimonial Não Encerra o Risco: Responsabilidades e Evidências no Descomissionamento de Ativos de TI'],
+  ['10.5281/zenodo.21398306', 'Risco Residual de Dados em Equipamentos Desativados: Governança de Mídias, Sanitização e Prestação de Contas'],
+  ['10.5281/zenodo.21398390', 'Cadeia de Custódia de Resíduos Eletroeletrônicos: Integridade, Continuidade e Rastreabilidade da Evidência'],
+  ['10.5281/zenodo.21398750', 'Da Coleta à Destinação: O que Cada Etapa Pode Sustentar - e o que Não Sustenta'],
+  ['10.5281/zenodo.21398814', 'Evidência de Destinação Ambiental: Alcance e Limites de Documentos, Registros e Certificados Isolados'],
+  ['10.5281/zenodo.21398879', 'Qualificação de Prestadores de Logística Reversa: Due Diligence Baseada em Risco para Compras, Compliance e Auditoria'],
+  ['10.5281/zenodo.21398926', 'Logística Reversa Multissite: Controles para Operações Corporativas Distribuídas'],
+  ['10.5281/zenodo.21398989', 'Não Conformidades na Destinação de Eletroeletrônicos: Uma Taxonomia para Auditoria e Controle Corporativo'],
+  ['10.5281/zenodo.21399040', 'Indicadores sem Evidência: Limites de Peso, Volume e Percentuais de Reciclagem na Prestação de Contas Corporativa'],
+];
+const secaoPublicacoes =
+  `<h2>Publicações técnicas com DOI</h2>` +
+  `<p>Marcio Villanova é autor de relatórios técnicos sobre governança, evidência e destinação de ativos eletroeletrônicos pós-uso, publicados no repositório aberto Zenodo com identificador permanente (DOI):</p>` +
+  `<ul>` + doisVillanova.map(([doi, titulo]) => `<li><em>${titulo}</em> — <a href="https://doi.org/${doi}" rel="noopener">doi.org/${doi}</a></li>`).join('') + `</ul>` +
+  `<p><a href="https://ecobraz.org/publicacoes/">Veja os resumos na página de publicações técnicas →</a></p>`;
+const extras = {'autor-marcio-villanova': secaoPublicacoes};
 const autores = [
   ['autor-sergio-diniz', 'Sergio Diniz'],
   ['autor-marcelo-aragao', 'Marcelo de Oliveira Lopes Aragão'],
@@ -54,7 +73,7 @@ const autores = [
   slug,
   title: nome,
   custom_excerpt: `Colunista do acervo editorial da Ecobraz Emigre (Ecobraz Informa).`,
-  html: `<p><strong>${nome}</strong> assina colunas e análises no acervo editorial da Ecobraz Emigre, publicado originalmente no Ecobraz Informa e hoje reunido nas <a href="https://ecobraz.org/noticias-esg/">Notícias ESG</a> e no <a href="https://ecobraz.org/museu/">Museu Virtual do Eletrônico</a>.</p><p>Os textos tratam de logística reversa, compliance ambiental, economia circular e descarte responsável de eletrônicos — sempre com foco em operação real e documentação auditável.</p>`,
+  html: `<p><strong>${nome}</strong> assina colunas e análises no acervo editorial da Ecobraz Emigre, publicado originalmente no Ecobraz Informa e hoje reunido nas <a href="https://ecobraz.org/noticias-esg/">Notícias ESG</a> e no <a href="https://ecobraz.org/museu/">Museu Virtual do Eletrônico</a>.</p><p>Os textos tratam de logística reversa, compliance ambiental, economia circular e descarte responsável de eletrônicos — sempre com foco em operação real e documentação auditável.</p>${extras[slug] || ''}`,
   meta_title: `${nome} — Colunista | Ecobraz`,
   meta_description: `Colunas e análises de ${nome} no acervo editorial da Ecobraz Emigre: ESG, logística reversa e descarte responsável de eletrônicos.`.slice(0, 155),
 }));
