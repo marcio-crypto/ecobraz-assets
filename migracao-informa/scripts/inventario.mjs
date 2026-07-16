@@ -47,6 +47,25 @@ for (const [original, timestamp] of rows) {
 }
 console.log(`Caminhos únicos de página: ${byPath.size}`);
 
+// 1b. Sitemaps arquivados do CMS (sitemap.php etc.) ampliam a cobertura: as
+// URLs listadas neles entram no inventário mesmo sem snapshot próprio.
+const fromSitemaps = new Set();
+for (const [path, {original, timestamp}] of [...byPath.entries()]) {
+  if (!/sitemap/i.test(path)) continue;
+  const xml = await fetchText(`https://web.archive.org/web/${timestamp}id_/${original}`);
+  if (!xml) continue;
+  const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1].trim());
+  for (const loc of locs) {
+    try {
+      const url = new URL(loc);
+      if (!url.hostname.endsWith(HOST)) continue;
+      const clean = url.pathname.replace(/\/+$/, '') || '/';
+      if (!byPath.has(clean)) { byPath.set(clean, {original: loc, timestamp: null}); fromSitemaps.add(clean); }
+    } catch {}
+  }
+  console.log(`Sitemap arquivado ${path}: ${locs.length} URLs (${fromSitemaps.size} novas até aqui).`);
+}
+
 const meta = (html, name) => {
   const re = new RegExp(`<meta[^>]+(?:property|name)=["']${name}["'][^>]+content=["']([^"']*)["']`, 'i');
   const alt = new RegExp(`<meta[^>]+content=["']([^"']*)["'][^>]+(?:property|name)=["']${name}["']`, 'i');
@@ -55,7 +74,8 @@ const meta = (html, name) => {
 const tag = (html, re) => (html.match(re)?.[1] || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 
 // 2. Metadados das páginas de conteúdo (snapshot bruto, sem o banner do archive)
-const contentPaths = [...byPath.entries()].filter(([path]) => {
+const contentPaths = [...byPath.entries()].filter(([path, snap]) => {
+  if (!snap.timestamp) return false; // veio do sitemap, não tem snapshot próprio
   const section = path.split('/')[1] || '';
   return CONTENT_SECTIONS.includes(section) || path === '/' || ['/colunas', '/noticias', '/contato'].includes(path);
 });
