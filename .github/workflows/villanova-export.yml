@@ -1,0 +1,26 @@
+name: Villanova ESG — exportar conteúdo do Ghost
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Exportar páginas e posts do Ghost
+        env:
+          VILLANOVA_GHOST_ADMIN_URL: ${{ secrets.VILLANOVA_GHOST_ADMIN_URL }}
+          VILLANOVA_GHOST_ADMIN_API_KEY: ${{ secrets.VILLANOVA_GHOST_ADMIN_API_KEY }}
+        run: node site-villanova/scripts/export-conteudo.mjs
+      - name: Publicar exportação no branch villanova-export
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -B villanova-export
+          git add -f site-villanova/export/
+          git commit -m "Exportação de conteúdo do Ghost (villanovaesg.com)"
+          git push -f origin villanova-export
