@@ -1,0 +1,35 @@
+name: Relatório do sitemap ao vivo
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Site a inspecionar'
+        type: string
+        default: 'https://ecobraz.org'
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar sitemap e contar páginas
+        run: |
+          BASE="${{ inputs.base_url }}"
+          echo "== Índice: $BASE/sitemap.xml =="
+          curl -sSf "$BASE/sitemap.xml" -o index.xml
+          grep -o '<loc>[^<]*</loc>' index.xml | sed 's/<[^>]*>//g' > children.txt
+          cat children.txt
+          TOTAL=0
+          echo
+          while read -r child; do
+            curl -sSf "$child" -o child.xml
+            COUNT=$(grep -o '<loc>[^<]*</loc>' child.xml | grep -vc '\.\(png\|jpg\|jpeg\|webp\|gif\|svg\)$' || true)
+            TOTAL=$((TOTAL + COUNT))
+            echo "== $child: $COUNT URLs =="
+            grep -o '<loc>[^<]*</loc>' child.xml | sed 's/<[^>]*>//g' | grep -v '\.\(png\|jpg\|jpeg\|webp\|gif\|svg\)$' || true
+            echo
+          done < children.txt
+          echo "TOTAL DE URLS NO SITEMAP: $TOTAL"
