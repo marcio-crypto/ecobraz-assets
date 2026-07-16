@@ -34,12 +34,36 @@ console.log(`Alvos: ${all.length} páginas`);
 await fs.mkdir('migracao-informa/conteudo', {recursive: true});
 const results = [];
 for (const path of all) {
+  const slug = path.replace(/^\//, '').replace(/\//g, '-').slice(0, 80);
+  const already = await fs.access(`migracao-informa/conteudo/${slug}.json`).then(() => true, () => false);
+  if (already) { results.push({path, status: 'ok', fonte: 'existente'}); continue; }
+
   // Lista TODOS os snapshots 200 dessa URL (qualquer época), pega o mais recente
   const cdx = await fetchText(`https://web.archive.org/cdx/search/cdx?url=${encodeURIComponent(HOST + path)}&output=json&filter=statuscode:200&limit=100`);
   let snaps = [];
   try { snaps = JSON.parse(cdx || '[]').slice(1); } catch {}
   if (!snaps.length) {
-    console.log(`SEM SNAPSHOT 200: ${path}`);
+    // Plano B: cache AMP do Google (as variações /amp ficam copiadas no CDN da Google)
+    const ampUrl = `https://ecobrazinforma-org.cdn.ampproject.org/c/s/ecobrazinforma.org${path}/amp`;
+    const ampHtml = await fetchText(ampUrl);
+    if (ampHtml && ampHtml.length > 3000) {
+      const clean = ampHtml.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<!--[\s\S]*?-->/g, '');
+      await fs.writeFile(`migracao-informa/conteudo/${slug}.json`, JSON.stringify({path, fonte: 'amp-cache', html: clean}, null, 1));
+      console.log(`OK (cache AMP) ${path} (${(clean.length / 1024).toFixed(0)} KB)`);
+      results.push({path, status: 'ok', fonte: 'amp-cache'});
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+      continue;
+    }
+    // Plano C: leitor público (r.jina.ai devolve o conteúdo em markdown)
+    const jina = await fetchText(`https://r.jina.ai/${HOST}${path}`);
+    if (jina && jina.length > 1500 && !/403 Forbidden|Access denied/i.test(jina.slice(0, 500))) {
+      await fs.writeFile(`migracao-informa/conteudo/${slug}.json`, JSON.stringify({path, fonte: 'jina-reader', markdown: jina}, null, 1));
+      console.log(`OK (leitor) ${path} (${(jina.length / 1024).toFixed(0)} KB)`);
+      results.push({path, status: 'ok', fonte: 'jina-reader'});
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+      continue;
+    }
+    console.log(`SEM SNAPSHOT/CACHE: ${path}`);
     results.push({path, status: 'sem-snapshot'});
     continue;
   }
@@ -53,7 +77,6 @@ for (const path of all) {
       .replace(/<script[\s\S]*?<\/script>/gi, '')
       .replace(/<style[\s\S]*?<\/style>/gi, '')
       .replace(/<!--[\s\S]*?-->/g, '');
-    const slug = path.replace(/^\//, '').replace(/\//g, '-').slice(0, 80);
     await fs.writeFile(`migracao-informa/conteudo/${slug}.json`, JSON.stringify({path, snapshot: timestamp, html: clean}, null, 1));
     console.log(`OK ${path} (snap ${timestamp}, ${(clean.length / 1024).toFixed(0)} KB)`);
     results.push({path, status: 'ok', snapshot: timestamp});
