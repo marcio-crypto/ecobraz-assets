@@ -1,0 +1,39 @@
+{{!< default}}
+
+{{#page}}
+<article class="article page-article">
+  <header class="article-head">
+    <div class="wrap">
+      <div class="eyebrow">Villanova ESG</div>
+      <h1>{{title}}</h1>
+      {{#if custom_excerpt}}<p class="page-excerpt">{{custom_excerpt}}</p>{{/if}}
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div class="article-body">
+      {{content}}
+    </div>
+  </div>
+</article>
+{{/page}}
+
+<section class="listing">
+  <div class="wrap">
+    <div class="eyebrow">Análises em português</div>
+    <div class="post-list">
+      {{#get "posts" filter="tag:hash-pt" limit="20" order="published_at desc"}}
+        {{#foreach posts}}
+        <a class="post-row" href="{{url}}">
+          {{#primary_tag}}<span class="row-tag">{{name}}</span>{{/primary_tag}}
+          <h2>{{title}}</h2>
+          <p>{{excerpt words="28"}}&hellip;</p>
+          <div class="row-meta"><time datetime="{{date format="YYYY-MM-DD"}}">{{date format="D MMM YYYY"}}</time><span class="sep" aria-hidden="true"></span><span>{{reading_time}}</span></div>
+        </a>
+        {{else}}
+        <p>Os primeiros artigos em português estão sendo publicados. Enquanto isso, a <a href="{{@site.url}}/eu-brazil-supplier-evidence-knowledge-base/">base completa em inglês</a> está no ar.</p>
+        {{/foreach}}
+      {{/get}}
+    </div>
+  </div>
+</section>

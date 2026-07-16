@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{meta_title}}</title>
     <link rel="stylesheet" href="{{asset "css/main.css"}}">
+    <link rel="stylesheet" href="{{asset "css/lang.css"}}">
     <link rel="icon" type="image/png" href="{{asset "favicon.png"}}">
     <link rel="apple-touch-icon" href="{{asset "apple-touch-icon.png"}}">
     <script>
@@ -33,6 +34,17 @@
     {{> footer}}
 
     <script src="{{asset "js/consent.js"}}" defer></script>
+    <script>
+      /* A chave de idioma aponta para a página irmã declarada no hreflang. */
+      (function () {
+        var pt = document.querySelector('link[rel="alternate"][hreflang="pt-BR"]');
+        var en = document.querySelector('link[rel="alternate"][hreflang="en"]');
+        var aPt = document.getElementById('lang-to-pt');
+        var aEn = document.getElementById('lang-to-en');
+        if (aPt && pt) aPt.href = pt.href;
+        if (aEn && en) aEn.href = en.href;
+      })();
+    </script>
     {{ghost_foot}}
 </body>
 </html>

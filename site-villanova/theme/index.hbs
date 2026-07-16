@@ -3,7 +3,7 @@
 <section class="listing-head">
   <div class="wrap">
     <div class="eyebrow">
-      {{#if tag}}Topic{{else}}{{#if author}}Author{{else}}Analysis{{/if}}{{/if}}
+      <span class="only-en">{{#if tag}}Topic{{else}}{{#if author}}Author{{else}}Analysis{{/if}}</span><span class="only-pt">{{#if tag}}Tema{{else}}{{#if author}}Autor{{else}}Análises{{/if}}</span>
     </div>
     <h1>
       {{#if tag}}{{tag.name}}{{else}}{{#if author}}{{author.name}}{{else}}Knowledge &amp; analysis{{/if}}{{/if}}
