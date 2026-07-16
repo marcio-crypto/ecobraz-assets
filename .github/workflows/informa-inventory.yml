@@ -12,12 +12,7 @@ jobs:
     timeout-minutes: 55
     steps:
       - uses: actions/checkout@v4
-      - name: Instala o Playwright e o Chromium
-        run: |
-          npm init -y >/dev/null
-          npm install --no-audit --no-fund playwright >/dev/null
-          npx playwright install --with-deps chromium
-      - name: Varre o ecobrazinforma.org
+      - name: Inventaria o ecobrazinforma.org via Wayback Machine
         run: node migracao-informa/scripts/inventario.mjs
       - name: Publica o inventário no repositório
         run: |
