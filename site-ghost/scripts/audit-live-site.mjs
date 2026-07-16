@@ -79,6 +79,7 @@ for (const route of routes) {
       const gtagResponse = await fetch(`https://www.googletagmanager.com/gtag/js?id=${gtagMatch[1]}`);
       if (!gtagResponse.ok) errors.push(`/: GA4 measurement ID ${gtagMatch[1]} appears invalid (gtag.js returned ${gtagResponse.status}) — no data reaches Google Analytics`);
     }
+    if (!html.includes('clarity.ms/tag/"+i') && !html.includes('clarity.ms/tag/')) errors.push('/: Microsoft Clarity (mapa de calor) não está instalado');
     const hrefs = [...html.matchAll(/<a\s[^>]*href=["']([^"'#]+)["']/gi)].map((m) => m[1]);
     const internal = [...new Set(hrefs
       .filter((href) => href.startsWith(baseUrl) || (href.startsWith('/') && !href.startsWith('//')))
