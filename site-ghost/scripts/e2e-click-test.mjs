@@ -59,7 +59,7 @@ await check('todos os links internos da home abrem com H1', async () => {
   const internal = [...new Set(hrefs
     .filter((h) => h && !h.startsWith('#') && !h.startsWith('mailto:') && !h.startsWith('tel:') && !h.startsWith('javascript:'))
     .map((h) => { try { const u = new URL(h, `${base}/`); return u.hostname === baseHost ? u.pathname : null; } catch { return null; } })
-    .filter((h) => h && h.startsWith('/')))];
+    .filter((h) => h && h.startsWith('/') && !h.startsWith('/cdn-cgi/')))];
   const broken = [];
   for (const path of internal) {
     const response = await page.goto(`${base}${path}`, {waitUntil: 'domcontentloaded', timeout: 30000});
