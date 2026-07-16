@@ -13,6 +13,7 @@ for (const line of csv.trim().split('\n').slice(1)) {
 }
 
 const normaliza = (html) => html
+  .replace(/href="http:\/\//gi, 'href="https://')
   .replace(/href="https:\/\/ecobraz\.org\/agendamento"/gi, 'href="https://ecobraz.org/agendamento/"')
   .replace(/href="https?:\/\/museu\.ecobraz\.net\/?"/gi, 'href="https://ecobraz.org/museu/"')
   .replace(/href="https:\/\/ecobraz\.org\/ecobraz_carbon"/gi, 'href="https://ecobraz.org/"');
