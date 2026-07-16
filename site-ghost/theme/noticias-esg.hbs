@@ -1,0 +1,23 @@
+{{!< default}}
+
+{{#contentFor "head"}}
+{{#unless pagination.prev}}
+<meta name="description" content="Notícias e colunas ESG da Ecobraz: logística reversa, compliance ambiental, economia circular e os bastidores do descarte responsável de eletrônicos no Brasil.">
+<meta property="og:description" content="Notícias e colunas ESG da Ecobraz: logística reversa, compliance ambiental e economia circular.">
+{{/unless}}
+{{#if pagination.prev}}
+<meta property="og:title" content="{{meta_title}}">
+<meta property="og:type" content="website">
+<meta name="twitter:title" content="{{meta_title}}">
+<meta name="description" content="Notícias e colunas ESG da Ecobraz: logística reversa, compliance ambiental e economia circular.">
+{{/if}}
+<meta property="og:image" content="{{asset "images/og-ecobraz.png"}}">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"CollectionPage","name":"Notícias ESG","url":"{{@site.url}}/noticias-esg/","description":"Seção de notícias e colunas ESG da Ecobraz Emigre, herdeira do acervo editorial do Ecobraz Informa.","publisher":{"@type":"NGO","name":"Ecobraz Emigre","url":"{{@site.url}}"}}
+</script>
+{{/contentFor}}
+
+<header class="archive-header"><div class="container"><span class="eyebrow">Notícias ESG</span><h1>ESG na prática: notícias e análises</h1><p>O acervo editorial da Ecobraz — antes publicado no Ecobraz Informa — sobre logística reversa, compliance ambiental, economia circular e o impacto real do descarte responsável.</p></div></header>
+<section class="section"><div class="container post-grid">{{#foreach posts}}{{> "post-card"}}{{/foreach}}</div><div class="container pagination-wrap">{{pagination}}</div></section>
+<section class="section"><div class="container"><aside class="article-cta"><div><strong>Sua empresa precisa de destino documentado para eletrônicos?</strong><p>Envie os dados básicos e receba a avaliação da coleta.</p></div><a class="button" href="{{@site.url}}/agendamento/?origem=noticias-esg">Agendar coleta</a></aside></div></section>
