@@ -119,6 +119,8 @@ jobs:
         run: node site-ghost/scripts/audit-live-redirects.mjs https://ecobraz.org site-ghost/theme/redirects.yaml 250
       - name: Audit live site (pages, links, SEO wiring)
         run: node site-ghost/scripts/audit-live-site.mjs https://ecobraz.org
+      - name: Notifica o Bing via IndexNow (URLs do sitemap)
+        run: node site-ghost/scripts/submit-indexnow.mjs https://ecobraz.org
       - name: Test Ploomes/E-goi integrations with a labelled lead
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.test_integrations }}
         run: node site-ghost/scripts/test-collection-endpoint.mjs https://ecobraz-coletas.ti-0ab.workers.dev https://ecobraz.org
