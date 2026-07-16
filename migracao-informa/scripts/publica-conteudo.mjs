@@ -61,7 +61,8 @@ const secaoPublicacoes =
   `<h2>Publicações técnicas com DOI</h2>` +
   `<p>Marcio Villanova é autor de relatórios técnicos sobre governança, evidência e destinação de ativos eletroeletrônicos pós-uso, publicados no repositório aberto Zenodo com identificador permanente (DOI):</p>` +
   `<ul>` + doisVillanova.map(([doi, titulo]) => `<li><em>${titulo}</em> — <a href="https://doi.org/${doi}" rel="noopener">doi.org/${doi}</a></li>`).join('') + `</ul>` +
-  `<p><a href="https://ecobraz.org/publicacoes/">Veja os resumos na página de publicações técnicas →</a></p>`;
+  `<p><a href="https://ecobraz.org/publicacoes/">Veja os resumos na página de publicações técnicas →</a></p>` +
+  `<p>Perfil do autor no ORCID: <a href="https://orcid.org/0009-0001-8072-6287" rel="noopener">orcid.org/0009-0001-8072-6287</a>.</p>`;
 const extras = {'autor-marcio-villanova': secaoPublicacoes};
 const autores = [
   ['autor-sergio-diniz', 'Sergio Diniz'],
