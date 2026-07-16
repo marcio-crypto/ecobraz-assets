@@ -7,6 +7,19 @@
     <link rel="stylesheet" href="{{asset "css/main.css"}}">
     <link rel="icon" type="image/png" href="{{asset "favicon.png"}}">
     <link rel="apple-touch-icon" href="{{asset "apple-touch-icon.png"}}">
+    <script>
+      /* Consent Mode v2: tudo negado por padrão, antes de qualquer tag (GDPR/LGPD) */
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('consent', 'default', {
+        analytics_storage: 'denied',
+        ad_storage: 'denied',
+        ad_user_data: 'denied',
+        ad_personalization: 'denied',
+        wait_for_update: 500
+      });
+    </script>
+    {{{block "hreflang"}}}
     {{ghost_head}}
 </head>
 <body class="{{body_class}}">
@@ -19,6 +32,7 @@
 
     {{> footer}}
 
+    <script src="{{asset "js/consent.js"}}" defer></script>
     {{ghost_foot}}
 </body>
 </html>
