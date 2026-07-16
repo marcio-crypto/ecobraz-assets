@@ -2,6 +2,12 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 const baseUrl = String(process.argv[2] || 'https://ecobraz-emigre.ghost.io').replace(/\/$/, '');
+// Slugs EN registrados (podem ainda não existir ao vivo durante a migração bilíngue).
+let enPendentes = new Set();
+try {
+  const paresIdioma = JSON.parse(await fs.readFile(path.resolve(import.meta.dirname, '..', 'pares-idioma.json'), 'utf8'));
+  enPendentes = new Set((paresIdioma.pages || []).map((par) => par.en).filter(Boolean));
+} catch {}
 const contentDir = path.resolve(import.meta.dirname, '..', 'content');
 const errors = [];
 const warnings = [];
@@ -116,7 +122,15 @@ for (const entry of routes) {
     for (const link of internal) {
       const linkResponse = await fetch(`${baseUrl}${link}`, {redirect: 'follow', headers: {'User-Agent': 'Ecobraz site audit'}});
       checkedLinks += 1;
-      if (!linkResponse.ok) errors.push(`/ -> ${link}: broken internal link (${linkResponse.status})`);
+      if (!linkResponse.ok) {
+        // Páginas EN declaradas em pares-idioma.json podem ainda não estar
+        // publicadas (a tradução é publicada em lote) — pendência, não erro.
+        if (enPendentes.has(link.replace(/\/$/, '').replace(/^\//, ''))) {
+          warnings.push(`/ -> ${link}: página EN ainda não publicada (pendente do lote de tradução)`);
+        } else {
+          errors.push(`/ -> ${link}: broken internal link (${linkResponse.status})`);
+        }
+      }
     }
   }
 
