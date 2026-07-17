@@ -1,0 +1,21 @@
+{{!< default}}
+
+{{#page}}
+<article class="article page-article">
+  <header class="article-head">
+    <div class="wrap">
+      <div class="eyebrow">Villanova ESG</div>
+      <h1>{{title}}</h1>
+      {{#if custom_excerpt}}<p class="page-excerpt">{{custom_excerpt}}</p>{{/if}}
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div class="article-body">
+      {{content}}
+      {{> form-intake}}
+    </div>
+  </div>
+</article>
+{{/page}}
+<script src="{{asset "js/form-intake.js"}}" defer></script>
