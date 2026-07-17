@@ -1,7 +1,27 @@
 routes:
   /: home
+  /noticias-esg/:
+    controller: channel
+    filter: tag:noticias-esg
+    template: noticias-esg
+  /autor/marcelo-aragao/:
+    data: page.autor-marcelo-aragao
+    template: autor
+  /autor/marcio-villanova/:
+    data: page.autor-marcio-villanova
+    template: autor
+  /autor/ernesto-machado/:
+    data: page.autor-ernesto-machado
+    template: autor
+  /autor/silvana-leite/:
+    data: page.autor-silvana-leite
+    template: autor
 
 collections:
+  /museu/:
+    permalink: /museu/{slug}/
+    filter: tag:museu-do-eletronico
+    template: museu
   /blog/:
     permalink: /blog/{slug}/
     template: index
