@@ -1,0 +1,19 @@
+name: Ecobraz — diagnóstico do sitemap de autor
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Diagnosticar /autor/sergio-diniz/ no sitemap
+        env:
+          BASE_URL: https://ecobraz.org
+          GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
+          GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
+        run: node site-ghost/scripts/diagnose-sitemap-autor.mjs
