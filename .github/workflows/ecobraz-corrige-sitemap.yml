@@ -1,0 +1,19 @@
+name: Ecobraz — corrigir resíduo do sitemap (autor Sérgio)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  corrige:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Remover bio órfã e reconstruir o sitemap
+        env:
+          BASE_URL: https://ecobraz.org
+          GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
+          GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
+        run: node site-ghost/scripts/corrige-sitemap-autor.mjs
