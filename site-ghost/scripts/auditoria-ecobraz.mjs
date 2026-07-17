@@ -41,6 +41,17 @@ context.on('request', (req) => {
 });
 const houveEvento = (nome) => gaHits.some((h) => h.event === nome);
 const zerarGA = () => { gaHits.length = 0; };
+// Espera o beacon do GA4 sair (o gtag envia de forma assíncrona; um waitForTimeout
+// fixo pode fechar a janela antes do POST). Faz polling até `ms` e retorna assim
+// que o evento aparecer — elimina a falha de timing intermitente.
+const esperaEvento = async (pagina, nome, ms = 6000) => {
+  const ate = Date.now() + ms;
+  while (Date.now() < ate) {
+    if (houveEvento(nome)) return true;
+    await pagina.waitForTimeout(200);
+  }
+  return houveEvento(nome);
+};
 
 const jsErrors = [];
 const novaPagina = async () => {
@@ -138,8 +149,7 @@ await ga.goto(`${base}/descarte-de-ativos-de-ti-desmobilizados/`, {waitUntil: 'd
 await ga.waitForTimeout(600);
 await ga.evaluate(() => { document.querySelectorAll('a[href*="wa.me"]').forEach((a) => { a.setAttribute('target', '_self'); a.addEventListener('click', (e) => e.preventDefault(), {once: true}); }); });
 await ga.locator('a[href*="wa.me"]').first().click({timeout: 8000}).catch(() => {});
-await ga.waitForTimeout(1800);
-if (houveEvento('contact_whatsapp')) ok('evento contact_whatsapp registrado no clique do WhatsApp');
+if (await esperaEvento(ga, 'contact_whatsapp')) ok('evento contact_whatsapp registrado no clique do WhatsApp');
 else falha('clique no WhatsApp NÃO registrou contact_whatsapp no analytics');
 
 // Clique no telefone -> contact_phone
@@ -150,8 +160,7 @@ const temTel = await ga.locator('a[href^="tel:"]').count();
 if (temTel) {
   await ga.evaluate(() => { document.querySelectorAll('a[href^="tel:"]').forEach((a) => a.addEventListener('click', (e) => e.preventDefault(), {once: true})); });
   await ga.locator('a[href^="tel:"]').first().click({timeout: 6000}).catch(() => {});
-  await ga.waitForTimeout(1500);
-  if (houveEvento('contact_phone')) ok('evento contact_phone registrado no clique do telefone');
+  if (await esperaEvento(ga, 'contact_phone')) ok('evento contact_phone registrado no clique do telefone');
   else falha('clique no telefone NÃO registrou contact_phone');
 } else notas.push('sem link tel: na home (pulado contact_phone)');
 
@@ -163,8 +172,7 @@ const temMail = await ga.locator('a[href^="mailto:"]').count();
 if (temMail) {
   await ga.evaluate(() => { document.querySelectorAll('a[href^="mailto:"]').forEach((a) => a.addEventListener('click', (e) => e.preventDefault(), {once: true})); });
   await ga.locator('a[href^="mailto:"]').first().click({timeout: 6000}).catch(() => {});
-  await ga.waitForTimeout(1500);
-  if (houveEvento('contact_email')) ok('evento contact_email registrado no clique do e-mail (/en/)');
+  if (await esperaEvento(ga, 'contact_email')) ok('evento contact_email registrado no clique do e-mail (/en/)');
   else falha('clique no e-mail NÃO registrou contact_email');
 } else falha('/en/ não tem link mailto: (CTA de contato ausente)');
 
@@ -174,8 +182,7 @@ await ga.goto(`${base}/agendamento/`, {waitUntil: 'domcontentloaded'});
 await ga.waitForTimeout(900);
 await ga.locator('label.choice:has(input[value="empresa"])').click({timeout: 8000}).catch(() => {});
 await ga.locator('[data-next-step]').first().click({timeout: 6000}).catch(() => {});
-await ga.waitForTimeout(1500);
-if (houveEvento('form_start_coleta')) ok('evento form_start_coleta registrado ao iniciar o formulário');
+if (await esperaEvento(ga, 'form_start_coleta')) ok('evento form_start_coleta registrado ao iniciar o formulário');
 else falha('iniciar o formulário NÃO registrou form_start_coleta');
 
 if (ENVIAR_LEAD) {
@@ -197,8 +204,7 @@ if (ENVIAR_LEAD) {
     await ga.locator('label.consent:has(input[name="service_consent"])').click();
     await ga.locator('button.form-submit').click();
     await ga.locator('.form-done').waitFor({state: 'visible', timeout: 25000});
-    await ga.waitForTimeout(2000);
-    if (houveEvento('generate_lead')) ok('evento generate_lead registrado no envio do formulário');
+    if (await esperaEvento(ga, 'generate_lead')) ok('evento generate_lead registrado no envio do formulário');
     else falha('envio do formulário NÃO registrou generate_lead');
     notas.push(`lead de teste criado: "TESTE AUTOMATIZADO ${stamp}" — excluir no funil INTEGRAÇÃO SITE`);
   } catch (e) { falha(`fluxo de envio do formulário falhou: ${String(e.message).slice(0, 160)}`); }
