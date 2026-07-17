@@ -1,0 +1,217 @@
+{{!< default}}
+{{! Gerado por scripts/build-landing-pages.mjs a partir de landing/landing-pages-en.json — nao edite a mao. }}
+{{#contentFor "head"}}
+<link rel="stylesheet" href="{{asset "css/landing.css"}}">
+{{/contentFor}}
+
+<section class="hx-hero">
+  <div class="container hx-crumbs"><a href="{{@site.url}}/">Home</a> › <a href="{{@site.url}}/corporate-solutions/">Corporate solutions</a> › Damaged and out-of-warranty products</div>
+  <div class="container hx-hero-grid">
+    <div>
+      <span class="hx-label on-dark">Damaged units · Returns · After-sales</span>
+      <h1>Damaged and out-of-warranty product disposal</h1>
+      <p class="hx-sub">Damaged-goods quarantine taking over the DC, rejected product reappearing for sale under your brand, and the tax inspector asking for backing for the write-off? Ecobraz disposes of what cannot return to the market — with recorded de-identification, per-batch inventory and the documentary evidence that supports the stock write-off.</p>
+      <div class="hx-hero-ctas">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=damaged-out-of-warranty-disposal&amp;material=Electronics" data-track="damaged-out-of-warranty-disposal_hero_cta">Request a technical assessment</a>
+        <a class="button hx-btn-outline-dark" href="#como-funciona" data-track="damaged-out-of-warranty-disposal_hero_como">How it works</a>
+      </div>
+      <div class="hx-hero-band">
+        <span><strong>Brand protection</strong>product once disposed of does not come back as a problem</span>
+        <span><strong>Per-batch inventory</strong>every item recorded before it leaves</span>
+        <span><strong>Documentation</strong>de-identification, waste transport manifest (MTR) and disposal certificate (CDF) where applicable</span>
+      </div>
+    </div>
+    <form class="hx-quote" id="avaliacao" method="get" action="{{@site.url}}/agendamento/">
+      <span class="hx-label">Technical assessment</span>
+      <h2>Describe the batch in 1 minute</h2>
+      <p class="hx-hint">The team gets back to you with scope, terms and the applicable documentation.</p>
+      <input type="hidden" name="perfil" value="empresa">
+      <input type="hidden" name="origem" value="damaged-out-of-warranty-disposal">
+      <input type="hidden" name="material" value="Electronics">
+      <div class="hx-field">
+        <label for="lp-desc">What needs disposing of?</label>
+        <input id="lp-desc" name="descricao" placeholder="e.g. 900 items rejected during after-sales screening">
+      </div>
+      <div class="hx-field">
+        <label for="lp-local">Postcode or collection city</label>
+        <input id="lp-local" name="local" placeholder="e.g. 02175-010 or São Paulo">
+      </div>
+      <button class="button" type="submit" data-track="damaged-out-of-warranty-disposal_hero_form">Request a technical assessment →</button>
+      <div class="hx-or-wa">or <a href="{{@custom.whatsapp_url}}" rel="noopener" data-track="damaged-out-of-warranty-disposal_hero_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> talk to the team on WhatsApp</a></div>
+      <p class="hx-micro">Collection is confirmed after assessment of material, volume, location and documentation.</p>
+    </form>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container hx-reco">
+    <div>
+      <span class="hx-label">Does this sound like you?</span>
+      <h2>If your quarantine tells this story, you are in the right place</h2>
+      <p class="hx-reco-cta">Is even one item on this list true for you? Then this page was written for you — <a href="#avaliacao">describe your situation in one minute</a> and get a technical reply, not a sales call.</p>
+    </div>
+    <ul class="hx-reco-list"><li>The damaged-goods and returns area already fills an entire aisle — and no one dares decide its fate</li><li>A product rejected by quality has appeared for sale on a marketplace, with your brand on the box</li><li>The tax audit asked for backing for the stock write-off and the process stalled</li><li>The technical support network is accumulating circuit boards and casings with no defined destination</li><li>Legal vetoed the middleman's 'we'll buy your rejects' — but pointed to no alternative</li></ul>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">What is at stake</span><h2>Rejected product without control is a risk to the brand</h2></div>
+      <p>Three problems that grow in your damaged-goods and returns stock.</p>
+    </div>
+    <div class="hx-sol-grid">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18h.01"/></svg></span><h3>Your brand on sale where it should not exist</h3><p>The item your quality team rejected returns to the market through a parallel channel, fails in the consumer's hands and triggers YOUR warranty — for a product you had already discontinued.</p><span class="hx-cost">Real cost: warranty and support paid twice over, public complaints and the consumer blaming the brand, not the middleman.</span></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><h3>Quarantine is idle capital deteriorating</h3><p>Accumulated damaged stock blocks prime DC space and capital that accounting cannot release — while the batch only loses value and gathers dust.</p><span class="hx-cost">Real cost: square metres with no turnover, a balance sheet carrying dead stock and a decision deferred every quarter.</span></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>A write-off without backing invites disallowance</h3><p>The definitive removal of an item needs a documentary trail: what left, when, to where and with what evidence. Without it, the write-off becomes a fiscal and audit weakness.</p><span class="hx-cost">Real cost: tax queries, accounting rework and the write-off challenged years later.</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">The turning point</span><h2>From endless quarantine to a documented write-off</h2></div>
+      <p>The rejects go out, the evidence comes in — and the brand stays protected.</p>
+    </div>
+    <div class="hx-contrast">
+      <div class="hx-before"><h3>How it is today</h3><ul><li>Damaged-goods aisles growing with every stocktake</li><li>Rejects sold 'by weight' with no control over their destination</li><li>Brand exposed to resurfacing in a parallel channel</li><li>Write-off stalled for lack of documentary backing</li><li>Support centres accumulating circuit boards with no process</li></ul></div>
+      <div class="hx-after"><h3>With Ecobraz</h3><ul><li>Collection by batch, one-off or recurring, with inventory</li><li>Recorded de-identification — the item dies documented</li><li>Custody control through to final disposal</li><li>MTR, CDF and batch report to support the write-off</li><li>Factory, DC and support centres to the same standard</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">What you gain</span><h2>What changes for the brand and for the stock</h2></div>
+      <p>Brand protection and accounting hygiene in a single move.</p>
+    </div>
+    <div class="hx-sol-grid g4">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span><h3>Brand out of the parallel channel</h3><p>The rejected item, disposed of with a record, does not reappear for sale under your name.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><h3>Quarantine cleared</h3><p>The damaged-goods aisle becomes operating space again, not a product graveyard.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>Write-off with backing</h3><p>A complete documentary trail for accounting and audit to sign off without fear.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M1 7h13v10H1zM14 10h4l4 4v3h-8z"/><circle cx="6" cy="19" r="1.6"/><circle cx="18" cy="19" r="1.6"/></svg></span><h3>The whole network to one standard</h3><p>Factory, DCs and support centres with the same process and the same document.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Clear scope</span><h2>What is included — and what is not</h2></div>
+      <p>Scope declared before scheduling reduces rework and surprises. Each batch is assessed technically.</p>
+    </div>
+    <div class="hx-scope">
+      <div class="hx-yes"><h3>In scope</h3><ul><li>Electronic and electrical products rejected during screening or testing</li><li>Returns not fit for resale</li><li>Out-of-warranty and post-repair items</li><li>Batches from technical support and repair centres</li><li>Circuit boards, components and electronic accessories</li></ul><p>Feasibility depends on categories, volume, location and any de-identification requirement. Each batch is assessed before confirmation.</p></div>
+      <div class="hx-not"><h3>Out of scope</h3><ul><li>Loose household batteries</li><li>Toner and cartridges</li><li>Lamps, oil, polystyrene and packaging</li><li>Chemical, biological, radioactive or contaminated waste</li></ul><p>Materials out of scope require specific chains and are not part of this service.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt" id="como-funciona">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Process</span><h2>How it works, from contact to final destination</h2></div>
+      <p>No collection is confirmed without a technical assessment. That is what keeps the operation predictable and documentable.</p>
+    </div>
+    <div class="hx-steps">
+        <div class="hx-step"><h3>Describe the batch</h3><p>Categories, quantity, origin (DC, factory, technical support) and requirements.</p></div>
+        <div class="hx-step"><h3>Technical assessment</h3><p>We analyse materials, logistics and the level of de-identification required.</p></div>
+        <div class="hx-step"><h3>Scope defined</h3><p>Destruction method, responsibilities and agreed documents.</p></div>
+        <div class="hx-step"><h3>Recorded collection</h3><p>Collection with per-batch inventory and chain of custody.</p></div>
+        <div class="hx-step"><h3>Disposal and evidence</h3><p>Recorded de-identification, disposal and batch documentation.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Evidence of the operation</span><h2>The evidence that supports the write-off and protects the brand</h2></div>
+      <p>The documentation reflects what was actually carried out in each batch — no generic promises.</p>
+    </div>
+    <div class="hx-docs">
+        <div class="hx-doc"><h3>Per-batch inventory</h3><p>A list of the items disposed of, recorded at source.</p></div>
+        <div class="hx-doc"><h3>Recorded de-identification</h3><p>Destruction carried out and documented, when contracted.</p></div>
+        <div class="hx-doc"><h3>MTR and CDF</h3><p>Waste transport manifest and disposal certificate, where applicable to the material.</p></div>
+        <div class="hx-doc"><h3>Chain of custody</h3><p>A record of the batch's route through to disposal.</p></div>
+        <div class="hx-doc"><h3>Disposal report</h3><p>Consolidation by batch for stock reconciliation and audit.</p></div>
+        <div class="hx-doc"><h3>Control against return</h3><p>A flow designed so that the disposed item does not reappear on the market.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Why Ecobraz</span><h2>Why Ecobraz and not the rejects buyer</h2></div>
+      <p>Whoever pays for your rejects has to resell them. We exist for the opposite path.</p>
+    </div>
+    <div class="hx-sol-grid g4">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>No conflict of interest</h3><p>A middleman profits by reselling what you want to eliminate. Our process ends in recorded de-identification and disposal.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span><h3>15 years of operation</h3><p>An organisation founded in 2011, recognised on EU and UN platforms — scope declared on the evidence page.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Evidence in every batch</h3><p>Inventory, custody and applicable certificates close out each operation — it is the backing for your write-off.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M1 7h13v10H1zM14 10h4l4 4v3h-8z"/><circle cx="6" cy="19" r="1.6"/><circle cx="18" cy="19" r="1.6"/></svg></span><h3>Scale with a standard</h3><p>From a one-off batch to a recurring after-sales flow, the process and the document are the same.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-authority">
+      <div>
+        <span class="hx-label on-dark">Verifiable authority</span>
+        <strong>Associação Auxílio à Reciclagem de Eletrônicos e Inclusão Digital — company ID (CNPJ) 14.197.457/0001-42</strong>
+        <p>Activity recorded on public platforms of international reference. Every claim on this site has a source, date and scope declared on the evidence page.</p>
+      </div>
+      <a href="{{@site.url}}/public-evidence/" data-track="damaged-out-of-warranty-disposal_evidencias">See public evidence →</a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Frequently asked questions</span><h2>What manufacturers, importers and retailers ask</h2></div>
+    </div>
+    <div class="hx-faq">
+        <details><summary>How do you ensure the product does not return to the market?</summary><p>When de-identification is part of the scope, it is carried out and recorded, and the batch remains in chain of custody through to disposal. It is this documented combination that protects the brand.</p></details>
+        <details><summary>Do you serve factories, DCs and support networks?</summary><p>Yes. Multiple origins are assessed according to volume per point and logistics — the scope can consolidate collections from several locations.</p></details>
+        <details><summary>Is there a minimum volume?</summary><p>We assess anything from one-off batches to recurring after-sales flows. The arrangement depends on categories, location and logistics.</p></details>
+        <details><summary>Can de-identification be total (shredding)?</summary><p>The destruction method is defined in the scope according to the material and the requirement — always with a record of what was carried out.</p></details>
+        <details><summary>How does cost work?</summary><p>Terms depend on categories, volume, location and level of de-identification. The technical assessment defines the model — with no promise of a free service.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Related solutions</span><h2>Could also be part of your operation</h2></div>
+    </div>
+    <div class="hx-sol-grid">
+        <a class="hx-sol" href="{{@site.url}}/marketplace-ecommerce-reverse-logistics/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M1 7h13v10H1zM14 10h4l4 4v3h-8z"/><circle cx="6" cy="19" r="1.6"/><circle cx="18" cy="19" r="1.6"/></svg></span><h3>Marketplaces and e-commerce</h3><p>Returns and damaged goods at scale, with a schedule per DC.</p><span class="hx-go">View solution →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/circuit-board-component-disposal/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>Circuit boards and components</h3><p>Disposal of circuit boards, components and electronic scrap.</p><span class="hx-go">View solution →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/recurring-collections/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><h3>Recurring collections</h3><p>A continuous collection flow for operations with steady volume.</p><span class="hx-go">View solution →</span></a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-final">
+      <div>
+        <span class="hx-label on-dark">Technical assessment with no obligation</span>
+        <h2>What is it worth to get your brand out of the parallel channel this quarter?</h2>
+        <p>Describe the categories, volume and origin of the batch. The team gets back to you with scope, level of de-identification and the standard of evidence — in writing.</p>
+      </div>
+      <div class="hx-actions">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=damaged-out-of-warranty-disposal&amp;material=Electronics" data-track="damaged-out-of-warranty-disposal_final_cta">Request a technical assessment</a>
+        <a class="button hx-btn-wa" href="{{@custom.whatsapp_url}}" rel="noopener" data-track="damaged-out-of-warranty-disposal_final_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> WhatsApp</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<a class="hx-wa-float" href="{{@custom.whatsapp_url}}" rel="noopener" aria-label="Talk on WhatsApp" data-track="damaged-out-of-warranty-disposal_whatsapp_flutuante"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg><span>Talk on WhatsApp</span></a>

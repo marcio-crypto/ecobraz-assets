@@ -1,0 +1,217 @@
+{{!< default}}
+{{! Gerado por scripts/build-landing-pages.mjs a partir de landing/landing-pages-en.json — nao edite a mao. }}
+{{#contentFor "head"}}
+<link rel="stylesheet" href="{{asset "css/landing.css"}}">
+{{/contentFor}}
+
+<section class="hx-hero">
+  <div class="container hx-crumbs"><a href="{{@site.url}}/">Home</a> › <a href="{{@site.url}}/corporate-solutions/">Corporate solutions</a> › Marketplaces and e-commerce</div>
+  <div class="container hx-hero-grid">
+    <div>
+      <span class="hx-label on-dark">Returns · Damaged goods · Unsellable stock</span>
+      <h1>Reverse logistics for marketplaces and e-commerce</h1>
+      <p class="hx-sub">Returns and damaged goods growing faster than sales, the DC turning into a storeroom and audit teams asking for proof of disposal? Ecobraz builds the reverse flow with a per-DC calendar, documented product destruction and evidence per cycle — the item you disposed of never comes back to haunt your brand.</p>
+      <div class="hx-hero-ctas">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=marketplace-ecommerce-reverse-logistics&amp;material=Electronics" data-track="marketplace-ecommerce-reverse-logistics_hero_cta">Request a technical assessment</a>
+        <a class="button hx-btn-outline-dark" href="#como-funciona" data-track="marketplace-ecommerce-reverse-logistics_hero_como">How it works</a>
+      </div>
+      <div class="hx-hero-band">
+        <span><strong>Scheduled recurrence</strong>calendar per DC and per flow</span>
+        <span><strong>Destination control</strong>documented product destruction and custody</span>
+        <span><strong>Documentation per cycle</strong>inventory, waste manifest and disposal certificate where applicable</span>
+      </div>
+    </div>
+    <form class="hx-quote" id="avaliacao" method="get" action="{{@site.url}}/agendamento/">
+      <span class="hx-label">Technical assessment</span>
+      <h2>Describe the flow in 1 minute</h2>
+      <p class="hx-hint">The team comes back with scope, calendar and applicable documentation.</p>
+      <input type="hidden" name="perfil" value="empresa">
+      <input type="hidden" name="origem" value="marketplace-ecommerce-reverse-logistics">
+      <input type="hidden" name="material" value="Electronics">
+      <div class="hx-field">
+        <label for="lp-desc">What needs disposing of?</label>
+        <input id="lp-desc" name="descricao" placeholder="E.g.: 3 pallets/month of returns at the Cajamar DC">
+      </div>
+      <div class="hx-field">
+        <label for="lp-local">Postcode or collection city</label>
+        <input id="lp-local" name="local" placeholder="e.g. 02175-010 or São Paulo">
+      </div>
+      <button class="button" type="submit" data-track="marketplace-ecommerce-reverse-logistics_hero_form">Request a technical assessment →</button>
+      <div class="hx-or-wa">or <a href="{{@custom.whatsapp_url}}" rel="noopener" data-track="marketplace-ecommerce-reverse-logistics_hero_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> talk to the team on WhatsApp</a></div>
+      <p class="hx-micro">Collection is confirmed after assessment of material, volume, location and documentation.</p>
+    </form>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container hx-reco">
+    <div>
+      <span class="hx-label">Does this sound like you?</span>
+      <h2>The day-to-day of running returns at scale</h2>
+      <p class="hx-reco-cta">Is even one item on this list true for you? Then this page was written for you — <a href="#avaliacao">describe your situation in one minute</a> and get a technical reply, not a sales call.</p>
+    </div>
+    <ul class="hx-reco-list"><li>The damaged-goods quarantine already takes up whole aisles of the DC — and keeps growing with every Black Friday</li><li>A product that should have been destroyed showed up listed on another channel</li><li>The marketplace or the seller asked for evidence of disposal and the answer was an internal spreadsheet</li><li>Each DC handles disposal its own way, and no standard holds up with legal</li><li>The team wastes hours negotiating with the local scrap dealer every cycle</li></ul>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">What is at stake</span><h2>Idle returns are a cost — and a brand risk</h2></div>
+      <p>Three problems grow alongside the volume of returns and damaged goods.</p>
+    </div>
+    <div class="hx-sol-grid">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18h.01"/></svg></span><h3>A 'disposed' product on sale through a parallel channel</h3><p>A rejected item that returns to the market triggers a warranty claim for a product you already wrote off, a dispute with the seller and a public case on social media.</p><span class="hx-cost">Real cost: warranty paid twice, brand exposed and relationships with sellers and manufacturers strained.</span></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><h3>Idle damaged stock is rent thrown away</h3><p>Every pallet position taken up by a return with no destination is space that isn't turning over sellable stock — on the most expensive square metre of the operation.</p><span class="hx-cost">Real cost: capital tied up, DC saturated and warehousing expansion brought forward without need.</span></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>A disposal audit with nothing to back it</h3><p>Contracts with marketplaces, sellers and manufacturers demand proof of end-of-life. An internal spreadsheet doesn't hold up in an audit — a disposal document does.</p><span class="hx-cost">Real cost: contractual non-compliance and the risk of losing the account that sustains the volume.</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">The turning point</span><h2>From chaotic build-up to a flow with proof</h2></div>
+      <p>The reverse operation becomes a predictable routine — with evidence every cycle.</p>
+    </div>
+    <div class="hx-contrast">
+      <div class="hx-before"><h3>How it is today</h3><ul><li>Quarantine growing with no date to be cleared</li><li>Each DC with a different disposal 'workaround'</li><li>No assurance the item does not return to the market</li><li>Proof of disposal: a spreadsheet nobody audits</li><li>Team hours burned with a scrap dealer every cycle</li></ul></div>
+      <div class="hx-after"><h3>With the Ecobraz flow</h3><ul><li>A collection calendar per DC — weekly, fortnightly or monthly</li><li>A single national standard of process and document</li><li>Documented product destruction: the item dies on record</li><li>Inventory, waste manifest and disposal certificate where applicable, per cycle</li><li>One contact, one contract, one report per period</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">What you gain</span><h2>What the operation gains once the flow is running</h2></div>
+      <p>Returns stop being an accumulating liability and become a process with an owner.</p>
+    </div>
+    <div class="hx-sol-grid g4">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><h3>The DC turning over again</h3><p>Pallet positions freed up for stock that sells — not for damaged goods that wait.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span><h3>Brand protected</h3><p>An item disposed of with documented product destruction does not reappear in a parallel channel.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Audit answer ready</h3><p>Seller, marketplace or manufacturer asks for evidence? The cycle report already exists.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M1 7h13v10H1zM14 10h4l4 4v3h-8z"/><circle cx="6" cy="19" r="1.6"/><circle cx="18" cy="19" r="1.6"/></svg></span><h3>A routine without friction</h3><p>A defined calendar, a team that knows the process and documentation arriving on its own.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Clear scope</span><h2>What is included — and what is not</h2></div>
+      <p>Scope declared before scheduling reduces rework and surprises. Each batch is assessed technically.</p>
+    </div>
+    <div class="hx-scope">
+      <div class="hx-yes"><h3>In scope</h3><ul><li>Returned electronics with no condition for resale</li><li>Transport and warehousing damage</li><li>Mobile phones, laptops, accessories and small electronic appliances</li><li>Products with lithium batteries (with their own handling requirements)</li><li>Batches at DCs, stores and fulfilment operations</li></ul><p>Viability depends on categories, volume per cycle, DC locations and required documentation. Each flow is assessed before the calendar is defined.</p></div>
+      <div class="hx-not"><h3>Out of scope</h3><ul><li>Loose household batteries</li><li>Toner and cartridges</li><li>Lamps, oil, polystyrene and packaging</li><li>Chemical, biological, radioactive or contaminated waste</li></ul><p>Materials out of scope require specific chains and are not part of this service.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt" id="como-funciona">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Process</span><h2>How it works, from contact to final destination</h2></div>
+      <p>No collection is confirmed without a technical assessment. That is what keeps the operation predictable and documentable.</p>
+    </div>
+    <div class="hx-steps">
+        <div class="hx-step"><h3>Describe the flow</h3><p>Categories, average volume per cycle, locations and destination requirements.</p></div>
+        <div class="hx-step"><h3>Technical assessment</h3><p>We analyse materials, per-DC logistics and product destruction requirements.</p></div>
+        <div class="hx-step"><h3>Scope and calendar</h3><p>We define collection cycles, responsibilities and documents per batch.</p></div>
+        <div class="hx-step"><h3>Documented collection</h3><p>Scheduled collection with batch inventory and chain of custody.</p></div>
+        <div class="hx-step"><h3>Disposal and proof</h3><p>Product destruction where contracted, disposal and documentation per cycle.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Evidence of the operation</span><h2>Proof of disposal per cycle — not by promise</h2></div>
+      <p>The documentation reflects what was actually carried out in each batch — no generic promises.</p>
+    </div>
+    <div class="hx-docs">
+        <div class="hx-doc"><h3>Batch inventory</h3><p>A list of the items collected in each cycle, recorded at source.</p></div>
+        <div class="hx-doc"><h3>Documented product destruction</h3><p>Where contracted, rendering the product unusable is carried out and documented.</p></div>
+        <div class="hx-doc"><h3>Waste manifest and disposal certificate</h3><p>Transport manifest and disposal certificate, where applicable to the material.</p></div>
+        <div class="hx-doc"><h3>Report per cycle</h3><p>Consolidation per period for reconciliation with stock and audit.</p></div>
+        <div class="hx-doc"><h3>Chain of custody</h3><p>A record of each batch's route, from the DC to disposal.</p></div>
+        <div class="hx-doc"><h3>Control against return</h3><p>A flow designed so the disposed item does not reappear on the market.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Why Ecobraz</span><h2>Why Ecobraz for an operation at scale</h2></div>
+      <p>Recurring volume demands a process — not improvisation cycle by cycle.</p>
+    </div>
+    <div class="hx-sol-grid g4">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M1 7h13v10H1zM14 10h4l4 4v3h-8z"/><circle cx="6" cy="19" r="1.6"/><circle cx="18" cy="19" r="1.6"/></svg></span><h3>Built for recurrence</h3><p>Scheduled collection with batch inventory and per-period consolidation — designed for a continuous flow, not for a one-off collection.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span><h3>15 years of operation</h3><p>Association founded in 2011 — recognition on EU and UN platforms, with scope stated on the evidence page.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>A document as standard</h3><p>Each cycle closes with an inventory and applicable certificates. It is the backing for your contract with sellers and marketplaces.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>Controlled end-of-line</h3><p>Documented product destruction and chain of custody — the commitment is that the item does not return to the market.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-authority">
+      <div>
+        <span class="hx-label on-dark">Verifiable authority</span>
+        <strong>Associação Auxílio à Reciclagem de Eletrônicos e Inclusão Digital — company ID (CNPJ) 14.197.457/0001-42</strong>
+        <p>Activity registered on public platforms of international reference. Every claim on the site has a source, date and scope stated on the evidence page.</p>
+      </div>
+      <a href="{{@site.url}}/public-evidence/" data-track="marketplace-ecommerce-reverse-logistics_evidencias">See public evidence →</a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Frequently asked questions</span><h2>What e-commerce operations ask</h2></div>
+    </div>
+    <div class="hx-faq">
+        <details><summary>Do you ensure the product does not return to the market?</summary><p>When product destruction is part of the contracted scope, it is carried out and recorded, and the batch stays in chain of custody through to disposal. The control is documented per batch — that is what supports the answer in an audit.</p></details>
+        <details><summary>Do you serve distribution centres in more than one city?</summary><p>Operations with multiple locations are assessed according to volume per site, logistics and calendar. Describe the DCs involved so we can check coverage.</p></details>
+        <details><summary>Can collection be recurring?</summary><p>Yes. For a continuous flow of returns, the scope defines collection cycles — weekly, fortnightly or monthly — with documentation per cycle.</p></details>
+        <details><summary>Do you take products with lithium batteries?</summary><p>Yes. Batteries and products containing them have their own packaging and transport requirements, defined in the technical assessment.</p></details>
+        <details><summary>How does the cost work?</summary><p>Commercial terms depend on categories, volume per cycle, locations and product destruction requirements. The technical assessment defines the model — with no promise of it being free and no surprises later.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Related solutions</span><h2>Could also be part of your operation</h2></div>
+    </div>
+    <div class="hx-sol-grid">
+        <a class="hx-sol" href="{{@site.url}}/recurring-collections/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M1 7h13v10H1zM14 10h4l4 4v3h-8z"/><circle cx="6" cy="19" r="1.6"/><circle cx="18" cy="19" r="1.6"/></svg></span><h3>Recurring collections</h3><p>A continuous collection calendar for operations with a constant flow.</p><span class="hx-go">View solution →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/damaged-out-of-warranty-disposal/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><h3>Damaged and out-of-warranty products</h3><p>Damaged goods, returns and after-sales for manufacturers and retail.</p><span class="hx-go">View solution →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/battery-ups-disposal/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18h.01"/></svg></span><h3>Batteries and UPS units</h3><p>Collection of lithium and other chemistry batteries, with their own requirements.</p><span class="hx-go">View solution →</span></a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-final">
+      <div>
+        <span class="hx-label on-dark">Technical assessment with no obligation</span>
+        <h2>How many pallets of returns are paying rent in your DC right now?</h2>
+        <p>Describe categories, volume per cycle and locations. The team designs the calendar and comes back with scope and terms — in writing.</p>
+      </div>
+      <div class="hx-actions">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=marketplace-ecommerce-reverse-logistics&amp;material=Electronics" data-track="marketplace-ecommerce-reverse-logistics_final_cta">Request a technical assessment</a>
+        <a class="button hx-btn-wa" href="{{@custom.whatsapp_url}}" rel="noopener" data-track="marketplace-ecommerce-reverse-logistics_final_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> WhatsApp</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<a class="hx-wa-float" href="{{@custom.whatsapp_url}}" rel="noopener" aria-label="Talk on WhatsApp" data-track="marketplace-ecommerce-reverse-logistics_whatsapp_flutuante"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg><span>Talk on WhatsApp</span></a>

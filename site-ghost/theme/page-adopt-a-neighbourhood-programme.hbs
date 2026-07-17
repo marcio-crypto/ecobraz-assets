@@ -1,0 +1,217 @@
+{{!< default}}
+{{! Gerado por scripts/build-landing-pages.mjs a partir de landing/landing-pages-en.json — nao edite a mao. }}
+{{#contentFor "head"}}
+<link rel="stylesheet" href="{{asset "css/landing.css"}}">
+{{/contentFor}}
+
+<section class="hx-hero">
+  <div class="container hx-crumbs"><a href="{{@site.url}}/">Home</a> › <a href="{{@site.url}}/about/">About Ecobraz</a> › Adopt a Neighbourhood Programme</div>
+  <div class="container hx-hero-grid">
+    <div>
+      <span class="hx-label on-dark">Sponsors · Municipalities · Institutions</span>
+      <h1>Adopt a Neighbourhood Programme: sponsor impact with public record</h1>
+      <p class="hx-sub">Adopt a Neighbourhood brings electronic waste collection and digital inclusion to a defined territory — with the sponsor's brand tied to real, documented delivery rather than a generic seal. The programme is listed as good practice on the European Union's circular economy platform.</p>
+      <div class="hx-hero-ctas">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=adopt-a-neighbourhood-programme" data-track="adopt-a-neighbourhood-programme_hero_cta">Discuss a partnership</a>
+        <a class="button hx-btn-outline-dark" href="#como-funciona" data-track="adopt-a-neighbourhood-programme_hero_como">How it works</a>
+      </div>
+      <div class="hx-hero-band">
+        <span><strong>Defined territory</strong>one neighbourhood, visible targets and delivery</span>
+        <span><strong>Documented delivery</strong>reports on what was collected and carried out</span>
+        <span><strong>Public record in the EU</strong>good practice listed, with declared scope</span>
+      </div>
+    </div>
+    <form class="hx-quote" id="avaliacao" method="get" action="{{@site.url}}/agendamento/">
+      <span class="hx-label">Technical assessment</span>
+      <h2>Tell us how you want to take part</h2>
+      <p class="hx-hint">We come back with the adoption design, contributions and next steps.</p>
+      <input type="hidden" name="perfil" value="empresa">
+      <input type="hidden" name="origem" value="adopt-a-neighbourhood-programme">
+      
+      <div class="hx-field">
+        <label for="lp-desc">How would you like to take part?</label>
+        <input id="lp-desc" name="descricao" placeholder="E.g.: sponsor the adoption of a neighbourhood in São Paulo">
+      </div>
+      <div class="hx-field">
+        <label for="lp-local">Postcode or collection city</label>
+        <input id="lp-local" name="local" placeholder="e.g. 02175-010 or São Paulo">
+      </div>
+      <button class="button" type="submit" data-track="adopt-a-neighbourhood-programme_hero_form">I want to support the programme →</button>
+      <div class="hx-or-wa">or <a href="{{@custom.whatsapp_url}}" rel="noopener" data-track="adopt-a-neighbourhood-programme_hero_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> talk to the team on WhatsApp</a></div>
+      <p class="hx-micro">Partnership proposal with no commitment — scope and contributions defined in conversation.</p>
+    </form>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container hx-reco">
+    <div>
+      <span class="hx-label">Does this sound like you?</span>
+      <h2>Who the programme is for</h2>
+      <p class="hx-reco-cta">Is even one item on this list true for you? Then this page was written for you — <a href="#avaliacao">describe your situation in one minute</a> and get a technical reply, not a sales call.</p>
+    </div>
+    <ul class="hx-reco-list"><li>Your company wants ESG with an address: impact you can visit, photograph and audit — not a purchased seal</li><li>The municipality needs a solution for household e-waste without a budget for its own operation</li><li>The brand sponsors causes but is tired of a logo at an event with no measurable delivery</li><li>The educational institution or local collective wants a structured programme to call its own</li><li>The sustainability report needs a concrete case, with figures and a source</li></ul>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">What is at stake</span><h2>The problem with ESG that has no address</h2></div>
+      <p>Why so much branded social initiative no longer convinces anyone.</p>
+    </div>
+    <div class="hx-sol-grid">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18h.01"/></svg></span><h3>A generic seal does not hold up a report</h3><p>Diffuse sponsorship becomes a line in the sustainability report that no auditor can verify — and no stakeholder can feel.</p><span class="hx-cost">Real cost: social funds spent with no usable evidence — and growing scepticism with each cycle.</span></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="3" width="16" height="18"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2M10 21v-3h4v3"/></svg></span><h3>Household e-waste has nowhere to go</h3><p>In neighbourhoods, electronic waste piles up at home or goes into ordinary rubbish — contaminating soil and water with heavy metals. Local collection infrastructure is missing.</p><span class="hx-cost">Real cost (for the territory): silent contamination and a gap that public policy alone cannot close.</span></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>Impact without measurement is a story, not a result</h3><p>Without a defined territory, targets and a record of what was collected and carried out, a social initiative produces no data — it produces a narrative.</p><span class="hx-cost">Real cost: impossible to compare, improve or defend the investment the following year.</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">The turning point</span><h2>Generic sponsorship vs. an adopted neighbourhood</h2></div>
+      <p>The difference between supporting a cause and signing off on a result.</p>
+    </div>
+    <div class="hx-contrast">
+      <div class="hx-before"><h3>Ordinary sponsorship</h3><ul><li>A logo on event material</li><li>Diffuse impact, no territory</li><li>No verifiable report</li><li>No link with the community</li><li>A generic line in the ESG report</li></ul></div>
+      <div class="hx-after"><h3>Adopted neighbourhood</h3><ul><li>A territory bearing the sponsor's name</li><li>E-waste collection and digital inclusion activities on site</li><li>Reports on what was collected and carried out</li><li>Community, schools and collectives involved</li><li>A concrete case, with a public record on the EU platform</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">What you gain</span><h2>What the sponsor takes away</h2></div>
+      <p>Deliverables defined in the adoption design — described by what is carried out.</p>
+    </div>
+    <div class="hx-sol-grid g4">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>An ESG case with data</h3><p>Figures from the adopted territory for reporting and communication — with a source.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span><h3>A verifiable association</h3><p>The brand tied to a programme listed publicly on the EU platform.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="3" width="16" height="18"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2M10 21v-3h4v3"/></svg></span><h3>Presence in the territory</h3><p>Local activities with community and schools — impact you can visit.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Accountability</h3><p>Periodic reports on delivery — transparency that sustains the partnership.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Clear scope</span><h2>What the programme delivers — and what it does not promise</h2></div>
+      <p>Scope declared before scheduling reduces rework and surprises. Each batch is assessed technically.</p>
+    </div>
+    <div class="hx-scope">
+      <div class="hx-yes"><h3>Delivers</h3><ul><li>Electronic waste collection infrastructure in the adopted neighbourhood</li><li>Environmental education and digital inclusion activities in the territory</li><li>Periodic reports on what was collected and carried out</li><li>Involvement of schools, collectives and the local community</li><li>Use of the programme's public listing, with its exact scope</li></ul><p>The design of each adoption — territory, targets, contributions and schedule — is defined with the sponsor or partner before it starts.</p></div>
+      <div class="hx-not"><h3>Does not promise</h3><ul><li>Institutional certification by the European Commission — the listing evidences publication as good practice, not certification</li><li>Credits, seals or offsets with no backing</li><li>Impact figures without a record to support them</li><li>Territorial exclusivity without a formal agreement</li></ul><p>The programme's rule is the same as the whole site's: a claim only with a source, exact scope and a record — that is what protects the sponsor's brand.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt" id="como-funciona">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Process</span><h2>How an adoption happens</h2></div>
+      <p>From first contact to a neighbourhood in operation.</p>
+    </div>
+    <div class="hx-steps">
+        <div class="hx-step"><h3>Initial conversation</h3><p>You tell us the objective — brand, territory of interest, budget and timeframe.</p></div>
+        <div class="hx-step"><h3>Adoption design</h3><p>We define the neighbourhood, targets, activities, contributions and schedule.</p></div>
+        <div class="hx-step"><h3>Formal agreement</h3><p>Scope, responsibilities and brand use documented.</p></div>
+        <div class="hx-step"><h3>Operation in the territory</h3><p>Collection, environmental education and digital inclusion under way.</p></div>
+        <div class="hx-step"><h3>Accountability</h3><p>Periodic reports on what was carried out — the basis of your ESG case.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Evidence of the operation</span><h2>The programme's public basis</h2></div>
+      <p>The documentation reflects what was actually carried out in each batch — no generic promises.</p>
+    </div>
+    <div class="hx-docs">
+        <div class="hx-doc"><h3>Listing on the EU platform</h3><p>Adopt a Neighbourhood is published as good practice on the European Circular Economy Stakeholder Platform — see the record and its exact scope on the evidence page.</p></div>
+        <div class="hx-doc"><h3>Delivery by Ecobraz</h3><p>The territory is operated by the organisation that has carried out collection and disposal since 2011.</p></div>
+        <div class="hx-doc"><h3>Reports by period</h3><p>What was carried out in the neighbourhood documented and delivered to the sponsor.</p></div>
+        <div class="hx-doc"><h3>Photographic record</h3><p>The activities in the territory recorded — material for communication with a source.</p></div>
+        <div class="hx-doc"><h3>Reciclando Project</h3><p>The digital inclusion strand that channels recovered equipment to those who need it.</p></div>
+        <div class="hx-doc"><h3>Declared limits</h3><p>What each record evidences — and what it does not — is written down.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Why Ecobraz</span><h2>Why adopt with Ecobraz</h2></div>
+      <p>Social impact held to the same standard of proof as corporate operations.</p>
+    </div>
+    <div class="hx-sol-grid g4">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span><h3>Whoever delivers is whoever signs</h3><p>The programme is run by the organisation itself — with no intermediary between the funds and the territory.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>International public record</h3><p>Good practice listed on the EU circular economy platform, with declared scope.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Built-in accountability</h3><p>The same documentary discipline as corporate operations, applied to the social side.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="3" width="16" height="18"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2M10 21v-3h4v3"/></svg></span><h3>15 years in the territory</h3><p>Since 2011 bringing together electronics collection and digital inclusion — the programme is the expansion of a practice, not a new idea.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-authority">
+      <div>
+        <span class="hx-label on-dark">Verifiable authority</span>
+        <strong>Associação Auxílio à Reciclagem de Eletrônicos e Inclusão Digital — company ID (CNPJ) 14.197.457/0001-42</strong>
+        <p>Adopt a Neighbourhood is listed as good practice on the European Union's circular economy platform — the listing evidences publication on the platform, with declared scope, and is not equivalent to institutional certification. Records and limits on the evidence page.</p>
+      </div>
+      <a href="{{@site.url}}/public-evidence/" data-track="adopt-a-neighbourhood-programme_evidencias">See public evidence →</a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Frequently asked questions</span><h2>What sponsors and partners ask</h2></div>
+    </div>
+    <div class="hx-faq">
+        <details><summary>What does being listed on the EU platform mean?</summary><p>It means the programme has been published as good practice on the European Circular Economy Stakeholder Platform, with declared scope. It is a verifiable public record — and it is not equivalent to institutional certification by the European Commission. The official link is on the evidence page.</p></details>
+        <details><summary>What can my brand communicate?</summary><p>Whatever is documented: the adoption of the territory, the activities carried out and the figures in the reports, together with a reference to the public listing and its exact scope. Brand use is defined in the agreement.</p></details>
+        <details><summary>What is the investment to adopt a neighbourhood?</summary><p>It depends on the territory, the targets and the design of the activities. The initial conversation defines the scope and the proposal — with no commitment.</p></details>
+        <details><summary>Can municipalities and institutions take part too?</summary><p>Yes — alongside corporate sponsors, the programme designs partnerships with local councils, schools and institutions that want to structure collection and digital inclusion in their territory.</p></details>
+        <details><summary>How do I follow what has been done?</summary><p>Through periodic reports on what was carried out in the neighbourhood — collection, activities and records. It is the accountability that sustains your ESG case.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Related solutions</span><h2>Could also be part of your operation</h2></div>
+    </div>
+    <div class="hx-sol-grid">
+        <a class="hx-sol" href="{{@site.url}}/ecobraz-villanova-esg-en/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>Ecobraz + Villanova ESG</h3><p>Structured evidence for Brazil-Europe supply chains.</p><span class="hx-go">View solution →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/about/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="3" width="16" height="18"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2M10 21v-3h4v3"/></svg></span><h3>About Ecobraz</h3><p>The organisation, its purpose and its journey since 2011.</p><span class="hx-go">View solution →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/public-evidence/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Public evidence</h3><p>Records, sources and limits of each claim — with a cut-off date.</p><span class="hx-go">View solution →</span></a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-final">
+      <div>
+        <span class="hx-label on-dark">Start the conversation</span>
+        <h2>Which neighbourhood will your brand adopt?</h2>
+        <p>Tell us the objective and the territory of interest. We come back with the adoption design, contributions and the proposal — with no commitment.</p>
+      </div>
+      <div class="hx-actions">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=adopt-a-neighbourhood-programme" data-track="adopt-a-neighbourhood-programme_final_cta">Discuss a partnership</a>
+        <a class="button hx-btn-wa" href="{{@custom.whatsapp_url}}" rel="noopener" data-track="adopt-a-neighbourhood-programme_final_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> WhatsApp</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<a class="hx-wa-float" href="{{@custom.whatsapp_url}}" rel="noopener" aria-label="Talk on WhatsApp" data-track="adopt-a-neighbourhood-programme_whatsapp_flutuante"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg><span>Talk on WhatsApp</span></a>

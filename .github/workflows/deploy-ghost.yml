@@ -29,6 +29,9 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build commercial landing pages from data
         run: node site-ghost/scripts/build-landing-pages.mjs
+      - name: Build English commercial landing pages from data
+        if: ${{ hashFiles('site-ghost/landing/landing-pages-en.json') != '' }}
+        run: node site-ghost/scripts/build-landing-pages-en.mjs
       - name: Audit content, links and collection form
         run: node site-ghost/scripts/audit-content.mjs
       - name: Build Ghost theme ZIP
@@ -75,6 +78,12 @@ jobs:
           GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
           GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
         run: node site-ghost/scripts/sync-pages.mjs site-ghost/content/en-paginas.json
+      - name: Sync English commercial landing pages (templates ricos)
+        if: ${{ hashFiles('site-ghost/content/en-commercial-pages.json') != '' }}
+        env:
+          GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
+          GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
+        run: node site-ghost/scripts/sync-pages.mjs site-ghost/content/en-commercial-pages.json
       - name: Sync English posts (versão EN do blog)
         if: ${{ hashFiles('site-ghost/content/en-posts.json') != '' }}
         env:

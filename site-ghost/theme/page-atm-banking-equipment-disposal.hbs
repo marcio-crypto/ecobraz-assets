@@ -1,0 +1,217 @@
+{{!< default}}
+{{! Gerado por scripts/build-landing-pages.mjs a partir de landing/landing-pages-en.json — nao edite a mao. }}
+{{#contentFor "head"}}
+<link rel="stylesheet" href="{{asset "css/landing.css"}}">
+{{/contentFor}}
+
+<section class="hx-hero">
+  <div class="container hx-crumbs"><a href="{{@site.url}}/">Home</a> › <a href="{{@site.url}}/industry-solutions/">Industry solutions</a> › ATM and banking equipment</div>
+  <div class="container hx-hero-grid">
+    <div>
+      <span class="hx-label on-dark">ATMs · Terminals · Branch infrastructure</span>
+      <h1>ATM and banking equipment disposal</h1>
+      <p class="hx-sub">Closed branches with ATMs still on the floor, compliance requiring a destruction record per disk and a deadline to hand back the premises? Ecobraz collects financial-sector equipment with end-to-end custody, recorded media destruction and consolidated documentation per branch — within your security team's windows and rules.</p>
+      <div class="hx-hero-ctas">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=atm-banking-equipment-disposal&amp;material=IT%20and%20computing" data-track="atm-banking-equipment-disposal_hero_cta">Request a technical assessment</a>
+        <a class="button hx-btn-outline-dark" href="#como-funciona" data-track="atm-banking-equipment-disposal_hero_como">How it works</a>
+      </div>
+      <div class="hx-hero-band">
+        <span><strong>End-to-end custody</strong>from collection to disposal</span>
+        <span><strong>Media handled</strong>recorded destruction as scoped</span>
+        <span><strong>Multi-branch</strong>consolidation by unit and by location</span>
+      </div>
+    </div>
+    <form class="hx-quote" id="avaliacao" method="get" action="{{@site.url}}/agendamento/">
+      <span class="hx-label">Technical assessment</span>
+      <h2>Describe the estate in 1 minute</h2>
+      <p class="hx-hint">The team responds with scope, conditions and applicable documentation.</p>
+      <input type="hidden" name="perfil" value="empresa">
+      <input type="hidden" name="origem" value="atm-banking-equipment-disposal">
+      <input type="hidden" name="material" value="IT and computing">
+      <div class="hx-field">
+        <label for="lp-desc">What needs collecting?</label>
+        <input id="lp-desc" name="descricao" placeholder="e.g. 35 decommissioned ATMs across 3 branches">
+      </div>
+      <div class="hx-field">
+        <label for="lp-local">Postcode or collection city</label>
+        <input id="lp-local" name="local" placeholder="e.g. 02175-010 or São Paulo">
+      </div>
+      <button class="button" type="submit" data-track="atm-banking-equipment-disposal_hero_form">Request a technical assessment →</button>
+      <div class="hx-or-wa">or <a href="{{@custom.whatsapp_url}}" rel="noopener" data-track="atm-banking-equipment-disposal_hero_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> talk to the team on WhatsApp</a></div>
+      <p class="hx-micro">Collection is confirmed after assessment of material, volume, location and documentation.</p>
+    </form>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container hx-reco">
+    <div>
+      <span class="hx-label">Does this sound like you?</span>
+      <h2>The checklist for anyone decommissioning banking infrastructure</h2>
+      <p class="hx-reco-cta">Is even one item on this list true for you? Then this page was written for you — <a href="#avaliacao">describe your situation in one minute</a> and get a technical reply, not a sales call.</p>
+    </div>
+    <ul class="hx-reco-list"><li>Closed branches with ATMs and terminals left idle — and a set date to hand back the premises</li><li>Compliance requires evidence of destruction for each disk, by serial number</li><li>The current disposal supplier does not pass corporate security scrutiny</li><li>Self-service equipment cannot simply 'go down to the scrap heap'</li><li>Dozens of units, several locations — and audit wants a single report</li></ul>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">What is at stake</span><h2>Idle banking equipment is a security risk</h2></div>
+      <p>Three exposures that grow while the decommissioned asset waits.</p>
+    </div>
+    <div class="hx-sol-grid">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>The ATM disk is the most sensitive asset in the batch</h3><p>Terminals and branch servers hold operational records and security modules. A media item lost during disposal is a banking security incident — not misplaced scrap.</p><span class="hx-cost">Real cost: a reportable incident, an internal investigation and the security board's confidence called into question.</span></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="3" width="16" height="18"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2M10 21v-3h4v3"/></svg></span><h3>Premises waiting for the equipment to leave</h3><p>A branch closure runs to a contractual schedule. An ATM sitting on the floor holds up the handover of keys and stretches out rent and contractual penalties.</p><span class="hx-cost">Real cost: every week of delay in decommissioning is money paid for premises that should already have been handed back.</span></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18h.01"/></svg></span><h3>A security asset with no record of leaving</h3><p>Financial-sector equipment that leaves without an inventory, custody and a recorded destination is an inevitable finding in internal and external audit.</p><span class="hx-cost">Real cost: an audit non-conformity, a forced action plan and friction between departments.</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">The turning point</span><h2>From a stalled branch to auditable decommissioning</h2></div>
+      <p>Security, deadline and documentation in the same flow.</p>
+    </div>
+    <div class="hx-contrast">
+      <div class="hx-before"><h3>Without a dedicated process</h3><ul><li>ATMs sitting idle, holding up the return of the premises</li><li>Disks 'that someone said were wiped'</li><li>A supplier without accreditation for a banking environment</li><li>Each branch produces a different piece of paper</li><li>Audit asking for a trail that does not exist</li></ul></div>
+      <div class="hx-after"><h3>With Ecobraz</h3><ul><li>Planned collection within each branch's window</li><li>Media destruction carried out and recorded by unit</li><li>Team and process adjusted to security scrutiny</li><li>Consolidated documentation by branch and by location</li><li>Inventory, custody, MTR and CDF to the audit standard</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">What you gain</span><h2>What the bank gains from a dedicated flow</h2></div>
+      <p>Decommissioning stops being an operational risk and becomes a completed item.</p>
+    </div>
+    <div class="hx-sol-grid g4">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="3" width="16" height="18"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2M10 21v-3h4v3"/></svg></span><h3>Premises handed back on time</h3><p>The collection follows the closure schedule — without overrunning the contract.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>Media put beyond use, in writing</h3><p>A destruction record per unit settles the compliance question.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>One report, every location</h3><p>Consolidation by branch and period — audit reads it all in a single document.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span><h3>Security without friction</h3><p>Accreditation, windows and procedures agreed beforehand — no surprises at the door.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Clear scope</span><h2>What is included — and what is not</h2></div>
+      <p>Scope declared before scheduling reduces rework and surprises. Each batch is assessed technically.</p>
+    </div>
+    <div class="hx-scope">
+      <div class="hx-yes"><h3>In scope</h3><ul><li>Decommissioned ATMs and self-service terminals</li><li>Servers, storage and network assets from branches and back office</li><li>POS units, readers and service peripherals</li><li>UPS units and batteries associated with the infrastructure</li><li>Media and disks, with destruction as scoped</li></ul><p>Feasibility takes into account the type of equipment, the number of units and locations, access windows, the client's security requirements and documentation. Each operation is assessed before confirmation.</p></div>
+      <div class="hx-not"><h3>Out of scope</h3><ul><li>Cash and valuables — never part of the service</li><li>Loose household batteries, toner and cartridges</li><li>Lamps, oil, polystyrene and packaging</li><li>Chemical, biological, radioactive or contaminated waste</li></ul><p>Materials out of scope require specific chains and are not part of this service.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt" id="como-funciona">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Process</span><h2>How it works, from contact to final destination</h2></div>
+      <p>No collection is confirmed without a technical assessment. That is what keeps the operation predictable and documentable.</p>
+    </div>
+    <div class="hx-steps">
+        <div class="hx-step"><h3>Describe the estate</h3><p>Equipment types, quantities, branches involved and deadlines.</p></div>
+        <div class="hx-step"><h3>Assessment and security</h3><p>We review logistics, access windows and the client's requirements.</p></div>
+        <div class="hx-step"><h3>Scope defined</h3><p>Responsibilities, media method and documents agreed.</p></div>
+        <div class="hx-step"><h3>Collection with custody</h3><p>Recorded collection by unit, with chain of custody.</p></div>
+        <div class="hx-step"><h3>Destruction and disposal</h3><p>Media handling, disposal and delivery of documentation.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Evidence of the operation</span><h2>What the bank's audit receives</h2></div>
+      <p>The documentation reflects what was actually carried out in each batch — no generic promises.</p>
+    </div>
+    <div class="hx-docs">
+        <div class="hx-doc"><h3>Inventory by unit</h3><p>A list of the equipment collected at each branch or site.</p></div>
+        <div class="hx-doc"><h3>Chain of custody</h3><p>A record of each asset's journey, from collection to disposal.</p></div>
+        <div class="hx-doc"><h3>Media destruction report</h3><p>The handling carried out and recorded as per the contracted scope.</p></div>
+        <div class="hx-doc"><h3>MTR and CDF</h3><p>Transport manifest and disposal certificate, where applicable.</p></div>
+        <div class="hx-doc"><h3>Multi-location consolidation</h3><p>A view by branch and by period for asset reconciliation.</p></div>
+        <div class="hx-doc"><h3>Documented scope</h3><p>Conditions, exclusions and responsibilities defined before collection.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Why Ecobraz</span><h2>Why Ecobraz in a financial environment</h2></div>
+      <p>The most audited sector in the country needs disposal held to the same standard.</p>
+    </div>
+    <div class="hx-sol-grid g4">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>Custody as the foundation</h3><p>A recorded chain of custody from collection to disposal — the basic requirement of a banking environment.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span><h3>15 years of operation</h3><p>An organisation founded in 2011, recognised on EU and UN platforms — scope stated on the evidence page.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Documentation to the audit standard</h3><p>Inventory by unit, media report and applicable certificates — organised for whoever audits.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="3" width="16" height="18"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2M10 21v-3h4v3"/></svg></span><h3>Multi-branch by assessment</h3><p>Operations across several units and locations enter technical assessment with single consolidation.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-authority">
+      <div>
+        <span class="hx-label on-dark">Verifiable authority</span>
+        <strong>Associação Auxílio à Reciclagem de Eletrônicos e Inclusão Digital — company ID (CNPJ) 14.197.457/0001-42</strong>
+        <p>Activity recorded on public platforms of international reference. Every claim on the site has a source, date and scope stated on the evidence page.</p>
+      </div>
+      <a href="{{@site.url}}/public-evidence/" data-track="atm-banking-equipment-disposal_evidencias">See public evidence →</a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Frequently asked questions</span><h2>What security, asset management and facilities ask</h2></div>
+    </div>
+    <div class="hx-faq">
+        <details><summary>Do you destroy the disks in the ATMs?</summary><p>Yes, as scoped: recorded physical destruction or logical sanitisation where technically applicable. The method and the execution are set out in the report.</p></details>
+        <details><summary>Do you handle several branches and cities in one operation?</summary><p>Multi-location operations are assessed according to the number of units, logistics and deadlines — with consolidated documentation by branch and by period.</p></details>
+        <details><summary>Can you work within restricted windows?</summary><p>The client's access windows, timings and security procedures form part of the scope definition. The operation is planned within those conditions.</p></details>
+        <details><summary>How do you handle the bank's security requirements?</summary><p>Team accreditation, integration with local security and the records required by the client are agreed in the scope before collection.</p></details>
+        <details><summary>What are the timescale and the cost?</summary><p>They depend on the number of units, locations, windows and requirements. The technical assessment returns with a timescale and conditions before any confirmation.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Related solutions</span><h2>Could also be part of your operation</h2></div>
+    </div>
+    <div class="hx-sol-grid">
+        <a class="hx-sol" href="{{@site.url}}/data-destruction/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>Data sanitisation and destruction</h3><p>Media handling with a report, for IT and security requirements.</p><span class="hx-go">View solution →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/decommissioned-it-asset-disposal/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><h3>Decommissioned IT assets</h3><p>Planned collection of IT estates with inventory and custody.</p><span class="hx-go">View solution →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/server-data-centre-disposal/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>Servers and data centre</h3><p>Decommissioning of critical infrastructure with planned collection.</p><span class="hx-go">View solution →</span></a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-final">
+      <div>
+        <span class="hx-label on-dark">Technical assessment, no obligation</span>
+        <h2>How many branches are waiting for the equipment to leave before the cycle can close?</h2>
+        <p>Describe the estate, the units and the deadlines. The team returns with scope, windows and the evidence standard — in writing.</p>
+      </div>
+      <div class="hx-actions">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=atm-banking-equipment-disposal&amp;material=IT%20and%20computing" data-track="atm-banking-equipment-disposal_final_cta">Request a technical assessment</a>
+        <a class="button hx-btn-wa" href="{{@custom.whatsapp_url}}" rel="noopener" data-track="atm-banking-equipment-disposal_final_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> WhatsApp</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<a class="hx-wa-float" href="{{@custom.whatsapp_url}}" rel="noopener" aria-label="Talk on WhatsApp" data-track="atm-banking-equipment-disposal_whatsapp_flutuante"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg><span>Talk on WhatsApp</span></a>

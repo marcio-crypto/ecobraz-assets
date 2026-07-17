@@ -1,0 +1,217 @@
+{{!< default}}
+{{! Gerado por scripts/build-landing-pages.mjs a partir de landing/landing-pages-en.json — nao edite a mao. }}
+{{#contentFor "head"}}
+<link rel="stylesheet" href="{{asset "css/landing.css"}}">
+{{/contentFor}}
+
+<section class="hx-hero">
+  <div class="container hx-crumbs"><a href="{{@site.url}}/">Home</a> › <a href="{{@site.url}}/industry-solutions/">Industry solutions</a> › Insurance salvage for insurers</div>
+  <div class="container hx-hero-grid">
+    <div>
+      <span class="hx-label on-dark">Claims · Salvage · Destruction</span>
+      <h1>Insurance salvage disposal for insurers</h1>
+      <p class="hx-sub">Policyholder's warehouse due back on a deadline, salvage with nowhere to go and the claim demanding evidence? Ecobraz inventories, photographs, destroys and disposes of damaged electrical and electronic goods — with a chain of custody that protects the claim and prevents the indemnified item from reappearing on the market.</p>
+      <div class="hx-hero-ctas">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=insurance-salvage-disposal&amp;material=Electronics" data-track="insurance-salvage-disposal_hero_cta">Request a technical assessment</a>
+        <a class="button hx-btn-outline-dark" href="#como-funciona" data-track="insurance-salvage-disposal_hero_como">How it works</a>
+      </div>
+      <div class="hx-hero-band">
+        <span><strong>Photographic record</strong>each item identified and inventoried</span>
+        <span><strong>Destruction</strong>carried out and recorded in line with the scope</span>
+        <span><strong>Evidence per case</strong>documentation in line with the service performed</span>
+      </div>
+    </div>
+    <form class="hx-quote" id="avaliacao" method="get" action="{{@site.url}}/agendamento/">
+      <span class="hx-label">Technical assessment</span>
+      <h2>Describe the case in 1 minute</h2>
+      <p class="hx-hint">The team gets back to you with scope, terms and applicable documentation.</p>
+      <input type="hidden" name="perfil" value="empresa">
+      <input type="hidden" name="origem" value="insurance-salvage-disposal">
+      <input type="hidden" name="material" value="Electronics">
+      <div class="hx-field">
+        <label for="lp-desc">Describe the claim or the batch</label>
+        <input id="lp-desc" name="descricao" placeholder="e.g. 400 damaged items in a warehouse in Barueri">
+      </div>
+      <div class="hx-field">
+        <label for="lp-local">Postcode or collection city</label>
+        <input id="lp-local" name="local" placeholder="e.g. 02175-010 or São Paulo">
+      </div>
+      <button class="button" type="submit" data-track="insurance-salvage-disposal_hero_form">Request a technical assessment →</button>
+      <div class="hx-or-wa">or <a href="{{@custom.whatsapp_url}}" rel="noopener" data-track="insurance-salvage-disposal_hero_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> talk to the team on WhatsApp</a></div>
+      <p class="hx-micro">Collection is confirmed after assessment of material, volume, location and documentation.</p>
+    </form>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container hx-reco">
+    <div>
+      <span class="hx-label">Does this sound like you?</span>
+      <h2>Scenes every claims and salvage team knows</h2>
+      <p class="hx-reco-cta">Is even one item on this list true for you? Then this page was written for you — <a href="#avaliacao">describe your situation in one minute</a> and get a technical reply, not a sales call.</p>
+    </div>
+    <ul class="hx-reco-list"><li>The policyholder's premises need to be handed back and the damaged goods are still occupying the warehouse</li><li>Salvage sold 'as a batch' turned up working on the market — and became a question mark in the claim</li><li>Every loss adjuster delivers a different evidence standard, and the file never comes out the same</li><li>A claim in a location with no trusted operation — and the claim deadline running down</li><li>Goods with data media in the middle of the batch, and no one wants to sign off on their disposal</li></ul>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">What is at stake</span><h2>Uncontrolled salvage becomes a liability for the insurer</h2></div>
+      <p>Three risks the claims process carries when disposal is not traceable.</p>
+    </div>
+    <div class="hx-sol-grid">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18h.01"/></svg></span><h3>The salvage that comes back to haunt the claim</h3><p>An indemnified item that reappears for sale opens the door to fraud questions, disputes with the policyholder and weakens the entire claim — months after it was closed.</p><span class="hx-cost">Real cost: reopened litigation, reputational damage and an internal precedent that is hard to explain.</span></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="3" width="16" height="18"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2M10 21v-3h4v3"/></svg></span><h3>Every location, a different standard — none defensible</h3><p>Claims do not pick a city. Without a coordinated operation, each case comes out with a different level of recording, and the company's standard becomes a lottery.</p><span class="hx-cost">Real cost: uneven files, rework by loss adjusters and exposure in internal audit.</span></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Disposal without evidence weakens the adjustment</h3><p>The claim needs to prove what it was, where it stood, what was done and where it ended up. Without inventory, photos and custody, that chain breaks at the final link.</p><span class="hx-cost">Real cost: a claim vulnerable to challenge — at precisely the cheapest stage to document.</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">The turning point</span><h2>From abandoned batch to a case closed with a file</h2></div>
+      <p>The final link of the claim handled with the same rigour as the adjustment.</p>
+    </div>
+    <div class="hx-contrast">
+      <div class="hx-before"><h3>How it usually ends</h3><ul><li>Damaged goods waiting while the warehouse rent runs on</li><li>Sale 'as a batch' with no control over what returns to the market</li><li>Photographic record incomplete or non-existent</li><li>Disposal evidence: a scrap invoice</li><li>A different standard at every location and every case</li></ul></div>
+      <div class="hx-after"><h3>With Ecobraz on the case</h3><ul><li>Inventory and photographic record item by item, at source</li><li>Recorded destruction — the salvage dies documented</li><li>Chain of custody from the warehouse to final disposal</li><li>MTR, CDF and final report attachable to the claim</li><li>The same evidence standard at any assessed location</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">What you gain</span><h2>What the company gains in each case</h2></div>
+      <p>Less exposure at the link that tends to end up ownerless.</p>
+    </div>
+    <div class="hx-sol-grid g4">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span><h3>Protected claim</h3><p>End-to-end evidence on the disposal of the goods — the final link stops being the weak point.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="3" width="16" height="18"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2M10 21v-3h4v3"/></svg></span><h3>Warehouse handed back on time</h3><p>Planned removal frees the policyholder's premises without blowing the case schedule.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Standardised file</h3><p>The same documentation pack, case after case — easy to audit, easy to defend.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>Policyholder data protected</h3><p>Media handled with a record, even when the claim affects equipment holding data.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Clear scope</span><h2>What is included — and what is not</h2></div>
+      <p>Scope declared before scheduling reduces rework and surprises. Each batch is assessed technically.</p>
+    </div>
+    <div class="hx-scope">
+      <div class="hx-yes"><h3>In scope</h3><ul><li>Damaged electrical and electronic goods — fire, flooding, transport damage</li><li>Salvage electronics not fit for resale</li><li>Equipment holding data media (with treatment in line with the scope)</li><li>Batches in warehouses, depots, distribution centres and policyholder sites</li><li>Operations across multiple locations, assessed case by case</li></ul><p>Feasibility depends on the type of goods, volume, location, access conditions and the requirements of the claim. Each case is assessed before confirmation — the scope can be defined with the insurer, the loss adjuster or the corporate policyholder.</p></div>
+      <div class="hx-not"><h3>Out of scope</h3><ul><li>Loose household batteries</li><li>Toner and cartridges</li><li>Lamps, oil, polystyrene and packaging</li><li>Chemical, biological, radioactive or contaminated waste</li></ul><p>Materials out of scope require specific chains and are not part of this service.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt" id="como-funciona">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Process</span><h2>How it works, from contact to final destination</h2></div>
+      <p>No collection is confirmed without a technical assessment. That is what keeps the operation predictable and documentable.</p>
+    </div>
+    <div class="hx-steps">
+        <div class="hx-step"><h3>Case registration</h3><p>Type of claim, estimated quantity of goods, locations and claim deadlines.</p></div>
+        <div class="hx-step"><h3>Technical assessment</h3><p>We analyse the materials, logistics per location and evidence requirements.</p></div>
+        <div class="hx-step"><h3>Scope defined</h3><p>Responsibilities, destruction method and agreed documents.</p></div>
+        <div class="hx-step"><h3>Inventory and recording</h3><p>Identification, photographic recording and inventory of the goods at source.</p></div>
+        <div class="hx-step"><h3>Disposal and evidence</h3><p>Destruction, disposal and delivery of the case documentation.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Evidence of the operation</span><h2>What the claim file receives</h2></div>
+      <p>The documentation reflects what was actually carried out in each batch — no generic promises.</p>
+    </div>
+    <div class="hx-docs">
+        <div class="hx-doc"><h3>Case inventory</h3><p>List of the goods with identification and location of origin.</p></div>
+        <div class="hx-doc"><h3>Photographic record</h3><p>Images of the goods in the state in which they were collected.</p></div>
+        <div class="hx-doc"><h3>Recorded destruction</h3><p>Disablement carried out and documented in line with the scope.</p></div>
+        <div class="hx-doc"><h3>Chain of custody</h3><p>Record of the goods' route, from origin to disposal.</p></div>
+        <div class="hx-doc"><h3>MTR and CDF</h3><p>Waste transport manifest and disposal certificate, where applicable to the material.</p></div>
+        <div class="hx-doc"><h3>Final report per case</h3><p>Consolidation of the operation to attach to the claim file.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Why Ecobraz</span><h2>Why Ecobraz in the salvage flow</h2></div>
+      <p>An offer designed for the rigour the claims process demands.</p>
+    </div>
+    <div class="hx-sol-grid g4">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Evidence as a product</h3><p>Inventory, photos, custody and certificates are not an add-on: they are what we deliver alongside the disposal.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span><h3>15 years of operation</h3><p>An organisation founded in 2011, recognised on EU and UN platforms — scope declared on the evidence page.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>Control against return</h3><p>Recorded destruction and custody to the end — designed so the salvage does not reappear.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="3" width="16" height="18"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2M10 21v-3h4v3"/></svg></span><h3>Multi-location under assessment</h3><p>Cases outside São Paulo enter a technical feasibility assessment — with the same documentation standard.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-authority">
+      <div>
+        <span class="hx-label on-dark">Verifiable authority</span>
+        <strong>Associação Auxílio à Reciclagem de Eletrônicos e Inclusão Digital — company ID (CNPJ) 14.197.457/0001-42</strong>
+        <p>Activity recorded on public platforms of international reference. The offer is presented to the insurance market in a generic and defensible way — each claim has its source and scope declared on the evidence page.</p>
+      </div>
+      <a href="{{@site.url}}/public-evidence/" data-track="insurance-salvage-disposal_evidencias">See public evidence →</a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Frequently asked questions</span><h2>What claims and salvage teams ask</h2></div>
+    </div>
+    <div class="hx-faq">
+        <details><summary>How do you ensure the salvage does not return to the market?</summary><p>Through the combination of recorded destruction and chain of custody through to disposal, in line with the contracted scope. Each stage generates evidence that attaches to the claim file.</p></details>
+        <details><summary>Do you handle claims outside São Paulo?</summary><p>Operations in other locations are assessed according to volume, logistics and claim deadline. Describe the location and the batch so we can check feasibility.</p></details>
+        <details><summary>Do you work with loss adjusters and corporate policyholders?</summary><p>Yes. The scope can be defined with the insurer, the loss adjuster or the corporate policyholder, according to the design of each case — with documented responsibilities.</p></details>
+        <details><summary>And when the damaged item contains data?</summary><p>Equipment with media is handled with data treatment defined in the scope — logical sanitisation where technically applicable, or recorded physical destruction.</p></details>
+        <details><summary>What is the turnaround time?</summary><p>It depends on the location, the volume and access conditions. The technical assessment comes back with timing and terms before any confirmation.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Related solutions</span><h2>Could also be part of your operation</h2></div>
+    </div>
+    <div class="hx-sol-grid">
+        <a class="hx-sol" href="{{@site.url}}/data-destruction/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>Data sanitisation and destruction</h3><p>Treatment of media with a report, for goods that carry data.</p><span class="hx-go">View solution →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/documentation-traceability/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Documentation and traceability</h3><p>How each operation generates the evidence that underpins the claim.</p><span class="hx-go">View solution →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/damaged-out-of-warranty-disposal/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><h3>Damaged and out-of-warranty products</h3><p>Damage and returns for manufacturers, retail and after-sales.</p><span class="hx-go">View solution →</span></a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-final">
+      <div>
+        <span class="hx-label on-dark">Technical assessment with no obligation</span>
+        <h2>Have an open case with goods awaiting disposal?</h2>
+        <p>Describe the claim, the location and the estimated volume. The team gets back to you with scope, timing and the evidence standard for the case — before any commitment.</p>
+      </div>
+      <div class="hx-actions">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=insurance-salvage-disposal&amp;material=Electronics" data-track="insurance-salvage-disposal_final_cta">Request a technical assessment</a>
+        <a class="button hx-btn-wa" href="{{@custom.whatsapp_url}}" rel="noopener" data-track="insurance-salvage-disposal_final_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> WhatsApp</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<a class="hx-wa-float" href="{{@custom.whatsapp_url}}" rel="noopener" aria-label="Talk on WhatsApp" data-track="insurance-salvage-disposal_whatsapp_flutuante"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg><span>Talk on WhatsApp</span></a>

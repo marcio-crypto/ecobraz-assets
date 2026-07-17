@@ -1,0 +1,227 @@
+{{!< default}}
+{{! Gerado por scripts/build-landing-pages.mjs a partir de landing/landing-pages-en.json — nao edite a mao. }}
+{{#contentFor "head"}}
+<link rel="stylesheet" href="{{asset "css/landing.css"}}">
+{{/contentFor}}
+
+<section class="hx-hero">
+  <div class="container hx-crumbs"><a href="{{@site.url}}/">Home</a> › <a href="{{@site.url}}/corporate-solutions/">Corporate solutions</a> › Data centre decommissioning</div>
+  <div class="container hx-hero-grid">
+    <div>
+      <span class="hx-label on-dark">Cloud migration · Site closure · Colocation</span>
+      <h1>Data centre decommissioning, from the rack to the handed-over property</h1>
+      <p class="hx-sub">The migration is over, but the room is still there: energised racks, storage arrays with live data and a running property lease. Ecobraz decommissions data centres with per-rack inventory, recorded media treatment and removal within planned windows — until the room becomes a handed-over space.</p>
+      <div class="hx-hero-ctas">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=data-centre-decommissioning&amp;material=Servers%20and%20data%20centre" data-track="data-centre-decommissioning_hero_cta">Request a technical assessment</a>
+        <a class="button hx-btn-outline-dark" href="#como-funciona" data-track="data-centre-decommissioning_hero_como">How it works</a>
+      </div>
+      <div class="hx-hero-band">
+        <span><strong>Per-rack inventory</strong>every asset listed before it leaves the room</span>
+        <span><strong>Media treated</strong>sanitisation or destruction, recorded</span>
+        <span><strong>A project with windows</strong>an agreed schedule, not 'we'll drop by'</span>
+      </div>
+    </div>
+    <form class="hx-quote" id="avaliacao" method="get" action="{{@site.url}}/agendamento/">
+      <span class="hx-label">Technical assessment</span>
+      <h2>Describe the site in 1 minute</h2>
+      <p class="hx-hint">The team gets back to you with scope, schedule and documentation.</p>
+      <input type="hidden" name="perfil" value="empresa">
+      <input type="hidden" name="origem" value="data-centre-decommissioning">
+      <input type="hidden" name="material" value="Servers and data centre">
+      <div class="hx-field">
+        <label for="lp-desc">What needs decommissioning?</label>
+        <input id="lp-desc" name="descricao" placeholder="E.g. a room with 18 racks after a cloud migration">
+      </div>
+      <div class="hx-field">
+        <label for="lp-local">Postcode or collection city</label>
+        <input id="lp-local" name="local" placeholder="e.g. 02175-010 or São Paulo">
+      </div>
+      <button class="button" type="submit" data-track="data-centre-decommissioning_hero_form">Request a technical assessment →</button>
+      <div class="hx-or-wa">or <a href="{{@custom.whatsapp_url}}" rel="noopener" data-track="data-centre-decommissioning_hero_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> talk to the team on WhatsApp</a></div>
+      <p class="hx-micro">Collection is confirmed after assessment of material, volume, location and documentation.</p>
+    </form>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container hx-reco">
+    <div>
+      <span class="hx-label">Does this sound like you?</span>
+      <h2>The picture of those who finished the migration — but not the project</h2>
+      <p class="hx-reco-cta">Is even one item on this list true for you? Then this page was written for you — <a href="#avaliacao">describe your situation in one minute</a> and get a technical reply, not a sales call.</p>
+    </div>
+    <ul class="hx-reco-list"><li>The cloud migration was completed months ago and the room is still intact, burning through energy and lease</li><li>The building has to be handed back — with an entire data centre inside</li><li>Powered-down storage arrays holding data no one has dealt with</li><li>The project needs a schedule and windows — not a lorry that 'swings by to pick things up'</li><li>The board asks how much it costs to keep the dead room running — and no one wants to answer</li></ul>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">What is at stake</span><h2>The decommissioned room that still costs as much as an active one</h2></div>
+      <p>After the migration, the old data centre generates only three things: cost, risk and questions.</p>
+    </div>
+    <div class="hx-sol-grid">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="3" width="16" height="18"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2M10 21v-3h4v3"/></svg></span><h3>The rent on the rack graveyard</h3><p>A decommissioned room keeps paying its lease, cooling, insurance and security — to protect equipment that will never be switched on again.</p><span class="hx-cost">Real cost: months of full running expense for a site that no longer serves the operation — visible in any budget review.</span></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>Live data in dead machines</h3><p>A powered-down storage array is not a wiped one. The disks in the old room hold entire databases — and no one monitors a room that is 'done for'.</p><span class="hx-cost">Real cost: a complete corporate data holding protected by nothing but a door — at the forgotten end of security.</span></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18h.01"/></svg></span><h3>Dismantling without an inventory means assets vanishing</h3><p>A rack stripped in a hurry, with no list and no custody, is an invitation to silent disappearance — and to an asset audit with no answer.</p><span class="hx-cost">Real cost: valuable assets with no whereabouts, a contested write-off and an internal control finding.</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">The turning point</span><h2>From an idle site to a handed-over property</h2></div>
+      <p>Decommissioning treated as a project — with a beginning, middle, end and evidence.</p>
+    </div>
+    <div class="hx-contrast">
+      <div class="hx-before"><h3>How things stand today</h3><ul><li>An entire idle room consuming lease and energy</li><li>Storage arrays with no defined data treatment</li><li>No inventory of what is in the racks</li><li>The property deadline approaching with no plan</li><li>A 'scrap removal' quote with no project</li></ul></div>
+      <div class="hx-after"><h3>With Ecobraz</h3><ul><li>A shutdown schedule with agreed windows</li><li>Media sanitised or destroyed, with records</li><li>Per-rack inventory before dismantling</li><li>Complete removal, disposal and documentation</li><li>An empty room and a property ready for handover</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">What you gain</span><h2>What the project delivers in the end</h2></div>
+      <p>It is not a large collection — it is a closed decommissioning with evidence.</p>
+    </div>
+    <div class="hx-sol-grid g4">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="3" width="16" height="18"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2M10 21v-3h4v3"/></svg></span><h3>Property released</h3><p>The room emptied within the lease deadline — with no penalty or extension.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>Fixed cost eliminated</h3><p>Energy, cooling and insurance for the dead site come off the expense sheet.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>Data closed out</h3><p>Each medium treated and recorded — the old room stops being a security risk.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Project dossier</h3><p>Inventory, custody, certificates and final report — the decommissioning made auditable.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Clear scope</span><h2>What is included — and what is not</h2></div>
+      <p>Scope declared before scheduling reduces rework and surprises. Each batch is assessed technically.</p>
+    </div>
+    <div class="hx-scope">
+      <div class="hx-yes"><h3>In scope</h3><ul><li>Servers, storage arrays, racks and appliances</li><li>Network assets, structured cabling and PDUs</li><li>UPS units and the site's battery banks</li><li>Media treatment: sanitisation or destruction, according to scope</li><li>Own rooms, corporate floors and colocation positions</li></ul><p>The scope takes into account access, permitted windows, hoisting and dismantling, data treatment and property deadlines. Each site is assessed before the schedule.</p></div>
+      <div class="hx-not"><h3>Out of scope</h3><ul><li>Civil infrastructure and fixed cooling (assessed case by case)</li><li>Household batteries, toner, lamps and other standard exclusions</li><li>Chemical, biological, radioactive or contaminated waste</li><li>Equipment that will remain in production</li></ul><p>Materials out of scope require specific chains and are not part of this service.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt" id="como-funciona">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Process</span><h2>How it works, from contact to final destination</h2></div>
+      <p>No collection is confirmed without a technical assessment. That is what keeps the operation predictable and documentable.</p>
+    </div>
+    <div class="hx-steps">
+        <div class="hx-step"><h3>Describe the site</h3><p>Racks, asset types, location, property deadlines and data requirements.</p></div>
+        <div class="hx-step"><h3>Technical assessment</h3><p>A visit or remote survey to size the logistics, windows and risks.</p></div>
+        <div class="hx-step"><h3>Schedule defined</h3><p>Phases, working windows, responsibilities and documents agreed.</p></div>
+        <div class="hx-step"><h3>Recorded shutdown</h3><p>Per-rack inventory, media treatment and dismantling with custody.</p></div>
+        <div class="hx-step"><h3>Handover and dossier</h3><p>The room released, waste disposed of and complete project documentation.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Evidence of the operation</span><h2>The proof the site was closed out properly</h2></div>
+      <p>The documentation reflects what was actually carried out in each batch — no generic promises.</p>
+    </div>
+    <div class="hx-docs">
+        <div class="hx-doc"><h3>Per-rack inventory</h3><p>A list of assets drawn up before dismantling — the basis of the project.</p></div>
+        <div class="hx-doc"><h3>Media report</h3><p>Sanitisation or destruction recorded for each medium treated.</p></div>
+        <div class="hx-doc"><h3>Chain of custody</h3><p>The journey of each asset, from the room to disposal.</p></div>
+        <div class="hx-doc"><h3>MTR and CDF</h3><p>Certified transport and disposal documents, where applicable to the material.</p></div>
+        <div class="hx-doc"><h3>Project report</h3><p>Consolidated by phase — the document that closes the decommissioning.</p></div>
+        <div class="hx-doc"><h3>Scope and schedule</h3><p>Windows, responsibilities and conditions agreed in writing.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Why Ecobraz</span><h2>Why decommission with Ecobraz</h2></div>
+      <p>A data centre is not dismantled in a rush — it is dismantled with a plan.</p>
+    </div>
+    <div class="hx-sol-grid g4">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>A project, not a collection</h3><p>Schedule, phases and agreed windows — the project rigour a critical room demands, even when decommissioned.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>Data within the flow</h3><p>Media sanitisation and destruction built into the decommissioning — without hiring three suppliers.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span><h3>15 years of operation</h3><p>An association founded in 2011, with recognition on EU and UN platforms — scope declared on the evidence page.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Closure dossier</h3><p>The project ends with complete documentation — assets, security and audit addressed at once.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-authority">
+      <div>
+        <span class="hx-label on-dark">Verifiable authority</span>
+        <strong>Associação Auxílio à Reciclagem de Eletrônicos e Inclusão Digital — company ID (CNPJ) 14.197.457/0001-42</strong>
+        <p>Activity registered on public platforms of international reference. Every claim on the site has its source, date and scope declared on the evidence page.</p>
+      </div>
+      <a href="{{@site.url}}/public-evidence/" data-track="data-centre-decommissioning_evidencias">See public evidence →</a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Frequently asked questions</span><h2>What infrastructure and facilities teams ask</h2></div>
+    </div>
+    <div class="hx-faq">
+        <details><summary>Do you dismantle the racks and the cabling?</summary><p>Yes — dismantling, organising and removal are part of the scope, defined at the assessment according to the site, the access and the permitted windows.</p></details>
+        <details><summary>How do you treat the data on the storage arrays and servers?</summary><p>Each medium receives the treatment defined in the scope — logical sanitisation where applicable or physical destruction — with a record per medium in the project report.</p></details>
+        <details><summary>Do you work in overnight windows or at weekends?</summary><p>The working windows are agreed in the schedule, in line with the building and operation rules — including restricted hours.</p></details>
+        <details><summary>Do you serve sites outside São Paulo?</summary><p>Projects in other locations are assessed according to size, logistics and deadlines. Describe the site and the location so we can check feasibility.</p></details>
+        <details><summary>And if part of the estate is still in production?</summary><p>The scope separates what leaves from what stays: the shutdown is done in phases, with a clear inventory of what belongs to each one.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Related solutions</span><h2>Could also be part of your operation</h2></div>
+    </div>
+    <div class="hx-sol-grid">
+        <a class="hx-sol" href="{{@site.url}}/secure-data-sanitisation/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>Secure data sanitisation</h3><p>Logical wiping with a report, for media that remain usable.</p><span class="hx-go">View solution →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/physical-media-destruction/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>Physical destruction of data and media</h3><p>Definitive disablement with custody, for no-reuse policies.</p><span class="hx-go">View solution →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/server-data-centre-disposal/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><h3>Servers, racks and storage arrays</h3><p>Disposal of standalone infrastructure equipment.</p><span class="hx-go">View solution →</span></a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Technical reference</span><h2>Published basis, with a persistent identifier</h2></div>
+      <p>This subject is developed in an original technical report by Ecobraz Emigre, published with a DOI on the open Zenodo repository.</p>
+    </div>
+    <p style="margin:0">VILLANOVA, Marcio. <em>A Baixa Patrimonial Não Encerra o Risco: Responsabilidades e Evidências no Descomissionamento de Ativos de TI</em>. Zenodo, 2026. <a class="hx-src" href="https://doi.org/10.5281/zenodo.21398130" rel="noopener" data-track="data-centre-decommissioning_referencia_doi">doi.org/10.5281/zenodo.21398130</a> &nbsp;·&nbsp; <a class="hx-src" href="{{@site.url}}/technical-publications/" data-track="data-centre-decommissioning_referencia_publicacoes">All publications →</a></p>
+  </div>
+</section>
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-final">
+      <div>
+        <span class="hx-label on-dark">A technical assessment with no obligation</span>
+        <h2>How much does one more quarter of the dead room cost your budget?</h2>
+        <p>Describe the site, the racks and the property deadlines. The team gets back to you with a schedule, scope and the project documentation — in writing.</p>
+      </div>
+      <div class="hx-actions">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=data-centre-decommissioning&amp;material=Servers%20and%20data%20centre" data-track="data-centre-decommissioning_final_cta">Request a technical assessment</a>
+        <a class="button hx-btn-wa" href="{{@custom.whatsapp_url}}" rel="noopener" data-track="data-centre-decommissioning_final_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> WhatsApp</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<a class="hx-wa-float" href="{{@custom.whatsapp_url}}" rel="noopener" aria-label="Talk on WhatsApp" data-track="data-centre-decommissioning_whatsapp_flutuante"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg><span>Talk on WhatsApp</span></a>

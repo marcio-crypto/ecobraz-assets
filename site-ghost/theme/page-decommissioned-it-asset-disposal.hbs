@@ -1,0 +1,227 @@
+{{!< default}}
+{{! Gerado por scripts/build-landing-pages.mjs a partir de landing/landing-pages-en.json — nao edite a mao. }}
+{{#contentFor "head"}}
+<link rel="stylesheet" href="{{asset "css/landing.css"}}">
+{{/contentFor}}
+
+<section class="hx-hero">
+  <div class="container hx-crumbs"><a href="{{@site.url}}/">Home</a> › <a href="{{@site.url}}/corporate-solutions/">Corporate solutions</a> › Decommissioned IT assets</div>
+  <div class="container hx-hero-grid">
+    <div>
+      <span class="hx-label on-dark">Fleet refresh · End of contract · Site closure</span>
+      <h1>Disposal of decommissioned IT assets, with inventory and custody</h1>
+      <p class="hx-sub">Laptops piled up in the warehouse, servers with nowhere to go and finance chasing the write-off? Ecobraz collects, inventories and disposes of each asset — and you receive the documentation that closes the matter: inventory, recorded data handling, MTR and CDF where applicable.</p>
+      <div class="hx-hero-ctas">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=decommissioned-it-asset-disposal&amp;material=IT%20and%20computing" data-track="decommissioned-it-asset-disposal_hero_cta">Request a technical assessment</a>
+        <a class="button hx-btn-outline-dark" href="#como-funciona" data-track="decommissioned-it-asset-disposal_hero_como">How it works</a>
+      </div>
+      <div class="hx-hero-band">
+        <span><strong>Inventory at source</strong>each asset recorded before it leaves</span>
+        <span><strong>Data handled</strong>sanitisation or destruction, as per scope</span>
+        <span><strong>Documentation</strong>inventory, MTR and CDF where applicable</span>
+      </div>
+    </div>
+    <form class="hx-quote" id="avaliacao" method="get" action="{{@site.url}}/agendamento/">
+      <span class="hx-label">Technical assessment</span>
+      <h2>Describe the batch in 1 minute</h2>
+      <p class="hx-hint">The team gets back to you with scope, terms and applicable documentation.</p>
+      <input type="hidden" name="perfil" value="empresa">
+      <input type="hidden" name="origem" value="decommissioned-it-asset-disposal">
+      <input type="hidden" name="material" value="IT and computing">
+      <div class="hx-field">
+        <label for="lp-desc">What do you need collected?</label>
+        <input id="lp-desc" name="descricao" placeholder="e.g. 120 laptops and 30 monitors in a warehouse">
+      </div>
+      <div class="hx-field">
+        <label for="lp-local">Postcode or collection city</label>
+        <input id="lp-local" name="local" placeholder="e.g. 02175-010 or São Paulo">
+      </div>
+      <button class="button" type="submit" data-track="decommissioned-it-asset-disposal_hero_form">Request a technical assessment →</button>
+      <div class="hx-or-wa">or <a href="{{@custom.whatsapp_url}}" rel="noopener" data-track="decommissioned-it-asset-disposal_hero_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> talk to the team on WhatsApp</a></div>
+      <p class="hx-micro">Collection is confirmed after assessment of material, volume, location and documentation.</p>
+    </form>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container hx-reco">
+    <div>
+      <span class="hx-label">Does this sound like you?</span>
+      <h2>If one of these scenarios exists at your site, the problem has already started</h2>
+      <p class="hx-reco-cta">Is even one item on this list true for you? Then this page was written for you — <a href="#avaliacao">describe your situation in one minute</a> and get a technical reply, not a sales call.</p>
+    </div>
+    <ul class="hx-reco-list"><li>The IT room has become a storeroom: piles of laptops, monitors and servers no one has used for months</li><li>The audit asked for the list of what left in the last decommissioning — and there is not even a photo</li><li>Finance is chasing the asset write-off, but no one will sign off the departure without knowing the destination</li><li>A 'scrap dealer' offered to take everything away for free — and you were worried about where it would end up</li><li>There is a hard drive with customer data in a machine that no longer even powers on</li></ul>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">What is at stake</span><h2>Idle equipment is not neutral: it is a liability</h2></div>
+      <p>Three risks grow quietly while the batch sits in a warehouse.</p>
+    </div>
+    <div class="hx-sol-grid">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>The forgotten hard drive is a scheduled data breach</h3><p>Every laptop sitting in the warehouse carries emails, contracts and customer data. If it leaves through the wrong door, it becomes a security incident with your organisation's name and company registration on it.</p><span class="hx-cost">Real cost: LGPD penalties reach 2% of revenue (capped at R$ 50 million per infringement) — in addition to public disclosure of the incident.</span></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18h.01"/></svg></span><h3>The law does not accept 'I handed it to someone to take away'</h3><p>Under the National Solid Waste Policy, the generator's responsibility is shared: if your organisation's batch turns up dumped or in an irregular channel, you are the one who answers for it.</p><span class="hx-cost">Real cost: environmental penalties, legal liability and the headline with your brand on it — years after disposal.</span></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="3" width="16" height="18"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2M10 21v-3h4v3"/></svg></span><h3>Idle assets lock up capital and space</h3><p>Without documented disposal, finance cannot record the write-off, the inventory will not close and the warehouse keeps paying rent to store scrap.</p><span class="hx-cost">Real cost: square metres taken up, a distorted balance sheet and rework at every internal audit cycle.</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">The turning point</span><h2>What changes when Ecobraz takes on the batch</h2></div>
+      <p>The difference between 'someone took it away' and an operation closed in writing.</p>
+    </div>
+    <div class="hx-contrast">
+      <div class="hx-before"><h3>How things are today</h3><ul><li>No one can list what is in the warehouse</li><li>Destination of the last batch: unknown</li><li>Data 'probably' wiped — with no record</li><li>Asset write-off stuck for months</li><li>Nothing to show when the audit asks</li></ul></div>
+      <div class="hx-after"><h3>After the operation</h3><ul><li>Each asset listed in an inventory before it leaves</li><li>Chain of custody from the door to the final destination</li><li>Sanitisation or destruction of media with a report</li><li>MTR and CDF where applicable, in your inbox</li><li>An answer ready for any audit — in minutes</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">What you gain</span><h2>What your operation gets back</h2></div>
+      <p>It is not just removing old equipment — it is closing pending matters that cost dearly.</p>
+    </div>
+    <div class="hx-sol-grid g4">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="3" width="16" height="18"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2M10 21v-3h4v3"/></svg></span><h3>Warehouse freed up</h3><p>The space that stored scrap goes back to serving the operation — with no change of contract.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>Write-off unblocked</h3><p>Documentation that finance accepts to record the write-off and close the inventory.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>Data risk closed</h3><p>Media handled with a record. The 'did they actually wipe it?' comes off your list of worries.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Audit without a scare</h3><p>Questionnaire arrived? The answer already exists: inventory, custody and certificates on file.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Clear scope</span><h2>What is included — and what is not</h2></div>
+      <p>Scope declared before scheduling reduces rework and surprises. Each batch is assessed technically.</p>
+    </div>
+    <div class="hx-scope">
+      <div class="hx-yes"><h3>In scope</h3><ul><li>Laptops, desktops and monitors</li><li>Servers, storage and network assets</li><li>Telephony and telecoms equipment</li><li>UPS units and associated batteries from the fleet</li><li>Peripherals and corporate electronics</li></ul><p>Feasibility depends on the type of asset, volume, location, site access and the documentation requested. Each batch is assessed before confirmation.</p></div>
+      <div class="hx-not"><h3>Out of scope</h3><ul><li>Loose household batteries</li><li>Toner and cartridges</li><li>Lamps, oil, polystyrene and packaging</li><li>Chemical, biological, radioactive or contaminated waste</li></ul><p>Materials out of scope require specific chains and are not part of this service.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt" id="como-funciona">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Process</span><h2>How it works, from contact to final destination</h2></div>
+      <p>No collection is confirmed without a technical assessment. That is what keeps the operation predictable and documentable.</p>
+    </div>
+    <div class="hx-steps">
+        <div class="hx-step"><h3>Describe the batch</h3><p>Asset types, approximate quantity, location and documentation needs.</p></div>
+        <div class="hx-step"><h3>Technical assessment</h3><p>We analyse scope, logistics and the applicable data handling.</p></div>
+        <div class="hx-step"><h3>Scope defined</h3><p>What will be collected, the method for the media and the documents for the operation.</p></div>
+        <div class="hx-step"><h3>Recorded collection</h3><p>Collection at source with an inventory of the assets and chain of custody.</p></div>
+        <div class="hx-step"><h3>Disposal and records</h3><p>Forwarding for disposal and delivery of the documentation produced.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Evidence of the operation</span><h2>What your audit will receive</h2></div>
+      <p>The documentation reflects what was actually carried out in each batch — no generic promises.</p>
+    </div>
+    <div class="hx-docs">
+        <div class="hx-doc"><h3>Batch inventory</h3><p>List of the assets collected, recorded at source.</p></div>
+        <div class="hx-doc"><h3>MTR and CDF</h3><p>Transport manifest and disposal certificate, where applicable to the material.</p></div>
+        <div class="hx-doc"><h3>Data report</h3><p>Logical sanitisation or physical destruction of media, as per the contracted scope.</p></div>
+        <div class="hx-doc"><h3>Chain of custody</h3><p>Record of the batch's route, from source to disposal.</p></div>
+        <div class="hx-doc"><h3>Documented scope</h3><p>Terms, exclusions and responsibilities defined before collection.</p></div>
+        <div class="hx-doc"><h3>Evidence with a source</h3><p>Institutional claims with a public record and a declared limit.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Why Ecobraz</span><h2>Why Ecobraz — and not the cheapest scrap dealer</h2></div>
+      <p>The bargain of irregular disposal costs dearly the day someone asks where the batch ended up.</p>
+    </div>
+    <div class="hx-sol-grid g4">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span><h3>15 years of operation</h3><p>An association founded in 2011, dedicated to electronics recycling and digital inclusion — not a scrap middleman.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>International recognition</h3><p>A practice listed on the European Union's circular economy platform and registered on a UN platform — with a declared scope.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Documentation is the standard</h3><p>Inventory, custody and certificates are not an 'extra service': they are how every operation of ours ends.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M1 7h13v10H1zM14 10h4l4 4v3h-8z"/><circle cx="6" cy="19" r="1.6"/><circle cx="18" cy="19" r="1.6"/></svg></span><h3>Assessment before a promise</h3><p>Anyone promising free collection over the phone hides the cost somewhere else. Here the scope comes in writing, before confirmation.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-authority">
+      <div>
+        <span class="hx-label on-dark">Verifiable authority</span>
+        <strong>Associação Auxílio à Reciclagem de Eletrônicos e Inclusão Digital — company ID (CNPJ) 14.197.457/0001-42</strong>
+        <p>Activity recorded on public platforms of international reference. Every claim on this site has a source, date and scope declared on the evidence page.</p>
+      </div>
+      <a href="{{@site.url}}/public-evidence/" data-track="decommissioned-it-asset-disposal_evidencias">See public evidence →</a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Frequently asked questions</span><h2>What IT and facilities managers ask</h2></div>
+    </div>
+    <div class="hx-faq">
+        <details><summary>Do you wipe the data from the equipment?</summary><p>When an asset contains data media, the handling is defined in the scope: logical sanitisation, where technically applicable, or physical destruction of the media. The chosen method is recorded in a report.</p></details>
+        <details><summary>Do you issue documentation for audit?</summary><p>Yes, according to the service performed: inventory, MTR and CDF where applicable to the material, a data handling report and a chain-of-custody record. The documentation reflects what was actually carried out.</p></details>
+        <details><summary>Do you operate outside São Paulo?</summary><p>The operation is based in São Paulo and the surrounding region; corporate collections in other regions are assessed according to volume, logistics and timescale. Describe the batch and the location so we can check feasibility.</p></details>
+        <details><summary>Is there a minimum volume?</summary><p>We assess anything from one-off batches to large-scale decommissioning. The arrangement depends on the type of asset, the location and the logistics involved.</p></details>
+        <details><summary>Is there a charge for collection?</summary><p>Commercial terms depend on the type of asset, volume, location and logistics. The technical assessment defines the model — with no promise of a free service and no surprises later.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Related solutions</span><h2>Could also be part of your operation</h2></div>
+    </div>
+    <div class="hx-sol-grid">
+        <a class="hx-sol" href="{{@site.url}}/data-destruction/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>Data sanitisation and destruction</h3><p>Media handling with a report, for batches with IT or DPO requirements.</p><span class="hx-go">View solution →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/server-data-centre-disposal/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>Servers and data centre</h3><p>Decommissioning of critical infrastructure with planned collection.</p><span class="hx-go">View solution →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/recurring-collections/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M1 7h13v10H1zM14 10h4l4 4v3h-8z"/><circle cx="6" cy="19" r="1.6"/><circle cx="18" cy="19" r="1.6"/></svg></span><h3>Recurring collections</h3><p>A continuous collection schedule for operations with constant flow.</p><span class="hx-go">View solution →</span></a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Technical reference</span><h2>Published basis, with a persistent identifier</h2></div>
+      <p>This subject is developed in an original technical report by Ecobraz Emigre, published with a DOI on the open Zenodo repository.</p>
+    </div>
+    <p style="margin:0">VILLANOVA, Marcio. <em>Ativos Eletroeletrônicos Pós-Uso como Risco Corporativo: Governança Ambiental, Patrimonial e Informacional</em>. Zenodo, 2026. <a class="hx-src" href="https://doi.org/10.5281/zenodo.21397950" rel="noopener" data-track="decommissioned-it-asset-disposal_referencia_doi">doi.org/10.5281/zenodo.21397950</a> &nbsp;·&nbsp; <a class="hx-src" href="{{@site.url}}/technical-publications/" data-track="decommissioned-it-asset-disposal_referencia_publicacoes">All publications →</a></p>
+  </div>
+</section>
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-final">
+      <div>
+        <span class="hx-label on-dark">Technical assessment with no obligation</span>
+        <h2>Every week the batch sits idle is a risk running on your organisation's account.</h2>
+        <p>Describe the assets, the volume and the location. The team gets back to you with scope, terms and the applicable documentation — in writing.</p>
+      </div>
+      <div class="hx-actions">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=decommissioned-it-asset-disposal&amp;material=IT%20and%20computing" data-track="decommissioned-it-asset-disposal_final_cta">Request a technical assessment</a>
+        <a class="button hx-btn-wa" href="{{@custom.whatsapp_url}}" rel="noopener" data-track="decommissioned-it-asset-disposal_final_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> WhatsApp</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<a class="hx-wa-float" href="{{@custom.whatsapp_url}}" rel="noopener" aria-label="Talk on WhatsApp" data-track="decommissioned-it-asset-disposal_whatsapp_flutuante"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg><span>Talk on WhatsApp</span></a>
