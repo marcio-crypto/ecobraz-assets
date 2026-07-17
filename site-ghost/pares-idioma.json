@@ -87,7 +87,8 @@
   },
   {
    "pt": "coleta-de-lixo-eletronico-em-osasco",
-   "en": "e-waste-collection-osasco"
+   "en": "e-waste-collection-osasco",
+   "pt_tipo": "posts"
   },
   {
    "pt": "coletas-recorrentes",
@@ -191,5 +192,298 @@
    "pt_tipo": "posts"
   }
  ],
- "posts": []
+ "posts": [
+  {
+   "pt": "a-diferenca-entre-descarte-reciclagem-reuso-e-remanufatura-e-por-que-isso-importa-no-compliance",
+   "en": "disposal-recycling-reuse-remanufacturing-compliance"
+  },
+  {
+   "pt": "a-evolucao-dos-computadores-dos-anos-70-ao-seculo-xxi",
+   "en": "evolution-of-computers-1970s-to-21st-century"
+  },
+  {
+   "pt": "a-ultracentrifuga-brasileira-e-o-dominio-do-ciclo-nuclear",
+   "en": "brazilian-ultracentrifuge-uranium-cycle"
+  },
+  {
+   "pt": "adote-um-bairro-a-engenharia-por-tras-do-esg-urbano",
+   "en": "adopt-a-neighbourhood-urban-esg"
+  },
+  {
+   "pt": "agbogbloshie-o-maior-desastre-de-lixo-eletronico-do-mundo",
+   "en": "agbogbloshie-worlds-largest-e-waste-disaster"
+  },
+  {
+   "pt": "altair-8800-1975-a-arquitetura-s100-e-microcomputacao",
+   "en": "altair-8800-s100-bus-microcomputing"
+  },
+  {
+   "pt": "anniston-e-o-pcb-a-tragedia-do-veneno-eterno-lixo-eletronico",
+   "en": "anniston-pcb-forever-poison-e-waste"
+  },
+  {
+   "pt": "apple-ii-o-micro-que-levou-computador-para-casa",
+   "en": "apple-ii-home-computer-e-waste"
+  },
+  {
+   "pt": "auditabilidade-esg-o-fim-da-era-do-greenwashing-em-2026",
+   "en": "esg-auditability-end-of-greenwashing-2026"
+  },
+  {
+   "pt": "bateria-de-notebook-vazando-o-que-fazer-agora",
+   "en": "laptop-battery-leaking-what-to-do"
+  },
+  {
+   "pt": "bina-a-invencao-brasileira-que-identificou-o-telefone-do-futuro",
+   "en": "bina-brazilian-invention-caller-id"
+  },
+  {
+   "pt": "certificado-de-descarte-de-lixo-eletronico-por-que-sua-empresa-precisa",
+   "en": "e-waste-disposal-certificate"
+  },
+  {
+   "pt": "coleta-e-reciclagem-de-autoclaves-e-equipamentos-de-esterilizacao",
+   "en": "autoclave-steriliser-collection-recycling"
+  },
+  {
+   "pt": "como-a-inteligencia-artificial-esta-ajudando-a-reciclar-lixo-eletronico",
+   "en": "how-ai-helps-recycle-electronic-waste"
+  },
+  {
+   "pt": "como-funciona-a-triagem-do-lixo-eletronico-passo-a-passo",
+   "en": "how-e-waste-sorting-works-step-by-step"
+  },
+  {
+   "pt": "como-limpar-roteadores-e-modems-antes-do-descarte",
+   "en": "clean-routers-modems-before-disposal"
+  },
+  {
+   "pt": "como-montar-um-ponto-de-coleta-de-eletronicos-na-sua-empresa",
+   "en": "how-to-set-up-e-waste-collection-point"
+  },
+  {
+   "pt": "cubatao-chuva-acida-e-o-ar-envenenado-pelo-progresso",
+   "en": "cubatao-acid-rain-air-poisoned-by-progress"
+  },
+  {
+   "pt": "de-onde-vem-o-lixo-eletronico-a-origem-dos-residuos-de-tecnologia-no-brasil",
+   "en": "where-e-waste-comes-from-brazil"
+  },
+  {
+   "pt": "deepwater-horizon-o-colapso-e-vazamento-toxico",
+   "en": "deepwater-horizon-collapse-toxic-blowout"
+  },
+  {
+   "pt": "descarte-de-ar-condicionado-a-solucao-sustentavel-da-ecobraz-emigre",
+   "en": "sustainable-air-conditioner-disposal"
+  },
+  {
+   "pt": "descarte-de-baterias-de-litio-riscos-normas-e-destinacao-segura",
+   "en": "lithium-battery-disposal-risks-and-safe-handling"
+  },
+  {
+   "pt": "descarte-de-equipamentos-de-imagem-medica-raio-x-tomografos-etc",
+   "en": "medical-imaging-equipment-disposal"
+  },
+  {
+   "pt": "descarte-de-ti-venda-sucata-ou-compra-de-risco",
+   "en": "it-disposal-scrap-sale-or-hidden-liability"
+  },
+  {
+   "pt": "do-microprocessador-ao-computador-pessoal-a-era-digital-comeca",
+   "en": "microprocessor-personal-computer-digital-age"
+  },
+  {
+   "pt": "empresas-obrigadas-a-fazer-logistica-reversa-lista-completa",
+   "en": "companies-required-to-run-reverse-logistics"
+  },
+  {
+   "pt": "eniac-1945-a-engenharia-do-primeiro-computador-modular",
+   "en": "eniac-first-modular-computer"
+  },
+  {
+   "pt": "fonografo-de-edison-o-som-gravado-pela-primeira-vez",
+   "en": "edison-phonograph-first-recorded-sound"
+  },
+  {
+   "pt": "fotografo-de-placa-vidro-a-precisao-da-luz-em-cristal",
+   "en": "glass-plate-camera-precision-of-light"
+  },
+  {
+   "pt": "ibm-pc-5150-o-computador-que-definiu-a-era-dos-pcs",
+   "en": "ibm-pc-5150-computer-that-defined-pc-era"
+  },
+  {
+   "pt": "iphone-5-2012-o-smartphone-que-afinou-a-era-retina",
+   "en": "iphone-5-2012-the-smartphone-that-slimmed-the-retina-era"
+  },
+  {
+   "pt": "itaiitai-o-cadmio-a-agua-e-agonia-dos-ossos",
+   "en": "itai-itai-cadmium-water-bone-agony"
+  },
+  {
+   "pt": "licenciamento-ambiental-para-recicladores-de-eletronicos-o-que-verificar-antes-de-contratar",
+   "en": "environmental-licensing-e-waste-recyclers-what-to-check"
+  },
+  {
+   "pt": "lixo-eletronico-lista-completa-do-que-pode-e-nao-pode-descartar",
+   "en": "e-waste-what-can-and-cannot-be-disposed"
+  },
+  {
+   "pt": "lixo-eletronico-nas-escolas-como-ensinar-sustentabilidade-com-a-ecobraz",
+   "en": "e-waste-in-schools-teaching-sustainability"
+  },
+  {
+   "pt": "lixo-eletronico-no-brasil-numeros-atualizados-2025",
+   "en": "e-waste-brazil-2025-key-figures"
+  },
+  {
+   "pt": "magnavox-odyssey-1972-eletronica-discreta-e-patentes",
+   "en": "magnavox-odyssey-1972-discrete-electronics-patents"
+  },
+  {
+   "pt": "maquina-de-costura-eletrica-singer-o-motor-que-vestiu-mundo",
+   "en": "singer-electric-sewing-machine"
+  },
+  {
+   "pt": "mineracao-urbana-a-geopolitica-dos-minerais-criticos",
+   "en": "urban-mining-geopolitics-critical-minerals"
+  },
+  {
+   "pt": "monitores-quebrados-o-chumbo-e-o-mercurio-exigem-destino-unico",
+   "en": "broken-monitors-lead-mercury-single-route"
+  },
+  {
+   "pt": "museu-itinerante-levando-a-historia-da-tecnologia-a-shoppings-e-eventos",
+   "en": "travelling-electronics-museum-malls-events"
+  },
+  {
+   "pt": "neo-geo-aes-1990-cartuchos-gigantes-e-hardware-arcade",
+   "en": "neo-geo-aes-1990-giant-cartridges-arcade-hardware"
+  },
+  {
+   "pt": "normas-da-antt-e-abnt-para-transporte-de-baterias-de-litio",
+   "en": "antt-abnt-standards-lithium-battery-transport"
+  },
+  {
+   "pt": "normas-da-anvisa-e-lixo-eletronico-cuidados-especiais-no-descarte-de-equipamentos-eletromedicos-e-hospitalares",
+   "en": "anvisa-rules-medical-hospital-equipment-disposal"
+  },
+  {
+   "pt": "novo-marco-da-cvm-o-fim-do-esg-de-fachada-nas-empresas",
+   "en": "cvm-rules-end-of-superficial-esg"
+  },
+  {
+   "pt": "o-desastre-de-minamata-a-ameaca-do-mercurio-e-alerta-global",
+   "en": "minamata-disaster-mercury-global-warning"
+  },
+  {
+   "pt": "o-impacto-ambiental-do-descarte-incorreto-de-eletrodomesticos",
+   "en": "environmental-impact-improper-appliance-disposal"
+  },
+  {
+   "pt": "o-impacto-do-lixo-eletronico-no-meio-ambiente-dados-2025",
+   "en": "e-waste-environmental-impact-2025-data"
+  },
+  {
+   "pt": "o-mapa-completo-do-lixo-eletronico-no-brasil-dados-regionais-volumes-e-riscos",
+   "en": "brazil-e-waste-map-regional-data-volumes-risks"
+  },
+  {
+   "pt": "o-papel-da-logistica-reversa-na-certificacao-iso-14001-das-empresas",
+   "en": "reverse-logistics-iso-14001-certification"
+  },
+  {
+   "pt": "o-primeiro-circuito-integrado-brasileiro",
+   "en": "first-brazilian-integrated-circuit"
+  },
+  {
+   "pt": "o-primeiro-microscopio-eletronico-fabricado-no-brasil",
+   "en": "first-electron-microscope-made-in-brazil"
+  },
+  {
+   "pt": "o-que-e-considerado-lixo-eletronico-exemplos-e-destinos-corretos-com-a-ecobraz",
+   "en": "what-is-e-waste-examples-and-correct-disposal"
+  },
+  {
+   "pt": "obsolescencia-programada-nos-carros-eletricos",
+   "en": "planned-obsolescence-electric-cars"
+  },
+  {
+   "pt": "onde-descartar-lixo-eletronico-em-sao-paulo-mapa-e-opcoes-seguras",
+   "en": "where-to-dispose-e-waste-sao-paulo"
+  },
+  {
+   "pt": "orelhao-design-tecnologia-e-cidadania-urbana",
+   "en": "orelhao-brazilian-payphone-design"
+  },
+  {
+   "pt": "os-componentes-toxicos-presentes-no-lixo-eletronico-e-seus-riscos",
+   "en": "toxic-components-e-waste-risks"
+  },
+  {
+   "pt": "os-impactos-do-lixo-eletronico-nos-solos-rios-e-oceanos",
+   "en": "e-waste-impact-soil-rivers-oceans"
+  },
+  {
+   "pt": "passo-a-passo-para-emitir-mtr-e-cdf-no-descarte-de-eletronicos",
+   "en": "issuing-mtr-cdf-e-waste-disposal"
+  },
+  {
+   "pt": "pdp11-o-minicomputador-que-moldou-a-computacao-moderna",
+   "en": "pdp11-minicomputer-that-shaped-modern-computing"
+  },
+  {
+   "pt": "por-que-criei-o-museu-virtual-do-eletronico",
+   "en": "why-i-created-the-virtual-electronics-museum"
+  },
+  {
+   "pt": "por-que-nao-jogar-eletronicos-no-lixo-comum-entenda-os-riscos-reais",
+   "en": "electronics-general-waste-real-risks"
+  },
+  {
+   "pt": "power-banks-sinais-de-risco-e-descarte-seguro",
+   "en": "power-banks-warning-signs-safe-disposal"
+  },
+  {
+   "pt": "procedimento-operacional-padrao-pop-coleta-e-descarte-de-elixo",
+   "en": "sop-e-waste-collection-disposal"
+  },
+  {
+   "pt": "projetor-dos-irmaos-lumiere-o-nascimento-do-cinema",
+   "en": "lumiere-brothers-cinematograph-birth-of-cinema"
+  },
+  {
+   "pt": "quais-componentes-de-um-eletronico-podem-ser-reciclados",
+   "en": "which-electronic-components-can-be-recycled"
+  },
+  {
+   "pt": "qual-documentacao-fiscal-adequada-para-saida-de-sucata-x-reciclagem",
+   "en": "tax-documents-scrap-versus-recycling-dispatch"
+  },
+  {
+   "pt": "radio-experimental-de-nikola-tesla-o-nascimento-da-comunicacao-sem-fio",
+   "en": "nikola-tesla-experimental-radio-wireless-origins"
+  },
+  {
+   "pt": "ranking-global-os-20-paises-que-mais-geram-lixo-eletronico",
+   "en": "top-20-e-waste-generating-countries"
+  },
+  {
+   "pt": "reciclagem-de-eletronicos-no-brasil-panorama-atual-desafios-e-oportunidades-para-empresas",
+   "en": "e-waste-recycling-brazil-challenges-opportunities"
+  },
+  {
+   "pt": "sanitizacao-de-dados-em-hds-e-ssds-como-fazer-de-forma-certificada",
+   "en": "data-sanitisation-hdd-ssd"
+  },
+  {
+   "pt": "sony-playstation-1-a-revolucao-dos-videogames-em-cd",
+   "en": "sony-playstation-1-cd-gaming-revolution"
+  },
+  {
+   "pt": "sony-playstation-2-o-videogame-que-dominou-mundo",
+   "en": "sony-ps2-console-that-ruled-the-world"
+  }
+ ]
 }
