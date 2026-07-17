@@ -252,3 +252,10 @@ nav.main a:hover{color:#fff}
 .vn-form-status{margin-top:16px;font-size:14px}
 .vn-form-status.is-ok{color:var(--green);font-weight:600}
 .vn-form-status.is-err{color:var(--risk);font-weight:600}
+
+/* Hero de conversão nas páginas internas (herda .hero) */
+.page-hero{padding:86px 0 66px}
+.page-hero h1{max-width:24ch}
+.page-hero .lead{max-width:60ch;font-size:17px;color:#B9C6D8;margin:18px 0 30px}
+.page-hero .cta-row{margin-top:6px}
+.page-article > .wrap > .article-body{margin-top:52px}

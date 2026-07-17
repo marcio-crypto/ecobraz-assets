@@ -2,13 +2,20 @@
 
 {{#page}}
 <article class="article page-article">
-  <header class="article-head">
+  <section class="hero page-hero">
+    <svg class="mark" width="460" height="520" viewBox="0 0 60 68" aria-hidden="true"><path d="M30 2 56 12v26c0 14-12 22-26 28C16 60 4 52 4 38V12Z" fill="none" stroke="#8FA8CC" stroke-width="1.4"/><path d="M30 2v64" stroke="#8FA8CC" stroke-width="1.1"/><path d="M30 40l7 8-7 8-7-8Z" fill="#C9A24B"/></svg>
     <div class="wrap">
       <div class="eyebrow">Villanova ESG</div>
       <h1>{{title}}</h1>
-      {{#if custom_excerpt}}<p class="page-excerpt">{{custom_excerpt}}</p>{{/if}}
+      {{#if custom_excerpt}}<p class="lead">{{custom_excerpt}}</p>{{/if}}
+      <div class="cta-row">
+        <a class="btn btn-primary only-en" href="{{@site.url}}/supplier-evidence-risk-intake/">Request an initial review</a>
+        <a class="btn btn-primary only-pt" href="{{@site.url}}/solicitar-analise/">Solicitar análise inicial</a>
+        <a class="btn btn-ghost only-en" href="mailto:contact@villanovaesg.com">Talk to us</a>
+        <a class="btn btn-ghost only-pt" href="mailto:contact@villanovaesg.com">Fale conosco</a>
+      </div>
     </div>
-  </header>
+  </section>
 
   <div class="wrap">
     <div class="article-body">
