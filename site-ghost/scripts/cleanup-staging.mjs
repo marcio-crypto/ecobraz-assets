@@ -8,6 +8,8 @@ const targets = {
   pages: [
     // 'about' saiu da lista: o slug era da página starter do Ghost, mas agora
     // é a página EN oficial "About" (en-paginas.json) — não despublicar.
+    // Sérgio Diniz não trabalha mais na Ecobraz — despublica a página de autor.
+    'autor-sergio-diniz',
     'blog',
     'sobre-2',
     'evidencias-2',
