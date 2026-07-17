@@ -66,6 +66,20 @@
         else if (stored === 'denied') window.clarity('consent', false);
       })();
     </script>
+    <!-- Connected Sites (E-goi) -->
+    <script>
+    if(window._mtmReady){
+     console.error('Connected sites script already loaded. You might have it dupplicated.');
+    } else {
+    window._mtmReady=true;
+    var _mtm = window._mtm = window._mtm || [];
+    _mtm.push({'mtm.startTime': (new Date().getTime()), 'event': 'mtm.Start'});
+    var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+    g.async=true; g.defer=true; g.src='https://egoi.site/1774067_ecobraz.org.js?v='+new Date().getTime();
+    s.parentNode.insertBefore(g,s);
+    }
+    </script>
+    <!-- End Connected Sites -->
     {{ghost_head}}
     {{{block "head"}}}
     <script type="application/ld+json">
