@@ -20,6 +20,13 @@
         wait_for_update: 500
       });
     </script>
+    <!-- Google Analytics 4 — respeita o Consent Mode acima (só mede após aceite) -->
+    <link rel="preconnect" href="https://www.googletagmanager.com">
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-Q8PDFMW53N"></script>
+    <script>
+      gtag('js', new Date());
+      gtag('config', 'G-Q8PDFMW53N');
+    </script>
     {{{block "hreflang"}}}
     {{ghost_head}}
 </head>
