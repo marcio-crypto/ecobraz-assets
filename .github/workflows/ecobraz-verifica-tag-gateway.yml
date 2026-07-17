@@ -1,0 +1,25 @@
+name: Ecobraz — verificar Google Tag Gateway (first-party)
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'URL base do site'
+        required: false
+        default: 'https://ecobraz.org'
+
+permissions:
+  contents: read
+
+jobs:
+  verifica:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instala Playwright + Chromium
+        run: |
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund playwright >/dev/null
+          npx playwright install --with-deps chromium
+      - name: Verifica roteamento first-party da tag
+        run: node site-ghost/scripts/verifica-tag-gateway.mjs '${{ inputs.base_url || 'https://ecobraz.org' }}'
