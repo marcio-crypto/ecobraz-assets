@@ -6,7 +6,8 @@ if (!adminUrl || !adminKey.includes(':')) throw new Error('Missing Ghost Admin c
 
 const targets = {
   pages: [
-    'about',
+    // 'about' saiu da lista: o slug era da página starter do Ghost, mas agora
+    // é a página EN oficial "About" (en-paginas.json) — não despublicar.
     'blog',
     'sobre-2',
     'evidencias-2',
