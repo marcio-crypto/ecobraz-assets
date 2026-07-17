@@ -24,24 +24,24 @@ const api = async (method, path, body) => {
 };
 const espera = (ms) => new Promise((res) => setTimeout(res, ms));
 
-const bloco = (pt, en, tipoRota, ptTipo) => {
-  const prefixo = tipoRota === 'posts' ? '/blog' : '';
-  const prefixoPt = (ptTipo || tipoRota) === 'posts' ? '/blog' : '';
-  const urlPt = pt === '' ? `${BASE}/` : `${BASE}${prefixoPt}/${pt}/`;
-  const urlEn = `${BASE}${prefixo}/${en}/`;
-  return `${INI}\n<link rel="alternate" hreflang="pt-BR" href="${urlPt}">\n<link rel="alternate" hreflang="en" href="${urlEn}">\n<link rel="alternate" hreflang="x-default" href="${urlPt}">\n${FIM}`;
-};
+const bloco = (urlPt, urlEn) =>
+  `${INI}\n<link rel="alternate" hreflang="pt-BR" href="${urlPt}">\n<link rel="alternate" hreflang="en" href="${urlEn}">\n<link rel="alternate" hreflang="x-default" href="${urlPt}">\n${FIM}`;
 
-const aplicar = async (tipo, slug, blocoNovo) => {
-  const item = (await api('GET', `${tipo}/?filter=slug:${slug}&limit=1`))[tipo]?.[0];
-  if (!item) { console.log(`AVISO: ${tipo}/${slug} não existe ainda — pulado`); return false; }
+// Busca o item vivo; usa a URL REAL do Ghost (item.url) para o hreflang, em vez
+// de reconstruir o caminho. Assim o hreflang aponta para a URL final (ex.: os
+// posts do museu vivem em /museu/, não /blog/) e nunca cai num redirect 301.
+const getItem = async (tipo, slug) =>
+  (await api('GET', `${tipo}/?filter=slug:${slug}&limit=1`))[tipo]?.[0];
+
+const injeta = async (item, tipo, blocoNovo) => {
+  if (!item) { console.log(`AVISO: ${tipo} inexistente — pulado`); return false; }
   let inj = item.codeinjection_head || '';
   const re = new RegExp(`${INI}[\\s\\S]*?${FIM}\\n?`, 'g');
   inj = inj.replace(re, '').trim();
   inj = (inj ? inj + '\n' : '') + blocoNovo;
-  if ((item.codeinjection_head || '').trim() === inj.trim()) { console.log(`ok (sem mudança): ${tipo}/${slug}`); return true; }
+  if ((item.codeinjection_head || '').trim() === inj.trim()) { console.log(`ok (sem mudança): ${tipo}/${item.slug}`); return true; }
   await api('PUT', `${tipo}/${item.id}/`, {[tipo]: [{codeinjection_head: inj, updated_at: item.updated_at}]});
-  console.log(`hreflang aplicado: ${tipo}/${slug}`);
+  console.log(`hreflang aplicado: ${tipo}/${item.slug} -> pt/en pela URL real`);
   await espera(200);
   return true;
 };
@@ -49,13 +49,22 @@ const aplicar = async (tipo, slug, blocoNovo) => {
 const pares = JSON.parse(await fs.readFile('site-ghost/pares-idioma.json', 'utf8'));
 let aplicados = 0;
 for (const par of pares.pages) {
-  const b = bloco(par.pt, par.en, 'pages', par.pt_tipo);
-  if (par.pt !== '') aplicados += (await aplicar(par.pt_tipo || 'pages', par.pt, b)) ? 1 : 0;
-  aplicados += (await aplicar('pages', par.en, b)) ? 1 : 0;
+  const ptTipo = par.pt_tipo || 'pages';
+  const ptItem = par.pt === '' ? null : await getItem(ptTipo, par.pt);
+  const enItem = await getItem('pages', par.en);
+  const urlPt = par.pt === '' ? `${BASE}/` : (ptItem?.url || `${BASE}/${par.pt}/`);
+  const urlEn = enItem?.url || `${BASE}/${par.en}/`;
+  const b = bloco(urlPt, urlEn);
+  if (ptItem) aplicados += (await injeta(ptItem, ptTipo, b)) ? 1 : 0;
+  aplicados += (await injeta(enItem, 'pages', b)) ? 1 : 0;
 }
 for (const par of pares.posts || []) {
-  const b = bloco(par.pt, par.en, 'posts');
-  aplicados += (await aplicar('posts', par.pt, b)) ? 1 : 0;
-  aplicados += (await aplicar('posts', par.en, b)) ? 1 : 0;
+  const ptItem = await getItem('posts', par.pt);
+  const enItem = await getItem('posts', par.en);
+  const urlPt = ptItem?.url || `${BASE}/blog/${par.pt}/`;
+  const urlEn = enItem?.url || `${BASE}/blog/${par.en}/`;
+  const b = bloco(urlPt, urlEn);
+  aplicados += (await injeta(ptItem, 'posts', b)) ? 1 : 0;
+  aplicados += (await injeta(enItem, 'posts', b)) ? 1 : 0;
 }
 console.log(`Concluído: ${aplicados} recursos com hreflang.`);

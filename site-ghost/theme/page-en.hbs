@@ -13,7 +13,7 @@
                 <span class="eyebrow">English overview</span>
                 <h1>{{title}}</h1>
                 {{#if custom_excerpt}}<p>{{custom_excerpt}}</p>{{/if}}
-                <a class="button" href="mailto:contato@ecobraz.org.br" data-track="en_contact_email">Contact us in English</a>
+                <a class="button" href="{{@custom.whatsapp_url}}" rel="noopener" data-track="en_contact_whatsapp">Contact us on WhatsApp</a>
             </div>
             <aside class="page-hero-card">
                 <strong>Operating language</strong>
@@ -24,8 +24,8 @@
     <div class="page-content-wrap">
         <div class="article-content container-narrow gh-content">{{content}}</div>
         <aside class="page-conversion container-narrow">
-            <div><span class="eyebrow">Get in touch</span><h2>Questions about our work or documentation?</h2><p>Write to us in English or Portuguese — we reply with the records that answer your question.</p></div>
-            <a class="button" href="mailto:contato@ecobraz.org.br" data-track="en_contact_email_footer">contato@ecobraz.org.br</a>
+            <div><span class="eyebrow">Get in touch</span><h2>Questions about our work or documentation?</h2><p>Message us in English or Portuguese — we reply with the records that answer your question.</p></div>
+            <a class="button" href="{{@custom.whatsapp_url}}" rel="noopener" data-track="en_contact_whatsapp_footer">Message us on WhatsApp</a>
         </aside>
     </div>
 </article>
