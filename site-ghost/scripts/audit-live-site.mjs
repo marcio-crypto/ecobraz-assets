@@ -46,6 +46,7 @@ function attr(tag, name) {
   return match ? match[1] : '';
 }
 
+const obfuscatedPages = [];
 for (const entry of routes) {
   const route = typeof entry === 'string' ? entry : entry.route;
   const alternates = typeof entry === 'string' ? [] : (entry.alternates || []);
@@ -75,6 +76,10 @@ for (const entry of routes) {
   }
   checkedPages += 1;
   const html = await response.text();
+
+  // Sinaliza (sem falhar) se a Cloudflare ainda está ofuscando e-mails, o que
+  // gera links quebrados /cdn-cgi/l/email-protection na auditoria do Ahrefs.
+  if (html.includes('/cdn-cgi/l/email-protection')) obfuscatedPages.push(effectiveRoute);
 
   const h1Count = (html.match(/<h1[\s>]/gi) || []).length;
   if (h1Count !== 1) errors.push(`${route}: expected exactly 1 <h1>, found ${h1Count}`);
@@ -157,6 +162,11 @@ const robots = await fetch(`${baseUrl}/robots.txt`);
 if (!robots.ok) errors.push(`/robots.txt: ${robots.status}`);
 
 console.log(`Audited ${checkedPages} live pages and ${checkedLinks} home internal links on ${baseUrl}.`);
+if (obfuscatedPages.length === 0) {
+  console.log('Ofuscação de e-mail da Cloudflare: DESLIGADA (nenhuma página com /cdn-cgi/l/email-protection).');
+} else {
+  console.warn(`WARN: ofuscação de e-mail ainda ativa/cacheada em ${obfuscatedPages.length} página(s): ${obfuscatedPages.slice(0, 8).join(', ')}`);
+}
 for (const warning of warnings) console.warn(`WARN: ${warning}`);
 if (errors.length) {
   for (const error of errors) console.error(`ERROR: ${error}`);
