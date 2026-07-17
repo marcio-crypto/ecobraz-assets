@@ -11,6 +11,9 @@ on:
         description: 'Enviar formulário de verdade (cria lead de teste no CRM e verifica generate_lead)'
         type: boolean
         default: true
+  schedule:
+    # Toda segunda-feira às 09:00 UTC (06:00 em Brasília). Sem envio de lead.
+    - cron: '0 9 * * 1'
 
 permissions:
   contents: read
@@ -26,7 +29,7 @@ jobs:
           npm install --no-audit --no-fund playwright >/dev/null
           npx playwright install --with-deps chromium
       - name: Roda o pente fino completo
-        run: node site-ghost/scripts/auditoria-ecobraz.mjs '${{ inputs.base_url }}' ${{ inputs.enviar_lead && '--enviar-lead' || '' }}
+        run: node site-ghost/scripts/auditoria-ecobraz.mjs '${{ inputs.base_url || 'https://ecobraz.org' }}' ${{ (github.event_name == 'workflow_dispatch' && inputs.enviar_lead) && '--enviar-lead' || '' }}
       - name: Guarda as capturas de tela
         if: always()
         uses: actions/upload-artifact@v4
@@ -35,3 +38,10 @@ jobs:
           path: auditoria-shots/
           if-no-files-found: warn
           retention-days: 14
+
+  indexacao:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Auditoria de indexabilidade e hreflang (BR + Europa)
+        run: node site-ghost/scripts/auditoria-indexacao.mjs '${{ inputs.base_url || 'https://ecobraz.org' }}'
