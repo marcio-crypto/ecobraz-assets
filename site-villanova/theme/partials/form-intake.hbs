@@ -1,7 +1,10 @@
 <section class="intake" id="formulario">
   <h2><span class="only-pt">Formulário de solicitação</span><span class="only-en">Request form</span></h2>
   <p class="intake-lead"><span class="only-pt">Forneça contexto suficiente para uma primeira resposta útil — use um e-mail profissional, identifique o comprador ou o mercado-alvo e descreva as evidências e o prazo.</span><span class="only-en">Give enough context for a useful first reply — use a work email, identify the buyer or target market, and describe the evidence and the deadline.</span></p>
-  <form class="vn-form" data-intake-form data-endpoint="{{@custom.contact_endpoint}}" novalidate>
+  <form class="vn-form" data-intake-form data-endpoint="{{#if @custom.contact_endpoint}}{{@custom.contact_endpoint}}{{else}}https://api.web3forms.com/submit{{/if}}" novalidate>
+    <input type="hidden" name="access_key" value="e92c1709-3b84-4b64-b4e9-7c9ddb1be472">
+    <input type="hidden" name="subject" value="Nova solicitação — Villanova ESG (site)">
+    <input type="hidden" name="from_name" value="Villanova ESG — Site">
     <div class="vn-field">
       <label for="if-nome"><span class="only-pt">Nome</span><span class="only-en">Name</span></label>
       <input id="if-nome" name="nome" type="text" autocomplete="name" required maxlength="120">
@@ -19,6 +22,7 @@
       <textarea id="if-msg" name="mensagem" rows="5" required maxlength="4000"></textarea>
     </div>
     <input type="text" name="_gotcha" tabindex="-1" autocomplete="off" aria-hidden="true" class="vn-hp">
+    <input type="checkbox" name="botcheck" class="vn-hp" tabindex="-1" autocomplete="off" aria-hidden="true">
     <label class="vn-form-consent">
       <input type="checkbox" name="consent" required>
       <span class="only-pt">Concordo que meus dados sejam usados para avaliar e responder a esta solicitação.</span><span class="only-en">I agree that my data may be used to assess and respond to this request.</span>

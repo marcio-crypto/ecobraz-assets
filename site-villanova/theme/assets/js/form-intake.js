@@ -13,19 +13,14 @@
     if (!form.checkValidity()) { form.reportValidity(); return; }
     var ep = form.getAttribute('data-endpoint');
     if (!ep) { window.location.href = 'mailto:contact@villanovaesg.com'; return; }
-    var data = {
-      nome: form.nome.value, email: form.email.value,
-      empresa: form.empresa.value, mensagem: form.mensagem.value,
-      _gotcha: form._gotcha.value
-    };
     btn.disabled = true;
     status.hidden = false;
     status.className = 'vn-form-status';
     status.textContent = t.sending;
-    fetch(ep, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
-      .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+    fetch(ep, { method: 'POST', headers: { 'Accept': 'application/json' }, body: new FormData(form) })
+      .then(function (r) { return r.json().catch(function () { return {}; }); })
       .then(function (j) {
-        if (j && j.ok) {
+        if (j && (j.success || j.ok)) {
           form.reset();
           status.className = 'vn-form-status is-ok';
           status.textContent = t.ok;
