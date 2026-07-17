@@ -1,0 +1,19 @@
+name = "ecobraz-coletas"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+workers_dev = true
+account_id = "0ab0573840927669f3bb3666d63cc023"
+
+# IMPORTANTE: preserva TODAS as variáveis e segredos já configurados na
+# Cloudflare (Ploomes, E-goi, Turnstile, ALLOWED_ORIGINS...). O deploy só
+# atualiza o CÓDIGO — não apaga nenhuma configuração existente.
+keep_vars = true
+
+# Segredos usados pelo Worker (definidos na Cloudflare, nunca no repositório):
+#   PLOOMES_USER_KEY, PLOOMES_PIPELINE_ID, PLOOMES_STAGE_ID, PLOOMES_OWNER_ID
+#   EGOI_API_KEY, EGOI_LIST_ID
+#   TURNSTILE_SECRET_KEY, ALLOWED_ORIGINS
+# NOVOS (para o e-mail de confirmação — o envio só ocorre quando ambos existem):
+#   EGOI_TRANSACTIONAL_API_KEY  -> chave da API Transacional do E-goi
+#   EGOI_SENDER_ID              -> código do remetente registrado no E-goi
+# Opcionais: EGOI_SENDER_NAME, EGOI_REPLY_TO_ID, EGOI_TRANSACTIONAL_API_URL
