@@ -237,3 +237,18 @@ nav.main a:hover{color:#fff}
 .article-body .kg-width-wide{width:min(100%, 46rem);margin-left:auto;margin-right:auto}
 .article-body .kg-width-full{width:100vw;position:relative;left:50%;right:50%;margin-left:-50vw;margin-right:-50vw;max-width:none}
 .article-body .kg-width-full img{width:100%}
+
+/* Formulário nativo de solicitação (intake) — padrão sóbrio Villanova */
+.intake{margin:40px 0 8px}
+.vn-form{max-width:640px}
+.vn-field{margin-bottom:18px}
+.vn-field label{display:block;font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--ink);margin-bottom:7px}
+.vn-form input[type=text],.vn-form input[type=email],.vn-form textarea{width:100%;font:inherit;font-size:15px;color:var(--ink);background:#fff;border:1px solid var(--hair);border-radius:2px;padding:13px 14px;transition:border-color .2s,box-shadow .2s}
+.vn-form input:focus,.vn-form textarea:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,162,75,.18)}
+.vn-form textarea{resize:vertical;min-height:120px}
+.vn-hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+.vn-form-consent{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;color:var(--body);line-height:1.5;margin:6px 0 22px}
+.vn-form-consent input{margin-top:3px;flex:none}
+.vn-form-status{margin-top:16px;font-size:14px}
+.vn-form-status.is-ok{color:var(--green);font-weight:600}
+.vn-form-status.is-err{color:var(--risk);font-weight:600}

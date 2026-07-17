@@ -1,0 +1,32 @@
+<section class="intake" id="formulario">
+  <h2><span class="only-pt">Formulário de solicitação</span><span class="only-en">Request form</span></h2>
+  <p class="intake-lead"><span class="only-pt">Forneça contexto suficiente para uma primeira resposta útil — use um e-mail profissional, identifique o comprador ou o mercado-alvo e descreva as evidências e o prazo.</span><span class="only-en">Give enough context for a useful first reply — use a work email, identify the buyer or target market, and describe the evidence and the deadline.</span></p>
+  <form class="vn-form" data-intake-form data-endpoint="{{@custom.contact_endpoint}}" novalidate>
+    <div class="vn-field">
+      <label for="if-nome"><span class="only-pt">Nome</span><span class="only-en">Name</span></label>
+      <input id="if-nome" name="nome" type="text" autocomplete="name" required maxlength="120">
+    </div>
+    <div class="vn-field">
+      <label for="if-email"><span class="only-pt">E-mail profissional</span><span class="only-en">Work email</span></label>
+      <input id="if-email" name="email" type="email" autocomplete="email" required maxlength="160">
+    </div>
+    <div class="vn-field">
+      <label for="if-empresa"><span class="only-pt">Empresa</span><span class="only-en">Company</span></label>
+      <input id="if-empresa" name="empresa" type="text" autocomplete="organization" required maxlength="160">
+    </div>
+    <div class="vn-field">
+      <label for="if-msg"><span class="only-pt">Mensagem</span><span class="only-en">Message</span></label>
+      <textarea id="if-msg" name="mensagem" rows="5" required maxlength="4000"></textarea>
+    </div>
+    <input type="text" name="_gotcha" tabindex="-1" autocomplete="off" aria-hidden="true" class="vn-hp">
+    <label class="vn-form-consent">
+      <input type="checkbox" name="consent" required>
+      <span class="only-pt">Concordo que meus dados sejam usados para avaliar e responder a esta solicitação.</span><span class="only-en">I agree that my data may be used to assess and respond to this request.</span>
+    </label>
+    <button class="btn btn-ink" type="submit" data-intake-submit>
+      <span class="only-pt">Enviar solicitação</span><span class="only-en">Send request</span>
+    </button>
+    <p class="vn-form-status" data-intake-status hidden role="status" aria-live="polite"></p>
+  </form>
+  <p class="vn-note"><span class="only-pt">As informações são usadas apenas para avaliar e responder à solicitação. A análise não substitui aconselhamento jurídico, auditoria, certificação nem decisão de autoridade ou comprador.</span><span class="only-en">Your information is used only to assess and respond to this request. The review does not replace legal advice, audit, certification, or any authority or buyer decision.</span></p>
+</section>
