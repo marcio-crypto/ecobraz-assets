@@ -259,3 +259,33 @@ nav.main a:hover{color:#fff}
 .page-hero .lead{max-width:60ch;font-size:17px;color:#B9C6D8;margin:18px 0 30px}
 .page-hero .cta-row{margin-top:6px}
 .page-article > .wrap > .article-body{margin-top:52px}
+
+/* ===== Fase 2: uplift visual do corpo das páginas (global) ===== */
+.article-body{max-width:760px}
+/* Primeiro parágrafo vira "lead" */
+.page-article > .wrap > .article-body > p:first-of-type{font-size:20px;line-height:1.72;color:#3A4653}
+/* Listas com marcador diamante dourado */
+.article-body > ul{list-style:none;padding-left:2px}
+.article-body > ul > li{position:relative;padding-left:26px;margin-bottom:11px}
+.article-body > ul > li::before{content:'';position:absolute;left:0;top:10px;width:8px;height:8px;background:var(--gold);transform:rotate(45deg)}
+/* Cards mais ricos + hover */
+.article-body .vn-cards{margin:38px 0;gap:18px}
+.article-body .vn-card{padding:26px 24px;transition:transform .2s ease,box-shadow .2s ease}
+.article-body .vn-card:hover{transform:translateY(-3px);box-shadow:0 16px 38px rgba(11,31,58,.11)}
+.article-body .vn-card h3{font-family:var(--serif);font-weight:400;font-size:19px;color:var(--ink)}
+/* Steps como blocos-cartão */
+.article-body ol.vn-steps{margin:34px 0}
+.article-body ol.vn-steps > li{background:#fff;border:1px solid var(--hair);border-left:3px solid var(--gold);padding:20px 26px 18px 66px;margin-bottom:14px}
+.article-body ol.vn-steps > li::before{left:22px;top:20px;border-bottom:0;padding-bottom:0}
+/* CTA no meio com mais presença */
+.article-body .vn-cta{padding:46px 36px;margin:56px 0}
+.article-body .vn-cta h2{color:#fff;font-size:27px;line-height:1.22;margin:0 0 12px;padding:0}
+.article-body .vn-cta h2::before{display:none}
+/* Respiro entre seções */
+.article-body h2{margin-top:56px}
+/* Ritmo editorial: cards, CTA e tabelas mais largos que o texto (desktop) */
+@media(min-width:980px){
+  .article-body .vn-cards,
+  .article-body .vn-cta,
+  .article-body table{width:calc(100% + 150px);margin-left:-75px}
+}
