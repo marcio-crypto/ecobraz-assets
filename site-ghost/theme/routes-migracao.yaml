@@ -4,9 +4,6 @@ routes:
     controller: channel
     filter: tag:noticias-esg
     template: noticias-esg
-  /autor/sergio-diniz/:
-    data: page.autor-sergio-diniz
-    template: autor
   /autor/marcelo-aragao/:
     data: page.autor-marcelo-aragao
     template: autor
