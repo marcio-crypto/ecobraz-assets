@@ -1,0 +1,15 @@
+name: Villanova ESG — diagnóstico do formulário
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Testar chave Web3Forms + página publicada
+        run: node site-villanova/scripts/diag-form.mjs
