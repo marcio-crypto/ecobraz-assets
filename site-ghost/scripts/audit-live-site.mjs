@@ -24,7 +24,7 @@ const routes = ['/', '/agendamento/', '/blog/',
 for (const name of files) {
   const items = JSON.parse(await fs.readFile(path.join(contentDir, name), 'utf8'));
   for (const item of items) {
-    if (name === 'priority-posts.json') routes.push(`/blog/${item.slug}/`);
+    if (name === 'priority-posts.json' || name === 'en-posts.json') routes.push(`/blog/${item.slug}/`);
     else if (name === 'migrated-posts.json') {
       const isMuseu = (item.tags || []).some((tag) => tag.slug === 'museu-do-eletronico');
       routes.push(isMuseu ? {route: `/museu/${item.slug}/`, alternates: [`/blog/${item.slug}/`]} : `/blog/${item.slug}/`);
