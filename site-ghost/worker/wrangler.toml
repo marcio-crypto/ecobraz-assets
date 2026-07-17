@@ -13,7 +13,10 @@ keep_vars = true
 #   PLOOMES_USER_KEY, PLOOMES_PIPELINE_ID, PLOOMES_STAGE_ID, PLOOMES_OWNER_ID
 #   EGOI_API_KEY, EGOI_LIST_ID
 #   TURNSTILE_SECRET_KEY, ALLOWED_ORIGINS
-# NOVOS (para o e-mail de confirmação — o envio só ocorre quando ambos existem):
-#   EGOI_TRANSACTIONAL_API_KEY  -> chave da API Transacional do E-goi
-#   EGOI_SENDER_ID              -> código do remetente registrado no E-goi
+# Para o e-mail de confirmação ao lead:
+#   EGOI_TRANSACTIONAL_API_KEY  -> chave da API Transacional (se ausente, o
+#                                  Worker tenta a EGOI_API_KEY já existente).
+#   EGOI_SENDER_ID              -> OPCIONAL: se ausente, o Worker descobre o
+#                                  remetente automaticamente (lista os senders
+#                                  da conta e usa o primeiro).
 # Opcionais: EGOI_SENDER_NAME, EGOI_REPLY_TO_ID, EGOI_TRANSACTIONAL_API_URL

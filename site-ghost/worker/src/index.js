@@ -18,7 +18,7 @@ export default {
     const cors = corsHeaders(origin, allowed);
     if (request.method === 'OPTIONS') return new Response(null, {status:204, headers:cors});
     const url = new URL(request.url);
-    if (url.pathname === '/health') return json({ok:true, service:'ecobraz-coletas', version:5}, 200, cors);
+    if (url.pathname === '/health') return json({ok:true, service:'ecobraz-coletas', version:6}, 200, cors);
     if (url.pathname !== '/api/coletas' || request.method !== 'POST') return json({ok:false, error:'not_found'}, 404, cors);
     if (!allowed.has(origin)) return json({ok:false, error:'origin_not_allowed'}, 403, cors);
     let input;
@@ -43,8 +43,8 @@ export default {
     // lead já registrado no CRM.
     let confirmation = {ok:false, skipped:true};
     try { confirmation = await sendConfirmationEmail(lead, env); }
-    catch (error) { console.error('confirmation_email_failure', safeError(error)); confirmation = {ok:false, skipped:false}; }
-    return json({ok:true, request_id:crypto.randomUUID(), crm:{ok:true,contact_id:ploomes.contactId,deal_id:ploomes.dealId}, marketing:{ok:Boolean(egoi.ok),skipped:Boolean(egoi.skipped)}, confirmation:{ok:Boolean(confirmation.ok),skipped:Boolean(confirmation.skipped)}},201,cors);
+    catch (error) { console.error('confirmation_email_failure', safeError(error)); confirmation = {ok:false, skipped:false, detail:safeError(error).message}; }
+    return json({ok:true, request_id:crypto.randomUUID(), crm:{ok:true,contact_id:ploomes.contactId,deal_id:ploomes.dealId}, marketing:{ok:Boolean(egoi.ok),skipped:Boolean(egoi.skipped)}, confirmation:{ok:Boolean(confirmation.ok),skipped:Boolean(confirmation.skipped),detail:confirmation.detail||''}},201,cors);
   }
 };
 
@@ -101,16 +101,34 @@ async function sendToEgoi(lead, env) {
   }
   return {ok:true,skipped:false,existing:false};
 }
+// Descobre o sender_id (remetente) do transacional. Usa EGOI_SENDER_ID se
+// definido; senão lista os remetentes da conta e usa o primeiro (com cache no
+// isolate). Assim não é preciso configurar o sender_id à mão.
+let _cachedSenderId = null;
+async function resolveSenderId(apiKey, env) {
+  if (env.EGOI_SENDER_ID) return env.EGOI_SENDER_ID;
+  if (_cachedSenderId) return _cachedSenderId;
+  const base=env.EGOI_TRANSACTIONAL_API_URL || 'https://slingshot.egoiapp.com/api';
+  const r = await fetch(`${base}/v2/email/senders`, {headers:{'ApiKey':apiKey,'accept':'application/json'}});
+  if (!r.ok) return null;
+  let data; try { data = await r.json(); } catch { return null; }
+  const list = Array.isArray(data) ? data : (data.items || data.senders || data.data || data.list || []);
+  const pick = (list || []).find(x=>x && (x.sender_id||x.id||x.senderId)) || (list||[])[0];
+  _cachedSenderId = pick ? (pick.sender_id || pick.id || pick.senderId) : null;
+  return _cachedSenderId;
+}
+
 // Envia o e-mail transacional de confirmação ao lead via E-goi Transacional (v2).
-// Só dispara com EGOI_TRANSACTIONAL_API_KEY + EGOI_SENDER_ID configurados.
 async function sendConfirmationEmail(lead, env) {
   // Usa a chave transacional dedicada se existir; senão tenta a chave do E-goi
   // que o Worker já usa (na maioria das contas é a mesma chave da conta).
   const apiKey = env.EGOI_TRANSACTIONAL_API_KEY || env.EGOI_API_KEY;
-  if (!apiKey || !env.EGOI_SENDER_ID) return {ok:false, skipped:true};
+  if (!apiKey) return {ok:false, skipped:true, detail:'sem_chave'};
+  const senderId = await resolveSenderId(apiKey, env);
+  if (!senderId) return {ok:false, skipped:true, detail:'sem_remetente'};
   const base=env.EGOI_TRANSACTIONAL_API_URL || 'https://slingshot.egoiapp.com/api';
   const payload={
-    sender_id: env.EGOI_SENDER_ID,
+    sender_id: senderId,
     subject: 'Recebemos a sua solicitação — Ecobraz',
     to: [lead.email],
     html_body: buildConfirmationHtml(lead),
@@ -121,8 +139,8 @@ async function sendConfirmationEmail(lead, env) {
   if (env.EGOI_SENDER_NAME) payload.sender_name = env.EGOI_SENDER_NAME;
   if (env.EGOI_REPLY_TO_ID) payload.reply_to_id = env.EGOI_REPLY_TO_ID;
   const r=await fetch(`${base}/v2/email/messages/action/send`,{method:'POST',headers:{'content-type':'application/json','ApiKey':apiKey},body:JSON.stringify(payload)});
-  if (!r.ok) throw new Error(`egoi_tx_${r.status}_${(await r.text()).slice(0,300)}`);
-  return {ok:true, skipped:false};
+  if (!r.ok) throw new Error(`egoi_tx_${r.status}_${(await r.text()).slice(0,200)}`);
+  return {ok:true, skipped:false, detail:`enviado:${senderId}`};
 }
 function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function buildConfirmationText(l) {
