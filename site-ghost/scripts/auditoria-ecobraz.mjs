@@ -155,6 +155,19 @@ if (temTel) {
   else falha('clique no telefone NÃO registrou contact_phone');
 } else notas.push('sem link tel: na home (pulado contact_phone)');
 
+// Clique no e-mail (mailto) -> contact_email — CTA principal das páginas em inglês
+zerarGA();
+await ga.goto(`${base}/en/`, {waitUntil: 'domcontentloaded'});
+await ga.waitForTimeout(600);
+const temMail = await ga.locator('a[href^="mailto:"]').count();
+if (temMail) {
+  await ga.evaluate(() => { document.querySelectorAll('a[href^="mailto:"]').forEach((a) => a.addEventListener('click', (e) => e.preventDefault(), {once: true})); });
+  await ga.locator('a[href^="mailto:"]').first().click({timeout: 6000}).catch(() => {});
+  await ga.waitForTimeout(1500);
+  if (houveEvento('contact_email')) ok('evento contact_email registrado no clique do e-mail (/en/)');
+  else falha('clique no e-mail NÃO registrou contact_email');
+} else falha('/en/ não tem link mailto: (CTA de contato ausente)');
+
 // Início do formulário -> form_start_coleta ; envio -> generate_lead
 zerarGA();
 await ga.goto(`${base}/agendamento/`, {waitUntil: 'domcontentloaded'});
