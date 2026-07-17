@@ -26,19 +26,30 @@ const espera = (ms) => new Promise((res) => setTimeout(res, ms));
 const posts = JSON.parse(await fs.readFile(ARQUIVO, 'utf8'));
 let ok = 0;
 for (const post of posts) {
-  const {tags, ...resto} = post;
-  const payload = {
-    ...resto,
-    status: 'published',
-    tags: (tags || []).map((name) => ({name}))
-  };
+  const {tags, status, html, ...resto} = post;
   const existente = (await api('GET', `posts/?filter=slug:${post.slug}&limit=1`)).posts?.[0];
-  const corpo = {posts: [{...payload, updated_at: existente?.updated_at}]};
-  const r = existente
-    ? await api('PUT', `posts/${existente.id}/?source=html`, corpo)
-    : await api('POST', 'posts/?source=html', corpo);
+  // Campos comuns. Só mexe em `tags` se o arquivo trouxer o campo (senão as
+  // tags atuais ficam intactas). `status` explícito vence; padrão: published.
+  const comuns = {
+    ...resto,
+    status: status || 'published',
+    ...(tags ? {tags: tags.map((name) => ({name}))} : {}),
+    updated_at: existente?.updated_at,
+  };
+  let r;
+  if (html == null) {
+    // Atualização somente de metadados/status — NÃO reescreve o corpo do post.
+    if (!existente) throw new Error(`Post '${post.slug}' não existe; para criar, inclua o campo html.`);
+    r = await api('PUT', `posts/${existente.id}/`, {posts: [comuns]});
+  } else {
+    // Cria/atualiza com corpo. `?source=html` converte o HTML em nós nativos.
+    const corpo = {posts: [{...comuns, html}]};
+    r = existente
+      ? await api('PUT', `posts/${existente.id}/?source=html`, corpo)
+      : await api('POST', 'posts/?source=html', corpo);
+  }
   ok += 1;
-  console.log(`${existente ? 'atualizado' : 'criado'}: /${r.posts[0].slug}/`);
+  console.log(`${existente ? 'atualizado' : 'criado'}: /${r.posts[0].slug}/ -> ${r.posts[0].status}`);
   await espera(250);
 }
 console.log(`Total sincronizado: ${ok}/${posts.length}`);

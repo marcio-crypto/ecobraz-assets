@@ -1,0 +1,11 @@
+{
+  "name": "ecobraz-coletas",
+  "private": true,
+  "description": "Worker que recebe o formulário de coleta, cria o lead no Ploomes/E-goi e envia e-mail de confirmação ao lead.",
+  "scripts": {
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^3.90.0"
+  }
+}

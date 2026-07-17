@@ -47,6 +47,11 @@ jobs:
           GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
           GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
         run: node site-ghost/scripts/sync-settings.mjs
+      - name: Sync meta descriptions das tags (arquivos de tag)
+        env:
+          GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
+          GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
+        run: node site-ghost/scripts/sync-tags-meta.mjs
       - name: Sync priority commercial pages
         env:
           GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}

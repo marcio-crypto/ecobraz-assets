@@ -9,7 +9,7 @@
                 <h1>{{title}}</h1>
                 {{#if custom_excerpt}}<p>{{custom_excerpt}}</p>{{/if}}
                 <a class="button only-pt" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem={{slug}}">Solicitar avaliação de coleta</a>
-                <a class="button only-en" href="mailto:contato@ecobraz.org.br">Contact us in English</a>
+                <a class="button only-en" href="{{@custom.whatsapp_url}}" rel="noopener">Contact us on WhatsApp</a>
             </div>
             <aside class="page-hero-card only-pt">
                 <strong>Atendimento orientado à operação</strong>
@@ -29,8 +29,8 @@
             <a class="button" href="{{@site.url}}/agendamento/?origem={{slug}}">Agendar coleta</a>
         </aside>
         <aside class="page-conversion container-narrow only-en">
-            <div><span class="eyebrow">Get in touch</span><h2>Need documented collection or disposal in Brazil?</h2><p>Write to us in English or Portuguese — we reply with scope and documentation details.</p></div>
-            <a class="button" href="mailto:contato@ecobraz.org.br">contato@ecobraz.org.br</a>
+            <div><span class="eyebrow">Get in touch</span><h2>Need documented collection or disposal in Brazil?</h2><p>Message us in English or Portuguese — we reply with scope and documentation details.</p></div>
+            <a class="button" href="{{@custom.whatsapp_url}}" rel="noopener">Message us on WhatsApp</a>
         </aside>
     </div>
 </article>
