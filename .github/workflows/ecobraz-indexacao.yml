@@ -1,0 +1,20 @@
+name: Ecobraz — auditoria de indexação (BR + Europa)
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'URL base do site'
+        required: false
+        default: 'https://ecobraz.org'
+
+permissions:
+  contents: read
+
+jobs:
+  indexacao:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Auditoria de indexabilidade e hreflang
+        run: node site-ghost/scripts/auditoria-indexacao.mjs '${{ inputs.base_url }}'
