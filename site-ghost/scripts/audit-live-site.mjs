@@ -14,7 +14,9 @@ const warnings = [];
 let checkedPages = 0;
 let checkedLinks = 0;
 
-const files = (await fs.readdir(contentDir)).filter((name) => name.endsWith('.json')).sort();
+// tags-meta.json são metadados de tag (arquivos de arquivo /blog/tag/...), não
+// páginas na raiz — fora da verificação de rotas ao vivo.
+const files = (await fs.readdir(contentDir)).filter((name) => name.endsWith('.json') && name !== 'tags-meta.json').sort();
 // alternates: URLs de transição aceitas enquanto o routes.yaml novo não é
 // importado no painel do Ghost (posts do museu ficam em /blog/ até lá; as
 // páginas de autor respondem na URL "achatada" /autor-<nome>/).
