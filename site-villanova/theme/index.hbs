@@ -3,10 +3,10 @@
 <section class="listing-head">
   <div class="wrap">
     <div class="eyebrow">
-      <span class="only-en">{{#if tag}}Topic{{else}}{{#if author}}Author{{else}}Analysis{{/if}}</span><span class="only-pt">{{#if tag}}Tema{{else}}{{#if author}}Autor{{else}}Análises{{/if}}</span>
+      <span class="only-en">{{#is "tag"}}Topic{{/is}}{{#is "author"}}Author{{/is}}{{^is "tag, author"}}Analysis{{/is}}</span><span class="only-pt">{{#is "tag"}}Tema{{/is}}{{#is "author"}}Autor{{/is}}{{^is "tag, author"}}Análises{{/is}}</span>
     </div>
     <h1>
-      {{#if tag}}{{tag.name}}{{else}}{{#if author}}{{author.name}}{{else}}Knowledge &amp; analysis{{/if}}{{/if}}
+      {{#is "tag"}}{{tag.name}}{{/is}}{{#is "author"}}Villanova ESG{{/is}}{{^is "tag, author"}}Knowledge &amp; analysis{{/is}}
     </h1>
     {{#if tag.description}}<p class="page-excerpt">{{tag.description}}</p>{{/if}}
   </div>

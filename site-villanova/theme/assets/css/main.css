@@ -232,3 +232,8 @@ nav.main a:hover{color:#fff}
 .article-body .vn-note{border:1px solid var(--hair);border-left:3px solid var(--green);background:#F4F6F2;padding:16px 20px;margin:26px 0;font-size:15px}
 .article-body .vn-src{font-size:13px;color:#8B96A0}
 .article-body .vn-src a{color:var(--steel)}
+
+/* Cartões largos/full do editor Koenig (recomendação do Ghost/gscan) */
+.article-body .kg-width-wide{width:min(100%, 46rem);margin-left:auto;margin-right:auto}
+.article-body .kg-width-full{width:100vw;position:relative;left:50%;right:50%;margin-left:-50vw;margin-right:-50vw;max-width:none}
+.article-body .kg-width-full img{width:100%}
