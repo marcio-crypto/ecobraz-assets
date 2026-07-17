@@ -23,13 +23,21 @@ const api = async (method, path, body) => {
   return r.json();
 };
 
+// O conteúdo vai como UM cartão HTML (formato lexical). Com `?source=html` o
+// Ghost converte para nós nativos do editor e DESCARTA as classes (vn-cards,
+// vn-steps...), quebrando o design. O cartão HTML preserva a marcação intacta.
+const comoLexical = (html) => JSON.stringify({
+  root: {children: [{type: 'html', version: 1, html}], direction: null, format: '', indent: 0, type: 'root', version: 1}
+});
+
 const paginas = JSON.parse(await fs.readFile(ARQUIVO, 'utf8'));
 for (const pagina of paginas) {
   const existente = (await api('GET', `pages/?filter=slug:${pagina.slug}&limit=1`)).pages?.[0];
-  const payload = {pages: [{...pagina, status: STATUS, updated_at: existente?.updated_at}]};
+  const {html, ...resto} = pagina;
+  const payload = {pages: [{...resto, lexical: comoLexical(html || ''), status: STATUS, updated_at: existente?.updated_at}]};
   const resultado = existente
-    ? await api('PUT', `pages/${existente.id}/?source=html`, payload)
-    : await api('POST', 'pages/?source=html', payload);
+    ? await api('PUT', `pages/${existente.id}/`, payload)
+    : await api('POST', 'pages/', payload);
   const p = resultado.pages[0];
   console.log(`Página '${p.slug}' ${existente ? 'atualizada' : 'criada'} com status: ${p.status}`);
   if (p.status === 'draft') {

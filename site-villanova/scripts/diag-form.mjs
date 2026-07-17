@@ -19,14 +19,13 @@ try {
   console.log(`Web3Forms API -> HTTP ${r.status} | server=${server} | corpo(400): ${txt.slice(0, 400).replace(/\s+/g, ' ')}`);
 } catch (e) { console.log('Web3Forms API -> erro:', e.message); }
 
-// 2. Página publicada: qual data-endpoint e tem access_key?
-for (const path of ['/solicitar-analise/', '/supplier-evidence-risk-intake/']) {
+// 2. Página publicada: form ok? e as CLASSES de design sobreviveram à publicação?
+for (const path of ['/solicitar-analise/', '/supplier-evidence-risk-intake/', '/csddd-due-diligence/']) {
   const html = await (await fetch(`${base}${path}`, {cache: 'no-store'})).text().catch(() => '');
   const ep = (html.match(/data-endpoint="([^"]*)"/) || [])[1] || '(ausente)';
-  const key = /e92c1709/.test(html);
   const temForm = /data-intake-form/.test(html);
-  const jsRef = (html.match(/form-intake\.js[^"']*/) || [])[0] || '(sem ref)';
-  console.log(`${path} -> form=${temForm} | data-endpoint="${ep}" | access_key=${key} | ${jsRef}`);
+  const conta = (rx) => (html.match(rx) || []).length;
+  console.log(`${path} -> form=${temForm} | endpoint=${ep !== '(ausente)'} | classes de design: vn-steps=${conta(/class="vn-steps"/g)} vn-cards=${conta(/class="vn-cards"/g)} vn-card=${conta(/class="vn-card"/g)} vn-cta=${conta(/class="vn-cta"/g)}`);
 }
 
 // 3. Asset JS publicado é a versão FormData/web3forms?
