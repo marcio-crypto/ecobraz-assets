@@ -1,0 +1,37 @@
+name: Ecobraz — pente fino (navegador real)
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'URL base do site'
+        required: false
+        default: 'https://ecobraz.org'
+      enviar_lead:
+        description: 'Enviar formulário de verdade (cria lead de teste no CRM e verifica generate_lead)'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  auditoria:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instala Playwright + Chromium
+        run: |
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund playwright >/dev/null
+          npx playwright install --with-deps chromium
+      - name: Roda o pente fino completo
+        run: node site-ghost/scripts/auditoria-ecobraz.mjs '${{ inputs.base_url }}' ${{ inputs.enviar_lead && '--enviar-lead' || '' }}
+      - name: Guarda as capturas de tela
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ecobraz-pente-fino-capturas
+          path: auditoria-shots/
+          if-no-files-found: warn
+          retention-days: 14
