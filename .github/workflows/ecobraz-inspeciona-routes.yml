@@ -1,0 +1,19 @@
+name: Ecobraz — inspecionar routes vivo (autor)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspeciona:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Baixar routes vivo e testar URLs /autor/
+        env:
+          BASE_URL: https://ecobraz.org
+          GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
+          GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
+        run: node site-ghost/scripts/inspeciona-routes.mjs
