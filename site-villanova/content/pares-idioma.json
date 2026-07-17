@@ -1,37 +1,156 @@
 {
-  "comment": "Registro dos pares de idioma do villanovaesg.com. Fonte única para lang.css (gera-idioma.mjs) e para o hreflang por página (aplica-hreflang.mjs). en '' = raiz do site.",
-  "pt_tags": ["risco-contratual-e-compras", "cbam-e-exposicao-de-carbono", "eudr-e-rastreabilidade", "evidencia-de-fornecedor", "financas-e-risco-de-diretoria", "due-diligence-da-cadeia", "dados-de-produto-e-evidencia-circular"],
-  "pages": [
-    {"en": "", "pt": "pt"},
-    {"en": "what-villanova-esg-reviews", "pt": "o-que-analisamos"},
-    {"en": "supplier-evidence-file-assessment", "pt": "revisao-evidencias-eudr-cbam-csddd-exportadores"},
-    {"en": "eu-buyer-readiness-review-brazilian-suppliers", "pt": "preparacao-fornecedores-brasileiros-compradores-europeus"},
-    {"en": "supplier-evidence-risk-intake", "pt": "solicitar-analise"},
-    {"en": "cbam-evidence-review-brazilian-suppliers", "pt": "revisao-evidencias-cbam"},
-    {"en": "eudr-evidence-readiness-review", "pt": "revisao-prontidao-evidencias-eudr"},
-    {"en": "contract-clause-risk-review-eu-facing-suppliers", "pt": "revisao-risco-clausulas-contratuais"},
-    {"en": "board-usable-evidence-review-eu-facing-suppliers", "pt": "revisao-evidencias-para-diretoria"},
-    {"en": "csddd-due-diligence", "pt": "due-diligence-csddd"},
-    {"en": "the-firm", "pt": "a-firma"},
-    {"en": "marcio-villanova", "pt": "sobre-marcio-villanova"},
-    {"en": "publications", "pt": "publicacoes"},
-    {"en": "contact", "pt": "contato"},
-    {"en": "eu-brazil-supplier-evidence-knowledge-base", "pt": "base-de-conhecimento"},
-    {"en": "faq-eu-buyer-evidence-brazilian-suppliers", "pt": "perguntas-frequentes"},
-    {"en": "supplier-evidence-glossary", "pt": "glossario-de-evidencias"},
-    {"en": "privacy", "pt": "privacidade"},
-    {"en": "terms", "pt": "termos"},
-    {"en": "cookies", "pt": "politica-de-cookies"},
-    {"en": "regulatory-source-trail", "pt": "fontes-regulatorias"},
-    {"en": "reference-villanova-esg-source-trail", "pt": "trilha-de-fontes"},
-    {"en": "european-product-passport", "pt": "passaporte-produto-europeu"},
-    {"en": "brazilian-suppliers-have-an-evidence-problem", "pt": "o-problema-de-evidencia-dos-fornecedores-brasileiros"},
-    {"en": "eu-buyer-readable-evidence-framework-circular-supply-chains", "pt": "estrutura-de-evidencias-legiveis-para-o-comprador-europeu"},
-    {"en": "circular-supply-chain-evidence-toolkit-non-eu-suppliers", "pt": "kit-de-evidencias-cadeia-circular"},
-    {"en": "2026-eu-buyer-evidence-file", "pt": "arquivo-de-evidencias-2026"},
-    {"en": "when-european-buyer-requests-evidence", "pt": "quando-o-comprador-europeu-pede-evidencias"},
-    {"en": "supply-chain-risk", "pt": "risco-da-cadeia-de-suprimentos"},
-    {"en": "eu-brazil-supplier-evidence-market", "pt": "mercado-de-evidencias-ue-brasil"}
-  ],
-  "posts": []
+ "comment": "Registro dos pares de idioma do villanovaesg.com. Fonte única para lang.css (gera-idioma.mjs) e para o hreflang por página (aplica-hreflang.mjs). en '' = raiz do site.",
+ "pt_tags": [
+  "risco-contratual-e-compras",
+  "cbam-e-exposicao-de-carbono",
+  "eudr-e-rastreabilidade",
+  "evidencia-de-fornecedor",
+  "financas-e-risco-de-diretoria",
+  "due-diligence-da-cadeia",
+  "dados-de-produto-e-evidencia-circular"
+ ],
+ "pages": [
+  {
+   "en": "",
+   "pt": "pt"
+  },
+  {
+   "en": "what-villanova-esg-reviews",
+   "pt": "o-que-analisamos"
+  },
+  {
+   "en": "supplier-evidence-file-assessment",
+   "pt": "revisao-evidencias-eudr-cbam-csddd-exportadores"
+  },
+  {
+   "en": "eu-buyer-readiness-review-brazilian-suppliers",
+   "pt": "preparacao-fornecedores-brasileiros-compradores-europeus"
+  },
+  {
+   "en": "supplier-evidence-risk-intake",
+   "pt": "solicitar-analise"
+  },
+  {
+   "en": "cbam-evidence-review-brazilian-suppliers",
+   "pt": "revisao-evidencias-cbam"
+  },
+  {
+   "en": "eudr-evidence-readiness-review",
+   "pt": "revisao-prontidao-evidencias-eudr"
+  },
+  {
+   "en": "contract-clause-risk-review-eu-facing-suppliers",
+   "pt": "revisao-risco-clausulas-contratuais"
+  },
+  {
+   "en": "board-usable-evidence-review-eu-facing-suppliers",
+   "pt": "revisao-evidencias-para-diretoria"
+  },
+  {
+   "en": "csddd-due-diligence",
+   "pt": "due-diligence-csddd"
+  },
+  {
+   "en": "the-firm",
+   "pt": "a-firma"
+  },
+  {
+   "en": "marcio-villanova",
+   "pt": "sobre-marcio-villanova"
+  },
+  {
+   "en": "publications",
+   "pt": "publicacoes"
+  },
+  {
+   "en": "contact",
+   "pt": "contato"
+  },
+  {
+   "en": "eu-brazil-supplier-evidence-knowledge-base",
+   "pt": "base-de-conhecimento"
+  },
+  {
+   "en": "faq-eu-buyer-evidence-brazilian-suppliers",
+   "pt": "perguntas-frequentes"
+  },
+  {
+   "en": "supplier-evidence-glossary",
+   "pt": "glossario-de-evidencias"
+  },
+  {
+   "en": "privacy",
+   "pt": "privacidade"
+  },
+  {
+   "en": "terms",
+   "pt": "termos"
+  },
+  {
+   "en": "cookies",
+   "pt": "politica-de-cookies"
+  },
+  {
+   "en": "regulatory-source-trail",
+   "pt": "fontes-regulatorias"
+  },
+  {
+   "en": "reference-villanova-esg-source-trail",
+   "pt": "trilha-de-fontes"
+  },
+  {
+   "en": "european-product-passport",
+   "pt": "passaporte-produto-europeu"
+  },
+  {
+   "en": "brazilian-suppliers-have-an-evidence-problem",
+   "pt": "o-problema-de-evidencia-dos-fornecedores-brasileiros"
+  },
+  {
+   "en": "eu-buyer-readable-evidence-framework-circular-supply-chains",
+   "pt": "estrutura-de-evidencias-legiveis-para-o-comprador-europeu"
+  },
+  {
+   "en": "circular-supply-chain-evidence-toolkit-non-eu-suppliers",
+   "pt": "kit-de-evidencias-cadeia-circular"
+  },
+  {
+   "en": "2026-eu-buyer-evidence-file",
+   "pt": "arquivo-de-evidencias-2026"
+  },
+  {
+   "en": "when-european-buyer-requests-evidence",
+   "pt": "quando-o-comprador-europeu-pede-evidencias"
+  },
+  {
+   "en": "supply-chain-risk",
+   "pt": "risco-da-cadeia-de-suprimentos"
+  },
+  {
+   "en": "eu-brazil-supplier-evidence-market",
+   "pt": "mercado-de-evidencias-ue-brasil"
+  }
+ ],
+ "posts": [
+  {
+   "en": "cbam-carbon-data-import-risk",
+   "pt": "cbam-dados-de-carbono-risco-de-importacao"
+  },
+  {
+   "en": "buyer-readable-proof-european-buyers",
+   "pt": "prova-legivel-para-compradores-europeus"
+  },
+  {
+   "en": "supplier-evidence-financial-risk-control",
+   "pt": "evidencia-fornecedor-controle-risco-financeiro"
+  },
+  {
+   "en": "market-access-is-no-longer-enough",
+   "pt": "acesso-ao-mercado-nao-basta-mais"
+  },
+  {
+   "en": "supplier-evidence-gap-brazil-europe",
+   "pt": "lacuna-evidencia-fornecedor-brasil-europa"
+  }
+ ]
 }
