@@ -4,7 +4,9 @@ import path from 'node:path';
 const siteRoot = path.resolve(import.meta.dirname, '..');
 const root = fs.existsSync(path.join(siteRoot, 'theme')) ? path.join(siteRoot, 'theme') : siteRoot;
 const contentDir = path.join(siteRoot, 'content');
-const files = fs.readdirSync(contentDir).filter((name) => name.endsWith('.json')).sort();
+// tags-meta.json tem formato próprio (metadados de tag: slug + meta_description),
+// não é página/post — fica fora desta auditoria de páginas.
+const files = fs.readdirSync(contentDir).filter((name) => name.endsWith('.json') && name !== 'tags-meta.json').sort();
 const pages = files.flatMap((name) => {
   const parsed = JSON.parse(fs.readFileSync(path.join(contentDir, name), 'utf8'));
   if (!Array.isArray(parsed)) throw new Error(`${name}: expected an array`);
