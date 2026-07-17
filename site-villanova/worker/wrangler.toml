@@ -2,6 +2,7 @@ name = "villanova-contato"
 main = "src/index.js"
 compatibility_date = "2024-11-01"
 workers_dev = true
+account_id = "0ab0573840927669f3bb3666d63cc023"
 
 # Envio de e-mail nativo do Cloudflare (Email Routing). Requer Email Routing
 # ativo em villanovaesg.com e o DEST_EMAIL verificado como destino.
