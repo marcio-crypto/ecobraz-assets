@@ -1,0 +1,87 @@
+{{!< default}}
+{{! Gerado por scripts/build-landing-pages.mjs a partir de landing/landing-pages-en.json — nao edite a mao. }}
+{{#contentFor "head"}}
+<link rel="stylesheet" href="{{asset "css/landing.css"}}">
+{{/contentFor}}
+
+<section class="hx-hero">
+  <div class="container hx-crumbs"><a href="{{@site.url}}/">Home</a> › Materials and equipment</div>
+  <div class="container hx-hero-grid" style="grid-template-columns:1fr">
+    <div>
+      <span class="hx-label on-dark">What we collect — and what we do not</span>
+      <h1>Materials and equipment Ecobraz collects</h1>
+      <p class="hx-sub">Each material has its own handling, transport and disposal requirements. Find yours in the list, see the exact scope on the dedicated page — and note that the exclusions are declared too, because honest scope avoids rework on both sides.</p>
+      <div class="hx-hero-ctas">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=materials-we-collect" data-track="materials-we-collect_hero_cta">Request a technical assessment</a>
+        <a class="button hx-btn-outline-dark" href="{{@custom.whatsapp_url}}" rel="noopener" data-track="materials-we-collect_hero_whatsapp">Talk on WhatsApp</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">IT and electronics</span><h2>Technology and infrastructure</h2></div>
+      <p>From peripherals to the data centre — with data handling when the equipment carries media.</p>
+    </div>
+    <div class="hx-sol-grid">
+        <a class="hx-sol" href="{{@site.url}}/electronic-waste-collection/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><h3>Electronic waste in general</h3><p>The general entry point for electrical and electronic waste from organisations and households.</p><span class="hx-go">View page →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/computer-laptop-collection/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>Computers and laptops</h3><p>End-user IT and peripherals, with data handling where applicable.</p><span class="hx-go">View page →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/server-data-centre-disposal/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="3" width="16" height="18"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2M10 21v-3h4v3"/></svg></span><h3>Servers, racks and storage</h3><p>Data centre and server room infrastructure.</p><span class="hx-go">View page →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/phone-tablet-disposal/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>Phones and tablets</h3><p>Corporate mobile devices, with attention to media.</p><span class="hx-go">View page →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/printer-disposal/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Printers</h3><p>Printing equipment — without loose toner and cartridges.</p><span class="hx-go">View page →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/circuit-board-component-disposal/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>Boards and components</h3><p>Boards, components and IT scrap.</p><span class="hx-go">View page →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/telecoms-equipment-disposal/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M1 7h13v10H1zM14 10h4l4 4v3h-8z"/><circle cx="6" cy="19" r="1.6"/><circle cx="18" cy="19" r="1.6"/></svg></span><h3>Telecoms</h3><p>Networks, telephony and decommissioned infrastructure.</p><span class="hx-go">View page →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/cable-wire-disposal/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><h3>Cables and wires</h3><p>Electrical and network cabling, assessed by volume.</p><span class="hx-go">View page →</span></a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Energy, climate and large-scale</span><h2>Batteries, white goods and industry</h2></div>
+      <p>Categories with their own logistics and requirements — always defined in the technical assessment.</p>
+    </div>
+    <div class="hx-sol-grid">
+        <a class="hx-sol" href="{{@site.url}}/battery-ups-disposal/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18h.01"/></svg></span><h3>Batteries and UPS units</h3><p>Lithium, lead-acid, stationary, traction, automotive and electric-vehicle batteries.</p><span class="hx-go">View page →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/white-goods-disposal/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><h3>White goods</h3><p>White goods: fridges, freezers, washers and dryers.</p><span class="hx-go">View page →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/air-conditioner-disposal/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="3" width="16" height="18"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2M10 21v-3h4v3"/></svg></span><h3>Air conditioning</h3><p>Climate control, with its own logistics and operational risks.</p><span class="hx-go">View page →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/tv-monitor-disposal/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>Televisions and monitors</h3><p>TVs, monitors and screens of any generation.</p><span class="hx-go">View page →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/industrial-equipment-disposal/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M1 7h13v10H1zM14 10h4l4 4v3h-8z"/><circle cx="6" cy="19" r="1.6"/><circle cx="18" cy="19" r="1.6"/></svg></span><h3>Industrial machinery</h3><p>Large-scale: panels, motors and decommissioned lines.</p><span class="hx-go">View page →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/hospital-equipment-disposal/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span><h3>Hospital equipment</h3><p>Only non-contaminated electronics and subject to declaration.</p><span class="hx-go">View page →</span></a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-authority">
+      <div>
+        <span class="hx-label on-dark">Negative scope — always declared</span>
+        <strong>What we do NOT collect, under any circumstances</strong>
+        <p>Loose household batteries (AA, AAA and similar), toner and cartridges, lamps, oil, polystyrene, packaging and chemical, biological, radioactive or contaminated waste. These materials require specific chains and are not part of our services.</p>
+      </div>
+      <a href="{{@site.url}}/agendamento/" data-track="materials-we-collect_note">Request collection of what we collect →</a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-final">
+      <div>
+        <span class="hx-label on-dark">Mixed material or not on the list?</span>
+        <h2>Describe the batch — the assessment separates what is in scope from what is not.</h2>
+        <p>Type, volume and location: with that, the team responds with the applicable scope and conditions, in writing.</p>
+      </div>
+      <div class="hx-actions">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=materials-we-collect" data-track="materials-we-collect_final_cta">Request a technical assessment</a>
+        <a class="button hx-btn-wa" href="{{@custom.whatsapp_url}}" rel="noopener" data-track="materials-we-collect_final_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> WhatsApp</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<a class="hx-wa-float" href="{{@custom.whatsapp_url}}" rel="noopener" aria-label="Talk on WhatsApp" data-track="materials-we-collect_whatsapp_flutuante"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg><span>Talk on WhatsApp</span></a>

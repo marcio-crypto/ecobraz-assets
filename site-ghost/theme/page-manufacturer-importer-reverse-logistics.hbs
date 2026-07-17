@@ -1,0 +1,227 @@
+{{!< default}}
+{{! Gerado por scripts/build-landing-pages.mjs a partir de landing/landing-pages-en.json — nao edite a mao. }}
+{{#contentFor "head"}}
+<link rel="stylesheet" href="{{asset "css/landing.css"}}">
+{{/contentFor}}
+
+<section class="hx-hero">
+  <div class="container hx-crumbs"><a href="{{@site.url}}/">Home</a> › <a href="{{@site.url}}/corporate-solutions/">Corporate solutions</a> › Manufacturers and importers</div>
+  <div class="container hx-hero-grid">
+    <div>
+      <span class="hx-label on-dark">Post-consumer · Warranty · Legal obligation</span>
+      <h1>Reverse logistics for manufacturers and importers</h1>
+      <p class="hx-sub">Whoever manufactures or imports electronics carries the reverse-logistics obligation — along with a permanent flow of warranty exchanges, recalls and non-resaleable product. Ecobraz runs the operational link: it receives, de-characterises when required and disposes, with the documentation that supports your figures.</p>
+      <div class="hx-hero-ctas">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=manufacturer-importer-reverse-logistics&amp;material=Electronics" data-track="manufacturer-importer-reverse-logistics_hero_cta">Request a technical assessment</a>
+        <a class="button hx-btn-outline-dark" href="#como-funciona" data-track="manufacturer-importer-reverse-logistics_hero_como">How it works</a>
+      </div>
+      <div class="hx-hero-band">
+        <span><strong>Obligation met with proof</strong>documented disposal batch by batch</span>
+        <span><strong>Warranty with no second life</strong>exchanged product does not return to the market</span>
+        <span><strong>Continuous flow</strong>a schedule for after-sales and recalls</span>
+      </div>
+    </div>
+    <form class="hx-quote" id="avaliacao" method="get" action="{{@site.url}}/agendamento/">
+      <span class="hx-label">Technical assessment</span>
+      <h2>Describe the flow in 1 minute</h2>
+      <p class="hx-hint">The team responds with scope, schedule and documentation.</p>
+      <input type="hidden" name="perfil" value="empresa">
+      <input type="hidden" name="origem" value="manufacturer-importer-reverse-logistics">
+      <input type="hidden" name="material" value="Electronics">
+      <div class="hx-field">
+        <label for="lp-desc">What do you need to dispose of?</label>
+        <input id="lp-desc" name="descricao" placeholder="e.g. 2,000 units/year of warranty exchanges">
+      </div>
+      <div class="hx-field">
+        <label for="lp-local">Postcode or collection city</label>
+        <input id="lp-local" name="local" placeholder="e.g. 02175-010 or São Paulo">
+      </div>
+      <button class="button" type="submit" data-track="manufacturer-importer-reverse-logistics_hero_form">Request a technical assessment →</button>
+      <div class="hx-or-wa">or <a href="{{@custom.whatsapp_url}}" rel="noopener" data-track="manufacturer-importer-reverse-logistics_hero_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> talk to the team on WhatsApp</a></div>
+      <p class="hx-micro">Collection is confirmed after assessment of material, volume, location and documentation.</p>
+    </form>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container hx-reco">
+    <div>
+      <span class="hx-label">Does this sound like you?</span>
+      <h2>The daily reality of whoever answers for the brand's after-sales</h2>
+      <p class="hx-reco-cta">Is even one item on this list true for you? Then this page was written for you — <a href="#avaliacao">describe your situation in one minute</a> and get a technical reply, not a sales call.</p>
+    </div>
+    <ul class="hx-reco-list"><li>The warranty-exchange warehouse grows every month — and no one wants to sign off on where it goes</li><li>The organisation has a reverse-logistics target to report and the figures have no backing</li><li>A product exchanged under warranty turned up refurbished for sale — competing with the new one</li><li>You imported it, the batch arrived faulty, and returning it abroad is not worth it</li><li>A compliance audit asked for the post-consumer trail and the answer was an old contract</li></ul>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">What is at stake</span><h2>The legal obligation does not end at the sale — and neither does the brand</h2></div>
+      <p>Three fronts that hold the manufacturer to account long after the product has left the factory.</p>
+    </div>
+    <div class="hx-sol-grid">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18h.01"/></svg></span><h3>The reverse-logistics obligation is yours — by law</h3><p>The National Solid Waste Policy assigns manufacturers and importers responsibility for the reverse logistics of electronics. Without a structured operation and without proof, the obligation becomes a regulatory liability.</p><span class="hx-cost">Real cost: exposure in enforcement and reverse-logistics figures reported without backing — indefensible when challenged.</span></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><h3>Warranty exchange that is reborn on the market</h3><p>The product replaced under warranty that escapes intact reappears refurbished — competing with the new product, breaking down again and triggering support again.</p><span class="hx-cost">Real cost: the same unit costing twice, three times over — in warranty, support and reputation.</span></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Target reported without an auditable trail</h3><p>A sustainability report and reverse-logistics targets require a trail: how much came back, from where, where it went. A drawer contract with a recycler does not build that figure.</p><span class="hx-cost">Real cost: the organisation's public indicator left vulnerable to challenge — the worst place to discover the weakness.</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">The turning point</span><h2>From after-sales liability to a closed loop with proof</h2></div>
+      <p>The reverse flow becomes a routine operation — and the reported figure gains backing.</p>
+    </div>
+    <div class="hx-contrast">
+      <div class="hx-before"><h3>How it is today</h3><ul><li>Warranty warehouse piling up with nowhere to go</li><li>Exchanged product escaping intact to the market</li><li>Reverse-logistics figures with no documentary trail</li><li>Each recall negotiated from scratch</li><li>Compliance asking and after-sales improvising</li></ul></div>
+      <div class="hx-after"><h3>With Ecobraz</h3><ul><li>A disposal schedule for the after-sales flow</li><li>De-characterisation recorded — the unit dies documented</li><li>Inventory, MTR and CDF where applicable, per batch</li><li>Consolidation by period for reporting and audit</li><li>One supplier, one standard, one trail</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">What you gain</span><h2>What the brand gains from the closed loop</h2></div>
+      <p>Legal obligation, brand protection and reporting — resolved in the same flow.</p>
+    </div>
+    <div class="hx-sol-grid g4">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span><h3>Obligation with backing</h3><p>Reverse logistics stops being a regulatory risk and becomes a defensible figure.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>Brand protected</h3><p>Exchanged or rejected product does not reappear competing with the new one.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>Reporting ready</h3><p>Consolidation by period feeds the sustainability report and targets.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><h3>Warehouse turning over</h3><p>After-sales stock flows on a schedule — no build-up, no deferred decision.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Clear scope</span><h2>What is included — and what is not</h2></div>
+      <p>Scope declared before scheduling reduces rework and surprises. Each batch is assessed technically.</p>
+    </div>
+    <div class="hx-scope">
+      <div class="hx-yes"><h3>In scope</h3><ul><li>Warranty exchanges and after-sales recalls</li><li>Post-consumer products received from channels and customers</li><li>Imported batches that are faulty or unfit for resale</li><li>Electronic samples, prototypes and showroom items</li><li>Recurring flows with a schedule by origin</li></ul><p>Viability depends on categories, volume per period, origins and de-characterisation and reporting requirements. Each flow is assessed before the schedule is set.</p></div>
+      <div class="hx-not"><h3>Out of scope</h3><ul><li>Loose household batteries</li><li>Toner and cartridges</li><li>Lamps, oil, polystyrene and packaging</li><li>Chemical, biological, radioactive or contaminated waste</li></ul><p>Materials out of scope require specific chains and are not part of this service.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt" id="como-funciona">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Process</span><h2>How it works, from contact to final destination</h2></div>
+      <p>No collection is confirmed without a technical assessment. That is what keeps the operation predictable and documentable.</p>
+    </div>
+    <div class="hx-steps">
+        <div class="hx-step"><h3>Describe the flow</h3><p>Categories, volume per period, origins and what the target or audit requires.</p></div>
+        <div class="hx-step"><h3>Technical assessment</h3><p>We analyse materials, logistics and the level of de-characterisation and proof.</p></div>
+        <div class="hx-step"><h3>Scope and schedule</h3><p>Disposal cycles, responsibilities and documents agreed.</p></div>
+        <div class="hx-step"><h3>Recorded disposal</h3><p>Receipt or collection with inventory and de-characterisation according to scope.</p></div>
+        <div class="hx-step"><h3>Consolidation and reporting</h3><p>Documentation per batch and consolidation by period for your targets.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Evidence of the operation</span><h2>The backing behind your reverse-logistics figures</h2></div>
+      <p>The documentation reflects what was actually carried out in each batch — no generic promises.</p>
+    </div>
+    <div class="hx-docs">
+        <div class="hx-doc"><h3>Inventory per batch</h3><p>What entered the reverse flow, recorded at origin.</p></div>
+        <div class="hx-doc"><h3>De-characterisation recorded</h3><p>The unit rendered unusable in a documented way, when contracted.</p></div>
+        <div class="hx-doc"><h3>MTR and CDF</h3><p>Transport and disposal certified, where applicable to the material.</p></div>
+        <div class="hx-doc"><h3>Chain of custody</h3><p>The path of each batch through to final disposal.</p></div>
+        <div class="hx-doc"><h3>Consolidation by period</h3><p>The totals that feed targets, reports and audits.</p></div>
+        <div class="hx-doc"><h3>Documented scope</h3><p>Responsibilities and conditions defined before the operation.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Why Ecobraz</span><h2>Why Ecobraz on the brand's reverse link</h2></div>
+      <p>The manufacturer needs an operator that generates proof — not a scrap buyer.</p>
+    </div>
+    <div class="hx-sol-grid g4">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>No conflict of interest</h3><p>We do not resell what you want to eliminate: the flow ends in recorded de-characterisation and disposal.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span><h3>15 years of operation</h3><p>An association founded in 2011, with recognition on EU and UN platforms — scope declared on the evidence page.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Proof in the format of the report</h3><p>Documentation per batch and consolidation by period — the format that targets and audits call for.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M1 7h13v10H1zM14 10h4l4 4v3h-8z"/><circle cx="6" cy="19" r="1.6"/><circle cx="18" cy="19" r="1.6"/></svg></span><h3>Recurrence built in</h3><p>Schedule, multiple origins and a single standard — designed for a permanent after-sales flow.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-authority">
+      <div>
+        <span class="hx-label on-dark">Verifiable authority</span>
+        <strong>Associação Auxílio à Reciclagem de Eletrônicos e Inclusão Digital — company ID (CNPJ) 14.197.457/0001-42</strong>
+        <p>Activity registered on public platforms of international reference. Every claim on the site has a source, date and scope declared on the evidence page.</p>
+      </div>
+      <a href="{{@site.url}}/public-evidence/" data-track="manufacturer-importer-reverse-logistics_evidencias">See public evidence →</a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Frequently asked questions</span><h2>What after-sales, compliance and supply ask</h2></div>
+    </div>
+    <div class="hx-faq">
+        <details><summary>Does this meet the legal reverse-logistics obligation?</summary><p>Ecobraz runs the operational link — documented receipt, de-characterisation and disposal — that gives backing to your reverse-logistics programme. Programme design and regulatory framing remain with the organisation; we deliver the operation and the proof.</p></details>
+        <details><summary>How do you ensure the exchanged product does not return to the market?</summary><p>When de-characterisation is part of the scope, it is carried out and recorded, and the batch continues in chain of custody through to disposal — the documented set that protects the brand.</p></details>
+        <details><summary>Do you handle a continuous flow, not just one-off batches?</summary><p>Yes — a schedule by period and by origin, with documentary consolidation. It is the ideal design for after-sales and permanent recalls.</p></details>
+        <details><summary>Do you receive products with batteries?</summary><p>Yes. Batteries and products that contain them have their own packaging and transport requirements, defined in the technical assessment.</p></details>
+        <details><summary>How does the cost work?</summary><p>Conditions depend on categories, volume, origins and the level of de-characterisation and proof. The technical assessment defines the model — with no promise of a free service.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Related solutions</span><h2>Could also be part of your operation</h2></div>
+    </div>
+    <div class="hx-sol-grid">
+        <a class="hx-sol" href="{{@site.url}}/marketplace-ecommerce-reverse-logistics/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M1 7h13v10H1zM14 10h4l4 4v3h-8z"/><circle cx="6" cy="19" r="1.6"/><circle cx="18" cy="19" r="1.6"/></svg></span><h3>Marketplaces and e-commerce</h3><p>Returns and damage at scale, with a schedule by distribution centre.</p><span class="hx-go">View solution →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/damaged-out-of-warranty-disposal/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><h3>Damaged and out-of-warranty products</h3><p>Damage, returns and non-resaleable stock with brand protection.</p><span class="hx-go">View solution →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/documentation-traceability/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Documentation and traceability</h3><p>How each operation generates the evidence that supports reporting.</p><span class="hx-go">View solution →</span></a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Technical reference</span><h2>Published basis, with a persistent identifier</h2></div>
+      <p>This subject is developed in an original technical report by Ecobraz Emigre, published with a DOI on the open Zenodo repository.</p>
+    </div>
+    <p style="margin:0">VILLANOVA, Marcio. <em>Qualificação de Prestadores de Logística Reversa: Due Diligence Baseada em Risco para Compras, Compliance e Auditoria</em>. Zenodo, 2026. <a class="hx-src" href="https://doi.org/10.5281/zenodo.21398879" rel="noopener" data-track="manufacturer-importer-reverse-logistics_referencia_doi">doi.org/10.5281/zenodo.21398879</a> &nbsp;·&nbsp; <a class="hx-src" href="{{@site.url}}/technical-publications/" data-track="manufacturer-importer-reverse-logistics_referencia_publicacoes">All publications →</a></p>
+  </div>
+</section>
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-final">
+      <div>
+        <span class="hx-label on-dark">Technical assessment with no commitment</span>
+        <h2>Does your reverse-logistics target have the backing to be audited today?</h2>
+        <p>Describe categories, volume per period and origins. The team responds with a schedule, scope and the standard of proof — in writing.</p>
+      </div>
+      <div class="hx-actions">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=manufacturer-importer-reverse-logistics&amp;material=Electronics" data-track="manufacturer-importer-reverse-logistics_final_cta">Request a technical assessment</a>
+        <a class="button hx-btn-wa" href="{{@custom.whatsapp_url}}" rel="noopener" data-track="manufacturer-importer-reverse-logistics_final_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> WhatsApp</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<a class="hx-wa-float" href="{{@custom.whatsapp_url}}" rel="noopener" aria-label="Talk on WhatsApp" data-track="manufacturer-importer-reverse-logistics_whatsapp_flutuante"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg><span>Talk on WhatsApp</span></a>
