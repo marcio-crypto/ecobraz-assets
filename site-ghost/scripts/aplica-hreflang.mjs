@@ -24,9 +24,10 @@ const api = async (method, path, body) => {
 };
 const espera = (ms) => new Promise((res) => setTimeout(res, ms));
 
-const bloco = (pt, en, tipoRota) => {
+const bloco = (pt, en, tipoRota, ptTipo) => {
   const prefixo = tipoRota === 'posts' ? '/blog' : '';
-  const urlPt = pt === '' ? `${BASE}/` : `${BASE}${prefixo}/${pt}/`;
+  const prefixoPt = (ptTipo || tipoRota) === 'posts' ? '/blog' : '';
+  const urlPt = pt === '' ? `${BASE}/` : `${BASE}${prefixoPt}/${pt}/`;
   const urlEn = `${BASE}${prefixo}/${en}/`;
   return `${INI}\n<link rel="alternate" hreflang="pt-BR" href="${urlPt}">\n<link rel="alternate" hreflang="en" href="${urlEn}">\n<link rel="alternate" hreflang="x-default" href="${urlPt}">\n${FIM}`;
 };
@@ -48,8 +49,8 @@ const aplicar = async (tipo, slug, blocoNovo) => {
 const pares = JSON.parse(await fs.readFile('site-ghost/pares-idioma.json', 'utf8'));
 let aplicados = 0;
 for (const par of pares.pages) {
-  const b = bloco(par.pt, par.en, 'pages');
-  if (par.pt !== '') aplicados += (await aplicar('pages', par.pt, b)) ? 1 : 0;
+  const b = bloco(par.pt, par.en, 'pages', par.pt_tipo);
+  if (par.pt !== '') aplicados += (await aplicar(par.pt_tipo || 'pages', par.pt, b)) ? 1 : 0;
   aplicados += (await aplicar('pages', par.en, b)) ? 1 : 0;
 }
 for (const par of pares.posts || []) {
