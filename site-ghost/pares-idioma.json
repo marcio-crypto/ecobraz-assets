@@ -1,9 +1,13 @@
 {
- "comment": "Pares de idioma do ecobraz.org. pt e a fonte; en e a traducao. Nav: chaves usadas no header/footer EN.",
+ "comment": "Pares de idioma do ecobraz.org. pt e a fonte; en e a traducao. x-default=PT. pt_tipo=posts para pares pagina-EN/post-PT.",
  "pages": [
   {
    "pt": "",
    "en": "en"
+  },
+  {
+   "pt": "coleta-de-lixo-eletronico",
+   "en": "electronic-waste-collection"
   },
   {
    "pt": "descarte-corporativo-de-ti",
@@ -11,59 +15,11 @@
   },
   {
    "pt": "destruicao-de-dados",
-   "en": "data-destruction-vs-sanitisation"
-  },
-  {
-   "pt": "documentacao-e-rastreabilidade",
-   "en": "documentation-traceability"
-  },
-  {
-   "pt": "coleta-de-lixo-eletronico",
-   "en": "electronic-waste-collection"
-  },
-  {
-   "pt": "coleta-de-computadores-e-notebooks",
-   "en": "computer-laptop-collection"
-  },
-  {
-   "pt": "descarte-de-servidores-e-data-center",
-   "en": "server-data-centre-disposal"
-  },
-  {
-   "pt": "descarte-de-impressoras",
-   "en": "printer-disposal"
-  },
-  {
-   "pt": "descarte-de-celulares-e-tablets",
-   "en": "mobile-phone-tablet-disposal"
-  },
-  {
-   "pt": "descarte-de-equipamentos-hospitalares",
-   "en": "medical-equipment-disposal"
+   "en": "data-destruction"
   },
   {
    "pt": "descarte-de-eletrodomesticos",
-   "en": "white-goods-appliance-disposal"
-  },
-  {
-   "pt": "descarte-de-ar-condicionado",
-   "en": "air-conditioning-disposal"
-  },
-  {
-   "pt": "descarte-de-maquinas-e-equipamentos-industriais",
-   "en": "industrial-equipment-disposal"
-  },
-  {
-   "pt": "descarte-de-placas-e-componentes-eletronicos",
-   "en": "circuit-board-component-disposal"
-  },
-  {
-   "pt": "descarte-de-equipamentos-de-telecomunicacoes",
-   "en": "telecoms-equipment-disposal"
-  },
-  {
-   "pt": "descarte-de-baterias-e-nobreaks",
-   "en": "battery-ups-disposal"
+   "en": "white-goods-disposal"
   },
   {
    "pt": "descarte-de-geladeira-velha",
@@ -74,12 +30,52 @@
    "en": "washing-machine-disposal"
   },
   {
+   "pt": "descarte-de-ar-condicionado",
+   "en": "air-conditioner-disposal"
+  },
+  {
    "pt": "descarte-de-televisao",
-   "en": "old-tv-disposal"
+   "en": "tv-monitor-disposal"
+  },
+  {
+   "pt": "descarte-de-celulares-e-tablets",
+   "en": "phone-tablet-disposal"
+  },
+  {
+   "pt": "descarte-de-impressoras",
+   "en": "printer-disposal"
   },
   {
    "pt": "descarte-de-cabos-e-fios",
    "en": "cable-wire-disposal"
+  },
+  {
+   "pt": "descarte-de-placas-e-componentes-eletronicos",
+   "en": "circuit-board-component-disposal"
+  },
+  {
+   "pt": "descarte-de-baterias-e-nobreaks",
+   "en": "battery-ups-disposal"
+  },
+  {
+   "pt": "descarte-de-servidores-e-data-center",
+   "en": "server-data-centre-disposal"
+  },
+  {
+   "pt": "descarte-de-equipamentos-de-telecomunicacoes",
+   "en": "telecoms-equipment-disposal"
+  },
+  {
+   "pt": "descarte-de-maquinas-e-equipamentos-industriais",
+   "en": "industrial-equipment-disposal"
+  },
+  {
+   "pt": "descarte-de-equipamentos-hospitalares",
+   "en": "hospital-equipment-disposal"
+  },
+  {
+   "pt": "coleta-de-computadores-e-notebooks",
+   "en": "computer-laptop-collection"
   },
   {
    "pt": "coleta-de-lixo-eletronico-para-empresas",
@@ -90,36 +86,44 @@
    "en": "e-waste-collection-sao-paulo"
   },
   {
-   "pt": "pontos-de-coleta",
-   "en": "collection-points"
-  },
-  {
-   "pt": "como-funciona",
-   "en": "how-it-works"
+   "pt": "coleta-de-lixo-eletronico-em-osasco",
+   "en": "e-waste-collection-osasco"
   },
   {
    "pt": "coletas-recorrentes",
    "en": "recurring-collections"
   },
   {
+   "pt": "pontos-de-coleta",
+   "en": "collection-points"
+  },
+  {
    "pt": "logistica-reversa",
    "en": "reverse-logistics"
+  },
+  {
+   "pt": "documentacao-e-rastreabilidade",
+   "en": "documentation-traceability"
   },
   {
    "pt": "evidencias",
    "en": "public-evidence"
   },
   {
+   "pt": "como-funciona",
+   "en": "how-it-works"
+  },
+  {
    "pt": "sobre",
    "en": "about"
   },
   {
-   "pt": "politica-de-privacidade",
-   "en": "privacy-policy"
-  },
-  {
    "pt": "publicacoes",
    "en": "technical-publications"
+  },
+  {
+   "pt": "politica-de-privacidade",
+   "en": "privacy-policy"
   },
   {
    "pt": "descarte-de-ativos-de-ti-desmobilizados",
@@ -174,12 +178,12 @@
    "en": "manufacturer-importer-reverse-logistics"
   },
   {
-   "pt": "descarte-de-equipamentos-de-varejo-e-pdv",
-   "en": "retail-pos-equipment-disposal"
-  },
-  {
    "pt": "programa-adote-um-bairro",
    "en": "adopt-a-neighbourhood-programme"
+  },
+  {
+   "pt": "descarte-de-equipamentos-de-varejo-e-pdv",
+   "en": "retail-pos-equipment-disposal"
   },
   {
    "pt": "como-descartar-geladeira-velha-em-sao-paulo",
