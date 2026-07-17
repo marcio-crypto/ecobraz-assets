@@ -1,0 +1,28 @@
+name: Ecobraz — verificar menu EN e link da ONU
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verifica:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instala Playwright + Chromium
+        run: |
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund playwright >/dev/null
+          npx playwright install --with-deps chromium
+      - name: Verifica menu EN (flex) e link da ONU
+        run: node site-ghost/scripts/verifica-menu-en.mjs https://ecobraz.org
+      - name: Guarda o print do cabeçalho EN
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: menu-en-screenshot
+          path: shots/
+          if-no-files-found: warn
+          retention-days: 14
