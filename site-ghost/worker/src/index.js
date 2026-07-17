@@ -104,7 +104,10 @@ async function sendToEgoi(lead, env) {
 // Envia o e-mail transacional de confirmação ao lead via E-goi Transacional (v2).
 // Só dispara com EGOI_TRANSACTIONAL_API_KEY + EGOI_SENDER_ID configurados.
 async function sendConfirmationEmail(lead, env) {
-  if (!env.EGOI_TRANSACTIONAL_API_KEY || !env.EGOI_SENDER_ID) return {ok:false, skipped:true};
+  // Usa a chave transacional dedicada se existir; senão tenta a chave do E-goi
+  // que o Worker já usa (na maioria das contas é a mesma chave da conta).
+  const apiKey = env.EGOI_TRANSACTIONAL_API_KEY || env.EGOI_API_KEY;
+  if (!apiKey || !env.EGOI_SENDER_ID) return {ok:false, skipped:true};
   const base=env.EGOI_TRANSACTIONAL_API_URL || 'https://slingshot.egoiapp.com/api';
   const payload={
     sender_id: env.EGOI_SENDER_ID,
@@ -117,7 +120,7 @@ async function sendConfirmationEmail(lead, env) {
   };
   if (env.EGOI_SENDER_NAME) payload.sender_name = env.EGOI_SENDER_NAME;
   if (env.EGOI_REPLY_TO_ID) payload.reply_to_id = env.EGOI_REPLY_TO_ID;
-  const r=await fetch(`${base}/v2/email/messages/action/send`,{method:'POST',headers:{'content-type':'application/json','ApiKey':env.EGOI_TRANSACTIONAL_API_KEY},body:JSON.stringify(payload)});
+  const r=await fetch(`${base}/v2/email/messages/action/send`,{method:'POST',headers:{'content-type':'application/json','ApiKey':apiKey},body:JSON.stringify(payload)});
   if (!r.ok) throw new Error(`egoi_tx_${r.status}_${(await r.text()).slice(0,300)}`);
   return {ok:true, skipped:false};
 }
