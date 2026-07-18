@@ -1,6 +1,7 @@
 {{!< default}}
 
 {{#post}}
+{{#foreach tags visibility="all"}}{{#match slug "hash-pt"}}{{#contentFor "htmlLang"}}pt-BR{{/contentFor}}{{/match}}{{/foreach}}
 <article class="article">
   <header class="article-head">
     <div class="wrap">

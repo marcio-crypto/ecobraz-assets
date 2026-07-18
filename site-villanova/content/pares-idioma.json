@@ -169,10 +169,6 @@
    "pt": "arquitetura-evidencias-fornecedores-ue-brasil"
   },
   {
-   "en": "brazilian-execution-european-regulatory-defensibility-2",
-   "pt": "execucao-brasileira-defensabilidade-regulatoria-europeia"
-  },
-  {
    "en": "the-brazil-europe-supply-chain-risk-memo-for-2026",
    "pt": "memorando-risco-cadeia-suprimentos-brasil-europa-2026"
   },
@@ -350,7 +346,7 @@
   },
   {
    "en": "brazilian-execution-european-regulatory-defensibility",
-   "pt": "execucao-brasileira-defensabilidade-regulatoria-europeia-2"
+   "pt": "execucao-brasileira-defensabilidade-regulatoria-europeia"
   },
   {
    "en": "regulatory-source-trail-3",
@@ -433,20 +429,12 @@
    "pt": "evidencia-fornecedor-eudr-apos-simplificacao"
   },
   {
-   "en": "the-cfo-checklist-for-eu-brazil-supplier-evidence-2",
-   "pt": "checklist-do-cfo-para-evidencias-de-fornecedores-ue-brasil"
-  },
-  {
-   "en": "the-eu-brazil-evidence-readiness-matrix-2",
-   "pt": "matriz-de-prontidao-de-evidencias-ue-brasil"
-  },
-  {
    "en": "the-board-memo-questions-european-buyers-will-ask-brazilian-suppliers",
    "pt": "memorando-conselho-perguntas-compradores-europeus-fornecedores-brasileiros"
   },
   {
    "en": "the-cfo-checklist-for-eu-brazil-supplier-evidence",
-   "pt": "checklist-do-cfo-para-evidencias-de-fornecedores-ue-brasil-2"
+   "pt": "checklist-do-cfo-para-evidencias-de-fornecedores-ue-brasil"
   },
   {
    "en": "the-eu-brazil-evidence-readiness-matrix",
@@ -765,24 +753,12 @@
    "pt": "csddd-reforma-2026-arquivo-controle-cadeias-suprimentos"
   },
   {
-   "en": "eu-critical-raw-materials-act-rare-earth-supply-chain-risk-2",
-   "pt": "lei-materias-primas-criticas-ue-risco-cadeia-terras-raras"
-  },
-  {
    "en": "green-claims-risk-environmental-statements-eu-rules",
    "pt": "risco-green-claims-diretiva-ue-2024-825-provas-antes-da-promocao"
   },
   {
-   "en": "eu-textile-regulation-product-data-market-access-risk-2",
-   "pt": "regulacao-textil-ue-prova-dados-produto-risco-acesso-mercado"
-  },
-  {
    "en": "weee-open-scope-financial-assurance-producer-responsibility",
    "pt": "weee-escopo-aberto-garantia-financeira-responsabilidade-do-produtor"
-  },
-  {
-   "en": "eu-forced-labour-regulation-import-restrictions-due-diligence-2",
-   "pt": "regulamento-ue-trabalho-forcado-restricoes-importacao-due-diligence"
   },
   {
    "en": "board-duties-csddd-fiduciary-accountability-supply-chain-compliance",
@@ -818,7 +794,7 @@
   },
   {
    "en": "eu-forced-labour-regulation-import-restrictions-due-diligence",
-   "pt": "regulamento-ue-trabalho-forcado-restricoes-importacao-due-diligence-2"
+   "pt": "regulamento-ue-trabalho-forcado-restricoes-importacao-due-diligence"
   },
   {
    "en": "eu-textile-regulation-product-data-market-access-risk",

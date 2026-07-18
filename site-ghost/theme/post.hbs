@@ -1,5 +1,6 @@
 {{!< default}}
 {{#post}}
+{{#foreach tags visibility="all"}}{{#match slug "hash-en"}}{{#contentFor "htmlLang"}}en{{/contentFor}}{{/match}}{{/foreach}}
 <article class="article">
     <header class="article-header container-narrow">
         {{#if primary_tag}}<a class="post-tag" href="{{primary_tag.url}}">{{primary_tag.name}}</a>{{/if}}
