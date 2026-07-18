@@ -86,12 +86,24 @@ ok('nenhum bloqueio geográfico detectado (BR e Europa acessam sem restrição)'
 // ---------- 5. cobertura de hreflang ----------
 const semHreflang = [];
 const comHreflang = [];
+const langMismatch = [];
+const langCount = {};
+const raizIdioma = (v) => String(v || '').toLowerCase().split('-')[0];
+const attrDe = (tag, name) => (tag && tag.match(new RegExp(`${name}=["']([^"']*)["']`, 'i')) || [])[1] || '';
 for (const url of listaUrls) {
   const path = new URL(url).pathname;
   if (/\/(tag|autor|author)\//.test(path)) continue; // taxonomias não têm par
   const r = await pegar(url);
   if (/rel=["']alternate["'][^>]*hreflang/i.test(r.body)) comHreflang.push(url);
   else semHreflang.push(url);
+  // html lang x self-hreflang: devem casar (evita o erro do Ahrefs)
+  const htmlLang = attrDe((r.body.match(/<html[^>]*\slang=["'][^"']*["'][^>]*>/i) || [])[0], 'lang');
+  langCount[htmlLang || '(vazio)'] = (langCount[htmlLang || '(vazio)'] || 0) + 1;
+  const alts = [...r.body.matchAll(/<link[^>]+rel=["']alternate["'][^>]*>/gi)].map((m) => m[0]);
+  const semBarra = (x) => String(x).replace(/\/$/, '');
+  const self = alts.find((a) => semBarra(attrDe(a, 'href')) === semBarra(url));
+  const selfLang = self ? attrDe(self, 'hreflang') : '';
+  if (htmlLang && selfLang && raizIdioma(htmlLang) !== raizIdioma(selfLang)) langMismatch.push(`${url.replace(base, '')} html:${htmlLang} vs hreflang:${selfLang}`);
 }
 console.log(`\n== COBERTURA DE HREFLANG ==`);
 console.log(`com hreflang: ${comHreflang.length} | sem hreflang: ${semHreflang.length}`);
@@ -99,6 +111,11 @@ if (semHreflang.length) {
   console.log('URLs SEM par de idioma (candidatas a tradução):');
   for (const u of semHreflang) console.log('  -', u.replace(base, '') || '/');
 }
+console.log(`\n== HTML LANG ==`);
+console.log(`distribuição <html lang>: ${JSON.stringify(langCount)}`);
+console.log(`descasados (html lang x self-hreflang): ${langMismatch.length}`);
+langMismatch.slice(0, 30).forEach((x) => console.log('  ✗', x));
+if (langMismatch.length) problemas.push(`${langMismatch.length} páginas com html lang ≠ hreflang`);
 
 // ---------- resumo ----------
 console.log(`\n===== RESUMO INDEXAÇÃO =====`);
