@@ -80,7 +80,9 @@ async function worker() {
       const self = alternates.find((a) => semBarra(attr(a, 'href')) === semBarra(u));
       const selfLang = self ? attr(self, 'hreflang') : '';
       if (htmlLang && selfLang && raizIdioma(htmlLang) !== raizIdioma(selfLang)) {
-        langMismatch.push(`${u} -> html:${htmlLang} vs hreflang:${selfLang}`);
+        const bodyCls = attr((html.match(/<body[^>]*\sclass=["'][^"']*["'][^>]*>/i) || [])[0], 'class');
+        const tagCls = (bodyCls.match(/\b(tag|page)-[\w-]+/g) || []).slice(0, 6).join(' ');
+        langMismatch.push(`${u} -> html:${htmlLang} vs hreflang:${selfLang} | body: ${tagCls}`);
       }
     } catch (e) {
       naoDuzentos.push(`${u} -> ERRO ${String(e.message).slice(0, 60)}`);
