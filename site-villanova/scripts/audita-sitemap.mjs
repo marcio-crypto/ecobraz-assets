@@ -50,7 +50,10 @@ const naoDuzentos = [];
 const comNoindex = [];
 const semCanonical = [];
 const semHreflang = [];
+const langMismatch = [];
 let checadas = 0;
+// idioma-raiz de um codigo (pt-br -> pt, en-us -> en)
+const raizIdioma = (v) => String(v || '').toLowerCase().split('-')[0];
 // concorrencia limitada pra nao estourar
 const fila = [...unicas];
 async function worker() {
@@ -66,6 +69,16 @@ async function worker() {
       const canon = (html.match(/<link[^>]+rel=["']canonical["'][^>]*>/i) || [])[0];
       if (!canon) semCanonical.push(u);
       if (!/hreflang=/.test(html)) semHreflang.push(u);
+      // html lang vs self-hreflang: o <html lang> deve casar com o hreflang
+      // que aponta para esta propria pagina (self). Descasamento = erro Ahrefs.
+      const htmlLang = attr((html.match(/<html[^>]*\slang=["'][^"']*["'][^>]*>/i) || [])[0], 'lang');
+      const alternates = [...html.matchAll(/<link[^>]+rel=["']alternate["'][^>]*>/gi)].map((m) => m[0]);
+      const semBarra = (x) => String(x).replace(/\/$/, '');
+      const self = alternates.find((a) => semBarra(attr(a, 'href')) === semBarra(u));
+      const selfLang = self ? attr(self, 'hreflang') : '';
+      if (htmlLang && selfLang && raizIdioma(htmlLang) !== raizIdioma(selfLang)) {
+        langMismatch.push(`${u} -> html:${htmlLang} vs hreflang:${selfLang}`);
+      }
     } catch (e) {
       naoDuzentos.push(`${u} -> ERRO ${String(e.message).slice(0, 60)}`);
     }
@@ -84,8 +97,10 @@ mortosNoSitemap.forEach((x) => console.log('  MORTO:', x));
 console.log(`Sem canonical: ${semCanonical.length} | Sem hreflang: ${semHreflang.length}`);
 semCanonical.slice(0, 10).forEach((x) => console.log('  sem-canonical:', x));
 semHreflang.slice(0, 10).forEach((x) => console.log('  sem-hreflang:', x));
+console.log(`html lang x self-hreflang descasados: ${langMismatch.length}`);
+langMismatch.slice(0, 30).forEach((x) => console.log('  lang≠hreflang:', x));
 
-const sujo = naoDuzentos.length + comNoindex.length + mortosNoSitemap.length;
+const sujo = naoDuzentos.length + comNoindex.length + mortosNoSitemap.length + langMismatch.length;
 if (sujo > 0) {
   console.error(`\nRESULTADO: sitemap com ${sujo} item(ns) a limpar.`);
   process.exit(1);
