@@ -1,0 +1,39 @@
+{
+ "comment": "Meta description das paginas de arquivo de tag e do autor do villanovaesg.com. Corrige o aviso 'meta description ausente' da auditoria Ahrefs. As tags sao casadas pelo NOME exato (o script resolve o slug no Ghost). Textos em ingles (idioma padrao do site), tom consultivo e sem promessas de resultado (compliance Villanova).",
+ "tags": [
+  {
+   "name": "CBAM & Carbon Exposure",
+   "meta_description": "How Brazilian exporters can map CBAM carbon exposure and organize emissions evidence to reduce carbon-border risk with European buyers. Villanova ESG advisory."
+  },
+  {
+   "name": "EUDR & Traceability",
+   "meta_description": "Structuring origin and deforestation-free traceability evidence in Brazilian supply chains to strengthen EUDR readiness for European buyers. Villanova ESG."
+  },
+  {
+   "name": "Finance, P&L & Board Risk",
+   "meta_description": "How EU supply-chain regulation reaches the P&L and the board: framing ESG evidence as financial and fiduciary risk for Brazilian exporters. Villanova ESG."
+  },
+  {
+   "name": "Procurement & Contract Risk",
+   "meta_description": "Aligning supplier evidence with EU due-diligence, procurement and contractual requirements to reduce buyer-side risk for Brazilian exporters. Villanova ESG."
+  },
+  {
+   "name": "Product Data & Circular Evidence",
+   "meta_description": "Organizing product data and circular-economy evidence for EU market access, including Digital Product Passport readiness for Brazilian suppliers. Villanova ESG."
+  },
+  {
+   "name": "Supplier Evidence & Buyer Readiness",
+   "meta_description": "Building supplier evidence files that hold up to European buyer scrutiny across CBAM, EUDR and CSDDD readiness reviews for Brazilian exporters. Villanova ESG."
+  },
+  {
+   "name": "Supply Chain Due Diligence & Liability",
+   "meta_description": "Mapping CSDDD supply-chain due-diligence obligations and organizing defensible evidence for Brazilian suppliers exposed to European buyers. Villanova ESG."
+  }
+ ],
+ "authors": [
+  {
+   "match_primary": true,
+   "meta_description": "Analysis on EU-Brazil supplier evidence, CBAM, EUDR and CSDDD readiness for exporters facing European buyer and regulatory scrutiny. Villanova ESG advisory."
+  }
+ ]
+}
