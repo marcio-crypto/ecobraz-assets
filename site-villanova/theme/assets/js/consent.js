@@ -15,6 +15,18 @@
     policy: 'Privacy policy'
   };
 
+  // Microsoft Clarity (mapa de calor) — carrega só APÓS o aceite (mais estrito).
+  var clarityLoaded = false;
+  function loadClarity() {
+    if (clarityLoaded) return;
+    clarityLoaded = true;
+    (function (c, l, a, r, i, t, y) {
+      c[a] = c[a] || function () { (c[a].q = c[a].q || []).push(arguments); };
+      t = l.createElement(r); t.async = 1; t.src = 'https://www.clarity.ms/tag/' + i;
+      y = l.getElementsByTagName(r)[0]; y.parentNode.insertBefore(t, y);
+    })(window, document, 'clarity', 'script', 'xo2sy61q4d');
+  }
+
   function update(state) {
     if (typeof gtag === 'function') {
       gtag('consent', 'update', {
@@ -24,6 +36,7 @@
         ad_personalization: 'denied'
       });
     }
+    if (state === 'granted') loadClarity();
   }
 
   var saved = null;
