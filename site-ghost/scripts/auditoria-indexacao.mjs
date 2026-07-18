@@ -17,6 +17,18 @@ const pegar = async (url, headers = {}) => {
   return {status: r.status, headers: r.headers, body: txt, location: r.headers.get('location')};
 };
 
+// ---------- 0. canonicalização de host (www x apex, http x https) ----------
+console.log('\n== CANONICALIZAÇÃO DE HOST (www / http) ==');
+for (const u of ['http://www.ecobraz.org/', 'https://www.ecobraz.org/', 'http://ecobraz.org/']) {
+  try {
+    const r = await pegar(u);
+    const srv = r.headers.get('server') || '?';
+    const cf = r.headers.get('cf-ray') ? 'cf' : '-';
+    console.log(`  ${u}  ->  ${r.status}  Location: ${r.location || '(nenhum)'}  | server: ${srv} | ${cf}`);
+    if (r.status === 302) console.log(`    ⚠️ 302 (temporário) — origem provável: ${/cloudflare/i.test(srv) ? 'Cloudflare (regra na CF)' : 'Ghost Pro (origem)'}`);
+  } catch (e) { console.log(`  ${u} -> ERRO ${String(e.message).slice(0, 60)}`); }
+}
+
 // ---------- 1. robots.txt ----------
 const robots = await pegar(`${base}/robots.txt`);
 if (robots.status === 200) {
