@@ -1,5 +1,6 @@
 {{!< default}}
 {{#post}}
+{{#foreach tags visibility="all"}}{{#match slug "hash-en"}}{{#contentFor "htmlLang"}}en{{/contentFor}}{{/match}}{{/foreach}}
 <article class="page-article">
     {{#match @page.show_title_and_feature_image}}
     <header class="page-hero">
