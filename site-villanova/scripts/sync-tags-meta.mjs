@@ -64,11 +64,19 @@ if (autoresCfg.length) {
     const alvo = a.match_primary ? principal : users.find((u) => u.slug === a.slug || u.name === a.name);
     if (!alvo) { console.log(`AVISO: autor ${a.slug || a.name || '(primary)'} nao encontrado — pulado`); continue; }
     if ((alvo.meta_description || '') === a.meta_description) { console.log(`ok (sem mudanca): author/${alvo.slug}`); okAutores += 1; continue; }
-    // O Ghost exige email no PUT de users; reenvia o email atual para nao alterar.
-    await api('PUT', `users/${alvo.id}/`, {users: [{email: alvo.email, meta_description: a.meta_description, updated_at: alvo.updated_at}]});
-    console.log(`meta aplicada: author/${alvo.slug} (${a.meta_description.length} chars)`);
-    okAutores += 1;
-    await espera(200);
+    try {
+      // O Ghost exige email no PUT de users; reenvia o email atual para nao alterar.
+      await api('PUT', `users/${alvo.id}/`, {users: [{email: alvo.email, meta_description: a.meta_description, updated_at: alvo.updated_at}]});
+      console.log(`meta aplicada: author/${alvo.slug} (${a.meta_description.length} chars)`);
+      okAutores += 1;
+      await espera(200);
+    } catch (e) {
+      // Tokens de integracao do Ghost Admin nao tem permissao para editar
+      // usuarios/staff (403 NoPermissionError). Nao e um bug: a meta do autor
+      // precisa ser definida manualmente no painel (Ghost Admin > Staff) ou o
+      // Ghost usa a bio como fallback. Nao falha o job por causa disso.
+      console.log(`AVISO: nao foi possivel definir meta do autor/${alvo.slug} via API (${String(e.message).slice(0, 120)}). Deixe manual no painel do Ghost.`);
+    }
   }
 }
 
