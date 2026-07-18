@@ -28,3 +28,6 @@ jobs:
           VILLANOVA_GHOST_ADMIN_URL: ${{ secrets.VILLANOVA_GHOST_ADMIN_URL }}
           VILLANOVA_GHOST_ADMIN_API_KEY: ${{ secrets.VILLANOVA_GHOST_ADMIN_API_KEY }}
         run: node site-villanova/scripts/sync-pagina.mjs "${{ inputs.arquivo }}" "${{ inputs.status }}"
+      - name: Notificar IndexNow (Bing e parceiros) imediatamente após publicar
+        continue-on-error: true
+        run: node site-villanova/scripts/submit-indexnow.mjs

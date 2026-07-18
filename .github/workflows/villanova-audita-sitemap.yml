@@ -1,0 +1,15 @@
+name: Villanova ESG — auditar limpeza do sitemap
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  auditar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Auditar cada URL do sitemap (status, noindex, slugs mortos)
+        run: node site-villanova/scripts/audita-sitemap.mjs
