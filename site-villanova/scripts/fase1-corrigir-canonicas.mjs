@@ -30,6 +30,21 @@ const api = async (method, path, body) => {
   return r.json();
 };
 
+// Home: o routes.yaml serve a página 'home' na raiz /, e o Ghost redireciona
+// /home/ -> / (301). Sem canônica, o /home/ (301) ainda aparece no sitemap.
+// Definir a canônica da página 'home' para a raiz remove /home/ do sitemap
+// (o Ghost exclui itens com canonical_url preenchida), deixando só a raiz /.
+const raiz = `${SITE}/`;
+const home = (await api('GET', `pages/?filter=slug:home&limit=1&fields=id,slug,canonical_url,updated_at`)).pages?.[0];
+if (!home) {
+  console.log('home\tpágina slug:home não encontrada — pulada');
+} else if (home.canonical_url === raiz) {
+  console.log(`home\tcanônica já = ${raiz}`);
+} else {
+  await api('PUT', `pages/${home.id}/`, {pages: [{canonical_url: raiz, updated_at: home.updated_at}]});
+  console.log(`home\tcanônica -> ${raiz} (remove /home/ do sitemap)`);
+}
+
 let limpas = 0, normalizadas = 0, mantidas = 0;
 for (const tipo of ['pages', 'posts']) {
   let page = 1;
