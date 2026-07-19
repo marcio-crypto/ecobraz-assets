@@ -28,6 +28,10 @@
       gtag('config', 'G-Q8PDFMW53N');
     </script>
     {{{block "hreflang"}}}
+    {{!-- Ghost omite a meta description nas páginas 2+ dos arquivos de tag/autor;
+         preenchemos aqui para não deixar essas páginas sem descrição. --}}
+    {{#is "tag"}}{{#if pagination.prev}}<meta name="description" content="{{tag.name}} — Villanova ESG analyses on EU–Brazil supplier evidence, due diligence and regulatory risk. Page {{pagination.page}}.">{{/if}}{{/is}}
+    {{#is "author"}}{{#if pagination.prev}}<meta name="description" content="Articles by {{author.name}} — Villanova ESG on EU–Brazil supplier evidence and regulatory risk. Page {{pagination.page}}.">{{/if}}{{/is}}
     {{ghost_head}}
 </head>
 <body class="{{body_class}}">
