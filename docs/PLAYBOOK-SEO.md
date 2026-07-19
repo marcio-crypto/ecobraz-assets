@@ -194,9 +194,9 @@ Preencher a cada ação executada, para acompanharmos causa e efeito ao longo da
 
 | Data | Site | O que foi feito | Efeito observado |
 |---|---|---|---|
-|  |  |  |  |
-|  |  |  |  |
-|  |  |  |  |
+| 2026-07-19 | Ecobraz | Post carro-chefe "lixo eletrônico" otimizado: meta reescrita + 4 links internos p/ páginas de serviço + CTA | Aguardando re-crawl (medir posição de "lixo eletrônico", hoje pos. 22) |
+| 2026-07-19 | Ecobraz | 14 posts fortes sem link ganharam link interno contextual → páginas de serviço (abrir comporta da autoridade) | Aguardando re-crawl |
+| 2026-07-19 | (nota) | Confirmado: **Ecobraz NÃO coleta pilhas domésticas** — nenhum conteúdo deve prometer isso | — |
 |  |  |  |  |
 |  |  |  |  |
 
