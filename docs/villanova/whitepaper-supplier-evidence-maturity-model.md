@@ -127,7 +127,7 @@ This is a conceptual framework, version 1.0, not peer reviewed and not empirical
 
 ## 10. How to cite
 
-> Villanova, M. (2026). *The Supplier Evidence Maturity Model (SEMM): A practical framework for EU-buyer-readiness of Brazilian exporters under EUDR, CBAM and CSDDD* (Version 1.0) [Technical report]. Zenodo. https://doi.org/[DOI atribuído no depósito]
+> Villanova, M. (2026). *The Supplier Evidence Maturity Model (SEMM): A practical framework for EU-buyer-readiness of Brazilian exporters under EUDR, CBAM and CSDDD* (Version 1.0) [Technical report]. Zenodo. https://doi.org/10.5281/zenodo.21445455
 
 ## References
 
