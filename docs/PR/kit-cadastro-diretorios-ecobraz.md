@@ -15,7 +15,7 @@ Peguei do repositório — **confirme se batem exatamente com o GBP** (se algo d
 
 | Campo | Valor |
 |---|---|
-| **Nome** | Ecobraz *(confirmar: "Ecobraz" ou "Ecobraz Emigre"?)* |
+| **Nome** | **Ecobraz Emigre** (nome registrado no GBP — usar exatamente assim no campo "nome do negócio") |
 | **Endereço** | Rua Dona Maria Quedas, 230 — Jardim Andaraí — São Paulo/SP — CEP 02175-010 |
 | **Telefone** | (11) 4329-2001 |
 | **Site** | https://ecobraz.org |
@@ -28,7 +28,7 @@ Peguei do repositório — **confirme se batem exatamente com o GBP** (se algo d
 ## 1. NAP — bloco padrão (colar em "endereço/contato")
 
 ```
-Ecobraz
+Ecobraz Emigre
 Rua Dona Maria Quedas, 230 — Jardim Andaraí
 São Paulo/SP — CEP 02175-010
 Telefone: (11) 4329-2001
@@ -36,6 +36,8 @@ Site: https://ecobraz.org
 E-mail: contato@ecobraz.org.br
 Atendimento: Grande São Paulo (até ~150 km da capital)
 ```
+
+> **Marca × nome registrado:** no campo **"nome do negócio"** use sempre **Ecobraz Emigre** (igual ao Google Business Profile). No texto das descrições, a marca **"Ecobraz"** pode aparecer normalmente — o que precisa ser idêntico em todo diretório é o **campo do nome**.
 
 ## 2. Descrição CURTA (até ~160 caracteres — para campos pequenos / meta)
 

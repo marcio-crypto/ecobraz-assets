@@ -11,7 +11,7 @@
 
 Use **sempre** o mesmo nome/endereço/telefone do seu Google Business Profile. O que achei no repositório (confirme se está exato):
 
-- **Nome:** Ecobraz *(confirmar se no GBP é "Ecobraz" ou "Ecobraz Emigre")*
+- **Nome (registrado):** Ecobraz Emigre *(nome do GBP; nos textos ao cliente a marca "Ecobraz" pode ser usada normalmente)*
 - **Endereço:** Rua Dona Maria Quedas, 230 — Jardim Andaraí — São Paulo/SP — CEP 02175-010
 - **Telefone:** (11) 4329-2001
 - **Site:** https://ecobraz.org
