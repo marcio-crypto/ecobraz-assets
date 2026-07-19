@@ -213,6 +213,8 @@ Preencher a cada ação executada, para acompanharmos causa e efeito ao longo da
 | 2026-07-19 | (pendência Marcio) | Google Business Profile da Ecobraz: configurar **área de serviço** = Grande SP/150km + categoria correta (maior alavanca do SEO local) | — |
 | 2026-07-19 | Villanova | ⚠️ **ACHADO CRÍTICO + correção de erro meu:** auditei os 348 domínios de referência e descobri que **~99% são spam de rede PBN/links comprados** (`.shop`/`.store`, itxoft, seoexpress). Marcio confirmou que nunca comprou links → fornecedor anterior não autorizado. **Corrigi o playbook**, que antes afirmava (errado) que a autoridade vinha de Zenodo/ORCID/acadêmico. Preparei `docs/PR/disavow-spam-links.txt` (106 domínios) + guia de remediação. | Autoridade real da Villanova ≈ zero; disavow a submeter no GSC (Marcio) |
 | 2026-07-19 | Ecobraz | Auditoria de backlinks: núcleo de links reais existe (diferente da Villanova), mas há **parte de spam da mesma rede**. Incluída na limpeza/disavow. | Verificar ações manuais no GSC |
+| 2026-07-19 | Ecobraz | ✅ **Ações manuais checadas no GSC = "Nenhum problema detectado"** (sem penalidade). **Disavow SUBMETIDO** (114 domínios) na propriedade URL-prefix `https://ecobraz.org/` às 17:10 — Marcio executou; verificado em tela. (Obs.: disavow não aceita propriedade "Domínio"; criada propriedade "Prefixo do URL" para isso.) | Aguardar semanas o Google reprocessar |
+| 2026-07-19 | Villanova | ✅ **Disavow SUBMETIDO** (114 domínios) na propriedade URL-prefix `https://villanovaesg.com/` às 17:12 — Marcio executou; verificado em tela. | Aguardar reprocessamento; DR pode cair (bom sinal = autoridade falsa saindo) |
 
 ---
 
