@@ -205,6 +205,8 @@ Preencher a cada ação executada, para acompanharmos causa e efeito ao longo da
 | 2026-07-19 | Ecobraz | 6 posts do mesmo tema passaram a linkar **para** o carro-chefe "lixo eletrônico" (concentra autoridade no termo de 2.700) | Aguardando re-crawl |
 | 2026-07-19 | (achado) | Investigação: 90% da oportunidade Ecobraz está no post carro-chefe (já otimizado). "pgrs" (vol 120) sendo redirecionado p/ página não-relacionada → tende a perder ranking (recuperação = baixa prioridade). GSC dos 2 sites verificado + sitemaps processados. Villanova = on-page já forte; gargalo é tempo+backlinks. | — |
 | 2026-07-19 | (nota) | GSC↔Ahrefs ainda não conectado (opcional) — dados do Google via Ahrefs indisponíveis até conectar | — |
+| 2026-07-19 | Ecobraz | SEO local: seção "Área de cobertura" (Grande SP/150km) na página principal + **3 páginas locais de qualidade** (Guarulhos, ABC, Campinas), conteúdo diferenciado e tom honesto de avaliação | Aguardando indexação |
+| 2026-07-19 | (pendência Marcio) | Google Business Profile da Ecobraz: configurar **área de serviço** = Grande SP/150km + categoria correta (maior alavanca do SEO local) | — |
 
 ---
 
