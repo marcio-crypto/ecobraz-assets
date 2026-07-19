@@ -50,6 +50,7 @@ const naoDuzentos = [];
 const comNoindex = [];
 const semCanonical = [];
 const semHreflang = [];
+const hreflangIncompleto = [];
 const langMismatch = [];
 const langCount = {};
 let checadas = 0;
@@ -69,7 +70,9 @@ async function worker() {
       if (robots && /noindex/i.test(attr(robots, 'content'))) comNoindex.push(u);
       const canon = (html.match(/<link[^>]+rel=["']canonical["'][^>]*>/i) || [])[0];
       if (!canon) semCanonical.push(u);
+      const nAlt = (html.match(/<link[^>]+rel=["']alternate["'][^>]+hreflang=/gi) || []).length;
       if (!/hreflang=/.test(html)) semHreflang.push(u);
+      else if (nAlt < 2) hreflangIncompleto.push(`${u} (${nAlt} alternate)`);
       // html lang vs self-hreflang: o <html lang> deve casar com o hreflang
       // que aponta para esta propria pagina (self). Descasamento = erro Ahrefs.
       const htmlLang = attr((html.match(/<html[^>]*\slang=["'][^"']*["'][^>]*>/i) || [])[0], 'lang');
@@ -103,10 +106,12 @@ console.log(`Sem canonical: ${semCanonical.length} | Sem hreflang: ${semHreflang
 semCanonical.slice(0, 10).forEach((x) => console.log('  sem-canonical:', x));
 semHreflang.slice(0, 10).forEach((x) => console.log('  sem-hreflang:', x));
 console.log(`Distribuição de <html lang>: ${JSON.stringify(langCount)}`);
+console.log(`hreflang incompleto (<2 alternates): ${hreflangIncompleto.length}`);
+hreflangIncompleto.slice(0,30).forEach((x) => console.log("  hreflang<2:", x));
 console.log(`html lang x self-hreflang descasados: ${langMismatch.length}`);
 langMismatch.slice(0, 30).forEach((x) => console.log('  lang≠hreflang:', x));
 
-const sujo = naoDuzentos.length + comNoindex.length + mortosNoSitemap.length + langMismatch.length;
+const sujo = naoDuzentos.length + comNoindex.length + mortosNoSitemap.length + langMismatch.length + hreflangIncompleto.length;
 if (sujo > 0) {
   console.error(`\nRESULTADO: sitemap com ${sujo} item(ns) a limpar.`);
   process.exit(1);
