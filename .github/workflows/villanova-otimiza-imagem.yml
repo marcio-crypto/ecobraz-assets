@@ -1,0 +1,43 @@
+name: Villanova ESG — otimizar imagem pesada
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_url:
+        description: 'URL completa da imagem original no Ghost'
+        required: true
+        type: string
+      old_substr:
+        description: 'Trecho da URL/nome do arquivo antigo para casar o feature_image'
+        required: true
+        type: string
+      max_width:
+        description: 'Largura máxima em px'
+        default: '1600'
+        type: string
+      quality:
+        description: 'Qualidade JPEG (1-100)'
+        default: '82'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  otimizar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Baixar imagem original
+        run: |
+          curl -fSL "${{ inputs.image_url }}" -o original
+          echo "Tamanho original:"; ls -la original
+      - name: Reconverter para JPEG otimizado
+        run: |
+          convert original -resize '${{ inputs.max_width }}x${{ inputs.max_width }}>' -strip -interlace Plane -quality ${{ inputs.quality }} otimizada.jpg
+          echo "Tamanho otimizado:"; ls -la otimizada.jpg
+      - name: Enviar ao Ghost e repontar posts/páginas
+        env:
+          VILLANOVA_GHOST_ADMIN_URL: ${{ secrets.VILLANOVA_GHOST_ADMIN_URL }}
+          VILLANOVA_GHOST_ADMIN_API_KEY: ${{ secrets.VILLANOVA_GHOST_ADMIN_API_KEY }}
+        run: node site-villanova/scripts/troca-feature-image.mjs "${{ inputs.old_substr }}" otimizada.jpg image/jpeg
