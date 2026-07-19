@@ -1,4 +1,5 @@
 301:
+  "^\\/articles\\/?$": "/eu-brazil-supplier-evidence-knowledge-base/"
   "^\\/eudr-audit\\/?$": "/eudr-evidence-readiness-review/"
   "^\\/privacy-policy\\/?$": "/privacy/"
   "^\\/terms-of-service\\/?$": "/terms/"
