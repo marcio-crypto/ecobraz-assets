@@ -9,6 +9,11 @@
 
 ---
 
+## 0. Cobertura geográfica (referência — confirmada pelo Marcio em 19/07/2026)
+
+- **Ecobraz:** atende a **Grande São Paulo — raio de ~150 km da capital**. Negócio **local** → SEO local é alavanca forte (Google Business Profile com área de serviço, termos "[cidade]/perto de mim", conteúdo por cidade **de qualidade**, sem páginas "vazias").
+- **Villanova:** atua em **todo o Brasil e em toda a União Europeia**. Negócio **B2B, não-local** → sem páginas por cidade; foco em autoridade temática (EUDR/CBAM/CSDDD/supplier evidence) em EN (mercados da UE: DE, NL, FR, etc.) e PT (Brasil inteiro).
+
 ## 1. Estado atual (números reais)
 
 Dados Ahrefs coletados em 19/07/2026 (modo subdomínios). Estado técnico verificado no Site Audit.
