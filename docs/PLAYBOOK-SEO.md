@@ -197,8 +197,9 @@ Preencher a cada ação executada, para acompanharmos causa e efeito ao longo da
 | 2026-07-19 | Ecobraz | Post carro-chefe "lixo eletrônico" otimizado: meta reescrita + 4 links internos p/ páginas de serviço + CTA | Aguardando re-crawl (medir posição de "lixo eletrônico", hoje pos. 22) |
 | 2026-07-19 | Ecobraz | 14 posts fortes sem link ganharam link interno contextual → páginas de serviço (abrir comporta da autoridade) | Aguardando re-crawl |
 | 2026-07-19 | (nota) | Confirmado: **Ecobraz NÃO coleta pilhas domésticas** — nenhum conteúdo deve prometer isso | — |
-|  |  |  |  |
-|  |  |  |  |
+| 2026-07-19 | Ecobraz | 6 posts do mesmo tema passaram a linkar **para** o carro-chefe "lixo eletrônico" (concentra autoridade no termo de 2.700) | Aguardando re-crawl |
+| 2026-07-19 | (achado) | Investigação: 90% da oportunidade Ecobraz está no post carro-chefe (já otimizado). "pgrs" (vol 120) sendo redirecionado p/ página não-relacionada → tende a perder ranking (recuperação = baixa prioridade). GSC dos 2 sites verificado + sitemaps processados. Villanova = on-page já forte; gargalo é tempo+backlinks. | — |
+| 2026-07-19 | (nota) | GSC↔Ahrefs ainda não conectado (opcional) — dados do Google via Ahrefs indisponíveis até conectar | — |
 
 ---
 
