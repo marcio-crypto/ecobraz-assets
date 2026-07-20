@@ -1,12 +1,13 @@
-// Inspeciona a DEFINIÇÃO de campos do Ploomes (somente leitura) para comparar por
-// que um campo aparece no formulário e outro não. Não lê dados pessoais — só a
-// configuração dos campos. IDs via env CAMPOS (padrão: o campo novo de data e o
-// "Contrato Ativo?" que já aparece).
+// Lista (SOMENTE LEITURA) os campos do cadastro de CONTATO/EMPRESA do Ploomes cujo
+// nome fala de contrato/vigência, com Id, Nome e TypeId. Serve para achar o campo
+// certo de "fim do contrato" (ex.: "Termino de Contrato") e apontar o Portal para ele.
+// Não lê dados pessoais — só a definição dos campos.
 
 const BASE = (process.env.PLOOMES_API_URL || 'https://public-api2.ploomes.com').replace(/\/+$/, '');
 const KEY = process.env.PLOOMES_USER_KEY || '';
 if (!KEY) { console.error('ERRO: PLOOMES_USER_KEY não definido.'); process.exit(1); }
 const H = { 'User-Key': KEY, Accept: 'application/json' };
+const PADRAO = new RegExp(process.env.PADRAO || 'contrato|termino|térmi|encerr|vig[êe]ncia|pagante', 'i');
 
 async function api(path) {
   const r = await fetch(`${BASE}/${path}`.replace(/ /g, '%20'), { headers: H });
@@ -16,12 +17,13 @@ async function api(path) {
 }
 
 async function main() {
-  const ids = String(process.env.CAMPOS || '365984,277451').split(',').map((s) => s.trim()).filter(Boolean);
-  const filtro = ids.map((id) => `Id eq ${id}`).join(' or ');
-  const r = await api(`Fields?$filter=${filtro}`);
+  // EntityId 1 = Contatos (pessoas e empresas). Traz todos os campos e filtra por nome.
+  const r = await api('Fields?$filter=EntityId eq 1&$top=500');
   const campos = Array.isArray(r.body?.value) ? r.body.value : [];
-  const out = { comparacao: ids.join(' x '), status: r.status, encontrados: campos.length };
-  for (const c of campos) out[`campo_${c.Id}`] = c;
+  const out = { status: r.status, totalCamposContato: campos.length };
+  out.relacionadosAContrato = campos
+    .filter((f) => PADRAO.test(String(f.Name || '')))
+    .map((f) => ({ Id: f.Id, Name: f.Name, TypeId: f.TypeId }));
   if (!campos.length) out.brutoTrecho = String(r.text).slice(0, 300);
   console.log(JSON.stringify(out, null, 2));
 }
