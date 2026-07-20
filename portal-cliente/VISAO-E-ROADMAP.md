@@ -151,9 +151,10 @@ legislação (BR + UE), comparar com a base de conhecimento do sistema e
 - [x] Rodar o **diagnóstico do Ploomes** — feito (ver `diagnostico/RESULTADOS.md`). (2026-07-20)
 - [x] **"Cliente ativo"** = PJ com **contrato ativo** no Ploomes (marcação + data de encerramento); trava ao vencer. (2026-07-20)
 - [x] **Login** = link/código por e-mail, **sem senha** (magic link). (2026-07-20)
-- [x] **Marcação de contrato no Ploomes** — pronta (2026-07-20): usa o campo já existente
-      **"Contrato Ativo?"** (Id 277451, Sim/Não) como gatilho de acesso + campo novo
-      **"Data de encerramento do contrato"** (Id 365984, data), ambos no cadastro de empresa (EntityId 1).
+- [x] **Marcação de contrato no Ploomes** — pronta (2026-07-20): usa **"Contrato Ativo?"**
+      (Id 277451, Sim/Não) como gatilho de acesso + **"Termino de Contrato"** (Id 366005, data
+      que **aparece no formulário**) como validade. O campo 365984 criado via API ficou **órfão**
+      (não aparece no formulário) e **deixou de ser usado**. Ambos no cadastro de empresa (EntityId 1).
 - [ ] **Metodologia de CO₂** que a Ecobraz vai assumir (fatores de emissão / fonte).
 - [x] Situação do **Adote um Bairro**: **programa de impacto social** (decidido 2026-07-20) →
       vendido como patrocínio de impacto; a neutralização de CO₂ usa **crédito verificado**.
@@ -166,12 +167,19 @@ legislação (BR + UE), comparar com a base de conhecimento do sistema e
 **Feito e verificado:**
 - Base técnica que já existe e funciona: site ↔ Ploomes seguro (Worker `ecobraz-coletas`),
   deploy automático. A API do Ploomes é OData v4 com chave — confirmado.
-- Diagnóstico do Ploomes (somente leitura) **escrito e no repositório**.
+- Diagnóstico do Ploomes **executado** (ver `diagnostico/RESULTADOS.md`).
+- **Pacote 0 escrito e publicado**: Worker `ecobraz-portal` no ar (login por link, portão por
+  contrato, sessão assinada, painel com OS + abrir chamado).
+- **Portão de acesso corrigido e provado** por autoteste sobre cliente real ativo (`liberado: true`).
+  Campos de contrato confirmados: 277451 "Contrato Ativo?" (Sim/Não, BoolValue) e 366005
+  "Termino de Contrato" (data, no formulário).
 
 **Ainda não feito / não testado:**
-- O diagnóstico **ainda não foi executado** (depende do segredo no GitHub).
-- Nenhuma linha do Portal em si foi escrita (login, painel, chamados) — de propósito,
-  para não construir sobre suposições.
+- ⚠️ **Segredos do Worker na Cloudflare** — `wrangler secret list` veio **vazio**; sem eles o login
+  não envia e-mail. **É o próximo passo para o teste real funcionar.**
+- **Teste ponta a ponta** (e-mail chegando → link → painel) ainda **não feito** — depende dos segredos.
+- **Mapeamento de "OS"** no painel é provisório (lê Negócios da empresa); precisa ser validado com
+  dados reais e, depois, apontar para o funil certo de OS (`PORTAL_OS_PIPELINE_ID`).
 - A base de **conformidade legal (BR+UE) e de normas de auditoria** já foi **pesquisada e
   documentada** em [`conformidade/`](./conformidade/CONFORMIDADE-E-NORMAS.md) (síntese + 2 anexos
   com fontes oficiais). ⚠️ Está marcada como **material de pesquisa, pendente de validação** por
@@ -209,3 +217,20 @@ legislação (BR + UE), comparar com a base de conhecimento do sistema e
   com login por link no e-mail, portão de acesso por contrato (relê do Ploomes), sessão assinada,
   painel (lista de OS + abrir chamado). ⚠️ Ainda **não publicado nem testado ponta a ponta**;
   mapeamento de "OS" provisório (lê Negócios); depende de config na Cloudflare (segredos, KV, domínio).
+- **2026-07-20** — **Portal publicado** (deploy verde, verificado) em `ecobraz-portal.ti-0ab.workers.dev`.
+- **2026-07-20** — **Login corrigido** após teste do Marcio falhar. Dois bugs achados por diagnóstico
+  de leitura no Ploomes real: (1) o código não seguia **pessoa → empresa** (o e-mail é de uma pessoa
+  vinculada); (2) decidia por **TypeId** de forma errada — nesta conta a **empresa** que guarda o
+  contrato é TypeId 1 e a **pessoa** é TypeId 2 (invertido do padrão). Correção: portão **agnóstico a
+  TypeId**, procura "Contrato Ativo?" no próprio contato **e** na empresa vinculada
+  (CompanyId/LastCompanyId). Formato do campo confirmado: 277451 é Sim/Não → lido por **BoolValue**.
+- **2026-07-20** — **Validade passou a usar "Termino de Contrato" (Id 366005)**, campo de data que já
+  **aparece no formulário** do Ploomes — resolve a pendência do campo de data sem criar nada. O órfão
+  365984 foi abandonado (candidato a remoção futura, com aval do Marcio).
+- **2026-07-20** — **Autoteste (somente leitura) provou o portão**: sobre um **cliente real ativo**,
+  a mesma lógica do Worker retorna `liberado: true`. ✅ Falta a prova ponta a ponta (e-mail chegando +
+  painel), que depende dos segredos e do teste do Marcio.
+- **2026-07-20** — ⚠️ **Bloqueio achado:** `wrangler secret list` no Worker devolveu **vazio** — o
+  `ecobraz-portal` está **sem os segredos** na Cloudflare (`PLOOMES_USER_KEY`, `PORTAL_SESSION_SECRET`,
+  chave do E-goi). Sem eles o login não envia e-mail e fica calado (anti-enumeração) — provável causa do
+  teste anterior. `/health` passou a mostrar a **presença** (sim/não) das configs para conferência.
