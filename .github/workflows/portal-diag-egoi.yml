@@ -25,16 +25,32 @@ jobs:
           curl -sS -m 30 "https://ecobraz-portal.ti-0ab.workers.dev/_diag/egoi/dz7m2x9q4p1v8" || echo "curl falhou"
           echo
           echo "== fim =="
-      - name: Baixar e ler a spec da API transacional v2 do E-goi
+      - name: Achar a spec real (springdoc no servidor da API)
         run: |
-          UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36"
-          curl -sS -m 25 -A "$UA" -o /tmp/spec.json "https://developers.e-goi.com/transactional/v2/swagger.json"
-          echo "tamanho $(wc -c < /tmp/spec.json) bytes"
-          echo "--- info ---"; jq -r '.info.title, .info.version, .basePath, (.host//""), (.servers//[])[]?.url' /tmp/spec.json 2>&1 | head
-          echo "--- TODOS os paths + métodos ---"
-          jq -r '.paths | to_entries[] | .key as $p | (.value|keys[]) as $m | "\($m|ascii_upcase) \($p)"' /tmp/spec.json 2>&1 | head -80
-          echo "--- operação de envio de EMAIL (path com email) : requestBody/parameters ---"
-          EP=$(jq -r '.paths|keys[]|select(test("email";"i"))' /tmp/spec.json 2>/dev/null | grep -iv sender | head -1)
-          echo "endpoint escolhido: $EP"
-          jq --arg p "$EP" '.paths[$p]' /tmp/spec.json 2>&1 | head -120
+          set +e
+          for U in \
+            "https://slingshot.egoiapp.com/api/v3/api-docs" \
+            "https://slingshot.egoiapp.com/api/v2/api-docs" \
+            "https://slingshot.egoiapp.com/v3/api-docs" \
+            "https://slingshot.egoiapp.com/v2/api-docs" \
+            "https://slingshot.egoiapp.com/api/api-docs" \
+            "https://slingshot.egoiapp.com/api/swagger.json" \
+            "https://slingshot.egoiapp.com/api/openapi.json" ; do
+            code=$(curl -sS -m 15 -o /tmp/s.json -w '%{http_code}' "$U")
+            valid=no; head -c 1 /tmp/s.json 2>/dev/null | grep -q '{' && valid=yes
+            echo "[$code valid_json:$valid] $U"
+            if [ "$valid" = yes ]; then
+              echo "TITLE: $(jq -r '.info.title // "?"' /tmp/s.json 2>/dev/null)"
+              echo "--- paths com 'email' ---"
+              jq -r '.paths | keys[]' /tmp/s.json 2>/dev/null | grep -i email | head -50
+              echo "--- para cada path de email: métodos ---"
+              jq -r '.paths | to_entries[] | select(.key|test("email";"i")) | "\(.key) -> \(.value|keys|join(","))"' /tmp/s.json 2>/dev/null | head -40
+              echo "--- requestBody schema do POST em .../messages ---"
+              jq '.paths | to_entries[] | select(.key|test("email/messages$";"i")) | .value.post.requestBody' /tmp/s.json 2>/dev/null | head -80
+              echo "--- schema EmailMessage/Message (componentes) ---"
+              jq '.components.schemas | to_entries[] | select(.key|test("email|message";"i")) | .key' /tmp/s.json 2>/dev/null | head -30
+              cp /tmp/s.json /tmp/spec_ok.json
+              break
+            fi
+          done
           echo "== fim spec =="
