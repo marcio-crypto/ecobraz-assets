@@ -1,0 +1,30 @@
+name: Portal — Inspecionar campos do Ploomes (somente leitura)
+
+# Lê a definição de dois campos do Ploomes para comparar visibilidade no formulário.
+# Somente leitura; não altera nada. Gatilho de push temporário nesta branch.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - claude/ecobraz-carbon-tracking-system-dh28dx
+    paths:
+      - '.github/workflows/portal-inspeciona-campos.yml'
+      - 'portal-cliente/configuracao/inspeciona-campos.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  inspecionar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Inspecionar campos (somente leitura)
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+        run: node portal-cliente/configuracao/inspeciona-campos.mjs
