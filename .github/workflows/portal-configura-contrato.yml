@@ -34,6 +34,7 @@ jobs:
         env:
           PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
           PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
-          # No push é sempre simulação; no dispatch, respeita o input "aplicar".
-          APLICAR: ${{ github.event.inputs.aplicar == '1' && '1' || '0' }}
+          # APLICAR=1 temporário: cria de fato (idempotente — pula o que já existe).
+          # Marcio aprovou criar só "Data de encerramento do contrato" (2026-07-20).
+          APLICAR: '1'
         run: node portal-cliente/configuracao/configura-contrato.mjs
