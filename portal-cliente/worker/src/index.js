@@ -37,7 +37,10 @@ export default {
         config: {
           ploomes: !!env.PLOOMES_USER_KEY,
           sessao: !!env.PORTAL_SESSION_SECRET,
-          email: !!(env.EGOI_TRANSACTIONAL_API_KEY || env.EGOI_API_KEY),
+          email: !!(env.RESEND_API_KEY || env.EGOI_TRANSACTIONAL_API_KEY || env.EGOI_API_KEY),
+          resend: !!env.RESEND_API_KEY,
+          resendFrom: env.RESEND_FROM || '(padrão onboarding@resend.dev)',
+          egoi: !!(env.EGOI_TRANSACTIONAL_API_KEY || env.EGOI_API_KEY),
           baseUrl: !!env.PORTAL_BASE_URL,
           kv: !!env.PORTAL_KV,
         },
@@ -326,6 +329,10 @@ async function resolverSender(apiKey, env) {
 }
 
 async function enviarEmailLogin(cliente, link, env) {
+  // Preferimos o Resend (API simples e compatível com Cloudflare Workers). O E-goi
+  // fica como reserva enquanto o envio transacional dele não estiver resolvido.
+  if (env.RESEND_API_KEY) return await enviarViaResend(cliente, link, env);
+
   const apiKey = env.EGOI_TRANSACTIONAL_API_KEY || env.EGOI_API_KEY;
   if (!apiKey) throw new Error('sem_chave_email');
   const senderId = await resolverSender(apiKey, env);
@@ -346,11 +353,49 @@ async function enviarEmailLogin(cliente, link, env) {
   if (!r.ok) { const b = await r.text().catch(() => ''); throw new Error(`egoi_tx_${r.status}:${b.slice(0, 140)}`); }
 }
 
+// Envio via Resend (https://resend.com) — POST simples, ideal para Cloudflare Workers.
+// RESEND_FROM é o remetente; no teste inicial use o padrão do Resend (onboarding@resend.dev),
+// depois troque para acesso@ecobraz.org.br após verificar o domínio no Resend.
+async function enviarViaResend(cliente, link, env) {
+  const from = env.RESEND_FROM || 'Portal Ecobraz <onboarding@resend.dev>';
+  const payload = {
+    from,
+    to: [cliente.email],
+    subject: 'Seu acesso ao Portal Ecobraz',
+    html: emailHtml(cliente, link),
+    text: `Olá,\n\nUse o link abaixo para acessar o Portal Ecobraz (vale uma vez, expira em 15 minutos):\n${link}\n\nSe você não pediu este acesso, ignore este e-mail.\n\nEcobraz`,
+  };
+  if (env.RESEND_REPLY_TO) payload.reply_to = env.RESEND_REPLY_TO;
+  const r = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${env.RESEND_API_KEY}` },
+    body: JSON.stringify(payload),
+  });
+  if (!r.ok) { const b = await r.text().catch(() => ''); throw new Error(`resend_${r.status}:${b.slice(0, 160)}`); }
+}
+
 // TEMPORÁRIO — diagnóstico da chamada ao E-goi. Reproduz resolução de remetente e
 // um envio de teste, reportando a resposta CRUA (status, location de redirect, corpo)
 // para achar por que o envio real dá "corpo ausente". NÃO imprime a chave.
 async function diagEgoi(request, env, url) {
   const to = url.searchParams.get('to') || 'marcio@villanovaesg.com';
+
+  // Se o Resend estiver configurado, testa o envio por ele e retorna (foco no Resend).
+  if (env.RESEND_API_KEY) {
+    const from = env.RESEND_FROM || 'Portal Ecobraz <onboarding@resend.dev>';
+    const saida = { provedor: 'resend', from, para: to };
+    try {
+      const r = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${env.RESEND_API_KEY}` },
+        body: JSON.stringify({ from, to: [to], subject: 'Teste diagnóstico Portal (Resend)', html: '<p>teste de envio</p>', text: 'teste de envio' }),
+      });
+      saida.status = r.status;
+      saida.corpo = (await r.text()).slice(0, 300);
+    } catch (e) { saida.erro = String(e?.message || e); }
+    return json(saida);
+  }
+
   const apiKey = env.EGOI_TRANSACTIONAL_API_KEY || env.EGOI_API_KEY;
   const base = env.EGOI_TRANSACTIONAL_API_URL || 'https://slingshot.egoiapp.com/api';
   const out = { temChave: !!apiKey, base };
