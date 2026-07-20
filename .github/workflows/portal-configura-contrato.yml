@@ -10,14 +10,6 @@ on:
       aplicar:
         description: 'Digite 1 para CRIAR de fato (vazio/0 = simulação)'
         default: '0'
-  # Gatilho temporário nesta branch (workflow_dispatch só fica disponível após
-  # o arquivo estar na branch principal). Pode ser removido depois.
-  push:
-    branches:
-      - claude/ecobraz-carbon-tracking-system-dh28dx
-    paths:
-      - '.github/workflows/portal-configura-contrato.yml'
-      - 'portal-cliente/configuracao/**'
 
 permissions:
   contents: read
@@ -34,7 +26,6 @@ jobs:
         env:
           PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
           PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
-          # APLICAR=1 temporário: cria de fato (idempotente — pula o que já existe).
-          # Marcio aprovou criar só "Data de encerramento do contrato" (2026-07-20).
-          APLICAR: '1'
+          # Simulação por padrão; só cria quando disparado manualmente com aplicar=1.
+          APLICAR: ${{ github.event.inputs.aplicar == '1' && '1' || '0' }}
         run: node portal-cliente/configuracao/configura-contrato.mjs

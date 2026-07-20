@@ -151,7 +151,9 @@ legislação (BR + UE), comparar com a base de conhecimento do sistema e
 - [x] Rodar o **diagnóstico do Ploomes** — feito (ver `diagnostico/RESULTADOS.md`). (2026-07-20)
 - [x] **"Cliente ativo"** = PJ com **contrato ativo** no Ploomes (marcação + data de encerramento); trava ao vencer. (2026-07-20)
 - [x] **Login** = link/código por e-mail, **sem senha** (magic link). (2026-07-20)
-- [ ] **Criar a marcação de contrato no Ploomes** ("Contrato ativo?" + "Data de encerramento") no cadastro de empresa — pré-requisito do portão de acesso.
+- [x] **Marcação de contrato no Ploomes** — pronta (2026-07-20): usa o campo já existente
+      **"Contrato Ativo?"** (Id 277451, Sim/Não) como gatilho de acesso + campo novo
+      **"Data de encerramento do contrato"** (Id 365984, data), ambos no cadastro de empresa (EntityId 1).
 - [ ] **Metodologia de CO₂** que a Ecobraz vai assumir (fatores de emissão / fonte).
 - [x] Situação do **Adote um Bairro**: **programa de impacto social** (decidido 2026-07-20) →
       vendido como patrocínio de impacto; a neutralização de CO₂ usa **crédito verificado**.
@@ -200,3 +202,6 @@ legislação (BR + UE), comparar com a base de conhecimento do sistema e
 - **2026-07-20** — **Escopo do Portal detalhado** (§4-bis): acesso só **PJ com contrato ativo**
   (marcação no Ploomes + data de encerramento, trava ao vencer); **login por link no e-mail** (sem
   senha); painel com OS, downloads (NF/MTR/Carta de Doação/CDF), carbono e relatórios de conformidade.
+- **2026-07-20** — **Marcação de contrato criada no Ploomes** via API (usuário de integração tem
+  permissão): reaproveita **"Contrato Ativo?"** (Id 277451) + cria **"Data de encerramento do
+  contrato"** (Id 365984) no cadastro de empresa. Pré-requisito do portão de acesso: **concluído**.
