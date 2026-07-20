@@ -11,6 +11,7 @@ on:
       - claude/ecobraz-carbon-tracking-system-dh28dx
     paths:
       - '.github/workflows/portal-diag-egoi.yml'
+      - 'portal-cliente/configuracao/extrai-egoi-spec.py'
 
 permissions:
   contents: read
@@ -25,69 +26,8 @@ jobs:
           curl -sS -m 30 "https://ecobraz-portal.ti-0ab.workers.dev/_diag/egoi/dz7m2x9q4p1v8" || echo "curl falhou"
           echo
           echo "== fim =="
-      - name: Achar a URL real da spec e dumpar o schema de envio
-        run: |
-          set +e
-          UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36"
-          curl -sS -m 20 -A "$UA" "https://developers.e-goi.com/transactional/v2/" -o /tmp/docs.html
-          echo "docs.html size $(wc -c < /tmp/docs.html)"
-          echo "--- refs .json/.yaml no HTML ---"
-          grep -oE "[A-Za-z0-9._/:-]+\.(json|yaml|yml)" /tmp/docs.html | sort -u | head -30
-          echo "--- refs openapi/swagger/api-docs/spec ---"
-          grep -oiE "[A-Za-z0-9._/:@-]*(openapi|swagger|api-docs|redoc|spec-url)[A-Za-z0-9._/:@-]*" /tmp/docs.html | sort -u | head -30
-          echo "--- <script src> e <link href> ---"
-          grep -oiE "(src|href)=\"[^\"]+\"" /tmp/docs.html | sort -u | head -40
-          echo "== extrai a spec embutida no Redoc e dumpa sendEmailMessages =="
-          python3 - <<'PY'
-import re, json
-html = open('/tmp/docs.html', encoding='utf-8', errors='ignore').read()
-blob = None
-for pat in [r'__redoc_state\s*=\s*(\{.*?\})\s*;?\s*</script>',
-            r'id="redoc-state"[^>]*>\s*(\{.*)\}\s*</script>']:
-    m = re.search(pat, html, re.S)
-    if m:
-        blob = m.group(1)
-        if not blob.strip().endswith('}'): blob += '}'
-        break
-if not blob:
-    print("Redoc state nao encontrado; tamanho html", len(html)); raise SystemExit
-try:
-    data = json.loads(blob)
-except Exception as e:
-    print("parse fail:", e); raise SystemExit
-def find_spec(d):
-    if isinstance(d, dict):
-        if 'paths' in d and isinstance(d['paths'], dict): return d
-        for v in d.values():
-            r = find_spec(v)
-            if r: return r
-    return None
-spec = find_spec(data)
-if not spec: print("spec nao achada no state"); raise SystemExit
-paths = spec.get('paths', {})
-print("num paths:", len(paths))
-comps = spec.get('components', {}).get('schemas', {})
-def deref(schema, depth=0):
-    if depth > 4 or not isinstance(schema, dict): return schema
-    if '$ref' in schema:
-        name = schema['$ref'].split('/')[-1]
-        return {'_ref': name, **deref(comps.get(name, {}), depth+1)}
-    out = {}
-    for k, v in schema.items():
-        if k == 'properties' and isinstance(v, dict):
-            out['properties'] = {pk: deref(pv, depth+1) for pk, pv in v.items()}
-        else:
-            out[k] = v
-    return out
-for p, ops in paths.items():
-    for method, op in ops.items():
-        if isinstance(op, dict) and str(op.get('operationId','')).startswith('sendEmailMessages'):
-            print("\n==== ", method.upper(), p, " opId=", op.get('operationId'))
-            rb = op.get('requestBody', {})
-            content = rb.get('content', {})
-            for ct, cv in content.items():
-                print("content-type:", ct)
-                sch = deref(cv.get('schema', {}))
-                print(json.dumps(sch, indent=1)[:2500])
-PY
-          echo "== fim spec =="
+      - uses: actions/checkout@v4
+      - name: Extrair schema de sendEmailMessages da spec do E-goi
+        run: python3 portal-cliente/configuracao/extrai-egoi-spec.py
+      - name: fim
+        run: echo "== fim spec =="
