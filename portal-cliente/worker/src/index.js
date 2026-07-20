@@ -24,6 +24,7 @@ const LINK_TTL_S = 15 * 60;             // 15 minutos
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' };
 
 import { paginaLogin, paginaPainel, paginaMensagem } from './paginas.js';
+import { LOGO_ESCURO_B64, LOGO_CLARO_B64 } from './logos.js';
 
 export default {
   async fetch(request, env) {
@@ -45,6 +46,9 @@ export default {
           kv: !!env.PORTAL_KV,
         },
       });
+
+      if (pathname === '/assets/logo.png') return servirLogo(LOGO_ESCURO_B64);
+      if (pathname === '/assets/logo-claro.png') return servirLogo(LOGO_CLARO_B64);
 
       if (pathname === '/' && request.method === 'GET') return await telaInicial(request, env);
       if (pathname === '/entrar' && request.method === 'GET') return await entrarComToken(request, env, url);
@@ -374,18 +378,30 @@ async function enviarViaResend(cliente, link, env) {
 
 function emailHtml(cliente, link) {
   const nome = esc((cliente.nome || '').split(/\s+/)[0] || '');
-  return `<!doctype html><html lang="pt-BR"><body style="margin:0;background:#f4f6f6;font-family:Arial,Helvetica,sans-serif;color:#0b2a2f;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f6;padding:24px 0;"><tr><td align="center">
-<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e2e8e8;">
-<tr><td style="background:#00333B;padding:20px 28px;color:#fff;font-size:18px;font-weight:bold;">Portal Ecobraz</td></tr>
-<tr><td style="padding:28px;">
-<h1 style="margin:0 0 12px;font-size:20px;color:#00333B;">Seu acesso${nome ? `, ${nome}` : ''}</h1>
-<p style="margin:0 0 18px;font-size:15px;line-height:1.6;">Clique no botão abaixo para entrar. O link vale <strong>uma vez</strong> e expira em <strong>15 minutos</strong>.</p>
-<p style="margin:0 0 22px;"><a href="${esc(link)}" style="display:inline-block;background:#00333B;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-size:15px;">Entrar no Portal</a></p>
-<p style="margin:0;font-size:13px;line-height:1.6;color:#667;">Se você não pediu este acesso, ignore este e-mail.</p>
+  let logo = '';
+  try { logo = new URL(link).origin + '/assets/logo-claro.png'; } catch {}
+  return `<!doctype html><html lang="pt-BR"><body style="margin:0;background:#F7F9F8;font-family:Montserrat,'Segoe UI',Arial,Helvetica,sans-serif;color:#10262B;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F7F9F8;padding:32px 0;"><tr><td align="center">
+<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#fff;border-radius:18px;overflow:hidden;border:1px solid #DFE7E6;box-shadow:0 18px 50px rgba(0,51,59,.10);">
+<tr><td style="background:#00333B;padding:28px 32px;">
+${logo ? `<img src="${logo}" alt="Ecobraz Emigre" width="168" style="display:block;width:168px;height:auto;border:0;">` : `<span style="color:#fff;font-size:22px;font-weight:800;">ecobraz</span>`}
+<div style="color:#92C430;font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin-top:14px;">Portal do Cliente</div>
 </td></tr>
-<tr><td style="padding:16px 28px;background:#f4f6f6;font-size:12px;color:#889;">Ecobraz — Portal do Cliente.</td></tr>
-</table></td></tr></table></body></html>`;
+<tr><td style="padding:38px 32px 6px;">
+<h1 style="margin:0 0 14px;font-size:24px;line-height:1.2;letter-spacing:-.02em;color:#00333B;">Seu acesso${nome ? `, ${nome}` : ''}</h1>
+<p style="margin:0 0 26px;font-size:15px;line-height:1.65;color:#4F6469;">Clique no botão abaixo para entrar no Portal Ecobraz. O link vale <strong style="color:#10262B;">uma vez</strong> e expira em <strong style="color:#10262B;">15 minutos</strong>.</p>
+<table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="border-radius:10px;background:#92C430;">
+<a href="${esc(link)}" style="display:inline-block;padding:15px 32px;font-size:15px;font-weight:800;color:#10262B;text-decoration:none;">Entrar no Portal &rarr;</a>
+</td></tr></table>
+<p style="margin:26px 0 0;font-size:12px;line-height:1.6;color:#9fb0ac;">Se o botão não abrir, copie e cole este endereço no navegador:<br><span style="color:#4F6469;word-break:break-all;">${esc(link)}</span></p>
+<p style="margin:20px 0 0;font-size:13px;line-height:1.6;color:#9fb0ac;">Se você não pediu este acesso, ignore este e-mail com segurança.</p>
+</td></tr>
+<tr><td style="padding:26px 32px 30px;">
+<div style="border-top:1px solid #DFE7E6;padding-top:18px;font-size:12px;color:#9fb0ac;line-height:1.6;"><strong style="color:#4F6469;">Ecobraz Emigre</strong> — Portal do Cliente<br>Destinação correta, conformidade e evidências para a sua empresa.</div>
+</td></tr>
+</table>
+<div style="max-width:560px;margin:14px auto 0;font-size:11px;color:#aebfbb;text-align:center;">Acesso exclusivo para clientes com contrato ativo.</div>
+</td></tr></table></body></html>`;
 }
 
 // ---------------------------------------------------------------------------
@@ -438,6 +454,10 @@ function nowS() { return Math.floor(Date.now() / 1000); }
 function inicioDeHoje() { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }
 function json(body, status = 200, extra = {}) { return new Response(JSON.stringify(body), { status, headers: { ...JSON_HEADERS, ...extra } }); }
 function html(markup, status = 200) { return new Response(markup, { status, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } }); }
+function servirLogo(b64) {
+  const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+  return new Response(bytes, { headers: { 'content-type': 'image/png', 'cache-control': 'public, max-age=604800' } });
+}
 function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 function requireEnv(env, names) { const m = names.filter((n) => !env[n]); if (m.length) throw new Error(`missing_env_${m.join('_')}`); }
 function safeError(e) { return { name: e?.name || 'Error', message: String(e?.message || 'unknown').slice(0, 200) }; }
