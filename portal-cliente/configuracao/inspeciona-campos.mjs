@@ -17,11 +17,12 @@ async function api(path) {
 
 async function main() {
   const ids = String(process.env.CAMPOS || '365984,277451').split(',').map((s) => s.trim()).filter(Boolean);
-  const out = { comparacao: ids.join(' x ') };
-  for (const id of ids) {
-    const r = await api(`Fields(${id})`);
-    out[`campo_${id}`] = r.ok ? (r.body?.value?.[0] || r.body) : { erro: r.status, detalhe: String(r.text).slice(0, 200) };
-  }
+  const filtro = ids.map((id) => `Id eq ${id}`).join(' or ');
+  const r = await api(`Fields?$filter=${filtro}`);
+  const campos = Array.isArray(r.body?.value) ? r.body.value : [];
+  const out = { comparacao: ids.join(' x '), status: r.status, encontrados: campos.length };
+  for (const c of campos) out[`campo_${c.Id}`] = c;
+  if (!campos.length) out.brutoTrecho = String(r.text).slice(0, 300);
   console.log(JSON.stringify(out, null, 2));
 }
 
