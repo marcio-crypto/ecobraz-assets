@@ -205,3 +205,7 @@ legislação (BR + UE), comparar com a base de conhecimento do sistema e
 - **2026-07-20** — **Marcação de contrato criada no Ploomes** via API (usuário de integração tem
   permissão): reaproveita **"Contrato Ativo?"** (Id 277451) + cria **"Data de encerramento do
   contrato"** (Id 365984) no cadastro de empresa. Pré-requisito do portão de acesso: **concluído**.
+- **2026-07-20** — **Pacote 0 — código da fundação escrito** (`worker/`): Worker `ecobraz-portal`
+  com login por link no e-mail, portão de acesso por contrato (relê do Ploomes), sessão assinada,
+  painel (lista de OS + abrir chamado). ⚠️ Ainda **não publicado nem testado ponta a ponta**;
+  mapeamento de "OS" provisório (lê Negócios); depende de config na Cloudflare (segredos, KV, domínio).
