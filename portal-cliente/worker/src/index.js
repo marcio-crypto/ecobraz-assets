@@ -31,7 +31,7 @@ export default {
     const { pathname } = url;
     try {
       if (pathname === '/health') return json({
-        ok: true, service: 'ecobraz-portal', version: 2,
+        ok: true, service: 'ecobraz-portal', version: 3,
         // Só presença (true/false) — NUNCA os valores. Ajuda a confirmar a
         // configuração pelo navegador sem expor segredo nenhum.
         config: {
@@ -96,7 +96,7 @@ async function solicitarLink(request, env) {
   if (env.PORTAL_KV) {
     const chave = `throttle:${email}`;
     const jaEnviou = await env.PORTAL_KV.get(chave);
-    if (jaEnviou) return generica; // já mandou há pouco; ignora silenciosamente
+    if (jaEnviou) { console.log('login_throttle'); return generica; } // já mandou há pouco; ignora
     await env.PORTAL_KV.put(chave, '1', { expirationTtl: 60 });
   }
 
@@ -105,7 +105,12 @@ async function solicitarLink(request, env) {
   catch (error) { console.error('ploomes_lookup_falhou', safeError(error)); return generica; }
 
   // Só manda link se for cliente ativo e liberado. Senão, silêncio (anti-enum).
-  if (!cliente || !cliente.liberado) return generica;
+  // Logs sem dados pessoais (só o motivo e o Id da empresa) para diagnóstico.
+  if (!cliente || !cliente.liberado) {
+    console.log('login_barrado', { achouContato: !!cliente, liberado: cliente?.liberado || false, empresaId: cliente?.empresaId || null, temDataFim: !!cliente?.dataFim });
+    return generica;
+  }
+  console.log('login_liberado', { empresaId: cliente.empresaId });
 
   const token = await criarToken({ cid: cliente.contactId, emp: cliente.empresaId, em: cliente.email, nome: cliente.nome, fim: cliente.dataFim || '', tipo: 'login' }, LINK_TTL_S, env);
   // Uso único: guarda o nonce no KV; ao usar, apaga.
@@ -113,8 +118,8 @@ async function solicitarLink(request, env) {
 
   const linkBase = env.PORTAL_BASE_URL || new URL(request.url).origin;
   const link = `${linkBase.replace(/\/+$/, '')}/entrar?token=${encodeURIComponent(token.valor)}`;
-  try { await enviarEmailLogin(cliente, link, env); }
-  catch (error) { console.error('email_login_falhou', safeError(error)); /* não revela ao cliente */ }
+  try { await enviarEmailLogin(cliente, link, env); console.log('login_email_ok', { empresaId: cliente.empresaId }); }
+  catch (error) { console.error('login_email_falhou', safeError(error)); /* não revela ao cliente */ }
   return generica;
 }
 
@@ -307,11 +312,12 @@ async function resolverSender(apiKey, env) {
   if (_senderId) return _senderId;
   const base = env.EGOI_TRANSACTIONAL_API_URL || 'https://slingshot.egoiapp.com/api';
   const r = await fetch(`${base}/v2/email/senders`, { headers: { ApiKey: apiKey, accept: 'application/json' } });
-  if (!r.ok) return null;
-  let data; try { data = await r.json(); } catch { return null; }
+  if (!r.ok) { console.error('egoi_senders_erro', { status: r.status }); return null; }
+  let data; try { data = await r.json(); } catch { console.error('egoi_senders_json'); return null; }
   const list = Array.isArray(data) ? data : (data.items || data.senders || data.data || data.list || []);
   const pick = (list || []).find((x) => x && (x.sender_id || x.id || x.senderId)) || (list || [])[0];
   _senderId = pick ? (pick.sender_id || pick.id || pick.senderId) : null;
+  if (!_senderId) console.error('egoi_sem_sender_na_lista', { qtd: (list || []).length });
   return _senderId;
 }
 
@@ -333,7 +339,7 @@ async function enviarEmailLogin(cliente, link, env) {
   if (env.EGOI_SENDER_NAME) payload.sender_name = env.EGOI_SENDER_NAME;
   if (env.EGOI_REPLY_TO_ID) payload.reply_to_id = env.EGOI_REPLY_TO_ID;
   const r = await fetch(`${base}/v2/email/messages/action/send`, { method: 'POST', headers: { 'content-type': 'application/json', ApiKey: apiKey }, body: JSON.stringify(payload) });
-  if (!r.ok) throw new Error(`egoi_tx_${r.status}`);
+  if (!r.ok) { const b = await r.text().catch(() => ''); throw new Error(`egoi_tx_${r.status}:${b.slice(0, 140)}`); }
 }
 
 function emailHtml(cliente, link) {

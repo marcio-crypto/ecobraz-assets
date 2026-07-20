@@ -7,6 +7,11 @@ account_id = "0ab0573840927669f3bb3666d63cc023"
 # Preserva variáveis/segredos já configurados na Cloudflare; o deploy só atualiza o código.
 keep_vars = true
 
+# Logs do Worker (para diagnóstico do login). Ficam visíveis na aba Observability/Logs
+# do Worker no painel da Cloudflare. Não gravam segredos.
+[observability]
+enabled = true
+
 # KV — links de login de USO ÚNICO e throttle de e-mails de login.
 [[kv_namespaces]]
 binding = "PORTAL_KV"
