@@ -377,16 +377,10 @@ async function diagEgoi(request, env, url) {
     } catch (e) { return { rotulo, erro: String(e?.message || e) }; }
   };
   out.tentativas = [
-    await tentar('ct_lower', { 'content-type': 'application/json', ApiKey: apiKey }),
-    await tentar('ct_charset', { 'content-type': 'application/json; charset=utf-8', ApiKey: apiKey }),
-    await tentar('ct_accept', { 'content-type': 'application/json', accept: 'application/json', ApiKey: apiKey }),
+    await tentar('com_user_agent', { 'content-type': 'application/json', ApiKey: apiKey, 'user-agent': 'ecobraz-portal/1.0 (+https://ecobraz.org.br)' }),
+    await tentar('ua_e_accept', { 'content-type': 'application/json', accept: 'application/json', ApiKey: apiKey, 'user-agent': 'Mozilla/5.0 ecobraz-portal' }),
+    await tentar('sem_apikey', { 'content-type': 'application/json', 'user-agent': 'ecobraz-portal/1.0' }),
   ];
-  // Teste de eco: o Worker realmente transmite o corpo num POST?
-  try {
-    const e = await fetch('https://postman-echo.com/post', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ping: 'ok', n: 7 }) });
-    const et = await e.text();
-    out.eco = { status: e.status, corpo: et.slice(0, 260) };
-  } catch (err) { out.eco = { erro: String(err?.message || err) }; }
   return json(out);
 }
 
