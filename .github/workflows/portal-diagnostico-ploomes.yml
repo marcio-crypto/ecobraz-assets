@@ -10,15 +10,6 @@ name: Portal — Diagnóstico do Ploomes (somente leitura)
 
 on:
   workflow_dispatch:
-  # Gatilho temporário: roda ao dar push nesta branch de trabalho (enquanto o
-  # workflow ainda não está na branch principal, onde a execução manual fica
-  # disponível). É somente leitura; pode ser removido depois.
-  push:
-    branches:
-      - claude/ecobraz-carbon-tracking-system-dh28dx
-    paths:
-      - '.github/workflows/portal-diagnostico-ploomes.yml'
-      - 'portal-cliente/diagnostico/**'
 
 permissions:
   contents: read
