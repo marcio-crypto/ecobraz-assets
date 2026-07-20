@@ -37,6 +37,7 @@ O objetivo comercial: **agregar valor ao serviço da Ecobraz** e virar uma
   em PDF, com rastreabilidade e verificação. Padrão audit-grade.
 - **Pacote 2 — Painel de carbono.** Cálculo das reduções por descarte (o material
   entregue "desconta" da conta do cliente), com metodologia que a Ecobraz assine.
+  Inclui a **Calculadora de Pegada de Carbono** (modelo *freemium* — ver §4.4).
 - **Pacote 3 — Radar de legislação por CNPJ/setor.** Puxa o setor (CNAE) pelo CNPJ,
   mostra obrigações e dispara alertas — com base jurídica validada e mantida.
 - **Pacote 4 — Neutralização + compensação.** Certificado de neutralização de CO₂,
@@ -79,6 +80,53 @@ legislação (BR + UE), comparar com a base de conhecimento do sistema e
   Ecobraz a responsabilidade legal por cada cliente. O que prometemos: "mantemos você
   atualizado e alertado", com validação humana.
 - Encaixe: é o motor de atualização do **Pacote 3 (Radar de Legislação)**.
+
+### 4.4 Calculadora de Pegada de Carbono — modelo *freemium* (proposto pelo Marcio, 2026-07-20)
+
+Módulo no Painel do Assinante (ativa o card **"Pegada de carbono"** já plantado no dashboard).
+Funil em **3 níveis**, do grátis ao serviço — cada nível com a palavra certa para não virar promessa que não se cumpre:
+
+**Nível 1 — Estimativa grátis (isca).** A partir do **CNPJ**, o sistema puxa **CNAE (setor) + porte**
+(API pública: BrasilAPI/ReceitaWS) e cruza com **fatores de emissão por setor** para exibir uma
+**estimativa** de tCO₂e.
+- ⚠️ **Basear no setor (CNAE), não só no porte** — porte sozinho erra feio (uma software house e uma
+  fundição do mesmo porte emitem coisas absurdamente diferentes). Opcional: 1–2 dados rápidos
+  (nº de funcionários, faixa da conta de luz) para afinar.
+- ⚠️ Rótulo obrigatório na tela: **"cálculo estimado"**, não inventário (coerente com §4-bis: a pegada
+  real "não sai só do CNPJ").
+
+**Nível 2 — Cálculo detalhado (R$ 250, pago).** Cliente clica → cobrança via **Mercado Pago**
+(Pix/cartão) → ao **confirmar o pagamento**, libera um **formulário** que ele preenche e o sistema
+calcula a pegada detalhada.
+- **Metodologia âncora:** **GHG Protocol** (e **Programa Brasileiro GHG Protocol** / FGV), Escopos 1/2/3,
+  com fatores oficiais citáveis (ex.: fator de emissão do **SIN/MCTI** p/ energia). As "perguntas padrão
+  que toda consultoria faz" **são** os campos de inventário do GHG Protocol.
+- ⚠️ **Palavra certa:** o R$250 compra um **cálculo detalhado/indicativo a partir dos dados informados**
+  — **não** um **inventário verificado** (esse exige consultor + verificação de terceiro, ISO 14064).
+  **Nunca prometer "neutralidade" nesse nível.**
+
+**Nível 3 — Inventário verificado + compensação (sob consulta — a receita de verdade).** Inventário com
+asseguração + **compensação com crédito verificado** (ISO 14068-1) e/ou *Adote um Bairro* como impacto
+social (§5.2, Caminho B). É a escada natural depois do R$250.
+
+**Fluxo de pagamento e Nota Fiscal (decidido pelo Marcio, 2026-07-20):**
+- **Pagamento:** Mercado Pago. O formulário do Nível 2 libera **só na confirmação do pagamento** — usar
+  **webhook/IPN** do Mercado Pago (status `approved`), não só o redirect, para ser confiável.
+- **NF:** o sistema **não** emite nota. Ao confirmar o pagamento, dispara **e-mail para
+  `pagamento@ecobraz.org.br`** com **dados da empresa** (razão social/CNPJ/endereço — já vêm da consulta
+  do CNPJ), **produto**, **valor pago** e o **ID do pagamento no Mercado Pago** (p/ o financeiro
+  conciliar). O **financeiro emite a NF e envia direto ao cliente**.
+
+**Campos do formulário (Nível 2) — padrão GHG Protocol (rascunho a detalhar):**
+- **Escopo 1** (direto): combustível de frota própria (litros/ano por tipo), combustão estacionária,
+  gases fugitivos (refrigeração/ar-condicionado).
+- **Escopo 2** (energia): consumo de energia elétrica (kWh/ano) → fator SIN.
+- **Escopo 3** (indireto, principais conforme o setor): viagens a negócio, deslocamento de funcionários,
+  resíduos, compras/serviços.
+
+**Pontos em aberto (ver §6):** tabela de **fatores por CNAE** (fonte + validação do especialista de
+carbono, §5.4); **enquadramento tributário** da venda (Ecobraz é Associação); taxa do Mercado Pago
+(~4–5% + fixo) sobre os R$250; curadoria da estimativa setorial para não sair irreal.
 
 ## 4-bis. Escopo detalhado do Portal (v1) — definido pelo Marcio em 2026-07-20
 
@@ -155,7 +203,15 @@ legislação (BR + UE), comparar com a base de conhecimento do sistema e
       (Id 277451, Sim/Não) como gatilho de acesso + **"Termino de Contrato"** (Id 366005, data
       que **aparece no formulário**) como validade. O campo 365984 criado via API ficou **órfão**
       (não aparece no formulário) e **deixou de ser usado**. Ambos no cadastro de empresa (EntityId 1).
-- [ ] **Metodologia de CO₂** que a Ecobraz vai assumir (fatores de emissão / fonte).
+- [ ] **Metodologia de CO₂** que a Ecobraz vai assumir — **âncora proposta: GHG Protocol / Programa
+      Brasileiro GHG Protocol (FGV)**, com fatores oficiais citáveis (fator SIN/MCTI etc.). Falta a
+      Ecobraz assumir formalmente + validação do especialista.
+- [x] **Gateway de pagamento** do cálculo pago = **Mercado Pago** (Pix/cartão). (2026-07-20)
+- [x] **Nota Fiscal** = o sistema manda e-mail p/ `pagamento@ecobraz.org.br` (dados da empresa + produto
+      + valor + ID do pagamento); **o financeiro emite e envia ao cliente**. (2026-07-20)
+- [ ] **Enquadramento tributário/estatutário** da venda de serviço (Ecobraz é **Associação sem fins
+      lucrativos**) — confirmar com o contador antes de cobrar.
+- [ ] **Tabela de fatores de emissão por CNAE** (fonte + curadoria, validada pelo especialista de carbono).
 - [x] Situação do **Adote um Bairro**: **programa de impacto social** (decidido 2026-07-20) →
       vendido como patrocínio de impacto; a neutralização de CO₂ usa **crédito verificado**.
 - [ ] Onde o Portal vai morar (ex.: `portal.ecobraz.org`) e a identidade visual.
@@ -246,3 +302,13 @@ legislação (BR + UE), comparar com a base de conhecimento do sistema e
   `ecobraz-portal` está **sem os segredos** na Cloudflare (`PLOOMES_USER_KEY`, `PORTAL_SESSION_SECRET`,
   chave do E-goi). Sem eles o login não envia e-mail e fica calado (anti-enumeração) — provável causa do
   teste anterior. `/health` passou a mostrar a **presença** (sim/não) das configs para conferência.
+- **2026-07-20** — **Portal com identidade Ecobraz Emigre publicado** (PR #158): login premium (painel
+  teal + logo), dashboard estilo corporativo, e-mail de acesso no padrão da marca (Resend). **Link
+  "Acesso do cliente" no cabeçalho do site** (deploy do tema, verde). Menu do topo enxugado
+  (Conteúdos/Notícias/Museu → rodapé, PR #159).
+- **2026-07-20** — **Calculadora de Pegada de Carbono (freemium) adotada** (§4.4): Nível 1 estimativa
+  grátis por **CNAE+porte** (API pública); Nível 2 **cálculo detalhado por R$250** via **Mercado Pago**
+  (libera na confirmação do pagamento) com **formulário GHG Protocol**; Nível 3 inventário verificado +
+  compensação. **NF pelo financeiro** (e-mail p/ `pagamento@ecobraz.org.br` com dados + valor + ID do
+  pagamento). Cuidados registrados: R$250 = **cálculo, não neutralidade**; estimativa por **setor**, não
+  só porte; validar **fatores por CNAE** e **enquadramento tributário** da associação (sem fins lucrativos).
