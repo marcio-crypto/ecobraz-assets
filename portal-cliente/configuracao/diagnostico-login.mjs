@@ -111,20 +111,23 @@ async function main() {
   };
 
   // (2) Escolhe o e-mail de teste: o pedido (EMAIL) ou, automático, o de uma
-  //     pessoa vinculada a um cliente ATIVO real.
+  //     PESSOA vinculada (Id != empresa) a um cliente ATIVO real — de propósito,
+  //     para exercer o "pulo" pessoa->empresa que o Marcio destacou.
   let emailTeste = EMAIL;
   if (!emailTeste) {
     const ativo = await acharClienteAtivo();
     out.buscaClienteAtivo = { modo: ativo.modo, encontrados: ativo.empresas.length };
-    const empresa = ativo.empresas[0];
-    if (!empresa) { out.aviso = 'Nenhum cliente com "Contrato Ativo? = Sim" foi encontrado agora.'; return console.log(JSON.stringify(out, null, 2)); }
-    out.clienteAtivoEscolhido = { empresaId: empresa.Id, dataEncerramento_raw: prop(empresa, F_FIM) || null };
-    // Acha uma pessoa vinculada com e-mail (é o e-mail que o cliente usaria no login).
-    const rp = await api(`Contacts?$filter=CompanyId eq ${Number(empresa.Id)}&$top=10&$select=Id,TypeId,Email,CompanyId,LastCompanyId`);
-    const pessoas = (rp.body?.value || []).filter((p) => p.Email);
-    if (pessoas.length) { emailTeste = String(pessoas[0].Email).toLowerCase(); out.origemEmailTeste = 'pessoa vinculada à empresa'; }
-    else if (empresa.Email) { emailTeste = String(empresa.Email).toLowerCase(); out.origemEmailTeste = 'e-mail da própria empresa'; }
-    else { out.aviso = `Cliente ativo ${empresa.Id} não tem pessoa com e-mail nem e-mail próprio para testar o login.`; return console.log(JSON.stringify(out, null, 2)); }
+    let escolha = null;
+    for (const empresa of ativo.empresas) {
+      const rp = await api(`Contacts?$filter=CompanyId eq ${Number(empresa.Id)}&$top=20&$select=Id,TypeId,Email,CompanyId`);
+      const distintas = (rp.body?.value || []).filter((p) => p.Email && Number(p.Id) !== Number(empresa.Id));
+      if (distintas.length) { escolha = { empresa, email: String(distintas[0].Email).toLowerCase(), origem: 'pessoa vinculada (Id != empresa) — exerce o pulo pessoa→empresa' }; break; }
+      if (!escolha && empresa.Email) escolha = { empresa, email: String(empresa.Email).toLowerCase(), origem: 'e-mail da própria empresa (não achei pessoa distinta)' };
+    }
+    if (!escolha) { out.aviso = 'Nenhum cliente ativo com e-mail testável foi encontrado agora.'; return console.log(JSON.stringify(out, null, 2)); }
+    out.clienteAtivoEscolhido = { empresaId: escolha.empresa.Id, dataEncerramento_raw: prop(escolha.empresa, F_FIM) || null };
+    out.origemEmailTeste = escolha.origem;
+    emailTeste = escolha.email;
   } else {
     out.origemEmailTeste = 'informado via env EMAIL';
   }
