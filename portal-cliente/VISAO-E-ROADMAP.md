@@ -181,13 +181,17 @@ legislação (BR + UE), comparar com a base de conhecimento do sistema e
   problema do lado do E-goi). O Resend funcionou de primeira e o e-mail de login chegou na caixa de
   entrada. (Provável que o e-mail transacional do Worker de coletas, mesmo padrão, nunca tenha saído.)
 
+- **Domínio ecobraz.org.br verificado no Resend** (2026-07-20) e remetente do login definido como
+  **acesso@ecobraz.org.br** → o Portal envia login para **qualquer cliente**. **Confirmado com teste
+  real** para um e-mail externo (chegou e o painel abriu). **Pacote 0 (login + acesso) concluído.**
+
 **Ainda não feito / não testado:**
-- ⚠️ **Resend em modo teste** — hoje só entrega para o e-mail dono da conta (marcio@ecobraz.org.br).
-  **Nenhum outro cliente recebe o link ainda.** Falta a **Fase 2: verificar o domínio
-  ecobraz.org.br no Resend** (registros DNS na Cloudflare) + `RESEND_FROM=acesso@ecobraz.org.br`.
-- **Mapeamento de "OS"** no painel é provisório (lê Negócios da empresa); precisa ser validado com
-  um cliente real que tenha OS e, depois, apontar para o funil certo (`PORTAL_OS_PIPELINE_ID`).
-- **Abrir chamado** (nova OS pelo Portal) escrito, ainda **não testado**.
+- **Conteúdo do painel:** a lista de **OS** e o **abrir chamado** estão escritos mas **não validados
+  com um cliente real que tenha OS**. Mapeamento provisório (lê Negócios da empresa); refinar para o
+  modelo real (Documentos) e apontar o funil certo (`PORTAL_OS_PIPELINE_ID`).
+- **Reforço de segurança (pendente):** chaves na Cloudflare foram adicionadas como **Text**; ideal
+  convertê-las para **Secret**. Turnstile (anti-abuso no login) disponível no código, não ativado.
+- **Código do E-goi** ficou como reserva morta (o envio dele nunca funcionou); pode ser removido.
 - A base de **conformidade legal (BR+UE) e de normas de auditoria** já foi **pesquisada e
   documentada** em [`conformidade/`](./conformidade/CONFORMIDADE-E-NORMAS.md) (síntese + 2 anexos
   com fontes oficiais). ⚠️ Está marcada como **material de pesquisa, pendente de validação** por
