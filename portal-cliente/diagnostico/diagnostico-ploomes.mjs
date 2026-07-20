@@ -73,37 +73,33 @@ function firstMatch(map, re) {
   return key ? map[key] : null;
 }
 
-// Monta os mapas ID -> Nome de funis, etapas e situações. Estratégia sem PII:
-// 1) tenta groupby com o nome via navegação (completo e agregado); 2) se falhar,
-// lê negócios trazendo SOMENTE os IDs + os nomes das tabelas de apoio (via
-// $expand/$select) — nunca título, contato ou qualquer dado pessoal.
+// Monta os mapas ID -> Nome de funis, etapas e situações — SEM dados pessoais:
+// lê uma amostra de negócios trazendo os objetos de apoio (funil/etapa/situação)
+// via $expand e guarda APENAS Id + Nome dessas tabelas — nunca título, contato
+// ou qualquer dado pessoal. Tenta variações de sintaxe porque a API do Ploomes
+// pode recusar $select junto de $expand.
 async function mapNames(out) {
   const nomes = { funis: {}, etapas: {}, situacoes: {} };
-  const tryNav = async (prop, nameNav, target) => {
-    const nav = nameNav.split('/')[0];
-    try {
-      const data = await api(`Deals?$apply=groupby((${prop},${nameNav}),aggregate($count as Total))`);
-      const rows = Array.isArray(data?.value) ? data.value : [];
-      for (const r of rows) {
-        const id = r[prop];
-        const nm = (r[nav] && r[nav].Name) || r[nameNav] || null;
-        if (id != null) target[id] = nm;
-      }
-      return rows.length > 0;
-    } catch { return false; }
+  const absorve = (rows) => {
+    for (const d of (Array.isArray(rows) ? rows : [])) {
+      if (d.Pipeline && d.Pipeline.Id != null) nomes.funis[d.Pipeline.Id] = d.Pipeline.Name;
+      if (d.Stage && d.Stage.Id != null) nomes.etapas[d.Stage.Id] = d.Stage.Name;
+      if (d.Status && d.Status.Id != null) nomes.situacoes[d.Status.Id] = d.Status.Name;
+    }
   };
-  const okP = await tryNav('PipelineId', 'Pipeline/Name', nomes.funis);
-  const okS = await tryNav('StageId', 'Stage/Name', nomes.etapas);
-  await tryNav('StatusId', 'Status/Name', nomes.situacoes);
-  if (!okP || !okS) {
+  const tentativas = [
+    'Deals?$top=300&$select=Id&$expand=Pipeline,Stage,Status',
+    'Deals?$top=300&$expand=Pipeline,Stage,Status',
+    'Deals?$top=300&$expand=Pipeline($select=Id,Name),Stage($select=Id,Name),Status($select=Id,Name)',
+  ];
+  for (const q of tentativas) {
     try {
-      const data = await api('Deals?$top=300&$select=Id,PipelineId,StageId,StatusId&$expand=Pipeline($select=Id,Name),Stage($select=Id,Name),Status($select=Id,Name)');
-      for (const d of (Array.isArray(data?.value) ? data.value : [])) {
-        if (d.Pipeline && d.Pipeline.Id != null) nomes.funis[d.Pipeline.Id] = d.Pipeline.Name;
-        if (d.Stage && d.Stage.Id != null) nomes.etapas[d.Stage.Id] = d.Stage.Name;
-        if (d.Status && d.Status.Id != null) nomes.situacoes[d.Status.Id] = d.Status.Name;
-      }
-    } catch (e) { out.erros.push(`nomes(expand): ${e.message}`); }
+      const data = await api(q);
+      absorve(data && data.value);
+      if (Object.keys(nomes.funis).length) break;
+    } catch (e) {
+      out.erros.push(`nomes: ${String(e.message).slice(0, 110)}`);
+    }
   }
   out.nomes = nomes;
 }
