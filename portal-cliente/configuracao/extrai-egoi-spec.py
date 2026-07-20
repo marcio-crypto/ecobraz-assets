@@ -38,27 +38,37 @@ def main():
     print("html bytes:", len(html))
 
     def extrair_json_parse(texto):
-        # Extrai o conteúdo de JSON.parse("...") respeitando escapes, e desescapa.
+        # Varre TODAS as ocorrências de JSON.parse("...") (o bundle tem várias),
+        # desescapa cada uma, e devolve a MAIOR que pareça uma spec OpenAPI.
+        resultados = []
         for marcador in ('JSON.parse("', "JSON.parse('"):
-            i = texto.find(marcador)
-            if i < 0:
-                continue
             q = marcador[-1]
-            j = i + len(marcador)
-            buf = []
-            k = j
-            while k < len(texto):
-                c = texto[k]
-                if c == "\\":
-                    buf.append(texto[k:k + 2]); k += 2; continue
-                if c == q:
+            start = 0
+            while True:
+                i = texto.find(marcador, start)
+                if i < 0:
                     break
-                buf.append(c); k += 1
-            inner = "".join(buf)
-            try:
-                return json.loads('"' + inner + '"')  # desescapa a string JS -> texto JSON
-            except Exception as e:
-                print("desescape falhou:", e)
+                j = i + len(marcador)
+                buf = []
+                k = j
+                while k < len(texto):
+                    c = texto[k]
+                    if c == "\\":
+                        buf.append(texto[k:k + 2]); k += 2; continue
+                    if c == q:
+                        break
+                    buf.append(c); k += 1
+                start = k + 1
+                inner = "".join(buf)
+                try:
+                    s = json.loads('"' + inner + '"')
+                except Exception:
+                    continue
+                if '"paths"' in s and ('"openapi"' in s or '"swagger"' in s):
+                    resultados.append(s)
+        if resultados:
+            print("candidatos de spec:", len(resultados), "maior:", max(len(x) for x in resultados))
+            return max(resultados, key=len)
         return None
 
     data = None
