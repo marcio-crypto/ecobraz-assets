@@ -73,6 +73,41 @@ function firstMatch(map, re) {
   return key ? map[key] : null;
 }
 
+// Monta os mapas ID -> Nome de funis, etapas e situações. Estratégia sem PII:
+// 1) tenta groupby com o nome via navegação (completo e agregado); 2) se falhar,
+// lê negócios trazendo SOMENTE os IDs + os nomes das tabelas de apoio (via
+// $expand/$select) — nunca título, contato ou qualquer dado pessoal.
+async function mapNames(out) {
+  const nomes = { funis: {}, etapas: {}, situacoes: {} };
+  const tryNav = async (prop, nameNav, target) => {
+    const nav = nameNav.split('/')[0];
+    try {
+      const data = await api(`Deals?$apply=groupby((${prop},${nameNav}),aggregate($count as Total))`);
+      const rows = Array.isArray(data?.value) ? data.value : [];
+      for (const r of rows) {
+        const id = r[prop];
+        const nm = (r[nav] && r[nav].Name) || r[nameNav] || null;
+        if (id != null) target[id] = nm;
+      }
+      return rows.length > 0;
+    } catch { return false; }
+  };
+  const okP = await tryNav('PipelineId', 'Pipeline/Name', nomes.funis);
+  const okS = await tryNav('StageId', 'Stage/Name', nomes.etapas);
+  await tryNav('StatusId', 'Status/Name', nomes.situacoes);
+  if (!okP || !okS) {
+    try {
+      const data = await api('Deals?$top=300&$select=Id,PipelineId,StageId,StatusId&$expand=Pipeline($select=Id,Name),Stage($select=Id,Name),Status($select=Id,Name)');
+      for (const d of (Array.isArray(data?.value) ? data.value : [])) {
+        if (d.Pipeline && d.Pipeline.Id != null) nomes.funis[d.Pipeline.Id] = d.Pipeline.Name;
+        if (d.Stage && d.Stage.Id != null) nomes.etapas[d.Stage.Id] = d.Stage.Name;
+        if (d.Status && d.Status.Id != null) nomes.situacoes[d.Status.Id] = d.Status.Name;
+      }
+    } catch (e) { out.erros.push(`nomes(expand): ${e.message}`); }
+  }
+  out.nomes = nomes;
+}
+
 async function main() {
   const out = { base: BASE, geradoEm: new Date().toISOString(), viaFallback: false, catalogo: [], configuracao: {}, contagens: {}, distribuicoes: {}, erros: [] };
 
@@ -120,6 +155,10 @@ async function main() {
   await tryGroupby(out, 'Deals', 'StageId', 'negociosPorEtapa');
   await tryGroupby(out, 'Deals', 'StatusId', 'negociosPorStatus');
 
+  // Nomes amigáveis de funis/etapas/situações — sem dados pessoais (lê apenas os
+  // IDs e os NOMES das tabelas de apoio, nunca título de negócio ou dados de pessoa).
+  await mapNames(out);
+
   // Saída: arquivo completo + resumo legível no log.
   const fs = await import('node:fs');
   const file = new URL('./resultado-ploomes.json', import.meta.url);
@@ -146,6 +185,20 @@ function printResumo(out) {
   for (const [k, v] of Object.entries(out.contagens)) L(`  - ${k}: ${v}`);
   L('\nDistribuições agregadas (sem dados pessoais):');
   for (const [k, v] of Object.entries(out.distribuicoes)) L(`  - ${k}: ${JSON.stringify(v)}`);
+
+  if (out.nomes) {
+    const funil = out.distribuicoes.negociosPorFunil;
+    if (Array.isArray(funil)) {
+      L('\nFunis (nome + nº de negócios, do maior para o menor):');
+      for (const f of [...funil].sort((a, b) => (b.Total || 0) - (a.Total || 0))) {
+        L(`  - [${f.PipelineId}] ${out.nomes.funis[f.PipelineId] || '(nome n/d)'} — ${f.Total}`);
+      }
+    }
+    if (out.nomes.situacoes && Object.keys(out.nomes.situacoes).length) {
+      L('\nSituações (StatusId -> nome): ' + JSON.stringify(out.nomes.situacoes));
+    }
+  }
+
   if (out.erros.length) { L('\nAvisos/erros (não fatais):'); for (const e of out.erros) L('  - ' + e); }
   L('\nArquivo completo: portal-cliente/diagnostico/resultado-ploomes.json');
   L('\n====================================================================\n');
