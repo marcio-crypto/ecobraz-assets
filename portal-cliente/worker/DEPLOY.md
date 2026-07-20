@@ -28,14 +28,20 @@ caracteres). Pode teclar aleatoriamente letras/números, ou me pedir que eu te g
 ## Passo 3 — (para testar) marcar uma empresa
 No Ploomes, pegue **uma empresa** para teste e no cadastro dela:
 - marque **Contrato Ativo? = Sim**;
-- preencha **Data de encerramento do contrato** com uma data **no futuro**;
-- confirme que ela tem um **e-mail** no cadastro.
+- a **Data de encerramento** pode ficar **em branco** por enquanto (aquele campo ainda
+  não aparece no formulário — ficou para o fim). Sem data, o Portal entende que **não há
+  prazo de expiração** e libera normalmente;
+- confirme que existe um **e-mail** — na própria empresa **ou** numa **pessoa vinculada**
+  a ela (é esse e-mail que o cliente digita no login).
 
 ## Passo 4 — Testar
 1. Abra o **endereço de teste** do Portal.
-2. Digite o **e-mail dessa empresa** e peça o link.
-3. Confira o e-mail (e o spam), clique no link e veja se entra no painel.
-4. Me conte o que aconteceu — se algo travar, o log me diz o motivo e eu ajusto.
+2. Digite o **e-mail dessa empresa (ou da pessoa vinculada a ela)** e peça o link.
+3. **Importante:** a tela sempre responde a mesma frase ("se o e-mail for de um cliente
+   ativo, enviamos um link") — isso é proposital, para não revelar quem é cliente. Então
+   **confira a caixa de entrada** (e o spam) desse e-mail: é lá que o link chega.
+4. Clique no link e veja se entra no painel. Me conte o que aconteceu — se travar, o log
+   me diz o motivo e eu ajusto.
 
 ## Depois (produção)
 - Trocar o endereço de teste por **`portal.ecobraz.org`** (configuração de domínio na Cloudflare).
