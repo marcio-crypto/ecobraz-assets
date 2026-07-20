@@ -80,6 +80,31 @@ legislação (BR + UE), comparar com a base de conhecimento do sistema e
   atualizado e alertado", com validação humana.
 - Encaixe: é o motor de atualização do **Pacote 3 (Radar de Legislação)**.
 
+## 4-bis. Escopo detalhado do Portal (v1) — definido pelo Marcio em 2026-07-20
+
+**Acesso (quem entra):** somente **Pessoas Jurídicas com contrato ativo** com a Ecobraz — não todos os clientes.
+- **Marcação no Ploomes:** campo **"Contrato ativo?"** + **"Data de encerramento do contrato"** no
+  cadastro da empresa. O sistema **libera** enquanto vigente e **trava** ao vencer (até renovar).
+- **Login:** **link/código enviado por e-mail** (sem senha). O e-mail precisa bater com uma empresa
+  PJ de contrato ativo.
+
+**O que o cliente vê/faz no painel:**
+- **Abrir OS** direto pelo sistema (sem falar com o comercial) → nova OS no Ploomes.
+- **Acompanhar todas as suas OS** (abertas e realizadas, com datas).
+- **Baixar documentos** (quando existirem): **Nota Fiscal**, **MTR**, **Carta de Doação**, **Certificado de Destinação Final**.
+- **Carbono:** calcular as emissões anuais da empresa; ver quanto foi **evitado** pelos descartes;
+  quanto **falta** para zerar; e **contratar Adote um Bairro** para complementar.
+- **Relatórios de conformidade** padronizados, **prontos para auditoria e ESG**, a partir dos
+  descartes + cotas do Adote um Bairro.
+
+**Regras que continuam valendo (de `conformidade/`), para o relatório ser aceito por auditor:**
+- A **pegada anual total** exige dados de entrada do cliente (energia, combustível etc.) ou estimativa
+  setorial — **não sai só do CNPJ**.
+- **Emissão evitada** pelo descarte **não é** neutralização no rigor contábil; neutralização real usa
+  **crédito verificado**; **Adote um Bairro = impacto social** (§5.3).
+- Documentos só são baixáveis se estiverem **guardados no Ploomes**; **MTR/CDF nascem no SINIR** (gov) —
+  ou a Ecobraz anexa a cópia no Ploomes, ou integramos o SINIR depois.
+
 ## 5. Pontos de atenção honestos (ler antes de construir os pacotes 2 e 4)
 
 > Estes são os pontos onde "bonito" e "confiável" se separam. Registrados para não
@@ -123,9 +148,10 @@ legislação (BR + UE), comparar com a base de conhecimento do sistema e
 
 ## 6. O que depende do Marcio / Ecobraz (decisões em aberto)
 
-- [ ] Rodar o **diagnóstico do Ploomes** (guardar a chave no GitHub — ver README).
-- [ ] Definição de **"cliente ativo"** (qual estado no Ploomes).
-- [ ] Como o cliente **faz login** (recomendação atual: link mágico por e-mail — sem senha).
+- [x] Rodar o **diagnóstico do Ploomes** — feito (ver `diagnostico/RESULTADOS.md`). (2026-07-20)
+- [x] **"Cliente ativo"** = PJ com **contrato ativo** no Ploomes (marcação + data de encerramento); trava ao vencer. (2026-07-20)
+- [x] **Login** = link/código por e-mail, **sem senha** (magic link). (2026-07-20)
+- [ ] **Criar a marcação de contrato no Ploomes** ("Contrato ativo?" + "Data de encerramento") no cadastro de empresa — pré-requisito do portão de acesso.
 - [ ] **Metodologia de CO₂** que a Ecobraz vai assumir (fatores de emissão / fonte).
 - [x] Situação do **Adote um Bairro**: **programa de impacto social** (decidido 2026-07-20) →
       vendido como patrocínio de impacto; a neutralização de CO₂ usa **crédito verificado**.
@@ -168,3 +194,9 @@ legislação (BR + UE), comparar com a base de conhecimento do sistema e
 - **2026-07-20** — **Decisão:** *Adote um Bairro* é **programa de impacto social** → vendido como
   patrocínio de impacto; a neutralização de CO₂ usa **crédito verificado** (Caminho B do §5).
   Podem ser oferecidos juntos (venda cruzada), sem rotular o patrocínio como "neutralização".
+- **2026-07-20** — **Diagnóstico do Ploomes concluído**: 26,9k contatos (19,7k empresas), 18,8k
+  negócios (9,5k ganhos), funis comerciais nomeados, dado operacional (nº OS, peso, datas) vive nos
+  **Documentos**. Ver `diagnostico/RESULTADOS.md`.
+- **2026-07-20** — **Escopo do Portal detalhado** (§4-bis): acesso só **PJ com contrato ativo**
+  (marcação no Ploomes + data de encerramento, trava ao vencer); **login por link no e-mail** (sem
+  senha); painel com OS, downloads (NF/MTR/Carta de Doação/CDF), carbono e relatórios de conformidade.
