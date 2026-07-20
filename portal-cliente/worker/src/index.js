@@ -30,7 +30,18 @@ export default {
     const url = new URL(request.url);
     const { pathname } = url;
     try {
-      if (pathname === '/health') return json({ ok: true, service: 'ecobraz-portal', version: 1 });
+      if (pathname === '/health') return json({
+        ok: true, service: 'ecobraz-portal', version: 2,
+        // Só presença (true/false) — NUNCA os valores. Ajuda a confirmar a
+        // configuração pelo navegador sem expor segredo nenhum.
+        config: {
+          ploomes: !!env.PLOOMES_USER_KEY,
+          sessao: !!env.PORTAL_SESSION_SECRET,
+          email: !!(env.EGOI_TRANSACTIONAL_API_KEY || env.EGOI_API_KEY),
+          baseUrl: !!env.PORTAL_BASE_URL,
+          kv: !!env.PORTAL_KV,
+        },
+      });
 
       if (pathname === '/' && request.method === 'GET') return await telaInicial(request, env);
       if (pathname === '/entrar' && request.method === 'GET') return await entrarComToken(request, env, url);
