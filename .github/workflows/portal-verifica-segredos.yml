@@ -1,0 +1,31 @@
+name: Portal — Verificar segredos do Worker (só nomes)
+
+# Lista os NOMES dos segredos configurados no Worker ecobraz-portal na Cloudflare,
+# para confirmar que o login consegue rodar (Ploomes + assinatura + e-mail).
+# NUNCA imprime valores — 'wrangler secret list' devolve apenas nome e tipo.
+# Gatilho de push temporário nesta branch (workflow_dispatch só vale após a main).
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - claude/ecobraz-carbon-tracking-system-dh28dx
+    paths:
+      - '.github/workflows/portal-verifica-segredos.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: portal-cliente/worker
+    steps:
+      - uses: actions/checkout@v4
+      - name: Listar NOMES dos segredos (nunca valores)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler@latest secret list
