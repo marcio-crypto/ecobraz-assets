@@ -7,13 +7,10 @@ account_id = "0ab0573840927669f3bb3666d63cc023"
 # Preserva variáveis/segredos já configurados na Cloudflare; o deploy só atualiza o código.
 keep_vars = true
 
-# KV — usado para (1) links de login de USO ÚNICO e (2) throttle de e-mails de login.
-# O código funciona sem KV, mas com KV fica mais seguro. Para ativar, crie o namespace
-# e cole o id abaixo (ou peça para eu criar via Cloudflare):
-#   npx wrangler kv namespace create PORTAL_KV
-# [[kv_namespaces]]
-# binding = "PORTAL_KV"
-# id = "<COLE_O_ID_DO_NAMESPACE_AQUI>"
+# KV — links de login de USO ÚNICO e throttle de e-mails de login.
+[[kv_namespaces]]
+binding = "PORTAL_KV"
+id = "edd3746ffe5a49d585c60d99c18a25c7"
 
 # ---------------------------------------------------------------------------
 # Segredos e variáveis (definidos NA CLOUDFLARE, nunca no repositório):
