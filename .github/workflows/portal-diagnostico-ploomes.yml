@@ -1,0 +1,36 @@
+name: Portal — Diagnóstico do Ploomes (somente leitura)
+
+# Rodada manual e SOMENTE-LEITURA. Descobre a estrutura real do Ploomes
+# (funis, etapas, campos, contagens) para construirmos o Portal do Cliente sem
+# suposições. NÃO cria, altera ou apaga nada, e NÃO baixa dados pessoais.
+#
+# PRÉ-REQUISITO: o segredo PLOOMES_USER_KEY precisa existir em
+#   Settings > Secrets and variables > Actions
+# (é a mesma chave de API do Ploomes já usada pelo Worker; basta copiá-la para cá).
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostico:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Rodar diagnóstico (somente leitura, sem dados pessoais)
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }} # opcional; padrão public-api2.ploomes.com
+        run: node portal-cliente/diagnostico/diagnostico-ploomes.mjs
+      - name: Guardar resultado como artefato
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagnostico-ploomes
+          path: portal-cliente/diagnostico/resultado-ploomes.json
+          if-no-files-found: warn
