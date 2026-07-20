@@ -36,32 +36,49 @@ def find_spec(d):
 def main():
     html = fetch(URL)
     print("html bytes:", len(html))
-    blob = None
-    for pat in [r"__redoc_state\s*=\s*(\{.*?\})\s*;?\s*</script>",
-                r'id="redoc-state"[^>]*>\s*(\{.*?\})\s*</script>',
-                r"JSON\.parse\(\"(.*?)\"\)\s*;?\s*</script>"]:
-        m = re.search(pat, html, re.S)
-        if m:
-            blob = m.group(1)
-            break
-    if not blob:
-        # tenta o maior objeto JSON dentro de <script>
-        for m in re.finditer(r"<script[^>]*>(.*?)</script>", html, re.S):
-            s = m.group(1)
-            i = s.find("{")
-            if i >= 0 and '"paths"' in s:
-                blob = s[i:s.rfind("}") + 1]
-                break
-    if not blob:
-        print("NAO achei o estado do Redoc")
-        return
-    if blob.startswith('"'):  # caso JSON.parse("...")
-        blob = json.loads('"' + blob + '"') if not blob.endswith('"') else json.loads(blob)
-    try:
-        data = json.loads(blob)
-    except Exception as e:
-        print("parse fail:", e)
-        print("trecho:", blob[:200])
+
+    def extrair_json_parse(texto):
+        # Extrai o conteúdo de JSON.parse("...") respeitando escapes, e desescapa.
+        for marcador in ('JSON.parse("', "JSON.parse('"):
+            i = texto.find(marcador)
+            if i < 0:
+                continue
+            q = marcador[-1]
+            j = i + len(marcador)
+            buf = []
+            k = j
+            while k < len(texto):
+                c = texto[k]
+                if c == "\\":
+                    buf.append(texto[k:k + 2]); k += 2; continue
+                if c == q:
+                    break
+                buf.append(c); k += 1
+            inner = "".join(buf)
+            try:
+                return json.loads('"' + inner + '"')  # desescapa a string JS -> texto JSON
+            except Exception as e:
+                print("desescape falhou:", e)
+        return None
+
+    data = None
+    spec_text = extrair_json_parse(html)
+    if spec_text:
+        try:
+            data = json.loads(spec_text)
+        except Exception as e:
+            print("parse do spec_text falhou:", e); print(spec_text[:200])
+    if data is None:
+        for pat in [r"__redoc_state\s*=\s*(\{.*?\})\s*;?\s*</script>",
+                    r'id="redoc-state"[^>]*>\s*(\{.*?\})\s*</script>']:
+            m = re.search(pat, html, re.S)
+            if m:
+                try:
+                    data = json.loads(m.group(1)); break
+                except Exception:
+                    pass
+    if data is None:
+        print("NAO consegui extrair o estado do Redoc")
         return
     spec = find_spec(data)
     if not spec:
