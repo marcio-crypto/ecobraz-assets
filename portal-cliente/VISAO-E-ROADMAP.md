@@ -95,14 +95,13 @@ legislação (BR + UE), comparar com a base de conhecimento do sistema e
    adicionalidade, verificação por terceiro, aposentadoria do crédito, sem dupla
    contagem). A norma internacional que rege isso é a **ISO 14068-1** (neutralidade
    de carbono), somada às regras anti-greenwashing da UE.
-   - **Pergunta em aberto:** o *Adote um Bairro* é hoje um **projeto de carbono
-     quantificado e verificado**, ou um programa de impacto **social/urbano**? Disso
-     depende tudo. (A confirmar com o Marcio.)
+   - **DECIDIDO (2026-07-20):** o *Adote um Bairro* é um **programa de impacto social/urbano**
+     (não é projeto de carbono verificado). Portanto seguimos o **Caminho B** abaixo.
    - **Dois caminhos honestos:**
      - **A) Transformar o *Adote um Bairro* em projeto de carbono certificável** —
        metodologia + MRV + verificação de terceiro. Aí as cotas viram compensação real
        e o certificado de neutralização é legítimo e audit-grade. (Mais trabalho, maior valor.)
-     - **B) Separar as duas coisas com honestidade** — (1) *reduções* comprovadas pela
+     - **B) Separar as duas coisas com honestidade [← CAMINHO ESCOLHIDO]** — (1) *reduções* comprovadas pela
        destinação correta (calculadas por norma) e (2) *compensação* feita com **créditos
        certificados**; e oferecer o *Adote um Bairro* como **patrocínio de impacto social**
        adicional, sem vendê-lo como toneladas de CO₂ enquanto não houver verificação.
@@ -128,7 +127,8 @@ legislação (BR + UE), comparar com a base de conhecimento do sistema e
 - [ ] Definição de **"cliente ativo"** (qual estado no Ploomes).
 - [ ] Como o cliente **faz login** (recomendação atual: link mágico por e-mail — sem senha).
 - [ ] **Metodologia de CO₂** que a Ecobraz vai assumir (fatores de emissão / fonte).
-- [ ] Situação do **Adote um Bairro** (projeto de carbono verificado vs. programa social).
+- [x] Situação do **Adote um Bairro**: **programa de impacto social** (decidido 2026-07-20) →
+      vendido como patrocínio de impacto; a neutralização de CO₂ usa **crédito verificado**.
 - [ ] Onde o Portal vai morar (ex.: `portal.ecobraz.org`) e a identidade visual.
 - [ ] **Posicionamento** dos documentos: "apoio/alerta de conformidade" (recomendado) vs.
       "garantia total" (não recomendado — transfere responsabilidade legal para a Ecobraz).
@@ -165,3 +165,6 @@ legislação (BR + UE), comparar com a base de conhecimento do sistema e
   com alerta da Diretiva UE 2024/825. Parte **jurídica (BR+UE)** ainda em pesquisa.
 - **2026-07-20** — Ideia da **varredura mensal de legislação por IA** (§4.3) — adotada, com
   **humano no circuito** e posicionamento "apoio", não "garantia total".
+- **2026-07-20** — **Decisão:** *Adote um Bairro* é **programa de impacto social** → vendido como
+  patrocínio de impacto; a neutralização de CO₂ usa **crédito verificado** (Caminho B do §5).
+  Podem ser oferecidos juntos (venda cruzada), sem rotular o patrocínio como "neutralização".
