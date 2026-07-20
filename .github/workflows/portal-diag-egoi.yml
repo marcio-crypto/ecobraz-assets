@@ -25,31 +25,32 @@ jobs:
           curl -sS -m 30 "https://ecobraz-portal.ti-0ab.workers.dev/_diag/egoi/dz7m2x9q4p1v8" || echo "curl falhou"
           echo
           echo "== fim =="
-      - name: Achar a spec real (springdoc no servidor da API)
+      - name: Achar a URL real da spec e dumpar o schema de envio
         run: |
           set +e
+          UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36"
+          curl -sS -m 20 -A "$UA" "https://developers.e-goi.com/transactional/v2/" -o /tmp/docs.html
+          echo "docs.html size $(wc -c < /tmp/docs.html)"
+          echo "--- refs .json/.yaml no HTML ---"
+          grep -oE "[A-Za-z0-9._/:-]+\.(json|yaml|yml)" /tmp/docs.html | sort -u | head -30
+          echo "--- refs openapi/swagger/api-docs/spec ---"
+          grep -oiE "[A-Za-z0-9._/:@-]*(openapi|swagger|api-docs|redoc|spec-url)[A-Za-z0-9._/:@-]*" /tmp/docs.html | sort -u | head -30
+          echo "--- <script src> e <link href> ---"
+          grep -oiE "(src|href)=\"[^\"]+\"" /tmp/docs.html | sort -u | head -40
+          echo "== tenta candidatos comuns de spec (aceita so 200 com .paths) =="
           for U in \
-            "https://slingshot.egoiapp.com/api/v3/api-docs" \
-            "https://slingshot.egoiapp.com/api/v2/api-docs" \
-            "https://slingshot.egoiapp.com/v3/api-docs" \
-            "https://slingshot.egoiapp.com/v2/api-docs" \
-            "https://slingshot.egoiapp.com/api/api-docs" \
-            "https://slingshot.egoiapp.com/api/swagger.json" \
-            "https://slingshot.egoiapp.com/api/openapi.json" ; do
-            code=$(curl -sS -m 15 -o /tmp/s.json -w '%{http_code}' "$U")
-            valid=no; head -c 1 /tmp/s.json 2>/dev/null | grep -q '{' && valid=yes
-            echo "[$code valid_json:$valid] $U"
-            if [ "$valid" = yes ]; then
-              echo "TITLE: $(jq -r '.info.title // "?"' /tmp/s.json 2>/dev/null)"
-              echo "--- paths com 'email' ---"
-              jq -r '.paths | keys[]' /tmp/s.json 2>/dev/null | grep -i email | head -50
-              echo "--- para cada path de email: métodos ---"
-              jq -r '.paths | to_entries[] | select(.key|test("email";"i")) | "\(.key) -> \(.value|keys|join(","))"' /tmp/s.json 2>/dev/null | head -40
-              echo "--- requestBody schema do POST em .../messages ---"
-              jq '.paths | to_entries[] | select(.key|test("email/messages$";"i")) | .value.post.requestBody' /tmp/s.json 2>/dev/null | head -80
-              echo "--- schema EmailMessage/Message (componentes) ---"
-              jq '.components.schemas | to_entries[] | select(.key|test("email|message";"i")) | .key' /tmp/s.json 2>/dev/null | head -30
-              cp /tmp/s.json /tmp/spec_ok.json
+            "https://developers.e-goi.com/transactional/v2/spec/openapi.json" \
+            "https://developers.e-goi.com/transactional/v2/openapi/openapi.json" \
+            "https://developers.e-goi.com/assets/transactional-v2.json" \
+            "https://developers.e-goi.com/transactional/v2/api.json" \
+            "https://api.egoiapp.com/openapi.json" ; do
+            code=$(curl -sS -m 15 -A "$UA" -o /tmp/s.json -w '%{http_code}' "$U")
+            has=$(jq -e '.paths' /tmp/s.json >/dev/null 2>&1 && echo yes || echo no)
+            echo "[$code paths:$has] $U"
+            if [ "$code" = "200" ] && [ "$has" = "yes" ]; then
+              echo "=== SPEC OK: $U ==="
+              jq -r '.paths|keys[]' /tmp/s.json | grep -i "email\|message" | head -40
+              jq '.paths|to_entries[]|select(.key|test("message";"i"))|{path:.key, methods:(.value|keys)}' /tmp/s.json | head -60
               break
             fi
           done
