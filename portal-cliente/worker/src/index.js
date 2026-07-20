@@ -365,22 +365,21 @@ async function diagEgoi(request, env, url) {
   } catch (e) { out.senders = { erro: String(e?.message || e) }; }
   out.senderId = senderId ?? null;
 
-  const payload = { sender_id: senderId, subject: 'Teste diagnostico Portal', to: [to], html_body: '<p>teste</p>', text_body: 'teste', open_tracking: false, click_tracking: false };
-  const bodyStr = JSON.stringify(payload);
-  const bytes = new TextEncoder().encode(bodyStr);
-  const enviaSend = `${base}/v2/email/messages/action/send`;
-  const tentar = async (rotulo, u, opts) => {
+  // Endpoint correto (spec E-goi): .../action/send/single, payload camelCase.
+  const single = `${base}/v2/email/messages/action/send/single`;
+  const sid = Number(senderId);
+  const mk = (over) => JSON.stringify({ senderId: sid, subject: 'Teste diag Portal', to: [to], htmlBody: '<p>teste</p>', textBody: 'teste', ...over });
+  const tentar = async (rotulo, u, body) => {
     try {
-      const r = await fetch(u, { method: 'POST', redirect: 'manual', ...opts });
+      const r = await fetch(u, { method: 'POST', headers: { 'content-type': 'application/json', ApiKey: apiKey }, body });
       const t = await r.text();
-      return { rotulo, url: u, status: r.status, corpo: t.slice(0, 180) };
-    } catch (e) { return { rotulo, url: u, erro: String(e?.message || e) }; }
+      return { rotulo, status: r.status, corpo: t.slice(0, 240) };
+    } catch (e) { return { rotulo, erro: String(e?.message || e) }; }
   };
   out.tentativas = [
-    await tentar('A_string', enviaSend, { headers: { 'content-type': 'application/json', ApiKey: apiKey }, body: bodyStr }),
-    await tentar('B_bytes', enviaSend, { headers: { 'content-type': 'application/json', ApiKey: apiKey }, body: bytes }),
-    await tentar('C_content_length', enviaSend, { headers: { 'content-type': 'application/json', ApiKey: apiKey, 'content-length': String(bytes.length) }, body: bodyStr }),
-    await tentar('D_sem_action', `${base}/v2/email/messages`, { headers: { 'content-type': 'application/json', ApiKey: apiKey }, body: bytes }),
+    await tentar('single_to_strings', single, mk({})),
+    await tentar('single_to_objs', single, mk({ to: [{ email: to }] })),
+    await tentar('single_senderId_str', single, mk({ senderId: String(senderId) })),
   ];
   return json(out);
 }
