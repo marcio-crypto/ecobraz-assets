@@ -1,8 +1,8 @@
 name: Portal — Diagnóstico E-goi (consulta o Worker)
 
-# Consulta o endpoint temporário /_diag/egoi do Worker (o runner do GitHub alcança
-# o Worker; o sandbox do dev não). Mostra a resposta CRUA do E-goi para achar por
-# que o envio do link falha. Não expõe segredos. Gatilho por push nesta branch.
+# (1) Consulta o endpoint temporário /_diag/egoi do Worker (resposta crua do E-goi).
+# (2) Baixa a especificação da API transacional v2 do E-goi para achar o endpoint
+#     e o payload corretos de envio de e-mail. Não expõe segredos.
 
 on:
   workflow_dispatch:
@@ -25,3 +25,24 @@ jobs:
           curl -sS -m 30 "https://ecobraz-portal.ti-0ab.workers.dev/_diag/egoi/dz7m2x9q4p1v8" || echo "curl falhou"
           echo
           echo "== fim =="
+      - name: Baixar spec da API transacional v2 do E-goi
+        run: |
+          UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36"
+          for U in \
+            "https://developers.e-goi.com/transactional/v2/swagger.json" \
+            "https://developers.e-goi.com/transactional/v2/openapi.json" \
+            "https://developers.e-goi.com/transactional/v2/spec.json" \
+            "https://developers.e-goi.com/transactional/v2/api-docs.json" \
+            "https://api.egoiapp.com/transactional/v2/swagger.json" ; do
+            echo "===== TENTANDO: $U ====="
+            code=$(curl -sS -m 25 -A "$UA" -o /tmp/spec.json -w '%{http_code}' "$U" || echo "erro")
+            echo "HTTP $code, tamanho $(wc -c < /tmp/spec.json 2>/dev/null || echo 0) bytes"
+            if [ "$code" = "200" ]; then
+              echo "--- paths de email (grep) ---"
+              grep -o '"/[^"]*email[^"]*"' /tmp/spec.json | sort -u | head -40 || true
+              echo "--- trecho com 'send' ---"
+              grep -o '.\{0,80\}send.\{0,200\}' /tmp/spec.json | head -20 || true
+              break
+            fi
+          done
+          echo "== fim spec =="
