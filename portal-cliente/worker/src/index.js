@@ -39,7 +39,7 @@ export default {
           sessao: !!env.PORTAL_SESSION_SECRET,
           email: !!(env.RESEND_API_KEY || env.EGOI_TRANSACTIONAL_API_KEY || env.EGOI_API_KEY),
           resend: !!env.RESEND_API_KEY,
-          resendFrom: env.RESEND_FROM || '(padrão onboarding@resend.dev)',
+          resendFrom: env.RESEND_FROM || '(padrão acesso@ecobraz.org.br)',
           egoi: !!(env.EGOI_TRANSACTIONAL_API_KEY || env.EGOI_API_KEY),
           baseUrl: !!env.PORTAL_BASE_URL,
           kv: !!env.PORTAL_KV,
@@ -353,7 +353,9 @@ async function enviarEmailLogin(cliente, link, env) {
 // RESEND_FROM é o remetente; no teste inicial use o padrão do Resend (onboarding@resend.dev),
 // depois troque para acesso@ecobraz.org.br após verificar o domínio no Resend.
 async function enviarViaResend(cliente, link, env) {
-  const from = env.RESEND_FROM || 'Portal Ecobraz <onboarding@resend.dev>';
+  // Domínio ecobraz.org.br verificado no Resend → envia de acesso@ecobraz.org.br
+  // para qualquer cliente. RESEND_FROM pode sobrescrever se quiser outro remetente.
+  const from = env.RESEND_FROM || 'Portal Ecobraz <acesso@ecobraz.org.br>';
   const payload = {
     from,
     to: [cliente.email],
