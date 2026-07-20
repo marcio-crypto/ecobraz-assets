@@ -173,13 +173,21 @@ legislação (BR + UE), comparar com a base de conhecimento do sistema e
 - **Portão de acesso corrigido e provado** por autoteste sobre cliente real ativo (`liberado: true`).
   Campos de contrato confirmados: 277451 "Contrato Ativo?" (Sim/Não, BoolValue) e 366005
   "Termino de Contrato" (data, no formulário).
+- **Login PONTA A PONTA funcionando** (2026-07-20): pessoa→empresa→contrato → link por e-mail →
+  clique → painel. Testado de verdade com uma empresa "Teste" ativa. Segredos configurados na
+  Cloudflare (`/health` mostra tudo `true`).
+- **Envio de e-mail: migrado do E-goi para o Resend.** O envio transacional do E-goi recusava toda
+  requisição com "Required request body is missing" (comprovado que o Worker envia o corpo certo; é
+  problema do lado do E-goi). O Resend funcionou de primeira e o e-mail de login chegou na caixa de
+  entrada. (Provável que o e-mail transacional do Worker de coletas, mesmo padrão, nunca tenha saído.)
 
 **Ainda não feito / não testado:**
-- ⚠️ **Segredos do Worker na Cloudflare** — `wrangler secret list` veio **vazio**; sem eles o login
-  não envia e-mail. **É o próximo passo para o teste real funcionar.**
-- **Teste ponta a ponta** (e-mail chegando → link → painel) ainda **não feito** — depende dos segredos.
+- ⚠️ **Resend em modo teste** — hoje só entrega para o e-mail dono da conta (marcio@ecobraz.org.br).
+  **Nenhum outro cliente recebe o link ainda.** Falta a **Fase 2: verificar o domínio
+  ecobraz.org.br no Resend** (registros DNS na Cloudflare) + `RESEND_FROM=acesso@ecobraz.org.br`.
 - **Mapeamento de "OS"** no painel é provisório (lê Negócios da empresa); precisa ser validado com
-  dados reais e, depois, apontar para o funil certo de OS (`PORTAL_OS_PIPELINE_ID`).
+  um cliente real que tenha OS e, depois, apontar para o funil certo (`PORTAL_OS_PIPELINE_ID`).
+- **Abrir chamado** (nova OS pelo Portal) escrito, ainda **não testado**.
 - A base de **conformidade legal (BR+UE) e de normas de auditoria** já foi **pesquisada e
   documentada** em [`conformidade/`](./conformidade/CONFORMIDADE-E-NORMAS.md) (síntese + 2 anexos
   com fontes oficiais). ⚠️ Está marcada como **material de pesquisa, pendente de validação** por

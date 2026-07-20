@@ -46,10 +46,6 @@ export default {
         },
       });
 
-      // TEMPORÁRIO (diagnóstico do E-goi): caminho secreto, será removido.
-      // Inspeciona a resposta CRUA do E-goi (status, redirect, corpo) sem expor a chave.
-      if (pathname === '/_diag/egoi/dz7m2x9q4p1v8' && request.method === 'GET') return await diagEgoi(request, env, url);
-
       if (pathname === '/' && request.method === 'GET') return await telaInicial(request, env);
       if (pathname === '/entrar' && request.method === 'GET') return await entrarComToken(request, env, url);
       if (pathname === '/api/auth/solicitar' && request.method === 'POST') return await solicitarLink(request, env);
@@ -372,61 +368,6 @@ async function enviarViaResend(cliente, link, env) {
     body: JSON.stringify(payload),
   });
   if (!r.ok) { const b = await r.text().catch(() => ''); throw new Error(`resend_${r.status}:${b.slice(0, 160)}`); }
-}
-
-// TEMPORÁRIO — diagnóstico da chamada ao E-goi. Reproduz resolução de remetente e
-// um envio de teste, reportando a resposta CRUA (status, location de redirect, corpo)
-// para achar por que o envio real dá "corpo ausente". NÃO imprime a chave.
-async function diagEgoi(request, env, url) {
-  const to = url.searchParams.get('to') || 'marcio@villanovaesg.com';
-
-  // Se o Resend estiver configurado, testa o envio por ele e retorna (foco no Resend).
-  if (env.RESEND_API_KEY) {
-    const from = env.RESEND_FROM || 'Portal Ecobraz <onboarding@resend.dev>';
-    const saida = { provedor: 'resend', from, para: to };
-    try {
-      const r = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', authorization: `Bearer ${env.RESEND_API_KEY}` },
-        body: JSON.stringify({ from, to: [to], subject: 'Teste diagnóstico Portal (Resend)', html: '<p>teste de envio</p>', text: 'teste de envio' }),
-      });
-      saida.status = r.status;
-      saida.corpo = (await r.text()).slice(0, 300);
-    } catch (e) { saida.erro = String(e?.message || e); }
-    return json(saida);
-  }
-
-  const apiKey = env.EGOI_TRANSACTIONAL_API_KEY || env.EGOI_API_KEY;
-  const base = env.EGOI_TRANSACTIONAL_API_URL || 'https://slingshot.egoiapp.com/api';
-  const out = { temChave: !!apiKey, base };
-  if (!apiKey) return json(out);
-
-  let senderId = env.EGOI_SENDER_ID || null;
-  try {
-    const rs = await fetch(`${base}/v2/email/senders`, { headers: { ApiKey: apiKey, accept: 'application/json' }, redirect: 'manual' });
-    const t = await rs.text();
-    out.senders = { status: rs.status, location: rs.headers.get('location'), corpo: t.slice(0, 200) };
-    try { const d = JSON.parse(t); const list = Array.isArray(d) ? d : (d.items || d.senders || d.data || d.list || []); const pick = (list || [])[0]; if (!senderId && pick) senderId = pick.sender_id || pick.id || pick.senderId; } catch {}
-  } catch (e) { out.senders = { erro: String(e?.message || e) }; }
-  out.senderId = senderId ?? null;
-
-  // Endpoint correto (spec E-goi): .../action/send/single, payload camelCase.
-  const single = `${base}/v2/email/messages/action/send/single`;
-  const sid = Number(senderId);
-  const body = JSON.stringify({ senderId: sid, subject: 'Teste diag Portal', to: [to], htmlBody: '<p>teste</p>', textBody: 'teste' });
-  const tentar = async (rotulo, headers) => {
-    try {
-      const r = await fetch(single, { method: 'POST', headers, body });
-      const t = await r.text();
-      return { rotulo, status: r.status, corpo: t.slice(0, 200) };
-    } catch (e) { return { rotulo, erro: String(e?.message || e) }; }
-  };
-  out.tentativas = [
-    await tentar('com_user_agent', { 'content-type': 'application/json', ApiKey: apiKey, 'user-agent': 'ecobraz-portal/1.0 (+https://ecobraz.org.br)' }),
-    await tentar('ua_e_accept', { 'content-type': 'application/json', accept: 'application/json', ApiKey: apiKey, 'user-agent': 'Mozilla/5.0 ecobraz-portal' }),
-    await tentar('sem_apikey', { 'content-type': 'application/json', 'user-agent': 'ecobraz-portal/1.0' }),
-  ];
-  return json(out);
 }
 
 function emailHtml(cliente, link) {
