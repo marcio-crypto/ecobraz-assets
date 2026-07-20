@@ -18,14 +18,9 @@ jobs:
   diag:
     runs-on: ubuntu-latest
     steps:
-      - name: Consultar /_diag/egoi do Worker
+      - name: Testar envio (Resend) para o e-mail dono da conta
         run: |
-          echo "== Resposta do endpoint de diagnostico =="
-          curl -sS -m 30 "https://ecobraz-portal.ti-0ab.workers.dev/_diag/egoi/dz7m2x9q4p1v8" || echo "curl falhou"
+          echo "== Resposta do endpoint de diagnostico (envio para marcio@ecobraz.org.br) =="
+          curl -sS -m 30 "https://ecobraz-portal.ti-0ab.workers.dev/_diag/egoi/dz7m2x9q4p1v8?to=marcio@ecobraz.org.br" || echo "curl falhou"
           echo
           echo "== fim =="
-      - name: E-goi esta atras da Cloudflare? (teste orange-to-orange)
-        run: |
-          echo "== cabecalhos de slingshot.egoiapp.com =="
-          curl -sSI -m 20 "https://slingshot.egoiapp.com/api/v2/email/senders" 2>&1 | grep -iE "^(server|cf-ray|cf-cache|via|x-|report-to):" | head -20 || echo "sem cabecalhos reveladores"
-          echo "== fim headers =="
