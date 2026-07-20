@@ -7,13 +7,10 @@ account_id = "0ab0573840927669f3bb3666d63cc023"
 # Preserva variáveis/segredos já configurados na Cloudflare; o deploy só atualiza o código.
 keep_vars = true
 
-# KV — links de uso único + throttle de e-mails de login.
-# TEMPORARIAMENTE desativado para isolar uma falha de deploy (Authentication error
-# 10000). O código funciona sem KV (modo degradado: link válido por 15 min, sem
-# throttle). Reativar depois de confirmar as permissões de KV do token de deploy.
-# [[kv_namespaces]]
-# binding = "PORTAL_KV"
-# id = "edd3746ffe5a49d585c60d99c18a25c7"
+# KV — links de login de USO ÚNICO e throttle de e-mails de login.
+[[kv_namespaces]]
+binding = "PORTAL_KV"
+id = "edd3746ffe5a49d585c60d99c18a25c7"
 
 # ---------------------------------------------------------------------------
 # Segredos e variáveis (definidos NA CLOUDFLARE, nunca no repositório):
