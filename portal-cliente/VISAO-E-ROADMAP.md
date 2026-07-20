@@ -206,11 +206,12 @@ carbono, §5.4); **enquadramento tributário** da venda (Ecobraz é Associação
 - [ ] **Metodologia de CO₂** que a Ecobraz vai assumir — **âncora proposta: GHG Protocol / Programa
       Brasileiro GHG Protocol (FGV)**, com fatores oficiais citáveis (fator SIN/MCTI etc.). Falta a
       Ecobraz assumir formalmente + validação do especialista.
-- [x] **Gateway de pagamento** do cálculo pago = **Mercado Pago** (Pix/cartão). (2026-07-20)
+- [x] **Gateway de pagamento** = **Mercado Pago** (Pix/cartão) — **conta já existe**, só integrar.
+      Produto: **"Cálculo detalhado de pegada de carbono — GHG Protocol"**, R$ 250. (2026-07-20)
 - [x] **Nota Fiscal** = o sistema manda e-mail p/ `pagamento@ecobraz.org.br` (dados da empresa + produto
       + valor + ID do pagamento); **o financeiro emite e envia ao cliente**. (2026-07-20)
-- [ ] **Enquadramento tributário/estatutário** da venda de serviço (Ecobraz é **Associação sem fins
-      lucrativos**) — confirmar com o contador antes de cobrar.
+- [x] **Enquadramento tributário/estatutário** — **resolvido** (Marcio, 2026-07-20): a Ecobraz **já
+      comercializa** esses serviços há anos; é **automação** do que já é praticado. Sem pendência nova.
 - [ ] **Tabela de fatores de emissão por CNAE** (fonte + curadoria, validada pelo especialista de carbono).
 - [x] Situação do **Adote um Bairro**: **programa de impacto social** (decidido 2026-07-20) →
       vendido como patrocínio de impacto; a neutralização de CO₂ usa **crédito verificado**.
@@ -312,3 +313,7 @@ carbono, §5.4); **enquadramento tributário** da venda (Ecobraz é Associação
   compensação. **NF pelo financeiro** (e-mail p/ `pagamento@ecobraz.org.br` com dados + valor + ID do
   pagamento). Cuidados registrados: R$250 = **cálculo, não neutralidade**; estimativa por **setor**, não
   só porte; validar **fatores por CNAE** e **enquadramento tributário** da associação (sem fins lucrativos).
+- **2026-07-20** — **Marcio confirmou** e destravou a calculadora: (1) **tributação/estatuto = sem
+  pendência** — a Ecobraz já vende esses serviços há anos; é só automatizar; (2) **conta Mercado Pago
+  já existe** (só integrar); (3) **produto** = "Cálculo detalhado de pegada de carbono — GHG Protocol",
+  R$ 250. Próximo (a partir de quarta, com créditos): consulta CNPJ→CNAE + esqueleto do módulo no painel.
