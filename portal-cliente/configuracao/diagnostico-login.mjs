@@ -17,7 +17,7 @@ const BASE = (process.env.PLOOMES_API_URL || 'https://public-api2.ploomes.com').
 const KEY = process.env.PLOOMES_USER_KEY || '';
 const EMAIL = String(process.env.EMAIL || '').trim().toLowerCase();
 const F_ATIVO = Number(process.env.F_ATIVO || 277451); // "Contrato Ativo?" (Sim/Não)
-const F_FIM = Number(process.env.F_FIM || 365984);     // "Data de encerramento do contrato"
+const F_FIM = Number(process.env.F_FIM || 366005);     // "Termino de Contrato" (data no formulário)
 const HOJE = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; })();
 
 if (!KEY) { console.error('ERRO: PLOOMES_USER_KEY não definido.'); process.exit(1); }

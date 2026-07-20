@@ -24,6 +24,6 @@ id = "edd3746ffe5a49d585c60d99c18a25c7"
 #
 # Config do Ploomes (opcional — já vêm com o padrão descoberto no diagnóstico):
 #   PLOOMES_FIELD_CONTRATO_ATIVO = 277451   (campo "Contrato Ativo?")
-#   PLOOMES_FIELD_CONTRATO_FIM   = 365984   (campo "Data de encerramento do contrato")
+#   PLOOMES_FIELD_CONTRATO_FIM   = 366005   (campo "Termino de Contrato", data no formulário)
 #   PORTAL_OS_PIPELINE_ID / PORTAL_OS_STAGE_ID / PORTAL_OS_OWNER_ID  (funil onde cai o chamado)
 # ---------------------------------------------------------------------------

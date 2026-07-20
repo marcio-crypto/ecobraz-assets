@@ -175,7 +175,9 @@ async function buscarClienteAtivo(email, env) {
   const base = env.PLOOMES_API_URL || 'https://public-api2.ploomes.com';
   const headers = { 'User-Key': env.PLOOMES_USER_KEY, Accept: 'application/json' };
   const fieldAtivo = Number(env.PLOOMES_FIELD_CONTRATO_ATIVO || 277451);
-  const fieldFim = Number(env.PLOOMES_FIELD_CONTRATO_FIM || 365984);
+  // 366005 = "Termino de Contrato" (data que APARECE no formulário do Ploomes).
+  // O 365984 ("Data de encerramento...") foi criado via API e não aparece — órfão.
+  const fieldFim = Number(env.PLOOMES_FIELD_CONTRATO_FIM || 366005);
 
   // 1) Acha o(s) contato(s) pelo e-mail.
   const esc = email.replaceAll("'", "''");
