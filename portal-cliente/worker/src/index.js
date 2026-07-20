@@ -96,7 +96,7 @@ async function solicitarLink(request, env) {
   // Só manda link se for cliente ativo e liberado. Senão, silêncio (anti-enum).
   if (!cliente || !cliente.liberado) return generica;
 
-  const token = await criarToken({ cid: cliente.contactId, em: cliente.email, nome: cliente.nome, fim: cliente.dataFim || '', tipo: 'login' }, LINK_TTL_S, env);
+  const token = await criarToken({ cid: cliente.contactId, emp: cliente.empresaId, em: cliente.email, nome: cliente.nome, fim: cliente.dataFim || '', tipo: 'login' }, LINK_TTL_S, env);
   // Uso único: guarda o nonce no KV; ao usar, apaga.
   if (env.PORTAL_KV) await env.PORTAL_KV.put(`nonce:${token.nonce}`, '1', { expirationTtl: LINK_TTL_S });
 
@@ -127,7 +127,7 @@ async function entrarComToken(request, env, url) {
     return html(paginaMensagem('Acesso indisponível', 'Seu contrato pode ter expirado. Fale com a equipe da Ecobraz para renovar.'), 403);
   }
 
-  const sessao = await criarToken({ cid: cliente.contactId, em: cliente.email, nome: cliente.nome, fim: cliente.dataFim || '', tipo: 'sessao' }, SESSAO_TTL_S, env);
+  const sessao = await criarToken({ cid: cliente.contactId, emp: cliente.empresaId, em: cliente.email, nome: cliente.nome, fim: cliente.dataFim || '', tipo: 'sessao' }, SESSAO_TTL_S, env);
   return new Response(null, {
     status: 302,
     headers: { Location: '/', 'Set-Cookie': cookieSessao(sessao.valor, SESSAO_TTL_S) },
@@ -144,7 +144,7 @@ async function lerSessao(request, env) {
   const valor = decodeURIComponent(cookie.slice(SESSAO_COOKIE.length + 1));
   const payload = await verificarToken(valor, env);
   if (!payload || payload.tipo !== 'sessao') return null;
-  return { contactId: payload.cid, email: payload.em, nome: payload.nome, dataFim: payload.fim };
+  return { contactId: payload.cid, empresaId: payload.emp || payload.cid, email: payload.em, nome: payload.nome, dataFim: payload.fim };
 }
 
 function cookieSessao(valor, maxAge) {
@@ -154,36 +154,75 @@ function cookieSessao(valor, maxAge) {
 // ---------------------------------------------------------------------------
 // Ploomes: portão de acesso (contrato) e leitura/escrita de OS
 // ---------------------------------------------------------------------------
+// Portão de acesso. O e-mail de login costuma ser de uma PESSOA vinculada à
+// empresa; o contrato ("Contrato Ativo?", campo Sim/Não 277451) fica no cadastro
+// da EMPRESA. Por isso NÃO decidimos por TypeId (a convenção varia): achamos o
+// contato pelo e-mail e procuramos o contrato no próprio registro E na empresa
+// vinculada (CompanyId / LastCompanyId), cobrindo os dois sentidos de login.
 async function buscarClienteAtivo(email, env) {
   requireEnv(env, ['PLOOMES_USER_KEY']);
   const base = env.PLOOMES_API_URL || 'https://public-api2.ploomes.com';
   const headers = { 'User-Key': env.PLOOMES_USER_KEY, Accept: 'application/json' };
-  const esc = email.replaceAll("'", "''");
-  const url = `${base}/Contacts?$filter=Email%20eq%20'${encodeURIComponent(esc)}'&$top=1&$expand=OtherProperties`;
-  const r = await fetch(url, { headers });
-  if (!r.ok) throw new Error(`contacts_${r.status}`);
-  const c = (await r.json()).value?.[0];
-  if (!c) return null;
-
   const fieldAtivo = Number(env.PLOOMES_FIELD_CONTRATO_ATIVO || 277451);
   const fieldFim = Number(env.PLOOMES_FIELD_CONTRATO_FIM || 365984);
-  const propAtivo = acharOtherProp(c, fieldAtivo);
-  const propFim = acharOtherProp(c, fieldFim);
-  const ativo = propAtivo?.BoolValue === true;
-  const dataFim = propFim?.DateTimeValue || propFim?.DateValue || null;
-  const naValidade = !dataFim || new Date(dataFim) >= inicioDeHoje();
-  const ehEmpresa = Number(c.TypeId) === 2; // 2 = empresa (PJ) no Ploomes
 
+  // 1) Acha o(s) contato(s) pelo e-mail.
+  const esc = email.replaceAll("'", "''");
+  const url = `${base}/Contacts?$filter=Email%20eq%20'${encodeURIComponent(esc)}'&$top=5&$expand=OtherProperties`;
+  const r = await fetch(url, { headers });
+  if (!r.ok) throw new Error(`contacts_${r.status}`);
+  const encontrados = (await r.json()).value || [];
+  if (!encontrados.length) return null;
+
+  // 2) Candidatos que podem GUARDAR o contrato: cada contato achado e a empresa
+  //    vinculada a ele. Guarda os já expandidos para evitar buscas repetidas.
+  const registros = new Map();
+  const idsCandidatos = [];
+  for (const c of encontrados) {
+    registros.set(Number(c.Id), c);
+    for (const id of [c.Id, c.CompanyId, c.LastCompanyId]) {
+      const n = id == null ? null : Number(id);
+      if (n != null && !idsCandidatos.includes(n)) idsCandidatos.push(n);
+    }
+  }
+
+  // 3) Avalia cada candidato: tem o campo de contrato? está ATIVO e na validade?
+  const pessoa = encontrados[0];
+  let ativoValido = null;   // { reg, dataFim } — libera o acesso
+  let ativoExpirado = null; // ativo porém fora da validade
+  let empresaBase = null;   // 1º candidato que tem o campo (para exibir nome mesmo sem liberar)
+  for (const id of idsCandidatos) {
+    let reg = registros.get(id);
+    if (!reg) { reg = await fetchContatoPorId(base, headers, id); if (reg) registros.set(id, reg); }
+    if (!reg) continue;
+    const propAtivo = acharOtherProp(reg, fieldAtivo);
+    if (!propAtivo) continue;                    // não tem o campo de contrato
+    empresaBase = empresaBase || reg;
+    if (propAtivo.BoolValue !== true) continue;  // tem o campo, mas está "Não"
+    const propFim = acharOtherProp(reg, fieldFim);
+    const dataFim = propFim?.DateTimeValue || propFim?.DateValue || null;
+    const naValidade = !dataFim || new Date(dataFim) >= inicioDeHoje();
+    if (naValidade) { ativoValido = { reg, dataFim }; break; }
+    ativoExpirado = ativoExpirado || { reg, dataFim };
+  }
+
+  const empresa = ativoValido?.reg || ativoExpirado?.reg || empresaBase || pessoa;
+  const dataFim = ativoValido?.dataFim || ativoExpirado?.dataFim || null;
   return {
-    contactId: c.Id,
-    nome: c.Name || '',
-    email: (c.Email || email).toLowerCase(),
-    cnpj: c.CNPJ || null,
-    ehEmpresa,
-    ativo,
+    contactId: pessoa.Id,      // quem fez login (pessoa vinculada, em geral)
+    empresaId: empresa.Id,     // cadastro que guarda o contrato — usado nas OS/chamados
+    nome: empresa.Name || pessoa.Name || '',
+    email: (pessoa.Email || email).toLowerCase(),
     dataFim,
-    liberado: ehEmpresa && ativo && naValidade,
+    liberado: !!ativoValido,
   };
+}
+
+async function fetchContatoPorId(base, headers, id) {
+  const u = `${base}/Contacts?$filter=Id%20eq%20${Number(id)}&$top=1&$expand=OtherProperties`;
+  const r = await fetch(u, { headers });
+  if (!r.ok) return null;
+  try { return (await r.json()).value?.[0] || null; } catch { return null; }
 }
 
 function acharOtherProp(contact, fieldId) {
@@ -194,9 +233,10 @@ function acharOtherProp(contact, fieldId) {
 async function listarOS(sessao, env) {
   const base = env.PLOOMES_API_URL || 'https://public-api2.ploomes.com';
   const headers = { 'User-Key': env.PLOOMES_USER_KEY, Accept: 'application/json' };
-  // TODO(validar): v1 lista os Negócios do contato como "atendimentos". O modelo
+  // TODO(validar): v1 lista os Negócios da EMPRESA como "atendimentos". O modelo
   // exato de OS (Documentos com "Número da OS") será refinado após teste real.
-  const url = `${base}/Deals?$filter=ContactId%20eq%20${Number(sessao.contactId)}&$top=50&$orderby=CreateDate%20desc&$select=Id,Title,StageId,StatusId,CreateDate,FinishDate`;
+  const clienteId = Number(sessao.empresaId || sessao.contactId);
+  const url = `${base}/Deals?$filter=ContactId%20eq%20${clienteId}&$top=50&$orderby=CreateDate%20desc&$select=Id,Title,StageId,StatusId,CreateDate,FinishDate`;
   const r = await fetch(url, { headers });
   if (!r.ok) { console.error('deals_erro', r.status); return json({ ok: false, error: 'ploomes_indisponivel' }, 502); }
   const linhas = ((await r.json()).value || []).map((d) => ({
@@ -220,7 +260,7 @@ async function abrirChamado(request, sessao, env) {
   const headers = { 'content-type': 'application/json', 'User-Key': env.PLOOMES_USER_KEY };
   const deal = {
     Title: `[Portal] ${assunto}`,
-    ContactId: Number(sessao.contactId),
+    ContactId: Number(sessao.empresaId || sessao.contactId),
     Note: `Chamado aberto pelo cliente no Portal.\nEmpresa: ${sessao.nome}\nE-mail: ${sessao.email}\n\n${descricao}`,
   };
   if (env.PORTAL_OS_PIPELINE_ID) deal.PipelineId = Number(env.PORTAL_OS_PIPELINE_ID); // TODO(Marcio): funil de "coletas/OS/solicitações"
