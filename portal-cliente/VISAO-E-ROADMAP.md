@@ -66,6 +66,20 @@ Comercialmente, é uma **venda cruzada** (ele já recebe tudo pronto para usar).
   ótima e viável.
 - ⚠️ **Dois cuidados sérios** antes de chamar isso de "neutralização" — ver §5.
 
+### 4.3 Varredura mensal de legislação assistida por IA (radar automático)
+Uma rotina automática (1×/mês) usa IA (via API) para varrer mudanças de regras e
+legislação (BR + UE), comparar com a base de conhecimento do sistema e
+**sinalizar e rascunhar** as atualizações necessárias.
+- ✅ **Motor já demonstrado:** os dois agentes de pesquisa deste projeto são exatamente isso.
+- ⚠️ **Regra de ouro — humano no circuito.** A varredura **detecta, alerta e rascunha**;
+  um **especialista aprova** antes de o sistema mudar o que o cliente vê. IA sozinha erra
+  ou interpreta mal, e fontes oficiais às vezes bloqueiam a leitura automática.
+- ⚠️ **Posicionamento honesto:** o produto é **apoio e alerta de conformidade**, e **não
+  "garantia de conformidade total"**. Prometer "100% automático" transferiria para a
+  Ecobraz a responsabilidade legal por cada cliente. O que prometemos: "mantemos você
+  atualizado e alertado", com validação humana.
+- Encaixe: é o motor de atualização do **Pacote 3 (Radar de Legislação)**.
+
 ## 5. Pontos de atenção honestos (ler antes de construir os pacotes 2 e 4)
 
 > Estes são os pontos onde "bonito" e "confiável" se separam. Registrados para não
@@ -93,7 +107,17 @@ Comercialmente, é uma **venda cruzada** (ele já recebe tudo pronto para usar).
        certificados**; e oferecer o *Adote um Bairro* como **patrocínio de impacto social**
        adicional, sem vendê-lo como toneladas de CO₂ enquanto não houver verificação.
        (Mais rápido e seguro.)
-3. **Validação por especialista.** Todo o conteúdo legal e de normas precisa ser
+3. **Emissões evitadas ≠ desconto ou compensação (confirmado pela pesquisa de normas, 2026-07-20).**
+   A redução gerada pela reciclagem é, tecnicamente, *emissão evitada* (*avoided emissions*).
+   Pela regra consensual de contabilização (GHG Protocol, SBTi, WBCSD), ela **não pode ser
+   subtraída** das emissões do cliente (Escopos 1/2/3), **não é compensação/offset** e **não
+   sustenta alegação de "carbono neutro"** — a menos que vire crédito verificado. Logo, a ideia
+   de "o material entregue desconta do que ele precisa neutralizar" (§4.2) deve ser reapresentada
+   como **duas coisas separadas e verdadeiras**: (1) "sua destinação correta **evitou** X tCO₂e"
+   (número real, auditável, reportado à parte) e (2) **neutralização** do residual com **crédito
+   verificado**. Reforço: a Diretiva UE 2024/825 **proíbe rótulo de "produto carbono neutro"
+   baseado em compensação a partir de 27/09/2026**.
+4. **Validação por especialista.** Todo o conteúdo legal e de normas precisa ser
    **validado por um advogado ambiental (BR), um especialista de conformidade (UE) e
    um especialista em asseguração de carbono/ESG** antes do uso comercial. O software
    organiza e entrega; não substitui o parecer técnico.
@@ -106,6 +130,8 @@ Comercialmente, é uma **venda cruzada** (ele já recebe tudo pronto para usar).
 - [ ] **Metodologia de CO₂** que a Ecobraz vai assumir (fatores de emissão / fonte).
 - [ ] Situação do **Adote um Bairro** (projeto de carbono verificado vs. programa social).
 - [ ] Onde o Portal vai morar (ex.: `portal.ecobraz.org`) e a identidade visual.
+- [ ] **Posicionamento** dos documentos: "apoio/alerta de conformidade" (recomendado) vs.
+      "garantia total" (não recomendado — transfere responsabilidade legal para a Ecobraz).
 
 ## 7. Estado atual (honesto)
 
@@ -118,8 +144,10 @@ Comercialmente, é uma **venda cruzada** (ele já recebe tudo pronto para usar).
 - O diagnóstico **ainda não foi executado** (depende do segredo no GitHub).
 - Nenhuma linha do Portal em si foi escrita (login, painel, chamados) — de propósito,
   para não construir sobre suposições.
-- A base de **conformidade legal (BR+UE) e de normas de auditoria** está **em pesquisa**
-  (será um documento próprio, com fontes, e marcado como "pendente de validação").
+- A base de **conformidade legal (BR+UE) e de normas de auditoria** já foi **pesquisada e
+  documentada** em [`conformidade/`](./conformidade/CONFORMIDADE-E-NORMAS.md) (síntese + 2 anexos
+  com fontes oficiais). ⚠️ Está marcada como **material de pesquisa, pendente de validação** por
+  advogado(a) ambiental (BR), especialista de compliance (UE) e especialista de asseguração ESG.
 
 ## 8. Registro de decisões e ideias
 
@@ -132,3 +160,8 @@ Comercialmente, é uma **venda cruzada** (ele já recebe tudo pronto para usar).
   com os cuidados de §5 (venda cruzada opcional + lastro real da compensação).
 - **2026-07-20** — Pedido do Marcio: documentos **audit-grade** e em conformidade
   **BR + UE** → pesquisa de conformidade iniciada.
+- **2026-07-20** — Pesquisa de **normas/auditoria concluída**: confirma que *emissão evitada*
+  não é desconto/compensação (§5.3) e que a neutralização exige lastro verificado (ISO 14068-1),
+  com alerta da Diretiva UE 2024/825. Parte **jurídica (BR+UE)** ainda em pesquisa.
+- **2026-07-20** — Ideia da **varredura mensal de legislação por IA** (§4.3) — adotada, com
+  **humano no circuito** e posicionamento "apoio", não "garantia total".
