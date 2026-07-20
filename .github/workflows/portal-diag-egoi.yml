@@ -1,0 +1,27 @@
+name: Portal — Diagnóstico E-goi (consulta o Worker)
+
+# Consulta o endpoint temporário /_diag/egoi do Worker (o runner do GitHub alcança
+# o Worker; o sandbox do dev não). Mostra a resposta CRUA do E-goi para achar por
+# que o envio do link falha. Não expõe segredos. Gatilho por push nesta branch.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - claude/ecobraz-carbon-tracking-system-dh28dx
+    paths:
+      - '.github/workflows/portal-diag-egoi.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Consultar /_diag/egoi do Worker
+        run: |
+          echo "== Resposta do endpoint de diagnostico =="
+          curl -sS -m 30 "https://ecobraz-portal.ti-0ab.workers.dev/_diag/egoi/dz7m2x9q4p1v8" || echo "curl falhou"
+          echo
+          echo "== fim =="
