@@ -1,0 +1,34 @@
+name = "ecobraz-portal"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+workers_dev = true
+account_id = "0ab0573840927669f3bb3666d63cc023"
+
+# Preserva variáveis/segredos já configurados na Cloudflare; o deploy só atualiza o código.
+keep_vars = true
+
+# Logs do Worker (para diagnóstico do login). Ficam visíveis na aba Observability/Logs
+# do Worker no painel da Cloudflare. Não gravam segredos.
+[observability]
+enabled = true
+
+# KV — links de login de USO ÚNICO e throttle de e-mails de login.
+[[kv_namespaces]]
+binding = "PORTAL_KV"
+id = "edd3746ffe5a49d585c60d99c18a25c7"
+
+# ---------------------------------------------------------------------------
+# Segredos e variáveis (definidos NA CLOUDFLARE, nunca no repositório):
+#
+#   PLOOMES_USER_KEY            (segredo) mesma chave do usuário de integração do Ploomes
+#   PORTAL_SESSION_SECRET       (segredo) texto aleatório longo — assina tokens e sessão
+#   EGOI_TRANSACTIONAL_API_KEY  (segredo) ou EGOI_API_KEY — envia o e-mail do link de login
+#   PORTAL_BASE_URL             (var)     ex.: https://portal.ecobraz.org
+#
+# Opcionais (anti-abuso): TURNSTILE_SECRET_KEY, EGOI_SENDER_ID/NAME/REPLY_TO_ID
+#
+# Config do Ploomes (opcional — já vêm com o padrão descoberto no diagnóstico):
+#   PLOOMES_FIELD_CONTRATO_ATIVO = 277451   (campo "Contrato Ativo?")
+#   PLOOMES_FIELD_CONTRATO_FIM   = 366005   (campo "Termino de Contrato", data no formulário)
+#   PORTAL_OS_PIPELINE_ID / PORTAL_OS_STAGE_ID / PORTAL_OS_OWNER_ID  (funil onde cai o chamado)
+# ---------------------------------------------------------------------------

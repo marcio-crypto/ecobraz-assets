@@ -1,0 +1,31 @@
+name: Portal — Criar marcação de contrato no Ploomes
+
+# Cria os 2 campos de contrato no cadastro de empresa do Ploomes.
+# Segurança: o passo abaixo define APLICAR. Com APLICAR="0" é SIMULAÇÃO (só leitura);
+# com APLICAR="1" cria de fato. Idempotente (não duplica campos já existentes).
+
+on:
+  workflow_dispatch:
+    inputs:
+      aplicar:
+        description: 'Digite 1 para CRIAR de fato (vazio/0 = simulação)'
+        default: '0'
+
+permissions:
+  contents: read
+
+jobs:
+  configurar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Rodar (simulação por padrão)
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+          # Simulação por padrão; só cria quando disparado manualmente com aplicar=1.
+          APLICAR: ${{ github.event.inputs.aplicar == '1' && '1' || '0' }}
+        run: node portal-cliente/configuracao/configura-contrato.mjs

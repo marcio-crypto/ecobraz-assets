@@ -1,0 +1,35 @@
+name: Portal — Diagnóstico do login (somente leitura)
+
+# Dado um e-mail, mostra o caminho pessoa -> empresa -> contrato no Ploomes,
+# para acertar a lógica de acesso do Portal. Somente leitura.
+
+on:
+  workflow_dispatch:
+    inputs:
+      email:
+        description: 'E-mail para testar (opcional)'
+        default: ''
+  push:
+    branches:
+      - claude/ecobraz-carbon-tracking-system-dh28dx
+    paths:
+      - '.github/workflows/portal-diagnostico-login.yml'
+      - 'portal-cliente/configuracao/diagnostico-login.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostico:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Diagnóstico do login (somente leitura)
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+          EMAIL: ${{ github.event.inputs.email }}
+        run: node portal-cliente/configuracao/diagnostico-login.mjs
