@@ -1,8 +1,7 @@
 name: Portal — Diagnóstico E-goi (consulta o Worker)
 
-# (1) Consulta o endpoint temporário /_diag/egoi do Worker (resposta crua do E-goi).
-# (2) Baixa a especificação da API transacional v2 do E-goi para achar o endpoint
-#     e o payload corretos de envio de e-mail. Não expõe segredos.
+# Consulta o endpoint temporário /_diag/egoi do Worker (o runner do GitHub alcança
+# o Worker; o sandbox do dev não). Mostra a resposta CRUA do E-goi. Não expõe segredos.
 
 on:
   workflow_dispatch:
@@ -11,7 +10,6 @@ on:
       - claude/ecobraz-carbon-tracking-system-dh28dx
     paths:
       - '.github/workflows/portal-diag-egoi.yml'
-      - 'portal-cliente/configuracao/extrai-egoi-spec.py'
 
 permissions:
   contents: read
@@ -26,8 +24,3 @@ jobs:
           curl -sS -m 30 "https://ecobraz-portal.ti-0ab.workers.dev/_diag/egoi/dz7m2x9q4p1v8" || echo "curl falhou"
           echo
           echo "== fim =="
-      - uses: actions/checkout@v4
-      - name: Extrair schema de sendEmailMessages da spec do E-goi
-        run: python3 portal-cliente/configuracao/extrai-egoi-spec.py
-      - name: fim
-        run: echo "== fim spec =="
