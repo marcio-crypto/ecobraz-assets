@@ -90,6 +90,8 @@ export function limparCnpj(bruto) {
   return String(bruto || '').replace(/\D/g, '').slice(0, 14);
 }
 
+function esperar(ms) { return new Promise((res) => setTimeout(res, ms)); }
+
 // Orquestra: consulta o CNPJ (BrasilAPI) + calcula a estimativa. Devolve objeto
 // simples (o index.js embrulha em JSON). Nunca lança — sempre retorna {ok:...}.
 export async function estimativaCarbono(cnpjBruto, env) {
@@ -98,14 +100,27 @@ export async function estimativaCarbono(cnpjBruto, env) {
     return { ok: false, error: 'cnpj_invalido', message: 'Informe um CNPJ válido (14 dígitos).' };
   }
   const base = env.BRASILAPI_URL || 'https://brasilapi.com.br/api/cnpj/v1';
-  let dados;
-  try {
-    const r = await fetch(`${base}/${cnpj}`, { headers: { accept: 'application/json' } });
-    if (r.status === 404) return { ok: false, error: 'cnpj_nao_encontrado', message: 'CNPJ não encontrado na base pública.' };
-    if (!r.ok) return { ok: false, error: 'consulta_indisponivel', message: 'A consulta de CNPJ está indisponível agora. Tente novamente em instantes.' };
-    dados = await r.json();
-  } catch (e) {
-    return { ok: false, error: 'consulta_falhou', message: 'Não foi possível consultar o CNPJ agora.' };
+  const headers = { accept: 'application/json', 'user-agent': 'EcobrazPortal/1.0 (+https://ecobraz.org)' };
+  let dados = null, ultimoStatus = 0, detalhe = '';
+  for (let tentativa = 0; tentativa < 3; tentativa++) {
+    try {
+      const r = await fetch(`${base}/${cnpj}`, { headers });
+      ultimoStatus = r.status;
+      if (r.status === 404) return { ok: false, error: 'cnpj_nao_encontrado', message: 'CNPJ não encontrado na base pública.' };
+      if (r.ok) { dados = await r.json(); break; }
+      detalhe = (await r.text().catch(() => '')).slice(0, 140);
+      // 5xx e 429 costumam ser passageiros — espera um pouco e tenta de novo.
+      if (r.status >= 500 || r.status === 429) { await esperar(500 * (tentativa + 1)); continue; }
+      break; // outros 4xx não adianta repetir
+    } catch (e) {
+      detalhe = String(e?.message || 'erro').slice(0, 140);
+      await esperar(500 * (tentativa + 1));
+    }
+  }
+  if (!dados) {
+    // status/detalhe são temporários, só para diagnóstico (não há segredo aqui).
+    return { ok: false, error: 'consulta_indisponivel', status: ultimoStatus, detalhe,
+      message: 'A consulta de CNPJ está indisponível agora. Tente novamente em instantes.' };
   }
 
   // Leitura DEFENSIVA dos campos (o formato exato pode variar entre versões da API).
