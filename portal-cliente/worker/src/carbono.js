@@ -321,6 +321,12 @@ h1{font-size:clamp(23px,3vw,30px);color:var(--teal);letter-spacing:-.02em;margin
   <h1>Cálculo detalhado da sua pegada</h1>
   <p class="sub">Informe os consumos do último ano. Quanto mais campos preencher, mais preciso fica o resultado.</p>
   <div class="note">🔒 Página de teste. Na versão final, ela abre automaticamente após o pagamento confirmado.</div>
+  <div class="card" id="paycard">
+    <div class="grp">🧪 Teste de pagamento (R$ 1 · Pix real)</div>
+    <p class="sub" style="margin:0 0 12px">Gera a cobrança no Mercado Pago e paga R$ 1 via Pix — é o teste do fluxo de pagamento de verdade.</p>
+    <div id="paystatus"></div>
+    <button class="btn" id="paybtn" type="button" onclick="pagar()">Pagar R$ 1 com Pix (teste)</button>
+  </div>
   <form id="f" onsubmit="return calc(event)">
     <div class="card">
       <div class="grp">Escopo 2 — Energia</div>
@@ -370,5 +376,29 @@ async function calc(e){e.preventDefault();
   b.disabled=false;b.textContent='Calcular pegada detalhada';
   return false;
 }
+async function pagar(){
+  var b=document.getElementById('paybtn'),s=document.getElementById('paystatus');
+  b.disabled=true;b.textContent='Gerando cobrança…';
+  try{
+    var r=await fetch('/api/carbono/pagar',{method:'POST'});
+    var d=await r.json();
+    if(d.ok&&d.init_point){ window.location.href=d.init_point; return; }
+    s.innerHTML='<div class="disc">Não foi possível gerar a cobrança agora. Tente de novo.</div>';
+  }catch(_){ s.innerHTML='<div class="disc">Falha de conexão.</div>'; }
+  b.disabled=false;b.textContent='Pagar R$ 1 com Pix (teste)';
+}
+(function(){
+  var p=new URLSearchParams(location.search).get('pedido');
+  if(!p) return;
+  var s=document.getElementById('paystatus'),b=document.getElementById('paybtn'),t=0;
+  function checa(){
+    fetch('/api/carbono/pedido?id='+encodeURIComponent(p)).then(function(r){return r.json();}).then(function(d){
+      if(d.status==='pago'){ s.innerHTML='<div class="disc" style="background:#EAF5D9;border-color:#cde5a6;color:#3f6d12">✅ Pagamento confirmado! O cálculo detalhado está liberado abaixo.</div>'; if(b)b.style.display='none'; }
+      else if(t++<20){ s.innerHTML='<div class="disc">⏳ Aguardando a confirmação do pagamento…</div>'; setTimeout(checa,3000); }
+      else { s.innerHTML='<div class="disc">Ainda não confirmou. Se você pagou, recarregue em instantes.</div>'; }
+    }).catch(function(){ if(t++<20) setTimeout(checa,3000); });
+  }
+  checa();
+})();
 </script></body></html>`;
 }

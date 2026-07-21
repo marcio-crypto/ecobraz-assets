@@ -26,6 +26,7 @@ const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8', 'cache
 import { paginaLogin, paginaPainel, paginaMensagem } from './paginas.js';
 import { LOGO_ESCURO_B64, LOGO_CLARO_B64 } from './logos.js';
 import { paginaCalculadora, estimativaCarbono, paginaCalculoDetalhado, calculoDetalhadoGHG } from './carbono.js';
+import { criarPreferencia, consultarPagamento } from './mercadopago.js';
 
 export default {
   async fetch(request, env) {
@@ -64,6 +65,52 @@ export default {
       if (pathname === '/api/carbono/detalhado' && request.method === 'POST') {
         const corpo = await request.json().catch(() => ({}));
         return json({ ok: true, resultado: calculoDetalhadoGHG(corpo) });
+      }
+      // Pagamento (Mercado Pago) — cria a cobrança e devolve o link de pagamento.
+      // Por ora valor de TESTE (R$1). Depois: precoNivel2 por porte.
+      if (pathname === '/api/carbono/pagar' && request.method === 'POST') {
+        const valor = Number(env.MP_VALOR_TESTE || 1);
+        const pedidoId = novoId();
+        const baseUrl = env.PORTAL_BASE_URL || url.origin;
+        if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${pedidoId}`, JSON.stringify({ status: 'pendente', valor, criadoEm: nowS() }), { expirationTtl: 86400 });
+        try {
+          const pref = await criarPreferencia({ valor, descricao: 'Cálculo detalhado de pegada de carbono (teste)', externalReference: pedidoId, baseUrl }, env);
+          return json({ ok: true, pedido: pedidoId, init_point: pref.initPoint });
+        } catch (error) {
+          console.error('mp_criar_falhou', safeError(error));
+          return json({ ok: false, error: 'nao_foi_possivel_cobrar' }, 502);
+        }
+      }
+      // Webhook do Mercado Pago: confirma o pagamento consultando a API (fonte da verdade).
+      if (pathname === '/api/mp/webhook') {
+        let paymentId = url.searchParams.get('data.id') || url.searchParams.get('id') || null;
+        if (!paymentId && request.method === 'POST') {
+          const corpo = await request.json().catch(() => ({}));
+          paymentId = corpo?.data?.id || corpo?.id || null;
+        }
+        if (paymentId && env.PORTAL_KV) {
+          const pg = await consultarPagamento(paymentId, env);
+          if (pg && pg.status === 'approved' && pg.externalReference) {
+            const chave = `pedido:${pg.externalReference}`;
+            const raw = await env.PORTAL_KV.get(chave);
+            const ped = raw ? JSON.parse(raw) : { status: 'pendente' };
+            if (ped.status !== 'pago') {
+              ped.status = 'pago'; ped.paymentId = pg.id; ped.pagoEm = nowS();
+              await env.PORTAL_KV.put(chave, JSON.stringify(ped), { expirationTtl: 7 * 86400 });
+              console.log('mp_pago', { pedido: pg.externalReference, valor: pg.valor });
+              try { await enviarEmailNF(ped, pg, env); } catch (error) { console.error('nf_email_falhou', safeError(error)); }
+            }
+          }
+        }
+        return json({ ok: true }); // sempre 200 para o MP não reenviar sem parar
+      }
+      // Status do pedido (a página consulta para saber se já foi pago).
+      if (pathname === '/api/carbono/pedido' && request.method === 'GET') {
+        const id = url.searchParams.get('id') || '';
+        if (!env.PORTAL_KV || !id) return json({ ok: false, status: 'desconhecido' }, 400);
+        const raw = await env.PORTAL_KV.get(`pedido:${id}`);
+        const ped = raw ? JSON.parse(raw) : null;
+        return json({ ok: true, status: ped?.status || 'desconhecido' });
       }
 
       if (pathname === '/' && request.method === 'GET') return await telaInicial(request, env);
@@ -392,6 +439,30 @@ async function enviarViaResend(cliente, link, env) {
   if (!r.ok) { const b = await r.text().catch(() => ''); throw new Error(`resend_${r.status}:${b.slice(0, 160)}`); }
 }
 
+// E-mail para o financeiro emitir a NF (via Resend). TESTE → vai para o Marcio (não
+// incomoda o financeiro). PRODUÇÃO → defina NF_EMAIL=pagamento@ecobraz.org.br.
+async function enviarEmailNF(pedido, pagamento, env) {
+  if (!env.RESEND_API_KEY) return;
+  const to = env.NF_EMAIL || 'marcio@ecobraz.org.br';
+  const from = env.RESEND_FROM || 'Portal Ecobraz <acesso@ecobraz.org.br>';
+  const empresa = (pedido && pedido.empresa) || {};
+  const linhas = [
+    'Produto: Cálculo detalhado de pegada de carbono — GHG Protocol',
+    `Valor pago: R$ ${Number(pagamento.valor || 0).toFixed(2)}`,
+    `Pagamento (Mercado Pago) ID: ${pagamento.id}`,
+    empresa.razaoSocial ? `Empresa: ${empresa.razaoSocial}` : null,
+    empresa.cnpj ? `CNPJ: ${empresa.cnpj}` : null,
+    `Pedido: ${pagamento.externalReference}`,
+  ].filter(Boolean);
+  const texto = `Nova venda no Portal Ecobraz.\n\n${linhas.join('\n')}\n\nEmita a NF e envie ao cliente.`;
+  const html = `<div style="font-family:Arial,Helvetica,sans-serif;color:#10262B"><h2 style="color:#00333B;margin:0 0 12px">Nova venda — emitir NF</h2><p style="line-height:1.7">${linhas.join('<br>')}</p><p>Emita a NF e envie ao cliente.</p></div>`;
+  await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${env.RESEND_API_KEY}` },
+    body: JSON.stringify({ from, to: [to], subject: 'Nova venda — Cálculo de pegada de carbono (emitir NF)', html, text: texto }),
+  });
+}
+
 function emailHtml(cliente, link) {
   const nome = esc((cliente.nome || '').split(/\s+/)[0] || '');
   let logo = '';
@@ -467,6 +538,7 @@ function b64urlStrDecode(s) { const b = atob(s.replace(/-/g, '+').replace(/_/g, 
 // Helpers gerais
 // ---------------------------------------------------------------------------
 function nowS() { return Math.floor(Date.now() / 1000); }
+function novoId() { return b64url(crypto.getRandomValues(new Uint8Array(12))); }
 function inicioDeHoje() { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }
 function json(body, status = 200, extra = {}) { return new Response(JSON.stringify(body), { status, headers: { ...JSON_HEADERS, ...extra } }); }
 function html(markup, status = 200) { return new Response(markup, { status, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } }); }
