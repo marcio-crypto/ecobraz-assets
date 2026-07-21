@@ -340,3 +340,15 @@ carbono, §5.4); **enquadramento tributário** da venda (Ecobraz é Associação
     (preço tem que casar com a promessa); (2) desenhar o **próximo passo (Nível 3)** logo após o resultado.
   - ⚠️ Números são **estimativa fundamentada**, não benchmark — **validar com pesquisa de concorrência**
     (preço de mercado BR) na quarta e ajustar.
+- **2026-07-21** — **Nível 2 (pago) construído; testado até o checkout do Mercado Pago.** Feito: motor
+  de cálculo GHG (`calculoDetalhadoGHG`, testado localmente), formulário `/calculo-detalhado`, e a
+  integração **Mercado Pago Checkout Pro** (`mercadopago.js`: preferência + consulta de pagamento),
+  webhook `/api/mp/webhook`, status do pedido no KV, e e-mail da NF (no teste vai pro Marcio).
+  - ✅ **Provado ao vivo:** botão → cria a preferência → **checkout do MP abre com R$1 e descrição
+    corretos**. A parte do MP que eu não conseguia testar do sandbox **funciona**. Bug do começo
+    (BrasilAPI sem User-Agent) e este passo confirmam o motor.
+  - ⏳ **Ainda a testar** (precisa de um pagamento concluído): webhook → "pago" → e-mail da NF.
+  - ⚠️ **Pix não apareceu** no checkout — provável causa: pagar a **própria conta** (MP não oferece Pix
+    pra você mesmo). Alternativas p/ testar: cartão real de R$1, cartão de teste, ou 2ª conta.
+  - ⚠️ Token do MP ainda em **produção** (`APP_USR-`); o de teste `TEST-` ficou pendente (o painel do MP
+    confundiu). Não bloqueia — dá pra testar com valor simbólico real.
