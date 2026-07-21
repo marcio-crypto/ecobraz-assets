@@ -33,7 +33,7 @@ export default {
     const { pathname } = url;
     try {
       if (pathname === '/health') return json({
-        ok: true, service: 'ecobraz-portal', version: 3,
+        ok: true, service: 'ecobraz-portal', version: 4,
         // Só presença (true/false) — NUNCA os valores. Ajuda a confirmar a
         // configuração pelo navegador sem expor segredo nenhum.
         config: {
@@ -45,6 +45,8 @@ export default {
           egoi: !!(env.EGOI_TRANSACTIONAL_API_KEY || env.EGOI_API_KEY),
           baseUrl: !!env.PORTAL_BASE_URL,
           kv: !!env.PORTAL_KV,
+          mercadopago: !!env.MERCADOPAGO_ACCESS_TOKEN,
+          mercadopagoModo: env.MERCADOPAGO_ACCESS_TOKEN ? (env.MERCADOPAGO_ACCESS_TOKEN.startsWith('TEST-') ? 'teste' : 'producao') : null,
         },
       });
 
