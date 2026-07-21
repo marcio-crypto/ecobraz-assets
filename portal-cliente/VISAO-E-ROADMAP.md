@@ -317,3 +317,18 @@ carbono, §5.4); **enquadramento tributário** da venda (Ecobraz é Associação
   pendência** — a Ecobraz já vende esses serviços há anos; é só automatizar; (2) **conta Mercado Pago
   já existe** (só integrar); (3) **produto** = "Cálculo detalhado de pegada de carbono — GHG Protocol",
   R$ 250. Próximo (a partir de quarta, com créditos): consulta CNPJ→CNAE + esqueleto do módulo no painel.
+- **2026-07-20** — **Calculadora Nível 1 CONSTRUÍDA e TESTADA ao vivo** (página pública `/calculadora`):
+  CNPJ → BrasilAPI → CNAE + porte → faixa de tCO₂e/ano. **Bug achado e corrigido:** a BrasilAPI recusava
+  a chamada do Worker **sem `User-Agent`** (add UA + 3 tentativas → passou; provado com CNPJ real, trouxe
+  razão social, setor e faixa corretos). ⚠️ Os **fatores por setor seguem ILUSTRATIVOS** (pendente especialista).
+- **2026-07-20** — **Requisito do Marcio para o PAINEL principal (a construir):** tudo **automático** — ao
+  logar, já mostra os dados da empresa + a **estimativa já calculada** (o CNPJ vem do contrato no Ploomes,
+  sem digitar); um **"termômetro"** com o que a empresa já descartou "abatendo o ponteiro"; abrir OS;
+  consultar OS feitas; e os **documentos emitidos**.
+  - ⚠️ **FREIO (ligado ao §5.3):** "abater o descartado do ponteiro" é exatamente a armadilha de
+    *emissão evitada ≠ compensação*. Mostrar como **DOIS indicadores** ("sua pegada estimada" + "quanto você
+    já evitou destinando certo com a Ecobraz"), lado a lado — **não** um subtraindo do outro como se
+    neutralizasse. Mantém o impacto visual e fica audit-safe.
+  - **Dependências:** o número do "evitado" e os **documentos** dependem dos **dados reais de descarte
+    (conversa com a Débora)** + **fatores de emissão evitada** validados por especialista. A estimativa
+    automática por CNPJ, essa dá pra ligar já (se o CNPJ estiver no cadastro do Ploomes).
