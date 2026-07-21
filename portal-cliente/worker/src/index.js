@@ -25,6 +25,7 @@ const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8', 'cache
 
 import { paginaLogin, paginaPainel, paginaMensagem } from './paginas.js';
 import { LOGO_ESCURO_B64, LOGO_CLARO_B64 } from './logos.js';
+import { paginaCalculadora, estimativaCarbono } from './carbono.js';
 
 export default {
   async fetch(request, env) {
@@ -49,6 +50,13 @@ export default {
 
       if (pathname === '/assets/logo.png') return servirLogo(LOGO_ESCURO_B64);
       if (pathname === '/assets/logo-claro.png') return servirLogo(LOGO_CLARO_B64);
+
+      // Calculadora de pegada de carbono — Nível 1 (estimativa grátis por CNPJ). Público.
+      if (pathname === '/calculadora' && request.method === 'GET') return html(paginaCalculadora());
+      if (pathname === '/api/carbono/estimativa' && request.method === 'GET') {
+        const resultado = await estimativaCarbono(url.searchParams.get('cnpj') || '', env);
+        return json(resultado, resultado.ok ? 200 : 400);
+      }
 
       if (pathname === '/' && request.method === 'GET') return await telaInicial(request, env);
       if (pathname === '/entrar' && request.method === 'GET') return await entrarComToken(request, env, url);
