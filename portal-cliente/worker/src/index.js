@@ -78,7 +78,7 @@ export default {
           return json({ ok: true, pedido: pedidoId, init_point: pref.initPoint });
         } catch (error) {
           console.error('mp_criar_falhou', safeError(error));
-          return json({ ok: false, error: 'nao_foi_possivel_cobrar' }, 502);
+          return json({ ok: false, error: 'nao_foi_possivel_cobrar', detalhe: String(error?.message || '').slice(0, 220) }, 502);
         }
       }
       // Webhook do Mercado Pago: confirma o pagamento consultando a API (fonte da verdade).

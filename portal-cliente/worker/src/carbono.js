@@ -383,7 +383,7 @@ async function pagar(){
     var r=await fetch('/api/carbono/pagar',{method:'POST'});
     var d=await r.json();
     if(d.ok&&d.init_point){ window.location.href=d.init_point; return; }
-    s.innerHTML='<div class="disc">Não foi possível gerar a cobrança agora. Tente de novo.</div>';
+    s.innerHTML='<div class="disc">Não foi possível gerar a cobrança agora.'+(d.detalhe?'<br><small style="word-break:break-all">'+d.detalhe+'</small>':' Tente de novo.')+'</div>';
   }catch(_){ s.innerHTML='<div class="disc">Falha de conexão.</div>'; }
   b.disabled=false;b.textContent='Pagar R$ 1 com Pix (teste)';
 }
