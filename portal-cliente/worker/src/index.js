@@ -25,7 +25,7 @@ const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8', 'cache
 
 import { paginaLogin, paginaPainel, paginaMensagem } from './paginas.js';
 import { LOGO_ESCURO_B64, LOGO_CLARO_B64 } from './logos.js';
-import { paginaCalculadora, estimativaCarbono } from './carbono.js';
+import { paginaCalculadora, estimativaCarbono, paginaCalculoDetalhado, calculoDetalhadoGHG } from './carbono.js';
 
 export default {
   async fetch(request, env) {
@@ -58,6 +58,12 @@ export default {
       if (pathname === '/api/carbono/estimativa' && request.method === 'GET') {
         const resultado = await estimativaCarbono(url.searchParams.get('cnpj') || '', env);
         return json(resultado, resultado.ok ? 200 : 400);
+      }
+      // Cálculo detalhado — Nível 2 (formulário GHG). Página de teste (será liberada após pagamento).
+      if (pathname === '/calculo-detalhado' && request.method === 'GET') return html(paginaCalculoDetalhado());
+      if (pathname === '/api/carbono/detalhado' && request.method === 'POST') {
+        const corpo = await request.json().catch(() => ({}));
+        return json({ ok: true, resultado: calculoDetalhadoGHG(corpo) });
       }
 
       if (pathname === '/' && request.method === 'GET') return await telaInicial(request, env);
