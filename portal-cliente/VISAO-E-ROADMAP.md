@@ -332,3 +332,11 @@ carbono, §5.4); **enquadramento tributário** da venda (Ecobraz é Associação
   - **Dependências:** o número do "evitado" e os **documentos** dependem dos **dados reais de descarte
     (conversa com a Débora)** + **fatores de emissão evitada** validados por especialista. A estimativa
     automática por CNPJ, essa dá pra ligar já (se o CNPJ estiver no cadastro do Ploomes).
+- **2026-07-20** — **Preço do Nível 2 decidido — escalonado por porte** (usando o porte que já vem do CNPJ),
+  substitui o "R$ 250 fixo" citado antes (§4.4/§6):
+  - Micro/Pequena: **R$ 290** · Média: **R$ 690** · **Grande → não vende o indicativo, vai direto pro
+    Nível 3** (inventário verificado; empresa grande precisa do completo).
+  - Regras de ouro: (1) deixar **cristalino** que é cálculo **indicativo**, não inventário verificado
+    (preço tem que casar com a promessa); (2) desenhar o **próximo passo (Nível 3)** logo após o resultado.
+  - ⚠️ Números são **estimativa fundamentada**, não benchmark — **validar com pesquisa de concorrência**
+    (preço de mercado BR) na quarta e ajustar.
