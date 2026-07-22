@@ -1,0 +1,101 @@
+name: Ecobraz — ler/limpar injeção de código (cards.min.js)
+
+# Ferramenta pontual e segura para inspecionar e remover o <script> quebrado
+# (/public/cards.min.js, 404) da injeção de código do site (Settings → Code
+# injection), usando a chave de API já configurada (sem senha do proprietário).
+#
+#   mode=read  -> apenas imprime codeinjection_head/foot (NÃO altera nada)
+#   mode=apply -> remove os <script> que referenciam cards.min.js e salva
+#
+# O endpoint /settings/ aceita PUT do token de integração (mesmo já usado por
+# sync-settings.mjs para 'description'); se o Ghost Pro negar (403), o passo
+# vira manual e o log avisa.
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'read (só mostra) ou apply (remove e salva)'
+        type: choice
+        options: [read, apply]
+        default: read
+
+permissions:
+  contents: read
+
+jobs:
+  codeinjection:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ler / limpar injeção de código
+        env:
+          GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
+          GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
+          MODE: ${{ inputs.mode }}
+        run: |
+          node --input-type=module <<'NODE'
+          import crypto from 'node:crypto';
+          const adminUrl = String(process.env.GHOST_ADMIN_URL || '').replace(/\/$/, '');
+          const adminKey = String(process.env.GHOST_ADMIN_API_KEY || '');
+          const mode = process.env.MODE === 'apply' ? 'apply' : 'read';
+          if (!adminUrl || !adminKey.includes(':')) throw new Error('Faltam credenciais do Ghost.');
+          const [id, secret] = adminKey.split(':');
+          const now = Math.floor(Date.now() / 1000);
+          const enc = (v) => Buffer.from(JSON.stringify(v)).toString('base64url');
+          const unsigned = `${enc({alg:'HS256',typ:'JWT',kid:id})}.${enc({iat:now,exp:now+300,aud:'/admin/'})}`;
+          const token = `${unsigned}.${crypto.createHmac('sha256',Buffer.from(secret,'hex')).update(unsigned).digest('base64url')}`;
+          const headers = {Authorization:`Ghost ${token}`,'Accept-Version':'v5.0','Content-Type':'application/json'};
+
+          const res = await fetch(`${adminUrl}/ghost/api/admin/settings/`, {headers});
+          if (!res.ok) throw new Error(`GET settings falhou (${res.status}): ${(await res.text()).slice(0,400)}`);
+          const settings = (await res.json()).settings || [];
+          const get = (k) => (settings.find(s => s.key === k) || {}).value || '';
+          const head = get('codeinjection_head');
+          const foot = get('codeinjection_foot');
+
+          const div = (t) => console.log(`\n================= ${t} =================`);
+          div('CABEÇALHO (codeinjection_head) — ATUAL');
+          console.log(head || '(vazio)');
+          div('RODAPÉ (codeinjection_foot) — ATUAL');
+          console.log(foot || '(vazio)');
+
+          // Remove <script ...>...</script> que referencie cards.min.js ou /public/cards
+          const strip = (html) => (html || '').replace(
+            /<script\b[^>]*(?:cards\.min\.js|\/public\/cards)[^>]*>[\s\S]*?<\/script>\s*/gi, ''
+          );
+          const newHead = strip(head);
+          const newFoot = strip(foot);
+          const changed = (newHead !== head) || (newFoot !== foot);
+
+          div('DETECÇÃO');
+          console.log(`Refere cards.min.js no cabeçalho: ${/cards\.min\.js|\/public\/cards/i.test(head)}`);
+          console.log(`Refere cards.min.js no rodapé:    ${/cards\.min\.js|\/public\/cards/i.test(foot)}`);
+          console.log(`Algo a remover: ${changed}`);
+
+          if (mode === 'read') {
+            div('MODO READ — nada foi alterado');
+            if (changed) {
+              div('PRÉVIA — CABEÇALHO depois da limpeza');
+              console.log(newHead || '(vazio)');
+              div('PRÉVIA — RODAPÉ depois da limpeza');
+              console.log(newFoot || '(vazio)');
+            }
+            process.exit(0);
+          }
+
+          // mode === 'apply'
+          if (!changed) { console.log('\nNada para remover — cabeçalho/rodapé já estão limpos.'); process.exit(0); }
+          const payload = {settings: [
+            {key:'codeinjection_head', value: newHead},
+            {key:'codeinjection_foot', value: newFoot},
+          ]};
+          const put = await fetch(`${adminUrl}/ghost/api/admin/settings/`, {method:'PUT', headers, body: JSON.stringify(payload)});
+          if (put.ok) { div('APLICADO'); console.log('Injeção de código atualizada com sucesso (script cards.min.js removido).'); process.exit(0); }
+          const txt = await put.text();
+          if (put.status === 403) {
+            div('SEM PERMISSÃO (403)');
+            console.log('O Ghost Pro negou a edição via token de integração — precisa ser removido no painel (Settings → Code injection).');
+            process.exit(1);
+          }
+          throw new Error(`PUT settings falhou (${put.status}): ${txt.slice(0,400)}`);
+          NODE

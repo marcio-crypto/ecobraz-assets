@@ -68,6 +68,6 @@ A Villanova já tem **on-page forte** e sementes boas de autoridade (Zenodo, ORC
 
 | Data | Site | Fonte do link (domínio) | DR | Como conseguiu |
 |---|---|---|---|---|
-|  |  |  |  |  |
-|  |  |  |  |  |
+| 2026-07-20 | Ecobraz | it.ifixit.com | 83 | **Recuperado** — link antigo apontava p/ URL 404; redirect 301 (Cloudflare) p/ /sobre/ |
+| 2026-07-20 | Ecobraz | techtudo.com.br | 80 | **Recuperado** — idem (mesma URL antiga 404 → 301) |
 |  |  |  |  |  |
