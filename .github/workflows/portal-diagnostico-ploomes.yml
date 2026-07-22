@@ -135,8 +135,8 @@ jobs:
         run: |
           S=$(openssl rand -hex 24); echo "::add-mask::$S"
           npm install --no-audit --no-fund
-          printf '%s' "$S" | npx wrangler@latest secret put PLOOMES_WEBHOOK_SECRET
-          printf '%s' "24038683" | npx wrangler@latest secret put NOTIF_TESTE_CONTACT_ID
+          printf '%s' "$S" | npx wrangler@3 secret put PLOOMES_WEBHOOK_SECRET
+          printf '%s' "24038683" | npx wrangler@3 secret put NOTIF_TESTE_CONTACT_ID
           PLOOMES_WEBHOOK_SECRET="$S" node ../setup/provisiona-aviso.mjs
       - name: Inspeção de cliente-exemplo (somente leitura) — quando informado cnpj
         if: ${{ github.event.inputs.cnpj != '' }}
