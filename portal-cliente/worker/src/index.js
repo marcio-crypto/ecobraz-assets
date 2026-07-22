@@ -391,6 +391,13 @@ function classificaDoc(nome) {
 // "Liberado" NÃO está no flag Shared do Ploomes (sonda: 0 de 400 docs marcados) — usamos a
 // ETAPA "Certificado Liberado" como sinal de liberação do CDF/laudo. (A confirmar com a Débora.)
 function certificadoLiberadoDaEtapa(nomeEtapa) { return /certificado liberado/.test(semAcentoLc(nomeEtapa)); }
+// Classifica um ANEXO pelo NOME DO ARQUIVO. Allowlist ESTRITO: só a NF passa; fotos de
+// controle (WhatsApp), termos e qualquer outro anexo interno ficam SEMPRE escondidos.
+function classificaAnexo(fileName) {
+  const s = semAcentoLc(fileName);
+  if (/(^|[\s_.\-])nf([\s_.\-]|\d)/.test(s) || /nota.?fiscal/.test(s)) return { cliente: true, rotulo: 'Nota Fiscal' };
+  return { cliente: false };
+}
 // Nome do MODELO (DocumentTemplate) de um Order — pra separar a OS ("OS - ...") de proposta.
 async function nomeModelo(templateId, base, headers) {
   if (!templateId) return '';
@@ -407,8 +414,8 @@ async function listarDocsOS(url, sessao, env) {
   const dealId = Number(url.searchParams.get('dealId') || 0);
   if (!dealId || !clienteId) return json({ ok: false, error: 'sem_id' }, 400);
   try {
-    // Confere que a OS é do cliente E pega a etapa (pra saber se CDF/laudo já está liberado).
-    const own = await fetch(`${base}/Deals?$filter=Id%20eq%20${dealId}%20and%20ContactId%20eq%20${clienteId}&$top=1&$expand=Stage`, { headers });
+    // Confere que a OS é do cliente E pega etapa (liberação) + anexos (a NF) numa tacada só.
+    const own = await fetch(`${base}/Deals?$filter=Id%20eq%20${dealId}%20and%20ContactId%20eq%20${clienteId}&$top=1&$expand=Stage,Attachments`, { headers });
     const deal = own.ok ? ((await own.json()).value || [])[0] : null;
     if (!deal) return json({ ok: false, error: 'nao_encontrada' }, 404);
     const liberado = certificadoLiberadoDaEtapa(deal.Stage?.Name);
@@ -432,6 +439,14 @@ async function listarDocsOS(url, sessao, env) {
         docs.push({ id: o.Id, fonte: 'order', nome: `${cO.rotulo || 'Ordem de Serviço'}${o.OrderNumber ? ' nº ' + o.OrderNumber : ''}` });
       }
     } catch (error) { console.error('orders_lista_erro', safeError(error)); }
+    // A NF fica nos ANEXOS — allowlist ESTRITO (só NF). Respeita ainda os flags do Ploomes
+    // (IsSensitiveData / Listable). Fotos de controle e termos NUNCA aparecem.
+    for (const a of (deal.Attachments || [])) {
+      if (a.IsSensitiveData || a.Listable === false) continue;
+      const cA = classificaAnexo(a.FileName || a.Name);
+      if (!cA.cliente) continue;
+      docs.push({ id: a.Id, fonte: 'anexo', nome: cA.rotulo });
+    }
     return json({ ok: true, docs });
   } catch (error) { console.error('docs_erro', safeError(error)); return json({ ok: false, error: 'indisponivel' }, 502); }
 }
@@ -443,37 +458,47 @@ async function baixarDocOS(url, sessao, env) {
   const headers = { 'User-Key': env.PLOOMES_USER_KEY, Accept: 'application/json' };
   const clienteId = Number(sessao.empresaId || sessao.contactId);
   const docId = Number(url.searchParams.get('docId') || 0);
-  const fonte = url.searchParams.get('fonte') === 'order' ? 'order' : 'document';
+  const fonte = ['order', 'anexo'].includes(url.searchParams.get('fonte')) ? url.searchParams.get('fonte') : 'document';
   if (!docId || !clienteId) return json({ ok: false, error: 'sem_id' }, 400);
   try {
-    // Resolve o documento na fonte certa (Documents ou Orders) → {dealId, url, nome p/ classificar/arquivo}.
-    let dealId, documentUrl, nomeClass, nomeArq;
-    if (fonte === 'order') {
+    // Resolve na fonte certa (Documents / Orders / Attachments) → {dealId, url, nome, tipo}.
+    let dealId, documentUrl, nomeClass, nomeArq, contentType = null, ehAnexo = false;
+    if (fonte === 'anexo') {
+      ehAnexo = true;
+      const r = await fetch(`${base}/Attachments(${docId})`, { headers });
+      const j = r.ok ? await r.json().catch(() => null) : null;
+      const a = j ? (j.value ? j.value[0] : j) : null;
+      if (!a || !a.Url) return json({ ok: false, error: 'nao_encontrado' }, 404);
+      // Allowlist estrito (só NF) + flags do Ploomes — senão nem baixa.
+      if (a.IsSensitiveData || a.Listable === false || !classificaAnexo(a.FileName || '').cliente) return json({ ok: false, error: 'sem_permissao' }, 403);
+      dealId = a.DealId; documentUrl = a.Url; nomeArq = a.FileName || `anexo-${docId}`; contentType = a.ContentType || null;
+    } else if (fonte === 'order') {
       const r = await fetch(`${base}/Orders?$filter=Id%20eq%20${docId}&$top=1&$select=Id,OrderNumber,TemplateId,DealId,DocumentUrl`, { headers });
       const o = r.ok ? ((await r.json()).value || [])[0] : null;
       if (!o || !o.DocumentUrl) return json({ ok: false, error: 'nao_encontrado' }, 404);
-      dealId = o.DealId; documentUrl = o.DocumentUrl; nomeArq = `OS-${o.OrderNumber || docId}`;
-      nomeClass = await nomeModelo(o.TemplateId, base, headers);
+      dealId = o.DealId; documentUrl = o.DocumentUrl; nomeArq = `OS-${o.OrderNumber || docId}`; nomeClass = await nomeModelo(o.TemplateId, base, headers);
     } else {
       const r = await fetch(`${base}/Documents?$filter=Id%20eq%20${docId}&$top=1&$select=Id,Name,FileName,DealId,DocumentUrl`, { headers });
       const d = r.ok ? ((await r.json()).value || [])[0] : null;
       if (!d || !d.DocumentUrl) return json({ ok: false, error: 'nao_encontrado' }, 404);
       dealId = d.DealId; documentUrl = d.DocumentUrl; nomeClass = d.Name; nomeArq = d.FileName || d.Name || `documento-${docId}`;
     }
-    // Confere que a OS do documento é do cliente E pega a etapa (liberação de CDF/laudo).
+    // Confere que a OS é do cliente (e a etapa, p/ liberação de CDF/laudo).
     const own = await fetch(`${base}/Deals?$filter=Id%20eq%20${Number(dealId)}%20and%20ContactId%20eq%20${clienteId}&$top=1&$expand=Stage`, { headers });
     const deal = own.ok ? ((await own.json()).value || [])[0] : null;
     if (!deal) return json({ ok: false, error: 'sem_permissao' }, 403);
-    // MESMAS regras da lista (não basta filtrar a lista — poderiam chamar /api/os/doc direto).
-    const c = classificaDoc(nomeClass);
-    if (!c.cliente) return json({ ok: false, error: 'sem_permissao' }, 403);
-    if (c.liberar && !certificadoLiberadoDaEtapa(deal.Stage?.Name)) return json({ ok: false, error: 'nao_liberado' }, 403);
-    const pdf = await fetch(documentUrl);
-    if (!pdf.ok || !pdf.body) return json({ ok: false, error: 'indisponivel' }, 502);
+    // Regras de tipo/liberação p/ Documents/Orders (o anexo já foi validado — allowlist NF — acima).
+    if (!ehAnexo) {
+      const c = classificaDoc(nomeClass);
+      if (!c.cliente) return json({ ok: false, error: 'sem_permissao' }, 403);
+      if (c.liberar && !certificadoLiberadoDaEtapa(deal.Stage?.Name)) return json({ ok: false, error: 'nao_liberado' }, 403);
+    }
+    const arq = await fetch(documentUrl);
+    if (!arq.ok || !arq.body) return json({ ok: false, error: 'indisponivel' }, 502);
     const limpo = String(nomeArq).replace(/[^\w.\- ]+/g, '').slice(0, 80) || `documento-${docId}`;
-    const nome = /\.pdf$/i.test(limpo) ? limpo : `${limpo}.pdf`;
-    return new Response(pdf.body, { status: 200, headers: {
-      'content-type': pdf.headers.get('content-type') || 'application/pdf',
+    const nome = /\.[a-z0-9]{2,4}$/i.test(limpo) ? limpo : `${limpo}.pdf`;
+    return new Response(arq.body, { status: 200, headers: {
+      'content-type': contentType || arq.headers.get('content-type') || 'application/pdf',
       'content-disposition': `attachment; filename="${nome}"`,
       'cache-control': 'private, no-store',
     } });
