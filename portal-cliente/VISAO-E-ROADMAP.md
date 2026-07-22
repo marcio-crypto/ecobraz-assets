@@ -369,3 +369,25 @@ carbono, §5.4); **enquadramento tributário** da venda (Ecobraz é Associação
     **área de documentos**.
   - ⚠️ **A confirmar com o Marcio/Débora:** se TODOS os clientes seguem esse padrão (a ENEL usa o funil de
     VENDAS pra OS) ou se varia; e qual etapa = "em andamento" vs "concluída" vs "cancelada".
+- **2026-07-22** — **Respostas da Débora + lista de OS construída e verificada.** Todos os clientes seguem
+  o padrão, em **4 funis por tipo** (LEADS, PJ VENDAS, SAC/RECEPTIVO, PESSOA FÍSICA), etapas parecidas.
+  Mapeamento (agnóstico ao funil, `os-utils.js`): *Concluída* = "OS finalizada"/"certificado liberado";
+  *Em atendimento* = de "ordem de serviço" até "pesagem" (**decisão do Marcio: "coleta finalizada" = Em
+  atendimento**); *Cancelada*; negociação não aparece. **Lista de OS real no painel — construída e
+  verificada com dados reais da ENEL** (nº, peso, data de coleta, status). Login de teste = cadastro do
+  Marcio (contrato ativo = sim).
+- **2026-07-22** — **Inspeção de anexos/documentos/webhook** (via `$metadata`, 492 entidades) — destrava
+  os próximos recursos:
+  - **Documentos emitidos** (CDF/Carta de Doação): `Orders`/`Documents` têm **`DocumentUrl`** (link do PDF),
+    `Key`, `Shared`, endpoint **`/Share`** e o HTML (`BodySourceCode`) → download viável.
+  - **Anexos (MTR/NF):** sistema **`Attachments`/`AttachmentsItems`/`AttachmentsFolders`** (`Base64`,
+    `GetById`). Falta só sondar o vínculo exato anexo↔negócio (via AttachmentsItems).
+  - **Upload de fotos (Abrir OS):** `Deals/{key}/UploadFile` (também Orders/Contacts).
+  - **E-mail branded na mudança de status:** o Ploomes TEM **`Webhooks` + `Automations`** → o "jeito bonito"
+    (portal avisado na mudança de etapa → e-mail com a cara da Ecobraz) **é viável**. ✅
+  - **QR de validação no CDF (ideia do Marcio, anti-fraude) — adotada:** documentos têm `Key`/`/Share`; o QR
+    aponta pra uma **página de validação nossa** que confere contra o registro real. `DocumentTemplates` é
+    configurável (pode embutir o QR).
+  - **Abrir OS (form pedido pelo Marcio):** Razão Social, CNPJ, **Endereço de coleta (editável — muda por
+    coleta)**, telefone, e-mail, responsável, **lista/fotos dos equipamentos**; pré-preenche do Ploomes,
+    cliente confirma/atualiza → cria a OS. Ploomes gera a OS + documento inicial (imediato); CDF vem depois.
