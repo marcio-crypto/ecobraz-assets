@@ -17,6 +17,64 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
+      - name: Status HTTP real do /public/cards.min.js (teste decisivo)
+        run: |
+          set +e
+          for u in \
+            "https://ecobraz.org/public/cards.min.js" \
+            "https://ecobraz.org/public/cards.min.js?v=df3fd72764" \
+            "https://ecobraz.org/public/cards.min.css" \
+            "https://ecobraz.org/public/ghost-sdk.min.js"; do
+            echo "===================================================="
+            echo "URL: $u"
+            # -o /dev/null: descarta corpo; -w: imprime status e infos; -L segue redirects
+            curl -sS -o /dev/null -L --max-time 30 -A "Mozilla/5.0 (compatible; EcobrazCheck/1.0)" \
+              -w "  HTTP final: %{http_code}\n  URL final:  %{url_effective}\n  Redirects:  %{num_redirects}\n  Tipo:       %{content_type}\n  Tamanho:    %{size_download} bytes\n" \
+              "$u"
+            echo "  --- Headers (sem seguir redirect) ---"
+            curl -sSI --max-time 30 -A "Mozilla/5.0 (compatible; EcobrazCheck/1.0)" "$u" \
+              | grep -iE '^(HTTP/|server:|cf-cache-status:|content-type:|location:|cache-control:|age:)' | sed 's/^/    /'
+          done
+      - name: Hash de versão — página fresca (furando cache) vs URL carimbada
+        run: |
+          set +e
+          echo "### Passo 1: pega a homepage com cache-buster (força origem/Ghost) e extrai o hash ?v= do cards.min.js"
+          CB="cbx8f2a7q"   # querystring única p/ forçar BYPASS do cache do Cloudflare
+          echo "--- Header cf-cache-status da homepage COM cache-buster ---"
+          curl -sSI --max-time 30 -A "Mozilla/5.0 (compatible; EcobrazCheck/1.0)" "https://ecobraz.org/?nc=$CB" \
+            | grep -iE '^(HTTP/|cf-cache-status:|age:|cache-control:)' | sed 's/^/    /'
+          fresh=$(curl -sSL --max-time 30 -A "Mozilla/5.0 (compatible; EcobrazCheck/1.0)" "https://ecobraz.org/?nc=$CB")
+          H1=$(printf '%s' "$fresh" | grep -oE '/public/cards\.min\.js\?v=[a-f0-9]+' | head -1 | sed 's/.*v=//')
+          echo "  Hash na página FRESCA (cache-buster): ${H1:-<nao encontrado>}"
+          echo "  Hash carimbado hoje nas páginas:      df3fd72764"
+          echo "--- Header cf-cache-status da homepage SEM cache-buster (normal) ---"
+          curl -sSI --max-time 30 -A "Mozilla/5.0 (compatible; EcobrazCheck/1.0)" "https://ecobraz.org/" \
+            | grep -iE '^(HTTP/|cf-cache-status:|age:|cache-control:)' | sed 's/^/    /'
+
+          echo ""
+          echo "### Passo 2: status do /public/cards.min.js com o hash FRESCO (se houver)"
+          if [ -n "$H1" ]; then
+            curl -sS -o /dev/null --max-time 30 -A "Mozilla/5.0 (compatible; EcobrazCheck/1.0)" \
+              -w "  cards.min.js?v=$H1 -> HTTP %{http_code} (%{size_download} bytes)\n" \
+              "https://ecobraz.org/public/cards.min.js?v=$H1"
+          fi
+
+          echo ""
+          echo "### Passo 3: o arquivo do TEMA (main.js) com o mesmo hash df3fd72764 abre? (esperado 200)"
+          curl -sS -o /dev/null --max-time 30 -A "Mozilla/5.0 (compatible; EcobrazCheck/1.0)" \
+            -w "  /assets/js/main.js?v=df3fd72764 -> HTTP %{http_code} (%{size_download} bytes)\n" \
+            "https://ecobraz.org/assets/js/main.js?v=df3fd72764"
+
+          echo ""
+          echo "### Conclusão automática"
+          if [ -n "$H1" ] && [ "$H1" != "df3fd72764" ]; then
+            echo "  >> Hash MUDOU (fresco=$H1 vs páginas=df3fd72764): páginas servidas com hash velho => LIMPAR CACHE resolve."
+          elif [ "$H1" = "df3fd72764" ]; then
+            echo "  >> Hash IGUAL (df3fd72764) mesmo furando cache: o Ghost gera um /public/ que ele mesmo rejeita => reativar tema OU regra no Cloudflare."
+          else
+            echo "  >> Não consegui extrair o hash fresco — checar manualmente."
+          fi
+
       - name: Páginas ao vivo — procurar cards.min.js
         run: |
           set +e

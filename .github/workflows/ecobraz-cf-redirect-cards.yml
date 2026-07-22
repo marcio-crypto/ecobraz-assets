@@ -1,0 +1,124 @@
+name: Ecobraz — regra Cloudflare p/ /public/cards.min.js (ler/aplicar)
+
+# O Ghost carimba /public/cards.min.js?v=df3fd72764 em TODAS as páginas, mas o
+# próprio Ghost devolve 404 para essa URL com ?v= (o arquivo SEM ?v= é 200).
+# O Ahrefs marca isso como "broken JavaScript" em ~3348 páginas. Correção segura
+# e reversível: uma regra de redirect (Single Redirect) na Cloudflare que, quando
+# o caminho for exatamente /public/cards.min.js E houver querystring, redireciona
+# 301 para o mesmo caminho SEM querystring -> o arquivo abre (200) e o Ahrefs
+# passa a ver um redirect válido em vez de 404.
+#
+#   mode=read  -> só mostra: zona, permissão do token e regras de redirect atuais
+#   mode=apply -> adiciona a regra (idempotente: não duplica se já existir)
+#   mode=remove-> remove a regra que este workflow criou (desfaz)
+#
+# Nada aqui imprime segredos. Usa CLOUDFLARE_API_TOKEN já configurado.
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'read (mostra) | apply (cria a regra) | remove (desfaz)'
+        type: choice
+        options: [read, apply, remove]
+        default: read
+
+permissions:
+  contents: read
+
+jobs:
+  cf:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ler / aplicar regra de redirect na Cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          MODE: ${{ inputs.mode }}
+        run: |
+          node --input-type=module <<'NODE'
+          const token = String(process.env.CLOUDFLARE_API_TOKEN || '');
+          const mode = ['apply','remove'].includes(process.env.MODE) ? process.env.MODE : 'read';
+          if (!token) throw new Error('Falta CLOUDFLARE_API_TOKEN.');
+          const API = 'https://api.cloudflare.com/client/v4';
+          const H = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+          const RULE_DESC = 'ecobraz: normaliza /public/cards.min.js (remove ?v= -> 200)';
+
+          const call = async (path, init={}) => {
+            const r = await fetch(`${API}${path}`, { ...init, headers: H });
+            let j = null; try { j = await r.json(); } catch {}
+            return { ok: r.ok && j && j.success !== false, status: r.status, j };
+          };
+
+          // 1) Verifica o token
+          const vt = await call('/user/tokens/verify');
+          console.log(`Token válido: ${vt.ok ? 'sim' : 'NÃO'} (HTTP ${vt.status})`);
+          if (!vt.ok) { console.log('  >> O token não passou na verificação. Detalhe:', JSON.stringify(vt.j?.errors||vt.j)); process.exit(1); }
+
+          // 2) Descobre a zona ecobraz.org
+          const zr = await call('/zones?name=ecobraz.org');
+          const zone = zr.ok && zr.j.result && zr.j.result[0];
+          if (!zone) {
+            console.log('  >> Não consegui listar a zona ecobraz.org com este token (provável falta de permissão Zone:Read).');
+            console.log('     Detalhe:', JSON.stringify(zr.j?.errors||zr.j));
+            console.log('     => Nesse caso o conserto será feito por você no painel da Cloudflare (eu te guio).');
+            process.exit(mode === 'read' ? 0 : 1);
+          }
+          console.log(`Zona ecobraz.org: id=${zone.id}  status=${zone.status}`);
+
+          // 3) Lê o ruleset de redirects dinâmicos (Single Redirects)
+          const phasePath = `/zones/${zone.id}/rulesets/phases/http_request_dynamic_redirect/entrypoint`;
+          let ep = await call(phasePath);
+          let ruleset = ep.ok ? ep.j.result : null;
+          if (!ep.ok && ep.status !== 404) {
+            console.log('  >> Não consegui ler as regras de redirect. Detalhe:', JSON.stringify(ep.j?.errors||ep.j));
+            console.log('     => Provável falta de permissão de Ruleset/Zone. O conserto será no painel (eu te guio).');
+            process.exit(mode === 'read' ? 0 : 1);
+          }
+          const rules = (ruleset && ruleset.rules) || [];
+          console.log(`\n=== Regras de redirect atuais (${rules.length}) ===`);
+          for (const r of rules) console.log(`  - ${r.description || '(sem descrição)'} | ${r.expression}`);
+          const existing = rules.find(r => (r.description || '') === RULE_DESC);
+          console.log(existing ? `\nA nossa regra JÁ existe (id=${existing.id}).` : '\nA nossa regra ainda NÃO existe.');
+
+          if (mode === 'read') { console.log('\nMODO READ — nada foi alterado.'); process.exit(0); }
+
+          // Monta a regra: caminho exato + querystring não-vazia -> 301 para o caminho limpo
+          const newRule = {
+            action: 'redirect',
+            description: RULE_DESC,
+            enabled: true,
+            expression: '(http.request.uri.path eq "/public/cards.min.js" and http.request.uri.query ne "")',
+            action_parameters: {
+              from_value: {
+                status_code: 301,
+                target_url: { expression: 'concat("https://ecobraz.org", http.request.uri.path)' },
+                preserve_query_string: false,
+              },
+            },
+          };
+
+          const putRules = async (arr) => {
+            // Se o ruleset ainda não existe (404), cria via PUT no entrypoint da fase.
+            const body = JSON.stringify({ rules: arr });
+            const r = await call(phasePath, { method: 'PUT', body });
+            return r;
+          };
+
+          if (mode === 'apply') {
+            if (existing) { console.log('Nada a fazer — regra já aplicada.'); process.exit(0); }
+            const next = [...rules.map(({id, version, last_updated, ref, ...keep}) => keep), newRule];
+            const res = await putRules(next);
+            if (res.ok) { console.log('\n>> APLICADO: regra de redirect criada com sucesso.'); process.exit(0); }
+            console.log('\n>> FALHOU ao aplicar. HTTP', res.status, JSON.stringify(res.j?.errors||res.j));
+            process.exit(1);
+          }
+
+          if (mode === 'remove') {
+            if (!existing) { console.log('Nada a remover — a regra não existe.'); process.exit(0); }
+            const next = rules.filter(r => r.id !== existing.id).map(({id, version, last_updated, ref, ...keep}) => keep);
+            const res = await putRules(next);
+            if (res.ok) { console.log('\n>> REMOVIDO: regra de redirect retirada.'); process.exit(0); }
+            console.log('\n>> FALHOU ao remover. HTTP', res.status, JSON.stringify(res.j?.errors||res.j));
+            process.exit(1);
+          }
+          NODE
