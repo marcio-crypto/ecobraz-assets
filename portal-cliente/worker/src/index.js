@@ -29,6 +29,7 @@ import { paginaCalculadora, estimativaCarbono, paginaCalculoDetalhado, calculoDe
 import { criarPreferencia, consultarPagamento } from './mercadopago.js';
 import { statusDaEtapa, valorProp, CAMPOS_OS } from './os-utils.js';
 import { qrCDF, validarCDF } from './validacao.js';
+import { paginaMetodologia } from './carbono-metodologia.js';
 
 export default {
   async fetch(request, env) {
@@ -36,7 +37,7 @@ export default {
     const { pathname } = url;
     try {
       if (pathname === '/health') return json({
-        ok: true, service: 'ecobraz-portal', version: 9,
+        ok: true, service: 'ecobraz-portal', version: 10,
         // Só presença (true/false) — NUNCA os valores. Ajuda a confirmar a
         // configuração pelo navegador sem expor segredo nenhum.
         config: {
@@ -128,6 +129,8 @@ export default {
       // Validação pública de CDF (anti-fraude): QR no certificado -> confere contra o Ploomes.
       if (pathname === '/qr' && request.method === 'GET') return await qrCDF(request, env, url);
       if (pathname === '/validar' && request.method === 'GET') return await validarCDF(request, env, url);
+      // Metodologia de carbono (superfície compartilhada: auditor + Villanova). Read-only nesta fase.
+      if (pathname === '/metodologia' && request.method === 'GET') return html(paginaMetodologia(env));
 
       // Dali para baixo, exige sessão válida.
       const sessao = await lerSessao(request, env);
