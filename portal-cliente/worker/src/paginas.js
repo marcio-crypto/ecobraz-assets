@@ -220,7 +220,10 @@ async function carregar(){
     if(!d.ok||!d.os||!d.os.length){ kpi.textContent='0'; alvo.innerHTML='<div class="empty"><div class="empty-ic">📄</div>Ainda não há ordens de serviço registradas.</div>'; return; }
     kpi.textContent=String(d.os.length);
     alvo.innerHTML=d.os.map(function(o){
-      return '<div class="os"><div><div class="os-title">'+escapeHtml(o.titulo)+'</div><div class="os-meta">Aberta em '+fmt(o.aberturaISO)+(o.conclusaoISO?' · concluída em '+fmt(o.conclusaoISO):'')+'</div></div><span class="tag '+tagCls(o.status)+'">'+escapeHtml(o.status)+'</span></div>';
+      var titulo=o.numeroOS?('Ordem de serviço '+escapeHtml(String(o.numeroOS))):escapeHtml(o.titulo||'Atendimento');
+      var meta=[]; meta.push(o.dataColeta?('Coleta em '+fmt(o.dataColeta)):('Aberta em '+fmt(o.aberturaISO)));
+      if(o.peso && String(o.peso).toLowerCase().indexOf('não informado')<0 && String(o.peso).toLowerCase().indexOf('nao informado')<0) meta.push('Peso: '+escapeHtml(String(o.peso)));
+      return '<div class="os"><div><div class="os-title">'+titulo+'</div><div class="os-meta">'+meta.join(' · ')+'</div></div><span class="tag '+tagCls(o.status)+'">'+escapeHtml(o.status)+'</span></div>';
     }).join('');
   }catch(_){ kpi.textContent='—'; alvo.innerHTML='<p class="muted">Não foi possível carregar agora. Tente atualizar a página.</p>'; }
 }

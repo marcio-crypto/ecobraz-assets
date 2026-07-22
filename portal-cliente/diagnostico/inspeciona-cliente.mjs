@@ -7,6 +7,8 @@
 // não altera, não apaga. A chave nunca é impressa. Saída vai só para o log da CI
 // (privado). CNPJ vem por variável de ambiente (não fica no repositório).
 
+import { statusDaEtapa, valorProp, CAMPOS_OS } from '../worker/src/os-utils.js';
+
 const BASE = (process.env.PLOOMES_API_URL || 'https://public-api2.ploomes.com').replace(/\/+$/, '');
 const KEY = process.env.PLOOMES_USER_KEY || '';
 const CNPJ = (process.env.CNPJ_ALVO || '').replace(/\D/g, '');
@@ -91,6 +93,7 @@ async function main() {
       L(`  • [${deal.Id}] "${String(deal.Title).slice(0, 50)}" | ${fn} / ${deal.Stage?.Name || deal.StageId} / ${deal.Status?.Name || deal.StatusId} | criado ${(deal.CreateDate || '').slice(0, 10)} fim ${(deal.FinishDate || '').slice(0, 10)}`);
       const c = campos(deal.OtherProperties);
       if (c) L(`      campos: ${c}`);
+      L(`      → PAINEL mostraria: OS ${valorProp(deal.OtherProperties, CAMPOS_OS.numero) || '-'} | ${statusDaEtapa(deal.Stage?.Name)} | coleta ${String(valorProp(deal.OtherProperties, CAMPOS_OS.dataColeta) || '-').slice(0, 10)} | peso ${valorProp(deal.OtherProperties, CAMPOS_OS.peso) || '-'}`);
       dealsAmostra.push(deal.Id);
     }
   }

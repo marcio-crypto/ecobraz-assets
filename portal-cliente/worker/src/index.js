@@ -27,6 +27,7 @@ import { paginaLogin, paginaPainel, paginaMensagem } from './paginas.js';
 import { LOGO_ESCURO_B64, LOGO_CLARO_B64 } from './logos.js';
 import { paginaCalculadora, estimativaCarbono, paginaCalculoDetalhado, calculoDetalhadoGHG } from './carbono.js';
 import { criarPreferencia, consultarPagamento } from './mercadopago.js';
+import { statusDaEtapa, valorProp, CAMPOS_OS } from './os-utils.js';
 
 export default {
   async fetch(request, env) {
@@ -321,19 +322,32 @@ function acharOtherProp(contact, fieldId) {
 async function listarOS(sessao, env) {
   const base = env.PLOOMES_API_URL || 'https://public-api2.ploomes.com';
   const headers = { 'User-Key': env.PLOOMES_USER_KEY, Accept: 'application/json' };
-  // TODO(validar): v1 lista os Negócios da EMPRESA como "atendimentos". O modelo
-  // exato de OS (Documentos com "Número da OS") será refinado após teste real.
+  // A OS é o Negócio; o status vem da ETAPA (mapeamento agnóstico ao funil). Os campos
+  // operacionais (nº da OS, peso, data de coleta) vêm das OtherProperties — descobertos
+  // na inspeção 2026-07-22 (ver os-utils.js).
   const clienteId = Number(sessao.empresaId || sessao.contactId);
-  const url = `${base}/Deals?$filter=ContactId%20eq%20${clienteId}&$top=50&$orderby=CreateDate%20desc&$select=Id,Title,StageId,StatusId,CreateDate,FinishDate`;
+  const url = `${base}/Deals?$filter=ContactId%20eq%20${clienteId}&$top=100&$orderby=CreateDate%20desc&$expand=OtherProperties,Stage`;
   const r = await fetch(url, { headers });
   if (!r.ok) { console.error('deals_erro', r.status); return json({ ok: false, error: 'ploomes_indisponivel' }, 502); }
-  const linhas = ((await r.json()).value || []).map((d) => ({
-    id: d.Id,
-    titulo: d.Title || `Atendimento ${d.Id}`,
-    status: rotuloStatus(d.StatusId),
-    aberturaISO: d.CreateDate || null,
-    conclusaoISO: d.FinishDate || null,
-  }));
+  const kNum = env.PLOOMES_FIELD_OS_NUMERO || CAMPOS_OS.numero;
+  const kPeso = env.PLOOMES_FIELD_OS_PESO || CAMPOS_OS.peso;
+  const kData = env.PLOOMES_FIELD_OS_DATA_COLETA || CAMPOS_OS.dataColeta;
+  const linhas = ((await r.json()).value || [])
+    .map((d) => {
+      const etapa = d.Stage?.Name || '';
+      return {
+        id: d.Id,
+        numeroOS: valorProp(d.OtherProperties, kNum),
+        titulo: d.Title || `Atendimento ${d.Id}`,
+        etapa,
+        status: statusDaEtapa(etapa),
+        peso: valorProp(d.OtherProperties, kPeso),
+        dataColeta: valorProp(d.OtherProperties, kData),
+        aberturaISO: d.CreateDate || null,
+        conclusaoISO: d.FinishDate || null,
+      };
+    })
+    .filter((o) => o.status !== 'Em negociação'); // só OS de verdade (da etapa "ordem de serviço" em diante)
   return json({ ok: true, os: linhas });
 }
 
