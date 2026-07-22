@@ -393,6 +393,17 @@ carbono, §5.4); **enquadramento tributário** da venda (Ecobraz é Associação
   - **Abrir OS (form pedido pelo Marcio):** Razão Social, CNPJ, **Endereço de coleta (editável — muda por
     coleta)**, telefone, e-mail, responsável, **lista/fotos dos equipamentos**; pré-preenche do Ploomes,
     cliente confirma/atualiza → cria a OS. Ploomes gera a OS + documento inicial (imediato); CDF vem depois.
+- **2026-07-22** — **3 pedidos do Marcio no teste ao vivo:** (1) **Baixar documentos** — descoberto e
+  **verificado** como os documentos ligam à OS (`Documents?$filter=DealId`) e como baixar (o `DocumentUrl`
+  devolve o PDF, 140 KB). Implementado: `/api/os/docs` (lista) e `/api/os/doc` (download **proxy pelo
+  Worker**, URL de storage nunca exposta), ambos **só para OS do próprio cliente** (confere ContactId).
+  Painel: botão "📄 Documentos" por OS. (2) **CEP** — novo `/api/cep` (BrasilAPI) autopreenche
+  rua/bairro/cidade/UF; seção "Local da coleta" reorganizada (CEP, número, rua, bairro, cidade/UF,
+  complemento) — reduz erro de digitação. (3) **Documentos preenchidos corretos** — achado o **campo real
+  do endereço de coleta** (`deal_F4BF490C-...`) e o Portal agora **grava nele** (não só na nota) — gravação
+  **verificada por sonda** (gravou e leu de volta idêntico). **Pendente:** anexos NF/MTR (sistema
+  `Attachments`, 12 itens por OS — download é um passo a mais) e confirmar com a Débora como o Nº/documentos
+  são gerados hoje.
 - **2026-07-22** — **Abrir OS vira OS de verdade (não mais lead):** o teste do Marcio mostrou que a
   solicitação caía na 1ª etapa ("Em contato") = um lead, sem virar OS. **Corrigido:** a solicitação agora
   é criada já no funil **[PJ] VENDAS (44259)**, etapa **"📄 Ordem de Serviço" (StageId 199543)** — IDs e o
