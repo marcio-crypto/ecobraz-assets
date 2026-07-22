@@ -119,6 +119,38 @@ async function main() {
     }
   }
 
+  // 5) ANEXOS / DOCUMENTOS: descobrir entidades (via $metadata) e como baixar.
+  L('\n--- Entidades no $metadata (achar anexo/documento/webhook) ---');
+  try {
+    const raw = await fetch(`${BASE}/$metadata`, { headers: HEADERS });
+    const xml = await raw.text();
+    const sets = [...new Set([...xml.matchAll(/EntitySet Name="([^"]+)"/g)].map((m) => m[1]))];
+    const types = [...new Set([...xml.matchAll(/EntityType Name="([^"]+)"/g)].map((m) => m[1]))];
+    L(`  EntitySets (${sets.length}): ${sets.join(', ') || '(nenhum)'}`);
+    if (!sets.length && types.length) L(`  EntityTypes (${types.length}): ${types.slice(0, 90).join(', ')}`);
+    const rel = [...new Set([...sets, ...types])].filter((n) => /attach|anexo|document|file|arquivo|webhook|hook/i.test(n));
+    L(`  → Candidatos a ANEXO/DOCUMENTO/WEBHOOK: ${rel.join(', ') || '(nenhum óbvio)'}`);
+  } catch (e) { L('  $metadata falhou: ' + String(e.message).slice(0, 90)); }
+
+  L('\n--- Anexos ligados a um negócio (tentativas) ---');
+  if (sample) {
+    for (const q of [`Deals(${sample})/Attachments?$top=5`, `Attachments?$filter=DealId eq ${sample}&$top=5`, `Deals?$filter=Id eq ${sample}&$expand=Attachments`]) {
+      const d = await tryApi(q);
+      if (d.__erro) { L(`  [${q.split('?')[0]}] -> ${String(d.__erro).slice(0, 70)}`); continue; }
+      const v = Array.isArray(d.value) ? d.value : [];
+      const amostra = v[0] || (Array.isArray(d.value?.[0]?.Attachments) ? d.value[0].Attachments[0] : null);
+      L(`  [${q.split('?')[0]}] -> ${v.length} itens${amostra ? ' | campos: ' + Object.keys(amostra).slice(0, 15).join(',') : ''}`);
+    }
+  }
+
+  const ordDoc = await tryApi(`Orders?$filter=DealId eq ${sample}&$top=1&$expand=OtherProperties`);
+  const od = ordDoc.value && ordDoc.value[0];
+  if (od) {
+    L(`\n  Documento emitido (Order [${od.Id}]) — campos base:`);
+    L('    ' + Object.keys(od).filter((k) => k !== 'OtherProperties').join(', '));
+    L('    (o conteúdo HTML do documento vem nas OtherProperties — dá pra renderizar em PDF)');
+  }
+
   L('\n===== FIM DA INSPEÇÃO =====\n');
 }
 main().catch((e) => { console.error('Falha inesperada:', e?.message || e); process.exit(1); });
