@@ -90,6 +90,13 @@ jobs:
           PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
           CNPJ_ALVO: ${{ github.event.inputs.cnpj }}
         run: node portal-cliente/diagnostico/inspeciona-os-nf.mjs
+      - name: Sonda baixar OS (Orders) + NF (anexo) — quando sonda = baixar-anexo
+        if: ${{ github.event.inputs.sonda == 'baixar-anexo' }}
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+          CNPJ_ALVO: ${{ github.event.inputs.cnpj }}
+        run: node portal-cliente/diagnostico/sonda-baixar-anexo.mjs
       - name: Inspeção de cliente-exemplo (somente leitura) — quando informado cnpj
         if: ${{ github.event.inputs.cnpj != '' }}
         env:
