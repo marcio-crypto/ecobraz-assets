@@ -393,6 +393,14 @@ carbono, §5.4); **enquadramento tributário** da venda (Ecobraz é Associação
   - **Abrir OS (form pedido pelo Marcio):** Razão Social, CNPJ, **Endereço de coleta (editável — muda por
     coleta)**, telefone, e-mail, responsável, **lista/fotos dos equipamentos**; pré-preenche do Ploomes,
     cliente confirma/atualiza → cria a OS. Ploomes gera a OS + documento inicial (imediato); CDF vem depois.
+- **2026-07-22** — **Abrir OS vira OS de verdade (não mais lead):** o teste do Marcio mostrou que a
+  solicitação caía na 1ª etapa ("Em contato") = um lead, sem virar OS. **Corrigido:** a solicitação agora
+  é criada já no funil **[PJ] VENDAS (44259)**, etapa **"📄 Ordem de Serviço" (StageId 199543)** — IDs e o
+  comportamento **verificados por sonda** (criou negócio de teste → caiu na etapa certa → apagado; nada
+  ficou). Cliente vê "Em atendimento" na hora; Débora recebe na coluna de OS. **Achado honesto:** o **Nº da
+  OS e os documentos NÃO saem ao entrar na etapa** — das 49 OS reais nessa etapa, **0 têm número**; o número
+  aparece mais à frente (pesagem/finalização). **Pendente com a Débora:** como o Nº/documentos são gerados
+  hoje (automação do Ploomes ou clique?), pra decidir se dá pra sair automático já na solicitação.
 - **2026-07-22** — **Abrir OS elaborado (fotos):** formulário reorganizado em seções (empresa, local da
   coleta, equipamentos, fotos), pré-preenchido do cadastro; anexo de fotos com arrastar-e-soltar, redução
   no navegador e miniaturas; o Worker envia as fotos ao negócio no Ploomes (`Deals/{id}/UploadFile`, campo
