@@ -35,7 +35,7 @@ export default {
     const { pathname } = url;
     try {
       if (pathname === '/health') return json({
-        ok: true, service: 'ecobraz-portal', version: 5,
+        ok: true, service: 'ecobraz-portal', version: 6,
         // Só presença (true/false) — NUNCA os valores. Ajuda a confirmar a
         // configuração pelo navegador sem expor segredo nenhum.
         config: {
@@ -788,33 +788,45 @@ async function webhookPloomes(request, env) {
   try { await processarMudancaOS(dealId, env); } catch (error) { console.error('webhook_erro', safeError(error)); }
   return json({ ok: true });
 }
-async function webhookUltimo(request, env) { // depuração: ver o último payload que o Ploomes mandou
+async function webhookUltimo(request, env) { // depuração: ver o último payload e o resultado do processamento
   const token = new URL(request.url).searchParams.get('t') || '';
   if (!env.PLOOMES_WEBHOOK_SECRET || token !== env.PLOOMES_WEBHOOK_SECRET) return json({ ok: false, error: 'nao_autorizado' }, 401);
   const ultimo = env.PORTAL_KV ? await env.PORTAL_KV.get('webhook:ultimo') : null;
-  return json({ ok: true, ultimo: ultimo ? JSON.parse(ultimo) : null });
+  const notif = env.PORTAL_KV ? await env.PORTAL_KV.get('notif:ultimo') : null;
+  return json({ ok: true, ultimo: ultimo ? JSON.parse(ultimo) : null, notif: notif ? JSON.parse(notif) : null });
 }
 async function processarMudancaOS(dealId, env) {
   const base = env.PLOOMES_API_URL || 'https://public-api2.ploomes.com';
   const headers = { 'User-Key': env.PLOOMES_USER_KEY, Accept: 'application/json' };
+  // Registra o RESULTADO do processamento (pra provar, com evidência, que o e-mail saiu — ou
+  // por que não saiu). Fica em notif:ultimo e aparece no GET /api/ploomes/webhook?t=SEGREDO.
+  const rec = async (o) => { try { if (env.PORTAL_KV) await env.PORTAL_KV.put('notif:ultimo', JSON.stringify({ dealId, em: agoraISO(), ...o }).slice(0, 2000), { expirationTtl: 60 * 60 * 24 * 30 }); } catch { /* ignore */ } };
   const r = await fetch(`${base}/Deals?$filter=Id%20eq%20${dealId}&$top=1&$expand=Stage,Contact`, { headers });
   const deal = r.ok ? ((await r.json()).value || [])[0] : null;
-  if (!deal) return;
-  const tipo = tipoNotificacao(deal.Stage?.Name);
-  if (!tipo) return; // etapa não é gatilho de aviso
+  if (!deal) { await rec({ resultado: 'deal_nao_encontrado', httpDeal: r.status }); return; }
+  const etapa = deal.Stage?.Name || '';
+  const tipo = tipoNotificacao(etapa);
+  if (!tipo) { await rec({ resultado: 'etapa_nao_gatilho', etapa }); return; } // etapa não é gatilho de aviso
   // MODO TESTE (canário): se definido, só envia para o contato de teste — evita e-mail a cliente
   // real antes de validar. Depois de aprovado, a variável é removida e vale para todos.
-  if (env.NOTIF_TESTE_CONTACT_ID && String(deal.ContactId) !== String(env.NOTIF_TESTE_CONTACT_ID)) return;
+  if (env.NOTIF_TESTE_CONTACT_ID && String(deal.ContactId) !== String(env.NOTIF_TESTE_CONTACT_ID)) { await rec({ resultado: 'fora_do_modo_teste', etapa, tipo, contactId: deal.ContactId }); return; }
   const email = deal.Contact?.Email;
-  if (!email) { console.error('webhook_sem_email', dealId); return; }
+  if (!email) { console.error('webhook_sem_email', dealId); await rec({ resultado: 'sem_email', etapa, tipo }); return; }
   const chave = `notif:${dealId}:${tipo}`;
-  if (env.PORTAL_KV && (await env.PORTAL_KV.get(chave))) return; // já avisou este passo
-  await enviarEmailStatus(email, deal.Contact?.Name || '', tipo, env);
+  if (env.PORTAL_KV && (await env.PORTAL_KV.get(chave))) { await rec({ resultado: 'ja_avisado', etapa, tipo, para: mascararEmail(email) }); return; } // já avisou este passo
+  let envio;
+  try {
+    envio = await enviarEmailStatus(email, deal.Contact?.Name || '', tipo, env);
+  } catch (error) {
+    await rec({ resultado: 'falha_envio', etapa, tipo, para: mascararEmail(email), erro: String(error?.message || error).slice(0, 180) });
+    throw error;
+  }
   if (env.PORTAL_KV) await env.PORTAL_KV.put(chave, '1', { expirationTtl: 60 * 60 * 24 * 90 });
+  await rec({ resultado: 'enviado', etapa, tipo, para: mascararEmail(email), resendId: envio?.id || null });
 }
 async function enviarEmailStatus(to, nome, tipo, env) {
   if (!env.RESEND_API_KEY) throw new Error('sem_resend');
-  const m = MSGS_STATUS[tipo]; if (!m) return;
+  const m = MSGS_STATUS[tipo]; if (!m) return null;
   const from = env.RESEND_FROM || 'Portal Ecobraz <acesso@ecobraz.org.br>';
   const portalUrl = env.PORTAL_URL || 'https://ecobraz-portal.ti-0ab.workers.dev/';
   const r = await fetch('https://api.resend.com/emails', {
@@ -822,7 +834,9 @@ async function enviarEmailStatus(to, nome, tipo, env) {
     headers: { 'content-type': 'application/json', authorization: `Bearer ${env.RESEND_API_KEY}` },
     body: JSON.stringify({ from, to: [to], subject: m.assunto, html: emailStatusHtml(nome, m, portalUrl), text: `${m.titulo}\n\n${m.corpo.replace(/<[^>]+>/g, '')}\n\nAcesse seu portal: ${portalUrl}\n\nEcobraz` }),
   });
-  if (!r.ok) { const b = await r.text().catch(() => ''); throw new Error(`resend_${r.status}:${b.slice(0, 140)}`); }
+  const b = await r.text().catch(() => '');
+  if (!r.ok) throw new Error(`resend_${r.status}:${b.slice(0, 140)}`);
+  try { return JSON.parse(b); } catch { return null; } // { id: "..." } = comprovante de que o Resend aceitou
 }
 function emailStatusHtml(nome, m, portalUrl) {
   const primeiro = esc((nome || '').split(/\s+/)[0] || '');
@@ -923,6 +937,8 @@ function b64urlStrDecode(s) { const b = atob(s.replace(/-/g, '+').replace(/_/g, 
 // Helpers gerais
 // ---------------------------------------------------------------------------
 function nowS() { return Math.floor(Date.now() / 1000); }
+function agoraISO() { try { return new Date().toISOString(); } catch { return ''; } }
+function mascararEmail(e) { const s = String(e || ''); const i = s.indexOf('@'); if (i < 1) return s ? '***' : ''; const u = s.slice(0, i); return `${u.slice(0, 2)}${'*'.repeat(Math.max(1, u.length - 2))}${s.slice(i)}`; }
 function novoId() { return b64url(crypto.getRandomValues(new Uint8Array(12))); }
 function inicioDeHoje() { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }
 function json(body, status = 200, extra = {}) { return new Response(JSON.stringify(body), { status, headers: { ...JSON_HEADERS, ...extra } }); }

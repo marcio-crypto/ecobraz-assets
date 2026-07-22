@@ -41,20 +41,31 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const mv = await api(`Deals(${id})`, { method: 'PATCH', body: JSON.stringify({ StageId: STAGE_TRIGGER }) });
   L(`  MOVIDO para "Ordem de Serviço" -> HTTP ${mv.status}`);
 
-  // 3) fica checando o registro por ~90s e imprime o PAYLOAD COMPLETO (pra achar onde vem o
-  //    Id do negócio na estrutura real do Ploomes).
+  // 3) fica checando o registro por ~160s. Agora olho DUAS coisas:
+  //    - ultimo  = payload cru que o Ploomes mandou (prova que o webhook chegou)
+  //    - notif   = RESULTADO do nosso processamento (prova que o e-mail saiu, com o id do Resend,
+  //                ou o motivo exato de não ter saído).
   let fired = null;
-  for (let i = 0; i < 16; i++) { // ~160s: o webhook do Ploomes chega com ~1-2 min de atraso
+  let notif = null;
+  for (let i = 0; i < 18; i++) { // ~180s: o webhook do Ploomes chega com ~1-2 min de atraso
     await wait(10000);
     const d = await dbg();
     const u = d?.ultimo;
-    if (u) { const s = JSON.stringify(u); L(`   ${(i + 1) * 10}s: ultimo(completo)= ${s.slice(0, 900)}`); if (s.includes(String(id))) { fired = u; L('       ^^ contém o Id do NOSSO negócio ' + id); break; } }
-    else L(`   ${(i + 1) * 10}s: (registro vazio / sem acesso)`);
+    const n = d?.notif;
+    const marca = `${(i + 1) * 10}s`;
+    if (u) { const s = JSON.stringify(u); L(`   ${marca}: ultimo= ${s.slice(0, 500)}`); if (s.includes(String(id))) fired = u; }
+    else L(`   ${marca}: (registro vazio / sem acesso)`);
+    if (n) { L(`   ${marca}: notif = ${JSON.stringify(n)}`); }
+    // Para quando o NOSSO negócio já foi processado (resultado registrado para este dealId).
+    if (n && String(n.dealId) === String(id)) { notif = n; L(`       ^^ resultado do NOSSO negócio ${id}: ${n.resultado}`); break; }
+    if (fired && n) break;
   }
 
-  // 4) veredito
-  if (fired) L(`\n  ✅ Webhook disparou para o NOSSO negócio (${id}) — payload acima. Vou ajustar o parser pra esse formato.`);
-  else L('\n  ℹ️ Não peguei o payload do nosso negócio nessa janela (mas o registro mostra que o webhook FUNCIONA). Uso o payload acima pra ajustar o parser.');
+  // 4) veredito honesto, baseado no RESULTADO real do processamento
+  if (notif && notif.resultado === 'enviado') L(`\n  ✅ E-MAIL ENVIADO para ${notif.para} — o Resend aceitou (id=${notif.resendId || 'sem-id'}). Etapa: ${notif.etapa}.`);
+  else if (notif) L(`\n  ⚠️ O Worker processou o negócio ${id}, mas NÃO enviou: resultado="${notif.resultado}"${notif.erro ? ' erro=' + notif.erro : ''} etapa="${notif.etapa || '?'}". (Sem e-mail — corrigir isto.)`);
+  else if (fired) L(`\n  ⚠️ O webhook chegou (payload do negócio ${id} capturado), mas não vi o registro de processamento nessa janela. Rode de novo ou aumente a espera.`);
+  else L('\n  ℹ️ Não peguei nem o payload nem o resultado do nosso negócio nessa janela (webhook do Ploomes atrasa 1-2 min).');
 
   // 5) limpeza
   const del = await api(`Deals(${id})`, { method: 'DELETE' });
