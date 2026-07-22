@@ -111,6 +111,12 @@ jobs:
           PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
           CNPJ_ALVO: ${{ github.event.inputs.cnpj }}
         run: node portal-cliente/diagnostico/sonda-nf-lista.mjs
+      - name: Sonda Webhooks/Automations do Ploomes (pode ligar o aviso pela API?) — quando sonda = webhooks
+        if: ${{ github.event.inputs.sonda == 'webhooks' }}
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+        run: node portal-cliente/diagnostico/inspeciona-webhooks.mjs
       - name: Inspeção de cliente-exemplo (somente leitura) — quando informado cnpj
         if: ${{ github.event.inputs.cnpj != '' }}
         env:
