@@ -393,6 +393,21 @@ carbono, §5.4); **enquadramento tributário** da venda (Ecobraz é Associação
   - **Abrir OS (form pedido pelo Marcio):** Razão Social, CNPJ, **Endereço de coleta (editável — muda por
     coleta)**, telefone, e-mail, responsável, **lista/fotos dos equipamentos**; pré-preenche do Ploomes,
     cliente confirma/atualiza → cria a OS. Ploomes gera a OS + documento inicial (imediato); CDF vem depois.
+- **2026-07-22** — **✅ ITEM 3 (QR de validação no CDF) — SISTEMA CONSTRUÍDO E PROVADO; falta só o
+  passo da Débora.** Novo módulo `worker/src/validacao.js` + dep `qrcode-generator` (v9): **`GET /qr?n=NÚMERO`**
+  gera a imagem do QR (GIF, mais compatível com PDF; `?fmt=svg|txt` também) apontando para
+  **`GET /validar?n=NÚMERO&c=CÓDIGO`** — página pública que **confere o CDF AO VIVO contra o Ploomes** e
+  mostra ✅ autêntico + nº + empresa + data (ou ❌). **Código assinado (HMAC-SHA256, chave derivada do
+  `PORTAL_SESSION_SECRET`)** — não dá pra forjar nem varrer números; validação **sem estado** (recalcula e
+  compara). Só valida documentos do **modelo do CDF (224095 "CERTIFICADO DE DESTINAÇÃO")** — nunca outro
+  doc; sem CNPJ/dados internos (só o que já está no papel). **PROVADO ponta a ponta contra CDF real nº 20010**
+  (sonda `valida-cdf`): `/validar` código certo → HTTP 200 "Documento autêntico" + empresa; código errado →
+  HTTP 400 "Código inválido"; `/qr` → GIF 3 KB. **Achado importante:** a API do Ploomes **NÃO expõe o HTML
+  do modelo** (`BodySourceCode` etc. vêm null mesmo com `$select`) — então **não dá pra pré-configurar nem
+  entregar o trecho exato pronto**: a Débora precisa, no **editor de modelo do Ploomes**, inserir a imagem do
+  QR com URL dinâmica `…/qr?n=<campo do número do certificado>`. **Plano A** (editor aceita URL de imagem com
+  campo) → colar o `<img>`. **Plano B** (só imagem estática) → QR fixo + página que pede o número (troca:
+  validação menos automática). **Depende da Débora + capacidade do editor.**
 - **2026-07-22** — **✅ ITEM 2 (aviso por e-mail) CONCLUÍDO, VERIFICADO E NO AR PARA TODOS.** E-mail
   "Coleta agendada" **chegou na caixa de entrada do Marcio** (não spam), com a cara da Ecobraz Emigre,
   remetente `acesso@ecobraz.org.br`, `resultado:enviado` + id do Resend nos logs. Modo-teste (canário)
