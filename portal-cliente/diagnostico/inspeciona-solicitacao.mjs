@@ -49,24 +49,24 @@ async function main() {
     L(`     documentos (Orders) ligados: ${ord.__erro ? 'erro/' + ord.__erro.slice(0, 40) : (ord.value || []).length}`);
   }
 
-  // 2) Funis e etapas (IDs) — pra saber a StageId da "Ordem de Serviço".
-  L('\n\n--- 2) Funis e etapas (IDs) ---');
-  const pipes = await tryApi(`Pipelines?$expand=Stages&$top=20`);
-  if (pipes.__erro) L('  (Pipelines indisponível: ' + pipes.__erro.slice(0, 70) + ')');
-  else for (const p of pipes.value || []) {
-    const stages = (p.Stages || []).slice().sort((a, b) => (a.Order ?? 0) - (b.Order ?? 0));
-    L(`\n  Funil [${p.Id}] ${p.Name}:`);
-    for (const s of stages) L(`     - etapa [${s.Id}] "${s.Name}"  → painel: ${statusDaEtapa(s.Name)}`);
-  }
-
-  // 3) Uma OS real com número — onde vive o número e se tem documento.
-  L('\n\n--- 3) Uma OS real já existente (com número) ---');
-  const comNum = await tryApi(`Deals?$filter=OtherProperties/any(p: p/FieldKey eq '${CAMPOS_OS.numero}' and p/StringValue ne null)&$orderby=CreateDate desc&$top=3&$expand=OtherProperties,Pipeline,Stage`);
-  if (comNum.__erro) L('  (filtro por número falhou: ' + comNum.__erro.slice(0, 80) + ')');
-  else for (const d of (comNum.value || [])) {
-    L(`  • [${d.Id}] Nº OS ${valorProp(d.OtherProperties, CAMPOS_OS.numero)} | funil ${d.Pipeline?.Name} | etapa "${d.Stage?.Name}"`);
-    const ord = await tryApi(`Orders?$filter=DealId eq ${d.Id}&$top=5&$select=Id,Name`);
-    L(`     documentos (Orders): ${ord.__erro ? 'erro' : (ord.value || []).length}${!ord.__erro && (ord.value || [])[0] ? ' (ex.: ' + (ord.value[0].Name || ord.value[0].Id) + ')' : ''}`);
+  // 2) Etapas do funil [PJ] VENDAS (44259) via os próprios negócios: ID de cada etapa,
+  //    quantos negócios tem e quantos JÁ carregam Nº de OS (pra saber ONDE o número aparece).
+  const PJ = Number(process.env.PJ_PIPELINE || 44259);
+  L(`\n\n--- 2) Etapas do funil [PJ] VENDAS (${PJ}) + em quais o Nº de OS já existe ---`);
+  const dd = await tryApi(`Deals?$filter=PipelineId eq ${PJ}&$top=300&$orderby=CreateDate desc&$expand=Stage,OtherProperties`);
+  if (dd.__erro) L('  (falhou: ' + dd.__erro.slice(0, 90) + ')');
+  else {
+    const porEtapa = new Map();
+    for (const d of dd.value || []) {
+      const sid = d.StageId, nm = d.Stage?.Name || String(sid);
+      if (!porEtapa.has(sid)) porEtapa.set(sid, { name: nm, total: 0, comNum: 0, ex: null });
+      const o = porEtapa.get(sid); o.total++;
+      const num = valorProp(d.OtherProperties, CAMPOS_OS.numero);
+      if (num) { o.comNum++; if (!o.ex) o.ex = num; }
+    }
+    L(`  (amostra de ${(dd.value || []).length} negócios do funil)`);
+    for (const [sid, o] of [...porEtapa.entries()].sort((a, b) => String(a[1].name).localeCompare(String(b[1].name))))
+      L(`   etapa [${sid}] "${o.name}"  → painel: ${statusDaEtapa(o.name)}  | ${o.total} neg., ${o.comNum} com Nº OS${o.ex ? ' (ex.: ' + o.ex + ')' : ''}`);
   }
 
   L('\n===== FIM =====\n');
