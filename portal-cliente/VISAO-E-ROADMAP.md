@@ -399,7 +399,7 @@ carbono, §5.4); **enquadramento tributário** da venda (Ecobraz é Associação
   Worker**, URL de storage nunca exposta), ambos **só para OS do próprio cliente** (confere ContactId).
   Painel: botão "📄 Documentos" por OS. (2) **CEP** — novo `/api/cep` (BrasilAPI) autopreenche
   rua/bairro/cidade/UF; seção "Local da coleta" reorganizada (CEP, número, rua, bairro, cidade/UF,
-  complemento) — reduz erro de digitação. (3) **Documentos preenchidos corretos** — achado o **campo real
+  complemento) — reduz erro de digitação. **Confirmado ao vivo pelo Marcio.** (3) **Documentos preenchidos corretos** — achado o **campo real
   do endereço de coleta** (`deal_F4BF490C-...`) e o Portal agora **grava nele** (não só na nota) — gravação
   **verificada por sonda** (gravou e leu de volta idêntico). **Pendente:** anexos NF/MTR (sistema
   `Attachments`, 12 itens por OS — download é um passo a mais) e confirmar com a Débora como o Nº/documentos
