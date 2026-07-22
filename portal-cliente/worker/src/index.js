@@ -141,6 +141,14 @@ export default {
         if (!sessao) return json({ ok: false, error: 'nao_autenticado' }, 401);
         return await consultaCep(request, env);
       }
+      if (pathname === '/api/os/docs' && request.method === 'GET') {
+        if (!sessao) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        return await listarDocsOS(url, sessao, env);
+      }
+      if (pathname === '/api/os/doc' && request.method === 'GET') {
+        if (!sessao) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        return await baixarDocOS(url, sessao, env);
+      }
 
       return json({ ok: false, error: 'not_found' }, 404);
     } catch (error) {
@@ -361,6 +369,52 @@ async function listarOS(sessao, env) {
     })
     .filter((o) => o.status !== 'Em negociação'); // só OS de verdade (da etapa "ordem de serviço" em diante)
   return json({ ok: true, os: linhas });
+}
+
+// Lista os DOCUMENTOS de uma OS (CDF/Certificado etc.). Segurança: só devolve se a OS for
+// do próprio cliente (confere ContactId). Documentos ligados via Documents?$filter=DealId.
+// (Linkagem e download verificados por sonda em 2026-07-22.)
+async function listarDocsOS(url, sessao, env) {
+  const base = env.PLOOMES_API_URL || 'https://public-api2.ploomes.com';
+  const headers = { 'User-Key': env.PLOOMES_USER_KEY, Accept: 'application/json' };
+  const clienteId = Number(sessao.empresaId || sessao.contactId);
+  const dealId = Number(url.searchParams.get('dealId') || 0);
+  if (!dealId || !clienteId) return json({ ok: false, error: 'sem_id' }, 400);
+  try {
+    // Confere que a OS é do cliente (senão não devolve nada — evita ver OS de outro).
+    const own = await fetch(`${base}/Deals?$filter=Id%20eq%20${dealId}%20and%20ContactId%20eq%20${clienteId}&$top=1&$select=Id`, { headers });
+    if (!own.ok || !((await own.json()).value || []).length) return json({ ok: false, error: 'nao_encontrada' }, 404);
+    const r = await fetch(`${base}/Documents?$filter=DealId%20eq%20${dealId}&$top=50&$select=Id,Name,DocumentNumber,FileName,Date`, { headers });
+    const docs = r.ok ? ((await r.json()).value || []).map((d) => ({ id: d.Id, nome: d.Name || d.FileName || `Documento ${d.DocumentNumber || d.Id}` })) : [];
+    return json({ ok: true, docs });
+  } catch (error) { console.error('docs_erro', safeError(error)); return json({ ok: false, error: 'indisponivel' }, 502); }
+}
+
+// Baixa UM documento (o Worker busca o PDF e entrega ao cliente — a URL de storage nunca
+// é exposta). Segurança: confere que a OS do documento é do próprio cliente.
+async function baixarDocOS(url, sessao, env) {
+  const base = env.PLOOMES_API_URL || 'https://public-api2.ploomes.com';
+  const headers = { 'User-Key': env.PLOOMES_USER_KEY, Accept: 'application/json' };
+  const clienteId = Number(sessao.empresaId || sessao.contactId);
+  const docId = Number(url.searchParams.get('docId') || 0);
+  if (!docId || !clienteId) return json({ ok: false, error: 'sem_id' }, 400);
+  try {
+    const r = await fetch(`${base}/Documents?$filter=Id%20eq%20${docId}&$top=1&$select=Id,Name,FileName,DealId,DocumentUrl`, { headers });
+    const doc = r.ok ? ((await r.json()).value || [])[0] : null;
+    if (!doc || !doc.DocumentUrl) return json({ ok: false, error: 'nao_encontrado' }, 404);
+    // Confere que a OS do documento é do cliente.
+    const own = await fetch(`${base}/Deals?$filter=Id%20eq%20${Number(doc.DealId)}%20and%20ContactId%20eq%20${clienteId}&$top=1&$select=Id`, { headers });
+    if (!own.ok || !((await own.json()).value || []).length) return json({ ok: false, error: 'sem_permissao' }, 403);
+    const pdf = await fetch(doc.DocumentUrl);
+    if (!pdf.ok || !pdf.body) return json({ ok: false, error: 'indisponivel' }, 502);
+    const limpo = String(doc.FileName || doc.Name || `documento-${docId}`).replace(/[^\w.\- ]+/g, '').slice(0, 80) || `documento-${docId}`;
+    const nome = /\.pdf$/i.test(limpo) ? limpo : `${limpo}.pdf`;
+    return new Response(pdf.body, { status: 200, headers: {
+      'content-type': pdf.headers.get('content-type') || 'application/pdf',
+      'content-disposition': `attachment; filename="${nome}"`,
+      'cache-control': 'private, no-store',
+    } });
+  } catch (error) { console.error('baixar_doc_erro', safeError(error)); return json({ ok: false, error: 'indisponivel' }, 502); }
 }
 
 async function abrirChamado(request, sessao, env) {

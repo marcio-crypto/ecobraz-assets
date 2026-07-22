@@ -97,6 +97,12 @@ textarea{resize:vertical}
 .thumb img{width:100%;height:100%;object-fit:cover}
 .thumb button{position:absolute;top:3px;right:3px;width:20px;height:20px;border:0;border-radius:50%;background:rgba(16,38,43,.78);color:#fff;font-size:13px;cursor:pointer;line-height:1;display:grid;place-items:center}
 @media(max-width:560px){.sol-grid{grid-template-columns:1fr}}
+.os-main{flex:1;min-width:0}
+.doclnk{margin-top:10px;background:none;border:0;color:var(--teal);font-weight:700;font-size:13px;cursor:pointer;padding:2px 0;display:inline-flex;align-items:center;gap:6px}
+.doclnk:hover{color:var(--green)}
+.docwrap{display:none;margin-top:8px;flex-direction:column;gap:6px}
+.docdl{display:inline-flex;align-items:center;gap:8px;font-size:13.5px;color:var(--teal);text-decoration:none;padding:8px 12px;border:1px solid var(--line);border-radius:9px;background:var(--soft);width:fit-content;max-width:100%}
+.docdl:hover{border-color:var(--green);background:#F0F7EC}
 
 @media(max-width:860px){
   .auth{grid-template-columns:1fr}
@@ -264,9 +270,25 @@ async function carregar(){
       var titulo=o.numeroOS?('Ordem de serviço '+escapeHtml(String(o.numeroOS))):'Ordem de serviço';
       var meta=[]; meta.push(o.dataColeta?('Coleta em '+fmt(o.dataColeta)):('Aberta em '+fmt(o.aberturaISO)));
       if(o.peso && String(o.peso).toLowerCase().indexOf('não informado')<0 && String(o.peso).toLowerCase().indexOf('nao informado')<0) meta.push('Peso: '+escapeHtml(String(o.peso)));
-      return '<div class="os"><div><div class="os-title">'+titulo+'</div><div class="os-meta">'+meta.join(' · ')+'</div></div><span class="tag '+tagCls(o.status)+'">'+escapeHtml(o.status)+'</span></div>';
+      return '<div class="os"><div class="os-main"><div class="os-title">'+titulo+'</div><div class="os-meta">'+meta.join(' · ')+'</div>'
+        +'<button class="doclnk" type="button" onclick="verDocs('+o.id+',this)">📄 Documentos</button>'
+        +'<div class="docwrap" id="docs-'+o.id+'"></div>'
+        +'</div><span class="tag '+tagCls(o.status)+'">'+escapeHtml(o.status)+'</span></div>';
     }).join('');
   }catch(_){ kpi.textContent='—'; alvo.innerHTML='<p class="muted">Não foi possível carregar agora. Tente atualizar a página.</p>'; }
+}
+async function verDocs(id,btn){
+  var box=document.getElementById('docs-'+id); if(!box) return;
+  if(box.dataset.loaded){ box.style.display=(box.style.display==='none'||!box.style.display)?'flex':'none'; return; }
+  btn.disabled=true; var txt=btn.textContent; btn.textContent='Carregando…';
+  try{
+    var r=await fetch('/api/os/docs?dealId='+id); var d=await r.json();
+    if(d.ok&&d.docs&&d.docs.length){
+      box.innerHTML=d.docs.map(function(x){return '<a class="docdl" href="/api/os/doc?docId='+x.id+'" target="_blank" rel="noopener">⬇ '+escapeHtml(x.nome)+'</a>';}).join('');
+    } else { box.innerHTML='<span class="muted" style="font-size:13px">Nenhum documento disponível ainda. Assim que a coleta for processada, os documentos aparecem aqui.</span>'; }
+    box.dataset.loaded='1'; box.style.display='flex';
+  }catch(_){ box.innerHTML='<span class="muted" style="font-size:13px">Não consegui carregar os documentos agora.</span>'; box.style.display='flex'; }
+  btn.disabled=false; btn.textContent=txt;
 }
 function campoVal(id){var el=document.getElementById(id);return el?el.value.trim():'';}
 async function preencherPerfil(){
