@@ -371,9 +371,28 @@ async function listarOS(sessao, env) {
   return json({ ok: true, os: linhas });
 }
 
-// Lista os DOCUMENTOS de uma OS (CDF/Certificado etc.). Segurança: só devolve se a OS for
-// do próprio cliente (confere ContactId). Documentos ligados via Documents?$filter=DealId.
-// (Linkagem e download verificados por sonda em 2026-07-22.)
+// Classifica um documento pelo NOME e diz se o CLIENTE pode ver — e se depende de liberação.
+// Regras da Débora (2026-07-22): cliente vê OS, NF, MTR, Carta de Descarte, CDF, laudo; o CDF e
+// o laudo SÓ quando liberados; NUNCA contrato/imagens de controle interno. Nomes no Ploomes
+// seguem "NNNNN - Tipo". Desconhecido = NÃO mostra (padrão seguro — melhor esconder que vazar).
+function semAcentoLc(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+function classificaDoc(nome) {
+  const s = semAcentoLc(nome);
+  if (/contrat|imagem|imagens|controle interno|\binterno\b/.test(s)) return { cliente: false };
+  if (/cdf|certificad/.test(s)) return { cliente: true, liberar: true, rotulo: 'Certificado de Destinação Final (CDF)' };
+  if (/laudo/.test(s)) return { cliente: true, liberar: true, rotulo: 'Laudo' };
+  if (/mtr/.test(s)) return { cliente: true, rotulo: 'MTR' };
+  if (/carta/.test(s)) return { cliente: true, rotulo: 'Carta de Descarte' };
+  if (/nota|\bnf\b|fiscal/.test(s)) return { cliente: true, rotulo: 'Nota Fiscal' };
+  if (/ordem|servi|\bo\.?s\.?\b/.test(s)) return { cliente: true, rotulo: 'Ordem de Serviço' };
+  return { cliente: false }; // tipo desconhecido: não mostra
+}
+// "Liberado" NÃO está no flag Shared do Ploomes (sonda: 0 de 400 docs marcados) — usamos a
+// ETAPA "Certificado Liberado" como sinal de liberação do CDF/laudo. (A confirmar com a Débora.)
+function certificadoLiberadoDaEtapa(nomeEtapa) { return /certificado liberado/.test(semAcentoLc(nomeEtapa)); }
+
+// Lista os DOCUMENTOS de uma OS que o cliente PODE ver. Segurança: só a OS do próprio cliente
+// (confere ContactId) e aplica as regras de tipo/liberação acima.
 async function listarDocsOS(url, sessao, env) {
   const base = env.PLOOMES_API_URL || 'https://public-api2.ploomes.com';
   const headers = { 'User-Key': env.PLOOMES_USER_KEY, Accept: 'application/json' };
@@ -381,11 +400,20 @@ async function listarDocsOS(url, sessao, env) {
   const dealId = Number(url.searchParams.get('dealId') || 0);
   if (!dealId || !clienteId) return json({ ok: false, error: 'sem_id' }, 400);
   try {
-    // Confere que a OS é do cliente (senão não devolve nada — evita ver OS de outro).
-    const own = await fetch(`${base}/Deals?$filter=Id%20eq%20${dealId}%20and%20ContactId%20eq%20${clienteId}&$top=1&$select=Id`, { headers });
-    if (!own.ok || !((await own.json()).value || []).length) return json({ ok: false, error: 'nao_encontrada' }, 404);
+    // Confere que a OS é do cliente E pega a etapa (pra saber se CDF/laudo já está liberado).
+    const own = await fetch(`${base}/Deals?$filter=Id%20eq%20${dealId}%20and%20ContactId%20eq%20${clienteId}&$top=1&$expand=Stage`, { headers });
+    const deal = own.ok ? ((await own.json()).value || [])[0] : null;
+    if (!deal) return json({ ok: false, error: 'nao_encontrada' }, 404);
+    const liberado = certificadoLiberadoDaEtapa(deal.Stage?.Name);
     const r = await fetch(`${base}/Documents?$filter=DealId%20eq%20${dealId}&$top=50&$select=Id,Name,DocumentNumber,FileName,Date`, { headers });
-    const docs = r.ok ? ((await r.json()).value || []).map((d) => ({ id: d.Id, nome: d.Name || d.FileName || `Documento ${d.DocumentNumber || d.Id}` })) : [];
+    const brutos = r.ok ? ((await r.json()).value || []) : [];
+    const docs = [];
+    for (const d of brutos) {
+      const c = classificaDoc(d.Name);
+      if (!c.cliente) continue;                 // interno/desconhecido: nunca mostra
+      if (c.liberar && !liberado) continue;     // CDF/laudo só quando liberado
+      docs.push({ id: d.Id, nome: c.rotulo ? `${c.rotulo}${d.DocumentNumber ? ' nº ' + d.DocumentNumber : ''}` : (d.Name || `Documento ${d.Id}`) });
+    }
     return json({ ok: true, docs });
   } catch (error) { console.error('docs_erro', safeError(error)); return json({ ok: false, error: 'indisponivel' }, 502); }
 }
@@ -402,9 +430,14 @@ async function baixarDocOS(url, sessao, env) {
     const r = await fetch(`${base}/Documents?$filter=Id%20eq%20${docId}&$top=1&$select=Id,Name,FileName,DealId,DocumentUrl`, { headers });
     const doc = r.ok ? ((await r.json()).value || [])[0] : null;
     if (!doc || !doc.DocumentUrl) return json({ ok: false, error: 'nao_encontrado' }, 404);
-    // Confere que a OS do documento é do cliente.
-    const own = await fetch(`${base}/Deals?$filter=Id%20eq%20${Number(doc.DealId)}%20and%20ContactId%20eq%20${clienteId}&$top=1&$select=Id`, { headers });
-    if (!own.ok || !((await own.json()).value || []).length) return json({ ok: false, error: 'sem_permissao' }, 403);
+    // Confere que a OS do documento é do cliente E pega a etapa (liberação de CDF/laudo).
+    const own = await fetch(`${base}/Deals?$filter=Id%20eq%20${Number(doc.DealId)}%20and%20ContactId%20eq%20${clienteId}&$top=1&$expand=Stage`, { headers });
+    const deal = own.ok ? ((await own.json()).value || [])[0] : null;
+    if (!deal) return json({ ok: false, error: 'sem_permissao' }, 403);
+    // MESMAS regras da lista (não basta filtrar a lista — poderiam chamar /api/os/doc direto).
+    const c = classificaDoc(doc.Name);
+    if (!c.cliente) return json({ ok: false, error: 'sem_permissao' }, 403);
+    if (c.liberar && !certificadoLiberadoDaEtapa(deal.Stage?.Name)) return json({ ok: false, error: 'nao_liberado' }, 403);
     const pdf = await fetch(doc.DocumentUrl);
     if (!pdf.ok || !pdf.body) return json({ ok: false, error: 'indisponivel' }, 502);
     const limpo = String(doc.FileName || doc.Name || `documento-${docId}`).replace(/[^\w.\- ]+/g, '').slice(0, 80) || `documento-${docId}`;
