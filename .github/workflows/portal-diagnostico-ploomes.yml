@@ -77,6 +77,12 @@ jobs:
           PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
           CNPJ_ALVO: ${{ github.event.inputs.cnpj }}
         run: node portal-cliente/diagnostico/sonda-docs-endpoint.mjs
+      - name: Sonda tipos de documento + flag liberado — quando sonda = tipos-doc
+        if: ${{ github.event.inputs.sonda == 'tipos-doc' }}
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+        run: node portal-cliente/diagnostico/inspeciona-tipos-doc.mjs
       - name: Inspeção de cliente-exemplo (somente leitura) — quando informado cnpj
         if: ${{ github.event.inputs.cnpj != '' }}
         env:
