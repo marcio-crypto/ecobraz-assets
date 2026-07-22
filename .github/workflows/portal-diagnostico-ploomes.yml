@@ -117,6 +117,13 @@ jobs:
           PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
           PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
         run: node portal-cliente/diagnostico/inspeciona-webhooks.mjs
+      - name: Sonda IDs (Negócio + cadastro do Marcio) — quando sonda = ids
+        if: ${{ github.event.inputs.sonda == 'ids' }}
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+          EMAIL_TESTE: ${{ github.event.inputs.cnpj }}
+        run: node portal-cliente/diagnostico/inspeciona-ids.mjs
       - name: Inspeção de cliente-exemplo (somente leitura) — quando informado cnpj
         if: ${{ github.event.inputs.cnpj != '' }}
         env:
