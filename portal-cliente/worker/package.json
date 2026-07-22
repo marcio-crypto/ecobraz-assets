@@ -3,5 +3,8 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Portal do Cliente Ecobraz — Worker (login por link + portão de contrato + painel)."
+  "description": "Portal do Cliente Ecobraz — Worker (login por link + portão de contrato + painel).",
+  "dependencies": {
+    "qrcode-generator": "1.4.4"
+  }
 }

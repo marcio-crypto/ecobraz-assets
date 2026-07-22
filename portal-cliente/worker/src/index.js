@@ -28,6 +28,7 @@ import { LOGO_ESCURO_B64, LOGO_CLARO_B64 } from './logos.js';
 import { paginaCalculadora, estimativaCarbono, paginaCalculoDetalhado, calculoDetalhadoGHG } from './carbono.js';
 import { criarPreferencia, consultarPagamento } from './mercadopago.js';
 import { statusDaEtapa, valorProp, CAMPOS_OS } from './os-utils.js';
+import { qrCDF, validarCDF } from './validacao.js';
 
 export default {
   async fetch(request, env) {
@@ -35,7 +36,7 @@ export default {
     const { pathname } = url;
     try {
       if (pathname === '/health') return json({
-        ok: true, service: 'ecobraz-portal', version: 8,
+        ok: true, service: 'ecobraz-portal', version: 9,
         // Só presença (true/false) — NUNCA os valores. Ajuda a confirmar a
         // configuração pelo navegador sem expor segredo nenhum.
         config: {
@@ -51,6 +52,7 @@ export default {
           mercadopagoModo: env.MERCADOPAGO_ACCESS_TOKEN ? (env.MERCADOPAGO_ACCESS_TOKEN.startsWith('TEST-') ? 'teste' : 'producao') : null,
           avisoEmail: !!env.PLOOMES_WEBHOOK_SECRET,
           avisoModoTeste: env.NOTIF_MODO_TESTE === '1', // true = só contato de teste; false = vale p/ todos
+          validacaoCDF: true, // /qr e /validar (QR anti-fraude no CDF)
         },
       });
 
@@ -123,6 +125,9 @@ export default {
       // Aviso ao cliente quando a OS muda de etapa (o Ploomes chama esta rota na automação).
       if (pathname === '/api/ploomes/webhook' && request.method === 'POST') return await webhookPloomes(request, env);
       if (pathname === '/api/ploomes/webhook' && request.method === 'GET') return await webhookUltimo(request, env);
+      // Validação pública de CDF (anti-fraude): QR no certificado -> confere contra o Ploomes.
+      if (pathname === '/qr' && request.method === 'GET') return await qrCDF(request, env, url);
+      if (pathname === '/validar' && request.method === 'GET') return await validarCDF(request, env, url);
 
       // Dali para baixo, exige sessão válida.
       const sessao = await lerSessao(request, env);
