@@ -393,6 +393,15 @@ carbono, §5.4); **enquadramento tributário** da venda (Ecobraz é Associação
   - **Abrir OS (form pedido pelo Marcio):** Razão Social, CNPJ, **Endereço de coleta (editável — muda por
     coleta)**, telefone, e-mail, responsável, **lista/fotos dos equipamentos**; pré-preenche do Ploomes,
     cliente confirma/atualiza → cria a OS. Ploomes gera a OS + documento inicial (imediato); CDF vem depois.
+- **2026-07-22** — **E-mail de aviso na mudança de etapa (item 2 dos 3) — parte do sistema pronta.**
+  Webhook `POST /api/ploomes/webhook?t=SEGREDO` (o Ploomes chama na automação), protegido por
+  `PLOOMES_WEBHOOK_SECRET` (desabilitado/503 até configurar → deploy seguro). 3 gatilhos por etapa:
+  **Ordem de Serviço → "coleta agendada"; Coleta Finalizada → "coleta realizada"; Certificado Liberado →
+  "certificado liberado"**. E-mail com a cara da Ecobraz Emigre (Resend, `acesso@ecobraz.org.br`), de-dup por
+  KV (`notif:{deal}:{tipo}`), remetente confirmado pelo Marcio. Lógica (etapa→aviso, parse do payload)
+  testada localmente. `/health` v5 mostra `avisoEmail`; rota GET guarda o último payload p/ ajustar formato.
+  **Falta LIGAR:** criar `PLOOMES_WEBHOOK_SECRET` no Cloudflare + a automação no Ploomes (guiar o Marcio);
+  teste real com o cadastro dele.
 - **2026-07-22** — **NF no download (fecha o item 1 dos 3 pedidos).** A NF vem dos **anexos**
   (`Attachments`): campo `Url` verificado (baixa PDF 109 KB) e `FileName`/`ContentType`/`IsSensitiveData`/
   `Listable` no próprio registro. `classificaAnexo` = **allowlist ESTRITO (só NF)**; fotos WhatsApp/termo
