@@ -50,6 +50,12 @@ jobs:
           PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
           PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
         run: node portal-cliente/diagnostico/inspeciona-solicitacao.mjs
+      - name: Sonda criar OS na etapa certa (cria e apaga um teste) — quando sonda = os-live
+        if: ${{ github.event.inputs.sonda == 'os-live' }}
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+        run: node portal-cliente/diagnostico/sonda-cria-os.mjs
       - name: Inspeção de cliente-exemplo (somente leitura) — quando informado cnpj
         if: ${{ github.event.inputs.cnpj != '' }}
         env:
