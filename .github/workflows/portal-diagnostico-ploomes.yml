@@ -16,7 +16,7 @@ on:
         required: false
         default: ''
       sonda:
-        description: 'Sonda específica: "upload" (só lê o $metadata) ou "upload-live" (testa o upload criando e apagando um negócio de teste). Vazio = ignora.'
+        description: 'Sonda específica: "upload" / "upload-live" (upload de fotos) ou "solicitacao" (o que a Solicitação de coleta virou + IDs das etapas). Vazio = ignora.'
         required: false
         default: ''
 
@@ -44,6 +44,12 @@ jobs:
           PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
           LIVE: ${{ github.event.inputs.sonda == 'upload-live' && '1' || '0' }}
         run: node portal-cliente/diagnostico/sonda-upload.mjs
+      - name: Sonda da Solicitação de coleta (somente leitura) — quando sonda = solicitacao
+        if: ${{ github.event.inputs.sonda == 'solicitacao' }}
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+        run: node portal-cliente/diagnostico/inspeciona-solicitacao.mjs
       - name: Inspeção de cliente-exemplo (somente leitura) — quando informado cnpj
         if: ${{ github.event.inputs.cnpj != '' }}
         env:
