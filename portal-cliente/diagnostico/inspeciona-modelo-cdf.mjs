@@ -26,10 +26,11 @@ const eCDF = (nome) => /cdf|certificad|destina/i.test(String(nome || ''));
   for (const m of cdfModelos) L(`     [${m.Id}] "${m.Name}"`);
   if (cdfModelos.length === 0) { L('  (nenhum pelo nome — listo todos p/ referência):'); for (const m of modelos.slice(0, 40)) L(`     [${m.Id}] "${m.Name}"`); }
 
-  // 2) Abre o 1º modelo de CDF com TODOS os campos, e procura corpo/merge fields.
-  const alvo = cdfModelos[0];
+  // 2) Abre o modelo do CDF com o CÓDIGO-FONTE explícito (sem $select ele vem null) e procura o
+  //    corpo/merge fields. Uso o modelo real dos certificados (224095) se estiver na lista, senão o 1º.
+  const alvo = cdfModelos.find((m) => Number(m.Id) === Number(process.env.CDF_TEMPLATE_ID || 224095)) || cdfModelos[0];
   if (alvo) {
-    const full = await api(`DocumentTemplates?$filter=Id%20eq%20${alvo.Id}&$top=1`);
+    const full = await api(`DocumentTemplates?$filter=Id%20eq%20${alvo.Id}&$top=1&$select=Id,Name,HeaderSourceCode,BodySourceCode,FooterSourceCode,CoverSourceCode,NewFormat,Editable`);
     const obj = (Array.isArray(full.val) ? full.val[0] : full.val) || {};
     L(`\n  Campos do modelo [${alvo.Id}] "${alvo.Name}" (HTTP ${full.status}):`);
     for (const [k, v] of Object.entries(obj)) {
@@ -37,19 +38,22 @@ const eCDF = (nome) => /cdf|certificad|destina/i.test(String(nome || ''));
       const tam = tipo === 'string' ? ` (len ${v.length})` : '';
       L(`     - ${k}: ${tipo}${tam}`);
     }
-    // Procura um campo que pareça o corpo (HTML) do modelo.
-    const corpoKey = Object.keys(obj).find((k) => typeof obj[k] === 'string' && obj[k].length > 200 && /<|\{\{|\[\[|\}\}/.test(obj[k]));
-    if (corpoKey) {
-      const corpo = obj[corpoKey];
-      L(`\n  >> Corpo provável no campo "${corpoKey}" (len ${corpo.length}). Amostra:`);
-      L('     ' + corpo.slice(0, 700).replace(/\n/g, '\n     '));
-      // Detecta a sintaxe de merge field usada.
-      const padroes = [/\{\{[^}]+\}\}/g, /\[\[[^\]]+\]\]/g, /\{[A-Za-z][\w.]+\}/g, /%[A-Za-z][\w.]+%/g, /\$\{[^}]+\}/g];
-      L('\n  >> Campos de mesclagem detectados no corpo:');
-      for (const p of padroes) { const ms = [...corpo.matchAll(p)].slice(0, 12).map((x) => x[0]); if (ms.length) L(`     ${p} -> ${[...new Set(ms)].join('  ')}`); }
-      L(`  >> Tem <img ...>? ${/<img/i.test(corpo) ? 'SIM' : 'não'}`);
-    } else {
-      L('\n  (não achei um campo de corpo HTML óbvio; ver a lista de campos acima)');
+    // Examina CADA seção de código-fonte (Header/Body/Footer/Cover) procurando merge fields, <img> e
+    // como o NÚMERO do certificado/OS é referenciado (é o campo que vamos usar no src do QR).
+    const padroes = [/\{\{[^}]{1,40}\}\}/g, /\[\[[^\]]{1,40}\]\]/g, /\{[A-Za-z][\w.]{1,40}\}/g, /%[A-Za-z][\w.]{1,40}%/g, /\$\{[^}]{1,40}\}/g, /#\{[^}]{1,40}\}/g, /@[A-Za-z][\w.]{1,40}@/g];
+    for (const sec of ['HeaderSourceCode', 'BodySourceCode', 'FooterSourceCode', 'CoverSourceCode']) {
+      const corpo = typeof obj[sec] === 'string' ? obj[sec] : '';
+      if (!corpo) { L(`\n  >> ${sec}: (vazio/null)`); continue; }
+      L(`\n  >> ${sec} (len ${corpo.length}) — tem <img>? ${/<img/i.test(corpo) ? 'SIM' : 'não'}`);
+      const campos = new Set();
+      for (const p of padroes) for (const m of corpo.matchAll(p)) campos.add(m[0]);
+      if (campos.size) L(`     campos de mesclagem: ${[...campos].slice(0, 30).join('  ')}`);
+      // Onde aparece "numero"/"number"/"os"/"documento" (candidatos ao número do certificado)?
+      const numTok = [...campos].filter((c) => /numer|number|\bos\b|document|codigo|nº|proposal/i.test(c));
+      if (numTok.length) L(`     >> candidatos a NÚMERO: ${numTok.join('  ')}`);
+      // Amostra em torno da 1ª imagem (pra ver como imagens são declaradas no modelo).
+      const iImg = corpo.search(/<img/i);
+      if (iImg >= 0) L(`     amostra <img>: ${corpo.slice(iImg, iImg + 160).replace(/\s+/g, ' ')}`);
     }
   }
 
