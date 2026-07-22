@@ -798,6 +798,9 @@ async function processarMudancaOS(dealId, env) {
   if (!deal) return;
   const tipo = tipoNotificacao(deal.Stage?.Name);
   if (!tipo) return; // etapa não é gatilho de aviso
+  // MODO TESTE (canário): se definido, só envia para o contato de teste — evita e-mail a cliente
+  // real antes de validar. Depois de aprovado, a variável é removida e vale para todos.
+  if (env.NOTIF_TESTE_CONTACT_ID && String(deal.ContactId) !== String(env.NOTIF_TESTE_CONTACT_ID)) return;
   const email = deal.Contact?.Email;
   if (!email) { console.error('webhook_sem_email', dealId); return; }
   const chave = `notif:${dealId}:${tipo}`;
