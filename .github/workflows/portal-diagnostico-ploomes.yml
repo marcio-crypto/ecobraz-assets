@@ -10,6 +10,11 @@ name: Portal — Diagnóstico do Ploomes (somente leitura)
 
 on:
   workflow_dispatch:
+    inputs:
+      cnpj:
+        description: 'CNPJ de um cliente-exemplo para inspeção focada (vazio = diagnóstico geral)'
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -22,11 +27,19 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Rodar diagnóstico (somente leitura, sem dados pessoais)
+      - name: Diagnóstico geral (somente leitura) — quando SEM cnpj
+        if: ${{ github.event.inputs.cnpj == '' }}
         env:
           PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
           PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }} # opcional; padrão public-api2.ploomes.com
         run: node portal-cliente/diagnostico/diagnostico-ploomes.mjs
+      - name: Inspeção de cliente-exemplo (somente leitura) — quando informado cnpj
+        if: ${{ github.event.inputs.cnpj != '' }}
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+          CNPJ_ALVO: ${{ github.event.inputs.cnpj }}
+        run: node portal-cliente/diagnostico/inspeciona-cliente.mjs
       - name: Guardar resultado como artefato
         if: always()
         uses: actions/upload-artifact@v4
