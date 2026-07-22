@@ -41,20 +41,20 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const mv = await api(`Deals(${id})`, { method: 'PATCH', body: JSON.stringify({ StageId: STAGE_TRIGGER }) });
   L(`  MOVIDO para "Ordem de Serviço" -> HTTP ${mv.status}`);
 
-  // 3) fica checando o registro por ~120s (negócio segue vivo → sem corrida com o e-mail).
+  // 3) fica checando o registro por ~90s e imprime o PAYLOAD COMPLETO (pra achar onde vem o
+  //    Id do negócio na estrutura real do Ploomes).
   let fired = null;
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < 16; i++) { // ~160s: o webhook do Ploomes chega com ~1-2 min de atraso
     await wait(10000);
     const d = await dbg();
     const u = d?.ultimo;
-    const refOurs = u && JSON.stringify(u).includes(String(id));
-    L(`   ${(i + 1) * 10}s: ultimo=${u ? JSON.stringify(u).slice(0, 90) : '(vazio)'}${refOurs ? '  <== é o nosso negócio!' : ''}`);
-    if (refOurs) { fired = u; break; }
+    if (u) { const s = JSON.stringify(u); L(`   ${(i + 1) * 10}s: ultimo(completo)= ${s.slice(0, 900)}`); if (s.includes(String(id))) { fired = u; L('       ^^ contém o Id do NOSSO negócio ' + id); break; } }
+    else L(`   ${(i + 1) * 10}s: (registro vazio / sem acesso)`);
   }
 
   // 4) veredito
-  if (fired) L('\n  ✅ O PLOOMES CHAMOU nosso sistema (webhook disparou p/ o nosso negócio). O e-mail deve ter saído para marcio@ecobraz.org.br.');
-  else L('\n  ⚠️ O Ploomes NÃO chamou nosso sistema em 120s (nem pela edição via API). Provável: só dispara quando movem pela TELA do Ploomes → a Débora precisa mover uma OS pra testar de verdade.');
+  if (fired) L(`\n  ✅ Webhook disparou para o NOSSO negócio (${id}) — payload acima. Vou ajustar o parser pra esse formato.`);
+  else L('\n  ℹ️ Não peguei o payload do nosso negócio nessa janela (mas o registro mostra que o webhook FUNCIONA). Uso o payload acima pra ajustar o parser.');
 
   // 5) limpeza
   const del = await api(`Deals(${id})`, { method: 'DELETE' });

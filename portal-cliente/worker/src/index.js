@@ -767,7 +767,11 @@ function tipoNotificacao(nomeEtapa) {
 }
 function extrairDealId(p) {
   if (!p || typeof p !== 'object') return null;
-  const cands = [p.Id, p.DealId, p.dealId, p.Deal?.Id, p.deal?.Id, p.entity?.Id, p.Entity?.Id, p.data?.Id, p.Data?.Id, Array.isArray(p.value) ? p.value[0]?.Id : null];
+  // Formato REAL do webhook do Ploomes (verificado 2026-07-22): {Action:"Update", Entity:"Deals",
+  // EntityId:<id do negócio>, ...}. Também aceita formatos alternativos por segurança.
+  const ent = typeof p.Entity === 'string' ? p.Entity.toLowerCase() : '';
+  const cands = [p.Id, p.DealId, p.dealId, p.Deal?.Id, p.deal?.Id, p.data?.Id, p.Data?.Id, Array.isArray(p.value) ? p.value[0]?.Id : null];
+  if (/deal|negoci/.test(ent) || !p.Entity) cands.push(p.EntityId, p.entityId);
   for (const c of cands) { const n = Number(c); if (Number.isInteger(n) && n > 0) return n; }
   return null;
 }
