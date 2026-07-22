@@ -35,7 +35,7 @@ export default {
     const { pathname } = url;
     try {
       if (pathname === '/health') return json({
-        ok: true, service: 'ecobraz-portal', version: 4,
+        ok: true, service: 'ecobraz-portal', version: 5,
         // Só presença (true/false) — NUNCA os valores. Ajuda a confirmar a
         // configuração pelo navegador sem expor segredo nenhum.
         config: {
@@ -49,6 +49,7 @@ export default {
           kv: !!env.PORTAL_KV,
           mercadopago: !!env.MERCADOPAGO_ACCESS_TOKEN,
           mercadopagoModo: env.MERCADOPAGO_ACCESS_TOKEN ? (env.MERCADOPAGO_ACCESS_TOKEN.startsWith('TEST-') ? 'teste' : 'producao') : null,
+          avisoEmail: !!env.PLOOMES_WEBHOOK_SECRET,
         },
       });
 
@@ -118,6 +119,9 @@ export default {
       if (pathname === '/entrar' && request.method === 'GET') return await entrarComToken(request, env, url);
       if (pathname === '/api/auth/solicitar' && request.method === 'POST') return await solicitarLink(request, env);
       if (pathname === '/api/auth/sair' && request.method === 'POST') return sair();
+      // Aviso ao cliente quando a OS muda de etapa (o Ploomes chama esta rota na automação).
+      if (pathname === '/api/ploomes/webhook' && request.method === 'POST') return await webhookPloomes(request, env);
+      if (pathname === '/api/ploomes/webhook' && request.method === 'GET') return await webhookUltimo(request, env);
 
       // Dali para baixo, exige sessão válida.
       const sessao = await lerSessao(request, env);
@@ -741,6 +745,100 @@ async function enviarEmailNF(pedido, pagamento, env) {
     headers: { 'content-type': 'application/json', authorization: `Bearer ${env.RESEND_API_KEY}` },
     body: JSON.stringify({ from, to: [to], subject: 'Nova venda — Cálculo de pegada de carbono (emitir NF)', html, text: texto }),
   });
+}
+
+// ---------------------------------------------------------------------------
+// Aviso ao cliente na mudança de etapa da OS (item pedido pelo Marcio).
+// O Ploomes chama POST /api/ploomes/webhook?t=SEGREDO quando a OS muda de etapa;
+// o Worker confere a etapa, acha o e-mail do cliente e manda um e-mail com a cara da
+// Ecobraz — nos 3 momentos definidos pela Débora. De-dup por KV (não manda 2x o mesmo).
+// ---------------------------------------------------------------------------
+const MSGS_STATUS = {
+  coleta_agendada: { assunto: 'Sua coleta foi agendada — Ecobraz', titulo: 'Coleta agendada', corpo: 'Recebemos sua solicitação e sua coleta já está <strong>agendada</strong>. Você acompanha cada passo por aqui, no seu portal.' },
+  coleta_realizada: { assunto: 'Coleta realizada — Ecobraz', titulo: 'Coleta realizada', corpo: 'Sua coleta foi <strong>realizada com sucesso</strong>. Em breve os documentos ficam disponíveis para você no portal.' },
+  certificado_liberado: { assunto: 'Seu certificado está disponível — Ecobraz', titulo: 'Certificado liberado', corpo: 'Seu <strong>Certificado de Destinação Final</strong> já está disponível para baixar no seu portal.' },
+};
+function tipoNotificacao(nomeEtapa) {
+  const s = semAcentoLc(nomeEtapa);
+  if (/certificado liberado/.test(s)) return 'certificado_liberado';
+  if (/coleta finalizada/.test(s)) return 'coleta_realizada';
+  if (/ordem de servico/.test(s)) return 'coleta_agendada';
+  return null;
+}
+function extrairDealId(p) {
+  if (!p || typeof p !== 'object') return null;
+  const cands = [p.Id, p.DealId, p.dealId, p.Deal?.Id, p.deal?.Id, p.entity?.Id, p.Entity?.Id, p.data?.Id, p.Data?.Id, Array.isArray(p.value) ? p.value[0]?.Id : null];
+  for (const c of cands) { const n = Number(c); if (Number.isInteger(n) && n > 0) return n; }
+  return null;
+}
+async function webhookPloomes(request, env) {
+  if (!env.PLOOMES_WEBHOOK_SECRET) return json({ ok: false, error: 'nao_configurado' }, 503);
+  const token = new URL(request.url).searchParams.get('t') || request.headers.get('x-webhook-token') || '';
+  if (token !== env.PLOOMES_WEBHOOK_SECRET) return json({ ok: false, error: 'nao_autorizado' }, 401);
+  let payload = null;
+  try { payload = await request.json(); } catch { payload = null; }
+  // Guarda o último payload cru (pra ajustar o formato após o 1º disparo real).
+  try { if (env.PORTAL_KV) await env.PORTAL_KV.put('webhook:ultimo', JSON.stringify(payload).slice(0, 4000), { expirationTtl: 60 * 60 * 24 * 7 }); } catch { /* ignore */ }
+  const dealId = extrairDealId(payload);
+  if (!dealId) { console.error('webhook_sem_deal'); return json({ ok: true, ignorado: 'sem_deal' }); }
+  try { await processarMudancaOS(dealId, env); } catch (error) { console.error('webhook_erro', safeError(error)); }
+  return json({ ok: true });
+}
+async function webhookUltimo(request, env) { // depuração: ver o último payload que o Ploomes mandou
+  const token = new URL(request.url).searchParams.get('t') || '';
+  if (!env.PLOOMES_WEBHOOK_SECRET || token !== env.PLOOMES_WEBHOOK_SECRET) return json({ ok: false, error: 'nao_autorizado' }, 401);
+  const ultimo = env.PORTAL_KV ? await env.PORTAL_KV.get('webhook:ultimo') : null;
+  return json({ ok: true, ultimo: ultimo ? JSON.parse(ultimo) : null });
+}
+async function processarMudancaOS(dealId, env) {
+  const base = env.PLOOMES_API_URL || 'https://public-api2.ploomes.com';
+  const headers = { 'User-Key': env.PLOOMES_USER_KEY, Accept: 'application/json' };
+  const r = await fetch(`${base}/Deals?$filter=Id%20eq%20${dealId}&$top=1&$expand=Stage,Contact`, { headers });
+  const deal = r.ok ? ((await r.json()).value || [])[0] : null;
+  if (!deal) return;
+  const tipo = tipoNotificacao(deal.Stage?.Name);
+  if (!tipo) return; // etapa não é gatilho de aviso
+  const email = deal.Contact?.Email;
+  if (!email) { console.error('webhook_sem_email', dealId); return; }
+  const chave = `notif:${dealId}:${tipo}`;
+  if (env.PORTAL_KV && (await env.PORTAL_KV.get(chave))) return; // já avisou este passo
+  await enviarEmailStatus(email, deal.Contact?.Name || '', tipo, env);
+  if (env.PORTAL_KV) await env.PORTAL_KV.put(chave, '1', { expirationTtl: 60 * 60 * 24 * 90 });
+}
+async function enviarEmailStatus(to, nome, tipo, env) {
+  if (!env.RESEND_API_KEY) throw new Error('sem_resend');
+  const m = MSGS_STATUS[tipo]; if (!m) return;
+  const from = env.RESEND_FROM || 'Portal Ecobraz <acesso@ecobraz.org.br>';
+  const portalUrl = env.PORTAL_URL || 'https://ecobraz-portal.ti-0ab.workers.dev/';
+  const r = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${env.RESEND_API_KEY}` },
+    body: JSON.stringify({ from, to: [to], subject: m.assunto, html: emailStatusHtml(nome, m, portalUrl), text: `${m.titulo}\n\n${m.corpo.replace(/<[^>]+>/g, '')}\n\nAcesse seu portal: ${portalUrl}\n\nEcobraz` }),
+  });
+  if (!r.ok) { const b = await r.text().catch(() => ''); throw new Error(`resend_${r.status}:${b.slice(0, 140)}`); }
+}
+function emailStatusHtml(nome, m, portalUrl) {
+  const primeiro = esc((nome || '').split(/\s+/)[0] || '');
+  let logo = '';
+  try { logo = new URL(portalUrl).origin + '/assets/logo-claro.png'; } catch { /* ignore */ }
+  return `<!doctype html><html lang="pt-BR"><body style="margin:0;background:#F7F9F8;font-family:Montserrat,'Segoe UI',Arial,Helvetica,sans-serif;color:#10262B;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F7F9F8;padding:32px 0;"><tr><td align="center">
+<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#fff;border-radius:18px;overflow:hidden;border:1px solid #DFE7E6;box-shadow:0 18px 50px rgba(0,51,59,.10);">
+<tr><td style="background:#00333B;padding:28px 32px;">
+${logo ? `<img src="${logo}" alt="Ecobraz Emigre" width="168" style="display:block;width:168px;height:auto;border:0;">` : `<span style="color:#fff;font-size:22px;font-weight:800;">ecobraz</span>`}
+<div style="color:#92C430;font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin-top:14px;">Portal do Cliente</div>
+</td></tr>
+<tr><td style="padding:38px 32px 6px;">
+<h1 style="margin:0 0 14px;font-size:23px;line-height:1.2;letter-spacing:-.02em;color:#00333B;">${esc(m.titulo)}${primeiro ? `, ${primeiro}` : ''}</h1>
+<p style="margin:0 0 26px;font-size:15px;line-height:1.65;color:#4F6469;">${m.corpo}</p>
+<table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="border-radius:10px;background:#92C430;">
+<a href="${esc(portalUrl)}" style="display:inline-block;padding:15px 32px;font-size:15px;font-weight:800;color:#10262B;text-decoration:none;">Acessar meu portal &rarr;</a>
+</td></tr></table>
+</td></tr>
+<tr><td style="padding:26px 32px 30px;">
+<div style="border-top:1px solid #DFE7E6;padding-top:18px;font-size:12px;color:#9fb0ac;line-height:1.6;"><strong style="color:#4F6469;">Ecobraz Emigre</strong> — Portal do Cliente<br>Destinação correta, conformidade e evidências para a sua empresa.</div>
+</td></tr>
+</table></td></tr></table></body></html>`;
 }
 
 function emailHtml(cliente, link) {
