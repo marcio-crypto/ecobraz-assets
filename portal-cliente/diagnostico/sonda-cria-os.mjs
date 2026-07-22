@@ -25,8 +25,8 @@ async function main() {
   L('  negócio de teste criado: Id =', id);
   if (!id) { L('  sem Id — aborta.'); return; }
 
-  // Lê de volta pra confirmar em qual etapa/funil caiu.
-  const rd = await fetch(`${BASE}/Deals(${id})?$expand=Stage,Pipeline`, { headers: HKEY });
+  // Lê de volta pra confirmar em qual etapa/funil caiu (forma de coleção, que funciona no Ploomes).
+  const rd = await fetch(`${BASE}/Deals?$filter=Id eq ${id}&$expand=Stage,Pipeline`, { headers: HKEY });
   const rdBody = await rd.text();
   let dealLido = null; try { dealLido = JSON.parse(rdBody).value?.[0] ?? null; } catch {}
   if (dealLido) {
