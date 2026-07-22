@@ -352,3 +352,20 @@ carbono, §5.4); **enquadramento tributário** da venda (Ecobraz é Associação
     pra você mesmo). Alternativas p/ testar: cartão real de R$1, cartão de teste, ou 2ª conta.
   - ⚠️ Token do MP ainda em **produção** (`APP_USR-`); o de teste `TEST-` ficou pendente (o painel do MP
     confundiu). Não bloqueia — dá pra testar com valor simbólico real.
+- **2026-07-22** — **ESTRUTURA REAL DE OS/DOCUMENTOS DESCOBERTA** (inspeção só-leitura no cliente-exemplo
+  autorizado pela Débora: **ENEL Distribuição SP**, CNPJ 61.695.227/0001-93) + confirmado pela Débora:
+  - **A OS é o Negócio (Deal)**, no funil **[44259] 🟦 [PJ] VENDAS**. O **status** é a **etapa (Stage)** do
+    negócio, ajustada à mão (ex.: *"Doc. Env: OS Finalizada"* = concluída, *"❌ Cancelado"*).
+  - **Campos operacionais no Negócio (por FieldKey):**
+    - Número da OS = `deal_7EAFD2A7-7804-4B61-B717-1D895F1B4AF9` (cada OS tem nº próprio; 1 negócio pode
+      ter vários — ex.: "000019774, 000019778").
+    - Peso = `deal_6CDA6722-B287-42B9-97DA-A7987A963CBE` (ex.: "141,2 KG").
+    - Data de Coleta = `deal_C8D28B9E-0F76-492B-B03D-6935CA2C39C8`.
+    - Região = `deal_85AE1C16-E06F-4638-8D77-6DD40A576786`; Endereço = `deal_F4BF490C-707A-434A-BB3A-E187CBFD8638`.
+  - **Documentos:** ligados ao negócio via entidade **Orders** (o "documento de venda", com template HTML —
+    é o que o Ploomes **emite**: Carta de Doação etc.). **MTR e NF são ANEXADOS**; os demais o Ploomes emite.
+    Tudo no banco do Ploomes, por cliente — qualquer funcionário acessa e encaminha.
+  - **→ Destrava:** a **lista de OS real no painel** (nº, peso, data de coleta, status pela etapa) e a
+    **área de documentos**.
+  - ⚠️ **A confirmar com o Marcio/Débora:** se TODOS os clientes seguem esse padrão (a ENEL usa o funil de
+    VENDAS pra OS) ou se varia; e qual etapa = "em andamento" vs "concluída" vs "cancelada".
