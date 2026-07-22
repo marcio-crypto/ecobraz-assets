@@ -35,7 +35,7 @@ export default {
     const { pathname } = url;
     try {
       if (pathname === '/health') return json({
-        ok: true, service: 'ecobraz-portal', version: 6,
+        ok: true, service: 'ecobraz-portal', version: 7,
         // Só presença (true/false) — NUNCA os valores. Ajuda a confirmar a
         // configuração pelo navegador sem expor segredo nenhum.
         config: {
@@ -767,10 +767,15 @@ function tipoNotificacao(nomeEtapa) {
 }
 function extrairDealId(p) {
   if (!p || typeof p !== 'object') return null;
-  // Formato REAL do webhook do Ploomes (verificado 2026-07-22): {Action:"Update", Entity:"Deals",
-  // EntityId:<id do negócio>, ...}. Também aceita formatos alternativos por segurança.
+  // Formato REAL do webhook do Ploomes (verificado nos logs em 2026-07-22):
+  //   {Action:"Update", Entity:"Deals", SecondaryEntityId, AccountId, ..., Old:{ Id:<id do negócio>, ... }}
+  // O Id do negócio vem DENTRO de "Old" (estado anterior) e/ou "New". NÃO existe EntityId no topo.
   const ent = typeof p.Entity === 'string' ? p.Entity.toLowerCase() : '';
-  const cands = [p.Id, p.DealId, p.dealId, p.Deal?.Id, p.deal?.Id, p.data?.Id, p.Data?.Id, Array.isArray(p.value) ? p.value[0]?.Id : null];
+  const cands = [
+    p.Old?.Id, p.New?.Id, // <- formato real do Ploomes: o Id do negócio está aqui
+    p.Id, p.DealId, p.dealId, p.Deal?.Id, p.deal?.Id, p.data?.Id, p.Data?.Id,
+    Array.isArray(p.value) ? p.value[0]?.Id : null,
+  ];
   if (/deal|negoci/.test(ent) || !p.Entity) cands.push(p.EntityId, p.entityId);
   for (const c of cands) { const n = Number(c); if (Number.isInteger(n) && n > 0) return n; }
   return null;

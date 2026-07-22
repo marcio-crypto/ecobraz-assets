@@ -30,9 +30,10 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
   // Mostra PARA ONDE o aviso vai: o e-mail cadastrado no contato de teste no Ploomes.
   // (É o que o cliente recebe — se estiver errado/vazio, o e-mail não chega.)
-  const ct = await api(`Contacts(${MARCIO})?$select=Id,Name,Email`);
+  // Uso a forma de COLEÇÃO (?$filter=Id eq X) que retorna value:[...] de forma confiável.
+  const ct = await api(`Contacts?$filter=Id%20eq%20${MARCIO}&$top=1&$select=Id,Name,Email`);
   const contato = Array.isArray(ct.val) ? ct.val[0] : ct.val;
-  L(`  contato de teste: Id=${MARCIO} Nome="${contato?.Name || '?'}" Email=${contato?.Email || '(VAZIO — sem e-mail, não há para onde enviar)'}`);
+  L(`  contato de teste: Id=${MARCIO} Nome="${contato?.Name || '?'}" Email=${contato?.Email || '(VAZIO — sem e-mail no cadastro; o e-mail do aviso não teria para onde ir)'} (HTTP ${ct.status})`);
 
   // baseline do registro
   await wait(3000);
