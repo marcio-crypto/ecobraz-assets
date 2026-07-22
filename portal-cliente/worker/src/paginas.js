@@ -81,6 +81,22 @@ textarea{resize:vertical}
 .docrow{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
 .docpill{font-size:13px;font-weight:700;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:999px;padding:8px 15px}
 .foot{text-align:center;color:var(--muted);font-size:12px;padding:26px 0 8px}
+.sol-lead{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.sol-badge{font-size:11px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;color:var(--green-d);background:#EAF5D9;border:1px solid #cde5a6;border-radius:999px;padding:4px 11px}
+.sol-sec{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+.sol-sec h3{font-size:12.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--teal);margin:0 0 12px;display:flex;align-items:center;gap:9px}
+.sol-sec h3 .ic{width:28px;height:28px;border-radius:8px;background:#EAF5D9;display:grid;place-items:center;font-size:15px}
+.sol-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 16px}
+.sol-grid label{margin-top:0}
+.sol-grid .full{grid-column:1/-1}
+.dropzone{border:2px dashed #cbd7d2;border-radius:12px;padding:24px;text-align:center;color:var(--muted);cursor:pointer;transition:.15s;background:var(--soft)}
+.dropzone:hover,.dropzone.drag{border-color:var(--green);background:#F0F7EC;color:var(--teal)}
+.dropzone strong{color:var(--teal)}
+.thumbs{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+.thumb{position:relative;width:76px;height:76px;border-radius:10px;overflow:hidden;border:1px solid var(--line)}
+.thumb img{width:100%;height:100%;object-fit:cover}
+.thumb button{position:absolute;top:3px;right:3px;width:20px;height:20px;border:0;border-radius:50%;background:rgba(16,38,43,.78);color:#fff;font-size:13px;cursor:pointer;line-height:1;display:grid;place-items:center}
+@media(max-width:560px){.sol-grid{grid-template-columns:1fr}}
 
 @media(max-width:860px){
   .auth{grid-template-columns:1fr}
@@ -180,36 +196,44 @@ export function paginaPainel({ nome, email, dataFim }) {
     <div class="kpi kpi-soon"><span class="kpi-label">Pegada de carbono</span><strong class="kpi-num">Em breve</strong><span class="kpi-hint">cálculo e neutralização</span></div>
   </section>
 
-  <div class="grid2">
-    <section class="panel">
-      <h2>Suas ordens de serviço</h2>
-      <p class="muted" style="margin:0 0 4px">Acompanhe suas coletas e atendimentos com a Ecobraz.</p>
-      <div id="oslista" class="oslist"><p class="muted">Carregando…</p></div>
-    </section>
+  <section class="panel">
+    <h2>Suas ordens de serviço</h2>
+    <p class="muted" style="margin:0 0 4px">Acompanhe suas coletas e atendimentos com a Ecobraz.</p>
+    <div id="oslista" class="oslist"><p class="muted">Carregando…</p></div>
+  </section>
 
-    <aside class="panel">
-      <h2>Solicitar coleta</h2>
-      <p class="muted" style="margin:0 0 4px">Confirme seus dados e abra uma nova ordem de coleta.</p>
-      <form id="fc" onsubmit="return solicitar(event)">
-        <label for="s_razao">Razão social</label>
-        <input id="s_razao" maxlength="200">
-        <label for="s_cnpj">CNPJ</label>
-        <input id="s_cnpj" maxlength="20">
-        <label for="s_end">Endereço de coleta (com CEP)</label>
-        <input id="s_end" required maxlength="300" placeholder="Rua, nº, bairro, cidade — CEP">
-        <label for="s_tel">Telefone</label>
-        <input id="s_tel" maxlength="30" placeholder="(11) 90000-0000">
-        <label for="s_email">E-mail</label>
-        <input id="s_email" type="email" maxlength="120">
-        <label for="s_resp">Responsável (nome e sobrenome)</label>
-        <input id="s_resp" maxlength="120">
-        <label for="s_equip">Equipamentos</label>
-        <textarea id="s_equip" rows="3" maxlength="4000" placeholder="Ex.: 10 monitores, 5 CPUs, 2 no-breaks…"></textarea>
-        <div style="margin-top:14px"><button class="btn btn-block" id="bc" type="submit">Solicitar coleta</button></div>
-      </form>
-      <div id="cmsg" class="notice" hidden></div>
-    </aside>
-  </div>
+  <section class="panel" style="margin-top:16px">
+    <div class="sol-lead"><h2 style="margin:0">Solicitar nova coleta</h2><span class="sol-badge">✓ dados do seu cadastro</span></div>
+    <p class="muted" style="margin:6px 0 0">Já preenchemos o que temos no seu cadastro. Confira, ajuste se precisar, anexe fotos e envie.</p>
+    <form id="fc" onsubmit="return solicitar(event)">
+      <div class="sol-sec">
+        <h3><span class="ic">🏢</span> Sua empresa</h3>
+        <div class="sol-grid">
+          <div><label for="s_razao">Razão social</label><input id="s_razao" maxlength="200"></div>
+          <div><label for="s_cnpj">CNPJ</label><input id="s_cnpj" maxlength="20"></div>
+          <div><label for="s_email">E-mail</label><input id="s_email" type="email" maxlength="120"></div>
+          <div><label for="s_tel">Telefone</label><input id="s_tel" maxlength="30" placeholder="(11) 90000-0000"></div>
+          <div class="full"><label for="s_resp">Responsável (nome e sobrenome)</label><input id="s_resp" maxlength="120"></div>
+        </div>
+      </div>
+      <div class="sol-sec">
+        <h3><span class="ic">📍</span> Local da coleta</h3>
+        <div class="sol-grid"><div class="full"><label for="s_end">Endereço com CEP</label><input id="s_end" required maxlength="300" placeholder="Rua, nº, bairro, cidade — CEP"></div></div>
+      </div>
+      <div class="sol-sec">
+        <h3><span class="ic">📦</span> Equipamentos</h3>
+        <textarea id="s_equip" rows="3" maxlength="4000" placeholder="Ex.: 10 monitores, 5 CPUs, 2 no-breaks, 1 impressora…"></textarea>
+      </div>
+      <div class="sol-sec">
+        <h3><span class="ic">📸</span> Fotos dos equipamentos <span style="font-weight:600;text-transform:none;letter-spacing:0;color:var(--muted)">— opcional</span></h3>
+        <div class="dropzone" id="dz"><strong>Clique ou arraste as fotos aqui</strong><br><span style="font-size:12.5px">até 4 imagens</span></div>
+        <input id="fotos" type="file" accept="image/*" multiple style="display:none">
+        <div class="thumbs" id="thumbs"></div>
+      </div>
+      <div style="margin-top:20px"><button class="btn" id="bc" type="submit">Solicitar coleta →</button></div>
+    </form>
+    <div id="cmsg" class="notice" hidden></div>
+  </section>
 
   <section class="panel docs">
     <h2>Documentos e conformidade <span class="chip">em breve</span></h2>
@@ -245,18 +269,42 @@ async function preencherPerfil(){
     }
   }catch(_){}
 }
+var _fotos=[];
+function renderThumbs(){ var t=document.getElementById('thumbs'); if(t) t.innerHTML=_fotos.map(function(f,i){return '<div class="thumb"><img src="'+f.dataUrl+'"><button type="button" onclick="removeFoto('+i+')" aria-label="remover">×</button></div>';}).join(''); }
+function removeFoto(i){ _fotos.splice(i,1); renderThumbs(); }
+function addFiles(files){
+  Array.prototype.slice.call(files||[]).forEach(function(file){
+    if(_fotos.length>=4 || !/^image\\//.test(file.type)) return;
+    var reader=new FileReader();
+    reader.onload=function(ev){ var img=new Image(); img.onload=function(){
+      var max=1400, sc=Math.min(1,max/Math.max(img.width,img.height));
+      var cv=document.createElement('canvas'); cv.width=Math.round(img.width*sc); cv.height=Math.round(img.height*sc);
+      cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+      _fotos.push({nome:file.name||'foto', dataUrl:cv.toDataURL('image/jpeg',0.72)}); renderThumbs();
+    }; img.src=ev.target.result; };
+    reader.readAsDataURL(file);
+  });
+}
+(function(){ var dz=document.getElementById('dz'), inp=document.getElementById('fotos');
+  if(dz&&inp){ dz.addEventListener('click',function(){inp.click();});
+    inp.addEventListener('change',function(){addFiles(this.files);this.value='';});
+    dz.addEventListener('dragover',function(e){e.preventDefault();dz.classList.add('drag');});
+    dz.addEventListener('dragleave',function(){dz.classList.remove('drag');});
+    dz.addEventListener('drop',function(e){e.preventDefault();dz.classList.remove('drag');addFiles(e.dataTransfer.files);});
+  }
+})();
 async function solicitar(e){e.preventDefault();
   var b=document.getElementById('bc'),m=document.getElementById('cmsg');
   b.disabled=true;b.textContent='Enviando…';
-  var body={razaoSocial:campoVal('s_razao'),cnpj:campoVal('s_cnpj'),endereco:campoVal('s_end'),telefone:campoVal('s_tel'),email:campoVal('s_email'),responsavel:campoVal('s_resp'),equipamentos:campoVal('s_equip')};
+  var body={razaoSocial:campoVal('s_razao'),cnpj:campoVal('s_cnpj'),endereco:campoVal('s_end'),telefone:campoVal('s_tel'),email:campoVal('s_email'),responsavel:campoVal('s_resp'),equipamentos:campoVal('s_equip'),fotos:_fotos};
   try{
     var r=await fetch('/api/os/solicitar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
     var d=await r.json(); m.hidden=false;
-    if(d.ok){ m.textContent=d.message||'Coleta solicitada!'; document.getElementById('s_end').value=''; document.getElementById('s_equip').value=''; carregar(); }
+    if(d.ok){ m.innerHTML=(d.message||'Coleta solicitada!')+(d.fotos?' <b>'+d.fotos+' foto(s) anexada(s).</b>':''); document.getElementById('s_end').value=''; document.getElementById('s_equip').value=''; _fotos=[]; renderThumbs(); carregar(); }
     else if(d.error==='endereco_obrigatorio'){ m.textContent='Informe o endereço de coleta.'; }
     else { m.textContent='Não foi possível solicitar agora. Tente novamente em instantes.'; }
   }catch(_){ m.hidden=false; m.textContent='Falha de conexão. Tente novamente.'; }
-  b.disabled=false;b.textContent='Solicitar coleta';
+  b.disabled=false;b.textContent='Solicitar coleta →';
   return false;
 }
 carregar();

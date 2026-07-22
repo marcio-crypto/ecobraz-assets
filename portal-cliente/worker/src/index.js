@@ -435,7 +435,28 @@ async function solicitarOS(request, sessao, env) {
   if (!r.ok) { console.error('solicitar_os_erro', r.status, body.slice(0, 160)); return json({ ok: false, error: 'nao_foi_possivel' }, 502); }
   let dealId = null;
   try { dealId = JSON.parse(body).value?.[0]?.Id ?? null; } catch {}
-  return json({ ok: true, pedido_id: dealId, message: 'Coleta solicitada! Nossa equipe vai agendar e você acompanha o andamento aqui no painel.' }, 201);
+
+  // Anexa as fotos enviadas (até 4) ao negócio no Ploomes.
+  // Formato VERIFICADO por sonda em 2026-07-22: multipart, campo "file", em
+  // Deals({id})/UploadFile → HTTP 200. Cada foto já vem reduzida (JPEG) do navegador.
+  const fotos = Array.isArray(input.fotos) ? input.fotos.slice(0, 4) : [];
+  let fotosOk = 0;
+  for (let i = 0; dealId && i < fotos.length; i++) {
+    try {
+      const m = /^data:(image\/[\w.+-]+);base64,(.+)$/i.exec(String(fotos[i]?.dataUrl || ''));
+      if (!m) continue;
+      const bytes = Uint8Array.from(atob(m[2]), (c) => c.charCodeAt(0));
+      const limpo = String(fotos[i]?.nome || '').replace(/[^\w.\- ]+/g, '').slice(0, 60);
+      const nome = /\.(jpe?g|png|webp|gif)$/i.test(limpo) ? limpo : `${limpo || 'foto-' + (i + 1)}.jpg`;
+      const form = new FormData();
+      form.append('file', new Blob([bytes], { type: m[1] }), nome);
+      const up = await fetch(`${base}/Deals(${dealId})/UploadFile`, { method: 'POST', headers: { 'User-Key': env.PLOOMES_USER_KEY }, body: form });
+      if (up.ok) fotosOk++;
+      else console.error('foto_upload_http', up.status, (await up.text().catch(() => '')).slice(0, 140));
+    } catch (error) { console.error('foto_upload', safeError(error)); }
+  }
+
+  return json({ ok: true, pedido_id: dealId, fotos: fotosOk, message: 'Coleta solicitada! Nossa equipe vai agendar e você acompanha o andamento aqui no painel.' }, 201);
 }
 
 function rotuloStatus(statusId) {
