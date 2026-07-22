@@ -423,12 +423,18 @@ async function solicitarOS(request, sessao, env) {
     `Telefone: ${telefone}\nE-mail: ${email}\nResponsável: ${responsavel}\n\n` +
     `Equipamentos:\n${equipamentos || '(não informado)'}`;
   const deal = {
-    Title: `[Portal] Solicitação de coleta — ${razaoSocial || sessao.nome || ''}`.slice(0, 200),
+    Title: `[Portal] ${(razaoSocial || sessao.nome || 'Cliente').slice(0, 80)} — solicitação de coleta`,
     ContactId: Number(sessao.empresaId || sessao.contactId),
     Note: nota,
   };
-  if (env.PORTAL_OS_PIPELINE_ID) deal.PipelineId = Number(env.PORTAL_OS_PIPELINE_ID);
-  if (env.PORTAL_OS_STAGE_ID) deal.StageId = Number(env.PORTAL_OS_STAGE_ID);
+  // A solicitação já entra como OS DE VERDADE: funil [PJ] VENDAS, etapa "📄 Ordem de Serviço"
+  // (IDs verificados em 2026-07-22). Assim o cliente vê "Em atendimento" na hora e a Débora
+  // recebe na coluna de OS. O Nº da OS e os documentos são gerados MAIS À FRENTE no fluxo
+  // interno (pesagem/finalização) — como já acontece com as 49 OS reais que estão nessa etapa.
+  // O prefixo "[Portal]" marca as que vieram do site (a Débora consegue filtrar/validar).
+  // IDs sobrescrevíveis por variável, caso o funil mude.
+  deal.PipelineId = Number(env.PORTAL_OS_PIPELINE_ID || 44259);
+  deal.StageId = Number(env.PORTAL_OS_STAGE_ID || 199543);
   if (env.PORTAL_OS_OWNER_ID) deal.OwnerId = Number(env.PORTAL_OS_OWNER_ID);
   const r = await fetch(`${base}/Deals`, { method: 'POST', headers, body: JSON.stringify(deal) });
   const body = await r.text();
@@ -456,7 +462,7 @@ async function solicitarOS(request, sessao, env) {
     } catch (error) { console.error('foto_upload', safeError(error)); }
   }
 
-  return json({ ok: true, pedido_id: dealId, fotos: fotosOk, message: 'Coleta solicitada! Nossa equipe vai agendar e você acompanha o andamento aqui no painel.' }, 201);
+  return json({ ok: true, pedido_id: dealId, fotos: fotosOk, message: 'Pronto! Sua ordem de serviço foi aberta e já está em atendimento. Acompanhe o andamento aqui no painel.' }, 201);
 }
 
 function rotuloStatus(statusId) {
