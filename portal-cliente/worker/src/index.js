@@ -390,6 +390,12 @@ function classificaDoc(nome) {
 // "Liberado" NÃO está no flag Shared do Ploomes (sonda: 0 de 400 docs marcados) — usamos a
 // ETAPA "Certificado Liberado" como sinal de liberação do CDF/laudo. (A confirmar com a Débora.)
 function certificadoLiberadoDaEtapa(nomeEtapa) { return /certificado liberado/.test(semAcentoLc(nomeEtapa)); }
+// Nome do MODELO (DocumentTemplate) de um Order — pra separar a OS ("OS - ...") de proposta.
+async function nomeModelo(templateId, base, headers) {
+  if (!templateId) return '';
+  try { const t = await fetch(`${base}/DocumentTemplates?$filter=Id%20eq%20${Number(templateId)}&$top=1&$select=Name`, { headers }); if (t.ok) return ((await t.json()).value || [])[0]?.Name || ''; } catch { /* ignore */ }
+  return '';
+}
 
 // Lista os DOCUMENTOS de uma OS que o cliente PODE ver. Segurança: só a OS do próprio cliente
 // (confere ContactId) e aplica as regras de tipo/liberação acima.
@@ -412,8 +418,19 @@ async function listarDocsOS(url, sessao, env) {
       const c = classificaDoc(d.Name);
       if (!c.cliente) continue;                 // interno/desconhecido: nunca mostra
       if (c.liberar && !liberado) continue;     // CDF/laudo só quando liberado
-      docs.push({ id: d.Id, nome: c.rotulo ? `${c.rotulo}${d.DocumentNumber ? ' nº ' + d.DocumentNumber : ''}` : (d.Name || `Documento ${d.Id}`) });
+      docs.push({ id: d.Id, fonte: 'document', nome: c.rotulo ? `${c.rotulo}${d.DocumentNumber ? ' nº ' + d.DocumentNumber : ''}` : (d.Name || `Documento ${d.Id}`) });
     }
+    // O documento da OS fica na entidade Orders — mostra só o que é do cliente (classifica pelo
+    // NOME DO MODELO, p/ nunca vazar proposta comercial). DocumentUrl verificado (PDF 60 KB).
+    try {
+      const ro = await fetch(`${base}/Orders?$filter=DealId%20eq%20${dealId}&$top=20&$select=Id,OrderNumber,TemplateId,DocumentUrl`, { headers });
+      for (const o of (ro.ok ? ((await ro.json()).value || []) : [])) {
+        if (!o.DocumentUrl) continue;
+        const cO = classificaDoc(await nomeModelo(o.TemplateId, base, headers));
+        if (!cO.cliente || (cO.liberar && !liberado)) continue;
+        docs.push({ id: o.Id, fonte: 'order', nome: `${cO.rotulo || 'Ordem de Serviço'}${o.OrderNumber ? ' nº ' + o.OrderNumber : ''}` });
+      }
+    } catch (error) { console.error('orders_lista_erro', safeError(error)); }
     return json({ ok: true, docs });
   } catch (error) { console.error('docs_erro', safeError(error)); return json({ ok: false, error: 'indisponivel' }, 502); }
 }
@@ -425,22 +442,34 @@ async function baixarDocOS(url, sessao, env) {
   const headers = { 'User-Key': env.PLOOMES_USER_KEY, Accept: 'application/json' };
   const clienteId = Number(sessao.empresaId || sessao.contactId);
   const docId = Number(url.searchParams.get('docId') || 0);
+  const fonte = url.searchParams.get('fonte') === 'order' ? 'order' : 'document';
   if (!docId || !clienteId) return json({ ok: false, error: 'sem_id' }, 400);
   try {
-    const r = await fetch(`${base}/Documents?$filter=Id%20eq%20${docId}&$top=1&$select=Id,Name,FileName,DealId,DocumentUrl`, { headers });
-    const doc = r.ok ? ((await r.json()).value || [])[0] : null;
-    if (!doc || !doc.DocumentUrl) return json({ ok: false, error: 'nao_encontrado' }, 404);
+    // Resolve o documento na fonte certa (Documents ou Orders) → {dealId, url, nome p/ classificar/arquivo}.
+    let dealId, documentUrl, nomeClass, nomeArq;
+    if (fonte === 'order') {
+      const r = await fetch(`${base}/Orders?$filter=Id%20eq%20${docId}&$top=1&$select=Id,OrderNumber,TemplateId,DealId,DocumentUrl`, { headers });
+      const o = r.ok ? ((await r.json()).value || [])[0] : null;
+      if (!o || !o.DocumentUrl) return json({ ok: false, error: 'nao_encontrado' }, 404);
+      dealId = o.DealId; documentUrl = o.DocumentUrl; nomeArq = `OS-${o.OrderNumber || docId}`;
+      nomeClass = await nomeModelo(o.TemplateId, base, headers);
+    } else {
+      const r = await fetch(`${base}/Documents?$filter=Id%20eq%20${docId}&$top=1&$select=Id,Name,FileName,DealId,DocumentUrl`, { headers });
+      const d = r.ok ? ((await r.json()).value || [])[0] : null;
+      if (!d || !d.DocumentUrl) return json({ ok: false, error: 'nao_encontrado' }, 404);
+      dealId = d.DealId; documentUrl = d.DocumentUrl; nomeClass = d.Name; nomeArq = d.FileName || d.Name || `documento-${docId}`;
+    }
     // Confere que a OS do documento é do cliente E pega a etapa (liberação de CDF/laudo).
-    const own = await fetch(`${base}/Deals?$filter=Id%20eq%20${Number(doc.DealId)}%20and%20ContactId%20eq%20${clienteId}&$top=1&$expand=Stage`, { headers });
+    const own = await fetch(`${base}/Deals?$filter=Id%20eq%20${Number(dealId)}%20and%20ContactId%20eq%20${clienteId}&$top=1&$expand=Stage`, { headers });
     const deal = own.ok ? ((await own.json()).value || [])[0] : null;
     if (!deal) return json({ ok: false, error: 'sem_permissao' }, 403);
     // MESMAS regras da lista (não basta filtrar a lista — poderiam chamar /api/os/doc direto).
-    const c = classificaDoc(doc.Name);
+    const c = classificaDoc(nomeClass);
     if (!c.cliente) return json({ ok: false, error: 'sem_permissao' }, 403);
     if (c.liberar && !certificadoLiberadoDaEtapa(deal.Stage?.Name)) return json({ ok: false, error: 'nao_liberado' }, 403);
-    const pdf = await fetch(doc.DocumentUrl);
+    const pdf = await fetch(documentUrl);
     if (!pdf.ok || !pdf.body) return json({ ok: false, error: 'indisponivel' }, 502);
-    const limpo = String(doc.FileName || doc.Name || `documento-${docId}`).replace(/[^\w.\- ]+/g, '').slice(0, 80) || `documento-${docId}`;
+    const limpo = String(nomeArq).replace(/[^\w.\- ]+/g, '').slice(0, 80) || `documento-${docId}`;
     const nome = /\.pdf$/i.test(limpo) ? limpo : `${limpo}.pdf`;
     return new Response(pdf.body, { status: 200, headers: {
       'content-type': pdf.headers.get('content-type') || 'application/pdf',

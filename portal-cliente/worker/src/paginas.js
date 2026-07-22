@@ -284,7 +284,7 @@ async function verDocs(id,btn){
   try{
     var r=await fetch('/api/os/docs?dealId='+id); var d=await r.json();
     if(d.ok&&d.docs&&d.docs.length){
-      box.innerHTML=d.docs.map(function(x){return '<a class="docdl" href="/api/os/doc?docId='+x.id+'" target="_blank" rel="noopener">⬇ '+escapeHtml(x.nome)+'</a>';}).join('');
+      box.innerHTML=d.docs.map(function(x){return '<a class="docdl" href="/api/os/doc?docId='+x.id+'&fonte='+(x.fonte||'document')+'" target="_blank" rel="noopener">⬇ '+escapeHtml(x.nome)+'</a>';}).join('');
     } else { box.innerHTML='<span class="muted" style="font-size:13px">Nenhum documento disponível ainda. Assim que a coleta for processada, os documentos aparecem aqui.</span>'; }
     box.dataset.loaded='1'; box.style.display='flex';
   }catch(_){ box.innerHTML='<span class="muted" style="font-size:13px">Não consegui carregar os documentos agora.</span>'; box.style.display='flex'; }
