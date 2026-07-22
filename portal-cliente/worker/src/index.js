@@ -137,6 +137,10 @@ export default {
         if (!sessao) return json({ ok: false, error: 'nao_autenticado' }, 401);
         return await solicitarOS(request, sessao, env);
       }
+      if (pathname === '/api/cep' && request.method === 'GET') {
+        if (!sessao) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        return await consultaCep(request, env);
+      }
 
       return json({ ok: false, error: 'not_found' }, 404);
     } catch (error) {
@@ -406,6 +410,31 @@ async function perfilCliente(sessao, env) {
   } });
 }
 
+// Consulta de CEP para AUTOPREENCHER o endereço de coleta (evita erro de digitação).
+// Usa a BrasilAPI (mesma origem do CNPJ), com User-Agent — sem User-Agent ela recusa.
+// Tenta v2 e cai para v1 se preciso. Só devolve o que precisamos (rua, bairro, cidade, UF).
+async function consultaCep(request, env) {
+  const cep = String(new URL(request.url).searchParams.get('cep') || '').replace(/\D/g, '');
+  if (cep.length !== 8) return json({ ok: false, error: 'cep_invalido' }, 422);
+  const ua = { 'user-agent': 'EcobrazPortal/1.0', accept: 'application/json' };
+  for (const u of [`https://brasilapi.com.br/api/cep/v2/${cep}`, `https://brasilapi.com.br/api/cep/v1/${cep}`]) {
+    try {
+      const r = await fetch(u, { headers: ua });
+      if (r.status === 404) return json({ ok: false, error: 'cep_nao_encontrado' }, 404);
+      if (!r.ok) continue;
+      const d = await r.json();
+      return json({ ok: true, endereco: {
+        cep: `${cep.slice(0, 5)}-${cep.slice(5)}`,
+        logradouro: d.street || '',
+        bairro: d.neighborhood || '',
+        cidade: d.city || '',
+        uf: d.state || '',
+      } });
+    } catch (error) { console.error('cep_erro', safeError(error)); }
+  }
+  return json({ ok: false, error: 'indisponivel' }, 502);
+}
+
 // Solicitação de coleta (Abrir OS): cria o Negócio no Ploomes com os dados da coleta.
 // O endereço de coleta é obrigatório (muda a cada coleta). Fotos entram num passo seguinte.
 async function solicitarOS(request, sessao, env) {
@@ -416,10 +445,14 @@ async function solicitarOS(request, sessao, env) {
   if (!endereco) return json({ ok: false, error: 'endereco_obrigatorio' }, 422);
   const razaoSocial = g('razaoSocial', 200), cnpj = g('cnpj', 20), telefone = g('telefone', 30);
   const email = g('email', 120), responsavel = g('responsavel', 120), equipamentos = g('equipamentos', 4000);
+  const cep = g('cep', 12), logradouro = g('logradouro', 200), numero = g('numero', 20);
+  const bairro = g('bairro', 120), cidade = g('cidade', 120), complemento = g('complemento', 160);
   const base = env.PLOOMES_API_URL || 'https://public-api2.ploomes.com';
   const headers = { 'content-type': 'application/json', 'User-Key': env.PLOOMES_USER_KEY };
   const nota = `Solicitação de coleta pelo Portal do Cliente.\n\n` +
-    `Razão Social: ${razaoSocial}\nCNPJ: ${cnpj}\nEndereço de coleta: ${endereco}\n` +
+    `Razão Social: ${razaoSocial}\nCNPJ: ${cnpj}\n` +
+    `Endereço de coleta: ${endereco}\n` +
+    (cep ? `  (CEP ${cep} | Rua ${logradouro} | Nº ${numero} | Bairro ${bairro} | Cidade/UF ${cidade}${complemento ? ' | Compl. ' + complemento : ''})\n` : '') +
     `Telefone: ${telefone}\nE-mail: ${email}\nResponsável: ${responsavel}\n\n` +
     `Equipamentos:\n${equipamentos || '(não informado)'}`;
   const deal = {

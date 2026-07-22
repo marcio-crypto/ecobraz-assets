@@ -218,7 +218,14 @@ export function paginaPainel({ nome, email, dataFim }) {
       </div>
       <div class="sol-sec">
         <h3><span class="ic">📍</span> Local da coleta</h3>
-        <div class="sol-grid"><div class="full"><label for="s_end">Endereço com CEP</label><input id="s_end" required maxlength="300" placeholder="Rua, nº, bairro, cidade — CEP"></div></div>
+        <div class="sol-grid">
+          <div><label for="s_cep">CEP</label><input id="s_cep" inputmode="numeric" maxlength="9" autocomplete="off" placeholder="00000-000"><div id="cepmsg" class="muted" style="font-size:12px;margin-top:4px"></div></div>
+          <div><label for="s_num">Número</label><input id="s_num" maxlength="12" placeholder="nº"></div>
+          <div class="full"><label for="s_log">Endereço (rua / avenida)</label><input id="s_log" required maxlength="200" placeholder="digite o CEP que preenchemos — confira"></div>
+          <div><label for="s_bairro">Bairro</label><input id="s_bairro" maxlength="120"></div>
+          <div><label for="s_cidade">Cidade / UF</label><input id="s_cidade" maxlength="120"></div>
+          <div class="full"><label for="s_compl">Complemento / referência <span style="font-weight:600;text-transform:none;letter-spacing:0;color:var(--muted)">— opcional</span></label><input id="s_compl" maxlength="160" placeholder="bloco, andar, sala, ponto de referência…"></div>
+        </div>
       </div>
       <div class="sol-sec">
         <h3><span class="ic">📦</span> Equipamentos</h3>
@@ -269,6 +276,22 @@ async function preencherPerfil(){
     }
   }catch(_){}
 }
+function soDig(s){return (s||'').replace(/\\D/g,'');}
+async function buscarCep(){
+  var el=document.getElementById('s_cep'), msg=document.getElementById('cepmsg'); if(!el) return;
+  var cep=soDig(el.value); if(cep.length!==8){ if(msg) msg.textContent=''; return; }
+  if(msg){ msg.textContent='Buscando endereço…'; msg.style.color=''; }
+  try{
+    var r=await fetch('/api/cep?cep='+cep); var d=await r.json();
+    if(d.ok&&d.endereco){ var e=d.endereco, setv=function(id,v){ var x=document.getElementById(id); if(x&&v) x.value=v; };
+      setv('s_log',e.logradouro); setv('s_bairro',e.bairro); setv('s_cidade',(e.cidade||'')+(e.uf?(' / '+e.uf):'')); el.value=e.cep||el.value;
+      if(msg){ msg.textContent='✓ endereço preenchido'; msg.style.color='var(--green)'; }
+      var n=document.getElementById('s_num'); if(n&&!n.value) n.focus();
+    } else if(d.error==='cep_nao_encontrado'){ if(msg){ msg.textContent='CEP não encontrado — pode digitar o endereço.'; msg.style.color='#b23b3b'; } }
+    else { if(msg){ msg.textContent='Não consegui buscar agora — pode digitar o endereço.'; msg.style.color='#b23b3b'; } }
+  }catch(_){ if(msg){ msg.textContent='Sem conexão para buscar o CEP — digite o endereço.'; msg.style.color='#b23b3b'; } }
+}
+(function(){ var c=document.getElementById('s_cep'); if(c){ c.addEventListener('blur',buscarCep); c.addEventListener('input',function(){ if(soDig(c.value).length===8) buscarCep(); }); } })();
 var _fotos=[];
 function renderThumbs(){ var t=document.getElementById('thumbs'); if(t) t.innerHTML=_fotos.map(function(f,i){return '<div class="thumb"><img src="'+f.dataUrl+'"><button type="button" onclick="removeFoto('+i+')" aria-label="remover">×</button></div>';}).join(''); }
 function removeFoto(i){ _fotos.splice(i,1); renderThumbs(); }
@@ -296,11 +319,13 @@ function addFiles(files){
 async function solicitar(e){e.preventDefault();
   var b=document.getElementById('bc'),m=document.getElementById('cmsg');
   b.disabled=true;b.textContent='Enviando…';
-  var body={razaoSocial:campoVal('s_razao'),cnpj:campoVal('s_cnpj'),endereco:campoVal('s_end'),telefone:campoVal('s_tel'),email:campoVal('s_email'),responsavel:campoVal('s_resp'),equipamentos:campoVal('s_equip'),fotos:_fotos};
+  var cep=campoVal('s_cep'),log=campoVal('s_log'),num=campoVal('s_num'),bairro=campoVal('s_bairro'),cidade=campoVal('s_cidade'),compl=campoVal('s_compl');
+  var endereco=[log+(num?(', '+num):''),bairro,cidade,cep?('CEP '+cep):'',compl?('('+compl+')'):''].filter(Boolean).join(' - ');
+  var body={razaoSocial:campoVal('s_razao'),cnpj:campoVal('s_cnpj'),endereco:endereco,cep:cep,logradouro:log,numero:num,bairro:bairro,cidade:cidade,complemento:compl,telefone:campoVal('s_tel'),email:campoVal('s_email'),responsavel:campoVal('s_resp'),equipamentos:campoVal('s_equip'),fotos:_fotos};
   try{
     var r=await fetch('/api/os/solicitar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
     var d=await r.json(); m.hidden=false;
-    if(d.ok){ m.innerHTML=(d.message||'Coleta solicitada!')+(d.fotos?' <b>'+d.fotos+' foto(s) anexada(s).</b>':''); document.getElementById('s_end').value=''; document.getElementById('s_equip').value=''; _fotos=[]; renderThumbs(); carregar(); }
+    if(d.ok){ m.innerHTML=(d.message||'Coleta solicitada!')+(d.fotos?' <b>'+d.fotos+' foto(s) anexada(s).</b>':''); ['s_cep','s_log','s_num','s_bairro','s_cidade','s_compl','s_equip'].forEach(function(id){var el=document.getElementById(id); if(el) el.value='';}); var cm=document.getElementById('cepmsg'); if(cm) cm.textContent=''; _fotos=[]; renderThumbs(); carregar(); }
     else if(d.error==='endereco_obrigatorio'){ m.textContent='Informe o endereço de coleta.'; }
     else { m.textContent='Não foi possível solicitar agora. Tente novamente em instantes.'; }
   }catch(_){ m.hidden=false; m.textContent='Falha de conexão. Tente novamente.'; }
