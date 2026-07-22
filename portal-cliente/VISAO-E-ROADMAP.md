@@ -393,6 +393,20 @@ carbono, §5.4); **enquadramento tributário** da venda (Ecobraz é Associação
   - **Abrir OS (form pedido pelo Marcio):** Razão Social, CNPJ, **Endereço de coleta (editável — muda por
     coleta)**, telefone, e-mail, responsável, **lista/fotos dos equipamentos**; pré-preenche do Ploomes,
     cliente confirma/atualiza → cria a OS. Ploomes gera a OS + documento inicial (imediato); CDF vem depois.
+- **2026-07-22** — **✅ ITEM 2 (aviso por e-mail) CONCLUÍDO, VERIFICADO E NO AR PARA TODOS.** E-mail
+  "Coleta agendada" **chegou na caixa de entrada do Marcio** (não spam), com a cara da Ecobraz Emigre,
+  remetente `acesso@ecobraz.org.br`, `resultado:enviado` + id do Resend nos logs. Modo-teste (canário)
+  **desligado** → passou a ser opt-in via `NOTIF_MODO_TESTE=1` (v8) → o aviso vale para **todos os
+  clientes**. Os **3 gatilhos foram conferidos contra os nomes REAIS do funil 44259** (sonda `etapas`,
+  cobertura completa por `Deals?$orderby=StageId`; as entidades raiz `Stages`/`Pipelines`/... dão 404):
+  **[199543] "📄 Ordem de Serviço" → coleta agendada; [209749] "✅ Coleta Finalizada" → coleta realizada;
+  [208578] "🔰 Certificado Liberado" → certificado liberado**. Cada aviso casa com **exatamente uma** etapa
+  (sem lacuna, sem ambiguidade). Demais etapas do funil (OS Finalizada 3120, Cancelado 452, Aguardando
+  pesagem 47, Proposta Comercial 25, Previsto Descarte 3) **não disparam** — correto. Mecanismo provado de
+  ponta a ponta uma vez (coleta agendada, entrega real); os outros 2 usam o MESMO caminho e etapas
+  confirmadas. De-dup por KV evita repetição. Comprovante de cada envio em `notif:ultimo`
+  (GET `/api/ploomes/webhook?t=SEGREDO`). **Falta (opcional):** limpar o secret `NOTIF_TESTE_CONTACT_ID`
+  (ignorado hoje); e, se o Marcio quiser, um teste forçado de "coleta realizada" e "certificado liberado".
 - **2026-07-22** — **Aviso por e-mail: causa real achada e corrigida + prova de envio.** O diagnóstico com
   registro de resultado (`notif:ultimo`, no ar na v6/v7) mostrou nos logs o **formato REAL do payload do
   webhook**: `{Action:"Update", Entity:"Deals", SecondaryEntityId, AccountId, ..., Old:{ Id:<negócio>, ... }}`
