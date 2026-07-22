@@ -15,6 +15,10 @@ on:
         description: 'CNPJ de um cliente-exemplo para inspeção focada (vazio = diagnóstico geral)'
         required: false
         default: ''
+      sonda:
+        description: 'Sonda específica: "upload" (só lê o $metadata) ou "upload-live" (testa o upload criando e apagando um negócio de teste). Vazio = ignora.'
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -27,12 +31,19 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Diagnóstico geral (somente leitura) — quando SEM cnpj
-        if: ${{ github.event.inputs.cnpj == '' }}
+      - name: Diagnóstico geral (somente leitura) — quando SEM cnpj e SEM sonda
+        if: ${{ github.event.inputs.cnpj == '' && github.event.inputs.sonda == '' }}
         env:
           PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
           PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }} # opcional; padrão public-api2.ploomes.com
         run: node portal-cliente/diagnostico/diagnostico-ploomes.mjs
+      - name: Sonda de upload (Abrir OS) — quando sonda = upload / upload-live
+        if: ${{ github.event.inputs.sonda == 'upload' || github.event.inputs.sonda == 'upload-live' }}
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+          LIVE: ${{ github.event.inputs.sonda == 'upload-live' && '1' || '0' }}
+        run: node portal-cliente/diagnostico/sonda-upload.mjs
       - name: Inspeção de cliente-exemplo (somente leitura) — quando informado cnpj
         if: ${{ github.event.inputs.cnpj != '' }}
         env:
