@@ -97,6 +97,13 @@ jobs:
           PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
           CNPJ_ALVO: ${{ github.event.inputs.cnpj }}
         run: node portal-cliente/diagnostico/sonda-baixar-anexo.mjs
+      - name: Sonda caminho de download do anexo (NF) — quando sonda = anexo-download
+        if: ${{ github.event.inputs.sonda == 'anexo-download' }}
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+          CNPJ_ALVO: ${{ github.event.inputs.cnpj }}
+        run: node portal-cliente/diagnostico/sonda-anexo-download.mjs
       - name: Inspeção de cliente-exemplo (somente leitura) — quando informado cnpj
         if: ${{ github.event.inputs.cnpj != '' }}
         env:
