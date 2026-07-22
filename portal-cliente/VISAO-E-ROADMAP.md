@@ -393,6 +393,17 @@ carbono, §5.4); **enquadramento tributário** da venda (Ecobraz é Associação
   - **Abrir OS (form pedido pelo Marcio):** Razão Social, CNPJ, **Endereço de coleta (editável — muda por
     coleta)**, telefone, e-mail, responsável, **lista/fotos dos equipamentos**; pré-preenche do Ploomes,
     cliente confirma/atualiza → cria a OS. Ploomes gera a OS + documento inicial (imediato); CDF vem depois.
+- **2026-07-22** — **Regras de documento da Débora (segurança no download):** cliente pode ver **OS, NF,
+  MTR, Carta de Descarte, CDF, laudo**; **CDF e laudo só quando liberados**; **nunca** contrato/imagens de
+  controle interno. Sonda dos tipos (400 docs): a entidade `Documents` traz **MTR, Carta de Descarte,
+  CDF/Certificado**; o flag **`Shared` do Ploomes NÃO é usado (0 de 400)** — então "liberado" é detectado
+  pela **etapa "Certificado Liberado"** (a **confirmar com a Débora**). Implementado `classificaDoc` +
+  trava por etapa **na lista E no download direto**; tipo desconhecido = escondido (padrão seguro). **Achado
+  do processo (Débora):** o **número da OS é automático (sequencial)**, mas o **documento da OS é gerado
+  MANUALMENTE** (cadastro → status "Ordem de Serviço" → "vendas" → preenche endereço/responsável/material →
+  salvar); os demais documentos idem, conforme a coleta anda. → o Portal **alimenta** esse passo (não
+  substitui a validação humana). **Pendente:** incluir no download a **OS (entidade `Orders`)** e a **NF
+  (anexos)**; confirmar a etapa de liberação; mapear responsável/material nos campos do "vendas".
 - **2026-07-22** — **3 pedidos do Marcio no teste ao vivo:** (1) **Baixar documentos** — descoberto e
   **verificado** como os documentos ligam à OS (`Documents?$filter=DealId`) e como baixar (o `DocumentUrl`
   devolve o PDF, 140 KB). Implementado: `/api/os/docs` (lista) e `/api/os/doc` (download **proxy pelo
