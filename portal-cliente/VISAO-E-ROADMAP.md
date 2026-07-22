@@ -393,6 +393,19 @@ carbono, §5.4); **enquadramento tributário** da venda (Ecobraz é Associação
   - **Abrir OS (form pedido pelo Marcio):** Razão Social, CNPJ, **Endereço de coleta (editável — muda por
     coleta)**, telefone, e-mail, responsável, **lista/fotos dos equipamentos**; pré-preenche do Ploomes,
     cliente confirma/atualiza → cria a OS. Ploomes gera a OS + documento inicial (imediato); CDF vem depois.
+- **2026-07-22** — **Carbono: direção fechada com o Marcio + base metodológica escrita.** Decisões: (1) foco =
+  **emissões evitadas (benefício)** da destinação correta **+** apoio ao **Escopo 3 (Cat. 5, resíduos)** do
+  cliente; (2) **Villanova ESG** valida/assina a metodologia; (3) dados de **material+peso** existem (Marcelo)
+  e entram pelo **módulo de operação** (a construir). **Visão do produto (confirmada):** a **cadeia de custódia
+  é o lastro** — coleta no cliente **com foto no ato + GPS do agente** → planta → **pesagem → tratamento →
+  destino** (reciclagem **com MTR+NF** ou **reuso/reintrodução com NF**); "cada porca e parafuso rastreado da
+  retirada ao destino final". O sistema **"enlata" documentos soltos num produto de prateleira de alto valor**.
+  **Pontos focais comerciais:** (1) **coleta nos clientes** (volume = ganha-pão) e (2) **Adote um Bairro**
+  (financia a última milha da coleta de PF, volumes pequenos). **Entregue hoje:** `portal-cliente/METODOLOGIA-
+  CARBONO.md` (v1) com normas (GHG Protocol, WRI/WBCSD emissões evitadas, ISO 14064/67, EPA WARM v16, WEEE
+  Forum/PRé, fator MCTI/SIRENE), fronteira, os **3 números que não se misturam** (evitadas ≠ inventário ≠
+  neutralização), tabela-mãe de fatores (a validar) e rastreabilidade. **Próximo:** validar com a Villanova →
+  motor de cálculo (puxa material/peso do Ploomes) → as 3 telas (auditor/cliente/analista).
 - **2026-07-22** — **✅ ITEM 3 (QR de validação no CDF) — SISTEMA CONSTRUÍDO E PROVADO; falta só o
   passo da Débora.** Novo módulo `worker/src/validacao.js` + dep `qrcode-generator` (v9): **`GET /qr?n=NÚMERO`**
   gera a imagem do QR (GIF, mais compatível com PDF; `?fmt=svg|txt` também) apontando para
