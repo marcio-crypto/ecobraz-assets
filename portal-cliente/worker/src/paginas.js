@@ -188,14 +188,24 @@ export function paginaPainel({ nome, email, dataFim }) {
     </section>
 
     <aside class="panel">
-      <h2>Abrir um chamado</h2>
-      <p class="muted" style="margin:0">Nova coleta ou solicitação? Cai direto na nossa equipe.</p>
-      <form id="fc" onsubmit="return abrir(event)">
-        <label for="assunto">Assunto</label>
-        <input id="assunto" required maxlength="200" placeholder="Ex.: Nova coleta de equipamentos">
-        <label for="descricao">Descrição (opcional)</label>
-        <textarea id="descricao" rows="4" maxlength="4000" placeholder="Detalhes que ajudem a equipe…"></textarea>
-        <div style="margin-top:16px"><button class="btn btn-block" id="bc" type="submit">Abrir chamado</button></div>
+      <h2>Solicitar coleta</h2>
+      <p class="muted" style="margin:0 0 4px">Confirme seus dados e abra uma nova ordem de coleta.</p>
+      <form id="fc" onsubmit="return solicitar(event)">
+        <label for="s_razao">Razão social</label>
+        <input id="s_razao" maxlength="200">
+        <label for="s_cnpj">CNPJ</label>
+        <input id="s_cnpj" maxlength="20">
+        <label for="s_end">Endereço de coleta (com CEP)</label>
+        <input id="s_end" required maxlength="300" placeholder="Rua, nº, bairro, cidade — CEP">
+        <label for="s_tel">Telefone</label>
+        <input id="s_tel" maxlength="30" placeholder="(11) 90000-0000">
+        <label for="s_email">E-mail</label>
+        <input id="s_email" type="email" maxlength="120">
+        <label for="s_resp">Responsável (nome e sobrenome)</label>
+        <input id="s_resp" maxlength="120">
+        <label for="s_equip">Equipamentos</label>
+        <textarea id="s_equip" rows="3" maxlength="4000" placeholder="Ex.: 10 monitores, 5 CPUs, 2 no-breaks…"></textarea>
+        <div style="margin-top:14px"><button class="btn btn-block" id="bc" type="submit">Solicitar coleta</button></div>
       </form>
       <div id="cmsg" class="notice" hidden></div>
     </aside>
@@ -227,19 +237,30 @@ async function carregar(){
     }).join('');
   }catch(_){ kpi.textContent='—'; alvo.innerHTML='<p class="muted">Não foi possível carregar agora. Tente atualizar a página.</p>'; }
 }
-async function abrir(e){e.preventDefault();
+function campoVal(id){var el=document.getElementById(id);return el?el.value.trim():'';}
+async function preencherPerfil(){
+  try{ var r=await fetch('/api/perfil'); var d=await r.json();
+    if(d.ok&&d.perfil){ var p=d.perfil, set=function(id,v){ var el=document.getElementById(id); if(el&&v&&!el.value) el.value=v; };
+      set('s_razao',p.razaoSocial); set('s_cnpj',p.cnpj); set('s_email',p.email); set('s_tel',p.telefone); set('s_resp',p.responsavel);
+    }
+  }catch(_){}
+}
+async function solicitar(e){e.preventDefault();
   var b=document.getElementById('bc'),m=document.getElementById('cmsg');
   b.disabled=true;b.textContent='Enviando…';
+  var body={razaoSocial:campoVal('s_razao'),cnpj:campoVal('s_cnpj'),endereco:campoVal('s_end'),telefone:campoVal('s_tel'),email:campoVal('s_email'),responsavel:campoVal('s_resp'),equipamentos:campoVal('s_equip')};
   try{
-    var r=await fetch('/api/chamado',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({assunto:document.getElementById('assunto').value,descricao:document.getElementById('descricao').value})});
+    var r=await fetch('/api/os/solicitar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
     var d=await r.json(); m.hidden=false;
-    if(d.ok){ m.textContent=d.message||'Chamado aberto! Nossa equipe já recebeu.'; document.getElementById('fc').reset(); carregar(); }
-    else { m.textContent='Não foi possível abrir agora. Tente novamente em instantes.'; }
+    if(d.ok){ m.textContent=d.message||'Coleta solicitada!'; document.getElementById('s_end').value=''; document.getElementById('s_equip').value=''; carregar(); }
+    else if(d.error==='endereco_obrigatorio'){ m.textContent='Informe o endereço de coleta.'; }
+    else { m.textContent='Não foi possível solicitar agora. Tente novamente em instantes.'; }
   }catch(_){ m.hidden=false; m.textContent='Falha de conexão. Tente novamente.'; }
-  b.disabled=false;b.textContent='Abrir chamado';
+  b.disabled=false;b.textContent='Solicitar coleta';
   return false;
 }
 carregar();
+preencherPerfil();
 </script></body></html>`;
 }
 

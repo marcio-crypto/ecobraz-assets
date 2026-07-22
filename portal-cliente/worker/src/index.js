@@ -129,6 +129,14 @@ export default {
         if (!sessao) return json({ ok: false, error: 'nao_autenticado' }, 401);
         return await abrirChamado(request, sessao, env);
       }
+      if (pathname === '/api/perfil' && request.method === 'GET') {
+        if (!sessao) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        return await perfilCliente(sessao, env);
+      }
+      if (pathname === '/api/os/solicitar' && request.method === 'POST') {
+        if (!sessao) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        return await solicitarOS(request, sessao, env);
+      }
 
       return json({ ok: false, error: 'not_found' }, 404);
     } catch (error) {
@@ -375,6 +383,59 @@ async function abrirChamado(request, sessao, env) {
   let dealId = null;
   try { dealId = JSON.parse(body).value?.[0]?.Id ?? null; } catch {}
   return json({ ok: true, chamado_id: dealId, message: 'Chamado aberto! Nossa equipe já recebeu.' }, 201);
+}
+
+// Perfil do cliente para PRÉ-PREENCHER o formulário de solicitação de coleta.
+// Lê o cadastro do Ploomes (Razão Social = Name, CNPJ = Register, e-mail). Telefone
+// e responsável vêm quando disponíveis; o cliente confirma/atualiza tudo no form.
+async function perfilCliente(sessao, env) {
+  const base = env.PLOOMES_API_URL || 'https://public-api2.ploomes.com';
+  const headers = { 'User-Key': env.PLOOMES_USER_KEY, Accept: 'application/json' };
+  const id = Number(sessao.empresaId || sessao.contactId);
+  let c = {};
+  try {
+    const r = await fetch(`${base}/Contacts?$filter=Id%20eq%20${id}&$top=1`, { headers });
+    if (r.ok) c = (await r.json()).value?.[0] || {};
+  } catch (error) { console.error('perfil_erro', safeError(error)); }
+  return json({ ok: true, perfil: {
+    razaoSocial: c.Name || sessao.nome || '',
+    cnpj: c.Register || '',
+    email: c.Email || sessao.email || '',
+    telefone: c.Phones?.[0]?.PhoneNumber || '',
+    responsavel: sessao.nome || '',
+  } });
+}
+
+// Solicitação de coleta (Abrir OS): cria o Negócio no Ploomes com os dados da coleta.
+// O endereço de coleta é obrigatório (muda a cada coleta). Fotos entram num passo seguinte.
+async function solicitarOS(request, sessao, env) {
+  let input;
+  try { input = await request.json(); } catch { return json({ ok: false, error: 'json_invalido' }, 400); }
+  const g = (k, n) => String(input?.[k] || '').trim().slice(0, n);
+  const endereco = g('endereco', 300);
+  if (!endereco) return json({ ok: false, error: 'endereco_obrigatorio' }, 422);
+  const razaoSocial = g('razaoSocial', 200), cnpj = g('cnpj', 20), telefone = g('telefone', 30);
+  const email = g('email', 120), responsavel = g('responsavel', 120), equipamentos = g('equipamentos', 4000);
+  const base = env.PLOOMES_API_URL || 'https://public-api2.ploomes.com';
+  const headers = { 'content-type': 'application/json', 'User-Key': env.PLOOMES_USER_KEY };
+  const nota = `Solicitação de coleta pelo Portal do Cliente.\n\n` +
+    `Razão Social: ${razaoSocial}\nCNPJ: ${cnpj}\nEndereço de coleta: ${endereco}\n` +
+    `Telefone: ${telefone}\nE-mail: ${email}\nResponsável: ${responsavel}\n\n` +
+    `Equipamentos:\n${equipamentos || '(não informado)'}`;
+  const deal = {
+    Title: `[Portal] Solicitação de coleta — ${razaoSocial || sessao.nome || ''}`.slice(0, 200),
+    ContactId: Number(sessao.empresaId || sessao.contactId),
+    Note: nota,
+  };
+  if (env.PORTAL_OS_PIPELINE_ID) deal.PipelineId = Number(env.PORTAL_OS_PIPELINE_ID);
+  if (env.PORTAL_OS_STAGE_ID) deal.StageId = Number(env.PORTAL_OS_STAGE_ID);
+  if (env.PORTAL_OS_OWNER_ID) deal.OwnerId = Number(env.PORTAL_OS_OWNER_ID);
+  const r = await fetch(`${base}/Deals`, { method: 'POST', headers, body: JSON.stringify(deal) });
+  const body = await r.text();
+  if (!r.ok) { console.error('solicitar_os_erro', r.status, body.slice(0, 160)); return json({ ok: false, error: 'nao_foi_possivel' }, 502); }
+  let dealId = null;
+  try { dealId = JSON.parse(body).value?.[0]?.Id ?? null; } catch {}
+  return json({ ok: true, pedido_id: dealId, message: 'Coleta solicitada! Nossa equipe vai agendar e você acompanha o andamento aqui no painel.' }, 201);
 }
 
 function rotuloStatus(statusId) {
