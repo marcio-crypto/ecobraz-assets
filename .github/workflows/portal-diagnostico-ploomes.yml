@@ -138,6 +138,19 @@ jobs:
           printf '%s' "$S" | npx wrangler@3 secret put PLOOMES_WEBHOOK_SECRET
           printf '%s' "24038683" | npx wrangler@3 secret put NOTIF_TESTE_CONTACT_ID
           PLOOMES_WEBHOOK_SECRET="$S" node ../setup/provisiona-aviso.mjs
+      - name: Diagnóstico do aviso por e-mail — quando sonda = diagnostica-aviso
+        if: ${{ github.event.inputs.sonda == 'diagnostica-aviso' }}
+        working-directory: portal-cliente/worker
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          S=$(openssl rand -hex 24); echo "::add-mask::$S"
+          npm install --no-audit --no-fund
+          printf '%s' "$S" | npx wrangler@3 secret put PLOOMES_WEBHOOK_SECRET
+          PLOOMES_WEBHOOK_SECRET="$S" node ../setup/diagnostica-aviso.mjs
       - name: Testar aviso por e-mail (cadeia real, canário) — quando sonda = testa-aviso
         if: ${{ github.event.inputs.sonda == 'testa-aviso' }}
         env:
