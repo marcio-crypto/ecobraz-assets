@@ -28,6 +28,12 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const wh = Array.isArray(cr.val) ? cr.val[0] : cr.val;
   L(`  webhook: Id=${wh?.Id} Active=${wh?.Active} (HTTP ${cr.status})`);
 
+  // Mostra PARA ONDE o aviso vai: o e-mail cadastrado no contato de teste no Ploomes.
+  // (É o que o cliente recebe — se estiver errado/vazio, o e-mail não chega.)
+  const ct = await api(`Contacts(${MARCIO})?$select=Id,Name,Email`);
+  const contato = Array.isArray(ct.val) ? ct.val[0] : ct.val;
+  L(`  contato de teste: Id=${MARCIO} Nome="${contato?.Name || '?'}" Email=${contato?.Email || '(VAZIO — sem e-mail, não há para onde enviar)'}`);
+
   // baseline do registro
   await wait(3000);
   const base0 = await dbg();
