@@ -459,6 +459,9 @@ async function solicitarOS(request, sessao, env) {
     Title: `[Portal] ${(razaoSocial || sessao.nome || 'Cliente').slice(0, 80)} — solicitação de coleta`,
     ContactId: Number(sessao.empresaId || sessao.contactId),
     Note: nota,
+    // Grava o endereço no CAMPO do Ploomes que os documentos leem (deal_F4BF490C..., verificado
+    // 2026-07-22 numa OS real), pra CDF/documentos saírem preenchidos certos — não só na nota.
+    OtherProperties: [{ FieldKey: env.PLOOMES_FIELD_OS_ENDERECO || 'deal_F4BF490C-707A-434A-BB3A-E187CBFD8638', StringValue: endereco.slice(0, 300) }],
   };
   // A solicitação já entra como OS DE VERDADE: funil [PJ] VENDAS, etapa "📄 Ordem de Serviço"
   // (IDs verificados em 2026-07-22). Assim o cliente vê "Em atendimento" na hora e a Débora
