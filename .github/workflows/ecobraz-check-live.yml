@@ -17,6 +17,24 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
+      - name: Status HTTP real do /public/cards.min.js (teste decisivo)
+        run: |
+          set +e
+          for u in \
+            "https://ecobraz.org/public/cards.min.js" \
+            "https://ecobraz.org/public/cards.min.js?v=df3fd72764" \
+            "https://ecobraz.org/public/cards.min.css" \
+            "https://ecobraz.org/public/ghost-sdk.min.js"; do
+            echo "===================================================="
+            echo "URL: $u"
+            # -o /dev/null: descarta corpo; -w: imprime status e infos; -L segue redirects
+            curl -sS -o /dev/null -L --max-time 30 -A "Mozilla/5.0 (compatible; EcobrazCheck/1.0)" \
+              -w "  HTTP final: %{http_code}\n  URL final:  %{url_effective}\n  Redirects:  %{num_redirects}\n  Tipo:       %{content_type}\n  Tamanho:    %{size_download} bytes\n" \
+              "$u"
+            echo "  --- Headers (sem seguir redirect) ---"
+            curl -sSI --max-time 30 -A "Mozilla/5.0 (compatible; EcobrazCheck/1.0)" "$u" \
+              | grep -iE '^(HTTP/|server:|cf-cache-status:|content-type:|location:|cache-control:|age:)' | sed 's/^/    /'
+          done
       - name: Páginas ao vivo — procurar cards.min.js
         run: |
           set +e
