@@ -378,7 +378,8 @@ async function listarOS(sessao, env) {
 function semAcentoLc(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
 function classificaDoc(nome) {
   const s = semAcentoLc(nome);
-  if (/contrat|imagem|imagens|controle interno|\binterno\b/.test(s)) return { cliente: false };
+  // Esconde SEMPRE (mesmo que o nome também tenha "serviço"): interno + comercial (proposta/orçamento).
+  if (/contrat|imagem|imagens|controle interno|\binterno\b|propost|orcament/.test(s)) return { cliente: false };
   if (/cdf|certificad/.test(s)) return { cliente: true, liberar: true, rotulo: 'Certificado de Destinação Final (CDF)' };
   if (/laudo/.test(s)) return { cliente: true, liberar: true, rotulo: 'Laudo' };
   if (/mtr/.test(s)) return { cliente: true, rotulo: 'MTR' };
