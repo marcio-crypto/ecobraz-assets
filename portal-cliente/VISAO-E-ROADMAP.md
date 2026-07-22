@@ -393,6 +393,12 @@ carbono, §5.4); **enquadramento tributário** da venda (Ecobraz é Associação
   - **Abrir OS (form pedido pelo Marcio):** Razão Social, CNPJ, **Endereço de coleta (editável — muda por
     coleta)**, telefone, e-mail, responsável, **lista/fotos dos equipamentos**; pré-preenche do Ploomes,
     cliente confirma/atualiza → cria a OS. Ploomes gera a OS + documento inicial (imediato); CDF vem depois.
+- **2026-07-22** — **NF no download (fecha o item 1 dos 3 pedidos).** A NF vem dos **anexos**
+  (`Attachments`): campo `Url` verificado (baixa PDF 109 KB) e `FileName`/`ContentType`/`IsSensitiveData`/
+  `Listable` no próprio registro. `classificaAnexo` = **allowlist ESTRITO (só NF)**; fotos WhatsApp/termo
+  **nunca** aparecem. **Provado na OS real da ENEL: 1 mostrado (NF), 11 escondidos.** Download por
+  `fonte=anexo` (`Attachments(id).Url`), mesma trava de dono. Restam os itens 2 (e-mail de aviso) e 3 (QR
+  no CDF).
 - **2026-07-22** — **Documento da OS no download + OS/NF mapeados.** Confirmado com a Débora: **CDF/laudo
   liberam na etapa "Certificado Liberado"** (valida a trava). **Documento da OS** agora entra no download
   (entidade `Orders`; `DocumentUrl` verificado = PDF 60 KB), classificado **pelo nome do modelo** (só "OS";
