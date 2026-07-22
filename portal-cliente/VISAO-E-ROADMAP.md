@@ -393,6 +393,14 @@ carbono, §5.4); **enquadramento tributário** da venda (Ecobraz é Associação
   - **Abrir OS (form pedido pelo Marcio):** Razão Social, CNPJ, **Endereço de coleta (editável — muda por
     coleta)**, telefone, e-mail, responsável, **lista/fotos dos equipamentos**; pré-preenche do Ploomes,
     cliente confirma/atualiza → cria a OS. Ploomes gera a OS + documento inicial (imediato); CDF vem depois.
+- **2026-07-22** — **Aviso por e-mail: causa real achada e corrigida + prova de envio.** O diagnóstico com
+  registro de resultado (`notif:ultimo`, no ar na v6/v7) mostrou nos logs o **formato REAL do payload do
+  webhook**: `{Action:"Update", Entity:"Deals", SecondaryEntityId, AccountId, ..., Old:{ Id:<negócio>, ... }}`
+  — **NÃO tem `EntityId` no topo; o Id do negócio vem em `Old.Id`**. O parser lia `EntityId` (que não existe)
+  → devolvia `null` → **nunca chamava o envio** (por isso nada chegava, mesmo com o webhook disparando certo).
+  **Corrigido:** `extrairDealId` agora lê `Old.Id`/`New.Id`. Adicionado **comprovante de envio**: o Worker
+  grava o resultado de cada aviso (enviado + id do Resend, ou o motivo exato de não enviar — sem e-mail,
+  falha no Resend, etc.), visível no GET `/api/ploomes/webhook?t=SEGREDO`. `/health` v7. **Reteste em curso.**
 - **2026-07-22** — **E-mail de aviso LIGADO em modo teste (item 2).** Via API (o Marcio pediu "faça
   tudo"): webhook do Ploomes criado (**Id 27000, Active, EntityId=2/Negócio, ActionId=2/editado** → chama o
   Worker); segredo `PLOOMES_WEBHOOK_SECRET` gravado no Cloudflare via `wrangler@3`; **canário**
