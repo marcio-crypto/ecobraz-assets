@@ -1,0 +1,58 @@
+name: Ecobraz — checar página ao vivo (cards.min.js) + tema ativo
+
+# Diagnóstico pontual: roda num runner do GitHub (que consegue acessar o site,
+# diferente do ambiente do assistente que é bloqueado pelo Cloudflare).
+# 1) Baixa páginas ao vivo e verifica se ainda referenciam /public/cards.min.js
+# 2) Consulta a API do Ghost para ver o TEMA ATIVO (nome + versão)
+# Assim descobrimos se o erro do Ahrefs é atual (script ainda no ar) ou de um
+# rastreamento antigo (já removido), e se o tema publicado difere do repositório.
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Páginas ao vivo — procurar cards.min.js
+        run: |
+          set +e
+          for u in "https://ecobraz.org/" "https://ecobraz.org/blog/" "https://ecobraz.org/agendamento/" "https://ecobraz.org/en/"; do
+            echo "===================================================="
+            echo "URL: $u"
+            body=$(curl -sSL --max-time 30 -A "Mozilla/5.0 (compatible; EcobrazCheck/1.0)" "$u")
+            code=$?
+            if [ $code -ne 0 ]; then echo "  curl erro ($code)"; continue; fi
+            hits=$(printf '%s' "$body" | grep -o 'cards\.min\.js\|/public/cards' | wc -l | tr -d ' ')
+            echo "  Ocorrências de cards.min.js/public/cards: $hits"
+            if [ "$hits" != "0" ]; then
+              echo "  Trecho(s):"
+              printf '%s' "$body" | grep -oE '<script[^>]*(cards\.min\.js|/public/cards)[^>]*>' | head -3 | sed 's/^/    /'
+            fi
+            echo "  Amostra de <script src> na página:"
+            printf '%s' "$body" | grep -oE '<script[^>]*src="[^"]*"' | head -6 | sed 's/^/    /'
+          done
+      - name: Tema ativo no Ghost (via API)
+        env:
+          GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
+          GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
+        run: |
+          node --input-type=module <<'NODE'
+          import crypto from 'node:crypto';
+          const adminUrl = String(process.env.GHOST_ADMIN_URL||'').replace(/\/$/,'');
+          const adminKey = String(process.env.GHOST_ADMIN_API_KEY||'');
+          if (!adminUrl || !adminKey.includes(':')) { console.log('sem credenciais'); process.exit(0); }
+          const [id,secret]=adminKey.split(':');
+          const now=Math.floor(Date.now()/1000);
+          const enc=(v)=>Buffer.from(JSON.stringify(v)).toString('base64url');
+          const uns=`${enc({alg:'HS256',typ:'JWT',kid:id})}.${enc({iat:now,exp:now+300,aud:'/admin/'})}`;
+          const token=`${uns}.${crypto.createHmac('sha256',Buffer.from(secret,'hex')).update(uns).digest('base64url')}`;
+          const r=await fetch(`${adminUrl}/ghost/api/admin/themes/`,{headers:{Authorization:`Ghost ${token}`,'Accept-Version':'v5.0'}});
+          if(!r.ok){console.log(`GET themes falhou (${r.status}) — pode ser restrição do Ghost Pro ao token.`);process.exit(0);}
+          const themes=(await r.json()).themes||[];
+          console.log('=== TEMAS NO GHOST ===');
+          for(const t of themes){ console.log(`${t.active?'>>> ATIVO':'   '} ${t.name} (package v${t.package&&t.package.version})`); }
+          NODE
