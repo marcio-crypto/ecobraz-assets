@@ -382,7 +382,9 @@ carbono, §5.4); **enquadramento tributário** da venda (Ecobraz é Associação
     `Key`, `Shared`, endpoint **`/Share`** e o HTML (`BodySourceCode`) → download viável.
   - **Anexos (MTR/NF):** sistema **`Attachments`/`AttachmentsItems`/`AttachmentsFolders`** (`Base64`,
     `GetById`). Falta só sondar o vínculo exato anexo↔negócio (via AttachmentsItems).
-  - **Upload de fotos (Abrir OS):** `Deals/{key}/UploadFile` (também Orders/Contacts).
+  - **Upload de fotos (Abrir OS):** `Deals/{key}/UploadFile` (também Orders/Contacts). **Formato
+    confirmado por sonda em 2026-07-22:** multipart, campo **`file`** → HTTP 200 (criação e exclusão de
+    negócio de teste também OK; nada ficou no Ploomes).
   - **E-mail branded na mudança de status:** o Ploomes TEM **`Webhooks` + `Automations`** → o "jeito bonito"
     (portal avisado na mudança de etapa → e-mail com a cara da Ecobraz) **é viável**. ✅
   - **QR de validação no CDF (ideia do Marcio, anti-fraude) — adotada:** documentos têm `Key`/`/Share`; o QR
@@ -391,3 +393,8 @@ carbono, §5.4); **enquadramento tributário** da venda (Ecobraz é Associação
   - **Abrir OS (form pedido pelo Marcio):** Razão Social, CNPJ, **Endereço de coleta (editável — muda por
     coleta)**, telefone, e-mail, responsável, **lista/fotos dos equipamentos**; pré-preenche do Ploomes,
     cliente confirma/atualiza → cria a OS. Ploomes gera a OS + documento inicial (imediato); CDF vem depois.
+- **2026-07-22** — **Abrir OS elaborado (fotos):** formulário reorganizado em seções (empresa, local da
+  coleta, equipamentos, fotos), pré-preenchido do cadastro; anexo de fotos com arrastar-e-soltar, redução
+  no navegador e miniaturas; o Worker envia as fotos ao negócio no Ploomes (`Deals/{id}/UploadFile`, campo
+  `file`). **Publicado no endereço de teste** (workers.dev). **Falta o teste ao vivo do Marcio** (criar uma
+  solicitação de verdade e conferir a foto anexada no Ploomes) — ainda NÃO verificado ponta a ponta com ele.
