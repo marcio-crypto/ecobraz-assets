@@ -124,6 +124,12 @@ jobs:
           PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
           EMAIL_TESTE: ${{ github.event.inputs.cnpj }}
         run: node portal-cliente/diagnostico/inspeciona-ids.mjs
+      - name: Sonda etapas do funil (confere os 3 gatilhos do aviso) — quando sonda = etapas
+        if: ${{ github.event.inputs.sonda == 'etapas' }}
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+        run: node portal-cliente/diagnostico/inspeciona-etapas.mjs
       - name: Ligar aviso por e-mail (provisiona webhook + segredo) — quando sonda = provisiona-aviso
         if: ${{ github.event.inputs.sonda == 'provisiona-aviso' }}
         working-directory: portal-cliente/worker

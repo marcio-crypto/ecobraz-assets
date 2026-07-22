@@ -35,7 +35,7 @@ export default {
     const { pathname } = url;
     try {
       if (pathname === '/health') return json({
-        ok: true, service: 'ecobraz-portal', version: 7,
+        ok: true, service: 'ecobraz-portal', version: 8,
         // Só presença (true/false) — NUNCA os valores. Ajuda a confirmar a
         // configuração pelo navegador sem expor segredo nenhum.
         config: {
@@ -50,6 +50,7 @@ export default {
           mercadopago: !!env.MERCADOPAGO_ACCESS_TOKEN,
           mercadopagoModo: env.MERCADOPAGO_ACCESS_TOKEN ? (env.MERCADOPAGO_ACCESS_TOKEN.startsWith('TEST-') ? 'teste' : 'producao') : null,
           avisoEmail: !!env.PLOOMES_WEBHOOK_SECRET,
+          avisoModoTeste: env.NOTIF_MODO_TESTE === '1', // true = só contato de teste; false = vale p/ todos
         },
       });
 
@@ -812,9 +813,11 @@ async function processarMudancaOS(dealId, env) {
   const etapa = deal.Stage?.Name || '';
   const tipo = tipoNotificacao(etapa);
   if (!tipo) { await rec({ resultado: 'etapa_nao_gatilho', etapa }); return; } // etapa não é gatilho de aviso
-  // MODO TESTE (canário): se definido, só envia para o contato de teste — evita e-mail a cliente
-  // real antes de validar. Depois de aprovado, a variável é removida e vale para todos.
-  if (env.NOTIF_TESTE_CONTACT_ID && String(deal.ContactId) !== String(env.NOTIF_TESTE_CONTACT_ID)) { await rec({ resultado: 'fora_do_modo_teste', etapa, tipo, contactId: deal.ContactId }); return; }
+  // MODO TESTE (canário) — só fica ATIVO com NOTIF_MODO_TESTE=1. Serviu para validar o aviso
+  // mandando apenas para o contato de teste antes de liberar. Validado de ponta a ponta em
+  // 2026-07-22 (e-mail chegou na caixa de entrada). DESLIGADO por padrão → o aviso vale para
+  // TODOS os clientes. Para testar de novo com segurança, basta setar NOTIF_MODO_TESTE=1.
+  if (env.NOTIF_MODO_TESTE === '1' && env.NOTIF_TESTE_CONTACT_ID && String(deal.ContactId) !== String(env.NOTIF_TESTE_CONTACT_ID)) { await rec({ resultado: 'fora_do_modo_teste', etapa, tipo, contactId: deal.ContactId }); return; }
   const email = deal.Contact?.Email;
   if (!email) { console.error('webhook_sem_email', dealId); await rec({ resultado: 'sem_email', etapa, tipo }); return; }
   const chave = `notif:${dealId}:${tipo}`;
