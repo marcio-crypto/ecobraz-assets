@@ -393,6 +393,13 @@ carbono, §5.4); **enquadramento tributário** da venda (Ecobraz é Associação
   - **Abrir OS (form pedido pelo Marcio):** Razão Social, CNPJ, **Endereço de coleta (editável — muda por
     coleta)**, telefone, e-mail, responsável, **lista/fotos dos equipamentos**; pré-preenche do Ploomes,
     cliente confirma/atualiza → cria a OS. Ploomes gera a OS + documento inicial (imediato); CDF vem depois.
+- **2026-07-22** — **E-mail de aviso LIGADO em modo teste (item 2).** Via API (o Marcio pediu "faça
+  tudo"): webhook do Ploomes criado (**Id 27000, Active, EntityId=2/Negócio, ActionId=2/editado** → chama o
+  Worker); segredo `PLOOMES_WEBHOOK_SECRET` gravado no Cloudflare via `wrangler@3`; **canário**
+  `NOTIF_TESTE_CONTACT_ID=24038683` (só o Marcio recebe). Disparei um teste de ponta a ponta (criar/mover/
+  apagar um negócio de teste sob o contato do Marcio). **Pendente de confirmação do Marcio:** se o e-mail
+  chegou. **Risco honesto:** o webhook pode só disparar em edições pela TELA do Ploomes (não pela API) — se
+  o teste não chegar, validar com a Débora movendo uma OS. Ao confirmar, remover o canário → vale para todos.
 - **2026-07-22** — **E-mail de aviso na mudança de etapa (item 2 dos 3) — parte do sistema pronta.**
   Webhook `POST /api/ploomes/webhook?t=SEGREDO` (o Ploomes chama na automação), protegido por
   `PLOOMES_WEBHOOK_SECRET` (desabilitado/503 até configurar → deploy seguro). 3 gatilhos por etapa:
