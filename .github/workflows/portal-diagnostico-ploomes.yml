@@ -130,6 +130,12 @@ jobs:
           PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
           PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
         run: node portal-cliente/diagnostico/inspeciona-etapas.mjs
+      - name: Sonda modelo do CDF (como embutir o QR) — quando sonda = modelo-cdf
+        if: ${{ github.event.inputs.sonda == 'modelo-cdf' }}
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+        run: node portal-cliente/diagnostico/inspeciona-modelo-cdf.mjs
       - name: Ligar aviso por e-mail (provisiona webhook + segredo) — quando sonda = provisiona-aviso
         if: ${{ github.event.inputs.sonda == 'provisiona-aviso' }}
         working-directory: portal-cliente/worker
