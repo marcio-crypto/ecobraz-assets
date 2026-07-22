@@ -12,7 +12,7 @@ function semAcento(s) {
 
 // Etapa (nome) -> status amigável ao cliente.
 //  - Concluída: OS finalizada / doc enviado / certificado liberado (o cliente tem tudo).
-//  - Em andamento: a partir de "ordem de serviço" (coleta, correios, pesagem, stand by).
+//  - Em atendimento: a partir de "ordem de serviço" (coleta, correios, pesagem, stand by).
 //  - Cancelada: cancelado/cancelada.
 //  - Em negociação: fases anteriores à OS (em contato, reunião, proposta, cadastro...) — o
 //    painel do cliente NÃO lista essas como OS.
@@ -20,7 +20,7 @@ export function statusDaEtapa(nomeEtapa) {
   const s = semAcento(nomeEtapa);
   if (s.includes('cancel')) return 'Cancelada';
   if (s.includes('os finalizada') || s.includes('doc env') || s.includes('certificado liberado')) return 'Concluída';
-  if (s.includes('ordem de servico') || s.includes('coleta') || s.includes('correios') || s.includes('pesagem') || s.includes('stand by')) return 'Em andamento';
+  if (s.includes('ordem de servico') || s.includes('coleta') || s.includes('correios') || s.includes('pesagem') || s.includes('stand by')) return 'Em atendimento';
   return 'Em negociação';
 }
 

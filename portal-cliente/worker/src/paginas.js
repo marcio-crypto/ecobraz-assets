@@ -211,7 +211,7 @@ export function paginaPainel({ nome, email, dataFim }) {
 </main>
 <script>
 function fmt(iso){ if(!iso) return '—'; try{ return new Date(iso).toLocaleDateString('pt-BR'); }catch(_){ return '—'; } }
-function tagCls(s){ s=(s||'').toLowerCase(); if(s.indexOf('conclu')>=0) return 'tag-ok'; if(s.indexOf('andamento')>=0) return 'tag-and'; return 'tag-x'; }
+function tagCls(s){ s=(s||'').toLowerCase(); if(s.indexOf('conclu')>=0) return 'tag-ok'; if(s.indexOf('atendimento')>=0||s.indexOf('andamento')>=0) return 'tag-and'; return 'tag-x'; }
 function escapeHtml(s){var d=document.createElement('div');d.textContent=s==null?'':String(s);return d.innerHTML;}
 async function carregar(){
   var alvo=document.getElementById('oslista'), kpi=document.getElementById('kpiOs');
