@@ -19,6 +19,7 @@
 // "OS/atendimento" (hoje lê os Negócios do contato) e os rótulos de status.
 
 const SESSAO_COOKIE = 'portal_sessao';
+const VALIDADOR_COOKIE = 'portal_validador';
 const SESSAO_TTL_S = 8 * 60 * 60;       // 8 horas
 const LINK_TTL_S = 15 * 60;             // 15 minutos
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' };
@@ -30,6 +31,7 @@ import { criarPreferencia, consultarPagamento } from './mercadopago.js';
 import { statusDaEtapa, valorProp, CAMPOS_OS } from './os-utils.js';
 import { qrCDF, validarCDF } from './validacao.js';
 import { paginaMetodologia } from './carbono-metodologia.js';
+import { lerValidacao, registrarValidacao, paginaAreaValidacao, qrMetodologia, validarMetodologiaPublico } from './validacao-metodologia.js';
 
 export default {
   async fetch(request, env) {
@@ -37,7 +39,7 @@ export default {
     const { pathname } = url;
     try {
       if (pathname === '/health') return json({
-        ok: true, service: 'ecobraz-portal', version: 11,
+        ok: true, service: 'ecobraz-portal', version: 12,
         // Só presença (true/false) — NUNCA os valores. Ajuda a confirmar a
         // configuração pelo navegador sem expor segredo nenhum.
         config: {
@@ -129,14 +131,31 @@ export default {
       // Validação pública de CDF (anti-fraude): QR no certificado -> confere contra o Ploomes.
       if (pathname === '/qr' && request.method === 'GET') return await qrCDF(request, env, url);
       if (pathname === '/validar' && request.method === 'GET') return await validarCDF(request, env, url);
+      // Selo PÚBLICO da metodologia (só confirma a validação da Villanova; não expõe a receita).
+      if (pathname === '/validar-metodologia' && request.method === 'GET') return await validarMetodologiaPublico(request, env, url);
+      if (pathname === '/qr-metodologia' && request.method === 'GET') return await qrMetodologia(request, env, url);
+      // Acesso da Villanova (validador) — login próprio por link mágico, independente do cliente.
+      if (pathname === '/api/validacao/entrar' && request.method === 'POST') return await solicitarLinkValidador(request, env);
+      if (pathname === '/entrar-validador' && request.method === 'GET') return await entrarComTokenValidador(request, env, url);
+      if (pathname === '/api/validacao/sair' && request.method === 'POST') return sairValidador();
 
-      // Dali para baixo, exige sessão válida.
+      // Sessões independentes: cliente e validador (Villanova).
       const sessao = await lerSessao(request, env);
-      // Metodologia de carbono — FECHADA (proteção contra concorrente). Só quem está logado vê a
-      // "receita"; o selo público (/validar) confirma a validação sem expor o conteúdo.
+      const validador = await lerSessaoValidador(request, env);
+
+      // Área de validação da Villanova (exige sessão de validador).
+      if (pathname === '/validacao' && request.method === 'GET') {
+        if (!validador) return html(paginaLoginValidador());
+        return html(await paginaAreaValidacao(env, validador, url));
+      }
+      if (pathname === '/api/validacao/validar' && request.method === 'POST') {
+        if (!validador) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        return await validarMetodologiaAcao(request, env, validador);
+      }
+      // Metodologia — FECHADA (proteção contra concorrente): cliente logado OU validador.
       if (pathname === '/metodologia' && request.method === 'GET') {
-        if (!sessao) return new Response(null, { status: 302, headers: { Location: '/', 'cache-control': 'no-store' } });
-        return html(paginaMetodologia(env));
+        if (!sessao && !validador) return new Response(null, { status: 302, headers: { Location: '/', 'cache-control': 'no-store' } });
+        return html(paginaMetodologia(env, await lerValidacao(env)));
       }
       if (pathname === '/api/os' && request.method === 'GET') {
         if (!sessao) return json({ ok: false, error: 'nao_autenticado' }, 401);
@@ -273,6 +292,77 @@ async function lerSessao(request, env) {
 
 function cookieSessao(valor, maxAge) {
   return `${SESSAO_COOKIE}=${encodeURIComponent(valor)}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${maxAge}`;
+}
+
+// ---------------------------------------------------------------------------
+// Acesso do VALIDADOR (Villanova ESG) — login próprio por link mágico
+// ---------------------------------------------------------------------------
+function emailValidadorPermitido(email, env) {
+  const lista = String(env.VALIDADOR_EMAILS || 'contact@villanovaesg.com').toLowerCase().split(/[,;\s]+/).filter(Boolean);
+  return lista.includes(String(email || '').toLowerCase());
+}
+async function solicitarLinkValidador(request, env) {
+  const generica = json({ ok: true, message: 'Se o e-mail for de um validador autorizado, enviamos um link de acesso.' });
+  let input; try { input = await request.json(); } catch { return generica; }
+  const email = String(input?.email || '').trim().toLowerCase();
+  if (!/^\S+@\S+\.\S+$/.test(email) || !emailValidadorPermitido(email, env)) { console.log('validador_barrado'); return generica; }
+  if (env.PORTAL_KV) { const chave = `throttle:val:${email}`; if (await env.PORTAL_KV.get(chave)) return generica; await env.PORTAL_KV.put(chave, '1', { expirationTtl: 60 }); }
+  const token = await criarToken({ em: email, tipo: 'login_validador' }, LINK_TTL_S, env);
+  if (env.PORTAL_KV) await env.PORTAL_KV.put(`nonce:${token.nonce}`, '1', { expirationTtl: LINK_TTL_S });
+  const linkBase = env.PORTAL_BASE_URL || new URL(request.url).origin;
+  const link = `${linkBase.replace(/\/+$/, '')}/entrar-validador?token=${encodeURIComponent(token.valor)}`;
+  try { await enviarEmailLogin({ nome: 'Villanova ESG', email }, link, env); console.log('validador_email_ok'); }
+  catch (error) { console.error('validador_email_falhou', safeError(error)); }
+  return generica;
+}
+async function entrarComTokenValidador(request, env, url) {
+  const payload = await verificarToken(url.searchParams.get('token') || '', env);
+  if (!payload || payload.tipo !== 'login_validador') return html(paginaMensagem('Link inválido ou expirado', 'Peça um novo link de acesso.'), 400);
+  if (env.PORTAL_KV) {
+    const existe = await env.PORTAL_KV.get(`nonce:${payload.n}`);
+    if (!existe) return html(paginaMensagem('Este link já foi usado', 'Por segurança, cada link vale uma vez. Peça um novo.'), 400);
+    await env.PORTAL_KV.delete(`nonce:${payload.n}`);
+  }
+  if (!emailValidadorPermitido(payload.em, env)) return html(paginaMensagem('Acesso indisponível', 'E-mail não autorizado para validação.'), 403);
+  const sessao = await criarToken({ em: payload.em, tipo: 'sessao_validador' }, SESSAO_TTL_S, env);
+  return new Response(null, { status: 302, headers: { Location: '/validacao', 'Set-Cookie': cookieValidador(sessao.valor, SESSAO_TTL_S) } });
+}
+function sairValidador() { return new Response(null, { status: 302, headers: { Location: '/validacao', 'Set-Cookie': cookieValidador('', 0) } }); }
+async function lerSessaoValidador(request, env) {
+  const cookie = (request.headers.get('Cookie') || '').split(';').map((s) => s.trim()).find((s) => s.startsWith(`${VALIDADOR_COOKIE}=`));
+  if (!cookie) return null;
+  const payload = await verificarToken(decodeURIComponent(cookie.slice(VALIDADOR_COOKIE.length + 1)), env);
+  if (!payload || payload.tipo !== 'sessao_validador') return null;
+  return { email: payload.em, nome: 'Villanova ESG', role: 'validador' };
+}
+function cookieValidador(valor, maxAge) { return `${VALIDADOR_COOKIE}=${encodeURIComponent(valor)}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${maxAge}`; }
+async function validarMetodologiaAcao(request, env, validador) {
+  let comentario = '', declaro = false;
+  try { const form = await request.formData(); comentario = String(form.get('comentario') || ''); declaro = !!form.get('declaro'); } catch { /* ignore */ }
+  if (!declaro) return html(paginaMensagem('Confirmação necessária', 'Marque a declaração de revisão para validar a metodologia.'), 400);
+  await registrarValidacao(env, { validadorEmail: validador.email, comentario });
+  return new Response(null, { status: 302, headers: { Location: '/validacao', 'cache-control': 'no-store' } });
+}
+function paginaLoginValidador() {
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Validação — Ecobraz</title></head>
+<body style="margin:0;background:#F2F6F4;font-family:Montserrat,'Segoe UI',Arial,Helvetica,sans-serif;color:#10262B;">
+<div style="max-width:440px;margin:0 auto;padding:60px 20px;">
+  <div style="background:#00333B;border-radius:16px 16px 0 0;padding:24px 28px;"><span style="color:#fff;font-size:20px;font-weight:800;">ecobraz</span><span style="color:#92C430;font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin-left:8px;">emigre</span>
+    <div style="color:#9FC6C1;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;margin-top:10px;">Área de validação — Villanova ESG</div></div>
+  <div style="background:#fff;border-radius:0 0 16px 16px;border:1px solid #E4EBE9;border-top:none;padding:28px;">
+    <h1 style="margin:0 0 8px;font-size:20px;color:#00333B;">Entrar para validar</h1>
+    <p style="margin:0 0 18px;font-size:13.5px;color:#4F6469;line-height:1.6;">Informe seu e-mail autorizado. Enviamos um link de acesso (vale uma vez, expira em 15 minutos).</p>
+    <input id="e" type="email" placeholder="seu e-mail" style="width:100%;box-sizing:border-box;border:1px solid #DDE1E6;border-radius:9px;padding:12px 14px;font-size:14px;font-family:inherit;">
+    <button id="b" style="width:100%;margin-top:12px;background:#92C430;color:#10262B;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:800;cursor:pointer;">Enviar link de acesso</button>
+    <div id="m" style="font-size:13px;color:#4F6469;margin-top:14px;line-height:1.5;"></div>
+  </div>
+</div>
+<script>
+  const b=document.getElementById('b'),e=document.getElementById('e'),m=document.getElementById('m');
+  b.onclick=async()=>{b.disabled=true;m.textContent='Enviando…';try{const r=await fetch('/api/validacao/entrar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:e.value})});const j=await r.json();m.textContent=j.message||'Se o e-mail for autorizado, enviamos um link.';}catch{m.textContent='Tente novamente em instantes.';}b.disabled=false;};
+  e.addEventListener('keydown',ev=>{if(ev.key==='Enter')b.click();});
+</script>
+</body></html>`;
 }
 
 // ---------------------------------------------------------------------------

@@ -51,6 +51,15 @@ export const METODOLOGIA = {
   ],
 };
 
+// "Impressão digital" do CONTEÚDO validável (normas, números, fronteira, fatores, versão) — NÃO inclui
+// metadados mutáveis (status/validadoPor). Se alguém mudar a receita depois de validada, o hash muda e o
+// selo deixa de bater → a página pública avisa "conteúdo alterado após a validação".
+export async function hashConteudo() {
+  const conteudo = { versao: METODOLOGIA.versao, normas: METODOLOGIA.normas, numeros: METODOLOGIA.numeros, fronteira: METODOLOGIA.fronteira, fatores: METODOLOGIA.fatores };
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(conteudo)));
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
+}
+
 const BADGE = {
   validado: { txt: 'validado', bg: '#E4F3E6', cor: '#1E7A3D', bd: '#B7E0BE' },
   em_validacao: { txt: 'em validação', bg: '#FFF4DE', cor: '#8A6A16', bd: '#F0DCA6' },
@@ -62,9 +71,10 @@ function badge(status) { const b = BADGE[status] || BADGE.proposto; return `<spa
 
 // Página da metodologia — superfície compartilhada (Auditor + Villanova veem isto).
 // Read-only nesta fase; a validação interativa (login Villanova + aprovar) vem na Fase 2.
-export function paginaMetodologia(env) {
+export function paginaMetodologia(env, validacao) {
   const m = METODOLOGIA;
-  const statusGeral = badge(m.status === 'validado' ? 'validado' : (m.status === 'em_validacao' ? 'em_validacao' : 'proposto'));
+  const validado = !!(validacao && validacao.versao === m.versao);
+  const statusGeral = badge(validado ? 'validado' : 'proposto');
   const normas = m.normas.map((n) => `<li style="margin:0 0 10px;"><a href="${esc(n.url)}" target="_blank" rel="noopener" style="color:#00333B;font-weight:700;text-decoration:none;border-bottom:1px solid #cfe0dd;">${esc(n.nome)}</a><div style="font-size:12.5px;color:#5B6570;margin-top:2px;">${esc(n.uso)}</div></li>`).join('');
   const numeros = m.numeros.map((x) => `<div style="flex:1 1 220px;min-width:220px;background:#fff;border:1px solid #E4EBE9;border-radius:14px;padding:18px 18px 16px;">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><span style="width:26px;height:26px;border-radius:7px;background:#00333B;color:#92C430;font-weight:800;font-size:13px;display:inline-flex;align-items:center;justify-content:center;">${x.id}</span><strong style="font-size:14.5px;color:#10262B;line-height:1.2;">${esc(x.titulo)}</strong></div>
@@ -96,9 +106,11 @@ export function paginaMetodologia(env) {
     </div>
   </div>
 
-  <div style="background:#FFFBEB;border:1px solid #F0DCA6;border-radius:12px;padding:14px 18px;margin-top:16px;font-size:13px;color:#7a5f13;line-height:1.55;">
+  ${validado ? `<div style="background:#E4F3E6;border:1px solid #B7E0BE;border-radius:12px;padding:14px 18px;margin-top:16px;font-size:13px;color:#1E5B31;line-height:1.55;">
+    <strong>✓ Metodologia validada por ${esc(validacao.validadoPor || 'Villanova ESG')}</strong> em ${esc((validacao.em || '').slice(0, 10).split('-').reverse().join('/'))} — versão ${esc(validacao.versao)}.${validacao.comentario ? ` <em>“${esc(validacao.comentario)}”</em>` : ''}
+  </div>` : `<div style="background:#FFFBEB;border:1px solid #F0DCA6;border-radius:12px;padding:14px 18px;margin-top:16px;font-size:13px;color:#7a5f13;line-height:1.55;">
     <strong>Rascunho v1 — em validação.</strong> Os fatores marcados <em>“a validar”</em> têm a <strong>fonte</strong> definida, mas o <strong>valor exato</strong> ainda será extraído da fonte e <strong>homologado pela Villanova ESG</strong>. Nada é publicado como número final antes disso.
-  </div>
+  </div>`}
 
   <h2 style="font-size:16px;color:#00333B;margin:30px 0 12px;">Os 3 números que nunca se misturam</h2>
   <div style="display:flex;gap:12px;flex-wrap:wrap;">${numeros}</div>
