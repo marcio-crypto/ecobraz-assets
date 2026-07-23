@@ -163,6 +163,16 @@ jobs:
         run: |
           npm install --no-audit --no-fund
           printf '%s' "marcio@ecobraz.org.br|Marcio (teste)" | npx wrangler@3 secret put AGENTE_EMAILS
+      - name: Lê o último acesso ao /qr (diagnóstico do QR do CDF) — quando sonda = le-qr
+        if: ${{ github.event.inputs.sonda == 'le-qr' }}
+        working-directory: portal-cliente/worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          echo "=== qr:ultimo (o que o Ploomes mandou no /qr) ==="
+          npx wrangler@3 kv:key get "qr:ultimo" --namespace-id=edd3746ffe5a49d585c60d99c18a25c7 || echo "(sem valor / erro na leitura)"
+          echo ""
       - name: Ligar aviso por e-mail (provisiona webhook + segredo) — quando sonda = provisiona-aviso
         if: ${{ github.event.inputs.sonda == 'provisiona-aviso' }}
         working-directory: portal-cliente/worker
