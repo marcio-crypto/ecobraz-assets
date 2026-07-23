@@ -36,7 +36,7 @@ import { paginaMetodologia } from './carbono-metodologia.js';
 import { lerValidacao, registrarValidacao, paginaAreaValidacao, qrMetodologia, validarMetodologiaPublico } from './validacao-metodologia.js';
 import { paginaPainelCarbono } from './carbono-painel.js';
 import { agentePermitido, nomeAgente, listarColetas, paginaLoginAgente, paginaAppAgente, detalheColeta, lerEstadoColeta, registrarCheckin, registrarFoto, servirFotoColeta, paginaColetaDetalhe } from './agente.js';
-import { operadorPermitido, nomeOperador, listarOperacoes, listarColetasRecebiveis, iniciarOperacao, lerOperacao, definirTipoOperacao, registrarPesoEntrada, registrarFotoOperacao, servirFotoOperacao, paginaLoginOperacao, paginaAppOperacao, paginaReceberLote, paginaLoteDetalhe, adicionarMaterial, removerMaterial, concluirTriagem, paginaTriagem, paginaProcessamento, concluirProcessamento } from './operacional.js';
+import { operadorPermitido, nomeOperador, listarOperacoes, listarColetasRecebiveis, iniciarOperacao, lerOperacao, definirTipoOperacao, registrarPesoEntrada, registrarFotoOperacao, servirFotoOperacao, paginaLoginOperacao, paginaAppOperacao, paginaReceberLote, paginaLoteDetalhe, adicionarMaterial, removerMaterial, concluirTriagem, paginaTriagem, paginaProcessamento, concluirProcessamento, paginaSaida, registrarSaida, concluirSaida } from './operacional.js';
 
 export default {
   async fetch(request, env) {
@@ -44,7 +44,7 @@ export default {
     const { pathname } = url;
     try {
       if (pathname === '/health') return json({
-        ok: true, service: 'ecobraz-portal', version: 20,
+        ok: true, service: 'ecobraz-portal', version: 21,
         // Só presença (true/false) — NUNCA os valores. Ajuda a confirmar a
         // configuração pelo navegador sem expor segredo nenhum.
         config: {
@@ -283,6 +283,26 @@ export default {
         const form = await request.formData().catch(() => null);
         const osId = form ? String(form.get('osId') || '') : '';
         await concluirProcessamento(env, osId);
+        return new Response(null, { status: 302, headers: { Location: `/operacao/lote?id=${encodeURIComponent(osId)}`, 'cache-control': 'no-store' } });
+      }
+      if (pathname === '/operacao/lote/saida' && request.method === 'GET') {
+        if (!operacao) return new Response(null, { status: 302, headers: { Location: '/operacao', 'cache-control': 'no-store' } });
+        const op = await lerOperacao(env, url.searchParams.get('id') || '');
+        if (!op) return html(paginaMensagem('Operação não encontrada', 'Volte e receba o lote de novo.'), 404);
+        return html(paginaSaida(operacao, op));
+      }
+      if (pathname === '/api/operacao/saida' && request.method === 'POST') {
+        if (!operacao) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = null; }
+        if (!b || !b.osId || b.pesoKg == null) return json({ ok: false, error: 'dados' }, 400);
+        await registrarSaida(env, b.osId, operacao, b);
+        return json({ ok: true });
+      }
+      if (pathname === '/api/operacao/saida/concluir' && request.method === 'POST') {
+        if (!operacao) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        const form = await request.formData().catch(() => null);
+        const osId = form ? String(form.get('osId') || '') : '';
+        await concluirSaida(env, osId);
         return new Response(null, { status: 302, headers: { Location: `/operacao/lote?id=${encodeURIComponent(osId)}`, 'cache-control': 'no-store' } });
       }
 

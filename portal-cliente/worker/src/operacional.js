@@ -46,6 +46,13 @@ export const FASES = {
       { id: 'destruicao_dados', rotulo: 'Destruição de dados (R2/R3)', obrig: false, soPago: true },
     ],
   },
+  fim: {
+    rotulo: 'Inutilização concluída / Acondicionamento',
+    fotos: [
+      { id: 'residuo_final', rotulo: 'Resíduo final inutilizado', obrig: true },
+      { id: 'acondicionamento', rotulo: 'Carregamento p/ o destino', obrig: true },
+    ],
+  },
 };
 
 // --- Persistência (KV) ---
@@ -137,6 +144,40 @@ export function meioCompleto(op) {
 export async function concluirProcessamento(env, osId) {
   const op = await lerOperacao(env, osId); if (!op) return null;
   if (meioCompleto(op)) { op.etapa = 'saida'; await salvarOperacao(env, op); }
+  return op;
+}
+const TOL_BALANCO = 0.02; // tolerância do balanço de massa: 2%
+export function balanco(op) {
+  const entrada = op && op.entrada ? Number(op.entrada.pesoKg) || 0 : 0;
+  const saida = op && op.saida ? Number(op.saida.pesoKg) || 0 : 0;
+  const dif = Math.round((entrada - saida) * 100) / 100;
+  const pct = entrada > 0 ? Math.abs(dif) / entrada : 1;
+  const somaMat = somaMateriais(op);
+  const base = saida || somaMat; // reparte pela proporção da triagem
+  const porDestino = {};
+  for (const m of (op.materiais || [])) {
+    const frac = somaMat > 0 ? (Number(m.qtd) || 0) / somaMat : 0;
+    porDestino[m.destino] = Math.round(((porDestino[m.destino] || 0) + frac * base) * 100) / 100;
+  }
+  return { entrada, saida, dif, pct, fecha: entrada > 0 && saida > 0 && pct <= TOL_BALANCO, porDestino };
+}
+export async function registrarSaida(env, osId, operador, d) {
+  const op = await lerOperacao(env, osId); if (!op) return null;
+  const pesoKg = Math.max(0, Number(String(d && d.pesoKg).replace(',', '.')) || 0);
+  op.saida = { pesoKg, justificativa: String((d && d.justificativa) || '').slice(0, 400), em: agora(), por: operador.email };
+  await salvarOperacao(env, op); return op;
+}
+export function fimCompleto(op) {
+  if (!op) return false;
+  const fs = (op.fotos && op.fotos.fim) || {};
+  const fotosOk = FASES.fim.fotos.filter((f) => f.obrig).every((f) => fs[f.id]);
+  const b = balanco(op);
+  const balancoOk = b.saida > 0 && (b.fecha || (op.saida && op.saida.justificativa));
+  return fotosOk && balancoOk;
+}
+export async function concluirSaida(env, osId) {
+  const op = await lerOperacao(env, osId); if (!op) return null;
+  if (fimCompleto(op)) { op.etapa = 'validacao'; op.concluidaEm = agora(); await salvarOperacao(env, op); }
   return op;
 }
 // Linha de navegação entre as etapas (usada no "hub" da operação).
@@ -269,8 +310,8 @@ export function paginaLoteDetalhe(operador, op) {
     <div class="eyebrow">Etapas da operação</div>
     ${etapaLink('Triagem — classificação', `/operacao/lote/triagem?id=${esc(op.osId)}`, okInicio, triagemCompleta(op))}
     ${etapaLink('Processamento — Fase 2 (R2/R3)', `/operacao/lote/processamento?id=${esc(op.osId)}`, triagemCompleta(op), meioCompleto(op))}
-    ${etapaLink('Saída + balanço de massa', '#', false, false, 'em breve')}
-    ${etapaLink('Validação (Eng. Ambiental)', '#', false, false, 'em breve')}
+    ${etapaLink('Saída + balanço de massa', `/operacao/lote/saida?id=${esc(op.osId)}`, meioCompleto(op), fimCompleto(op))}
+    ${etapaLink('Validação (Eng. Ambiental)', '#', false, op.etapa === 'validacao' || op.etapa === 'concluida', op.etapa === 'validacao' ? 'na fila da eng.' : 'em breve')}
   </div>
   <div id="msg" style="text-align:center;font-size:12px;color:#4F6469;min-height:16px;margin-top:8px"></div>
 </div>
@@ -478,6 +519,90 @@ export function paginaProcessamento(operador, op) {
     inp.onchange=async()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const cat=inp.getAttribute('data-cat'); msg.textContent='Preparando a foto…';
       try{ const r=await carimbar(f); msg.textContent='Enviando…';
         await post('/api/operacao/foto',{osId:OS,fase:'meio',cat:cat,foto:r.dataUrl.split(',')[1],geo:r.geo}); location.reload();
+      }catch{ msg.textContent='Não consegui processar a foto. Tente de novo.'; } };
+  });
+</script></body></html>`;
+}
+
+// ---------------------------------------------------------------------------
+// Slice 4: Saída — pesagem de saída + Fase 3 (FIM) + fechamento do balanço de massa
+// ---------------------------------------------------------------------------
+export function paginaSaida(operador, op) {
+  const b = balanco(op);
+  const fs = (op.fotos && op.fotos.fim) || {};
+  const ok = fimCompleto(op);
+  const temSaida = !!(op.saida && op.saida.pesoKg > 0);
+  const foraTol = temSaida && !b.fecha;
+  const corDif = b.fecha ? '#1E7A3D' : (temSaida ? '#B23A2E' : '#8A6A16');
+  const destinoLinhas = Object.entries(b.porDestino).map(([k, v]) => `<div style="display:flex;justify-content:space-between;font-size:12.5px;color:#4F6469;padding:4px 0"><span>${esc(DESTINOS[k] || k)}</span><b>${String(v).replace('.', ',')} kg</b></div>`).join('') || '<div style="font-size:12px;color:#9aa7a4">Classifique na triagem para ver a repartição.</div>';
+  const linhaFotos = FASES.fim.fotos.map((f) => {
+    const feito = fs[f.id];
+    const cls = feito ? 'done' : 'primary';
+    const marca = feito ? `✓ ${esc(f.rotulo)} — ${hhmm(feito.em)}` : `📷 ${esc(f.rotulo)}`;
+    const img = feito ? `<img src="/operacao/foto?id=${esc(op.osId)}&fase=fim&cat=${f.id}" style="width:100%;border-radius:10px;margin:6px 0 12px;border:1px solid #E4EBE9">` : '';
+    return `<label class="btn ${cls}">${marca}<input type="file" accept="image/*" capture="environment" data-cat="${f.id}" class="fp" style="display:none"></label>${img}`;
+  }).join('');
+  return `${head('Saída OS ' + op.numero)}
+<div class="top"><a href="/operacao/lote?id=${esc(op.osId)}" style="color:#9FC6C1;font-size:12px;font-weight:800;letter-spacing:.08em;text-decoration:none">← SAÍDA OS ${esc(op.numero)}</a>
+  <div style="color:#fff;font-size:19px;font-weight:800;margin-top:8px">${esc(op.cliente || 'Cliente')}</div>
+  <div style="color:#9FC6C1;font-size:12px;margin-top:4px">Saída · pesagem + balanço de massa</div></div>
+<div class="wrap">
+  <div class="card">
+    <div class="eyebrow">Balanço de massa</div>
+    <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:#4F6469">Entrada (pesada)</span><b>${String(b.entrada).replace('.', ',')} kg</b></div>
+    <label class="fld" style="margin-top:12px">Peso de saída (balança)</label>
+    <input class="txt" id="saida" inputmode="decimal" value="${temSaida ? String(op.saida.pesoKg) : ''}" placeholder="peso total que saiu (kg)">
+    <div style="display:flex;justify-content:space-between;font-size:13px;margin-top:12px;border-top:1px solid #EEF1F0;padding-top:9px"><span style="color:#4F6469">Diferença</span><b style="color:${corDif}">${temSaida ? String(b.dif).replace('.', ',') + ' kg (' + (Math.round(b.pct * 1000) / 10) + '%)' : '—'}</b></div>
+    <div id="just" style="${foraTol ? '' : 'display:none;'}margin-top:10px">
+      <label class="fld">Justificativa da diferença (obrigatória fora de ±2%)</label>
+      <textarea class="txt" id="justtxt" rows="2" placeholder="ex.: perda de processo, umidade, resíduo retido…">${esc(op.saida && op.saida.justificativa || '')}</textarea>
+    </div>
+    <button class="btn primary" style="margin-top:12px" onclick="salvar()">Salvar saída</button>
+  </div>
+  <div class="card">
+    <div class="eyebrow">Repartição por destino (proporção da triagem)</div>
+    ${destinoLinhas}
+  </div>
+  <div class="card">
+    <div class="eyebrow">Fotos da saída — Fase 3 (marca d'água automática)</div>
+    ${linhaFotos}
+    <div style="font-size:11px;color:#9aa7a4">Obrigatórias: resíduo final inutilizado e carregamento para o destino.</div>
+  </div>
+  <div class="card" style="background:${ok ? '#F0F7EC' : '#FBFCFB'};border-color:${ok ? '#cfe6be' : '#E4EBE9'}">
+    <div class="eyebrow">Conformidade da Saída</div>
+    <div style="font-size:13px;font-weight:700;color:${ok ? '#2f6d12' : '#8A6A16'}">${ok ? '✓ Saída completa — pronta para a validação da Engenharia' : '⚠ Faltam o peso de saída, a justificativa (se fora de ±2%) e/ou as fotos'}</div>
+  </div>
+  ${ok
+    ? `<form method="post" action="/api/operacao/saida/concluir" style="margin:0"><input type="hidden" name="osId" value="${esc(op.osId)}"><button class="btn dark">✓ Concluir operação → Engenharia Ambiental</button></form>`
+    : `<button class="btn muted" disabled>✓ Concluir operação</button>`}
+  <div style="text-align:center;font-size:10px;color:#9aa7a4;margin-top:2px">Ao concluir, o lote entra na fila de validação do Engenheiro Ambiental.</div>
+  <div id="msg" style="text-align:center;font-size:12px;color:#4F6469;min-height:16px;margin-top:8px"></div>
+</div>
+<script>
+  const OS=${JSON.stringify(String(op.osId))}, NUM=${JSON.stringify(String(op.numero))}, ENTRADA=${Number(b.entrada) || 0}, msg=document.getElementById('msg');
+  async function post(url,body){ const r=await fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}); if(!r.ok) throw 0; return r; }
+  const sIn=document.getElementById('saida'), just=document.getElementById('just');
+  function chk(){ const v=Number((sIn.value||'').replace(',','.'))||0; const pct=ENTRADA>0?Math.abs(ENTRADA-v)/ENTRADA:1; just.style.display=(v>0&&pct>0.02)?'block':'none'; }
+  sIn.addEventListener('input',chk); chk();
+  async function salvar(){ if(!sIn.value){ msg.textContent='Digite o peso de saída.'; return; } msg.textContent='Salvando…';
+    try{ await post('/api/operacao/saida',{osId:OS,pesoKg:sIn.value,justificativa:(document.getElementById('justtxt')||{}).value||''}); location.reload(); }catch{ msg.textContent='Falha ao salvar. Tente de novo.'; } }
+  function geo(){ return new Promise(res=>{ if(!navigator.geolocation) return res(null); navigator.geolocation.getCurrentPosition(p=>res({lat:p.coords.latitude,lon:p.coords.longitude,acc:p.coords.accuracy}),()=>res(null),{enableHighAccuracy:true,timeout:8000,maximumAge:0}); }); }
+  async function carimbar(file){
+    const g=await geo();
+    const img=await createImageBitmap(file); const max=1200; const sc=Math.min(1,max/Math.max(img.width,img.height));
+    const w=Math.round(img.width*sc), h=Math.round(img.height*sc);
+    const cv=document.createElement('canvas'); cv.width=w; cv.height=h; const ctx=cv.getContext('2d'); ctx.drawImage(img,0,0,w,h);
+    const dt=new Date(); const linhas=['ECOBRAZ · OS '+NUM, dt.toLocaleString('pt-BR'), g?('GPS '+g.lat.toFixed(5)+', '+g.lon.toFixed(5)+' (±'+Math.round(g.acc)+'m)'):'GPS indisponível'];
+    const fz=Math.max(12,Math.round(w*0.028)), pad=Math.round(w*0.02), lh=fz+6, barH=linhas.length*lh+pad;
+    ctx.fillStyle='rgba(0,51,59,0.66)'; ctx.fillRect(0,h-barH,w,barH);
+    ctx.fillStyle='#fff'; ctx.textBaseline='top'; ctx.font='700 '+fz+'px Arial';
+    linhas.forEach((t,i)=>{ if(i===1) ctx.font='400 '+fz+'px Arial'; ctx.fillText(t,pad,h-barH+pad/2+i*lh); });
+    return { dataUrl: cv.toDataURL('image/jpeg',0.65), geo: g };
+  }
+  document.querySelectorAll('.fp').forEach(inp=>{
+    inp.onchange=async()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const cat=inp.getAttribute('data-cat'); msg.textContent='Preparando a foto…';
+      try{ const r=await carimbar(f); msg.textContent='Enviando…';
+        await post('/api/operacao/foto',{osId:OS,fase:'fim',cat:cat,foto:r.dataUrl.split(',')[1],geo:r.geo}); location.reload();
       }catch{ msg.textContent='Não consegui processar a foto. Tente de novo.'; } };
   });
 </script></body></html>`;
