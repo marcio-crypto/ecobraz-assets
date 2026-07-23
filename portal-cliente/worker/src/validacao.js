@@ -36,7 +36,9 @@ function fmtData(d) { const m = String(d || '').match(/^(\d{4})-(\d{2})-(\d{2})/
 // Ploomes) ou a URL de validação em texto. Público (a imagem só codifica a URL de validação).
 export async function qrCDF(request, env, url) {
   const raw = url.searchParams.get('n') || '';
-  const n = raw.replace(/\D/g, '').slice(0, 12);
+  // Aceita tanto o DocumentNumber puro ("20048") quanto o Título do CDF ("16974 - Certificado"):
+  // pega o 1º grupo de dígitos. Assim dá pra usar [Documento.Título] no modelo (que resolve de certeza).
+  const n = ((raw.match(/\d+/) || [''])[0]).slice(0, 12);
   // Diagnóstico (temporário): grava o ÚLTIMO acesso ao /qr para descobrir o que o Ploomes
   // de fato manda no lugar de [Documento.Número]. Sem segredos; expira em 7 dias.
   if (env.PORTAL_KV) {
@@ -79,19 +81,29 @@ export async function validarCDF(request, env, url) {
 async function buscarCertificado(numero, env) {
   const base = env.PLOOMES_API_URL || 'https://public-api2.ploomes.com';
   const headers = { 'User-Key': env.PLOOMES_USER_KEY, Accept: 'application/json' };
-  const r = await fetch(`${base}/Documents?$filter=DocumentNumber%20eq%20${Number(numero)}&$top=10&$select=Id,Name,DocumentNumber,DealId,Date,TemplateId`, { headers });
-  if (!r.ok) return null;
-  const docs = (await r.json()).value || [];
   const modeloCDF = Number(env.CDF_TEMPLATE_ID || 224095);
-  // Só aceita Certificado/CDF (pelo modelo do Ploomes ou pelo nome) — nunca outro tipo de documento.
-  const doc = docs.find((d) => Number(d.TemplateId) === modeloCDF || /certificad|cdf|destina/i.test(d.Name || ''));
+  const n = String(numero).replace(/\D/g, '');
+  if (!n) return null;
+  const sel = "&$top=20&$select=Id,Name,DocumentNumber,DealId,Date,TemplateId";
+  const ehCDF = (d) => Number(d.TemplateId) === modeloCDF || /certificad|cdf|destina/i.test(d.Name || '');
+  const numNoNome = (d) => (String(d.Name || '').match(/(\d+)/) || [])[1] || '';
+  const consulta = async (filtro) => {
+    const r = await fetch(`${base}/Documents?$filter=${encodeURIComponent(filtro)}${sel}`, { headers });
+    if (!r.ok) return [];
+    return (await r.json()).value || [];
+  };
+  // O número no QR vem do TÍTULO do CDF ("16974 - Certificado") = número da OS que aparece no papel.
+  // 1) acha pelo número no início do nome; 2) cai pro DocumentNumber interno do Ploomes.
+  let doc = (await consulta(`startswith(Name,'${n} ')`)).find((d) => ehCDF(d) && numNoNome(d) === n);
+  if (!doc) doc = (await consulta(`DocumentNumber eq ${Number(n)}`)).find(ehCDF);
   if (!doc) return null;
   let empresa = '';
   if (doc.DealId) {
     const rd = await fetch(`${base}/Deals?$filter=Id%20eq%20${doc.DealId}&$top=1&$select=Id,Title&$expand=Contact($select=Id,Name)`, { headers });
     if (rd.ok) { const dl = ((await rd.json()).value || [])[0]; empresa = dl?.Contact?.Name || dl?.Title || ''; }
   }
-  return { numero: doc.DocumentNumber ?? numero, empresa, data: doc.Date || '' };
+  // Mostra o número que a pessoa vê no papel (o da OS, do título), não o DocumentNumber interno.
+  return { numero: numNoNome(doc) || doc.DocumentNumber || n, empresa, data: doc.Date || '' };
 }
 
 function paginaValidacao({ assinaturaOk, info, n }) {

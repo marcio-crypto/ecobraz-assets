@@ -42,7 +42,7 @@ export default {
     const { pathname } = url;
     try {
       if (pathname === '/health') return json({
-        ok: true, service: 'ecobraz-portal', version: 16,
+        ok: true, service: 'ecobraz-portal', version: 17,
         // Só presença (true/false) — NUNCA os valores. Ajuda a confirmar a
         // configuração pelo navegador sem expor segredo nenhum.
         config: {
