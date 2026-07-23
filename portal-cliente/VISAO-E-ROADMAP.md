@@ -430,8 +430,10 @@ carbono, §5.4); **enquadramento tributário** da venda (Ecobraz é Associação
   usinas que recebem o destino final (**recicladoras E incineradoras**), com CNPJ, tipo (reciclagem/
   incineração/co-processamento), **licenças ambientais com validade**, certificações e **comprovantes de
   recebimento** (CDF/MTR de destino). **Alerta/trava de licença vencida** (não deixa mandar p/ destino
-  irregular). **Ecobraz = ATERRO ZERO:** cada kg tem destino documentado e licenciado → 0% aterro, **provado
-  pelo cadastro de destino + balanço de massa** no dossiê. **PONTO DE HONESTIDADE (anti-greenwashing/Green
+  irregular). **Ecobraz = ATERRO ZERO (correção Marcio):** **nada** vai para aterro; o que **não pode ser reciclado/reusado
+  OU não tem valor comercial** é **INCINERADO** (idealmente c/ recuperação energética/co-processamento) em
+  usina **licenciada**. Cada kg tem destino documentado e licenciado → 0% aterro, **provado pelo cadastro de
+  destino + balanço de massa** no dossiê. **PONTO DE HONESTIDADE (anti-greenwashing/Green
   Claims UE):** "aterro zero" é alegação de RESÍDUO, **não** de carbono — NÃO conflar com "carbono zero"; a
   fração **incinerada EMITE CO₂** (entra como custo no carbono, não benefício); desviar de aterro evita metano
   (benefício), incinerar emite (custo) — a conta considera os dois; separar "incineração c/ recuperação
