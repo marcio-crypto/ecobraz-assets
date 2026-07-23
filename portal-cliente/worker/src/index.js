@@ -25,6 +25,7 @@ const OPERACAO_COOKIE = 'portal_operacao';
 const ENG_COOKIE = 'portal_eng';
 const DIRETORIA_COOKIE = 'portal_diretoria';
 const SESSAO_TTL_S = 8 * 60 * 60;       // 8 horas
+const APP_SESSAO_TTL_S = 30 * 24 * 60 * 60; // 30 dias — apps de campo (operação/coletas) ficam logados
 const LINK_TTL_S = 15 * 60;             // 15 minutos
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' };
 
@@ -41,6 +42,7 @@ import { agentePermitido, nomeAgente, listarColetas, paginaLoginAgente, paginaAp
 import { operadorPermitido, nomeOperador, listarOperacoes, listarColetasRecebiveis, iniciarOperacao, lerOperacao, definirTipoOperacao, registrarPesoEntrada, registrarFotoOperacao, servirFotoOperacao, paginaLoginOperacao, paginaAppOperacao, paginaReceberLote, paginaLoteDetalhe, adicionarMaterial, removerMaterial, concluirTriagem, paginaTriagem, paginaProcessamento, concluirProcessamento, paginaSaida, registrarSaida, concluirSaida } from './operacional.js';
 import { engenheiroPermitido, nomeEngenheiro, filaValidacao, operacoesValidadas, lerValidacaoOp, registrarValidacaoOp, paginaLoginEng, paginaFilaEng, paginaDossie, qrOperacao, validarOperacaoPublico, listarDestinos, lerDestino, salvarDestino, paginaDestinos, paginaDestinoForm, paginaRelatorio } from './engenharia.js';
 import { diretorPermitido, nomeDiretor, reunirDados, paginaLoginDiretoria, paginaPainelDiretoria } from './diretoria.js';
+import { servirIcone, servirManifest, servirServiceWorker } from './pwa.js';
 
 export default {
   async fetch(request, env) {
@@ -48,7 +50,7 @@ export default {
     const { pathname } = url;
     try {
       if (pathname === '/health') return json({
-        ok: true, service: 'ecobraz-portal', version: 25,
+        ok: true, service: 'ecobraz-portal', version: 26,
         // Só presença (true/false) — NUNCA os valores. Ajuda a confirmar a
         // configuração pelo navegador sem expor segredo nenhum.
         config: {
@@ -74,6 +76,11 @@ export default {
 
       if (pathname === '/assets/logo.png') return servirLogo(LOGO_ESCURO_B64);
       if (pathname === '/assets/logo-claro.png') return servirLogo(LOGO_CLARO_B64);
+      // PWA (app instalável): ícones, manifesto e service worker.
+      if (pathname === '/assets/icon-192.png') return servirIcone('192');
+      if (pathname === '/assets/icon-512.png') return servirIcone('512');
+      if (pathname === '/manifest.webmanifest') return servirManifest(url);
+      if (pathname === '/sw.js') return servirServiceWorker();
 
       // Calculadora de pegada de carbono — Nível 1 (estimativa grátis por CNPJ). Público.
       if (pathname === '/calculadora' && request.method === 'GET') return html(paginaCalculadora());
@@ -635,8 +642,8 @@ async function entrarComTokenAgente(request, env, url) {
     await env.PORTAL_KV.delete(`nonce:${payload.n}`);
   }
   if (!agentePermitido(payload.em, env)) return html(paginaMensagem('Acesso indisponível', 'E-mail não cadastrado como agente.'), 403);
-  const sessao = await criarToken({ em: payload.em, tipo: 'sessao_agente' }, SESSAO_TTL_S, env);
-  return new Response(null, { status: 302, headers: { Location: '/agente', 'Set-Cookie': cookieAgente(sessao.valor, SESSAO_TTL_S) } });
+  const sessao = await criarToken({ em: payload.em, tipo: 'sessao_agente' }, APP_SESSAO_TTL_S, env);
+  return new Response(null, { status: 302, headers: { Location: '/agente', 'Set-Cookie': cookieAgente(sessao.valor, APP_SESSAO_TTL_S) } });
 }
 function sairAgente() { return new Response(null, { status: 302, headers: { Location: '/agente', 'Set-Cookie': cookieAgente('', 0) } }); }
 async function lerSessaoAgente(request, env) {
@@ -674,8 +681,8 @@ async function entrarComTokenOperacao(request, env, url) {
     await env.PORTAL_KV.delete(`nonce:${payload.n}`);
   }
   if (!operadorPermitido(payload.em, env)) return html(paginaMensagem('Acesso indisponível', 'E-mail não cadastrado na operação.'), 403);
-  const sessao = await criarToken({ em: payload.em, tipo: 'sessao_operacao' }, SESSAO_TTL_S, env);
-  return new Response(null, { status: 302, headers: { Location: '/operacao', 'Set-Cookie': cookieOperacao(sessao.valor, SESSAO_TTL_S) } });
+  const sessao = await criarToken({ em: payload.em, tipo: 'sessao_operacao' }, APP_SESSAO_TTL_S, env);
+  return new Response(null, { status: 302, headers: { Location: '/operacao', 'Set-Cookie': cookieOperacao(sessao.valor, APP_SESSAO_TTL_S) } });
 }
 function sairOperacao() { return new Response(null, { status: 302, headers: { Location: '/operacao', 'Set-Cookie': cookieOperacao('', 0) } }); }
 async function lerSessaoOperacao(request, env) {

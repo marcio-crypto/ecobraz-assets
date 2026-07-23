@@ -3,6 +3,7 @@
 // (env AGENTE_EMAILS = "email|Nome,email2|Nome2"). O app lê as Vendas (Orders) na etapa "Em Transporte"
 // (StageId 35313, configurável). Câmera/GPS/offline/encerrar/PDF vêm nas próximas fatias.
 
+import { tagsPWA } from './pwa.js';
 const STAGE_EM_TRANSPORTE = (env) => Number(env.COLETA_STAGE_EM_TRANSPORTE || 35313);
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -31,7 +32,7 @@ export async function listarColetas(env) {
 }
 
 export function paginaLoginAgente() {
-  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Ecobraz Coletas</title></head>
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex">${tagsPWA('agente')}<title>Ecobraz Coletas</title></head>
 <body style="margin:0;background:#00333B;min-height:100vh;font-family:Montserrat,'Segoe UI',Arial,Helvetica,sans-serif;color:#fff;display:flex;align-items:center;">
 <div style="max-width:400px;margin:0 auto;padding:32px 24px;width:100%;box-sizing:border-box;">
   <div style="text-align:center;margin-bottom:28px;"><span style="font-size:26px;font-weight:800;">ecobraz</span><span style="color:#92C430;font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin-left:8px;">coletas</span></div>
@@ -57,7 +58,7 @@ export function paginaAppAgente(agente, coletas) {
       <div style="font-size:13px;color:#4F6469;margin-top:7px;">${esc(c.cliente || 'Cliente')}</div>
       <div style="font-size:12px;color:#3f8f3a;font-weight:700;margin-top:10px;">Abrir coleta →</div>
     </a>`).join('') : `<div style="background:#fff;border:1px solid #E4EBE9;border-radius:16px;padding:26px 18px;text-align:center;color:#8fa39f;font-size:13.5px;">Nenhuma coleta em transporte agora.<br>Quando a Débora liberar uma coleta, ela aparece aqui.</div>`;
-  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Minhas coletas — Ecobraz</title></head>
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex">${tagsPWA('agente')}<title>Minhas coletas — Ecobraz</title></head>
 <body style="margin:0;background:#F2F6F4;min-height:100vh;font-family:Montserrat,'Segoe UI',Arial,Helvetica,sans-serif;color:#10262B;">
 <div style="background:#00333B;padding:16px 18px 14px;">
   <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -109,7 +110,7 @@ export function paginaColetaDetalhe(agente, coleta, estado) {
   const linhaFoto = foto ? `<div style="font-size:12.5px;color:#1E5B31;font-weight:700;margin-top:8px;">✓ Foto da carga — ${hhmm(foto.em)}</div><img src="/agente/coleta/foto?id=${coleta.id}" style="width:100%;border-radius:10px;margin-top:8px;border:1px solid #E4EBE9;">` : '';
   const btnChk = chk ? `<button class="btn done" disabled>✓ Cheguei ao local (${hhmm(chk.em)})</button>` : `<button class="btn primary" id="bchk">📍 Cheguei ao local (check-in)</button>`;
   const btnFoto = `<label class="btn ${chk ? 'primary' : 'muted'}" style="${chk ? '' : 'pointer-events:none;'}">${foto ? '📷 Trocar foto da carga' : '📷 Tirar foto da carga'}<input type="file" accept="image/*" capture="environment" id="fp" style="display:none;"></label>`;
-  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Coleta OS ${esc(coleta.numero)}</title>
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex">${tagsPWA('agente')}<title>Coleta OS ${esc(coleta.numero)}</title>
 <style>.btn{display:block;width:100%;box-sizing:border-box;border:none;border-radius:12px;padding:15px;font-size:14px;font-weight:800;margin-bottom:10px;text-align:center;cursor:pointer;}
 .primary{background:#92C430;color:#10262B;}.dark{background:#00333B;color:#fff;}.ghost{background:#fff;color:#00333B;border:1.5px solid #cfe0dd;}.done{background:#E4F3E6;color:#1E5B31;}.muted{background:#EEF1F0;color:#9aa7a4;}</style></head>
 <body style="margin:0;background:#F2F6F4;min-height:100vh;font-family:Montserrat,'Segoe UI',Arial,Helvetica,sans-serif;color:#10262B;">

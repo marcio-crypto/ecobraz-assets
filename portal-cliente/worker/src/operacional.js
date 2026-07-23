@@ -8,6 +8,7 @@
 // acondicionamento + pesagem de saída, balanço de massa, laudo (Pago/ANVISA) e envio pra validação
 // da Engenharia Ambiental.
 
+import { tagsPWA } from './pwa.js';
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const agora = () => { try { return new Date().toISOString(); } catch { return ''; } };
 const hhmm = (iso) => { const m = String(iso || '').match(/T(\d{2}:\d{2})/); return m ? m[1] : ''; };
@@ -209,7 +210,7 @@ input.txt{width:100%;border:1px solid #DDE1E6;border-radius:11px;padding:13px;fo
 .pill{font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px}`;
 
 function head(titulo) {
-  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${esc(titulo)} — Ecobraz</title><style>${CSS}</style></head><body>`;
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${esc(titulo)} — Ecobraz</title>${tagsPWA('operacao')}<style>${CSS}</style></head><body>`;
 }
 
 export function paginaLoginOperacao() {
