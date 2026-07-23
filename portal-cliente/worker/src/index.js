@@ -20,6 +20,7 @@
 
 const SESSAO_COOKIE = 'portal_sessao';
 const VALIDADOR_COOKIE = 'portal_validador';
+const AGENTE_COOKIE = 'portal_agente';
 const SESSAO_TTL_S = 8 * 60 * 60;       // 8 horas
 const LINK_TTL_S = 15 * 60;             // 15 minutos
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' };
@@ -33,6 +34,7 @@ import { qrCDF, validarCDF } from './validacao.js';
 import { paginaMetodologia } from './carbono-metodologia.js';
 import { lerValidacao, registrarValidacao, paginaAreaValidacao, qrMetodologia, validarMetodologiaPublico } from './validacao-metodologia.js';
 import { paginaPainelCarbono } from './carbono-painel.js';
+import { agentePermitido, nomeAgente, listarColetas, paginaLoginAgente, paginaAppAgente } from './agente.js';
 
 export default {
   async fetch(request, env) {
@@ -40,7 +42,7 @@ export default {
     const { pathname } = url;
     try {
       if (pathname === '/health') return json({
-        ok: true, service: 'ecobraz-portal', version: 13,
+        ok: true, service: 'ecobraz-portal', version: 14,
         // Só presença (true/false) — NUNCA os valores. Ajuda a confirmar a
         // configuração pelo navegador sem expor segredo nenhum.
         config: {
@@ -57,6 +59,7 @@ export default {
           avisoEmail: !!env.PLOOMES_WEBHOOK_SECRET,
           avisoModoTeste: env.NOTIF_MODO_TESTE === '1', // true = só contato de teste; false = vale p/ todos
           validacaoCDF: true, // /qr e /validar (QR anti-fraude no CDF)
+          agenteColetas: !!env.AGENTE_EMAILS, // app do agente ligado (há agentes cadastrados)
         },
       });
 
@@ -139,10 +142,25 @@ export default {
       if (pathname === '/api/validacao/entrar' && request.method === 'POST') return await solicitarLinkValidador(request, env);
       if (pathname === '/entrar-validador' && request.method === 'GET') return await entrarComTokenValidador(request, env, url);
       if (pathname === '/api/validacao/sair' && request.method === 'POST') return sairValidador();
+      // Acesso do AGENTE DE COLETAS (app mobile). Login próprio; agentes não são usuários do Ploomes.
+      if (pathname === '/api/agente/entrar' && request.method === 'POST') return await solicitarLinkAgente(request, env);
+      if (pathname === '/entrar-agente' && request.method === 'GET') return await entrarComTokenAgente(request, env, url);
+      if (pathname === '/api/agente/sair' && request.method === 'POST') return sairAgente();
 
-      // Sessões independentes: cliente e validador (Villanova).
+      // Sessões independentes: cliente, validador (Villanova) e agente de coletas.
       const sessao = await lerSessao(request, env);
       const validador = await lerSessaoValidador(request, env);
+      const agente = await lerSessaoAgente(request, env);
+
+      // App do agente de coletas.
+      if (pathname === '/agente' && request.method === 'GET') {
+        if (!agente) return html(paginaLoginAgente());
+        return html(paginaAppAgente(agente, await listarColetas(env)));
+      }
+      if (pathname === '/agente/coleta' && request.method === 'GET') {
+        if (!agente) return new Response(null, { status: 302, headers: { Location: '/agente', 'cache-control': 'no-store' } });
+        return html(paginaMensagem('Coleta — em construção', 'O detalhe da coleta (check-in por GPS, foto da carga e encerrar) entra na próxima fatia. A lista já lê o Ploomes de verdade.'));
+      }
 
       // Área de validação da Villanova (exige sessão de validador).
       if (pathname === '/validacao' && request.method === 'GET') {
@@ -370,6 +388,45 @@ function paginaLoginValidador() {
 </script>
 </body></html>`;
 }
+
+// ---------------------------------------------------------------------------
+// Acesso do AGENTE DE COLETAS (app mobile) — login próprio por link mágico
+// ---------------------------------------------------------------------------
+async function solicitarLinkAgente(request, env) {
+  const generica = json({ ok: true, message: 'Se o e-mail estiver cadastrado, enviamos um link de acesso.' });
+  let input; try { input = await request.json(); } catch { return generica; }
+  const email = String(input?.email || '').trim().toLowerCase();
+  if (!/^\S+@\S+\.\S+$/.test(email) || !agentePermitido(email, env)) { console.log('agente_barrado'); return generica; }
+  if (env.PORTAL_KV) { const chave = `throttle:ag:${email}`; if (await env.PORTAL_KV.get(chave)) return generica; await env.PORTAL_KV.put(chave, '1', { expirationTtl: 60 }); }
+  const token = await criarToken({ em: email, tipo: 'login_agente' }, LINK_TTL_S, env);
+  if (env.PORTAL_KV) await env.PORTAL_KV.put(`nonce:${token.nonce}`, '1', { expirationTtl: LINK_TTL_S });
+  const linkBase = env.PORTAL_BASE_URL || new URL(request.url).origin;
+  const link = `${linkBase.replace(/\/+$/, '')}/entrar-agente?token=${encodeURIComponent(token.valor)}`;
+  try { await enviarEmailLogin({ nome: nomeAgente(email, env), email }, link, env); console.log('agente_email_ok'); }
+  catch (error) { console.error('agente_email_falhou', safeError(error)); }
+  return generica;
+}
+async function entrarComTokenAgente(request, env, url) {
+  const payload = await verificarToken(url.searchParams.get('token') || '', env);
+  if (!payload || payload.tipo !== 'login_agente') return html(paginaMensagem('Link inválido ou expirado', 'Peça um novo link de acesso.'), 400);
+  if (env.PORTAL_KV) {
+    const existe = await env.PORTAL_KV.get(`nonce:${payload.n}`);
+    if (!existe) return html(paginaMensagem('Este link já foi usado', 'Por segurança, cada link vale uma vez. Peça um novo.'), 400);
+    await env.PORTAL_KV.delete(`nonce:${payload.n}`);
+  }
+  if (!agentePermitido(payload.em, env)) return html(paginaMensagem('Acesso indisponível', 'E-mail não cadastrado como agente.'), 403);
+  const sessao = await criarToken({ em: payload.em, tipo: 'sessao_agente' }, SESSAO_TTL_S, env);
+  return new Response(null, { status: 302, headers: { Location: '/agente', 'Set-Cookie': cookieAgente(sessao.valor, SESSAO_TTL_S) } });
+}
+function sairAgente() { return new Response(null, { status: 302, headers: { Location: '/agente', 'Set-Cookie': cookieAgente('', 0) } }); }
+async function lerSessaoAgente(request, env) {
+  const cookie = (request.headers.get('Cookie') || '').split(';').map((s) => s.trim()).find((s) => s.startsWith(`${AGENTE_COOKIE}=`));
+  if (!cookie) return null;
+  const payload = await verificarToken(decodeURIComponent(cookie.slice(AGENTE_COOKIE.length + 1)), env);
+  if (!payload || payload.tipo !== 'sessao_agente' || !agentePermitido(payload.em, env)) return null;
+  return { email: payload.em, nome: nomeAgente(payload.em, env), role: 'agente' };
+}
+function cookieAgente(valor, maxAge) { return `${AGENTE_COOKIE}=${encodeURIComponent(valor)}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${maxAge}`; }
 
 // ---------------------------------------------------------------------------
 // Ploomes: portão de acesso (contrato) e leitura/escrita de OS
