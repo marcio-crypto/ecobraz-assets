@@ -32,6 +32,7 @@ import { statusDaEtapa, valorProp, CAMPOS_OS } from './os-utils.js';
 import { qrCDF, validarCDF } from './validacao.js';
 import { paginaMetodologia } from './carbono-metodologia.js';
 import { lerValidacao, registrarValidacao, paginaAreaValidacao, qrMetodologia, validarMetodologiaPublico } from './validacao-metodologia.js';
+import { paginaPainelCarbono } from './carbono-painel.js';
 
 export default {
   async fetch(request, env) {
@@ -39,7 +40,7 @@ export default {
     const { pathname } = url;
     try {
       if (pathname === '/health') return json({
-        ok: true, service: 'ecobraz-portal', version: 12,
+        ok: true, service: 'ecobraz-portal', version: 13,
         // Só presença (true/false) — NUNCA os valores. Ajuda a confirmar a
         // configuração pelo navegador sem expor segredo nenhum.
         config: {
@@ -156,6 +157,11 @@ export default {
       if (pathname === '/metodologia' && request.method === 'GET') {
         if (!sessao && !validador) return new Response(null, { status: 302, headers: { Location: '/', 'cache-control': 'no-store' } });
         return html(paginaMetodologia(env, await lerValidacao(env)));
+      }
+      // Painel de carbono do cliente (prévia) — só cliente logado.
+      if (pathname === '/painel-carbono' && request.method === 'GET') {
+        if (!sessao) return new Response(null, { status: 302, headers: { Location: '/', 'cache-control': 'no-store' } });
+        return html(paginaPainelCarbono(sessao));
       }
       if (pathname === '/api/os' && request.method === 'GET') {
         if (!sessao) return json({ ok: false, error: 'nao_autenticado' }, 401);
