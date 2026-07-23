@@ -35,7 +35,21 @@ function fmtData(d) { const m = String(d || '').match(/^(\d{4})-(\d{2})-(\d{2})/
 // GET /qr?n=NUMERO[&fmt=gif|svg|txt] — imagem do QR (GIF por padrão, mais compatível com o PDF do
 // Ploomes) ou a URL de validação em texto. Público (a imagem só codifica a URL de validação).
 export async function qrCDF(request, env, url) {
-  const n = (url.searchParams.get('n') || '').replace(/\D/g, '').slice(0, 12);
+  const raw = url.searchParams.get('n') || '';
+  const n = raw.replace(/\D/g, '').slice(0, 12);
+  // Diagnóstico (temporário): grava o ÚLTIMO acesso ao /qr para descobrir o que o Ploomes
+  // de fato manda no lugar de [Documento.Número]. Sem segredos; expira em 7 dias.
+  if (env.PORTAL_KV) {
+    try {
+      await env.PORTAL_KV.put('qr:ultimo', JSON.stringify({
+        em: new Date().toISOString(),
+        nRaw: raw.slice(0, 120),
+        nLimpo: n,
+        ua: (request.headers.get('user-agent') || '').slice(0, 180),
+        ref: (request.headers.get('referer') || '').slice(0, 180),
+      }), { expirationTtl: 7 * 24 * 3600 });
+    } catch (_) { /* diagnóstico não pode derrubar o QR */ }
+  }
   if (!n) return new Response('faltou o parâmetro n (número do certificado)', { status: 400, headers: { 'content-type': 'text/plain; charset=utf-8' } });
   const code = await codigoCDF(n, env);
   const alvo = `${origemPortal(env, url)}/validar?n=${n}&c=${code}`;

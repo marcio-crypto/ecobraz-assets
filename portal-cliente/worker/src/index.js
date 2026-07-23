@@ -42,7 +42,7 @@ export default {
     const { pathname } = url;
     try {
       if (pathname === '/health') return json({
-        ok: true, service: 'ecobraz-portal', version: 15,
+        ok: true, service: 'ecobraz-portal', version: 16,
         // Só presença (true/false) — NUNCA os valores. Ajuda a confirmar a
         // configuração pelo navegador sem expor segredo nenhum.
         config: {
@@ -134,6 +134,11 @@ export default {
       if (pathname === '/api/ploomes/webhook' && request.method === 'GET') return await webhookUltimo(request, env);
       // Validação pública de CDF (anti-fraude): QR no certificado -> confere contra o Ploomes.
       if (pathname === '/qr' && request.method === 'GET') return await qrCDF(request, env, url);
+      // Diagnóstico (temporário): mostra o último acesso ao /qr (o que o Ploomes mandou).
+      if (pathname === '/qr-ultimo' && request.method === 'GET') {
+        const v = env.PORTAL_KV ? await env.PORTAL_KV.get('qr:ultimo') : null;
+        return new Response(v || '{"vazio":true,"nota":"nenhum acesso ao /qr registrado ainda"}', { headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
+      }
       if (pathname === '/validar' && request.method === 'GET') return await validarCDF(request, env, url);
       // Selo PÚBLICO da metodologia (só confirma a validação da Villanova; não expõe a receita).
       if (pathname === '/validar-metodologia' && request.method === 'GET') return await validarMetodologiaPublico(request, env, url);
