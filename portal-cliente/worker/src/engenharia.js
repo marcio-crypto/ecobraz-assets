@@ -96,7 +96,7 @@ e.addEventListener('keydown',ev=>{if(ev.key==='Enter')b.click();});</script></bo
 
 export function paginaFilaEng(eng, fila, validadas) {
   const item = (o, badge) => `<a href="/eng/lote?id=${esc(o.osId)}" style="display:block;text-decoration:none;background:#fff;border:1px solid #E4EBE9;border-radius:14px;padding:14px 16px;margin-bottom:10px">
-      <div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:14px;font-weight:800">OS ${esc(o.numero)}</div>${badge}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:14px;font-weight:800;color:#10262B">OS ${esc(o.numero)}</div>${badge}</div>
       <div style="font-size:13px;color:#4F6469;margin-top:6px">${esc(o.cliente || 'Cliente')}${o.tipo === 'pago' ? ' · <b style="color:#8A6A16">Pago/laudo</b>' : ''}</div></a>`;
   const filaHtml = fila.length ? fila.map((o) => item(o, `<span class="pill" style="background:#FFF4DE;color:#8A6A16">aguardando validação</span>`)).join('') : `<div class="card" style="text-align:center;color:#8fa39f;font-size:13.5px">Nenhuma operação aguardando validação.</div>`;
   const validHtml = (validadas || []).slice(0, 8).map((o) => item(o, `<span class="pill" style="background:#E4F3E6;color:#1E5B31">✓ validada</span>`)).join('');
@@ -106,6 +106,7 @@ export function paginaFilaEng(eng, fila, validadas) {
   <form method="post" action="/api/eng/sair" style="margin:0"><button style="background:#0e4651;color:#cfe3e0;border:1px solid #1c5b66;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700">Sair</button></form>
 </div></div>
 <div class="wrap">
+  <a href="/eng/destinos" class="btn ghost" style="margin-bottom:16px">🏭 Destinos finais (usinas) →</a>
   <div style="font-size:13px;font-weight:800;margin-bottom:12px">Aguardando validação <span class="pill" style="background:#FFF4DE;color:#8A6A16">${fila.length}</span></div>
   ${filaHtml}
   ${validHtml ? `<div style="font-size:13px;font-weight:800;margin:22px 0 12px">Validadas recentemente</div>${validHtml}` : ''}
@@ -222,4 +223,85 @@ export async function validarOperacaoPublico(request, env, url) {
   </div>
 </div></body></html>`;
   return new Response(body, { status: ok ? 200 : (assinaturaOk ? 404 : 400), headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } });
+}
+
+// ---------------------------------------------------------------------------
+// Destino Final — cadastro e auditoria das usinas (incineração/coprocessamento/reciclagem)
+// A Ecobraz é ATERRO ZERO: nada vai para aterro; o que não recicla é incinerado/coprocessado.
+// A Engenharia audita a documentação (Licença de Operação + validade) de cada destino.
+// ---------------------------------------------------------------------------
+export const TIPOS_DESTINO = { reciclagem: 'Reciclagem', incineracao: 'Incineração', coprocessamento: 'Coprocessamento', reuso: 'Reúso', tratamento: 'Tratamento' };
+export function destinoStatus(d) {
+  if (!d) return 'pendente';
+  let hoje = ''; try { hoje = new Date().toISOString().slice(0, 10); } catch { hoje = ''; }
+  if (d.loValidade && hoje && d.loValidade < hoje) return 'vencido';
+  return d.validado ? 'validado' : 'pendente';
+}
+async function lerIndiceDestinos(env) { if (!env.PORTAL_KV) return []; const raw = await env.PORTAL_KV.get('destinos:index'); try { return raw ? JSON.parse(raw) : []; } catch { return []; } }
+export async function listarDestinos(env) { return await lerIndiceDestinos(env); }
+export async function lerDestino(env, id) { if (!env.PORTAL_KV) return null; const raw = await env.PORTAL_KV.get(`destino:${String(id).replace(/\D/g, '')}`); return raw ? JSON.parse(raw) : null; }
+export async function salvarDestino(env, eng, d) {
+  const id = String((d && d.cnpj) || (d && d.id) || '').replace(/\D/g, '');
+  if (!id) return null;
+  const destino = {
+    id, razaoSocial: String(d.razaoSocial || '').slice(0, 120), cnpj: String(d.cnpj || '').slice(0, 20),
+    tipo: TIPOS_DESTINO[d.tipo] ? d.tipo : 'reciclagem', endereco: String(d.endereco || '').slice(0, 160),
+    lo: String(d.lo || '').slice(0, 40), loValidade: String(d.loValidade || '').slice(0, 10),
+    validado: d.validado === true || d.validado === 'on' || d.validado === '1',
+    por: eng.email, em: agora(),
+  };
+  if (env.PORTAL_KV) {
+    await env.PORTAL_KV.put(`destino:${id}`, JSON.stringify(destino), { expirationTtl: 60 * 60 * 24 * 730 });
+    const idx = await lerIndiceDestinos(env);
+    const resumo = { id, razaoSocial: destino.razaoSocial, cnpj: destino.cnpj, tipo: destino.tipo, lo: destino.lo, loValidade: destino.loValidade, validado: destino.validado };
+    const i = idx.findIndex((x) => x.id === id); if (i >= 0) idx[i] = resumo; else idx.unshift(resumo);
+    await env.PORTAL_KV.put('destinos:index', JSON.stringify(idx.slice(0, 200)));
+  }
+  return destino;
+}
+
+const pillStatus = (st) => {
+  const m = { validado: ['#E4F3E6', '#1E5B31', '✓ validado'], pendente: ['#FFF4DE', '#8A6A16', 'pendente'], vencido: ['#FCE7E4', '#B23A2E', '⚠ licença vencida'] };
+  const [bg, fg, txt] = m[st] || m.pendente;
+  return `<span class="pill" style="background:${bg};color:${fg}">${txt}</span>`;
+};
+
+export function paginaDestinos(eng, destinos) {
+  const itens = destinos.length ? destinos.map((d) => {
+    const st = destinoStatus(d);
+    return `<a href="/eng/destino?id=${esc(d.id)}" style="display:block;text-decoration:none;background:#fff;border:1px solid #E4EBE9;border-radius:14px;padding:14px 16px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div style="font-size:14px;font-weight:800;color:#10262B">${esc(d.razaoSocial || d.cnpj)}</div>${pillStatus(st)}</div>
+      <div style="font-size:12.5px;color:#4F6469;margin-top:6px">${esc(TIPOS_DESTINO[d.tipo] || d.tipo)} · LO ${esc(d.lo || '—')}${d.loValidade ? ` · val. ${esc(d.loValidade.split('-').reverse().join('/'))}` : ''}</div></a>`;
+  }).join('') : `<div class="card" style="text-align:center;color:#8fa39f;font-size:13.5px">Nenhum destino cadastrado ainda.</div>`;
+  return `${head('Destinos finais')}
+<div class="top"><a href="/eng" style="color:#9FC6C1;font-size:12px;font-weight:800;letter-spacing:.08em;text-decoration:none">← DESTINOS FINAIS</a>
+  <div style="color:#fff;font-size:19px;font-weight:800;margin-top:8px">Usinas / destinos homologados</div>
+  <div style="color:#9FC6C1;font-size:12px;margin-top:4px">Ecobraz é aterro zero · reciclagem, incineração e coprocessamento</div></div>
+<div class="wrap">
+  <a href="/eng/destino" class="btn dark" style="margin-bottom:16px">➕ Cadastrar destino</a>
+  ${itens}
+</div></body></html>`;
+}
+
+export function paginaDestinoForm(eng, destino) {
+  const d = destino || {};
+  const optsTipo = Object.entries(TIPOS_DESTINO).map(([k, v]) => `<option value="${k}"${d.tipo === k ? ' selected' : ''}>${esc(v)}</option>`).join('');
+  return `${head(d.id ? 'Editar destino' : 'Cadastrar destino')}
+<div class="top"><a href="/eng/destinos" style="color:#9FC6C1;font-size:12px;font-weight:800;letter-spacing:.08em;text-decoration:none">← ${d.id ? 'EDITAR DESTINO' : 'CADASTRAR DESTINO'}</a>
+  <div style="color:#fff;font-size:19px;font-weight:800;margin-top:8px">${d.id ? esc(d.razaoSocial || d.cnpj) : 'Novo destino final'}</div></div>
+<div class="wrap">
+  <form method="post" action="/api/eng/destino" class="card">
+    <label class="fld">Razão social da usina/destino</label><input class="txt" name="razaoSocial" value="${esc(d.razaoSocial || '')}" required>
+    <label class="fld">CNPJ</label><input class="txt" name="cnpj" value="${esc(d.cnpj || '')}" ${d.id ? 'readonly' : ''} required placeholder="00.000.000/0000-00">
+    <label class="fld">Tipo de tratamento</label><select class="txt" name="tipo">${optsTipo}</select>
+    <label class="fld">Endereço</label><input class="txt" name="endereco" value="${esc(d.endereco || '')}">
+    <div style="display:flex;gap:10px">
+      <div style="flex:1"><label class="fld">Licença de Operação (LO)</label><input class="txt" name="lo" value="${esc(d.lo || '')}"></div>
+      <div style="width:150px"><label class="fld">Validade da LO</label><input class="txt" type="date" name="loValidade" value="${esc(d.loValidade || '')}"></div>
+    </div>
+    <label style="display:flex;align-items:center;gap:10px;margin-top:16px;font-size:13.5px;font-weight:700;color:#10262B"><input type="checkbox" name="validado" value="1"${d.validado ? ' checked' : ''} style="width:18px;height:18px">Documentação auditada e destino homologado</label>
+    <button class="btn dark" style="margin-top:16px">Salvar destino</button>
+  </form>
+  <div style="font-size:11px;color:#9aa7a4;text-align:center">A homologação atesta que a Engenharia auditou a licença ambiental do destino. Destinos com LO vencida entram como alerta.</div>
+</div></body></html>`;
 }
