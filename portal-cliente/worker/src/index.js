@@ -34,7 +34,7 @@ import { qrCDF, validarCDF } from './validacao.js';
 import { paginaMetodologia } from './carbono-metodologia.js';
 import { lerValidacao, registrarValidacao, paginaAreaValidacao, qrMetodologia, validarMetodologiaPublico } from './validacao-metodologia.js';
 import { paginaPainelCarbono } from './carbono-painel.js';
-import { agentePermitido, nomeAgente, listarColetas, paginaLoginAgente, paginaAppAgente } from './agente.js';
+import { agentePermitido, nomeAgente, listarColetas, paginaLoginAgente, paginaAppAgente, detalheColeta, lerEstadoColeta, registrarCheckin, registrarFoto, servirFotoColeta, paginaColetaDetalhe } from './agente.js';
 
 export default {
   async fetch(request, env) {
@@ -42,7 +42,7 @@ export default {
     const { pathname } = url;
     try {
       if (pathname === '/health') return json({
-        ok: true, service: 'ecobraz-portal', version: 14,
+        ok: true, service: 'ecobraz-portal', version: 15,
         // Só presença (true/false) — NUNCA os valores. Ajuda a confirmar a
         // configuração pelo navegador sem expor segredo nenhum.
         config: {
@@ -159,7 +159,28 @@ export default {
       }
       if (pathname === '/agente/coleta' && request.method === 'GET') {
         if (!agente) return new Response(null, { status: 302, headers: { Location: '/agente', 'cache-control': 'no-store' } });
-        return html(paginaMensagem('Coleta — em construção', 'O detalhe da coleta (check-in por GPS, foto da carga e encerrar) entra na próxima fatia. A lista já lê o Ploomes de verdade.'));
+        const cid = url.searchParams.get('id') || '';
+        const coleta = await detalheColeta(env, cid);
+        if (!coleta) return html(paginaMensagem('Coleta não encontrada', 'Volte para a lista e tente de novo.'), 404);
+        return html(paginaColetaDetalhe(agente, coleta, await lerEstadoColeta(env, cid)));
+      }
+      if (pathname === '/agente/coleta/foto' && request.method === 'GET') {
+        if (!agente) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        return await servirFotoColeta(env, url.searchParams.get('id') || '');
+      }
+      if (pathname === '/api/agente/checkin' && request.method === 'POST') {
+        if (!agente) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = null; }
+        if (!b || !b.id || b.lat == null || b.lon == null) return json({ ok: false, error: 'dados' }, 400);
+        await registrarCheckin(env, b.id, agente, { lat: b.lat, lon: b.lon, acc: b.acc });
+        return json({ ok: true });
+      }
+      if (pathname === '/api/agente/foto' && request.method === 'POST') {
+        if (!agente) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = null; }
+        if (!b || !b.id || !b.foto) return json({ ok: false, error: 'dados' }, 400);
+        await registrarFoto(env, b.id, agente, b.foto);
+        return json({ ok: true });
       }
 
       // Área de validação da Villanova (exige sessão de validador).
