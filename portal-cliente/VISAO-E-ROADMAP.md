@@ -406,6 +406,20 @@ carbono, §5.4); **enquadramento tributário** da venda (Ecobraz é Associação
   Forum/PRé, fator MCTI/SIRENE), fronteira, os **3 números que não se misturam** (evitadas ≠ inventário ≠
   neutralização), tabela-mãe de fatores (a validar) e rastreabilidade. **Próximo:** validar com a Villanova →
   motor de cálculo (puxa material/peso do Ploomes) → as 3 telas (auditor/cliente/analista).
+- **2026-07-23** — **Módulo Agente de Coletas — desenho fechado + entidade certa achada.** Fluxo (Marcio):
+  Débora move a coleta p/ "Em Transporte" → aparece no app do agente (só as dele) → **check-in GPS** ao
+  chegar → **foto da carga** → chega na Ecobraz → **encerra** → "Coleta Finalizada" (+ GPS) → gera
+  **comprovante PDF + QR anexado no Ploomes**. Botão **reagendar** (GPS + motivo). Decisões: **login por
+  agente**; **modo offline** (guarda e sincroniza); **GPS alta precisão** (carimbo hora+precisão); **agente
+  só coleta** (conferência de itens é da equipe Ecobraz); comprovante = **anexo no Ploomes**. Ordem dos 3
+  módulos: **Agente de Coletas → Operacional Ecobraz → Validação do Marcelo**. **App = PWA mobile** (câmera+GPS
+  do navegador, sem loja). Selo/QR da coleta: **público = só confirma; detalhe (GPS/fotos) = logado**.
+  **DESCOBERTA CHAVE (sonda `orders`):** o funil de coleta é a entidade **Orders (Vendas)** — `/Orders/table`,
+  **não** Deals. Order tem **`StageId`** (Estágio) e um campo embutido **`AgentId`** (Agente/Vendedor) — forte
+  candidato pra marcar o coletor. **Limitações da API de Orders:** `$expand=Stage` e `$expand=Tags` dão **HTTP
+  400** → Vendas provavelmente **não usa marcador (tag)**, e o **nome** da etapa não vem no expand (resolver o
+  mapa StageId→nome ainda). **A confirmar com o Marcio:** os coletores são **usuários do Ploomes**? (se sim →
+  usar `AgentId`; se não → campo/lista de agentes própria). Mockup visual das 3 telas do app **aprovado**.
 - **2026-07-22** — **✅ ITEM 3 (QR de validação no CDF) — SISTEMA CONSTRUÍDO E PROVADO; falta só o
   passo da Débora.** Novo módulo `worker/src/validacao.js` + dep `qrcode-generator` (v9): **`GET /qr?n=NÚMERO`**
   gera a imagem do QR (GIF, mais compatível com PDF; `?fmt=svg|txt` também) apontando para
