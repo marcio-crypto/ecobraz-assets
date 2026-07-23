@@ -43,6 +43,7 @@ import { operadorPermitido, nomeOperador, listarOperacoes, listarColetasRecebive
 import { engenheiroPermitido, nomeEngenheiro, filaValidacao, operacoesValidadas, lerValidacaoOp, registrarValidacaoOp, paginaLoginEng, paginaFilaEng, paginaDossie, qrOperacao, validarOperacaoPublico, listarDestinos, lerDestino, salvarDestino, paginaDestinos, paginaDestinoForm, paginaRelatorio } from './engenharia.js';
 import { diretorPermitido, nomeDiretor, reunirDados, paginaLoginDiretoria, paginaPainelDiretoria } from './diretoria.js';
 import { servirIcone, servirManifest, servirServiceWorker } from './pwa.js';
+import { googleConfigurado, iniciarGoogle, callbackGoogle } from './google-auth.js';
 
 export default {
   async fetch(request, env) {
@@ -50,7 +51,7 @@ export default {
     const { pathname } = url;
     try {
       if (pathname === '/health') return json({
-        ok: true, service: 'ecobraz-portal', version: 26,
+        ok: true, service: 'ecobraz-portal', version: 27,
         // Só presença (true/false) — NUNCA os valores. Ajuda a confirmar a
         // configuração pelo navegador sem expor segredo nenhum.
         config: {
@@ -71,6 +72,7 @@ export default {
           operacao: !!env.OPERACAO_EMAILS, // módulo operacional (doca) ligado
           engenharia: !!env.ENG_EMAILS, // módulo de validação da Engenharia Ambiental ligado
           diretoria: !!env.DIRETORIA_EMAILS, // painel da diretoria ligado
+          google: !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET), // login Google configurado
         },
       });
 
@@ -182,6 +184,29 @@ export default {
       if (pathname === '/api/diretoria/entrar' && request.method === 'POST') return await solicitarLinkDiretoria(request, env);
       if (pathname === '/entrar-diretoria' && request.method === 'GET') return await entrarComTokenDiretoria(request, env, url);
       if (pathname === '/api/diretoria/sair' && request.method === 'POST') return sairDiretoria();
+      // Login com Google (interno) — ativa quando as credenciais estiverem configuradas.
+      if (pathname === '/auth/google' && request.method === 'GET') {
+        if (!googleConfigurado(env)) return html(paginaMensagem('Login Google indisponível', 'Ainda não configurado. Use o link por e-mail.'), 503);
+        return await iniciarGoogle(env, url);
+      }
+      if (pathname === '/auth/google/callback' && request.method === 'GET') {
+        if (!googleConfigurado(env)) return html(paginaMensagem('Login Google indisponível', ''), 503);
+        const g = await callbackGoogle(env, url);
+        if (!g.ok) return html(paginaMensagem('Não foi possível entrar com o Google', 'Tente de novo.'), 400);
+        if (g.ctx === 'operacao' && operadorPermitido(g.email, env)) {
+          const s = await criarToken({ em: g.email, tipo: 'sessao_operacao' }, APP_SESSAO_TTL_S, env);
+          return new Response(null, { status: 302, headers: { Location: '/operacao', 'Set-Cookie': cookieOperacao(s.valor, APP_SESSAO_TTL_S) } });
+        }
+        if (g.ctx === 'eng' && engenheiroPermitido(g.email, env)) {
+          const s = await criarToken({ em: g.email, tipo: 'sessao_eng' }, SESSAO_TTL_S, env);
+          return new Response(null, { status: 302, headers: { Location: '/eng', 'Set-Cookie': cookieEng(s.valor, SESSAO_TTL_S) } });
+        }
+        if (g.ctx === 'diretoria' && diretorPermitido(g.email, env)) {
+          const s = await criarToken({ em: g.email, tipo: 'sessao_diretoria' }, SESSAO_TTL_S, env);
+          return new Response(null, { status: 302, headers: { Location: '/diretoria', 'Set-Cookie': cookieDiretoria(s.valor, SESSAO_TTL_S) } });
+        }
+        return html(paginaMensagem('Acesso não liberado', `O e-mail ${esc(g.email)} entrou no Google, mas não está cadastrado para este acesso.`), 403);
+      }
 
       // Sessões independentes: cliente, validador, agente, operador, engenheiro e diretoria.
       const sessao = await lerSessao(request, env);
@@ -193,7 +218,7 @@ export default {
 
       // Painel da Diretoria (visão macro). Exige sessão de diretoria.
       if (pathname === '/diretoria' && request.method === 'GET') {
-        if (!diretoria) return html(paginaLoginDiretoria());
+        if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
         return html(paginaPainelDiretoria(diretoria, await reunirDados(env)));
       }
 
@@ -230,7 +255,7 @@ export default {
 
       // Módulo OPERACIONAL (doca → destino). Exige sessão de operador.
       if (pathname === '/operacao' && request.method === 'GET') {
-        if (!operacao) return html(paginaLoginOperacao());
+        if (!operacao) return html(paginaLoginOperacao(googleConfigurado(env)));
         return html(paginaAppOperacao(operacao, await listarOperacoes(env)));
       }
       if (pathname === '/operacao/receber' && request.method === 'GET') {
@@ -340,7 +365,7 @@ export default {
 
       // Módulo ENGENHARIA AMBIENTAL (validação técnica). Exige sessão de engenheiro.
       if (pathname === '/eng' && request.method === 'GET') {
-        if (!eng) return html(paginaLoginEng());
+        if (!eng) return html(paginaLoginEng(googleConfigurado(env)));
         return html(paginaFilaEng(eng, await filaValidacao(env), await operacoesValidadas(env)));
       }
       if (pathname === '/eng/lote' && request.method === 'GET') {

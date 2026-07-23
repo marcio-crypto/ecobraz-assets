@@ -7,6 +7,7 @@
 
 import qrcode from 'qrcode-generator';
 import { lerOperacao, balanco, FASES, DESTINOS, listarOperacoes, atualizarEtapaOperacao } from './operacional.js';
+import { botaoGoogle } from './google-auth.js';
 
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const agora = () => { try { return new Date().toISOString(); } catch { return ''; } };
@@ -75,14 +76,15 @@ input.txt,textarea.txt,select.txt{width:100%;border:1px solid #DDE1E6;border-rad
 @media(max-width:560px){.kpis{grid-template-columns:repeat(2,1fr)}.fotos{grid-template-columns:repeat(2,1fr)}}`;
 const head = (t) => `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${esc(t)} — Ecobraz</title><style>${CSS}</style></head><body>`;
 
-export function paginaLoginEng() {
+export function paginaLoginEng(googleOn) {
   return `${head('Engenharia Ambiental')}
 <div style="min-height:100vh;display:flex;align-items:center;background:#00333B">
   <div style="max-width:420px;margin:0 auto;padding:32px 24px;width:100%">
     <div style="text-align:center;margin-bottom:26px"><span style="color:#fff;font-size:26px;font-weight:800">ecobraz</span><span style="color:#92C430;font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin-left:8px">engenharia</span></div>
     <div style="background:#fff;border-radius:18px;padding:26px 22px">
       <h1 style="margin:0 0 8px;font-size:20px;color:#00333B">Validação técnica</h1>
-      <p style="margin:0 0 16px;font-size:13.5px;color:#4F6469;line-height:1.6">Acesso do Engenheiro Ambiental (RT). Digite seu e-mail — enviamos um link (vale uma vez, 15 min).</p>
+      <p style="margin:0 0 16px;font-size:13.5px;color:#4F6469;line-height:1.6">Acesso do Engenheiro Ambiental (RT).</p>
+      ${googleOn ? botaoGoogle('eng') : ''}
       <input id="e" type="email" inputmode="email" placeholder="seu e-mail" class="txt">
       <button id="b" class="btn primary" style="margin-top:12px">Entrar</button>
       <div id="m" style="font-size:13px;color:#4F6469;margin-top:14px"></div>

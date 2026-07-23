@@ -7,6 +7,7 @@
 
 import { listarOperacoes } from './operacional.js';
 import { listarDestinos, destinoStatus } from './engenharia.js';
+import { botaoGoogle } from './google-auth.js';
 
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const VERDE = '#3f8f3a', TEAL = '#00333B';
@@ -49,14 +50,15 @@ const tile = (num, label, hint, cor) => `<div style="background:#fff;border:1px 
 
 const ETAPAS = [['recepcao', 'Recepção'], ['triagem', 'Triagem'], ['processamento', 'Processamento'], ['saida', 'Saída'], ['validacao', 'Aguardando validação'], ['concluida', 'Concluídas']];
 
-export function paginaLoginDiretoria() {
+export function paginaLoginDiretoria(googleOn) {
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Diretoria — Ecobraz</title></head>
 <body style="margin:0;min-height:100vh;display:flex;align-items:center;background:#00333B;font-family:Montserrat,'Segoe UI',Arial,sans-serif">
 <div style="max-width:400px;margin:0 auto;padding:32px 24px;width:100%;box-sizing:border-box">
   <div style="text-align:center;margin-bottom:26px"><span style="color:#fff;font-size:26px;font-weight:800">ecobraz</span><span style="color:#92C430;font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin-left:8px">diretoria</span></div>
   <div style="background:#fff;border-radius:18px;padding:26px 22px;color:#10262B">
     <h1 style="margin:0 0 8px;font-size:20px;color:#00333B">Painel da Diretoria</h1>
-    <p style="margin:0 0 16px;font-size:13.5px;color:#4F6469;line-height:1.6">Acesso restrito. Digite seu e-mail — enviamos um link (vale uma vez, 15 min).</p>
+    <p style="margin:0 0 16px;font-size:13.5px;color:#4F6469;line-height:1.6">Acesso restrito à diretoria.</p>
+    ${googleOn ? botaoGoogle('diretoria') : ''}
     <input id="e" type="email" inputmode="email" placeholder="seu e-mail" style="width:100%;box-sizing:border-box;border:1px solid #DDE1E6;border-radius:11px;padding:14px;font-size:16px">
     <button id="b" style="width:100%;margin-top:12px;background:#92C430;color:#10262B;border:none;border-radius:12px;padding:15px;font-size:15px;font-weight:800">Entrar</button>
     <div id="m" style="font-size:13px;color:#4F6469;margin-top:14px"></div>
