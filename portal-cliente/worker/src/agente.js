@@ -4,8 +4,22 @@
 // (StageId 35313, configurável). Câmera/GPS/offline/encerrar/PDF vêm nas próximas fatias.
 
 import { tagsPWA } from './pwa.js';
+import qrcode from 'qrcode-generator';
 const STAGE_EM_TRANSPORTE = (env) => Number(env.COLETA_STAGE_EM_TRANSPORTE || 35313);
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const TE = new TextEncoder();
+function b64url(bytes) { let s = ''; for (const b of bytes) s += String.fromCharCode(b); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+async function hmacSHA(secret, data) {
+  const k = await crypto.subtle.importKey('raw', TE.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  return b64url(new Uint8Array(await crypto.subtle.sign('HMAC', k, TE.encode(data))));
+}
+// Selo público da coleta: código curto derivado do id por HMAC (não dá pra adivinhar nem forjar).
+export async function seloColeta(id, env) {
+  const base = env.PORTAL_SESSION_SECRET || env.PLOOMES_WEBHOOK_SECRET || 'ecobraz-coleta';
+  return (await hmacSHA(`${base}|coleta-selo-v1`, `coleta:${id}`)).slice(0, 12);
+}
+function origemPortal(env, url) { return String(env.PORTAL_BASE_URL || env.PORTAL_URL || `${url.origin}/`).replace(/\/+$/, ''); }
+const dataHoraBR = (iso) => { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}:\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]} ${m[4]}` : ''; };
 
 // Registro de agentes (nome por e-mail). Fonte única: env AGENTE_EMAILS.
 export function agentesDe(env) {
@@ -53,11 +67,22 @@ export function paginaLoginAgente() {
 }
 
 export function paginaAppAgente(agente, coletas) {
-  const itens = coletas.length ? coletas.map((c) => `<a href="/agente/coleta?id=${c.id}" style="display:block;text-decoration:none;background:#fff;border:1px solid #E4EBE9;border-radius:16px;padding:15px 16px;margin-bottom:12px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;"><div style="font-size:14px;font-weight:800;color:#10262B;">OS ${esc(c.numero)}</div><span style="font-size:10px;font-weight:800;color:#8A6A16;background:#FFF4DE;padding:3px 8px;border-radius:20px;">EM TRANSPORTE</span></div>
+  const badgeDe = (c) => c.encerrada
+    ? '<span style="font-size:10px;font-weight:800;color:#1E5B31;background:#E4F3E6;padding:3px 8px;border-radius:20px;">ENCERRADA</span>'
+    : c.reagendar
+      ? '<span style="font-size:10px;font-weight:800;color:#8A6A16;background:#FFF4DE;padding:3px 8px;border-radius:20px;">REAGENDAR</span>'
+      : c.status === 'andamento'
+        ? '<span style="font-size:10px;font-weight:800;color:#0B5B66;background:#E3F0F3;padding:3px 8px;border-radius:20px;">EM ANDAMENTO</span>'
+        : '<span style="font-size:10px;font-weight:800;color:#8A6A16;background:#FFF4DE;padding:3px 8px;border-radius:20px;">EM TRANSPORTE</span>';
+  const itens = coletas.length ? coletas.map((c) => {
+    const href = c.encerrada ? `/agente/coleta/comprovante?id=${c.id}` : `/agente/coleta?id=${c.id}`;
+    const cta = c.encerrada ? 'Ver comprovante →' : 'Abrir coleta →';
+    return `<a href="${href}" style="display:block;text-decoration:none;background:#fff;border:1px solid #E4EBE9;border-radius:16px;padding:15px 16px;margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;"><div style="font-size:14px;font-weight:800;color:#10262B;">OS ${esc(c.numero)}</div>${badgeDe(c)}</div>
       <div style="font-size:13px;color:#4F6469;margin-top:7px;">${esc(c.cliente || 'Cliente')}</div>
-      <div style="font-size:12px;color:#3f8f3a;font-weight:700;margin-top:10px;">Abrir coleta →</div>
-    </a>`).join('') : `<div style="background:#fff;border:1px solid #E4EBE9;border-radius:16px;padding:26px 18px;text-align:center;color:#8fa39f;font-size:13.5px;">Nenhuma coleta em transporte agora.<br>Quando a Débora liberar uma coleta, ela aparece aqui.</div>`;
+      <div style="font-size:12px;color:#3f8f3a;font-weight:700;margin-top:10px;">${cta}</div>
+    </a>`;
+  }).join('') : `<div style="background:#fff;border:1px solid #E4EBE9;border-radius:16px;padding:26px 18px;text-align:center;color:#8fa39f;font-size:13.5px;">Nenhuma coleta em transporte agora.<br>Quando a Débora liberar uma coleta, ela aparece aqui.</div>`;
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex">${tagsPWA('agente')}<title>Minhas coletas — Ecobraz</title></head>
 <body style="margin:0;background:#F2F6F4;min-height:100vh;font-family:Montserrat,'Segoe UI',Arial,Helvetica,sans-serif;color:#10262B;">
 <div style="background:#00333B;padding:16px 18px 14px;">
@@ -102,9 +127,96 @@ export async function servirFotoColeta(env, id) {
   return new Response(base64ParaBytes(b64), { headers: { 'content-type': 'image/jpeg', 'cache-control': 'private, max-age=3600' } });
 }
 
+// ---------------------------------------------------------------------------
+// Fatia 3: encerrar a coleta (entrega na Ecobraz) + comprovante com QR + reagendar
+// ---------------------------------------------------------------------------
+export async function registrarEncerramento(env, id, agente, dados) {
+  const e = await lerEstadoColeta(env, id);
+  const d = dados || {};
+  e.os = { numero: d.numero || (e.os && e.os.numero) || '', cliente: d.cliente || (e.os && e.os.cliente) || '', endereco: d.endereco || (e.os && e.os.endereco) || '' };
+  e.encerramento = { em: agora(), agente: agente.email, agenteNome: agente.nome || '', volumes: String(d.volumes || '').slice(0, 40), obs: String(d.obs || '').slice(0, 300) };
+  e.status = 'encerrada';
+  delete e.reagendar;
+  await salvarEstadoColeta(env, id, e);
+  return e;
+}
+export async function registrarReagendamento(env, id, agente, dados) {
+  const e = await lerEstadoColeta(env, id);
+  const d = dados || {};
+  e.os = { numero: d.numero || (e.os && e.os.numero) || '', cliente: d.cliente || (e.os && e.os.cliente) || '', endereco: d.endereco || (e.os && e.os.endereco) || '' };
+  e.reagendar = { em: agora(), agente: agente.email, motivo: String(d.motivo || '').slice(0, 300) };
+  e.status = 'reagendar';
+  await salvarEstadoColeta(env, id, e);
+  return e;
+}
+
+// Lista as coletas do Ploomes JÁ com o status do NOSSO sistema (encerrada/reagendar/andamento).
+export async function listarColetasComStatus(env) {
+  const arr = await listarColetas(env);
+  const out = [];
+  for (const c of arr) {
+    let e = {};
+    try { e = await lerEstadoColeta(env, c.id); } catch { e = {}; }
+    const status = e.status || ((e.checkin || e.foto) ? 'andamento' : 'pendente');
+    out.push({ ...c, status, encerrada: e.status === 'encerrada', reagendar: e.status === 'reagendar' });
+  }
+  return out;
+}
+
+// QR público do comprovante (aponta para /validar-coleta com o selo assinado).
+export async function qrColeta(request, env, url) {
+  const id = (url.searchParams.get('id') || '').replace(/[^0-9]/g, '').slice(0, 12);
+  if (!id) return new Response('faltou id', { status: 400 });
+  const code = await seloColeta(id, env);
+  const alvo = `${origemPortal(env, url)}/validar-coleta?id=${id}&c=${code}`;
+  if ((url.searchParams.get('fmt') || '') === 'txt') return new Response(alvo, { headers: { 'content-type': 'text/plain; charset=utf-8' } });
+  const qr = qrcode(0, 'M'); qr.addData(alvo); qr.make();
+  const b64 = (qr.createDataURL(6, 4).split(',')[1]) || '';
+  return new Response(base64ParaBytes(b64), { headers: { 'content-type': 'image/gif', 'cache-control': 'public, max-age=86400' } });
+}
+
+// Página pública de validação do comprovante (qualquer pessoa que leia o QR).
+export async function validarColetaPublico(request, env, url) {
+  const id = (url.searchParams.get('id') || '').replace(/[^0-9]/g, '').slice(0, 12);
+  const c = (url.searchParams.get('c') || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 24);
+  const esperado = id ? await seloColeta(id, env) : '';
+  const assinaturaOk = !!(id && c && esperado && c === esperado);
+  let e = {};
+  if (assinaturaOk) { try { e = await lerEstadoColeta(env, id); } catch { e = {}; } }
+  const enc = e && e.encerramento;
+  const ok = assinaturaOk && !!enc;
+  const os = (e && e.os) || {};
+  const chk = e && e.checkin;
+  const cor = ok ? '#1E7A3D' : '#B23A2E';
+  const titulo = ok ? 'Coleta autêntica' : 'Comprovante não confere';
+  const sub = ok ? 'Este comprovante foi emitido pela Ecobraz.' : (assinaturaOk ? 'Esta coleta ainda não foi encerrada pelo agente.' : 'Código inválido ou adulterado.');
+  const linhas = ok ? `
+    <table role="presentation" style="width:100%;border-collapse:collapse;margin-top:20px;font-size:14px">
+      <tr><td style="padding:9px 0;border-top:1px solid #E4EBE9;color:#6B7B78">Coleta (OS)</td><td style="padding:9px 0;border-top:1px solid #E4EBE9;text-align:right;font-weight:800">${esc(os.numero || id)}</td></tr>
+      <tr><td style="padding:9px 0;border-top:1px solid #E4EBE9;color:#6B7B78">Cliente</td><td style="padding:9px 0;border-top:1px solid #E4EBE9;text-align:right;font-weight:700">${esc(os.cliente || '—')}</td></tr>
+      <tr><td style="padding:9px 0;border-top:1px solid #E4EBE9;color:#6B7B78">Coletado em</td><td style="padding:9px 0;border-top:1px solid #E4EBE9;text-align:right;font-weight:700">${esc(dataHoraBR(enc.em))}</td></tr>
+      <tr><td style="padding:9px 0;border-top:1px solid #E4EBE9;color:#6B7B78">Agente responsável</td><td style="padding:9px 0;border-top:1px solid #E4EBE9;text-align:right;font-weight:700">${esc(enc.agenteNome || '—')}</td></tr>
+      ${chk ? `<tr><td style="padding:9px 0;border-top:1px solid #E4EBE9;color:#6B7B78">Check-in por GPS</td><td style="padding:9px 0;border-top:1px solid #E4EBE9;text-align:right;font-weight:700;color:#1E7A3D">confirmado no local</td></tr>` : ''}
+    </table>` : '';
+  return new Response(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Validação — Ecobraz</title></head>
+<body style="margin:0;background:#F2F6F4;min-height:100vh;font-family:Montserrat,'Segoe UI',Arial,Helvetica,sans-serif;color:#10262B;display:flex;align-items:center;justify-content:center">
+<div style="max-width:440px;margin:0 auto;padding:28px 22px;width:100%;box-sizing:border-box">
+  <div style="background:#fff;border-radius:18px;padding:28px 24px;border:1px solid #E4EBE9">
+    <div style="text-align:center"><span style="font-size:22px;font-weight:800;color:#00333B">ecobraz</span></div>
+    <div style="text-align:center;margin-top:18px"><div style="display:inline-block;width:56px;height:56px;border-radius:50%;background:${ok ? '#E4F3E6' : '#FBE9E7'};line-height:56px;font-size:28px">${ok ? '✓' : '✕'}</div></div>
+    <h1 style="margin:14px 0 6px;text-align:center;font-size:19px;color:${cor}">${titulo}</h1>
+    <p style="margin:0;text-align:center;font-size:13px;color:#6B7B78;line-height:1.6">${sub}</p>
+    ${linhas}
+    <div style="margin-top:22px;font-size:11px;color:#9aa7a4;text-align:center;line-height:1.6">Comprovante de coleta de resíduos eletroeletrônicos.<br>A destinação final e o certificado (CDF) são emitidos após o processamento na unidade.</div>
+  </div>
+</div></body></html>`, { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } });
+}
+
 export function paginaColetaDetalhe(agente, coleta, estado) {
   const chk = estado && estado.checkin;
   const foto = estado && estado.foto;
+  const enc = estado && estado.encerramento;
+  const rea = estado && estado.reagendar;
   const mapa = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(coleta.endereco || coleta.cliente)}`;
   const linhaChk = chk ? `<div style="font-size:12.5px;color:#1E5B31;font-weight:700;">✓ Check-in no local — ${hhmm(chk.em)}</div><div style="font-size:10.5px;color:#8fa39f;margin-top:2px;">GPS registrado · precisão ${chk.acc} m</div>` : `<div style="font-size:12.5px;color:#8fa39f;">Aguardando check-in…</div>`;
   const linhaFoto = foto ? `<div style="font-size:12.5px;color:#1E5B31;font-weight:700;margin-top:8px;">✓ Foto da carga — ${hhmm(foto.em)}</div><img src="/agente/coleta/foto?id=${coleta.id}" style="width:100%;border-radius:10px;margin-top:8px;border:1px solid #E4EBE9;">` : '';
@@ -127,8 +239,25 @@ export function paginaColetaDetalhe(agente, coleta, estado) {
   </div>
   ${btnChk}
   ${btnFoto}
-  <button class="btn muted" disabled>🏭 Encerrar na Ecobraz</button>
-  <div style="text-align:center;font-size:10px;color:#9aa7a4;margin:-2px 0 14px;">encerrar e reagendar entram na próxima fatia</div>
+  ${enc ? `
+  <div class="btn done">✓ Coleta encerrada — ${hhmm(enc.em)}</div>
+  <a href="/agente/coleta/comprovante?id=${Number(coleta.id)}" class="btn dark" style="text-decoration:none;">📄 Ver comprovante (QR)</a>
+  ` : `
+  <button class="btn ${chk ? 'dark' : 'muted'}" id="benc" ${chk ? '' : 'disabled'}>🏭 Encerrar na Ecobraz</button>
+  ${chk ? '' : `<div style="text-align:center;font-size:10.5px;color:#9aa7a4;margin:-4px 0 12px;">faça o check-in no local antes de encerrar</div>`}
+  <div id="pane-enc" style="display:none;background:#fff;border:1px solid #E4EBE9;border-radius:12px;padding:14px;margin-bottom:10px;">
+    <div style="font-size:12px;font-weight:800;color:#10262B;margin-bottom:8px;">Confirmar entrega na Ecobraz</div>
+    <input id="vol" inputmode="text" placeholder="Volumes / quantidade (opcional)" style="width:100%;box-sizing:border-box;border:1px solid #DDE1E6;border-radius:10px;padding:12px;font-size:15px;margin-bottom:8px;">
+    <textarea id="obs" rows="2" placeholder="Observações (opcional)" style="width:100%;box-sizing:border-box;border:1px solid #DDE1E6;border-radius:10px;padding:12px;font-size:15px;font-family:inherit;"></textarea>
+    <button class="btn primary" id="benc2" style="margin-top:8px;">✓ Confirmar entrega</button>
+  </div>
+  <button class="btn ghost" id="brea">↩︎ Não deu pra coletar — reagendar</button>
+  <div id="pane-rea" style="display:none;background:#fff;border:1px solid #E4EBE9;border-radius:12px;padding:14px;margin-bottom:10px;">
+    <textarea id="mot" rows="2" placeholder="Motivo (ex: cliente ausente, carga não estava pronta)" style="width:100%;box-sizing:border-box;border:1px solid #DDE1E6;border-radius:10px;padding:12px;font-size:15px;font-family:inherit;"></textarea>
+    <button class="btn ghost" id="brea2" style="margin-top:8px;border-color:#E0B4AE;color:#B23A2E;">Enviar para reagendar</button>
+  </div>
+  `}
+  ${rea ? `<div style="text-align:center;font-size:11.5px;color:#8A6A16;background:#FFF4DE;border-radius:8px;padding:9px;margin-bottom:12px;">↩︎ Enviado para reagendar${rea.motivo ? ' — ' + esc(rea.motivo) : ''}</div>` : ''}
   <div id="msg" style="text-align:center;font-size:12px;color:#4F6469;min-height:16px;"></div>
   <div id="net" style="text-align:center;font-size:10.5px;font-weight:700;margin-top:8px;"></div>
 </div>
@@ -158,6 +287,63 @@ export function paginaColetaDetalhe(agente, coleta, estado) {
       if(r.ok){location.reload();} else {msg.textContent='Falha ao enviar a foto. Tente de novo.';}
     }catch{ msg.textContent='Não consegui processar a foto. Tente de novo.'; }
   };
+  const benc=document.getElementById('benc'),benc2=document.getElementById('benc2'),brea=document.getElementById('brea'),brea2=document.getElementById('brea2');
+  function toggle(id){const p=document.getElementById(id);if(p)p.style.display=p.style.display==='none'?'block':'none';}
+  if(benc) benc.onclick=()=>toggle('pane-enc');
+  if(brea) brea.onclick=()=>toggle('pane-rea');
+  if(benc2) benc2.onclick=async()=>{benc2.disabled=true;msg.textContent='Encerrando…';
+    try{const r=await fetch('/api/agente/encerrar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:ID,volumes:(document.getElementById('vol').value||''),obs:(document.getElementById('obs').value||'')})});
+      if(r.ok){location.href='/agente/coleta/comprovante?id='+ID;}else{msg.textContent='Falha ao encerrar. Tente de novo.';benc2.disabled=false;}}
+    catch{msg.textContent='Sem conexão. Tente de novo com sinal.';benc2.disabled=false;}};
+  if(brea2) brea2.onclick=async()=>{brea2.disabled=true;msg.textContent='Enviando…';
+    try{const r=await fetch('/api/agente/reagendar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:ID,motivo:(document.getElementById('mot').value||'')})});
+      if(r.ok){location.reload();}else{msg.textContent='Falha ao enviar. Tente de novo.';brea2.disabled=false;}}
+    catch{msg.textContent='Sem conexão. Tente de novo com sinal.';brea2.disabled=false;}};
 </script>
+</body></html>`;
+}
+
+// Comprovante de coleta imprimível (o motorista/cliente pode salvar em PDF pelo navegador).
+export function paginaComprovante(agente, coleta, estado, seloUrl) {
+  const enc = (estado && estado.encerramento) || {};
+  const chk = estado && estado.checkin;
+  const os = (estado && estado.os) || {};
+  const numero = os.numero || (coleta && coleta.numero) || '';
+  const cliente = os.cliente || (coleta && coleta.cliente) || '';
+  const endereco = os.endereco || (coleta && coleta.endereco) || '';
+  const foto = estado && estado.foto;
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex">${tagsPWA('agente')}<title>Comprovante — Coleta OS ${esc(numero)}</title>
+<style>@media print{.noprint{display:none!important}body{background:#fff!important}}</style></head>
+<body style="margin:0;background:#F2F6F4;font-family:Montserrat,'Segoe UI',Arial,Helvetica,sans-serif;color:#10262B;">
+<div style="max-width:560px;margin:0 auto;padding:18px;">
+  <div class="noprint" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+    <a href="/agente/coleta?id=${Number(coleta.id)}" style="color:#4F6469;font-size:13px;font-weight:800;text-decoration:none;">← Voltar</a>
+    <button onclick="window.print()" style="background:#00333B;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:800;">🖨️ Imprimir / Salvar PDF</button>
+  </div>
+  <div style="background:#fff;border:1px solid #E4EBE9;border-radius:16px;padding:26px 24px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #00333B;padding-bottom:14px;">
+      <div><div style="font-size:22px;font-weight:800;color:#00333B;">ecobraz</div><div style="font-size:10.5px;color:#6B7B78;margin-top:2px;">Gestão de resíduos eletroeletrônicos</div></div>
+      <div style="text-align:right;"><div style="font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#7c8a87;">Comprovante</div><div style="font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#7c8a87;">de coleta</div></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:16px;">
+      <div><div style="font-size:10px;color:#7c8a87;text-transform:uppercase;letter-spacing:.08em;font-weight:800;">Coleta (OS)</div><div style="font-size:20px;font-weight:800;margin-top:3px;">${esc(numero || '—')}</div></div>
+      <div style="text-align:right;"><div style="font-size:10px;color:#7c8a87;text-transform:uppercase;letter-spacing:.08em;font-weight:800;">Data / hora</div><div style="font-size:14px;font-weight:700;margin-top:5px;">${esc(dataHoraBR(enc.em))}</div></div>
+    </div>
+    <table role="presentation" style="width:100%;border-collapse:collapse;margin-top:18px;font-size:13.5px;">
+      <tr><td style="padding:9px 0;border-top:1px solid #E4EBE9;color:#6B7B78;width:42%;">Cliente</td><td style="padding:9px 0;border-top:1px solid #E4EBE9;text-align:right;font-weight:700;">${esc(cliente || '—')}</td></tr>
+      <tr><td style="padding:9px 0;border-top:1px solid #E4EBE9;color:#6B7B78;vertical-align:top;">Endereço da coleta</td><td style="padding:9px 0;border-top:1px solid #E4EBE9;text-align:right;font-weight:600;">${esc(endereco || '—')}</td></tr>
+      <tr><td style="padding:9px 0;border-top:1px solid #E4EBE9;color:#6B7B78;">Agente responsável</td><td style="padding:9px 0;border-top:1px solid #E4EBE9;text-align:right;font-weight:700;">${esc(enc.agenteNome || (agente && agente.nome) || '—')}</td></tr>
+      ${enc.volumes ? `<tr><td style="padding:9px 0;border-top:1px solid #E4EBE9;color:#6B7B78;">Volumes / quantidade</td><td style="padding:9px 0;border-top:1px solid #E4EBE9;text-align:right;font-weight:700;">${esc(enc.volumes)}</td></tr>` : ''}
+      <tr><td style="padding:9px 0;border-top:1px solid #E4EBE9;color:#6B7B78;">Check-in no local</td><td style="padding:9px 0;border-top:1px solid #E4EBE9;text-align:right;font-weight:700;color:${chk ? '#1E7A3D' : '#8A6A16'};">${chk ? 'confirmado por GPS · ' + hhmm(chk.em) : 'não registrado'}</td></tr>
+      <tr><td style="padding:9px 0;border-top:1px solid #E4EBE9;color:#6B7B78;">Registro fotográfico</td><td style="padding:9px 0;border-top:1px solid #E4EBE9;text-align:right;font-weight:700;color:${foto ? '#1E7A3D' : '#8A6A16'};">${foto ? 'anexado' : 'não anexado'}</td></tr>
+    </table>
+    ${enc.obs ? `<div style="margin-top:14px;background:#F7FAF9;border:1px solid #E4EBE9;border-radius:10px;padding:12px 14px;font-size:12.5px;"><b>Observações:</b> ${esc(enc.obs)}</div>` : ''}
+    <div style="display:flex;gap:16px;align-items:center;margin-top:22px;border-top:1px solid #E4EBE9;padding-top:18px;">
+      <img src="${esc(seloUrl)}" alt="QR de validação" style="width:104px;height:104px;flex:none;border:1px solid #E4EBE9;border-radius:8px;">
+      <div style="font-size:12px;color:#4F6469;line-height:1.6;">Aponte a câmera para o QR e confirme a autenticidade desta coleta no site da Ecobraz.<br><span style="font-size:10.5px;color:#9aa7a4;">A destinação final e o CDF são emitidos após o processamento na unidade.</span></div>
+    </div>
+  </div>
+  <div style="text-align:center;font-size:10px;color:#9aa7a4;margin-top:12px;">Documento gerado eletronicamente pela Ecobraz${enc.em ? ' · ' + esc(dataHoraBR(enc.em)) : ''}</div>
+</div>
 </body></html>`;
 }

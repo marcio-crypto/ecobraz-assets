@@ -38,7 +38,7 @@ import { qrCDF, validarCDF } from './validacao.js';
 import { paginaMetodologia } from './carbono-metodologia.js';
 import { lerValidacao, registrarValidacao, paginaAreaValidacao, qrMetodologia, validarMetodologiaPublico } from './validacao-metodologia.js';
 import { paginaPainelCarbono } from './carbono-painel.js';
-import { agentePermitido, nomeAgente, listarColetas, paginaLoginAgente, paginaAppAgente, detalheColeta, lerEstadoColeta, registrarCheckin, registrarFoto, servirFotoColeta, paginaColetaDetalhe } from './agente.js';
+import { agentePermitido, nomeAgente, listarColetasComStatus, paginaLoginAgente, paginaAppAgente, detalheColeta, lerEstadoColeta, registrarCheckin, registrarFoto, servirFotoColeta, paginaColetaDetalhe, registrarEncerramento, registrarReagendamento, qrColeta, validarColetaPublico, paginaComprovante } from './agente.js';
 import { operadorPermitido, nomeOperador, listarOperacoes, listarColetasRecebiveis, iniciarOperacao, lerOperacao, definirTipoOperacao, registrarPesoEntrada, registrarFotoOperacao, servirFotoOperacao, paginaLoginOperacao, paginaAppOperacao, paginaReceberLote, paginaLoteDetalhe, adicionarMaterial, removerMaterial, concluirTriagem, paginaTriagem, paginaProcessamento, concluirProcessamento, paginaSaida, registrarSaida, concluirSaida } from './operacional.js';
 import { engenheiroPermitido, nomeEngenheiro, filaValidacao, operacoesValidadas, lerValidacaoOp, registrarValidacaoOp, paginaLoginEng, paginaFilaEng, paginaDossie, qrOperacao, validarOperacaoPublico, listarDestinos, lerDestino, salvarDestino, paginaDestinos, paginaDestinoForm, paginaRelatorio } from './engenharia.js';
 import { diretorPermitido, nomeDiretor, reunirDados, paginaLoginDiretoria, paginaPainelDiretoria } from './diretoria.js';
@@ -161,6 +161,9 @@ export default {
       // Verificação pública de operação validada pela Engenharia Ambiental (QR anti-fraude).
       if (pathname === '/qr-operacao' && request.method === 'GET') return await qrOperacao(request, env, url);
       if (pathname === '/validar-operacao' && request.method === 'GET') return await validarOperacaoPublico(request, env, url);
+      // Verificação pública do comprovante de coleta do agente (QR anti-fraude).
+      if (pathname === '/qr-coleta' && request.method === 'GET') return await qrColeta(request, env, url);
+      if (pathname === '/validar-coleta' && request.method === 'GET') return await validarColetaPublico(request, env, url);
       // Selo PÚBLICO da metodologia (só confirma a validação da Villanova; não expõe a receita).
       if (pathname === '/validar-metodologia' && request.method === 'GET') return await validarMetodologiaPublico(request, env, url);
       if (pathname === '/qr-metodologia' && request.method === 'GET') return await qrMetodologia(request, env, url);
@@ -225,7 +228,7 @@ export default {
       // App do agente de coletas.
       if (pathname === '/agente' && request.method === 'GET') {
         if (!agente) return html(paginaLoginAgente());
-        return html(paginaAppAgente(agente, await listarColetas(env)));
+        return html(paginaAppAgente(agente, await listarColetasComStatus(env)));
       }
       if (pathname === '/agente/coleta' && request.method === 'GET') {
         if (!agente) return new Response(null, { status: 302, headers: { Location: '/agente', 'cache-control': 'no-store' } });
@@ -233,6 +236,14 @@ export default {
         const coleta = await detalheColeta(env, cid);
         if (!coleta) return html(paginaMensagem('Coleta não encontrada', 'Volte para a lista e tente de novo.'), 404);
         return html(paginaColetaDetalhe(agente, coleta, await lerEstadoColeta(env, cid)));
+      }
+      if (pathname === '/agente/coleta/comprovante' && request.method === 'GET') {
+        if (!agente) return new Response(null, { status: 302, headers: { Location: '/agente', 'cache-control': 'no-store' } });
+        const cid = url.searchParams.get('id') || '';
+        const estado = await lerEstadoColeta(env, cid);
+        let coleta = null; try { coleta = await detalheColeta(env, cid); } catch { coleta = null; }
+        if (!coleta) coleta = { id: cid, numero: (estado.os && estado.os.numero) || '', cliente: (estado.os && estado.os.cliente) || '', endereco: (estado.os && estado.os.endereco) || '' };
+        return html(paginaComprovante(agente, coleta, estado, `/qr-coleta?id=${encodeURIComponent(cid)}`));
       }
       if (pathname === '/agente/coleta/foto' && request.method === 'GET') {
         if (!agente) return json({ ok: false, error: 'nao_autenticado' }, 401);
@@ -250,6 +261,22 @@ export default {
         let b; try { b = await request.json(); } catch { b = null; }
         if (!b || !b.id || !b.foto) return json({ ok: false, error: 'dados' }, 400);
         await registrarFoto(env, b.id, agente, b.foto);
+        return json({ ok: true });
+      }
+      if (pathname === '/api/agente/encerrar' && request.method === 'POST') {
+        if (!agente) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = null; }
+        if (!b || !b.id) return json({ ok: false, error: 'dados' }, 400);
+        let det = null; try { det = await detalheColeta(env, b.id); } catch { det = null; }
+        await registrarEncerramento(env, b.id, agente, { volumes: b.volumes, obs: b.obs, numero: det && det.numero, cliente: det && det.cliente, endereco: det && det.endereco });
+        return json({ ok: true });
+      }
+      if (pathname === '/api/agente/reagendar' && request.method === 'POST') {
+        if (!agente) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = null; }
+        if (!b || !b.id) return json({ ok: false, error: 'dados' }, 400);
+        let det = null; try { det = await detalheColeta(env, b.id); } catch { det = null; }
+        await registrarReagendamento(env, b.id, agente, { motivo: b.motivo, numero: det && det.numero, cliente: det && det.cliente, endereco: det && det.endereco });
         return json({ ok: true });
       }
 
