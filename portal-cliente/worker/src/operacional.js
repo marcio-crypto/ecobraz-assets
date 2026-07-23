@@ -64,7 +64,7 @@ async function salvarOperacao(env, op) {
   op.atualizadoEm = agora();
   await env.PORTAL_KV.put(`op:${op.osId}`, JSON.stringify(op), { expirationTtl: 60 * 60 * 24 * 365 });
   const idx = await lerIndice(env);
-  const resumo = { osId: op.osId, numero: op.numero, cliente: op.cliente, etapa: op.etapa, tipo: op.tipo, em: op.atualizadoEm };
+  const resumo = { osId: op.osId, numero: op.numero, cliente: op.cliente, etapa: op.etapa, tipo: op.tipo, em: op.atualizadoEm, criadoEm: op.criadoEm, entradaKg: (op.entrada && op.entrada.pesoKg) || 0, saidaKg: (op.saida && op.saida.pesoKg) || 0 };
   const i = idx.findIndex((x) => String(x.osId) === String(op.osId));
   if (i >= 0) idx[i] = resumo; else idx.unshift(resumo);
   await salvarIndice(env, idx);
