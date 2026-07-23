@@ -236,8 +236,8 @@ export function paginaLoteDetalhe(operador, op) {
     <div style="font-size:13px;font-weight:700;color:${okInicio ? '#2f6d12' : '#8A6A16'}">${okInicio ? '✓ Recepção completa — pronta para a triagem' : '⚠ Faltam o peso e/ou as fotos obrigatórias'}</div>
   </div>
 
-  <button class="btn ${okInicio ? 'dark' : 'muted'}" ${okInicio ? '' : 'disabled'}>➡ Ir para a Triagem</button>
-  <div style="text-align:center;font-size:10px;color:#9aa7a4;margin-top:-2px">Triagem, processamento, saída e balanço de massa entram nas próximas fatias.</div>
+  ${okInicio ? `<a href="/operacao/lote/triagem?id=${esc(op.osId)}" class="btn dark">➡ Ir para a Triagem</a>` : `<button class="btn muted" disabled>➡ Ir para a Triagem</button>`}
+  <div style="text-align:center;font-size:10px;color:#9aa7a4;margin-top:-2px">Processamento, saída e balanço de massa entram nas próximas fatias.</div>
   <div id="msg" style="text-align:center;font-size:12px;color:#4F6469;min-height:16px;margin-top:8px"></div>
 </div>
 <script>
@@ -264,5 +264,122 @@ export function paginaLoteDetalhe(operador, op) {
         await post('/api/operacao/foto',{osId:OS,fase:'inicio',cat:cat,foto:r.dataUrl.split(',')[1],geo:r.geo}); location.reload();
       }catch{ msg.textContent='Não consegui processar a foto. Tente de novo.'; } };
   });
+</script></body></html>`;
+}
+
+// ---------------------------------------------------------------------------
+// Slice 2: Triagem / Classificação (código IBAMA + classe + qtd + destino)
+// ---------------------------------------------------------------------------
+// Catálogo de materiais comuns de e-lixo — SUGESTÕES para agilizar; a classificação final
+// (IBAMA/classe) é validada pela Engenharia Ambiental. O operador pode editar tudo.
+export const MATERIAIS = [
+  { id: 'pci', rotulo: 'Placa de circuito (PCI)', ibama: '16 02 16', classe: 'II-A', destino: 'reciclagem' },
+  { id: 'computador', rotulo: 'Computador / gabinete', ibama: '16 02 14', classe: 'II-A', destino: 'reciclagem' },
+  { id: 'monitor', rotulo: 'Monitor / tela', ibama: '16 02 14', classe: 'II-A', destino: 'reciclagem' },
+  { id: 'cabos', rotulo: 'Cabos e fios', ibama: '17 04 11', classe: 'II-A', destino: 'reciclagem' },
+  { id: 'fonte_bateria', rotulo: 'Fonte / no-break / bateria', ibama: '16 06 00', classe: 'I', destino: 'coprocessamento' },
+  { id: 'componentes', rotulo: 'Componentes eletrônicos', ibama: '16 02 16', classe: 'II-A', destino: 'reciclagem' },
+  { id: 'metal', rotulo: 'Sucata metálica', ibama: '19 12 02', classe: 'II-B', destino: 'reciclagem' },
+  { id: 'plastico', rotulo: 'Plástico', ibama: '19 12 04', classe: 'II-B', destino: 'reciclagem' },
+  { id: 'rejeito', rotulo: 'Rejeito (não reciclável)', ibama: '19 12 12', classe: 'II-A', destino: 'incineracao' },
+  { id: 'outros', rotulo: 'Outros', ibama: '', classe: 'II-A', destino: 'reciclagem' },
+];
+export const DESTINOS = { reciclagem: 'Reciclagem', incineracao: 'Incineração', coprocessamento: 'Coprocessamento', reuso: 'Reúso' };
+const CLASSES = ['I', 'II-A', 'II-B'];
+
+export async function adicionarMaterial(env, osId, operador, d) {
+  const op = await lerOperacao(env, osId); if (!op) return null;
+  op.materiais = op.materiais || [];
+  if (op.materiais.length >= 40) return op;
+  const qtd = Math.max(0, Number(String(d && d.qtd).replace(',', '.')) || 0);
+  op.materiais.push({
+    rotulo: String((d && d.rotulo) || 'Material').slice(0, 60),
+    ibama: String((d && d.ibama) || '').slice(0, 20),
+    classe: CLASSES.includes(d && d.classe) ? d.classe : 'II-A',
+    qtd,
+    destino: DESTINOS[d && d.destino] ? d.destino : 'reciclagem',
+    por: operador.email, em: agora(),
+  });
+  if (op.etapa === 'recepcao' && inicioCompleto(op)) op.etapa = 'triagem';
+  await salvarOperacao(env, op); return op;
+}
+export async function removerMaterial(env, osId, idx) {
+  const op = await lerOperacao(env, osId); if (!op || !op.materiais) return null;
+  const i = Number(idx); if (i >= 0 && i < op.materiais.length) op.materiais.splice(i, 1);
+  await salvarOperacao(env, op); return op;
+}
+export const somaMateriais = (op) => (op && op.materiais || []).reduce((s, m) => s + (Number(m.qtd) || 0), 0);
+export async function concluirTriagem(env, osId) {
+  const op = await lerOperacao(env, osId); if (!op) return null;
+  if ((op.materiais || []).length) { op.etapa = 'processamento'; await salvarOperacao(env, op); }
+  return op;
+}
+
+export function paginaTriagem(operador, op) {
+  const entrada = op.entrada ? op.entrada.pesoKg : 0;
+  const mats = op.materiais || [];
+  const soma = somaMateriais(op);
+  const dif = Math.round((entrada - soma) * 100) / 100;
+  const linhas = mats.length ? mats.map((m, i) => `<div style="border-top:1px solid #EEF1F0;padding:11px 0;display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+      <div><div style="font-size:13.5px;font-weight:700">${esc(m.rotulo)}</div>
+        <div style="font-size:11px;color:#7c8a87;margin-top:3px">IBAMA ${esc(m.ibama || '—')} · Classe ${esc(m.classe)} · <b style="color:#0B5B66">${esc(DESTINOS[m.destino] || m.destino)}</b></div></div>
+      <div style="text-align:right;white-space:nowrap"><div style="font-size:14px;font-weight:800">${String(m.qtd).replace('.', ',')} kg</div>
+        <form method="post" action="/api/operacao/material/remover" style="margin:2px 0 0"><input type="hidden" name="osId" value="${esc(op.osId)}"><input type="hidden" name="idx" value="${i}"><button style="background:none;border:none;color:#B23A2E;font-size:11px;font-weight:700;cursor:pointer;padding:0">remover</button></form></div>
+    </div>`).join('') : `<div style="color:#9aa7a4;font-size:13px;padding:10px 0">Nenhum material classificado ainda.</div>`;
+  const opts = MATERIAIS.map((m) => `<option value="${m.id}" data-rotulo="${esc(m.rotulo)}" data-ibama="${esc(m.ibama)}" data-classe="${m.classe}" data-destino="${m.destino}">${esc(m.rotulo)}</option>`).join('');
+  const optDest = Object.entries(DESTINOS).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join('');
+  const podeConcluir = mats.length > 0;
+  const corDif = Math.abs(dif) <= Math.max(1, entrada * 0.02) ? '#1E7A3D' : '#8A6A16';
+  return `${head('Triagem OS ' + op.numero)}
+<div class="top"><a href="/operacao/lote?id=${esc(op.osId)}" style="color:#9FC6C1;font-size:12px;font-weight:800;letter-spacing:.08em;text-decoration:none">← TRIAGEM OS ${esc(op.numero)}</a>
+  <div style="color:#fff;font-size:19px;font-weight:800;margin-top:8px">${esc(op.cliente || 'Cliente')}</div>
+  <div style="color:#9FC6C1;font-size:12px;margin-top:4px">Triagem · classificação dos materiais</div></div>
+<div class="wrap">
+
+  <div class="card">
+    <div class="eyebrow">Balanço (entrada × classificado)</div>
+    <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:#4F6469">Peso de entrada</span><b>${String(entrada).replace('.', ',')} kg</b></div>
+    <div style="display:flex;justify-content:space-between;font-size:13px;margin-top:5px"><span style="color:#4F6469">Já classificado</span><b>${String(soma).replace('.', ',')} kg</b></div>
+    <div style="display:flex;justify-content:space-between;font-size:13px;margin-top:5px;border-top:1px solid #EEF1F0;padding-top:8px"><span style="color:#4F6469">Falta classificar</span><b style="color:${corDif}">${String(dif).replace('.', ',')} kg</b></div>
+  </div>
+
+  <div class="card">
+    <div class="eyebrow">Materiais do lote</div>
+    ${linhas}
+  </div>
+
+  <div class="card">
+    <div class="eyebrow">Adicionar material</div>
+    <label class="fld">Tipo (preenche IBAMA/classe sugeridos)</label>
+    <select id="tipo" class="txt">${opts}</select>
+    <div style="display:flex;gap:10px;margin-top:10px">
+      <div style="flex:1"><label class="fld">Código IBAMA</label><input id="ibama" class="txt"></div>
+      <div style="width:110px"><label class="fld">Classe</label><select id="classe" class="txt"><option>I</option><option selected>II-A</option><option>II-B</option></select></div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:10px">
+      <div style="flex:1"><label class="fld">Quantidade (kg)</label><input id="qtd" class="txt" inputmode="decimal" placeholder="ex.: 120"></div>
+      <div style="flex:1"><label class="fld">Destino</label><select id="destino" class="txt">${optDest}</select></div>
+    </div>
+    <button class="btn primary" style="margin-top:12px" onclick="add()">Adicionar material</button>
+    <div style="font-size:11px;color:#9aa7a4;margin-top:6px">IBAMA e classe são sugestões — a classificação final é validada pela Engenharia Ambiental.</div>
+  </div>
+
+  ${podeConcluir
+    ? `<form method="post" action="/api/operacao/triagem/concluir" style="margin:0"><input type="hidden" name="osId" value="${esc(op.osId)}"><button class="btn dark">✓ Concluir triagem → Processamento</button></form>`
+    : `<button class="btn muted" disabled>✓ Concluir triagem</button>`}
+  <div style="text-align:center;font-size:10px;color:#9aa7a4;margin-top:2px">Processamento (fotos Fase 2, R2/R3), saída e balanço de massa entram nas próximas fatias.</div>
+  <div id="msg" style="text-align:center;font-size:12px;color:#4F6469;min-height:16px;margin-top:8px"></div>
+</div>
+<script>
+  const OS=${JSON.stringify(String(op.osId))}, msg=document.getElementById('msg');
+  const sel=document.getElementById('tipo'), ib=document.getElementById('ibama'), cl=document.getElementById('classe'), de=document.getElementById('destino');
+  function preencher(){ const o=sel.options[sel.selectedIndex]; ib.value=o.getAttribute('data-ibama')||''; cl.value=o.getAttribute('data-classe')||'II-A'; de.value=o.getAttribute('data-destino')||'reciclagem'; }
+  sel.onchange=preencher; preencher();
+  async function add(){ const rotulo=sel.options[sel.selectedIndex].getAttribute('data-rotulo'); const qtd=document.getElementById('qtd').value;
+    if(!qtd||Number(qtd.replace(',','.'))<=0){ msg.textContent='Digite a quantidade em kg.'; return; }
+    msg.textContent='Salvando…';
+    try{ const r=await fetch('/api/operacao/material',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({osId:OS,rotulo:rotulo,ibama:ib.value,classe:cl.value,qtd:qtd,destino:de.value})});
+      if(r.ok) location.reload(); else msg.textContent='Falha ao salvar. Tente de novo.';
+    }catch{ msg.textContent='Sem conexão. Tente de novo.'; } }
 </script></body></html>`;
 }

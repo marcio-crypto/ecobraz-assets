@@ -36,7 +36,7 @@ import { paginaMetodologia } from './carbono-metodologia.js';
 import { lerValidacao, registrarValidacao, paginaAreaValidacao, qrMetodologia, validarMetodologiaPublico } from './validacao-metodologia.js';
 import { paginaPainelCarbono } from './carbono-painel.js';
 import { agentePermitido, nomeAgente, listarColetas, paginaLoginAgente, paginaAppAgente, detalheColeta, lerEstadoColeta, registrarCheckin, registrarFoto, servirFotoColeta, paginaColetaDetalhe } from './agente.js';
-import { operadorPermitido, nomeOperador, listarOperacoes, listarColetasRecebiveis, iniciarOperacao, lerOperacao, definirTipoOperacao, registrarPesoEntrada, registrarFotoOperacao, servirFotoOperacao, paginaLoginOperacao, paginaAppOperacao, paginaReceberLote, paginaLoteDetalhe } from './operacional.js';
+import { operadorPermitido, nomeOperador, listarOperacoes, listarColetasRecebiveis, iniciarOperacao, lerOperacao, definirTipoOperacao, registrarPesoEntrada, registrarFotoOperacao, servirFotoOperacao, paginaLoginOperacao, paginaAppOperacao, paginaReceberLote, paginaLoteDetalhe, adicionarMaterial, removerMaterial, concluirTriagem, paginaTriagem } from './operacional.js';
 
 export default {
   async fetch(request, env) {
@@ -44,7 +44,7 @@ export default {
     const { pathname } = url;
     try {
       if (pathname === '/health') return json({
-        ok: true, service: 'ecobraz-portal', version: 18,
+        ok: true, service: 'ecobraz-portal', version: 19,
         // Só presença (true/false) — NUNCA os valores. Ajuda a confirmar a
         // configuração pelo navegador sem expor segredo nenhum.
         config: {
@@ -244,6 +244,33 @@ export default {
         if (!b || !b.osId || !b.fase || !b.cat || !b.foto) return json({ ok: false, error: 'dados' }, 400);
         const op = await registrarFotoOperacao(env, b.osId, operacao, b.fase, b.cat, b.foto, { geo: b.geo });
         return json({ ok: !!op });
+      }
+      if (pathname === '/operacao/lote/triagem' && request.method === 'GET') {
+        if (!operacao) return new Response(null, { status: 302, headers: { Location: '/operacao', 'cache-control': 'no-store' } });
+        const op = await lerOperacao(env, url.searchParams.get('id') || '');
+        if (!op) return html(paginaMensagem('Operação não encontrada', 'Volte e receba o lote de novo.'), 404);
+        return html(paginaTriagem(operacao, op));
+      }
+      if (pathname === '/api/operacao/material' && request.method === 'POST') {
+        if (!operacao) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = null; }
+        if (!b || !b.osId) return json({ ok: false, error: 'dados' }, 400);
+        const op = await adicionarMaterial(env, b.osId, operacao, b);
+        return json({ ok: !!op });
+      }
+      if (pathname === '/api/operacao/material/remover' && request.method === 'POST') {
+        if (!operacao) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        const form = await request.formData().catch(() => null);
+        const osId = form ? String(form.get('osId') || '') : '';
+        await removerMaterial(env, osId, form ? form.get('idx') : -1);
+        return new Response(null, { status: 302, headers: { Location: `/operacao/lote/triagem?id=${encodeURIComponent(osId)}`, 'cache-control': 'no-store' } });
+      }
+      if (pathname === '/api/operacao/triagem/concluir' && request.method === 'POST') {
+        if (!operacao) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        const form = await request.formData().catch(() => null);
+        const osId = form ? String(form.get('osId') || '') : '';
+        await concluirTriagem(env, osId);
+        return new Response(null, { status: 302, headers: { Location: `/operacao/lote?id=${encodeURIComponent(osId)}`, 'cache-control': 'no-store' } });
       }
 
       // Área de validação da Villanova (exige sessão de validador).
