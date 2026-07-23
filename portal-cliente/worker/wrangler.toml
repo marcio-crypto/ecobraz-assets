@@ -17,6 +17,13 @@ enabled = true
 binding = "PORTAL_KV"
 id = "edd3746ffe5a49d585c60d99c18a25c7"
 
+# Endereço OFICIAL do sistema (domínio próprio na Cloudflare: Worker "ecobraz-portal").
+# Fixa todos os links (login por e-mail, retorno do Google, QR de validação) neste domínio.
+# Se um dia mudar o domínio, basta trocar aqui. Não é segredo — é uma URL pública.
+[vars]
+PORTAL_BASE_URL = "https://sistema.ecobraz.org"
+PORTAL_URL = "https://sistema.ecobraz.org"
+
 # ---------------------------------------------------------------------------
 # Segredos e variáveis (definidos NA CLOUDFLARE, nunca no repositório):
 #
