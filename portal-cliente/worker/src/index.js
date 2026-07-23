@@ -38,7 +38,7 @@ import { lerValidacao, registrarValidacao, paginaAreaValidacao, qrMetodologia, v
 import { paginaPainelCarbono } from './carbono-painel.js';
 import { agentePermitido, nomeAgente, listarColetas, paginaLoginAgente, paginaAppAgente, detalheColeta, lerEstadoColeta, registrarCheckin, registrarFoto, servirFotoColeta, paginaColetaDetalhe } from './agente.js';
 import { operadorPermitido, nomeOperador, listarOperacoes, listarColetasRecebiveis, iniciarOperacao, lerOperacao, definirTipoOperacao, registrarPesoEntrada, registrarFotoOperacao, servirFotoOperacao, paginaLoginOperacao, paginaAppOperacao, paginaReceberLote, paginaLoteDetalhe, adicionarMaterial, removerMaterial, concluirTriagem, paginaTriagem, paginaProcessamento, concluirProcessamento, paginaSaida, registrarSaida, concluirSaida } from './operacional.js';
-import { engenheiroPermitido, nomeEngenheiro, filaValidacao, operacoesValidadas, lerValidacaoOp, registrarValidacaoOp, paginaLoginEng, paginaFilaEng, paginaDossie, qrOperacao, validarOperacaoPublico, listarDestinos, lerDestino, salvarDestino, paginaDestinos, paginaDestinoForm } from './engenharia.js';
+import { engenheiroPermitido, nomeEngenheiro, filaValidacao, operacoesValidadas, lerValidacaoOp, registrarValidacaoOp, paginaLoginEng, paginaFilaEng, paginaDossie, qrOperacao, validarOperacaoPublico, listarDestinos, lerDestino, salvarDestino, paginaDestinos, paginaDestinoForm, paginaRelatorio } from './engenharia.js';
 
 export default {
   async fetch(request, env) {
@@ -46,7 +46,7 @@ export default {
     const { pathname } = url;
     try {
       if (pathname === '/health') return json({
-        ok: true, service: 'ecobraz-portal', version: 23,
+        ok: true, service: 'ecobraz-portal', version: 24,
         // Só presença (true/false) — NUNCA os valores. Ajuda a confirmar a
         // configuração pelo navegador sem expor segredo nenhum.
         config: {
@@ -358,6 +358,14 @@ export default {
         if (!form || !String(form.get('cnpj') || '').replace(/\D/g, '')) return html(paginaMensagem('CNPJ obrigatório', 'Volte e informe o CNPJ do destino.'), 400);
         await salvarDestino(env, eng, { razaoSocial: form.get('razaoSocial'), cnpj: form.get('cnpj'), tipo: form.get('tipo'), endereco: form.get('endereco'), lo: form.get('lo'), loValidade: form.get('loValidade'), validado: form.get('validado') });
         return new Response(null, { status: 302, headers: { Location: '/eng/destinos', 'cache-control': 'no-store' } });
+      }
+      if (pathname === '/eng/relatorio' && request.method === 'GET') {
+        if (!eng) return new Response(null, { status: 302, headers: { Location: '/eng', 'cache-control': 'no-store' } });
+        const op = await lerOperacao(env, url.searchParams.get('id') || '');
+        if (!op) return html(paginaMensagem('Operação não encontrada', 'Volte para a fila.'), 404);
+        const val = await lerValidacaoOp(env, op.osId);
+        const seloUrl = (op.etapa === 'concluida') ? `/qr-operacao?id=${encodeURIComponent(op.osId)}` : null;
+        return html(paginaRelatorio(op, val, await listarDestinos(env), seloUrl));
       }
 
       // Área de validação da Villanova (exige sessão de validador).

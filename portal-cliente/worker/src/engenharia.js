@@ -137,6 +137,7 @@ export function paginaDossie(eng, op, validacao, seloUrl) {
           </div>
           ${seloUrl ? `<div style="text-align:center"><img src="${esc(seloUrl)}" alt="QR de verificação" style="width:120px;height:120px"><div style="font-size:10px;color:#7c8a87;margin-top:4px">Verificação pública</div></div>` : ''}
         </div>
+        <a href="/eng/relatorio?id=${esc(op.osId)}" target="_blank" rel="noopener" class="btn dark" style="margin:16px 0 0">📄 Gerar relatório de conformidade (PDF)</a>
       </div>`
     : `<div class="card">
         <div class="eyebrow">Validação técnica (RT)</div>
@@ -303,5 +304,84 @@ export function paginaDestinoForm(eng, destino) {
     <button class="btn dark" style="margin-top:16px">Salvar destino</button>
   </form>
   <div style="font-size:11px;color:#9aa7a4;text-align:center">A homologação atesta que a Engenharia auditou a licença ambiental do destino. Destinos com LO vencida entram como alerta.</div>
+</div></body></html>`;
+}
+
+// ---------------------------------------------------------------------------
+// Relatório final de conformidade (documento imprimível / PDF, à prova de auditoria)
+// ---------------------------------------------------------------------------
+export function paginaRelatorio(op, validacao, destinos, seloUrl) {
+  const b = balanco(op);
+  let emissao = ''; try { emissao = new Date().toLocaleDateString('pt-BR'); } catch { emissao = ''; }
+  const tiposUsados = [...new Set((op.materiais || []).map((m) => m.destino))];
+  const destinacao = tiposUsados.map((t) => {
+    const usinas = (destinos || []).filter((d) => d.tipo === t && destinoStatus(d) === 'validado');
+    return { tipo: t, kg: b.porDestino[t] || 0, usinas };
+  });
+  const matRows = (op.materiais || []).map((m) => `<tr><td>${esc(m.rotulo)}</td><td>${esc(m.ibama || '—')}</td><td>${esc(m.classe)}</td><td style="text-align:right">${String(m.qtd).replace('.', ',')} kg</td><td>${esc(DESTINOS[m.destino] || m.destino)}</td></tr>`).join('');
+  const destRows = destinacao.map((d) => `<tr><td>${esc(DESTINOS[d.tipo] || d.tipo)}</td><td style="text-align:right">${String(Math.round(d.kg * 100) / 100).replace('.', ',')} kg</td><td>${d.usinas.length ? d.usinas.map((u) => esc(u.razaoSocial || u.cnpj) + ' (LO ' + esc(u.lo || '—') + ')').join('; ') : '<span style="color:#B23A2E">destino homologado pendente</span>'}</td></tr>`).join('');
+  const fotos = Object.keys(FASES).map((fase) => {
+    const fs = (op.fotos && op.fotos[fase]) || {};
+    const imgs = FASES[fase].fotos.filter((f) => fs[f.id]).map((f) => `<div style="width:31%"><img src="/eng/foto?id=${esc(op.osId)}&fase=${fase}&cat=${f.id}" style="width:100%;height:90px;object-fit:cover;border:1px solid #ccc;border-radius:6px"><div style="font-size:8.5px;color:#666;margin-top:2px">${esc(f.rotulo)} · ${dataHora(fs[f.id].em)}${fs[f.id].geo ? ' · GPS✓' : ''}</div></div>`).join('');
+    return imgs ? `<div style="margin-bottom:8px"><div style="font-size:10px;font-weight:800;color:#00333B;margin-bottom:4px">${esc(FASES[fase].rotulo)}</div><div style="display:flex;flex-wrap:wrap;gap:6px">${imgs}</div></div>` : '';
+  }).join('');
+  const S = (v) => String(v).replace('.', ',');
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Relatório de Conformidade — OS ${esc(op.numero)}</title>
+<style>
+  *{box-sizing:border-box}body{margin:0;background:#EEF1F0;font-family:Arial,Helvetica,sans-serif;color:#1f2933}
+  .bar{position:sticky;top:0;background:#00333B;padding:10px 16px;display:flex;justify-content:space-between;align-items:center}
+  .bar b{color:#fff;font-size:13px}.pbtn{background:#92C430;color:#10262B;border:none;border-radius:8px;padding:9px 16px;font-weight:800;font-size:13px;cursor:pointer}
+  .doc{max-width:800px;margin:16px auto;background:#fff;padding:34px 40px;box-shadow:0 8px 30px rgba(0,0,0,.1)}
+  .hd{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #92C430;padding-bottom:14px;margin-bottom:18px}
+  .hd .lg{font-size:24px;font-weight:800;color:#00333B}.hd .lg span{color:#3f8f3a}
+  h1{font-size:16px;color:#00333B;margin:0 0 2px}.sub{font-size:11px;color:#666}
+  .sec{font-size:11px;font-weight:800;color:#00333B;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #e2e8f0;padding-bottom:5px;margin:20px 0 10px}
+  table{width:100%;border-collapse:collapse;font-size:11.5px}th{text-align:left;color:#666;font-size:9.5px;text-transform:uppercase;padding:5px 6px;border-bottom:1px solid #e2e8f0}td{padding:6px;border-bottom:1px solid #eef1f0}
+  .grid{display:flex;gap:14px;flex-wrap:wrap}.box{flex:1;min-width:150px;background:#F7FaF6;border:1px solid #e2e8f0;border-radius:8px;padding:10px}.box b{display:block;font-size:16px;color:#00333B}.box span{font-size:10px;color:#666}
+  .ok{color:#1E7A3D;font-weight:700}.bad{color:#B23A2E;font-weight:700}
+  .val{display:flex;gap:16px;align-items:center;background:#F5FBF1;border:1px solid #cfe6be;border-radius:8px;padding:14px;margin-top:8px;flex-wrap:wrap}
+  .foot{margin-top:22px;padding-top:12px;border-top:1px solid #e2e8f0;font-size:9.5px;color:#888;line-height:1.5}
+  @media print{.bar{display:none}body{background:#fff}.doc{box-shadow:none;margin:0;max-width:100%;padding:0}}
+</style></head><body>
+<div class="bar noprint"><b>Relatório de Conformidade · OS ${esc(op.numero)}</b><button class="pbtn" onclick="window.print()">🖨 Imprimir / Salvar PDF</button></div>
+<div class="doc">
+  <div class="hd">
+    <div><div class="lg">ecobraz<span> emigre</span></div><div class="sub" style="margin-top:4px">Associação Auxílio à Reciclagem de Eletrônicos e Inclusão Digital</div></div>
+    <div style="text-align:right"><h1>Relatório de Conformidade Ambiental</h1><div class="sub">Nº da operação: <b>${esc(op.numero)}</b> · Emissão: ${esc(emissao)}</div></div>
+  </div>
+
+  <div class="sec">Partes</div>
+  <div class="grid">
+    <div class="box"><span>Gerador (cliente)</span><b style="font-size:13px">${esc(op.cliente || '—')}</b></div>
+    <div class="box"><span>Destinador</span><b style="font-size:13px">Ecobraz (aterro zero)</b><span>Atendimento: ${op.tipo === 'pago' ? 'Pago / laudo' : 'Padrão'}</span></div>
+  </div>
+
+  <div class="sec">Balanço de massa</div>
+  <div class="grid">
+    <div class="box"><span>Entrada (pesada)</span><b>${S(b.entrada)} kg</b></div>
+    <div class="box"><span>Saída (pesada)</span><b>${S(b.saida)} kg</b></div>
+    <div class="box"><span>Diferença</span><b>${b.saida > 0 ? (Math.round(b.pct * 1000) / 10) + '%' : '—'}</b><span class="${b.fecha ? 'ok' : 'bad'}">${b.fecha ? '✓ fecha em ±2%' : (op.saida && op.saida.justificativa ? 'justificado' : 'fora de ±2%')}</span></div>
+  </div>
+  ${op.saida && op.saida.justificativa ? `<div style="font-size:10.5px;color:#666;margin-top:8px">Justificativa da diferença: “${esc(op.saida.justificativa)}”.</div>` : ''}
+
+  <div class="sec">Detalhamento dos resíduos (Tabela IBAMA)</div>
+  <table><thead><tr><th>Material</th><th>Cód. IBAMA</th><th>Classe</th><th>Quantidade</th><th>Destino</th></tr></thead><tbody>${matRows || '<tr><td colspan="5">—</td></tr>'}</tbody></table>
+
+  <div class="sec">Destinação final (aterro zero)</div>
+  <table><thead><tr><th>Tipo</th><th>Quantidade</th><th>Usina(s) homologada(s)</th></tr></thead><tbody>${destRows || '<tr><td colspan="3">—</td></tr>'}</tbody></table>
+
+  <div class="sec">Evidências fotográficas (3 fases, carimbadas com OS · data/hora · GPS)</div>
+  ${fotos || '<div style="font-size:11px;color:#888">Sem fotos.</div>'}
+
+  <div class="sec">Validação técnica</div>
+  ${validacao && validacao.decisao === 'validada'
+    ? `<div class="val"><div style="flex:1;min-width:200px"><div class="ok" style="font-size:14px">✓ Operação validada pela Engenharia Ambiental</div>
+        <div style="font-size:11.5px;margin-top:6px">Responsável Técnico: <b>${esc(validacao.rt || '—')}</b>${validacao.registro ? ' · ' + esc(validacao.registro) : ''}</div>
+        <div style="font-size:10.5px;color:#666">em ${esc(dataHora(validacao.em))}</div>
+        ${validacao.comentario ? `<div style="font-size:10.5px;color:#555;margin-top:6px;font-style:italic">“${esc(validacao.comentario)}”</div>` : ''}</div>
+        ${seloUrl ? `<div style="text-align:center"><img src="${esc(seloUrl)}" style="width:96px;height:96px"><div style="font-size:8.5px;color:#666">Verificação: escaneie o QR</div></div>` : ''}</div>`
+    : '<div class="bad" style="font-size:12px">Operação ainda não validada.</div>'}
+
+  <div class="foot">Documento gerado pelo sistema Ecobraz a partir do registro operacional rastreável (recepção, triagem, processamento e saída). A destinação segue a Política Nacional de Resíduos Sólidos (Lei nº 12.305/2010). Autenticidade verificável pelo QR de validação. Ecobraz é aterro zero: o material não reciclável é encaminhado a incineração/coprocessamento em usinas homologadas.</div>
 </div></body></html>`;
 }
