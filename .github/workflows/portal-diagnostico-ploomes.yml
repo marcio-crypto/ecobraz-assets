@@ -154,6 +154,15 @@ jobs:
           PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
           PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
         run: node portal-cliente/diagnostico/inspeciona-orders.mjs
+      - name: Cadastra agente de teste (AGENTE_EMAILS) — quando sonda = cadastra-agente
+        if: ${{ github.event.inputs.sonda == 'cadastra-agente' }}
+        working-directory: portal-cliente/worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          npm install --no-audit --no-fund
+          printf '%s' "marcio@ecobraz.org.br|Marcio (teste)" | npx wrangler@3 secret put AGENTE_EMAILS
       - name: Ligar aviso por e-mail (provisiona webhook + segredo) — quando sonda = provisiona-aviso
         if: ${{ github.event.inputs.sonda == 'provisiona-aviso' }}
         working-directory: portal-cliente/worker
