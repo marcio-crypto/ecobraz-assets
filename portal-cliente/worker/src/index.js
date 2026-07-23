@@ -21,6 +21,7 @@
 const SESSAO_COOKIE = 'portal_sessao';
 const VALIDADOR_COOKIE = 'portal_validador';
 const AGENTE_COOKIE = 'portal_agente';
+const OPERACAO_COOKIE = 'portal_operacao';
 const SESSAO_TTL_S = 8 * 60 * 60;       // 8 horas
 const LINK_TTL_S = 15 * 60;             // 15 minutos
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' };
@@ -35,6 +36,7 @@ import { paginaMetodologia } from './carbono-metodologia.js';
 import { lerValidacao, registrarValidacao, paginaAreaValidacao, qrMetodologia, validarMetodologiaPublico } from './validacao-metodologia.js';
 import { paginaPainelCarbono } from './carbono-painel.js';
 import { agentePermitido, nomeAgente, listarColetas, paginaLoginAgente, paginaAppAgente, detalheColeta, lerEstadoColeta, registrarCheckin, registrarFoto, servirFotoColeta, paginaColetaDetalhe } from './agente.js';
+import { operadorPermitido, nomeOperador, listarOperacoes, listarColetasRecebiveis, iniciarOperacao, lerOperacao, definirTipoOperacao, registrarPesoEntrada, registrarFotoOperacao, servirFotoOperacao, paginaLoginOperacao, paginaAppOperacao, paginaReceberLote, paginaLoteDetalhe } from './operacional.js';
 
 export default {
   async fetch(request, env) {
@@ -42,7 +44,7 @@ export default {
     const { pathname } = url;
     try {
       if (pathname === '/health') return json({
-        ok: true, service: 'ecobraz-portal', version: 17,
+        ok: true, service: 'ecobraz-portal', version: 18,
         // Só presença (true/false) — NUNCA os valores. Ajuda a confirmar a
         // configuração pelo navegador sem expor segredo nenhum.
         config: {
@@ -60,6 +62,7 @@ export default {
           avisoModoTeste: env.NOTIF_MODO_TESTE === '1', // true = só contato de teste; false = vale p/ todos
           validacaoCDF: true, // /qr e /validar (QR anti-fraude no CDF)
           agenteColetas: !!env.AGENTE_EMAILS, // app do agente ligado (há agentes cadastrados)
+          operacao: !!env.OPERACAO_EMAILS, // módulo operacional (doca) ligado
         },
       });
 
@@ -151,11 +154,16 @@ export default {
       if (pathname === '/api/agente/entrar' && request.method === 'POST') return await solicitarLinkAgente(request, env);
       if (pathname === '/entrar-agente' && request.method === 'GET') return await entrarComTokenAgente(request, env, url);
       if (pathname === '/api/agente/sair' && request.method === 'POST') return sairAgente();
+      // Acesso do OPERADOR (módulo operacional / doca). Login próprio; equipe interna da Ecobraz.
+      if (pathname === '/api/operacao/entrar' && request.method === 'POST') return await solicitarLinkOperacao(request, env);
+      if (pathname === '/entrar-operacao' && request.method === 'GET') return await entrarComTokenOperacao(request, env, url);
+      if (pathname === '/api/operacao/sair' && request.method === 'POST') return sairOperacao();
 
-      // Sessões independentes: cliente, validador (Villanova) e agente de coletas.
+      // Sessões independentes: cliente, validador (Villanova), agente de coletas e operador (doca).
       const sessao = await lerSessao(request, env);
       const validador = await lerSessaoValidador(request, env);
       const agente = await lerSessaoAgente(request, env);
+      const operacao = await lerSessaoOperacao(request, env);
 
       // App do agente de coletas.
       if (pathname === '/agente' && request.method === 'GET') {
@@ -186,6 +194,56 @@ export default {
         if (!b || !b.id || !b.foto) return json({ ok: false, error: 'dados' }, 400);
         await registrarFoto(env, b.id, agente, b.foto);
         return json({ ok: true });
+      }
+
+      // Módulo OPERACIONAL (doca → destino). Exige sessão de operador.
+      if (pathname === '/operacao' && request.method === 'GET') {
+        if (!operacao) return html(paginaLoginOperacao());
+        return html(paginaAppOperacao(operacao, await listarOperacoes(env)));
+      }
+      if (pathname === '/operacao/receber' && request.method === 'GET') {
+        if (!operacao) return new Response(null, { status: 302, headers: { Location: '/operacao', 'cache-control': 'no-store' } });
+        return html(paginaReceberLote(await listarColetasRecebiveis(env)));
+      }
+      if (pathname === '/operacao/lote' && request.method === 'GET') {
+        if (!operacao) return new Response(null, { status: 302, headers: { Location: '/operacao', 'cache-control': 'no-store' } });
+        const op = await lerOperacao(env, url.searchParams.get('id') || '');
+        if (!op) return html(paginaMensagem('Operação não encontrada', 'Volte e receba o lote de novo.'), 404);
+        return html(paginaLoteDetalhe(operacao, op));
+      }
+      if (pathname === '/operacao/foto' && request.method === 'GET') {
+        if (!operacao) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        return await servirFotoOperacao(env, url.searchParams.get('id') || '', url.searchParams.get('fase') || '', url.searchParams.get('cat') || '');
+      }
+      if (pathname === '/api/operacao/iniciar' && request.method === 'POST') {
+        if (!operacao) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        const form = await request.formData().catch(() => null);
+        const osId = form ? String(form.get('osId') || '') : '';
+        if (!osId) return html(paginaMensagem('Lote inválido', 'Volte e escolha de novo.'), 400);
+        const op = await iniciarOperacao(env, osId, operacao);
+        if (!op) return html(paginaMensagem('Não consegui abrir a operação', 'Tente de novo em instantes.'), 502);
+        return new Response(null, { status: 302, headers: { Location: `/operacao/lote?id=${encodeURIComponent(osId)}`, 'cache-control': 'no-store' } });
+      }
+      if (pathname === '/api/operacao/tipo' && request.method === 'POST') {
+        if (!operacao) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = null; }
+        if (!b || !b.osId) return json({ ok: false, error: 'dados' }, 400);
+        await definirTipoOperacao(env, b.osId, b.tipo);
+        return json({ ok: true });
+      }
+      if (pathname === '/api/operacao/peso' && request.method === 'POST') {
+        if (!operacao) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = null; }
+        if (!b || !b.osId || b.kg == null) return json({ ok: false, error: 'dados' }, 400);
+        await registrarPesoEntrada(env, b.osId, operacao, b.kg);
+        return json({ ok: true });
+      }
+      if (pathname === '/api/operacao/foto' && request.method === 'POST') {
+        if (!operacao) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = null; }
+        if (!b || !b.osId || !b.fase || !b.cat || !b.foto) return json({ ok: false, error: 'dados' }, 400);
+        const op = await registrarFotoOperacao(env, b.osId, operacao, b.fase, b.cat, b.foto, { geo: b.geo });
+        return json({ ok: !!op });
       }
 
       // Área de validação da Villanova (exige sessão de validador).
@@ -453,6 +511,45 @@ async function lerSessaoAgente(request, env) {
   return { email: payload.em, nome: nomeAgente(payload.em, env), role: 'agente' };
 }
 function cookieAgente(valor, maxAge) { return `${AGENTE_COOKIE}=${encodeURIComponent(valor)}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${maxAge}`; }
+
+// ---------------------------------------------------------------------------
+// Acesso do OPERADOR (módulo operacional / doca) — login próprio por link mágico
+// ---------------------------------------------------------------------------
+async function solicitarLinkOperacao(request, env) {
+  const generica = json({ ok: true, message: 'Se o e-mail estiver cadastrado, enviamos um link de acesso.' });
+  let input; try { input = await request.json(); } catch { return generica; }
+  const email = String(input?.email || '').trim().toLowerCase();
+  if (!/^\S+@\S+\.\S+$/.test(email) || !operadorPermitido(email, env)) { console.log('operador_barrado'); return generica; }
+  if (env.PORTAL_KV) { const chave = `throttle:op:${email}`; if (await env.PORTAL_KV.get(chave)) return generica; await env.PORTAL_KV.put(chave, '1', { expirationTtl: 60 }); }
+  const token = await criarToken({ em: email, tipo: 'login_operacao' }, LINK_TTL_S, env);
+  if (env.PORTAL_KV) await env.PORTAL_KV.put(`nonce:${token.nonce}`, '1', { expirationTtl: LINK_TTL_S });
+  const linkBase = env.PORTAL_BASE_URL || new URL(request.url).origin;
+  const link = `${linkBase.replace(/\/+$/, '')}/entrar-operacao?token=${encodeURIComponent(token.valor)}`;
+  try { await enviarEmailLogin({ nome: nomeOperador(email, env), email }, link, env); console.log('operador_email_ok'); }
+  catch (error) { console.error('operador_email_falhou', safeError(error)); }
+  return generica;
+}
+async function entrarComTokenOperacao(request, env, url) {
+  const payload = await verificarToken(url.searchParams.get('token') || '', env);
+  if (!payload || payload.tipo !== 'login_operacao') return html(paginaMensagem('Link inválido ou expirado', 'Peça um novo link de acesso.'), 400);
+  if (env.PORTAL_KV) {
+    const existe = await env.PORTAL_KV.get(`nonce:${payload.n}`);
+    if (!existe) return html(paginaMensagem('Este link já foi usado', 'Por segurança, cada link vale uma vez. Peça um novo.'), 400);
+    await env.PORTAL_KV.delete(`nonce:${payload.n}`);
+  }
+  if (!operadorPermitido(payload.em, env)) return html(paginaMensagem('Acesso indisponível', 'E-mail não cadastrado na operação.'), 403);
+  const sessao = await criarToken({ em: payload.em, tipo: 'sessao_operacao' }, SESSAO_TTL_S, env);
+  return new Response(null, { status: 302, headers: { Location: '/operacao', 'Set-Cookie': cookieOperacao(sessao.valor, SESSAO_TTL_S) } });
+}
+function sairOperacao() { return new Response(null, { status: 302, headers: { Location: '/operacao', 'Set-Cookie': cookieOperacao('', 0) } }); }
+async function lerSessaoOperacao(request, env) {
+  const cookie = (request.headers.get('Cookie') || '').split(';').map((s) => s.trim()).find((s) => s.startsWith(`${OPERACAO_COOKIE}=`));
+  if (!cookie) return null;
+  const payload = await verificarToken(decodeURIComponent(cookie.slice(OPERACAO_COOKIE.length + 1)), env);
+  if (!payload || payload.tipo !== 'sessao_operacao' || !operadorPermitido(payload.em, env)) return null;
+  return { email: payload.em, nome: nomeOperador(payload.em, env), role: 'operacao' };
+}
+function cookieOperacao(valor, maxAge) { return `${OPERACAO_COOKIE}=${encodeURIComponent(valor)}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${maxAge}`; }
 
 // ---------------------------------------------------------------------------
 // Ploomes: portão de acesso (contrato) e leitura/escrita de OS
