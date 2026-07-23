@@ -37,7 +37,7 @@ export default {
     const { pathname } = url;
     try {
       if (pathname === '/health') return json({
-        ok: true, service: 'ecobraz-portal', version: 10,
+        ok: true, service: 'ecobraz-portal', version: 11,
         // Só presença (true/false) — NUNCA os valores. Ajuda a confirmar a
         // configuração pelo navegador sem expor segredo nenhum.
         config: {
@@ -129,11 +129,15 @@ export default {
       // Validação pública de CDF (anti-fraude): QR no certificado -> confere contra o Ploomes.
       if (pathname === '/qr' && request.method === 'GET') return await qrCDF(request, env, url);
       if (pathname === '/validar' && request.method === 'GET') return await validarCDF(request, env, url);
-      // Metodologia de carbono (superfície compartilhada: auditor + Villanova). Read-only nesta fase.
-      if (pathname === '/metodologia' && request.method === 'GET') return html(paginaMetodologia(env));
 
       // Dali para baixo, exige sessão válida.
       const sessao = await lerSessao(request, env);
+      // Metodologia de carbono — FECHADA (proteção contra concorrente). Só quem está logado vê a
+      // "receita"; o selo público (/validar) confirma a validação sem expor o conteúdo.
+      if (pathname === '/metodologia' && request.method === 'GET') {
+        if (!sessao) return new Response(null, { status: 302, headers: { Location: '/', 'cache-control': 'no-store' } });
+        return html(paginaMetodologia(env));
+      }
       if (pathname === '/api/os' && request.method === 'GET') {
         if (!sessao) return json({ ok: false, error: 'nao_autenticado' }, 401);
         return await listarOS(sessao, env);
