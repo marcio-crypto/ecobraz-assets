@@ -38,6 +38,14 @@ export const FASES = {
       { id: 'lacre', rotulo: 'Lacre de transporte (se houver)', obrig: false },
     ],
   },
+  meio: {
+    rotulo: 'Processamento / Descaracterização',
+    fotos: [
+      { id: 'material_maquina', rotulo: 'Material na máquina (em operação)', obrig: true },
+      { id: 'inutilizacao', rotulo: 'Inutilização / fragmentação', obrig: true },
+      { id: 'destruicao_dados', rotulo: 'Destruição de dados (R2/R3)', obrig: false, soPago: true },
+    ],
+  },
 };
 
 // --- Persistência (KV) ---
@@ -117,6 +125,27 @@ export function inicioCompleto(op) {
   if (!op || !op.entrada || !(op.entrada.pesoKg > 0)) return false;
   const fs = (op.fotos && op.fotos.inicio) || {};
   return FASES.inicio.fotos.filter((f) => f.obrig).every((f) => fs[f.id]);
+}
+export const triagemCompleta = (op) => !!(op && (op.materiais || []).length);
+// Fase MEIO: fotos obrigatórias + (se Pago/laudo) a destruição de dados R2/R3.
+export function meioCompleto(op) {
+  if (!op) return false;
+  const fs = (op.fotos && op.fotos.meio) || {};
+  const req = FASES.meio.fotos.filter((f) => f.obrig || (f.soPago && op.tipo === 'pago'));
+  return req.every((f) => fs[f.id]);
+}
+export async function concluirProcessamento(env, osId) {
+  const op = await lerOperacao(env, osId); if (!op) return null;
+  if (meioCompleto(op)) { op.etapa = 'saida'; await salvarOperacao(env, op); }
+  return op;
+}
+// Linha de navegação entre as etapas (usada no "hub" da operação).
+function etapaLink(rotulo, href, desbloqueado, feito, nota) {
+  const pill = feito
+    ? `<span class="pill" style="background:#E4F3E6;color:#1E5B31">✓ feito</span>`
+    : (desbloqueado ? `<span class="pill" style="background:#E3F0F3;color:#0B5B66">a fazer</span>` : `<span class="pill" style="background:#EEF1F0;color:#9aa7a4">${esc(nota || 'bloqueado')}</span>`);
+  const inner = `<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-top:1px solid #EEF1F0"><div style="font-size:13.5px;font-weight:700;color:${desbloqueado ? '#10262B' : '#9aa7a4'}">${esc(rotulo)}${desbloqueado && !feito ? ' →' : ''}</div>${pill}</div>`;
+  return desbloqueado ? `<a href="${esc(href)}" style="text-decoration:none;display:block">${inner}</a>` : inner;
 }
 
 // --- Páginas ---
@@ -236,8 +265,13 @@ export function paginaLoteDetalhe(operador, op) {
     <div style="font-size:13px;font-weight:700;color:${okInicio ? '#2f6d12' : '#8A6A16'}">${okInicio ? '✓ Recepção completa — pronta para a triagem' : '⚠ Faltam o peso e/ou as fotos obrigatórias'}</div>
   </div>
 
-  ${okInicio ? `<a href="/operacao/lote/triagem?id=${esc(op.osId)}" class="btn dark">➡ Ir para a Triagem</a>` : `<button class="btn muted" disabled>➡ Ir para a Triagem</button>`}
-  <div style="text-align:center;font-size:10px;color:#9aa7a4;margin-top:-2px">Processamento, saída e balanço de massa entram nas próximas fatias.</div>
+  <div class="card">
+    <div class="eyebrow">Etapas da operação</div>
+    ${etapaLink('Triagem — classificação', `/operacao/lote/triagem?id=${esc(op.osId)}`, okInicio, triagemCompleta(op))}
+    ${etapaLink('Processamento — Fase 2 (R2/R3)', `/operacao/lote/processamento?id=${esc(op.osId)}`, triagemCompleta(op), meioCompleto(op))}
+    ${etapaLink('Saída + balanço de massa', '#', false, false, 'em breve')}
+    ${etapaLink('Validação (Eng. Ambiental)', '#', false, false, 'em breve')}
+  </div>
   <div id="msg" style="text-align:center;font-size:12px;color:#4F6469;min-height:16px;margin-top:8px"></div>
 </div>
 <script>
@@ -381,5 +415,70 @@ export function paginaTriagem(operador, op) {
     try{ const r=await fetch('/api/operacao/material',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({osId:OS,rotulo:rotulo,ibama:ib.value,classe:cl.value,qtd:qtd,destino:de.value})});
       if(r.ok) location.reload(); else msg.textContent='Falha ao salvar. Tente de novo.';
     }catch{ msg.textContent='Sem conexão. Tente de novo.'; } }
+</script></body></html>`;
+}
+
+// ---------------------------------------------------------------------------
+// Slice 3: Processamento / Descaracterização (fotos Fase 2 — MEIO; R2/R3 se Pago)
+// ---------------------------------------------------------------------------
+export function paginaProcessamento(operador, op) {
+  const fs = (op.fotos && op.fotos.meio) || {};
+  const pago = op.tipo === 'pago';
+  const slots = FASES.meio.fotos.filter((f) => !f.soPago || pago);
+  const ok = meioCompleto(op);
+  const linhaFotos = slots.map((f) => {
+    const feito = fs[f.id];
+    const obrig = f.obrig || (f.soPago && pago);
+    const cls = feito ? 'done' : (obrig ? 'primary' : 'ghost');
+    const marca = feito ? `✓ ${esc(f.rotulo)} — ${hhmm(feito.em)}` : `📷 ${esc(f.rotulo)}${obrig ? '' : ' (opcional)'}`;
+    const img = feito ? `<img src="/operacao/foto?id=${esc(op.osId)}&fase=meio&cat=${f.id}" style="width:100%;border-radius:10px;margin:6px 0 12px;border:1px solid #E4EBE9">` : '';
+    return `<label class="btn ${cls}">${marca}<input type="file" accept="image/*" capture="environment" data-cat="${f.id}" class="fp" style="display:none"></label>${img}`;
+  }).join('');
+  return `${head('Processamento OS ' + op.numero)}
+<div class="top"><a href="/operacao/lote?id=${esc(op.osId)}" style="color:#9FC6C1;font-size:12px;font-weight:800;letter-spacing:.08em;text-decoration:none">← PROCESSAMENTO OS ${esc(op.numero)}</a>
+  <div style="color:#fff;font-size:19px;font-weight:800;margin-top:8px">${esc(op.cliente || 'Cliente')}</div>
+  <div style="color:#9FC6C1;font-size:12px;margin-top:4px">Processamento / descaracterização · Fase 2 (Meio)</div></div>
+<div class="wrap">
+  <div class="card" style="background:#FBFCFB">
+    <div class="eyebrow">Objetivo</div>
+    <div style="font-size:13px;color:#4F6469;line-height:1.6">Provar a <b>inutilização física irreversível</b> do material.${pago ? ' Como é <b>Pago/laudo</b>, inclua a foto da <b>destruição de dados (R2/R3)</b>.' : ''}</div>
+  </div>
+  <div class="card">
+    <div class="eyebrow">Fotos do processamento (marca d'água automática: OS · data/hora · GPS)</div>
+    ${linhaFotos}
+    <div style="font-size:11px;color:#9aa7a4">Obrigatórias: material na máquina e inutilização${pago ? ' + destruição de dados' : ''}.</div>
+  </div>
+  <div class="card" style="background:${ok ? '#F0F7EC' : '#FBFCFB'};border-color:${ok ? '#cfe6be' : '#E4EBE9'}">
+    <div class="eyebrow">Conformidade da Fase 2</div>
+    <div style="font-size:13px;font-weight:700;color:${ok ? '#2f6d12' : '#8A6A16'}">${ok ? '✓ Processamento completo — pronto para a Saída' : '⚠ Faltam as fotos obrigatórias'}</div>
+  </div>
+  ${ok
+    ? `<form method="post" action="/api/operacao/processamento/concluir" style="margin:0"><input type="hidden" name="osId" value="${esc(op.osId)}"><button class="btn dark">✓ Concluir processamento → Saída</button></form>`
+    : `<button class="btn muted" disabled>✓ Concluir processamento</button>`}
+  <div style="text-align:center;font-size:10px;color:#9aa7a4;margin-top:2px">A Saída (pesagem por destino + Fase 3) e o fechamento do balanço de massa entram na próxima fatia.</div>
+  <div id="msg" style="text-align:center;font-size:12px;color:#4F6469;min-height:16px;margin-top:8px"></div>
+</div>
+<script>
+  const OS=${JSON.stringify(String(op.osId))}, NUM=${JSON.stringify(String(op.numero))}, msg=document.getElementById('msg');
+  async function post(url,body){ const r=await fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}); if(!r.ok) throw 0; return r; }
+  function geo(){ return new Promise(res=>{ if(!navigator.geolocation) return res(null); navigator.geolocation.getCurrentPosition(p=>res({lat:p.coords.latitude,lon:p.coords.longitude,acc:p.coords.accuracy}),()=>res(null),{enableHighAccuracy:true,timeout:8000,maximumAge:0}); }); }
+  async function carimbar(file){
+    const g=await geo();
+    const img=await createImageBitmap(file); const max=1200; const sc=Math.min(1,max/Math.max(img.width,img.height));
+    const w=Math.round(img.width*sc), h=Math.round(img.height*sc);
+    const cv=document.createElement('canvas'); cv.width=w; cv.height=h; const ctx=cv.getContext('2d'); ctx.drawImage(img,0,0,w,h);
+    const dt=new Date(); const linhas=['ECOBRAZ · OS '+NUM, dt.toLocaleString('pt-BR'), g?('GPS '+g.lat.toFixed(5)+', '+g.lon.toFixed(5)+' (±'+Math.round(g.acc)+'m)'):'GPS indisponível'];
+    const fz=Math.max(12,Math.round(w*0.028)), pad=Math.round(w*0.02), lh=fz+6, barH=linhas.length*lh+pad;
+    ctx.fillStyle='rgba(0,51,59,0.66)'; ctx.fillRect(0,h-barH,w,barH);
+    ctx.fillStyle='#fff'; ctx.textBaseline='top'; ctx.font='700 '+fz+'px Arial';
+    linhas.forEach((t,i)=>{ if(i===1) ctx.font='400 '+fz+'px Arial'; ctx.fillText(t,pad,h-barH+pad/2+i*lh); });
+    return { dataUrl: cv.toDataURL('image/jpeg',0.65), geo: g };
+  }
+  document.querySelectorAll('.fp').forEach(inp=>{
+    inp.onchange=async()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const cat=inp.getAttribute('data-cat'); msg.textContent='Preparando a foto…';
+      try{ const r=await carimbar(f); msg.textContent='Enviando…';
+        await post('/api/operacao/foto',{osId:OS,fase:'meio',cat:cat,foto:r.dataUrl.split(',')[1],geo:r.geo}); location.reload();
+      }catch{ msg.textContent='Não consegui processar a foto. Tente de novo.'; } };
+  });
 </script></body></html>`;
 }
