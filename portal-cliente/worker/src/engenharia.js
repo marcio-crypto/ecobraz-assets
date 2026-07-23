@@ -1,0 +1,225 @@
+// Módulo Engenharia Ambiental — validação técnica das operações (RT CREA/CRQ).
+// O engenheiro revisa o DOSSIÊ completo da operação (pesos, materiais/IBAMA, balanço de massa,
+// e as fotos carimbadas das 3 fases) e VALIDA ou DEVOLVE. Ao validar, gera um registro assinado
+// (HMAC) e um QR público de verificação — o mesmo padrão anti-fraude do selo da Villanova.
+//
+// Fatias seguintes deste módulo: cadastro/auditoria de Destino Final (usinas) e os Relatórios finais.
+
+import qrcode from 'qrcode-generator';
+import { lerOperacao, balanco, FASES, DESTINOS, listarOperacoes, atualizarEtapaOperacao } from './operacional.js';
+
+const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const agora = () => { try { return new Date().toISOString(); } catch { return ''; } };
+const dataHora = (iso) => { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}:\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]} ${m[4]}` : ''; };
+const TE = new TextEncoder();
+function b64url(bytes) { let s = ''; for (const b of bytes) s += String.fromCharCode(b); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+function base64ParaBytes(b64) { const bin = atob(b64); const out = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i); return out; }
+async function hmac(secret, data) {
+  const key = await crypto.subtle.importKey('raw', TE.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  return b64url(new Uint8Array(await crypto.subtle.sign('HMAC', key, TE.encode(data))));
+}
+async function seloCodigoOp(osId, env) {
+  const base = env.PORTAL_SESSION_SECRET || env.PLOOMES_WEBHOOK_SECRET || 'ecobraz-op';
+  return (await hmac(`${base}|op-selo-v1`, `op:${osId}`)).slice(0, 12);
+}
+function origemPortal(env, url) { return String(env.PORTAL_URL || `${url.origin}/`).replace(/\/+$/, ''); }
+
+// --- Registro de engenheiros (env ENG_EMAILS = "email|Nome,email2|Nome2") ---
+export function engenheirosDe(env) {
+  const out = new Map();
+  for (const par of String(env.ENG_EMAILS || '').split(/[,;]+/)) {
+    const [em, nome] = par.split('|');
+    const e = (em || '').trim().toLowerCase();
+    if (e) out.set(e, (nome || '').trim() || e.split('@')[0]);
+  }
+  return out;
+}
+export function engenheiroPermitido(email, env) { return engenheirosDe(env).has(String(email || '').trim().toLowerCase()); }
+export function nomeEngenheiro(email, env) { return engenheirosDe(env).get(String(email || '').trim().toLowerCase()) || String(email || '').split('@')[0]; }
+
+export async function filaValidacao(env) { return (await listarOperacoes(env)).filter((o) => o.etapa === 'validacao'); }
+export async function operacoesValidadas(env) { return (await listarOperacoes(env)).filter((o) => o.etapa === 'concluida'); }
+export async function lerValidacaoOp(env, osId) { if (!env.PORTAL_KV) return null; const raw = await env.PORTAL_KV.get(`opvalidacao:${osId}`); return raw ? JSON.parse(raw) : null; }
+
+export async function registrarValidacaoOp(env, osId, eng, d) {
+  const op = await lerOperacao(env, osId); if (!op) return null;
+  const validar = (d && d.decisao || 'validar') === 'validar';
+  const reg = {
+    decisao: validar ? 'validada' : 'devolvida',
+    rt: String((d && d.rt) || '').slice(0, 80),
+    registro: String((d && d.registro) || '').slice(0, 40),
+    comentario: String((d && d.comentario) || '').slice(0, 600),
+    por: eng.email, em: agora(),
+  };
+  if (env.PORTAL_KV) await env.PORTAL_KV.put(`opvalidacao:${osId}`, JSON.stringify(reg), { expirationTtl: 60 * 60 * 24 * 365 });
+  await atualizarEtapaOperacao(env, osId, validar ? 'concluida' : 'saida', { validacao: { decisao: reg.decisao, rt: reg.rt, registro: reg.registro, em: reg.em, por: eng.email } });
+  return reg;
+}
+
+// --- Páginas ---
+const CSS = `*{box-sizing:border-box}body{margin:0;background:#F2F6F4;min-height:100vh;font-family:Montserrat,'Segoe UI',Arial,Helvetica,sans-serif;color:#10262B}
+.wrap{max-width:760px;margin:0 auto;padding:20px 18px 48px}
+.top{background:#00333B;padding:18px 20px}
+.card{background:#fff;border:1px solid #E4EBE9;border-radius:16px;padding:18px;margin-bottom:16px}
+.eyebrow{font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#7c8a87;margin-bottom:12px}
+.btn{display:block;width:100%;border:none;border-radius:12px;padding:14px;font-size:14px;font-weight:800;text-align:center;cursor:pointer;margin-bottom:10px;text-decoration:none}
+.primary{background:#92C430;color:#10262B}.dark{background:#00333B;color:#fff}.ghost{background:#fff;color:#00333B;border:1.5px solid #cfe0dd}.muted{background:#EEF1F0;color:#9aa7a4}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.kpi{background:#F7FaF6;border:1px solid #E4EBE9;border-radius:12px;padding:12px}
+.kpi b{display:block;font-size:19px;color:#00333B;letter-spacing:-.02em}.kpi span{font-size:10.5px;color:#7c8a87;font-weight:700}
+label.fld{display:block;font-size:12px;font-weight:700;color:#4F6469;margin:12px 0 6px}
+input.txt,textarea.txt,select.txt{width:100%;border:1px solid #DDE1E6;border-radius:11px;padding:12px;font-size:15px;font-family:inherit}
+.tbl{width:100%;border-collapse:collapse;font-size:12.5px}.tbl th{text-align:left;color:#7c8a87;font-size:10px;text-transform:uppercase;letter-spacing:.06em;padding:6px 6px}.tbl td{padding:8px 6px;border-top:1px solid #EEF1F0}
+.fotos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.fotos img{width:100%;height:96px;object-fit:cover;border-radius:9px;border:1px solid #E4EBE9}
+.pill{font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px}
+@media(max-width:560px){.kpis{grid-template-columns:repeat(2,1fr)}.fotos{grid-template-columns:repeat(2,1fr)}}`;
+const head = (t) => `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${esc(t)} — Ecobraz</title><style>${CSS}</style></head><body>`;
+
+export function paginaLoginEng() {
+  return `${head('Engenharia Ambiental')}
+<div style="min-height:100vh;display:flex;align-items:center;background:#00333B">
+  <div style="max-width:420px;margin:0 auto;padding:32px 24px;width:100%">
+    <div style="text-align:center;margin-bottom:26px"><span style="color:#fff;font-size:26px;font-weight:800">ecobraz</span><span style="color:#92C430;font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin-left:8px">engenharia</span></div>
+    <div style="background:#fff;border-radius:18px;padding:26px 22px">
+      <h1 style="margin:0 0 8px;font-size:20px;color:#00333B">Validação técnica</h1>
+      <p style="margin:0 0 16px;font-size:13.5px;color:#4F6469;line-height:1.6">Acesso do Engenheiro Ambiental (RT). Digite seu e-mail — enviamos um link (vale uma vez, 15 min).</p>
+      <input id="e" type="email" inputmode="email" placeholder="seu e-mail" class="txt">
+      <button id="b" class="btn primary" style="margin-top:12px">Entrar</button>
+      <div id="m" style="font-size:13px;color:#4F6469;margin-top:14px"></div>
+    </div>
+  </div>
+</div>
+<script>const b=document.getElementById('b'),e=document.getElementById('e'),m=document.getElementById('m');
+b.onclick=async()=>{b.disabled=true;m.textContent='Enviando…';try{const r=await fetch('/api/eng/entrar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:e.value})});const j=await r.json();m.textContent=j.message||'Se o e-mail estiver cadastrado, enviamos o link.';}catch{m.textContent='Tente de novo.';}b.disabled=false;};
+e.addEventListener('keydown',ev=>{if(ev.key==='Enter')b.click();});</script></body></html>`;
+}
+
+export function paginaFilaEng(eng, fila, validadas) {
+  const item = (o, badge) => `<a href="/eng/lote?id=${esc(o.osId)}" style="display:block;text-decoration:none;background:#fff;border:1px solid #E4EBE9;border-radius:14px;padding:14px 16px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:14px;font-weight:800">OS ${esc(o.numero)}</div>${badge}</div>
+      <div style="font-size:13px;color:#4F6469;margin-top:6px">${esc(o.cliente || 'Cliente')}${o.tipo === 'pago' ? ' · <b style="color:#8A6A16">Pago/laudo</b>' : ''}</div></a>`;
+  const filaHtml = fila.length ? fila.map((o) => item(o, `<span class="pill" style="background:#FFF4DE;color:#8A6A16">aguardando validação</span>`)).join('') : `<div class="card" style="text-align:center;color:#8fa39f;font-size:13.5px">Nenhuma operação aguardando validação.</div>`;
+  const validHtml = (validadas || []).slice(0, 8).map((o) => item(o, `<span class="pill" style="background:#E4F3E6;color:#1E5B31">✓ validada</span>`)).join('');
+  return `${head('Fila de validação')}
+<div class="top"><div style="display:flex;justify-content:space-between;align-items:center">
+  <div><span style="color:#fff;font-size:15px;font-weight:800">Eng. ${esc((eng.nome || '').split(/\s+/)[0] || '')}</span><div style="color:#9FC6C1;font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;margin-top:4px">Ecobraz · Engenharia Ambiental</div></div>
+  <form method="post" action="/api/eng/sair" style="margin:0"><button style="background:#0e4651;color:#cfe3e0;border:1px solid #1c5b66;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700">Sair</button></form>
+</div></div>
+<div class="wrap">
+  <div style="font-size:13px;font-weight:800;margin-bottom:12px">Aguardando validação <span class="pill" style="background:#FFF4DE;color:#8A6A16">${fila.length}</span></div>
+  ${filaHtml}
+  ${validHtml ? `<div style="font-size:13px;font-weight:800;margin:22px 0 12px">Validadas recentemente</div>${validHtml}` : ''}
+</div></body></html>`;
+}
+
+function kpi(v, s) { return `<div class="kpi"><b>${esc(v)}</b><span>${esc(s)}</span></div>`; }
+
+export function paginaDossie(eng, op, validacao, seloUrl) {
+  const b = balanco(op);
+  const validada = op.etapa === 'concluida' && validacao && validacao.decisao === 'validada';
+  const fotosHtml = Object.keys(FASES).map((fase) => {
+    const fs = (op.fotos && op.fotos[fase]) || {};
+    const imgs = FASES[fase].fotos.filter((f) => fs[f.id]).map((f) => `<div><img src="/eng/foto?id=${esc(op.osId)}&fase=${fase}&cat=${f.id}" alt="${esc(f.rotulo)}"><div style="font-size:10px;color:#7c8a87;margin-top:3px">${esc(f.rotulo)} · ${dataHora(fs[f.id].em)}${fs[f.id].geo ? ' · GPS ✓' : ''}</div></div>`).join('');
+    return imgs ? `<div style="margin-bottom:12px"><div style="font-size:11px;font-weight:800;color:#4F6469;margin-bottom:6px">${esc(FASES[fase].rotulo)}</div><div class="fotos">${imgs}</div></div>` : '';
+  }).join('') || '<div style="font-size:12px;color:#9aa7a4">Sem fotos anexadas.</div>';
+  const matRows = (op.materiais || []).map((m) => `<tr><td>${esc(m.rotulo)}</td><td>${esc(m.ibama || '—')}</td><td>${esc(m.classe)}</td><td>${String(m.qtd).replace('.', ',')} kg</td><td>${esc(DESTINOS[m.destino] || m.destino)}</td></tr>`).join('') || '<tr><td colspan="5" style="color:#9aa7a4">Sem materiais.</td></tr>';
+  const balCor = b.fecha ? '#1E7A3D' : '#B23A2E';
+  const bloco = validada
+    ? `<div class="card" style="border-color:#cfe6be;background:#F5FBF1">
+        <div class="eyebrow">Validação técnica</div>
+        <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+          <div style="flex:1;min-width:180px">
+            <div style="font-size:15px;font-weight:800;color:#1E5B31">✓ Operação validada</div>
+            <div style="font-size:12.5px;color:#4F6469;margin-top:6px">RT <b>${esc(validacao.rt || '—')}</b>${validacao.registro ? ` · ${esc(validacao.registro)}` : ''}</div>
+            <div style="font-size:11.5px;color:#7c8a87;margin-top:2px">em ${dataHora(validacao.em)}</div>
+            ${validacao.comentario ? `<div style="font-size:12px;color:#4F6469;margin-top:8px;font-style:italic">“${esc(validacao.comentario)}”</div>` : ''}
+          </div>
+          ${seloUrl ? `<div style="text-align:center"><img src="${esc(seloUrl)}" alt="QR de verificação" style="width:120px;height:120px"><div style="font-size:10px;color:#7c8a87;margin-top:4px">Verificação pública</div></div>` : ''}
+        </div>
+      </div>`
+    : `<div class="card">
+        <div class="eyebrow">Validação técnica (RT)</div>
+        <form method="post" action="/api/eng/validar">
+          <input type="hidden" name="osId" value="${esc(op.osId)}">
+          <label class="fld">Responsável Técnico (nome)</label><input class="txt" name="rt" value="${esc(eng.nome || '')}" required>
+          <label class="fld">Registro profissional (CREA/CRQ)</label><input class="txt" name="registro" placeholder="ex.: CREA-SP 000000">
+          <label class="fld">Parecer / observações</label><textarea class="txt" name="comentario" rows="3" placeholder="Conformidade da operação, ressalvas…"></textarea>
+          <div style="display:flex;gap:10px;margin-top:14px">
+            <button class="btn dark" name="decisao" value="validar" style="margin:0">✓ Validar e assinar</button>
+            <button class="btn ghost" name="decisao" value="devolver" style="margin:0" onclick="return confirm('Devolver a operação para a doca?')">↩ Devolver</button>
+          </div>
+        </form>
+      </div>`;
+  return `${head('Dossiê OS ' + op.numero)}
+<div class="top"><a href="/eng" style="color:#9FC6C1;font-size:12px;font-weight:800;letter-spacing:.08em;text-decoration:none">← DOSSIÊ OS ${esc(op.numero)}</a>
+  <div style="color:#fff;font-size:20px;font-weight:800;margin-top:8px">${esc(op.cliente || 'Cliente')}</div>
+  <div style="color:#9FC6C1;font-size:12px;margin-top:4px">${op.tipo === 'pago' ? 'Pago / laudo' : 'Padrão'} · dossiê de conformidade</div></div>
+<div class="wrap">
+  <div class="card">
+    <div class="eyebrow">Resumo</div>
+    <div class="kpis">
+      ${kpi(String(b.entrada).replace('.', ',') + ' kg', 'Entrada')}
+      ${kpi(String(b.saida).replace('.', ',') + ' kg', 'Saída')}
+      ${kpi((op.materiais || []).length, 'Materiais')}
+      ${kpi((b.saida > 0 ? (Math.round(b.pct * 1000) / 10) + '%' : '—'), 'Dif. balanço')}
+    </div>
+    <div style="font-size:12px;color:${balCor};font-weight:700;margin-top:12px">${b.fecha ? '✓ Balanço de massa fecha dentro de ±2%' : (b.saida > 0 ? '⚠ Balanço fora de ±2%' + (op.saida && op.saida.justificativa ? ' — justificado: “' + esc(op.saida.justificativa) + '”' : '') : 'Saída ainda não pesada')}</div>
+  </div>
+
+  <div class="card">
+    <div class="eyebrow">Materiais / classificação</div>
+    <table class="tbl"><thead><tr><th>Material</th><th>IBAMA</th><th>Classe</th><th>Qtd</th><th>Destino</th></tr></thead><tbody>${matRows}</tbody></table>
+  </div>
+
+  <div class="card">
+    <div class="eyebrow">Evidências fotográficas (3 fases, carimbadas)</div>
+    ${fotosHtml}
+  </div>
+
+  ${bloco}
+</div></body></html>`;
+}
+
+// --- Público: QR de verificação da operação validada ---
+export async function qrOperacao(request, env, url) {
+  const id = (url.searchParams.get('id') || '').replace(/[^0-9]/g, '').slice(0, 12);
+  if (!id) return new Response('faltou id', { status: 400 });
+  const code = await seloCodigoOp(id, env);
+  const alvo = `${origemPortal(env, url)}/validar-operacao?id=${id}&c=${code}`;
+  if ((url.searchParams.get('fmt') || '') === 'txt') return new Response(alvo, { headers: { 'content-type': 'text/plain; charset=utf-8' } });
+  const qr = qrcode(0, 'M'); qr.addData(alvo); qr.make();
+  const b64 = (qr.createDataURL(6, 4).split(',')[1]) || '';
+  return new Response(base64ParaBytes(b64), { headers: { 'content-type': 'image/gif', 'cache-control': 'public, max-age=86400' } });
+}
+
+export async function validarOperacaoPublico(request, env, url) {
+  const id = (url.searchParams.get('id') || '').replace(/[^0-9]/g, '').slice(0, 12);
+  const c = (url.searchParams.get('c') || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 24);
+  const esperado = id ? await seloCodigoOp(id, env) : '';
+  const assinaturaOk = !!(id && c && esperado && c === esperado);
+  let op = null, val = null;
+  if (assinaturaOk) { op = await lerOperacao(env, id); val = await lerValidacaoOp(env, id); }
+  const ok = assinaturaOk && op && op.etapa === 'concluida' && val && val.decisao === 'validada';
+  const cor = ok ? '#1E7A3D' : '#B23A2E';
+  const b = op ? balanco(op) : null;
+  const linhas = ok ? `
+      <table role="presentation" style="width:100%;border-collapse:collapse;margin-top:20px;font-size:14px">
+        <tr><td style="padding:9px 0;border-top:1px solid #E4EBE9;color:#6B7B78">Operação (OS)</td><td style="padding:9px 0;border-top:1px solid #E4EBE9;text-align:right;font-weight:800">${esc(op.numero)}</td></tr>
+        <tr><td style="padding:9px 0;border-top:1px solid #E4EBE9;color:#6B7B78">Cliente</td><td style="padding:9px 0;border-top:1px solid #E4EBE9;text-align:right;font-weight:700">${esc(op.cliente || '—')}</td></tr>
+        <tr><td style="padding:9px 0;border-top:1px solid #E4EBE9;color:#6B7B78">Entrada / Saída</td><td style="padding:9px 0;border-top:1px solid #E4EBE9;text-align:right;font-weight:700">${String(b.entrada).replace('.', ',')} / ${String(b.saida).replace('.', ',')} kg</td></tr>
+        <tr><td style="padding:9px 0;border-top:1px solid #E4EBE9;color:#6B7B78">Validado por (RT)</td><td style="padding:9px 0;border-top:1px solid #E4EBE9;text-align:right;font-weight:700">${esc(val.rt || '—')}${val.registro ? ' · ' + esc(val.registro) : ''}</td></tr>
+        <tr><td style="padding:9px 0;border-top:1px solid #E4EBE9;color:#6B7B78">Data</td><td style="padding:9px 0;border-top:1px solid #E4EBE9;text-align:right;font-weight:700">${esc(dataHora(val.em))}</td></tr>
+      </table>` : '';
+  const body = `${head('Verificação de operação')}
+<div style="max-width:520px;margin:0 auto;padding:28px 18px">
+  <div style="background:#00333B;border-radius:16px 16px 0 0;padding:22px 26px"><span style="color:#fff;font-size:20px;font-weight:800">ecobraz</span><span style="color:#92C430;font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin-left:8px">verificação</span></div>
+  <div style="background:#fff;border-radius:0 0 16px 16px;border:1px solid #E4EBE9;border-top:none;padding:30px 26px 34px">
+    <div style="width:74px;height:74px;border-radius:50%;background:${cor};color:#fff;font-size:40px;line-height:74px;text-align:center;margin:0 auto 18px">${ok ? '✓' : '✕'}</div>
+    <h1 style="margin:0 0 10px;text-align:center;font-size:22px;color:${cor}">${ok ? 'Operação validada' : (assinaturaOk ? 'Operação não encontrada' : 'Código inválido')}</h1>
+    <p style="margin:0;text-align:center;font-size:14.5px;color:#4F6469;line-height:1.6">${ok ? 'Esta operação foi <strong>validada pela Engenharia Ambiental da Ecobraz</strong>, com rastreabilidade e balanço de massa.' : 'Não foi possível verificar. Escaneie o QR direto do documento original.'}</p>
+    ${linhas}
+    <p style="margin:24px 0 0;text-align:center;font-size:11.5px;color:#9fb0ac">Conferido em tempo real nos registros da Ecobraz.</p>
+  </div>
+</div></body></html>`;
+  return new Response(body, { status: ok ? 200 : (assinaturaOk ? 404 : 400), headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } });
+}

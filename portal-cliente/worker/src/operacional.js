@@ -71,6 +71,13 @@ async function salvarOperacao(env, op) {
 }
 
 export async function listarOperacoes(env) { return await lerIndice(env); }
+// Usado por outros módulos (ex.: Engenharia Ambiental) para mudar a etapa/anexar um resultado.
+export async function atualizarEtapaOperacao(env, osId, etapa, patch) {
+  const op = await lerOperacao(env, osId); if (!op) return null;
+  if (etapa) op.etapa = etapa;
+  if (patch) Object.assign(op, patch);
+  await salvarOperacao(env, op); return op;
+}
 
 // Coletas que podem ser recebidas na doca: Vendas recentes do Ploomes (o operador escolhe o lote que chegou).
 export async function listarColetasRecebiveis(env) {
