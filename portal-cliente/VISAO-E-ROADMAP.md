@@ -426,6 +426,16 @@ carbono, §5.4); **enquadramento tributário** da venda (Ecobraz é Associação
   Honestidade (mesma do carbono): construímos sistema+rastreabilidade+travas+motor de relatório; **laudos e
   padrões específicos são validados/assinados pela Eng. Ambiental + Villanova + jurídico**. Ordem: Agente →
   **Operacional/Eng. Ambiental** → Validação Marcelo.
+  **ADENDO (Marcio) — Cadastro & validação de DESTINO FINAL (sub-módulo da Eng. Ambiental):** registro das
+  usinas que recebem o destino final (**recicladoras E incineradoras**), com CNPJ, tipo (reciclagem/
+  incineração/co-processamento), **licenças ambientais com validade**, certificações e **comprovantes de
+  recebimento** (CDF/MTR de destino). **Alerta/trava de licença vencida** (não deixa mandar p/ destino
+  irregular). **Ecobraz = ATERRO ZERO:** cada kg tem destino documentado e licenciado → 0% aterro, **provado
+  pelo cadastro de destino + balanço de massa** no dossiê. **PONTO DE HONESTIDADE (anti-greenwashing/Green
+  Claims UE):** "aterro zero" é alegação de RESÍDUO, **não** de carbono — NÃO conflar com "carbono zero"; a
+  fração **incinerada EMITE CO₂** (entra como custo no carbono, não benefício); desviar de aterro evita metano
+  (benefício), incinerar emite (custo) — a conta considera os dois; separar "incineração c/ recuperação
+  energética / co-processamento" de incineração simples.
 - **2026-07-23** — **Módulo Agente de Coletas — desenho fechado + entidade certa achada.** Fluxo (Marcio):
   Débora move a coleta p/ "Em Transporte" → aparece no app do agente (só as dele) → **check-in GPS** ao
   chegar → **foto da carga** → chega na Ecobraz → **encerra** → "Coleta Finalizada" (+ GPS) → gera
