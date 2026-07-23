@@ -406,6 +406,26 @@ carbono, §5.4); **enquadramento tributário** da venda (Ecobraz é Associação
   Forum/PRé, fator MCTI/SIRENE), fronteira, os **3 números que não se misturam** (evitadas ≠ inventário ≠
   neutralização), tabela-mãe de fatores (a validar) e rastreabilidade. **Próximo:** validar com a Villanova →
   motor de cálculo (puxa material/peso do Ploomes) → as 3 telas (auditor/cliente/analista).
+- **2026-07-23** — **Processo OPERACIONAL + Engenharia Ambiental (spec do Marcio) — capturado p/ construir em
+  conformidade.** DOIS fluxos: **(1) Padrão** — chega na doca → equipe **confere contra a OS** (inspeção
+  visual) → separa em 2 grupos: **Reciclagem** (paletiza/pesa/fotografa/estretcha → planta de manufatura →
+  desmonta por componente → **usina recicladora cadastrada**, com **MTR+NF**) e **Remanufatura/reuso**
+  (paletiza/pesa/fotografa → **descaracterização + remoção de HD/memória** → **dados destruídos padrão R2/R3 e
+  reciclados** → resto limpo/consertado → **leilão** com **NF**). **Regra de ouro:** celular/tablet/**memória
+  sólida = sempre reciclado, nunca reuso** (LGPD+GDPR). **(2) Pago (laudo)** — destruição/sanitização ou
+  **médico/laboratorial** → tratado **isolado**, reciclagem completa + venda de matéria-prima, **sem reuso**.
+  Envio a reciclador = **MTR+NF**; leilão = **NF**. **Engenharia Ambiental** faz laudos, acompanha, valida a
+  documentação interna, sanitização e QC. **Pedidos do Marcio:** QR/controle em CADA etapa; fotos+docs sempre
+  em anexo p/ linkar; após validação (**Eng. Ambiental + Villanova**), o sistema **gera o relatório final de
+  conformidade** (BR+Europa) que passe em KPMG/bancos. **Mapa de conformidade (a validar c/ especialista):**
+  R2v3/e-Stewards, ISO 14001/9001/27001, **NIST SP 800-88** (destruição de dados), LGPD/GDPR, **ADISA** (ITAD
+  Europa), **MTR/SINIR/PNRS/CDF** (BR), **Diretiva WEEE**/Basel (EU). **Value-add proposto (aprovar):** (a)
+  **balanço de massa** (entra = reciclado+reuso+destruído+rejeito); (b) **certificado de destruição por nº de
+  série** (NIST 800-88); (c) **due diligence do destino final** (licença/CDF da recicladora — R2 exige);
+  (d) **isolamento provado** do fluxo pago; (e) **regra do SSD como TRAVA do sistema** (dado → só reciclagem).
+  Honestidade (mesma do carbono): construímos sistema+rastreabilidade+travas+motor de relatório; **laudos e
+  padrões específicos são validados/assinados pela Eng. Ambiental + Villanova + jurídico**. Ordem: Agente →
+  **Operacional/Eng. Ambiental** → Validação Marcelo.
 - **2026-07-23** — **Módulo Agente de Coletas — desenho fechado + entidade certa achada.** Fluxo (Marcio):
   Débora move a coleta p/ "Em Transporte" → aparece no app do agente (só as dele) → **check-in GPS** ao
   chegar → **foto da carga** → chega na Ecobraz → **encerra** → "Coleta Finalizada" (+ GPS) → gera
