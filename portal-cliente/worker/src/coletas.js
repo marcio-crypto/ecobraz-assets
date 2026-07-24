@@ -42,6 +42,15 @@ async function proximoNumero(env) {
   }
   return `OS-${ano}-${String(seq).padStart(4, '0')}`;
 }
+// Lista de equipamentos item a item, a partir de texto colado (um por linha:
+// "Nome ; quantidade"). Alimenta a tabela da Carta, do Manifesto e do CDF.
+export function parseItensColeta(texto) {
+  return String(texto || '').split(/\r?\n/).map((l) => l.trim()).filter(Boolean).slice(0, 80).map((l) => {
+    const p = l.split(/\s*[;|\t]\s*/);
+    return { nome: String(p[0] || '').slice(0, 140), qtd: String(p[1] || '1').replace(/[^0-9.,]/g, '').slice(0, 12) || '1' };
+  }).filter((it) => it.nome);
+}
+
 export async function criarColetaOS(env, dados, criadoPor) {
   const d = dados || {};
   const numero = await proximoNumero(env);
@@ -54,6 +63,7 @@ export async function criarColetaOS(env, dados, criadoPor) {
     dataAgendada: String(d.dataAgendada || '').slice(0, 10), janela: String(d.janela || '').slice(0, 40),
     agenteEmail: String(d.agenteEmail || '').trim().toLowerCase(), agenteNome: d.agenteNome || '',
     material: String(d.material || '').slice(0, 500), quantidade: String(d.quantidade || '').slice(0, 100),
+    itens: Array.isArray(d.itens) ? d.itens.slice(0, 80).map((it) => ({ nome: String(it.nome || '').slice(0, 140), qtd: String(it.qtd || '1').slice(0, 12) })).filter((it) => it.nome) : parseItensColeta(d.itensTexto),
     acondicionamento: String(d.acondicionamento || '').slice(0, 120), obs: String(d.obs || '').slice(0, 600),
     contato: String(d.contato || '').slice(0, 200),
     criadoEm: agora(), criadoPor: criadoPor || '',
@@ -137,6 +147,8 @@ export function paginaGerarColeta(user, cliente, agentes, patrocinadores) {
     <label>Contato no local</label><input id="contato" value="${esc(contatoStr)}">
     <div class="sec">Material &amp; motorista</div>
     <label>Material declarado</label><textarea id="material" rows="2" placeholder="ex.: CPUs, monitores, cabos e placas (REEE)"></textarea>
+    <label>Equipamentos item a item <span style="color:#9aa7a4;font-weight:400">(um por linha — ex.: Monitor LCD ; 5)</span></label><textarea id="itens" rows="4" placeholder="Monitor LCD ; 5&#10;CPU Dell ; 12&#10;No-break ; 3"></textarea>
+    <div style="font-size:11px;color:#9aa7a4;margin:-4px 0 4px">Aparece item a item na Carta de Descarte e no Manifesto. Se deixar em branco, usa o material declarado.</div>
     <div class="g2"><div><label>Quantidade estimada</label><input id="quantidade" placeholder="ex.: ~500 kg (3 pallets)"></div>
     <div><label>Acondicionamento</label><input id="acondicionamento" placeholder="ex.: paletizado / caixas"></div></div>
     <label>Motorista</label><select id="agente">${optAgentes}</select>
@@ -160,6 +172,7 @@ function gerar(){var ag=g('agente').split('|');
   var rec={clienteId:'${esc(cliente.id)}',clienteNome:${JSON.stringify(nome)},clienteDoc:${JSON.stringify(cliente.tipo === 'PJ' ? (cliente.cnpj || '') : (cliente.cpf || ''))},
     endereco:g('endereco'),dataAgendada:g('data'),janela:g('janela'),contato:g('contato'),
     material:g('material'),quantidade:g('quantidade'),acondicionamento:g('acondicionamento'),obs:g('obs'),
+    itensTexto:g('itens'),
     agenteEmail:ag[0]||'',agenteNome:ag[1]||''};
   var pOn=document.getElementById('patroOn');
   if(pOn&&pOn.checked){var pp=g('patro').split('|');if(!pp[0]){document.getElementById('m').textContent='Escolha a empresa patrocinadora ou desmarque o patrocínio.';return;}rec.patrocinadorId=pp[0];rec.patrocinadorNome=pp[1]||'';}
@@ -190,7 +203,7 @@ export function paginaColetaOSDetalhe(user, os, seloUrl) {
       ${linha('Data / janela', [dataBR(os.dataAgendada), os.janela].filter(Boolean).join(' · '))}
       ${linha('Contato no local', os.contato)}
       ${linha('Motorista', os.agenteNome)}
-      ${linha('Material', os.material)}${linha('Quantidade', os.quantidade)}${linha('Acondicionamento', os.acondicionamento)}
+      ${linha('Material', os.material)}${(os.itens && os.itens.length) ? linha('Equipamentos', os.itens.map((i) => `${i.nome} (${i.qtd})`).join(' · ')) : ''}${linha('Quantidade', os.quantidade)}${linha('Acondicionamento', os.acondicionamento)}
       ${linha('Observações', os.obs)}
       ${linha('Aberta em', dataBR(os.criadoEm))}
     </table>
@@ -228,15 +241,15 @@ const DECLARACAO_CARTA = 'A Ecobraz declara que está dispensada de emissão de 
 
 const tdDoc = 'padding:9px 10px;border:1px solid #E4EBE9';
 function tabelaItens(os) {
-  const nome = esc(os.material || 'Sucata Eletrônica — Diversa');
-  const qtd = esc(os.quantidade || '1,000');
+  const itens = (os.itens && os.itens.length) ? os.itens : [{ nome: os.material || 'Sucata Eletrônica — Diversa', qtd: os.quantidade || '1,000' }];
+  const linhas = itens.map((it, i) => `<tr><td style="${tdDoc}">${i + 1}</td><td style="${tdDoc}">${esc(it.nome)}</td><td style="${tdDoc};text-align:right">${esc(it.qtd)}</td><td style="${tdDoc};text-align:right">R$ 0,00</td><td style="${tdDoc};text-align:right">R$ 0,00</td></tr>`).join('');
   return `<table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-top:6px">
     <thead><tr style="background:#F2F6F4;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#5c6f6b">
       <th style="${tdDoc};text-align:left;width:40px">Item</th><th style="${tdDoc};text-align:left">Nome</th>
       <th style="${tdDoc};text-align:right">Quantidade</th><th style="${tdDoc};text-align:right">Valor Unit.</th><th style="${tdDoc};text-align:right">Total</th>
     </tr></thead>
     <tbody>
-      <tr><td style="${tdDoc}">1</td><td style="${tdDoc}">${nome}</td><td style="${tdDoc};text-align:right">${qtd}</td><td style="${tdDoc};text-align:right">R$ 0,00</td><td style="${tdDoc};text-align:right">R$ 0,00</td></tr>
+      ${linhas}
       <tr><td colspan="4" style="${tdDoc};text-align:right;font-weight:800">Total</td><td style="${tdDoc};text-align:right;font-weight:800">R$ 0,00</td></tr>
     </tbody></table>`;
 }
