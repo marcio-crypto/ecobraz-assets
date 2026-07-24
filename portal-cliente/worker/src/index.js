@@ -46,6 +46,7 @@ import { diretorPermitido, nomeDiretor, reunirDados, paginaLoginDiretoria, pagin
 import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, paginaLeads, paginaLeadDetalhe, paginaInicio } from './cadastro.js';
 import { listarColetasOS, lerColetaOS, criarColetaOS, atualizarStatusOS, paginaColetasLista, paginaGerarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS } from './coletas.js';
 import { listarVeiculos, lerVeiculo, salvarVeiculo, paginaFrota, paginaVeiculoForm, lerJornadaAtiva, abrirJornada, fecharJornada, registrarAbastecimento, tagColetaComVeiculo, servirFotoJornada, bannerJornada, paginaAbrirDia, paginaFecharDia, paginaAbastecer } from './frota.js';
+import { carregarEquipeNoEnv, listarUsuarios, lerUsuario, salvarUsuario, paginaEquipe, paginaUsuarioForm } from './equipe.js';
 import { agentesDe } from './agente.js';
 import { servirIcone, servirManifest, servirServiceWorker } from './pwa.js';
 import { googleConfigurado, iniciarGoogle, callbackGoogle } from './google-auth.js';
@@ -148,6 +149,11 @@ export default {
         const ped = raw ? JSON.parse(raw) : null;
         return json({ ok: true, status: ped?.status || 'desconhecido' });
       }
+
+      // Equipe & Acessos: SOMA os usuários cadastrados às listas de acesso por papel
+      // (aditivo e defensivo — se falhar, mantém o env original). A partir daqui, as
+      // funções *Permitido honram tanto o env quanto o cadastro no sistema.
+      try { env = await carregarEquipeNoEnv(env); } catch { /* mantém env original */ }
 
       if (pathname === '/' && request.method === 'GET') return await telaInicial(request, env);
       if (pathname === '/entrar' && request.method === 'GET') return await entrarComToken(request, env, url);
@@ -258,13 +264,14 @@ export default {
         if (!escritorio) return html(paginaLoginEscritorio(googleConfigurado(env)));
         let stats = {};
         try {
-          const [clientes, coletas, leads, veiculos] = await Promise.all([listarClientes(env), listarColetasOS(env), listarLeads(env), listarVeiculos(env)]);
+          const [clientes, coletas, leads, veiculos, usuarios] = await Promise.all([listarClientes(env), listarColetasOS(env), listarLeads(env), listarVeiculos(env), listarUsuarios(env)]);
           stats = {
             clientes: clientes.length,
             coletasAbertas: coletas.filter((c) => c.status !== 'concluida' && c.status !== 'cancelada').length,
             aReceber: coletas.filter((c) => c.status === 'na_unidade').length,
             leadsNovos: leads.filter((l) => l.status !== 'tratado').length,
             veiculos: veiculos.filter((v) => v.ativo !== false).length,
+            equipe: usuarios.filter((u) => u.ativo !== false).length,
           };
         } catch { stats = {}; }
         return html(paginaInicio(escritorio, stats));
@@ -392,6 +399,30 @@ export default {
         const r = await salvarVeiculo(env, b, escritorio.email);
         if (r.erro) return json({ ok: false, error: r.erro }, 400);
         return json({ ok: true, id: r.id });
+      }
+
+      // Equipe & Acessos (escritório): cadastro de usuários e papéis.
+      if (pathname === '/equipe' && request.method === 'GET') {
+        if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/inicio', 'cache-control': 'no-store' } });
+        return html(paginaEquipe(escritorio, await listarUsuarios(env)));
+      }
+      if (pathname === '/equipe/novo' && request.method === 'GET') {
+        if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/inicio', 'cache-control': 'no-store' } });
+        return html(paginaUsuarioForm(escritorio, null));
+      }
+      if (pathname === '/equipe/usuario' && request.method === 'GET') {
+        if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/inicio', 'cache-control': 'no-store' } });
+        const u = await lerUsuario(env, url.searchParams.get('email') || '');
+        if (!u) return html(paginaMensagem('Pessoa não encontrada', 'Volte e tente de novo.'), 404);
+        return html(paginaUsuarioForm(escritorio, u));
+      }
+      if (pathname === '/api/equipe/salvar' && request.method === 'POST') {
+        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = null; }
+        if (!b) return json({ ok: false, error: 'dados' }, 400);
+        const r = await salvarUsuario(env, b, escritorio.email);
+        if (r.erro) return json({ ok: false, error: r.erro }, 400);
+        return json({ ok: true, email: r.email });
       }
 
       // App do agente de coletas.

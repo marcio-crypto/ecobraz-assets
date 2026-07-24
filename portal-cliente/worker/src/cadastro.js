@@ -372,6 +372,7 @@ export function paginaInicio(user, stats) {
     ${card('/frota', '🚛', 'Frota', 'Veículos da empresa. O motorista faz o checklist ao abrir e fechar o dia.', badge(s.veiculos != null && s.veiculos > 0 ? `${num(s.veiculos)} veículos` : null))}
     ${card('/eng', '🔬', 'Engenharia Ambiental', 'Validação técnica (RT), destino final e relatórios de conformidade.')}
     ${card('/diretoria', '📊', 'Diretoria', 'Visão macro: volume, prazos e alertas.')}
+    ${card('/equipe', '🔑', 'Equipe & Acessos', 'Cadastre as pessoas e defina o que cada uma pode acessar.', badge(s.equipe != null && s.equipe > 0 ? `${num(s.equipe)} pessoas` : null))}
   </div>
   <div style="margin-top:22px;background:#fff;border:1px solid #E4EBE9;border-radius:16px;padding:18px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
     <div><div style="font-size:14px;font-weight:800">🚚 App do Motorista</div><div style="font-size:12.5px;color:#7c8a87;margin-top:3px">O motorista usa no celular pra fazer as coletas em campo.</div></div>
