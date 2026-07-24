@@ -25,8 +25,8 @@ export const precoPacote = (pac, tipo) => (tipo === 'recorrente' ? pac.recorrent
 const agora = () => { try { return new Date().toISOString(); } catch { return ''; } };
 
 // --- Motor de crédito (funções PURAS; fáceis de testar) --------------------
-export function novoCredito(clienteId) {
-  return { clienteId: String(clienteId), saldoKg: 0, tipo: null, pacoteId: null, valorUltimo: 0, cardId: null, status: 'ativo', criadoEm: agora(), atualizadoEm: agora(), historico: [] };
+export function novoCredito(clienteId, nome) {
+  return { clienteId: String(clienteId), clienteNome: nome || '', saldoKg: 0, tipo: null, pacoteId: null, valorUltimo: 0, cardId: null, status: 'ativo', criadoEm: agora(), atualizadoEm: agora(), historico: [] };
 }
 
 // Registra uma COMPRA aprovada (primeira ou upgrade): soma kg e define tipo/pacote.
@@ -78,6 +78,33 @@ export async function salvarCredito(env, cred) {
   if (cred.historico && cred.historico.length > 200) cred.historico = cred.historico.slice(-200);
   await env.PORTAL_KV.put(`credito:${cred.clienteId}`, JSON.stringify(cred));
   return cred;
+}
+
+// Empresas com crédito disponível — alimenta o seletor de "patrocínio" na coleta.
+export async function listarPatrocinadores(env) {
+  if (!env.PORTAL_KV) return [];
+  const out = [];
+  let cursor;
+  do {
+    const res = await env.PORTAL_KV.list({ prefix: 'credito:', cursor, limit: 1000 });
+    for (const k of (res.keys || [])) {
+      const raw = await env.PORTAL_KV.get(k.name);
+      if (!raw) continue;
+      try { const c = JSON.parse(raw); if (Number(c.saldoKg) > 0 && c.status !== 'suspenso') out.push({ clienteId: c.clienteId, nome: c.clienteNome || c.clienteId, saldoKg: c.saldoKg, tipo: c.tipo }); } catch { /* ignora */ }
+    }
+    cursor = res.list_complete ? null : res.cursor;
+  } while (cursor);
+  return out.sort((a, b) => b.saldoKg - a.saldoKg);
+}
+
+// Desconta o crédito da EMPRESA patrocinadora quando uma coleta patrocinada é
+// validada na doca. Nunca lança; devolve o novo saldo e se precisa recarga.
+export async function debitarPatrocinio(env, empresaId, kg, ref) {
+  const cred = await lerCredito(env, empresaId);
+  if (!cred) return { ok: false, motivo: 'sem_credito' };
+  const atualizado = debitar(cred, kg, ref);
+  await salvarCredito(env, atualizado);
+  return { ok: true, saldoKg: atualizado.saldoKg, precisaRecarga: precisaRecarga(atualizado) };
 }
 
 // Formatação BR

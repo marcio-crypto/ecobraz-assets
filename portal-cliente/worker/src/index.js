@@ -149,7 +149,7 @@ export default {
         const valor = precoPacote(pac, tipo);
         const ref = novoId();
         const baseUrl = env.PORTAL_BASE_URL || url.origin;
-        if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${ref}`, JSON.stringify({ produto: 'adote', status: 'pendente', clienteId: cliente.id, pacoteId: pac.id, tipo, valor, kg: pac.kg, email, criadoEm: nowS() }), { expirationTtl: 7 * 86400 });
+        if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${ref}`, JSON.stringify({ produto: 'adote', status: 'pendente', clienteId: cliente.id, clienteNome: razaoSocial, pacoteId: pac.id, tipo, valor, kg: pac.kg, email, criadoEm: nowS() }), { expirationTtl: 7 * 86400 });
         try {
           const pref = await criarPreferencia({ valor, descricao: `Adote um Bairro — ${pac.ton}t (${tipo === 'recorrente' ? 'recorrente' : 'avulso'})`, externalReference: ref, baseUrl, backPath: '/adote/obrigado' }, env);
           return json({ ok: true, pedido: ref, init_point: pref.initPoint });
@@ -176,7 +176,7 @@ export default {
                 // Libera o crédito da loja Adote um Bairro (peso comprado → saldo em kg).
                 try {
                   const pac = acharPacote(ped.pacoteId);
-                  if (pac) { let cred = (await lerCredito(env, ped.clienteId)) || novoCredito(ped.clienteId); cred = aplicarCompra(cred, pac, ped.tipo, ped.valor, pg.externalReference, nowS()); await salvarCredito(env, cred); console.log('adote_credito', { cliente: ped.clienteId, saldo: cred.saldoKg }); }
+                  if (pac) { let cred = (await lerCredito(env, ped.clienteId)) || novoCredito(ped.clienteId, ped.clienteNome); cred = aplicarCompra(cred, pac, ped.tipo, ped.valor, pg.externalReference, nowS()); await salvarCredito(env, cred); console.log('adote_credito', { cliente: ped.clienteId, saldo: cred.saldoKg }); }
                 } catch (error) { console.error('adote_credito_falhou', safeError(error)); }
               } else {
                 try { await enviarEmailNF(ped, pg, env); } catch (error) { console.error('nf_email_falhou', safeError(error)); }
