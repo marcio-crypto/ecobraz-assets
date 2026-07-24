@@ -204,6 +204,15 @@ export default {
         const r = await ingestLead(env, b);
         return json(r, r.ok ? 201 : 400);
       }
+      // Diagnóstico de envio de e-mail (temporário). Só envia para e-mails já autorizados
+      // em alguma lista (anti-abuso) e devolve a resposta CRUA do provedor.
+      if (pathname === '/diag/email' && request.method === 'GET') {
+        const to = (url.searchParams.get('to') || '').trim().toLowerCase();
+        const autorizado = to && (escritorioPermitido(to, env) || operadorPermitido(to, env) || agentePermitido(to, env) || diretorPermitido(to, env) || engenheiroPermitido(to, env));
+        if (!autorizado) return json({ ok: false, error: 'email_nao_autorizado' }, 403);
+        try { return json(await diagEnviaEmail(to, env)); }
+        catch (e) { return json({ ok: false, erro: safeError(e).message }); }
+      }
       // Login com Google (interno) — ativa quando as credenciais estiverem configuradas.
       if (pathname === '/auth/google' && request.method === 'GET') {
         if (!googleConfigurado(env)) return html(paginaMensagem('Login Google indisponível', 'Ainda não configurado. Use o link por e-mail.'), 503);
@@ -1360,6 +1369,17 @@ async function resolverSender(apiKey, env) {
   return _senderId;
 }
 
+// Diagnóstico: tenta enviar um e-mail de teste e devolve a resposta crua do provedor.
+async function diagEnviaEmail(to, env) {
+  const from = env.RESEND_FROM || 'Portal Ecobraz <acesso@ecobraz.org.br>';
+  if (env.RESEND_API_KEY) {
+    const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${env.RESEND_API_KEY}` }, body: JSON.stringify({ from, to: [to], subject: 'Teste de envio — Ecobraz', html: '<p>Teste de envio do Portal Ecobraz. Se você recebeu, o envio está OK.</p>', text: 'Teste de envio do Portal Ecobraz.' }) });
+    const body = await r.text();
+    return { provider: 'resend', ok: r.ok, status: r.status, from, resposta: body.slice(0, 600) };
+  }
+  const apiKey = env.EGOI_TRANSACTIONAL_API_KEY || env.EGOI_API_KEY;
+  return { provider: apiKey ? 'egoi' : 'nenhum', ok: false, from, detail: apiKey ? 'Sem RESEND_API_KEY; o sistema usaria E-goi.' : 'Nenhuma chave de e-mail configurada.' };
+}
 async function enviarEmailLogin(cliente, link, env) {
   // Preferimos o Resend (API simples e compatível com Cloudflare Workers). O E-goi
   // fica como reserva enquanto o envio transacional dele não estiver resolvido.
