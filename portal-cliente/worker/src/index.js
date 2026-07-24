@@ -41,6 +41,7 @@ import { qrCDF, validarCDF } from './validacao.js';
 import { paginaMetodologia } from './carbono-metodologia.js';
 import { lerValidacao, registrarValidacao, paginaAreaValidacao, qrMetodologia, validarMetodologiaPublico } from './validacao-metodologia.js';
 import { paginaPainelCarbono } from './carbono-painel.js';
+import { clientesComOperacoes, carbonoDoCliente, paginaCarbonoAnalista } from './carbono-motor.js';
 import { agentePermitido, nomeAgente, listarColetasComStatus, paginaLoginAgente, paginaAppAgente, detalheColeta, lerEstadoColeta, registrarCheckin, registrarFoto, servirFotoColeta, paginaColetaDetalhe, registrarEncerramento, registrarReagendamento, qrColeta, validarColetaPublico, paginaComprovante } from './agente.js';
 import { operadorPermitido, nomeOperador, listarOperacoes, listarColetasRecebiveis, iniciarOperacao, lerOperacao, definirTipoOperacao, registrarPesoEntrada, registrarFotoOperacao, servirFotoOperacao, paginaLoginOperacao, paginaAppOperacao, paginaReceberLote, paginaLoteDetalhe, adicionarMaterial, removerMaterial, concluirTriagem, paginaTriagem, paginaProcessamento, concluirProcessamento, paginaSaida, registrarSaida, concluirSaida } from './operacional.js';
 import { engenheiroPermitido, nomeEngenheiro, filaValidacao, operacoesValidadas, lerValidacaoOp, registrarValidacaoOp, paginaLoginEng, paginaFilaEng, paginaDossie, qrOperacao, validarOperacaoPublico, listarDestinos, lerDestino, salvarDestino, paginaDestinos, paginaDestinoForm, paginaRelatorio, paginaCDF } from './engenharia.js';
@@ -880,6 +881,16 @@ export default {
       if (pathname === '/painel-carbono' && request.method === 'GET') {
         if (!sessao) return new Response(null, { status: 302, headers: { Location: '/', 'cache-control': 'no-store' } });
         return html(paginaPainelCarbono(sessao));
+      }
+      // Carbono — tela do ANALISTA (a cozinha): peso REAL por material × fator da metodologia.
+      // Interno (engenharia/diretoria). Todo tCO₂e fica "pendente" até a Villanova validar os fatores.
+      if (pathname === '/carbono/analista' && request.method === 'GET') {
+        if (!eng && !diretoria) return html(paginaLoginEng(googleConfigurado(env)));
+        const user = eng || diretoria;
+        const clientes = await clientesComOperacoes(env);
+        const clienteNome = url.searchParams.get('cliente') || '';
+        const dados = clienteNome ? await carbonoDoCliente(env, clienteNome) : null;
+        return html(paginaCarbonoAnalista(user, clientes, dados));
       }
       if (pathname === '/api/os' && request.method === 'GET') {
         if (!sessao) return json({ ok: false, error: 'nao_autenticado' }, 401);
