@@ -49,7 +49,7 @@ import { listarVeiculos, lerVeiculo, salvarVeiculo, paginaFrota, paginaVeiculoFo
 import { carregarEquipeNoEnv, listarUsuarios, lerUsuario, salvarUsuario, paginaEquipe, paginaUsuarioForm } from './equipe.js';
 import { agentesDe } from './agente.js';
 import { servirIcone, servirManifest, servirServiceWorker } from './pwa.js';
-import { googleConfigurado, iniciarGoogle, callbackGoogle } from './google-auth.js';
+import { googleConfigurado, iniciarGoogle, callbackGoogle, botaoGoogle } from './google-auth.js';
 
 export default {
   async fetch(request, env) {
@@ -241,6 +241,14 @@ export default {
           const s = await criarToken({ em: g.email, tipo: 'sessao_escritorio' }, SESSAO_TTL_S, env);
           return new Response(null, { status: 302, headers: { Location: '/inicio', 'Set-Cookie': cookieEscritorio(s.valor, SESSAO_TTL_S) } });
         }
+        if (g.ctx === 'agente' && agentePermitido(g.email, env)) {
+          const s = await criarToken({ em: g.email, tipo: 'sessao_agente' }, APP_SESSAO_TTL_S, env);
+          return new Response(null, { status: 302, headers: { Location: '/agente', 'Set-Cookie': cookieAgente(s.valor, APP_SESSAO_TTL_S) } });
+        }
+        if (g.ctx === 'validador' && emailValidadorPermitido(g.email, env)) {
+          const s = await criarToken({ em: g.email, tipo: 'sessao_validador' }, SESSAO_TTL_S, env);
+          return new Response(null, { status: 302, headers: { Location: '/validacao', 'Set-Cookie': cookieValidador(s.valor, SESSAO_TTL_S) } });
+        }
         return html(paginaMensagem('Acesso não liberado', `O e-mail ${esc(g.email)} entrou no Google, mas não está cadastrado para este acesso.`), 403);
       }
 
@@ -427,7 +435,7 @@ export default {
 
       // App do agente de coletas.
       if (pathname === '/agente' && request.method === 'GET') {
-        if (!agente) return html(paginaLoginAgente());
+        if (!agente) return html(paginaLoginAgente(googleConfigurado(env)));
         // Abrir o dia é OBRIGATÓRIO: sem jornada aberta, mostra o checklist do veículo.
         const jornada = await lerJornadaAtiva(env, agente.email);
         if (!jornada) return html(paginaAbrirDia(agente, await listarVeiculos(env), ''));
@@ -687,7 +695,7 @@ export default {
 
       // Área de validação da Villanova (exige sessão de validador).
       if (pathname === '/validacao' && request.method === 'GET') {
-        if (!validador) return html(paginaLoginValidador());
+        if (!validador) return html(paginaLoginValidador(googleConfigurado(env)));
         return html(await paginaAreaValidacao(env, validador, url));
       }
       if (pathname === '/api/validacao/validar' && request.method === 'POST') {
@@ -890,7 +898,7 @@ async function validarMetodologiaAcao(request, env, validador) {
   await registrarValidacao(env, { validadorEmail: validador.email, comentario });
   return new Response(null, { status: 302, headers: { Location: '/validacao', 'cache-control': 'no-store' } });
 }
-function paginaLoginValidador() {
+function paginaLoginValidador(googleOn) {
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Validação — Ecobraz</title></head>
 <body style="margin:0;background:#F2F6F4;font-family:Montserrat,'Segoe UI',Arial,Helvetica,sans-serif;color:#10262B;">
 <div style="max-width:440px;margin:0 auto;padding:60px 20px;">
@@ -901,6 +909,7 @@ function paginaLoginValidador() {
     <p style="margin:0 0 18px;font-size:13.5px;color:#4F6469;line-height:1.6;">Informe seu e-mail autorizado. Enviamos um link de acesso (vale uma vez, expira em 60 minutos).</p>
     <input id="e" type="email" placeholder="seu e-mail" style="width:100%;box-sizing:border-box;border:1px solid #DDE1E6;border-radius:9px;padding:12px 14px;font-size:14px;font-family:inherit;">
     <button id="b" style="width:100%;margin-top:12px;background:#92C430;color:#10262B;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:800;cursor:pointer;">Enviar link de acesso</button>
+    ${googleOn ? `<div style="text-align:center;color:#9aa7a4;font-size:12px;margin:14px 0 10px;">ou</div>${botaoGoogle('validador')}` : ''}
     <div id="m" style="font-size:13px;color:#4F6469;margin-top:14px;line-height:1.5;"></div>
   </div>
 </div>

@@ -6,6 +6,7 @@
 import { tagsPWA } from './pwa.js';
 import qrcode from 'qrcode-generator';
 import { listarColetasOS, lerColetaOS, atualizarStatusOS } from './coletas.js';
+import { botaoGoogle } from './google-auth.js';
 const STAGE_EM_TRANSPORTE = (env) => Number(env.COLETA_STAGE_EM_TRANSPORTE || 35313);
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const TE = new TextEncoder();
@@ -46,7 +47,7 @@ export async function listarColetas(env, agenteEmail) {
     .map((c) => ({ id: c.id, numero: c.numero, cliente: c.clienteNome || '' }));
 }
 
-export function paginaLoginAgente() {
+export function paginaLoginAgente(googleOn) {
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex">${tagsPWA('agente')}<title>Ecobraz Coletas</title></head>
 <body style="margin:0;background:#00333B;min-height:100vh;font-family:Montserrat,'Segoe UI',Arial,Helvetica,sans-serif;color:#fff;display:flex;align-items:center;">
 <div style="max-width:400px;margin:0 auto;padding:32px 24px;width:100%;box-sizing:border-box;">
@@ -56,6 +57,7 @@ export function paginaLoginAgente() {
     <p style="margin:0 0 16px;font-size:13.5px;color:#4F6469;line-height:1.6;">Digite seu e-mail. Enviamos um link de acesso (vale uma vez, 15 min).</p>
     <input id="e" type="email" inputmode="email" placeholder="seu e-mail" style="width:100%;box-sizing:border-box;border:1px solid #DDE1E6;border-radius:11px;padding:14px;font-size:16px;font-family:inherit;">
     <button id="b" style="width:100%;margin-top:12px;background:#92C430;color:#10262B;border:none;border-radius:12px;padding:15px;font-size:15px;font-weight:800;">Entrar</button>
+    ${googleOn ? `<div style="text-align:center;color:#9aa7a4;font-size:12px;margin:14px 0 10px;">ou</div>${botaoGoogle('agente')}` : ''}
     <div id="m" style="font-size:13px;color:#4F6469;margin-top:14px;line-height:1.5;"></div>
   </div>
 </div>
