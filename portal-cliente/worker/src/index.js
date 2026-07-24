@@ -255,7 +255,17 @@ export default {
       // Tela inicial (hub) — a "casa" que integra os módulos. Landing do login interno.
       if (pathname === '/inicio' && request.method === 'GET') {
         if (!escritorio) return html(paginaLoginEscritorio(googleConfigurado(env)));
-        return html(paginaInicio(escritorio));
+        let stats = {};
+        try {
+          const [clientes, coletas, leads] = await Promise.all([listarClientes(env), listarColetasOS(env), listarLeads(env)]);
+          stats = {
+            clientes: clientes.length,
+            coletasAbertas: coletas.filter((c) => c.status !== 'concluida' && c.status !== 'cancelada').length,
+            aReceber: coletas.filter((c) => c.status === 'na_unidade').length,
+            leadsNovos: leads.filter((l) => l.status !== 'tratado').length,
+          };
+        } catch { stats = {}; }
+        return html(paginaInicio(escritorio, stats));
       }
       // Cadastro & Clientes (escritório/comercial — Débora). Base própria, sem Ploomes.
       if (pathname === '/cadastro' && request.method === 'GET') {

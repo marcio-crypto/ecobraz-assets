@@ -90,7 +90,7 @@ textarea{resize:vertical}
 }
 function topo(user, sub) {
   return `<div style="background:#00333B;padding:15px 20px"><div style="max-width:840px;margin:0 auto;display:flex;justify-content:space-between;align-items:center">
-    <a href="/cadastro" style="text-decoration:none"><span style="color:#fff;font-size:16px;font-weight:800">ecobraz</span><span style="color:#92C430;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin-left:8px">${esc(sub || 'cadastro')}</span></a>
+    <a href="/inicio" style="text-decoration:none"><span style="color:#fff;font-size:16px;font-weight:800">ecobraz</span><span style="color:#92C430;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin-left:8px">${esc(sub || 'cadastro')}</span></a>
     <form method="post" action="/api/cadastro/sair" style="margin:0"><button class="btn" style="background:#0e4651;color:#cfe3e0;border:1px solid #1c5b66;padding:8px 12px;font-size:12px">Sair</button></form>
   </div></div>`;
 }
@@ -345,14 +345,17 @@ export function paginaLeadDetalhe(user, lead) {
 }
 
 // Tela inicial (hub) — a "casa" que integra todos os módulos. Landing após o login interno.
-export function paginaInicio(user) {
+export function paginaInicio(user, stats) {
   const nome = (user && user.nome ? user.nome : '').split(/\s+/)[0] || 'equipe';
-  const card = (href, icon, titulo, desc) => `<a href="${href}" style="display:flex;flex-direction:column;text-decoration:none;background:#fff;border:1px solid #E4EBE9;border-radius:16px;padding:20px;min-height:152px">
-    <div style="font-size:28px;line-height:1">${icon}</div>
+  const s = stats || {};
+  const badge = (txt, destaque) => txt == null ? '' : `<span style="flex:none;font-size:10.5px;font-weight:800;padding:3px 10px;border-radius:20px;${destaque ? 'background:#FFF4DE;color:#8A6A16' : 'background:#EEF3F1;color:#4F6469'}">${esc(txt)}</span>`;
+  const card = (href, icon, titulo, desc, badgeHtml) => `<a href="${href}" style="display:flex;flex-direction:column;text-decoration:none;background:#fff;border:1px solid #E4EBE9;border-radius:16px;padding:20px;min-height:152px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><div style="font-size:28px;line-height:1">${icon}</div>${badgeHtml || ''}</div>
     <div style="font-size:15.5px;font-weight:800;color:#10262B;margin-top:12px">${esc(titulo)}</div>
     <div style="font-size:12.5px;color:#7c8a87;margin-top:5px;line-height:1.55;flex:1">${esc(desc)}</div>
     <div style="font-size:12px;color:#3f8f3a;font-weight:800;margin-top:12px">Abrir →</div>
   </a>`;
+  const num = (n) => Number(n || 0).toLocaleString('pt-BR');
   return `${head('Início')}<body>
 <div style="background:#00333B;padding:16px 20px"><div style="max-width:960px;margin:0 auto;display:flex;justify-content:space-between;align-items:center">
   <div><span style="color:#fff;font-size:17px;font-weight:800">ecobraz</span><span style="color:#92C430;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin-left:8px">sistema</span></div>
@@ -362,10 +365,10 @@ export function paginaInicio(user) {
   <h1 style="font-size:22px;margin:0 0 4px">Olá, ${esc(nome)} 👋</h1>
   <p style="font-size:13.5px;color:#7c8a87;margin:0 0 22px">Bem-vindo ao sistema da Ecobraz. Por onde você quer começar?</p>
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px" class="grid">
-    ${card('/cadastro', '🏢', 'Cadastro & Clientes', 'Empresas e pessoas físicas, com contatos embutidos. Busca rápida.')}
-    ${card('/coletas', '📋', 'Ordens de Coleta', 'Abra e acompanhe as coletas. Comprovante com QR de rastreio.')}
-    ${card('/leads', '📥', 'Leads do site', 'Solicitações que chegam pelo formulário do site.')}
-    ${card('/operacao', '🏭', 'Operação (doca)', 'Recepção, triagem, processamento e saída. Balanço de massa.')}
+    ${card('/cadastro', '🏢', 'Cadastro & Clientes', 'Empresas e pessoas físicas, com contatos embutidos. Busca rápida.', badge(s.clientes != null ? `${num(s.clientes)} clientes` : null))}
+    ${card('/coletas', '📋', 'Ordens de Coleta', 'Abra e acompanhe as coletas. Comprovante com QR de rastreio.', badge(s.coletasAbertas != null ? `${num(s.coletasAbertas)} em aberto` : null, s.coletasAbertas > 0))}
+    ${card('/leads', '📥', 'Leads do site', 'Solicitações que chegam pelo formulário do site.', badge(s.leadsNovos != null ? `${num(s.leadsNovos)} novos` : null, s.leadsNovos > 0))}
+    ${card('/operacao', '🏭', 'Operação (doca)', 'Recepção, triagem, processamento e saída. Balanço de massa.', badge(s.aReceber != null && s.aReceber > 0 ? `${num(s.aReceber)} a receber` : null, true))}
     ${card('/eng', '🔬', 'Engenharia Ambiental', 'Validação técnica (RT), destino final e relatórios de conformidade.')}
     ${card('/diretoria', '📊', 'Diretoria', 'Visão macro: volume, prazos e alertas.')}
   </div>
