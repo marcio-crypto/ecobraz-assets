@@ -11,6 +11,7 @@
 import { tagsPWA } from './pwa.js';
 import { botaoGoogle } from './google-auth.js';
 import { listarColetasOS, lerColetaOS, atualizarStatusOS } from './coletas.js';
+import { debitarPatrocinio } from './adote.js';
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const agora = () => { try { return new Date().toISOString(); } catch { return ''; } };
 const hhmm = (iso) => { const m = String(iso || '').match(/T(\d{2}:\d{2})/); return m ? m[1] : ''; };
@@ -187,7 +188,23 @@ export function fimCompleto(op) {
 }
 export async function concluirSaida(env, osId) {
   const op = await lerOperacao(env, osId); if (!op) return null;
-  if (fimCompleto(op)) { op.etapa = 'validacao'; op.concluidaEm = agora(); await salvarOperacao(env, op); }
+  if (fimCompleto(op)) {
+    op.etapa = 'validacao'; op.concluidaEm = agora();
+    // Coleta patrocinada (Adote um Bairro): desconta o CRÉDITO da empresa
+    // patrocinadora pelo PESO DE ENTRADA (doca, auditável). Uma vez só; nunca bloqueia.
+    if (!op.patrocinioDebitado) {
+      try {
+        const os = await lerColetaOS(env, osId);
+        const patroId = os && os.patrocinadorId;
+        const kg = (op.entrada && Number(op.entrada.pesoKg)) || 0;
+        if (patroId && kg > 0) {
+          const r = await debitarPatrocinio(env, patroId, kg, osId);
+          if (r && r.ok) { op.patrocinioDebitado = true; op.patrocinioKg = kg; op.patrocinadorId = patroId; op.patrocinadorNome = os.patrocinadorNome || ''; }
+        }
+      } catch { /* não bloqueia a conclusão da operação */ }
+    }
+    await salvarOperacao(env, op);
+  }
   return op;
 }
 // Linha de navegação entre as etapas (usada no "hub" da operação).

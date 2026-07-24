@@ -34,7 +34,7 @@ import { paginaLogin, paginaPainel, paginaMensagem } from './paginas.js';
 import { LOGO_ESCURO_B64, LOGO_CLARO_B64 } from './logos.js';
 import { paginaCalculadora, estimativaCarbono, paginaCalculoDetalhado, calculoDetalhadoGHG } from './carbono.js';
 import { criarPreferencia, consultarPagamento } from './mercadopago.js';
-import { acharPacote, precoPacote, paginaLojaAdote, paginaObrigadoAdote, paginaDiagnostico, lerCredito, salvarCredito, novoCredito, aplicarCompra } from './adote.js';
+import { acharPacote, precoPacote, paginaLojaAdote, paginaObrigadoAdote, paginaDiagnostico, lerCredito, salvarCredito, novoCredito, aplicarCompra, listarPatrocinadores } from './adote.js';
 import { statusDaEtapa, valorProp, CAMPOS_OS } from './os-utils.js';
 import { qrCDF, validarCDF } from './validacao.js';
 import { paginaMetodologia } from './carbono-metodologia.js';
@@ -429,7 +429,8 @@ export default {
         const cli = await lerCliente(env, url.searchParams.get('cliente') || '');
         if (!cli) return html(paginaMensagem('Cliente não encontrado', 'Volte e tente de novo.'), 404);
         const agentes = [...agentesDe(env).entries()].map(([email, nome]) => ({ email, nome }));
-        return html(paginaGerarColeta(escritorio, cli, agentes));
+        let patrocinadores = []; try { patrocinadores = await listarPatrocinadores(env); } catch { /* ok */ }
+        return html(paginaGerarColeta(escritorio, cli, agentes, patrocinadores));
       }
       if (pathname === '/coletas/os' && request.method === 'GET') {
         if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });

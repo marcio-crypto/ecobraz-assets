@@ -49,6 +49,7 @@ export async function criarColetaOS(env, dados, criadoPor) {
   const rec = {
     id, numero, status: 'agendada',
     clienteId: d.clienteId || '', clienteNome: d.clienteNome || '', clienteDoc: d.clienteDoc || '',
+    patrocinadorId: String(d.patrocinadorId || '').slice(0, 40), patrocinadorNome: String(d.patrocinadorNome || '').slice(0, 120),
     endereco: String(d.endereco || '').slice(0, 400),
     dataAgendada: String(d.dataAgendada || '').slice(0, 10), janela: String(d.janela || '').slice(0, 40),
     agenteEmail: String(d.agenteEmail || '').trim().toLowerCase(), agenteNome: d.agenteNome || '',
@@ -115,13 +116,15 @@ export function paginaColetasLista(user, coletas) {
 </div></body></html>`;
 }
 
-export function paginaGerarColeta(user, cliente, agentes) {
+export function paginaGerarColeta(user, cliente, agentes, patrocinadores) {
   const e = cliente.endereco || {};
   const endPadrao = [[e.logradouro, e.numero].filter(Boolean).join(', '), e.complemento, e.bairro, [e.cidade, e.uf].filter(Boolean).join('/'), e.cep].filter(Boolean).join(' · ');
   const nome = cliente.tipo === 'PJ' ? (cliente.razaoSocial || cliente.nomeFantasia || '') : (cliente.nome || '');
   const contatoPadrao = cliente.tipo === 'PJ' ? ((cliente.contatos || [])[0] || {}) : { nome: cliente.nome, fone: cliente.fone, email: cliente.email };
   const contatoStr = [contatoPadrao.nome, contatoPadrao.fone].filter(Boolean).join(' · ');
   const optAgentes = ['<option value="">— escolher motorista —</option>'].concat((agentes || []).map((a) => `<option value="${esc(a.email)}|${esc(a.nome)}">${esc(a.nome)}</option>`)).join('');
+  const patros = patrocinadores || [];
+  const optPatro = ['<option value="">— escolher empresa —</option>'].concat(patros.map((p) => `<option value="${esc(p.clienteId)}|${esc(p.nome)}">${esc(p.nome)} — ${(Number(p.saldoKg) / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} t disponíveis</option>`)).join('');
   return `${head('Nova coleta')}<body>${topo('coletas')}
 <div class="wrap">
   <a href="/cadastro/cliente?id=${esc(cliente.id)}" style="font-size:13px;font-weight:800;text-decoration:none;color:#4F6469">← Cliente</a>
@@ -138,6 +141,12 @@ export function paginaGerarColeta(user, cliente, agentes) {
     <div><label>Acondicionamento</label><input id="acondicionamento" placeholder="ex.: paletizado / caixas"></div></div>
     <label>Motorista</label><select id="agente">${optAgentes}</select>
     <label>Observações / instruções de acesso</label><textarea id="obs" rows="2">${esc(cliente.obsColeta || '')}</textarea>
+    <div class="sec">Patrocínio · Adote um Bairro</div>
+    ${patros.length ? `<label style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:13.5px;cursor:pointer"><input type="checkbox" id="patroOn" onchange="togglePatro()" style="width:18px;height:18px"> Esta coleta é patrocinada por uma empresa</label>
+    <div id="patroBox" style="display:none;margin-top:10px">
+      <label>Empresa patrocinadora</label><select id="patro">${optPatro}</select>
+      <div style="font-size:11.5px;color:#8fa39f;margin-top:6px">O peso pesado na doca será descontado do crédito dessa empresa. Os documentos da coleta vão informar o patrocínio e a autorização do cliente para compartilhar os dados desta coleta com o parceiro.</div>
+    </div>` : `<div style="font-size:12.5px;color:#8fa39f">Nenhuma empresa com crédito de patrocínio disponível no momento.</div>`}
     <div style="display:flex;gap:10px;align-items:center;margin-top:22px">
       <button class="btn btn-p" onclick="gerar()">Gerar coleta</button>
       <span id="m" style="font-size:13px;color:#4F6469"></span>
@@ -146,11 +155,14 @@ export function paginaGerarColeta(user, cliente, agentes) {
 </div>
 <script>
 function g(id){var el=document.getElementById(id);return el?el.value.trim():'';}
+function togglePatro(){var on=document.getElementById('patroOn').checked;document.getElementById('patroBox').style.display=on?'block':'none';}
 function gerar(){var ag=g('agente').split('|');
   var rec={clienteId:'${esc(cliente.id)}',clienteNome:${JSON.stringify(nome)},clienteDoc:${JSON.stringify(cliente.tipo === 'PJ' ? (cliente.cnpj || '') : (cliente.cpf || ''))},
     endereco:g('endereco'),dataAgendada:g('data'),janela:g('janela'),contato:g('contato'),
     material:g('material'),quantidade:g('quantidade'),acondicionamento:g('acondicionamento'),obs:g('obs'),
     agenteEmail:ag[0]||'',agenteNome:ag[1]||''};
+  var pOn=document.getElementById('patroOn');
+  if(pOn&&pOn.checked){var pp=g('patro').split('|');if(!pp[0]){document.getElementById('m').textContent='Escolha a empresa patrocinadora ou desmarque o patrocínio.';return;}rec.patrocinadorId=pp[0];rec.patrocinadorNome=pp[1]||'';}
   if(!rec.endereco){document.getElementById('m').textContent='Informe o endereço da coleta.';return;}
   document.getElementById('m').textContent='Gerando…';
   fetch('/api/coletas/criar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(rec)}).then(r=>r.json()).then(j=>{if(j.ok){location.href='/coletas/os?id='+j.id;}else{document.getElementById('m').textContent=j.error||'Erro ao gerar.';}}).catch(()=>document.getElementById('m').textContent='Sem conexão.');}
@@ -178,6 +190,11 @@ export function paginaColetaOSDetalhe(user, os, seloUrl) {
       ${linha('Observações', os.obs)}
       ${linha('Aberta em', dataBR(os.criadoEm))}
     </table>
+    ${os.patrocinadorNome ? `<div style="margin-top:14px;background:#F1F8EC;border:1px solid #cfe6b8;border-radius:12px;padding:14px">
+      <div style="font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#3f6b1e">🤝 Coleta patrocinada · Adote um Bairro</div>
+      <div style="font-size:13.5px;color:#28413f;margin-top:6px">Esta coleta é <b>financiada por ${esc(os.patrocinadorNome)}</b>.</div>
+      <div style="font-size:12px;color:#4F6469;margin-top:8px;line-height:1.55">Ao realizar a coleta, o cliente <b>autoriza o compartilhamento das informações desta coleta</b> (materiais, peso e comprovantes de destinação) com o patrocinador <b>${esc(os.patrocinadorNome)}</b>, para fins de comprovação e relatório socioambiental, nos termos da LGPD (Lei 13.709/2018).</div>
+    </div>` : ''}
     <div class="sec">Situação</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       ${Object.keys(STATUS).map((s) => `<button class="btn ${s === os.status ? 'btn-d' : 'btn-g'}" style="padding:8px 12px;font-size:12.5px" onclick="setStatus('${s}')" ${s === os.status ? 'disabled' : ''}>${esc(STATUS[s])}</button>`).join('')}
@@ -271,6 +288,10 @@ export function paginaComprovanteOS(os, seloUrl) {
         ${f('Acondicionamento', os.acondicionamento)}${f('Situação', STATUS[os.status] || os.status)}
         ${os.obs ? f('Observações', os.obs, true) : ''}
       </div>
+      ${os.patrocinadorNome ? `<div style="margin-top:22px;background:#F1F8EC;border:1px solid #cfe6b8;border-radius:12px;padding:16px 18px">
+        <div style="font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:#3f6b1e">🤝 Coleta patrocinada · Adote um Bairro</div>
+        <div style="font-size:13px;color:#28413f;margin-top:6px;line-height:1.55">Esta coleta é <b>financiada por ${esc(os.patrocinadorNome)}</b>. Ao receber este documento, o cliente <b>autoriza o compartilhamento das informações desta coleta</b> (materiais, peso e comprovantes de destinação) com o patrocinador, para fins de comprovação e relatório socioambiental — nos termos da LGPD (Lei 13.709/2018).</div>
+      </div>` : ''}
       <div style="display:flex;gap:18px;align-items:center;margin-top:22px;background:#F7FAF9;border:1px solid #E4EBE9;border-radius:12px;padding:16px 18px">
         <img src="${esc(seloUrl)}" alt="QR" style="width:100px;height:100px;flex:none;border:1px solid #E4EBE9;border-radius:8px;background:#fff">
         <div><div style="font-size:13px;font-weight:800;color:#00333B">Rastreabilidade &amp; autenticidade</div>
