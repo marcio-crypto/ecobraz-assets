@@ -5,7 +5,8 @@
 //  - O cliente compra PESO (toneladas) e fica com CRÉDITO em kg.
 //  - A cada coleta CONCLUÍDA, desconta do crédito o PESO DA DOCA (número auditável).
 //  - RECORRENTE: quando o saldo chega a ≤ 20 kg, recarrega o MESMO pacote
-//    (cobrança automática no cartão salvo; se falhar ou não estiver configurado, envia link).
+//    (ao chegar em ~20kg, o sistema gera a cobrança e ENVIA O LINK de renovação por e-mail;
+//     o cliente confirma num toque — sem guardar cartão).
 //
 // SEGURANÇA: a chave do Mercado Pago vive só na Cloudflare (Secret). O cartão é
 // tokenizado pelo próprio Mercado Pago — o sistema NUNCA vê o número do cartão.
@@ -208,7 +209,7 @@ export function paginaLojaAdote() {
     <div class="ben"><div class="ic">🌱</div><div><div class="t">Impacto ESG de verdade</div><div class="d">Cada tonelada financia a coleta correta em bairros e comunidades. Sua marca ligada a algo que admiram.</div></div></div>
     <div class="ben"><div class="ic">♻️</div><div><div class="t">Rastreabilidade que se sustenta</div><div class="d">Do caminhão ao destino final, cada quilo é pesado, fotografado e registrado — a trilha que segura em pé numa auditoria.</div></div></div>
     <div class="ben"><div class="ic">💳</div><div><div class="t">Crédito pré-pago, sem surpresa</div><div class="d">Compra o peso que precisa e usa quando quiser. Sem mensalidade escondida, sem contrato amarrado.</div></div></div>
-    <div class="ben"><div class="ic">🔁</div><div><div class="t">Recorrente com 10% off</div><div class="d">Ative a renovação automática e nunca mais fique sem coleta — com desconto e zero preocupação.</div></div></div>
+    <div class="ben"><div class="ic">🔁</div><div><div class="t">Recorrente com 10% off</div><div class="d">Quando o crédito está acabando, a gente te envia a renovação por e-mail — você confirma num toque. 10% de desconto e nunca fica sem coleta.</div></div></div>
   </div>
 </div>
 
@@ -291,7 +292,7 @@ function fmtBRL(n){return 'R$ '+Number(n).toLocaleString('pt-BR',{minimumFractio
 function setTipo(t){TIPO=t;
   document.getElementById('seg_avulso').className=(t==='avulso'?'on':'');
   document.getElementById('seg_recorrente').className=(t==='recorrente'?'on':'');
-  document.getElementById('notaTipo').innerHTML = t==='recorrente' ? 'Na recorrência você tem <b>10% de desconto</b>. O crédito se renova automaticamente quando está acabando.' : 'Compra única. Quando o crédito acabar, é só comprar de novo.';
+  document.getElementById('notaTipo').innerHTML = t==='recorrente' ? 'Na recorrência você tem <b>10% de desconto</b>. Quando o crédito está acabando, a gente te envia a renovação por e-mail — você confirma num toque.' : 'Compra única. Quando o crédito acabar, é só comprar de novo.';
   document.querySelectorAll('.pac').forEach(function(el){
     var v=Number(el.getAttribute('data-'+t)), ton=Number(el.getAttribute('data-ton'));
     var id=el.getAttribute('data-id');

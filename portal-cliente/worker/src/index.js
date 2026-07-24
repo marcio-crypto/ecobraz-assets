@@ -35,7 +35,7 @@ import { paginaLogin, paginaPainel, paginaMensagem } from './paginas.js';
 import { LOGO_ESCURO_B64, LOGO_CLARO_B64 } from './logos.js';
 import { paginaCalculadora, estimativaCarbono, paginaCalculoDetalhado, calculoDetalhadoGHG } from './carbono.js';
 import { criarPreferencia, consultarPagamento } from './mercadopago.js';
-import { acharPacote, precoPacote, paginaLojaAdote, paginaObrigadoAdote, paginaDiagnostico, lerCredito, salvarCredito, novoCredito, aplicarCompra, listarPatrocinadores } from './adote.js';
+import { acharPacote, precoPacote, paginaLojaAdote, paginaObrigadoAdote, paginaDiagnostico, lerCredito, salvarCredito, novoCredito, aplicarCompra, aplicarRecarga, precisaRecarga, listarPatrocinadores } from './adote.js';
 import { statusDaEtapa, valorProp, CAMPOS_OS } from './os-utils.js';
 import { qrCDF, validarCDF } from './validacao.js';
 import { paginaMetodologia } from './carbono-metodologia.js';
@@ -177,9 +177,20 @@ export default {
               console.log('mp_pago', { pedido: pg.externalReference, valor: pg.valor, produto: ped.produto || 'carbono' });
               if (ped.produto === 'adote') {
                 // Libera o crédito da loja Adote um Bairro (peso comprado → saldo em kg).
+                // evento 'recarga' = renovação recorrente (soma kg e limpa o pendente); senão é compra.
                 try {
                   const pac = acharPacote(ped.pacoteId);
-                  if (pac) { let cred = (await lerCredito(env, ped.clienteId)) || novoCredito(ped.clienteId, ped.clienteNome); cred = aplicarCompra(cred, pac, ped.tipo, ped.valor, pg.externalReference, nowS()); await salvarCredito(env, cred); console.log('adote_credito', { cliente: ped.clienteId, saldo: cred.saldoKg }); }
+                  if (pac) {
+                    let cred = (await lerCredito(env, ped.clienteId)) || novoCredito(ped.clienteId, ped.clienteNome);
+                    if (ped.evento === 'recarga') {
+                      cred = aplicarRecarga(cred, pac, ped.valor, pg.externalReference, nowS());
+                      if (cred.recargaPendente && cred.recargaPendente.ref === pg.externalReference) cred.recargaPendente = null;
+                    } else {
+                      cred = aplicarCompra(cred, pac, ped.tipo, ped.valor, pg.externalReference, nowS());
+                    }
+                    await salvarCredito(env, cred);
+                    console.log('adote_credito', { cliente: ped.clienteId, saldo: cred.saldoKg, evento: ped.evento || 'compra' });
+                  }
                 } catch (error) { console.error('adote_credito_falhou', safeError(error)); }
               } else {
                 try { await enviarEmailNF(ped, pg, env); } catch (error) { console.error('nf_email_falhou', safeError(error)); }
@@ -808,7 +819,12 @@ export default {
         if (!operacao) return json({ ok: false, error: 'nao_autenticado' }, 401);
         const form = await request.formData().catch(() => null);
         const osId = form ? String(form.get('osId') || '') : '';
-        await concluirSaida(env, osId);
+        const opFim = await concluirSaida(env, osId);
+        // Adote um Bairro: se a coleta era patrocinada e o crédito recorrente ficou baixo
+        // (≤20kg), gera e envia o link de renovação por e-mail (best-effort; não bloqueia).
+        if (opFim && opFim.patrocinadorId) {
+          try { await verificarRecargaAdote(env, opFim.patrocinadorId, env.PORTAL_BASE_URL || url.origin); } catch (e) { console.error('recarga_trigger_falhou', safeError(e)); }
+        }
         return new Response(null, { status: 302, headers: { Location: `/operacao/lote?id=${encodeURIComponent(osId)}`, 'cache-control': 'no-store' } });
       }
 
@@ -1806,6 +1822,64 @@ async function enviarViaResend(cliente, link, env) {
     body: JSON.stringify(payload),
   });
   if (!r.ok) { const b = await r.text().catch(() => ''); throw new Error(`resend_${r.status}:${b.slice(0, 160)}`); }
+}
+
+// Adote um Bairro — renovação por LINK: quando o crédito recorrente fica ≤20kg, gera a
+// cobrança e envia o link por e-mail. Idempotente: não reenvia enquanto houver pedido de
+// recarga pendente. Best-effort: se o Mercado Pago não estiver configurado, apenas registra.
+async function verificarRecargaAdote(env, clienteId, baseUrl) {
+  if (!env.PORTAL_KV || !clienteId) return;
+  const cred = await lerCredito(env, clienteId);
+  if (!cred || !precisaRecarga(cred)) return;
+  if (cred.recargaPendente && cred.recargaPendente.ref) {
+    const raw = await env.PORTAL_KV.get(`pedido:${cred.recargaPendente.ref}`);
+    const pp = raw ? JSON.parse(raw) : null;
+    if (pp && pp.status === 'pendente') return; // link já enviado, aguardando pagamento
+  }
+  const pac = acharPacote(cred.pacoteId);
+  if (!pac) return;
+  const cliente = await lerCliente(env, clienteId);
+  const email = (cliente && cliente.email) || '';
+  const valor = precoPacote(pac, 'recorrente');
+  const ref = novoId();
+  const base = String(baseUrl || '').replace(/\/+$/, '');
+  await env.PORTAL_KV.put(`pedido:${ref}`, JSON.stringify({ produto: 'adote', evento: 'recarga', status: 'pendente', clienteId, clienteNome: cred.clienteNome, pacoteId: pac.id, tipo: 'recorrente', valor, kg: pac.kg, email, criadoEm: nowS() }), { expirationTtl: 14 * 86400 });
+  const pref = await criarPreferencia({ valor, descricao: `Adote um Bairro — renovação ${pac.ton}t (recorrente)`, externalReference: ref, baseUrl: base, backPath: '/adote/obrigado' }, env);
+  cred.recargaPendente = { ref, em: nowS() };
+  await salvarCredito(env, cred);
+  if (email) { try { await enviarEmailRecarga({ nome: cred.clienteNome, email }, pref.initPoint, pac.ton, env); console.log('adote_recarga_email_ok', { cliente: clienteId }); } catch (e) { console.error('adote_recarga_email_falhou', safeError(e)); } }
+  console.log('adote_recarga_gerada', { cliente: clienteId, saldo: cred.saldoKg, ref });
+}
+
+// E-mail de renovação (Adote um Bairro) — mesmo esquema do login (Resend, com e-Goi de reserva).
+async function enviarEmailRecarga(cliente, link, ton, env) {
+  const assunto = 'Seu crédito Ecobraz está acabando — renove em 1 toque';
+  const primeiro = cliente.nome ? esc(String(cliente.nome).split(' ')[0]) : '';
+  const html = `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;color:#10262B">
+    <div style="background:#00333B;padding:20px 24px;border-radius:12px 12px 0 0"><span style="color:#fff;font-size:20px;font-weight:800">ecobraz</span><span style="color:#92C430;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin-left:8px">adote um bairro</span></div>
+    <div style="border:1px solid #E4EBE9;border-top:none;border-radius:0 0 12px 12px;padding:24px">
+      <p style="font-size:15px;line-height:1.6;margin:0 0 14px">Olá${primeiro ? ', ' + primeiro : ''}! Seu crédito de coleta está chegando ao fim.</p>
+      <p style="font-size:14px;line-height:1.6;color:#4F6469;margin:0 0 20px">Para não ficar sem coleta, renove o seu pacote de <b>${esc(String(ton))} tonelada(s)</b> com os <b>10% de desconto</b> da recorrência. É só confirmar:</p>
+      <a href="${esc(link)}" style="display:inline-block;background:#92C430;color:#10262B;font-weight:800;font-size:15px;text-decoration:none;padding:13px 22px;border-radius:10px">Renovar meu crédito →</a>
+      <p style="font-size:12px;color:#9aa7a4;margin:20px 0 0;line-height:1.6">Sem contrato e sem fidelidade — você renova quando quiser.</p>
+    </div></div>`;
+  const texto = `Olá! Seu crédito de coleta Ecobraz está acabando. Renove o pacote de ${ton}t (recorrente, 10% de desconto) neste link:\n${link}\n\nEcobraz — Adote um Bairro`;
+  if (env.RESEND_API_KEY) {
+    const from = env.RESEND_FROM || 'Portal Ecobraz <acesso@ecobraz.org.br>';
+    const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${env.RESEND_API_KEY}` }, body: JSON.stringify({ from, to: [cliente.email], subject: assunto, html, text: texto }) });
+    if (!r.ok) { const b = await r.text().catch(() => ''); throw new Error(`resend_${r.status}:${b.slice(0, 140)}`); }
+    return;
+  }
+  const apiKey = env.EGOI_TRANSACTIONAL_API_KEY || env.EGOI_API_KEY;
+  if (!apiKey) throw new Error('sem_chave_email');
+  const senderId = await resolverSender(apiKey, env);
+  if (!senderId) throw new Error('sem_remetente');
+  const base = env.EGOI_TRANSACTIONAL_API_URL || 'https://slingshot.egoiapp.com/api';
+  const payload = { sender_id: senderId, subject: assunto, to: [cliente.email], html_body: html, text_body: texto, open_tracking: false, click_tracking: false };
+  if (env.EGOI_SENDER_NAME) payload.sender_name = env.EGOI_SENDER_NAME;
+  if (env.EGOI_REPLY_TO_ID) payload.reply_to_id = env.EGOI_REPLY_TO_ID;
+  const r = await fetch(`${base}/v2/email/messages/action/send`, { method: 'POST', headers: { 'content-type': 'application/json', ApiKey: apiKey }, body: JSON.stringify(payload) });
+  if (!r.ok) { const b = await r.text().catch(() => ''); throw new Error(`egoi_tx_${r.status}:${b.slice(0, 140)}`); }
 }
 
 // E-mail para o financeiro emitir a NF (via Resend). TESTE → vai para o Marcio (não
