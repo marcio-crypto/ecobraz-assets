@@ -253,7 +253,13 @@ function blocoPatrocinioDoc(os) {
     <div style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#3f6b1e">Coleta patrocinada · Adote um Bairro</div>
     <div style="font-size:11.5px;color:#28413f;margin-top:5px;line-height:1.5">Coleta financiada por <b>${esc(os.patrocinadorNome)}</b>. O cliente autoriza o compartilhamento das informações desta coleta com o patrocinador, para fins de comprovação e relatório socioambiental (LGPD, Lei nº 13.709/2018).</div></div>`;
 }
-const assinaturasDoc = (labels) => `<div style="display:flex;gap:22px;margin-top:38px;text-align:center">${labels.map((l) => `<div style="flex:1"><div style="border-top:1px solid #10262B;padding-top:6px;font-size:10.5px;font-weight:800;letter-spacing:.03em;color:#4F6469">${esc(l)}</div></div>`).join('')}</div>`;
+// Cada assinatura recebe um QR de autenticidade (identifica o papel e valida o
+// documento contra a OS no site da Ecobraz). Substitui a linha de assinatura manual.
+const assinaturasDoc = (os, papeis) => `<div style="display:flex;gap:20px;margin-top:30px;text-align:center;flex-wrap:wrap">${papeis.map((p) => `<div style="flex:1;min-width:150px">
+    <img src="/qr-os?id=${esc(os.id)}&p=${encodeURIComponent(p.slug)}" alt="QR ${esc(p.label)}" style="width:78px;height:78px;border:1px solid #E4EBE9;border-radius:8px;background:#fff">
+    <div style="border-top:1px solid #10262B;margin-top:8px;padding-top:6px;font-size:10.5px;font-weight:800;letter-spacing:.03em;color:#4F6469">${esc(p.label)}</div>
+    <div style="font-size:8.5px;color:#9aa7a4;margin-top:2px;text-transform:uppercase;letter-spacing:.05em">Verificar autenticidade</div>
+  </div>`).join('')}</div>`;
 
 function docHTML(titulo, os, seloUrl, corpo) {
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${esc(titulo)} — ${esc(os.numero)}</title>
@@ -274,12 +280,8 @@ function docHTML(titulo, os, seloUrl, corpo) {
       <span><b style="color:#10262B">${esc(EMPRESA.razao)}</b></span><span>CNPJ ${esc(EMPRESA.cnpj)} · LO ${esc(EMPRESA.lo)}</span>
     </div>
     <div style="padding:20px 28px 22px">${corpo}</div>
-    <div style="padding:0 28px 24px">
-      <div style="display:flex;gap:16px;align-items:center;background:#F7FAF9;border:1px solid #E4EBE9;border-radius:12px;padding:16px 18px">
-        <img src="${esc(seloUrl)}" alt="QR de autenticidade" style="width:96px;height:96px;flex:none;border:1px solid #E4EBE9;border-radius:8px;background:#fff">
-        <div><div style="font-size:13px;font-weight:800;color:#00333B">Autenticidade verificável</div>
-        <div style="font-size:11.5px;color:#4F6469;line-height:1.6;margin-top:4px">Aponte a câmera para o QR e confira no site da Ecobraz que este documento é autêntico e vinculado à OS ${esc(os.numero)}.</div></div>
-      </div>
+    <div style="padding:0 28px 22px">
+      <div style="font-size:11px;color:#4F6469;text-align:center;background:#F7FAF9;border:1px solid #E4EBE9;border-radius:10px;padding:11px 14px;line-height:1.55">🔒 Cada assinatura acima traz um <b>QR de autenticidade</b>. Aponte a câmera para conferir, no site da Ecobraz, que este documento é autêntico e vinculado à OS <b>${esc(os.numero)}</b>.</div>
     </div>
     <div style="background:#00333B;padding:13px 28px;font-size:10px;color:#9FC6C1;line-height:1.7">
       ${esc(EMPRESA.endereco)} · ${esc(EMPRESA.fone)} · ${esc(EMPRESA.email)}. Documento emitido eletronicamente e verificável pelo QR.
@@ -297,7 +299,7 @@ export function paginaCartaDescarte(os, seloUrl) {
     <div style="font-size:12px;color:#4F6469;line-height:1.65;text-align:justify;background:#FBFDFC;border:1px solid #EEF1F0;border-radius:10px;padding:12px 14px">${esc(DECLARACAO_CARTA)}</div>
     ${eyebrowDoc('Mercadorias')}${tabelaItens(os)}
     ${os.patrocinadorNome ? blocoPatrocinioDoc(os) : ''}
-    ${assinaturasDoc(['Doador', 'Coletor', 'Responsável Comercial'])}`;
+    ${assinaturasDoc(os, [{ label: 'Doador', slug: 'doador' }, { label: 'Coletor', slug: 'coletor' }, { label: 'Responsável Comercial', slug: 'resp-comercial' }])}`;
   return docHTML('Carta de Descarte', os, seloUrl, corpo);
 }
 
@@ -307,7 +309,7 @@ export function paginaManifestoCarga(os, seloUrl) {
     ${eyebrowDoc('Descrição do material')}${tabelaItens(os)}
     <div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:22px">${parte('Transportador')}${parte('Receptor')}</div>
     ${os.patrocinadorNome ? blocoPatrocinioDoc(os) : ''}
-    ${assinaturasDoc(['Gerador', 'Transportador', 'Receptor'])}`;
+    ${assinaturasDoc(os, [{ label: 'Gerador', slug: 'gerador' }, { label: 'Transportador', slug: 'transportador' }, { label: 'Receptor', slug: 'receptor' }])}`;
   return docHTML('Manifesto de Carga', os, seloUrl, corpo);
 }
 
@@ -315,8 +317,9 @@ export function paginaManifestoCarga(os, seloUrl) {
 export async function qrOS(request, env, url) {
   const id = (url.searchParams.get('id') || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40);
   if (!id) return new Response('faltou id', { status: 400 });
+  const papel = (url.searchParams.get('p') || '').replace(/[^a-z-]/g, '').slice(0, 20);
   const code = await seloOS(id, env);
-  const alvo = `${origemPortal(env, url)}/validar-os?id=${encodeURIComponent(id)}&c=${code}`;
+  const alvo = `${origemPortal(env, url)}/validar-os?id=${encodeURIComponent(id)}&c=${code}${papel ? `&p=${encodeURIComponent(papel)}` : ''}`;
   if ((url.searchParams.get('fmt') || '') === 'txt') return new Response(alvo, { headers: { 'content-type': 'text/plain; charset=utf-8' } });
   const qr = qrcode(0, 'M'); qr.addData(alvo); qr.make();
   const b64 = (qr.createDataURL(6, 4).split(',')[1]) || '';
@@ -327,6 +330,8 @@ export async function qrOS(request, env, url) {
 export async function validarOSPublico(request, env, url) {
   const id = (url.searchParams.get('id') || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40);
   const c = (url.searchParams.get('c') || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 24);
+  const PAPEIS = { doador: 'Doador', coletor: 'Coletor', 'resp-comercial': 'Responsável Comercial', gerador: 'Gerador', transportador: 'Transportador', receptor: 'Receptor' };
+  const papel = PAPEIS[(url.searchParams.get('p') || '').replace(/[^a-z-]/g, '').slice(0, 20)] || '';
   const esperado = id ? await seloOS(id, env) : '';
   const ok = !!(id && c && esperado && c === esperado);
   let os = null; if (ok) os = await lerColetaOS(env, id);
@@ -338,6 +343,7 @@ export async function validarOSPublico(request, env, url) {
       <tr><td style="padding:9px 0;border-top:1px solid #E4EBE9;color:#6B7B78">Cliente</td><td style="padding:9px 0;border-top:1px solid #E4EBE9;text-align:right;font-weight:700">${esc(os.clienteNome || '—')}</td></tr>
       <tr><td style="padding:9px 0;border-top:1px solid #E4EBE9;color:#6B7B78">Situação</td><td style="padding:9px 0;border-top:1px solid #E4EBE9;text-align:right;font-weight:700">${esc(STATUS[os.status] || os.status)}</td></tr>
       <tr><td style="padding:9px 0;border-top:1px solid #E4EBE9;color:#6B7B78">Data</td><td style="padding:9px 0;border-top:1px solid #E4EBE9;text-align:right;font-weight:700">${esc(dataBR(os.dataAgendada) || dataBR(os.criadoEm))}</td></tr>
+      ${papel ? `<tr><td style="padding:9px 0;border-top:1px solid #E4EBE9;color:#6B7B78">Assinatura verificada</td><td style="padding:9px 0;border-top:1px solid #E4EBE9;text-align:right;font-weight:700">${esc(papel)}</td></tr>` : ''}
     </table>` : '';
   return new Response(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Validação — Ecobraz</title></head>
 <body style="margin:0;background:#F2F6F4;min-height:100vh;font-family:Montserrat,'Segoe UI',Arial,Helvetica,sans-serif;color:#10262B;display:flex;align-items:center;justify-content:center">
