@@ -43,7 +43,7 @@ import { agentePermitido, nomeAgente, listarColetasComStatus, paginaLoginAgente,
 import { operadorPermitido, nomeOperador, listarOperacoes, listarColetasRecebiveis, iniciarOperacao, lerOperacao, definirTipoOperacao, registrarPesoEntrada, registrarFotoOperacao, servirFotoOperacao, paginaLoginOperacao, paginaAppOperacao, paginaReceberLote, paginaLoteDetalhe, adicionarMaterial, removerMaterial, concluirTriagem, paginaTriagem, paginaProcessamento, concluirProcessamento, paginaSaida, registrarSaida, concluirSaida } from './operacional.js';
 import { engenheiroPermitido, nomeEngenheiro, filaValidacao, operacoesValidadas, lerValidacaoOp, registrarValidacaoOp, paginaLoginEng, paginaFilaEng, paginaDossie, qrOperacao, validarOperacaoPublico, listarDestinos, lerDestino, salvarDestino, paginaDestinos, paginaDestinoForm, paginaRelatorio } from './engenharia.js';
 import { diretorPermitido, nomeDiretor, reunirDados, paginaLoginDiretoria, paginaPainelDiretoria } from './diretoria.js';
-import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe } from './cadastro.js';
+import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, paginaLeads, paginaLeadDetalhe } from './cadastro.js';
 import { servirIcone, servirManifest, servirServiceWorker } from './pwa.js';
 import { googleConfigurado, iniciarGoogle, callbackGoogle } from './google-auth.js';
 
@@ -194,6 +194,16 @@ export default {
       if (pathname === '/api/cadastro/entrar' && request.method === 'POST') return await solicitarLinkEscritorio(request, env);
       if (pathname === '/entrar-escritorio' && request.method === 'GET') return await entrarComTokenEscritorio(request, env, url);
       if (pathname === '/api/cadastro/sair' && request.method === 'POST') return sairEscritorio();
+      // Recebe leads do formulário do site (worker ecobraz-coletas), no lugar do Ploomes.
+      // Protegido por segredo compartilhado (LEAD_INGEST_SECRET), servidor-a-servidor.
+      if (pathname === '/api/lead' && request.method === 'POST') {
+        if (!env.LEAD_INGEST_SECRET) return json({ ok: false, error: 'ingest_desligado' }, 503);
+        if (request.headers.get('x-lead-secret') !== env.LEAD_INGEST_SECRET) return json({ ok: false, error: 'nao_autorizado' }, 401);
+        let b; try { b = await request.json(); } catch { b = null; }
+        if (!b) return json({ ok: false, error: 'json' }, 400);
+        const r = await ingestLead(env, b);
+        return json(r, r.ok ? 201 : 400);
+      }
       // Login com Google (interno) — ativa quando as credenciais estiverem configuradas.
       if (pathname === '/auth/google' && request.method === 'GET') {
         if (!googleConfigurado(env)) return html(paginaMensagem('Login Google indisponível', 'Ainda não configurado. Use o link por e-mail.'), 503);
@@ -277,6 +287,26 @@ export default {
         if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
         const d = await consultarCNPJ(url.searchParams.get('n') || '');
         return d ? json({ ok: true, ...d }) : json({ ok: false });
+      }
+      // Caixa de entrada de leads do site (escritório/comercial — Débora).
+      if (pathname === '/leads' && request.method === 'GET') {
+        if (!escritorio) return html(paginaLoginEscritorio(googleConfigurado(env)));
+        return html(paginaLeads(escritorio, await listarLeads(env)));
+      }
+      if (pathname === '/leads/lead' && request.method === 'GET') {
+        if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
+        const l = await lerLead(env, url.searchParams.get('id') || '');
+        if (!l) return html(paginaMensagem('Lead não encontrado', 'Volte e tente de novo.'), 404);
+        return html(paginaLeadDetalhe(escritorio, l));
+      }
+      if (pathname === '/api/leads/tratar' && request.method === 'POST') {
+        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = null; }
+        if (!b || !b.id) return json({ ok: false, error: 'dados' }, 400);
+        const l = await lerLead(env, b.id);
+        if (!l) return json({ ok: false, error: 'nao_encontrado' }, 404);
+        l.status = 'tratado'; await salvarLead(env, l);
+        return json({ ok: true });
       }
 
       // App do agente de coletas.

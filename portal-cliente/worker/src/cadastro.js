@@ -240,3 +240,106 @@ export function paginaClienteDetalhe(user, cli) {
 </div>
 </body></html>`;
 }
+
+// ---------------------------------------------------------------------------
+// LEADS do site (formulário /agendamento/) — entram aqui em vez do Ploomes.
+// Guardados no KV (lead:{id} + leads:index). A Débora vê na caixa de entrada.
+// ---------------------------------------------------------------------------
+export async function listarLeads(env) {
+  const raw = env.PORTAL_KV ? await env.PORTAL_KV.get('leads:index') : null;
+  return raw ? JSON.parse(raw) : [];
+}
+export async function lerLead(env, id) {
+  if (!env.PORTAL_KV || !id) return null;
+  const raw = await env.PORTAL_KV.get(`lead:${String(id).replace(/[^a-zA-Z0-9_]/g, '')}`);
+  return raw ? JSON.parse(raw) : null;
+}
+export async function salvarLead(env, rec) {
+  if (!env.PORTAL_KV || !rec || !rec.id) return rec;
+  await env.PORTAL_KV.put(`lead:${rec.id}`, JSON.stringify(rec));
+  const idx = await listarLeads(env);
+  const i = idx.findIndex((x) => x.id === rec.id);
+  if (i >= 0) { idx[i].status = rec.status; await env.PORTAL_KV.put('leads:index', JSON.stringify(idx).slice(0, 800000)); }
+  return rec;
+}
+// Recebe um lead do site (worker ecobraz-coletas) e guarda na nossa base.
+export async function ingestLead(env, body) {
+  const b = body || {};
+  const email = String(b.email || '').trim().toLowerCase();
+  const nome = String(b.name || b.nome || '').trim();
+  const empresa = String(b.company || b.empresa || '').trim();
+  if (!email && !nome && !empresa) return { ok: false, error: 'dados' };
+  const id = 'lead_' + (crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '').slice(0, 12) : Math.random().toString(36).slice(2, 14));
+  const rec = {
+    id, status: 'novo', perfil: String(b.profile || b.perfil || ''),
+    nome, empresa, email, fone: String(b.phone || b.fone || '').trim(),
+    material: String(b.material_category || b.material || '').trim(), volume: String(b.volume || '').trim(),
+    descricao: String(b.material_description || b.descricao || '').slice(0, 4000),
+    cep: String(b.postal_code || b.cep || '').trim(), cidade: String(b.city || b.cidade || '').trim(), uf: String(b.state || b.uf || '').trim(),
+    documentacao: String(b.documentation || '').trim(), urgencia: String(b.urgency || '').trim(),
+    consentimentoMkt: b.marketing_consent === true || b.marketing_consent === 'yes',
+    origem: String(b.source || 'site'), pagina: String(b.page_url || '').slice(0, 500),
+    utm: { source: b.utm_source || '', medium: b.utm_medium || '', campaign: b.utm_campaign || '', content: b.utm_content || '', term: b.utm_term || '' },
+    criadoEm: agora(),
+  };
+  if (env.PORTAL_KV) {
+    await env.PORTAL_KV.put(`lead:${id}`, JSON.stringify(rec));
+    const idx = await listarLeads(env);
+    idx.unshift({ id, nome: nome || empresa || email, empresa, email, cidade: rec.cidade, status: 'novo', criadoEm: rec.criadoEm });
+    await env.PORTAL_KV.put('leads:index', JSON.stringify(idx).slice(0, 800000));
+  }
+  return { ok: true, id };
+}
+
+export function paginaLeads(user, leads) {
+  const novos = leads.filter((l) => l.status !== 'tratado').length;
+  const linhas = leads.length ? leads.map((l) => `<a href="/leads/lead?id=${esc(l.id)}" style="display:flex;justify-content:space-between;align-items:center;gap:12px;text-decoration:none;background:#fff;border:1px solid #E4EBE9;border-radius:12px;padding:13px 15px;margin-bottom:9px">
+      <div style="min-width:0"><div style="font-size:14px;font-weight:800;color:#10262B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.nome || l.empresa || '(sem nome)')}</div>
+      <div style="font-size:12px;color:#7c8a87;margin-top:3px">${esc(l.email || '')}${l.cidade ? ' · ' + esc(l.cidade) : ''} · ${esc(dataBR(l.criadoEm))}</div></div>
+      <span style="flex:none;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;${l.status === 'tratado' ? 'background:#EEF1F0;color:#7c8a87' : 'background:#FFF4DE;color:#8A6A16'}">${l.status === 'tratado' ? 'TRATADO' : 'NOVO'}</span>
+    </a>`).join('') : `<div class="card" style="text-align:center;color:#8fa39f;font-size:13.5px">Nenhum lead ainda. Quando alguém preencher o formulário do site, aparece aqui.</div>`;
+  return `${head('Leads do site')}<body>${topo(user, 'leads')}
+<div class="wrap">
+  <a href="/cadastro" style="font-size:13px;font-weight:800;text-decoration:none;color:#4F6469">← Cadastro</a>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin:12px 0 14px"><h1 style="font-size:20px;margin:0">Leads do site</h1><span style="font-size:11px;background:#FFF4DE;color:#8A6A16;font-weight:800;padding:3px 9px;border-radius:20px">${novos} novo(s)</span></div>
+  <div>${linhas}</div>
+</div>
+</body></html>`;
+}
+
+export function paginaLeadDetalhe(user, lead) {
+  const linha = (l, v) => v ? `<tr><td style="padding:8px 0;border-top:1px solid #EEF1F0;color:#6B7B78;width:38%">${esc(l)}</td><td style="padding:8px 0;border-top:1px solid #EEF1F0;font-weight:600">${esc(v)}</td></tr>` : '';
+  const utm = lead.utm && (lead.utm.source || lead.utm.campaign) ? [lead.utm.source, lead.utm.medium, lead.utm.campaign, lead.utm.content, lead.utm.term].filter(Boolean).join(' · ') : '';
+  return `${head(lead.nome || lead.empresa || 'Lead')}<body>${topo(user, 'leads')}
+<div class="wrap">
+  <a href="/leads" style="font-size:13px;font-weight:800;text-decoration:none;color:#4F6469">← Todos os leads</a>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin:12px 0 16px">
+    <div><span style="font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;${lead.status === 'tratado' ? 'background:#EEF1F0;color:#7c8a87' : 'background:#FFF4DE;color:#8A6A16'}">${lead.status === 'tratado' ? 'TRATADO' : 'NOVO'}</span>
+    <h1 style="font-size:22px;margin:8px 0 0">${esc(lead.nome || lead.empresa || '—')}</h1></div>
+  </div>
+  <div class="card">
+    <table role="presentation" style="width:100%;border-collapse:collapse;font-size:13.5px">
+      ${linha('Perfil', lead.perfil === 'empresa' ? 'Empresa' : (lead.perfil === 'pessoa_fisica' ? 'Pessoa física' : lead.perfil))}
+      ${linha('Empresa', lead.empresa)}
+      ${linha('E-mail', lead.email)}
+      ${linha('Telefone', lead.fone)}
+      ${linha('Material', lead.material)}
+      ${linha('Volume', lead.volume)}
+      ${linha('Descrição', lead.descricao)}
+      ${linha('Local', [lead.cidade, lead.uf].filter(Boolean).join('/') + (lead.cep ? ' · ' + lead.cep : ''))}
+      ${linha('Documentação', lead.documentacao)}
+      ${linha('Urgência', lead.urgencia)}
+      ${linha('Consentimento marketing', lead.consentimentoMkt ? 'Sim' : 'Não')}
+      ${linha('Origem', [lead.origem, utm].filter(Boolean).join(' · '))}
+      ${linha('Recebido em', dataBR(lead.criadoEm))}
+    </table>
+  </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
+    <button class="btn btn-p" id="btrat" ${lead.status === 'tratado' ? 'disabled style="opacity:.5"' : ''}>${lead.status === 'tratado' ? '✓ Tratado' : 'Marcar como tratado'}</button>
+    <span id="m" style="font-size:13px;color:#4F6469;align-self:center"></span>
+  </div>
+  <div style="font-size:11px;color:#9aa7a4;margin-top:10px">Converter o lead em cliente + gerar a coleta entra no próximo passo.</div>
+</div>
+<script>const bt=document.getElementById('btrat');if(bt&&!bt.disabled)bt.onclick=async()=>{bt.disabled=true;document.getElementById('m').textContent='Salvando…';try{const r=await fetch('/api/leads/tratar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:'${esc(lead.id)}'})});if(r.ok){location.reload();}else{document.getElementById('m').textContent='Falha. Tente de novo.';bt.disabled=false;}}catch{document.getElementById('m').textContent='Sem conexão.';bt.disabled=false;}};</script>
+</body></html>`;
+}
