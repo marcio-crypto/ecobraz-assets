@@ -72,6 +72,38 @@ export function reconciliar(op) {
 // ---------------------------------------------------------------------------
 export function iaConfigurada(env) { return !!env.ANTHROPIC_API_KEY; }
 
+// Teste de conexão com a IA: chamada real e MÍNIMA (texto só) para provar que a
+// chave é válida e que o Worker alcança a API. Não expõe a chave; custa uma fração
+// de centavo. Diagnostica os erros mais comuns (401 chave inválida, 429 sem crédito).
+export async function pingIA(env) {
+  if (!iaConfigurada(env)) return { ok: false, erro: 'Chave não encontrada no cofre. Confira o nome exato: ANTHROPIC_API_KEY.' };
+  const body = {
+    model: 'claude-opus-4-8', max_tokens: 16,
+    messages: [{ role: 'user', content: [{ type: 'text', text: 'Responda apenas com a palavra OK.' }] }],
+  };
+  try {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) {
+      const t = await r.text();
+      let motivo = `A API respondeu ${r.status}.`;
+      if (r.status === 401) motivo = 'Chave inválida ou revogada (401). Confira se colou a chave completa.';
+      else if (r.status === 403) motivo = 'Acesso negado (403).';
+      else if (r.status === 429) motivo = 'Sem crédito ou limite atingido (429). Verifique o saldo/billing na Anthropic.';
+      else if (r.status === 400) motivo = 'Requisição rejeitada (400).';
+      return { ok: false, erro: motivo, detalhe: t.slice(0, 160) };
+    }
+    const j = await r.json();
+    const txt = ((j.content || []).find((b) => b.type === 'text') || {}).text || '';
+    return { ok: true, modelo: j.model || body.model, resposta: (txt || '').trim().slice(0, 40) };
+  } catch (e) {
+    return { ok: false, erro: 'Não consegui alcançar a API a partir do Worker.', detalhe: String(e).slice(0, 160) };
+  }
+}
+
 async function primeiraFotoDoca(env, osId) {
   // tenta as fotos da fase inicial da operação (recepção)
   for (const cat of ['carga', 'geral', 'material', 'lote', 'entrada', 'foto1', 'foto']) {
@@ -213,6 +245,11 @@ export function paginaPrevencao(user, dados) {
     <b>Como ler este painel.</b> O controle firme é o <b>peso</b> (balanço de massa). A <b>IA nas fotos</b> é um apoio: aponta divergência visual grosseira para <b>investigar</b> — nunca é prova, nunca acusa ninguém. O <b>valor</b> é estimativa: <b>por peso</b> (kg × R$/kg) e <b>por lote</b> (nº de tipos separados na triagem × R$/lote), até a integração com a plataforma de leilão.${iaOn ? '' : ' <b>IA ainda não ativada</b> (falta a chave da Anthropic no cofre).'}
   </div>
 
+  <div class="card" style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+    <div><div style="font-size:14px;font-weight:800">Conexão com a IA</div><div style="font-size:12px;color:#7c8a87;margin-top:2px">Faz uma chamada real e mínima à Anthropic para conferir se a chave funciona.</div></div>
+    <div style="display:flex;align-items:center;gap:10px"><span id="mia" style="font-size:12.5px;font-weight:700"></span><button class="btn btn-g" onclick="testarIA(this)">🔌 Testar conexão</button></div>
+  </div>
+
   <h2 style="font-size:16px;margin:0 0 10px">Lotes recebidos</h2>
   ${linhas}
 
@@ -225,6 +262,11 @@ export function paginaPrevencao(user, dados) {
   </div>
 </div>
 <script>
+function testarIA(btn){var m=document.getElementById('mia');var t=btn.textContent;btn.disabled=true;btn.textContent='Testando…';m.style.color='#7c8a87';m.textContent='Chamando a IA…';
+  fetch('/api/diretoria/ping-ia',{method:'POST'}).then(r=>r.json()).then(function(j){btn.disabled=false;btn.textContent=t;
+    if(j&&j.ok){m.style.color='#1E5B31';m.textContent='✅ IA conectada — a chave funciona'+(j.resposta?' (respondeu: '+j.resposta+')':'');}
+    else{m.style.color='#8a4b45';m.textContent='❌ '+((j&&j.erro)||'Falha ao testar');}
+  }).catch(function(){btn.disabled=false;btn.textContent=t;m.style.color='#8a4b45';m.textContent='❌ Sem conexão com o servidor.';});}
 function analisar(btn,osId){var t=btn.textContent;btn.disabled=true;btn.textContent='Analisando… (pode levar alguns segundos)';
   fetch('/api/diretoria/analisar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({osId:osId})}).then(r=>r.json()).then(j=>{if(j.ok||j.erro){location.reload();}else{btn.disabled=false;btn.textContent=t;}}).catch(function(){btn.disabled=false;btn.textContent=t;});}
 function salvarPrecos(){var precos={kg:(document.getElementById('p_kg')||{}).value,lote:(document.getElementById('p_lote')||{}).value};
