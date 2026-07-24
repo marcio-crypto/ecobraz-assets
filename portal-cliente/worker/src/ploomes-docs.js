@@ -1,12 +1,12 @@
 // Diagnóstico de ANEXOS/DOCUMENTOS do Ploomes (só Diretoria, read-only).
 //
-// Objetivo: descobrir COMO a conta real do Ploomes expõe os anexos, para montar o
-// importador SEM chutar a API. Roda no Worker (que tem a chave e alcança o Ploomes).
-// Não baixa nem grava nada — apenas inspeciona e relata.
+// Roda no Worker (tem a chave e alcança o Ploomes). Não grava nada. Objetivo:
+// descobrir, na conta REAL, (1) se dá para listar os anexos de um cliente e
+// (2) se dá para BAIXAR o arquivo — para eu montar o importador sem chutar a API.
 //
-// LEVE e à prova de travamento: consulta a raiz OData (documento de serviço, pequeno)
-// para listar as coleções, e sonda alguns endpoints candidatos EM PARALELO, cada um
-// com tempo limite curto. Nunca lança: devolve o que conseguir, mesmo com falhas.
+// Descobertas até aqui: /Attachments sem filtro dá timeout (pesado); precisa ser
+// escopado por cliente. /AttachmentItems e /AttachmentFolders não existem (404).
+// /Documents responde 200 (mas é o módulo de PROPOSTAS). Tudo com tempo limite.
 
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -17,38 +17,61 @@ function cfg(env) {
 export async function sondarAnexosPloomes(env) {
   if (!env.PLOOMES_USER_KEY) return { ok: false, erro: 'Falta a chave do Ploomes (PLOOMES_USER_KEY) no cofre.' };
   const { base, headers } = cfg(env);
-  const rel = /(attach|document|anexo|file|arquiv)/i;
-  const out = { ok: true, entitySets: [], amostras: [] };
+  const out = { ok: true, contatoId: null, testes: [], amostra: null, download: null };
 
-  // Busca JSON com tempo limite curto; nunca lança.
-  const getJson = async (path, ms) => {
+  // Busca JSON com tempo limite; nunca lança.
+  const req = async (path, ms) => {
     try {
       const r = await fetch(`${base}${path}`, { headers, signal: AbortSignal.timeout(ms || 7000) });
       const rec = { status: r.status };
-      if (r.ok) { try { rec.json = await r.json(); } catch { rec.corpo = 'resposta não-JSON'; } }
-      else { rec.corpo = (await r.text().catch(() => '')).slice(0, 120); }
+      const ct = r.headers.get('content-type') || '';
+      if (r.ok && ct.includes('json')) { try { const j = await r.json(); rec.value = Array.isArray(j.value) ? j.value : (j && j.Id != null ? [j] : []); } catch { rec.value = []; } }
+      else if (!r.ok) { rec.corpo = (await r.text().catch(() => '')).slice(0, 120); }
       return rec;
     } catch (e) { return { erro: (e && e.name === 'TimeoutError') ? 'tempo esgotado' : String(e && e.message || e).slice(0, 90) }; }
   };
 
-  // 1) Raiz OData (documento de serviço): lista compacta de TODAS as coleções.
-  const raiz = await getJson('/', 7000);
-  out.raizStatus = raiz.status != null ? raiz.status : null;
-  if (raiz.erro) out.raizErro = raiz.erro;
-  const todas = (raiz.json && Array.isArray(raiz.json.value)) ? raiz.json.value.map((v) => v.name || v.url).filter(Boolean) : [];
-  out.totalColecoes = todas.length;
-  out.entitySets = todas.filter((n) => rel.test(n));
+  // 1) Um contato real (para escopar os anexos).
+  const c = await req('/Contacts?$top=1&$select=Id,Name', 7000);
+  const cid = c.value && c.value[0] && c.value[0].Id;
+  out.contatoId = cid || null;
+  out.testes.push({ rotulo: 'Contacts (1 amostra)', status: c.status, erro: c.erro });
 
-  // 2) Sonda os candidatos EM PARALELO, com timeout curto e ordenação leve por Id
-  //    (ajuda o Ploomes a usar índice e evitar o 504 do /Attachments sem filtro).
-  const fixos = ['Attachments', 'AttachmentItems', 'AttachmentFolders', 'Documents'];
-  const candidatos = [...new Set([...fixos, ...out.entitySets])].slice(0, 8);
-  out.amostras = await Promise.all(candidatos.map(async (ep) => {
-    const r = await getJson(`/${ep}?$top=1&$orderby=Id%20desc`, 6000);
-    const rec = { endpoint: ep, status: r.status != null ? r.status : null, erro: r.erro };
-    if (r.json && Array.isArray(r.json.value)) { const it = r.json.value[0]; rec.campos = it ? Object.keys(it) : []; }
-    return rec;
-  }));
+  // 2) Anexos ESCOPADOS a esse contato (o blanket dá timeout). Tenta alguns filtros.
+  let att = null;
+  if (cid) {
+    for (const f of [`ContactId%20eq%20${cid}`, `OwnerId%20eq%20${cid}`, `DealId%20ne%20null`]) {
+      const a = await req(`/Attachments?$top=5&$filter=${f}`, 9000);
+      const it = a.value && a.value[0];
+      out.testes.push({ rotulo: `Attachments (filtro ${decodeURIComponent(f)})`, status: a.status, erro: a.erro, qtd: a.value ? a.value.length : undefined, campos: it ? Object.keys(it) : (a.value ? [] : undefined) });
+      if (a.status === 200 && it && !att) att = it;
+      if (a.status === 200) break;
+    }
+  }
+
+  // 3) Documents (sabidamente 200) — guarda um p/ comparar/baixar se não houver anexo.
+  const d = await req('/Documents?$top=1', 7000);
+  const doc = d.value && d.value[0];
+  out.testes.push({ rotulo: 'Documents', status: d.status, erro: d.erro, campos: doc ? Object.keys(doc) : undefined });
+
+  // Amostra: valores dos campos "de arquivo" do 1º anexo (ou documento).
+  const src = att || doc;
+  if (src) {
+    const chaves = ['Id', 'Name', 'FileName', 'Key', 'Url', 'DownloadUrl', 'FileUrl', 'DocumentUrl', 'Size', 'ContactId', 'DealId', 'MimeType', 'Extension', 'CreateDate'];
+    const campos = {};
+    for (const k of chaves) if (src[k] != null) campos[k] = String(src[k]).slice(0, 90);
+    out.amostra = { origem: att ? 'Attachment (anexo)' : 'Document (proposta)', campos };
+  }
+
+  // 4) Teste de DOWNLOAD real (sem gravar): tenta baixar o arquivo pelo campo de URL.
+  const urlCampo = src && (src.Url || src.DownloadUrl || src.FileUrl || src.DocumentUrl);
+  if (urlCampo) {
+    try {
+      const r = await fetch(String(urlCampo), { signal: AbortSignal.timeout(9000), redirect: 'follow' });
+      let bytes = 0; if (r.ok) { const b = await r.arrayBuffer(); bytes = b.byteLength; }
+      out.download = { via: att ? 'anexo' : 'documento', status: r.status, contentType: r.headers.get('content-type') || '', bytes };
+    } catch (e) { out.download = { erro: (e && e.name === 'TimeoutError') ? 'tempo esgotado' : String(e && e.message || e).slice(0, 90) }; }
+  }
   return out;
 }
 
@@ -66,29 +89,35 @@ export function paginaSondaAnexos(user, d) {
     return `${head('Diagnóstico de anexos')}<body><div class="wrap"><a href="/diretoria" style="color:#00333B;font-size:12px;font-weight:800;text-decoration:none">← Diretoria</a>
     <div class="card" style="margin-top:12px;color:#8a4b45"><b>Não foi possível diagnosticar.</b><br>${esc((d && d.erro) || 'Erro desconhecido.')}</div></div></body></html>`;
   }
-  const lista = (arr) => (arr && arr.length) ? arr.map((x) => `<code>${esc(x)}</code>`).join(' ') : '<span style="color:#8fa39f">— nenhuma coleção de anexo/documento encontrada —</span>';
-  const pill = (st) => `<span class="pill" style="background:#EEF3F1;color:${st === 200 ? '#1E5B31' : (st ? '#8a4b45' : '#8A6A16')}">${st != null ? 'HTTP ' + st : 'sem resposta'}</span>`;
-  const amostras = (d.amostras || []).map((a) => `<div style="padding:8px 0;border-top:1px solid #F2F5F4">
-      <div><code>/${esc(a.endpoint)}</code> ${a.status != null ? pill(a.status) : `<span class="pill" style="background:#FFF4DE;color:#8A6A16">${esc(a.erro || 'erro')}</span>`}</div>
-      ${a.campos ? `<div style="font-size:12px;color:#4F6469;margin-top:5px">campos: ${a.campos.length ? a.campos.map((c) => `<code>${esc(c)}</code>`).join(' ') : '(sem registros nesta conta)'}</div>` : ''}
+  const pill = (st, txt) => `<span class="pill" style="background:${st === 200 ? '#E4F3E6' : '#FFF4DE'};color:${st === 200 ? '#1E5B31' : '#8A6A16'}">${esc(txt || (st != null ? 'HTTP ' + st : '—'))}</span>`;
+  const testes = (d.testes || []).map((t) => `<div style="padding:9px 0;border-top:1px solid #F2F5F4">
+      <div style="font-size:13px;font-weight:700">${esc(t.rotulo)} ${t.status != null ? pill(t.status) : pill(0, t.erro || 'erro')} ${t.qtd != null ? `<span style="font-size:11px;color:#8fa39f">${t.qtd} registro(s)</span>` : ''}</div>
+      ${t.campos && t.campos.length ? `<div style="font-size:11.5px;color:#4F6469;margin-top:5px">campos: ${t.campos.map((c) => `<code>${esc(c)}</code>`).join(' ')}</div>` : (t.campos && !t.campos.length ? '<div style="font-size:11.5px;color:#8fa39f;margin-top:5px">(respondeu, mas sem registros)</div>' : '')}
     </div>`).join('');
+
+  const amostra = d.amostra ? `<div class="card">
+    <div style="font-size:13px;font-weight:800;margin-bottom:6px">Amostra de 1 arquivo <span style="font-size:11px;color:#8fa39f">(${esc(d.amostra.origem)})</span></div>
+    ${Object.keys(d.amostra.campos).length ? Object.entries(d.amostra.campos).map(([k, v]) => `<div style="font-size:12.5px;padding:3px 0"><code>${esc(k)}</code> = ${esc(v)}</div>`).join('') : '<div style="color:#8fa39f;font-size:12.5px">sem campos de arquivo reconhecíveis</div>'}
+  </div>` : '';
+
+  const download = d.download ? `<div class="card">
+    <div style="font-size:13px;font-weight:800;margin-bottom:6px">Teste de download real</div>
+    ${d.download.erro ? `<div style="color:#8a4b45;font-size:12.5px">Falhou: ${esc(d.download.erro)}</div>`
+      : `<div style="font-size:12.5px;color:#4F6469">via ${esc(d.download.via)} · ${pill(d.download.status)} · tipo <code>${esc(d.download.contentType || '?')}</code> · <b>${esc(String(d.download.bytes))} bytes</b> ${d.download.bytes > 0 && d.download.status === 200 ? '<span style="color:#1E5B31;font-weight:800">✓ arquivo baixou!</span>' : ''}</div>`}
+  </div>` : '';
 
   return `${head('Diagnóstico de anexos')}<body><div class="wrap">
   <a href="/diretoria" style="color:#00333B;font-size:12px;font-weight:800;text-decoration:none">← Diretoria</a>
   <h1 style="font-size:19px;margin:12px 0 4px">Diagnóstico — anexos no Ploomes</h1>
-  <p style="font-size:13px;color:#4F6469;margin:0 0 16px">Só inspeção (nada é baixado, apagado ou alterado). Tire um print e me mande — com isso eu monto o importador certo.</p>
+  <p style="font-size:13px;color:#4F6469;margin:0 0 16px">Só inspeção (nada é baixado para guardar, nem apagado). ${d.contatoId ? `Cliente de amostra: <code>#${esc(String(d.contatoId))}</code>.` : ''} Tire um print e me mande.</p>
 
   <div class="card">
-    <div style="font-size:13px;font-weight:800;margin-bottom:6px">1) Coleções do Ploomes ${pill(d.raizStatus)} ${d.totalColecoes != null ? `<span style="font-size:11px;color:#8fa39f">(${d.totalColecoes} coleções no total)</span>` : ''}</div>
-    ${d.raizErro ? `<div style="font-size:12px;color:#8a4b45;margin-bottom:6px">Raiz: ${esc(d.raizErro)}</div>` : ''}
-    <div style="font-size:12.5px;color:#4F6469;line-height:1.9"><b>Coleções de anexo/documento:</b> ${lista(d.entitySets)}</div>
+    <div style="font-size:13px;font-weight:800;margin-bottom:2px">Testes na API</div>
+    ${testes}
   </div>
+  ${amostra}
+  ${download}
 
-  <div class="card">
-    <div style="font-size:13px;font-weight:800;margin-bottom:2px">2) Teste dos endpoints candidatos</div>
-    ${amostras || '<div style="color:#8fa39f;font-size:12.5px">—</div>'}
-  </div>
-
-  <div style="font-size:11.5px;color:#8fa39f">Se algum endpoint der <b>HTTP 200</b> com campos como <code>Url</code>, <code>FileName</code>, <code>Base64</code> ou <code>Size</code>, dá para importar os arquivos. Se der <b>403</b> (sem permissão) ou só metadados sem o arquivo, eu te aviso a alternativa.</div>
+  <div style="font-size:11.5px;color:#8fa39f">O que decide a importação: um teste com <b>HTTP 200</b> listando anexos do cliente + o "arquivo baixou!" no teste de download. Se der <b>403</b> (sem permissão) ou o download falhar, eu te aviso a alternativa.</div>
   </div></body></html>`;
 }
