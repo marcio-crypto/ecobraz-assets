@@ -177,7 +177,11 @@ export function paginaColetaOSDetalhe(user, os, seloUrl) {
   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin:12px 0 16px">
     <div>${pill(os.status)}<h1 style="font-size:22px;margin:8px 0 0">${esc(os.numero)}</h1>
     <div style="font-size:13px;color:#7c8a87;margin-top:2px">${esc(os.clienteNome || '')}</div></div>
-    <a href="/coletas/os/comprovante?id=${esc(os.id)}" class="btn btn-d" style="flex:none;padding:9px 14px;font-size:13px">📄 Comprovante (QR)</a>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;flex:none;justify-content:flex-end">
+      <a href="/coletas/os/carta?id=${esc(os.id)}" class="btn btn-g" style="padding:9px 12px;font-size:12.5px">📄 Carta de Descarte</a>
+      <a href="/coletas/os/manifesto?id=${esc(os.id)}" class="btn btn-g" style="padding:9px 12px;font-size:12.5px">📄 Manifesto de Carga</a>
+      <a href="/coletas/os/comprovante?id=${esc(os.id)}" class="btn btn-d" style="padding:9px 12px;font-size:12.5px">✅ Comprovante (QR)</a>
+    </div>
   </div>
   <div class="card">
     <table role="presentation" style="width:100%;border-collapse:collapse;font-size:13.5px">
@@ -204,6 +208,107 @@ export function paginaColetaOSDetalhe(user, os, seloUrl) {
 </div>
 <script>function setStatus(s){document.getElementById('m').textContent='Salvando…';fetch('/api/coletas/status',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:'${esc(os.id)}',status:s})}).then(r=>r.json()).then(j=>{if(j.ok){location.reload();}else{document.getElementById('m').textContent='Falha.';}}).catch(()=>document.getElementById('m').textContent='Sem conexão.');}</script>
 </body></html>`;
+}
+
+// ---------------------------------------------------------------------------
+// Documentos que acompanham a OS na coleta: Carta de Descarte e Manifesto de Carga.
+// Gerados AUTOMATICAMENTE a partir da OS (a Débora não redigita nada), padronizados,
+// com QR de autenticidade. O texto jurídico da declaração é mantido LITERAL.
+// ---------------------------------------------------------------------------
+const EMPRESA = {
+  razao: 'ASSOCIAÇÃO AUXÍLIO À RECICLAGEM DE ELETRÔNICOS E INCLUSÃO DIGITAL — ECOBRAZ',
+  cnpj: '14.197.457/0001-42',
+  lo: '30011495',
+  endereco: 'Rua Dona Maria Quedas, 230 — Jardim Andaraí — 02175-010 — São Paulo/SP',
+  fone: '(11) 4329-2001',
+  email: 'contato@ecobraz.org.br',
+};
+// Declaração LITERAL do modelo (não alterar — texto jurídico).
+const DECLARACAO_CARTA = 'A Ecobraz declara que está dispensada de emissão de nota fiscal de circulação de mercadorias, tendo em vista o que dispõe o ART. 19 do decreto Nº 45.490 de 30/11/2000 na resposta consulta 499/87 e no ART. 1 da lei complementar Nº 116/03 e suas alterações. Mediante o exposto, emite esta declaração para fins de circulação das mercadorias abaixo relacionadas.';
+
+const tdDoc = 'padding:9px 10px;border:1px solid #E4EBE9';
+function tabelaItens(os) {
+  const nome = esc(os.material || 'Sucata Eletrônica — Diversa');
+  const qtd = esc(os.quantidade || '1,000');
+  return `<table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-top:6px">
+    <thead><tr style="background:#F2F6F4;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#5c6f6b">
+      <th style="${tdDoc};text-align:left;width:40px">Item</th><th style="${tdDoc};text-align:left">Nome</th>
+      <th style="${tdDoc};text-align:right">Quantidade</th><th style="${tdDoc};text-align:right">Valor Unit.</th><th style="${tdDoc};text-align:right">Total</th>
+    </tr></thead>
+    <tbody>
+      <tr><td style="${tdDoc}">1</td><td style="${tdDoc}">${nome}</td><td style="${tdDoc};text-align:right">${qtd}</td><td style="${tdDoc};text-align:right">R$ 0,00</td><td style="${tdDoc};text-align:right">R$ 0,00</td></tr>
+      <tr><td colspan="4" style="${tdDoc};text-align:right;font-weight:800">Total</td><td style="${tdDoc};text-align:right;font-weight:800">R$ 0,00</td></tr>
+    </tbody></table>`;
+}
+const eyebrowDoc = (t) => `<div style="display:flex;align-items:center;gap:9px;margin:22px 0 8px"><span style="width:4px;height:16px;background:#92C430;border-radius:2px"></span><span style="font-size:12px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:#00333B">${esc(t)}</span></div>`;
+const campoDoc = (rot, val, span) => `<div style="${span ? 'grid-column:1/-1;' : ''}"><div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#93a6a2">${esc(rot)}</div><div style="font-size:13px;font-weight:600;color:#10262B;margin-top:2px;line-height:1.5">${esc(val || '—')}</div></div>`;
+function blocoGerador(os) {
+  return `${eyebrowDoc('Gerador')}<div style="display:grid;grid-template-columns:1fr 1fr;gap:11px 26px">
+    ${campoDoc('Razão social / Nome', os.clienteNome, true)}
+    ${campoDoc('CNPJ / CPF', os.clienteDoc)}${campoDoc('Data da coleta', dataBR(os.dataAgendada))}
+    ${campoDoc('Endereço', os.endereco, true)}</div>`;
+}
+function blocoPatrocinioDoc(os) {
+  return `<div style="margin-top:18px;background:#F1F8EC;border:1px solid #cfe6b8;border-radius:10px;padding:12px 14px">
+    <div style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#3f6b1e">Coleta patrocinada · Adote um Bairro</div>
+    <div style="font-size:11.5px;color:#28413f;margin-top:5px;line-height:1.5">Coleta financiada por <b>${esc(os.patrocinadorNome)}</b>. O cliente autoriza o compartilhamento das informações desta coleta com o patrocinador, para fins de comprovação e relatório socioambiental (LGPD, Lei nº 13.709/2018).</div></div>`;
+}
+const assinaturasDoc = (labels) => `<div style="display:flex;gap:22px;margin-top:38px;text-align:center">${labels.map((l) => `<div style="flex:1"><div style="border-top:1px solid #10262B;padding-top:6px;font-size:10.5px;font-weight:800;letter-spacing:.03em;color:#4F6469">${esc(l)}</div></div>`).join('')}</div>`;
+
+function docHTML(titulo, os, seloUrl, corpo) {
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${esc(titulo)} — ${esc(os.numero)}</title>
+<style>@media print{.noprint{display:none!important}body{background:#fff!important}}*{box-sizing:border-box}</style></head>
+<body style="margin:0;background:#EDF1EF;font-family:Montserrat,'Segoe UI',Arial,Helvetica,sans-serif;color:#10262B">
+<div style="max-width:820px;margin:0 auto;padding:18px">
+  <div class="noprint" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <a href="/coletas/os?id=${esc(os.id)}" style="color:#4F6469;font-size:13px;font-weight:800;text-decoration:none">← Voltar</a>
+    <button onclick="window.print()" style="background:#00333B;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:800">🖨️ Imprimir / Salvar PDF</button>
+  </div>
+  <div style="background:#fff;border:1px solid #E1E8E5;border-radius:14px;overflow:hidden">
+    <div style="background:#00333B;padding:22px 28px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+      <div><div style="font-size:27px;font-weight:800;color:#fff">ecobraz<span style="color:#92C430">.</span></div>
+      <div style="font-size:11px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#92C430;margin-top:7px">${esc(titulo)}</div></div>
+      <div style="text-align:right"><div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#7fa6a3">Ordem de Serviço</div><div style="font-size:21px;font-weight:800;color:#fff">${esc(os.numero)}</div><div style="font-size:11.5px;color:#cfe3e0;margin-top:7px">Emissão: <b style="color:#fff">${esc(dataBR(os.criadoEm) || '—')}</b></div></div>
+    </div>
+    <div style="background:#F2F6F4;border-bottom:1px solid #E4EBE9;padding:11px 28px;font-size:11px;color:#4F6469;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px">
+      <span><b style="color:#10262B">${esc(EMPRESA.razao)}</b></span><span>CNPJ ${esc(EMPRESA.cnpj)} · LO ${esc(EMPRESA.lo)}</span>
+    </div>
+    <div style="padding:20px 28px 22px">${corpo}</div>
+    <div style="padding:0 28px 24px">
+      <div style="display:flex;gap:16px;align-items:center;background:#F7FAF9;border:1px solid #E4EBE9;border-radius:12px;padding:16px 18px">
+        <img src="${esc(seloUrl)}" alt="QR de autenticidade" style="width:96px;height:96px;flex:none;border:1px solid #E4EBE9;border-radius:8px;background:#fff">
+        <div><div style="font-size:13px;font-weight:800;color:#00333B">Autenticidade verificável</div>
+        <div style="font-size:11.5px;color:#4F6469;line-height:1.6;margin-top:4px">Aponte a câmera para o QR e confira no site da Ecobraz que este documento é autêntico e vinculado à OS ${esc(os.numero)}.</div></div>
+      </div>
+    </div>
+    <div style="background:#00333B;padding:13px 28px;font-size:10px;color:#9FC6C1;line-height:1.7">
+      ${esc(EMPRESA.endereco)} · ${esc(EMPRESA.fone)} · ${esc(EMPRESA.email)}. Documento emitido eletronicamente e verificável pelo QR.
+    </div>
+  </div>
+</div></body></html>`;
+}
+
+export function paginaCartaDescarte(os, seloUrl) {
+  const veic = `Placa: ${esc(os.veiculoPlaca || '________________')}   ·   Motorista: ${esc(os.agenteNome || '________________')}`;
+  const corpo = `${blocoGerador(os)}
+    <div style="margin-top:16px;font-size:12.5px;color:#28413f;line-height:1.55"><b>Recebido por:</b> ${esc(EMPRESA.razao)}, inscrita no CNPJ ${esc(EMPRESA.cnpj)}, LO ${esc(EMPRESA.lo)}, com sede na Rua Dona Maria Quedas, 230.</div>
+    <div style="margin-top:10px;font-size:12.5px;color:#28413f"><b>Dados do veículo:</b> ${veic}</div>
+    ${eyebrowDoc('Declaração')}
+    <div style="font-size:12px;color:#4F6469;line-height:1.65;text-align:justify;background:#FBFDFC;border:1px solid #EEF1F0;border-radius:10px;padding:12px 14px">${esc(DECLARACAO_CARTA)}</div>
+    ${eyebrowDoc('Mercadorias')}${tabelaItens(os)}
+    ${os.patrocinadorNome ? blocoPatrocinioDoc(os) : ''}
+    ${assinaturasDoc(['Doador', 'Coletor', 'Responsável Comercial'])}`;
+  return docHTML('Carta de Descarte', os, seloUrl, corpo);
+}
+
+export function paginaManifestoCarga(os, seloUrl) {
+  const parte = (rot) => `<div style="flex:1;min-width:230px"><div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#93a6a2;margin-bottom:4px">${esc(rot)}</div><div style="font-size:12px;color:#28413f;line-height:1.5"><b>${esc(EMPRESA.razao)}</b><br>CNPJ ${esc(EMPRESA.cnpj)} · ${esc(EMPRESA.fone)}<br>${esc(EMPRESA.endereco)}</div></div>`;
+  const corpo = `${blocoGerador(os)}
+    ${eyebrowDoc('Descrição do material')}${tabelaItens(os)}
+    <div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:22px">${parte('Transportador')}${parte('Receptor')}</div>
+    ${os.patrocinadorNome ? blocoPatrocinioDoc(os) : ''}
+    ${assinaturasDoc(['Gerador', 'Transportador', 'Receptor'])}`;
+  return docHTML('Manifesto de Carga', os, seloUrl, corpo);
 }
 
 // QR público da OS (aponta para /validar-os).
