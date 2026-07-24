@@ -79,15 +79,18 @@ export async function importarLoteAnexos(env, desdeDealId, topDeals) {
   if (!env.PLOOMES_USER_KEY) return { ok: false, erro: 'Falta a chave do Ploomes no cofre.' };
   if (!env.DB_PLOOMES) return { ok: false, erro: 'Banco D1 não vinculado (DB_PLOOMES).' };
   if (!env.R2_ARQUIVOS) return { ok: false, erro: 'Depósito R2 ainda não ligado. Ative o R2 no painel da Cloudflare.' };
-  const N = Math.min(Math.max(Number(topDeals) || 5, 1), 20);
+  // Lotes de coletas grandes: coleta SEM anexo custa quase nada (só o expand), então
+  // varremos rápido as regiões vazias. Mas limitamos os DOWNLOADS por requisição (CAP)
+  // para não estourar tempo/memória — o corte é em fronteira de coleta (cursor seguro).
+  const N = Math.min(Math.max(Number(topDeals) || 30, 1), 60);
+  const CAP = 25;
   const D = Math.max(Number(desdeDealId) || 0, 0);
   const r = await reqJSON(env, `/Deals?$top=${N}&$orderby=Id&$filter=Id%20gt%20${D}&$expand=Attachments`, 25000);
   if (r.erro) return { ok: false, erro: r.erro, desdeDealId: D };
   if (r.status !== 200) return { ok: false, erro: `HTTP ${r.status}`, desdeDealId: D };
   const deals = r.value || [];
-  let maxId = D, gravados = 0, anexosVistos = 0, falhas = 0;
+  let maxId = D, gravados = 0, anexosVistos = 0, falhas = 0, bytes = 0, baixados = 0, cortadoPorCap = false;
   for (const deal of deals) {
-    if (deal.Id > maxId) maxId = deal.Id;
     const anexos = Array.isArray(deal.Attachments) ? deal.Attachments : [];
     for (const a of anexos) {
       anexosVistos++;
@@ -104,11 +107,13 @@ export async function importarLoteAnexos(env, desdeDealId, topDeals) {
       const dl = await baixarParaR2(env, key, url, ct);
       if (!dl.ok) { falhas++; continue; }
       await gravarMeta(env, { r2_key: key, fonte: 'anexo', ploomes_id: a.Id, deal_id: dealId, contact_id: deal.ContactId || null, nome_arquivo: fn, content_type: dl.contentType, tamanho: dl.tamanho, criado_em: a.CreateDate || deal.CreateDate || '' });
-      gravados++;
+      gravados++; baixados++; if (dl.tamanho) bytes += dl.tamanho;
     }
+    maxId = deal.Id;                       // cursor avança só com a coleta concluída
+    if (baixados >= CAP) { cortadoPorCap = true; break; }
   }
   await gravarEstado(env, 'anexos_cursor', maxId);
-  return { ok: true, dealsLidos: deals.length, anexosVistos, gravados, falhas, ultimoDealId: maxId, fim: deals.length < N };
+  return { ok: true, dealsLidos: deals.length, anexosVistos, gravados, falhas, bytes, ultimoDealId: maxId, fim: deals.length < N && !cortadoPorCap };
 }
 
 // ---------------------------------------------------------------------------
@@ -118,13 +123,13 @@ export async function importarLoteDocumentos(env, desdeId, top) {
   if (!env.PLOOMES_USER_KEY) return { ok: false, erro: 'Falta a chave do Ploomes no cofre.' };
   if (!env.DB_PLOOMES) return { ok: false, erro: 'Banco D1 não vinculado (DB_PLOOMES).' };
   if (!env.R2_ARQUIVOS) return { ok: false, erro: 'Depósito R2 ainda não ligado. Ative o R2 no painel da Cloudflare.' };
-  const N = Math.min(Math.max(Number(top) || 10, 1), 40);
+  const N = Math.min(Math.max(Number(top) || 20, 1), 50);
   const D = Math.max(Number(desdeId) || 0, 0);
   const r = await reqJSON(env, `/Documents?$top=${N}&$orderby=Id&$filter=Id%20gt%20${D}&$select=Id,Name,FileName,ContactId,DealId,DocumentUrl,CreateDate`, 20000);
   if (r.erro) return { ok: false, erro: r.erro, desdeId: D };
   if (r.status !== 200) return { ok: false, erro: `HTTP ${r.status}`, desdeId: D };
   const docs = r.value || [];
-  let maxId = D, gravados = 0, falhas = 0;
+  let maxId = D, gravados = 0, falhas = 0, bytes = 0;
   for (const d of docs) {
     if (d.Id > maxId) maxId = d.Id;
     const key = `documento/${d.Id}`;
@@ -133,10 +138,10 @@ export async function importarLoteDocumentos(env, desdeId, top) {
     const dl = await baixarParaR2(env, key, d.DocumentUrl, 'application/pdf');
     if (!dl.ok) { falhas++; continue; }
     await gravarMeta(env, { r2_key: key, fonte: 'documento', ploomes_id: d.Id, deal_id: d.DealId || null, contact_id: d.ContactId || null, nome_arquivo: d.FileName || d.Name || `documento-${d.Id}`, content_type: dl.contentType, tamanho: dl.tamanho, criado_em: d.CreateDate || '' });
-    gravados++;
+    gravados++; if (dl.tamanho) bytes += dl.tamanho;
   }
   await gravarEstado(env, 'documentos_cursor', maxId);
-  return { ok: true, lidos: docs.length, gravados, falhas, ultimoId: maxId, fim: docs.length < N };
+  return { ok: true, lidos: docs.length, gravados, falhas, bytes, ultimoId: maxId, fim: docs.length < N };
 }
 
 // ---------------------------------------------------------------------------
@@ -193,20 +198,21 @@ export function paginaMigrarArquivos(user, s) {
 <body><div class="wrap">
   <a class="top" href="/diretoria">← Diretoria</a>
   <h1 style="font-size:20px;margin:12px 0 4px">Migração do Ploomes — Arquivos</h1>
-  <p style="font-size:13px;color:#4F6469;margin:0 0 14px">Copia os arquivos do Ploomes para o depósito próprio (R2), amarrando cada um à coleta/cliente de origem. É retomável e não duplica — pode fechar e voltar. Guardado até agora: <b>${mb ? mb.toLocaleString('pt-BR', { maximumFractionDigits: 0 }) + ' MB' : '0 MB'}</b>.</p>
+  <p style="font-size:13px;color:#4F6469;margin:0 0 14px">Copia os arquivos do Ploomes para o depósito próprio (R2), amarrando cada um à coleta/cliente de origem. É retomável e não duplica — pode fechar e voltar. Guardado até agora: <b id="mbTot">${mb ? mb.toLocaleString('pt-BR', { maximumFractionDigits: 0 }) + ' MB' : '0 MB'}</b>.</p>
   ${aviso}
   ${bloco('Anexos', 'NF, certificados, MTR e fotos — pendurados nas coletas.', 'anx', anexPct, anexI, anexT, !s.r2Ligado)}
   ${bloco('Documentos', 'Propostas geradas (PDF).', 'doc', docPct, docI, docT, !s.r2Ligado)}
 </div>
 <script>
-var PARAR={}, CUR={anx:${curA}, doc:${curD}}, TOT={anx:${anexT}, doc:${docT}}, FEITO={anx:${anexI}, doc:${docI}};
+var PARAR={}, CUR={anx:${curA}, doc:${curD}}, TOT={anx:${anexT}, doc:${docT}}, FEITO={anx:${anexI}, doc:${docI}}, BYTES0=${bytes}, BYTES={anx:0,doc:0};
 var API={anx:'/api/diretoria/arquivos-anexos', doc:'/api/diretoria/arquivos-docs'};
 function setBar(id){var p=TOT[id]?Math.min(100,Math.round(FEITO[id]/TOT[id]*100)):0;document.getElementById(id+'Bar').style.width=p+'%';document.getElementById(id+'Txt').textContent=p+'% · '+FEITO[id].toLocaleString('pt-BR')+' / '+TOT[id].toLocaleString('pt-BR');document.getElementById(id+'I').textContent=FEITO[id].toLocaleString('pt-BR');}
+function setMB(){var t=(BYTES0+BYTES.anx+BYTES.doc)/1048576;document.getElementById('mbTot').textContent=(t>=1?Math.round(t).toLocaleString('pt-BR'):t.toFixed(1))+' MB';}
 async function umLote(id){var p=id==='anx'?('desdeDealId='+CUR[id]):('desdeId='+CUR[id]);var r=await fetch(API[id]+'?'+p,{method:'POST'});return r.json();}
 async function rodar(id,btn){PARAR[id]=false;btn.disabled=true;document.getElementById(id+'Stop').disabled=false;var st=document.getElementById(id+'St');st.textContent='Importando…';
   while(!PARAR[id]){var j;try{j=await umLote(id);}catch(e){st.textContent='Erro de conexão — clique de novo para retomar.';break;}
     if(!j.ok){st.textContent='Parou: '+(j.erro||'erro')+' — clique de novo para retomar.';break;}
-    FEITO[id]+=(j.gravados||0);CUR[id]=(id==='anx'?j.ultimoDealId:j.ultimoId);setBar(id);
+    FEITO[id]+=(j.gravados||0);if(j.bytes)BYTES[id]+=j.bytes;CUR[id]=(id==='anx'?j.ultimoDealId:j.ultimoId);setBar(id);setMB();
     var extra=(j.falhas?(' · '+j.falhas+' sem arquivo/erro'):'');
     if(j.fim){st.textContent='✅ Concluído! '+FEITO[id].toLocaleString('pt-BR')+' guardados.'+extra;break;}
     st.textContent='Importando… +'+(j.gravados||0)+' neste lote'+extra;
