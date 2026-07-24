@@ -50,16 +50,23 @@ export async function sondarAnexosPloomes(env) {
   out.contatoId = cid || null;
   out.testes.push({ rotulo: 'Contacts (1 amostra)', status: c.status, erro: c.erro });
 
-  // 2) Anexos ESCOPADOS a esse contato (o blanket dá timeout). Tenta alguns filtros.
+  // 2) Anexos: tenta escopar ao contato de amostra; só serve se VIER registro.
   let att = null;
   if (cid) {
-    for (const f of [`ContactId%20eq%20${cid}`, `OwnerId%20eq%20${cid}`, `DealId%20ne%20null`]) {
-      const a = await req(`/Attachments?$top=5&$filter=${f}`, 9000);
+    for (const f of [`ContactId%20eq%20${cid}`, `OwnerId%20eq%20${cid}`]) {
+      const a = await req(`/Attachments?$top=5&$filter=${f}`, 7000);
       const it = a.value && a.value[0];
       out.testes.push({ rotulo: `Attachments (filtro ${decodeURIComponent(f)})`, status: a.status, erro: a.erro, qtd: a.value ? a.value.length : undefined, campos: it ? Object.keys(it) : (a.value ? [] : undefined) });
-      if (a.status === 200 && it && !att) att = it;
-      if (a.status === 200) break;
+      if (a.status === 200 && it) { att = it; break; }
     }
+  }
+  // Se o contato de amostra não tinha anexo, pega uma AMOSTRA GERAL (top pequeno não dá
+  // timeout — o $count já respondeu 10.556). É o que confirma a estrutura + download do anexo.
+  if (!att) {
+    const a = await req(`/Attachments?$top=3&$orderby=Id`, 8000);
+    const it = a.value && a.value[0];
+    out.testes.push({ rotulo: 'Attachments (amostra geral, $top=3)', status: a.status, erro: a.erro, qtd: a.value ? a.value.length : undefined, campos: it ? Object.keys(it) : (a.value ? [] : undefined) });
+    if (a.status === 200 && it) att = it;
   }
 
   // 3) Documents (sabidamente 200) — guarda um p/ comparar/baixar se não houver anexo.
