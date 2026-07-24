@@ -170,7 +170,7 @@ export function paginaLojaAdote() {
   <div class="sub">Você terceiriza o problema inteiro e recebe a prova na mão.</div>
   <div class="bens">
     <div class="ben"><div class="ic">✅</div><div><div class="t">Conformidade legal</div><div class="d">Certificado de Destinação Final (CDF) e rastreabilidade via MTR — a prova que a fiscalização e a auditoria pedem.</div></div></div>
-    <div class="ben"><div class="ic">🔒</div><div><div class="t">Seus dados fora de circulação</div><div class="d">Equipamento destinado e rastreado não vira sucata revendida com seus arquivos dentro. O risco de vazamento sai da sua mão.</div></div></div>
+    <div class="ben"><div class="ic">🔒</div><div><div class="t">Destruição certificada de dados</div><div class="d">Equipamentos com informação sensível passam por destruição/descaracterização certificada, com comprovação. Seu sigilo protegido — e documentado.</div></div></div>
     <div class="ben"><div class="ic">🌱</div><div><div class="t">Impacto ESG de verdade</div><div class="d">Cada tonelada financia a coleta correta em bairros e comunidades. Sua marca ligada a algo que admiram.</div></div></div>
     <div class="ben"><div class="ic">♻️</div><div><div class="t">Rastreabilidade que se sustenta</div><div class="d">Do caminhão ao destino final, cada quilo é pesado, fotografado e registrado — a trilha que segura em pé numa auditoria.</div></div></div>
     <div class="ben"><div class="ic">💳</div><div><div class="t">Crédito pré-pago, sem surpresa</div><div class="d">Compra o peso que precisa e usa quando quiser. Sem mensalidade escondida, sem contrato amarrado.</div></div></div>
@@ -190,8 +190,8 @@ export function paginaLojaAdote() {
 <div class="sec" style="padding-top:6px">
   <div class="impact">
     <div class="eyebrow" style="color:#9CE06B">Por que “Adote um Bairro”</div>
-    <h2 style="color:#fff;margin-top:10px">Sua empresa resolve o problema e deixa um legado</h2>
-    <p style="font-size:15px;line-height:1.7;color:#CFE9C7;max-width:640px;margin:8px auto 0">Cada tonelada que você contrata é lixo eletrônico que teve o destino certo — em vez de acabar em aterro, lixão ou desmanche informal. É economia circular real, com documento que comprova. Sua marca ligada a uma atitude concreta, não a uma promessa vazia.</p>
+    <h2 style="color:#fff;margin-top:10px">Você financia a coleta que faltava — e fica com a prova</h2>
+    <p style="font-size:15px;line-height:1.7;color:#CFE9C7;max-width:660px;margin:8px auto 0">Recolher o eletrônico na casa de uma pessoa custa caro: é a “última milha” que quase ninguém faz — e por isso esse lixo acaba no lixão ou no desmanche informal. No Adote um Bairro, a sua empresa <b>financia essa coleta</b>. Em troca, você recebe a <b>documentação auditável</b> de tudo que foi recolhido e realiza uma ação concreta: tira o lixo eletrônico da casa das pessoas e fecha o ciclo do jeito certo. É a sua marca ligada a um impacto que dá para provar — e que ninguém mais no mercado oferece.</p>
   </div>
 </div>
 
@@ -229,6 +229,7 @@ export function paginaLojaAdote() {
     <details><summary>Como comprovo que foi destinado corretamente?</summary><p>Você recebe o Certificado de Destinação Final (CDF) e a trilha de rastreabilidade de cada coleta, com assinatura do Responsável Técnico — válidos para auditoria e órgãos ambientais.</p></details>
     <details><summary>Preciso assinar contrato longo?</summary><p>Não. O avulso é compra única. O recorrente você ativa e cancela quando quiser — sem multa, sem fidelidade.</p></details>
     <details><summary>Como funciona o desconto do crédito?</summary><p>Cada coleta é pesada na recepção da Ecobraz e esse peso é descontado do seu saldo. Você acompanha o saldo pelo sistema, com total transparência.</p></details>
+    <details><summary>E a segurança dos meus dados?</summary><p>Equipamentos com informação sensível passam por destruição/descaracterização certificada, com comprovação documentada. Seu HD velho não vira sucata revendida com seus arquivos dentro.</p></details>
   </div>
 </div>
 <script>
