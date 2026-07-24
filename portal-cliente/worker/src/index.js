@@ -1791,18 +1791,32 @@ async function processarMudancaOS(dealId, env) {
   await rec({ resultado: 'enviado', etapa, tipo, para: mascararEmail(email), resendId: envio?.id || null });
 }
 async function enviarEmailStatus(to, nome, tipo, env) {
-  if (!env.RESEND_API_KEY) throw new Error('sem_resend');
   const m = MSGS_STATUS[tipo]; if (!m) return null;
-  const from = env.RESEND_FROM || 'Portal Ecobraz <acesso@ecobraz.org.br>';
   const portalUrl = env.PORTAL_URL || 'https://ecobraz-portal.ti-0ab.workers.dev/';
-  const r = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${env.RESEND_API_KEY}` },
-    body: JSON.stringify({ from, to: [to], subject: m.assunto, html: emailStatusHtml(nome, m, portalUrl), text: `${m.titulo}\n\n${m.corpo.replace(/<[^>]+>/g, '')}\n\nAcesse seu portal: ${portalUrl}\n\nEcobraz` }),
-  });
-  const b = await r.text().catch(() => '');
-  if (!r.ok) throw new Error(`resend_${r.status}:${b.slice(0, 140)}`);
-  try { return JSON.parse(b); } catch { return null; } // { id: "..." } = comprovante de que o Resend aceitou
+  const html = emailStatusHtml(nome, m, portalUrl);
+  const text = `${m.titulo}\n\n${m.corpo.replace(/<[^>]+>/g, '')}\n\nAcesse seu portal: ${portalUrl}\n\nEcobraz`;
+  // Mesmo caminho do login: Resend se houver; senão, e-Goi transacional (provado).
+  if (env.RESEND_API_KEY) {
+    const from = env.RESEND_FROM || 'Portal Ecobraz <acesso@ecobraz.org.br>';
+    const r = await fetch('https://api.resend.com/emails', {
+      method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${env.RESEND_API_KEY}` },
+      body: JSON.stringify({ from, to: [to], subject: m.assunto, html, text }),
+    });
+    const b = await r.text().catch(() => '');
+    if (!r.ok) throw new Error(`resend_${r.status}:${b.slice(0, 140)}`);
+    try { return JSON.parse(b); } catch { return null; }
+  }
+  const apiKey = env.EGOI_TRANSACTIONAL_API_KEY || env.EGOI_API_KEY;
+  if (!apiKey) throw new Error('sem_chave_email');
+  const senderId = await resolverSender(apiKey, env);
+  if (!senderId) throw new Error('sem_remetente');
+  const base = env.EGOI_TRANSACTIONAL_API_URL || 'https://slingshot.egoiapp.com/api';
+  const payload = { sender_id: senderId, subject: m.assunto, to: [to], html_body: html, text_body: text, open_tracking: false, click_tracking: false };
+  if (env.EGOI_SENDER_NAME) payload.sender_name = env.EGOI_SENDER_NAME;
+  if (env.EGOI_REPLY_TO_ID) payload.reply_to_id = env.EGOI_REPLY_TO_ID;
+  const r = await fetch(`${base}/v2/email/messages/action/send`, { method: 'POST', headers: { 'content-type': 'application/json', ApiKey: apiKey }, body: JSON.stringify(payload) });
+  if (!r.ok) { const b = await r.text().catch(() => ''); throw new Error(`egoi_tx_${r.status}:${b.slice(0, 140)}`); }
+  return null;
 }
 function emailStatusHtml(nome, m, portalUrl) {
   const primeiro = esc((nome || '').split(/\s+/)[0] || '');
