@@ -24,6 +24,12 @@ binding = "DB_PLOOMES"
 database_name = "ecobraz-ploomes"
 database_id = "acd75607-389c-42c3-b50b-24f607350dd9"
 
+# R2 (depósito de arquivos) — arquivos migrados do Ploomes (anexos: NF/certificados/
+# MTR/fotos; documentos: propostas). Saída de dados grátis. Binding: env.R2_ARQUIVOS.
+[[r2_buckets]]
+binding = "R2_ARQUIVOS"
+bucket_name = "ecobraz-arquivos"
+
 # Endereço OFICIAL do sistema (domínio próprio na Cloudflare: Worker "ecobraz-portal").
 # Fixa todos os links (login por e-mail, retorno do Google, QR de validação) neste domínio.
 # Se um dia mudar o domínio, basta trocar aqui. Não é segredo — é uma URL pública.
