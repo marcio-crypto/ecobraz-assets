@@ -204,15 +204,6 @@ export default {
         const r = await ingestLead(env, b);
         return json(r, r.ok ? 201 : 400);
       }
-      // Diagnóstico de envio de e-mail (temporário). Só envia para e-mails já autorizados
-      // em alguma lista (anti-abuso) e devolve a resposta CRUA do provedor.
-      if (pathname === '/diag/email' && request.method === 'GET') {
-        const to = (url.searchParams.get('to') || '').trim().toLowerCase();
-        const autorizado = to && (escritorioPermitido(to, env) || operadorPermitido(to, env) || agentePermitido(to, env) || diretorPermitido(to, env) || engenheiroPermitido(to, env));
-        if (!autorizado) return json({ ok: false, error: 'email_nao_autorizado' }, 403);
-        try { return json(await diagEnviaEmail(to, env)); }
-        catch (e) { return json({ ok: false, erro: safeError(e).message }); }
-      }
       // Login com Google (interno) — ativa quando as credenciais estiverem configuradas.
       if (pathname === '/auth/google' && request.method === 'GET') {
         if (!googleConfigurado(env)) return html(paginaMensagem('Login Google indisponível', 'Ainda não configurado. Use o link por e-mail.'), 503);
@@ -1369,24 +1360,6 @@ async function resolverSender(apiKey, env) {
   return _senderId;
 }
 
-// Diagnóstico: envia (1) um e-mail simples e (2) o CAMINHO REAL do login (emailHtml + link)
-// e devolve o resultado de cada um — pra separar "não foi enviado" de "não foi entregue".
-async function diagEnviaEmail(to, env) {
-  const from = env.RESEND_FROM || 'Portal Ecobraz <acesso@ecobraz.org.br>';
-  const out = { from, provider: env.RESEND_API_KEY ? 'resend' : ((env.EGOI_TRANSACTIONAL_API_KEY || env.EGOI_API_KEY) ? 'egoi' : 'nenhum') };
-  if (env.RESEND_API_KEY) {
-    try {
-      const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${env.RESEND_API_KEY}` }, body: JSON.stringify({ from, to: [to], subject: 'Teste simples — Ecobraz', html: '<p>Teste simples do Portal Ecobraz.</p>', text: 'Teste simples do Portal Ecobraz.' }) });
-      out.simples = { ok: r.ok, status: r.status, resposta: (await r.text()).slice(0, 300) };
-    } catch (e) { out.simples = { ok: false, erro: safeError(e).message }; }
-  }
-  // Caminho REAL do login (mesma função que o botão Entrar usa).
-  try {
-    await enviarEmailLogin({ nome: 'Teste', email: to }, 'https://sistema.ecobraz.org/entrar-escritorio?token=TESTE-DIAG', env);
-    out.login = { ok: true, nota: 'enviarEmailLogin nao lancou erro (provedor aceitou o e-mail de login)' };
-  } catch (e) { out.login = { ok: false, erro: safeError(e).message }; }
-  return out;
-}
 async function enviarEmailLogin(cliente, link, env) {
   // Preferimos o Resend (API simples e compatível com Cloudflare Workers). O E-goi
   // fica como reserva enquanto o envio transacional dele não estiver resolvido.
