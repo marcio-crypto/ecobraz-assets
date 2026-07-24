@@ -48,6 +48,7 @@ import { engenheiroPermitido, nomeEngenheiro, filaValidacao, operacoesValidadas,
 import { diretorPermitido, nomeDiretor, reunirDados, paginaLoginDiretoria, paginaPainelDiretoria } from './diretoria.js';
 import { dadosPrevencao, paginaPrevencao, analisarColetaIA, salvarTabelaPrecos, pingIA } from './prevencao.js';
 import { sondarAnexosPloomes, paginaSondaAnexos } from './ploomes-docs.js';
+import { amostraContatosPloomes, paginaAmostraContatos } from './ploomes-migracao.js';
 import { fiscalPermitido, nomeFiscal, listarNotas, lerNota, importarLote, vincularNota, sugerirVinculoSync, paginaFiscalLogin, paginaFiscalHome, paginaFiscalResultado, paginaFiscalNota } from './fiscal.js';
 import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, paginaLeads, paginaLeadDetalhe, paginaInicio } from './cadastro.js';
 import { listarColetasOS, lerColetaOS, criarColetaOS, atualizarStatusOS, paginaColetasLista, paginaGerarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga } from './coletas.js';
@@ -347,6 +348,11 @@ export default {
       if (pathname === '/diretoria/ploomes-anexos' && request.method === 'GET') {
         if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
         return html(paginaSondaAnexos(diretoria, await sondarAnexosPloomes(env)));
+      }
+      // Migração Ploomes — Fase 1: inspetor de contatos (Diretoria, read-only, mascarado).
+      if (pathname === '/diretoria/ploomes-contatos' && request.method === 'GET') {
+        if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
+        return html(paginaAmostraContatos(diretoria, await amostraContatosPloomes(env, url.searchParams.get('n'))));
       }
       // Diagnóstico do Mercado Pago (só Diretoria) — descobre POR QUE o checkout falha,
       // sem NUNCA expor a chave (mostra só presença, tipo TEST/PROD e o erro real do MP).
