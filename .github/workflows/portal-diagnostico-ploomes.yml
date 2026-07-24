@@ -200,6 +200,17 @@ jobs:
         run: |
           npm install --no-audit --no-fund
           printf '%s' "marcio@ecobraz.org.br|Marcio" | npx wrangler@3 secret put DIRETORIA_EMAILS
+      - name: Cadastra escritório/comercial (ESCRITORIO_EMAILS) — quando sonda = cadastra-escritorio
+        if: ${{ github.event.inputs.sonda == 'cadastra-escritorio' }}
+        working-directory: portal-cliente/worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          LISTA: ${{ github.event.inputs.cnpj }}
+        run: |
+          npm install --no-audit --no-fund
+          VAL="${LISTA:-marcio@ecobraz.org.br|Marcio}"
+          printf '%s' "$VAL" | npx wrangler@3 secret put ESCRITORIO_EMAILS
       - name: Ligar aviso por e-mail (provisiona webhook + segredo) — quando sonda = provisiona-aviso
         if: ${{ github.event.inputs.sonda == 'provisiona-aviso' }}
         working-directory: portal-cliente/worker

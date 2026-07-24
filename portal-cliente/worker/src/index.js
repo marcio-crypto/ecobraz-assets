@@ -24,6 +24,7 @@ const AGENTE_COOKIE = 'portal_agente';
 const OPERACAO_COOKIE = 'portal_operacao';
 const ENG_COOKIE = 'portal_eng';
 const DIRETORIA_COOKIE = 'portal_diretoria';
+const ESCRITORIO_COOKIE = 'portal_escritorio';
 const SESSAO_TTL_S = 8 * 60 * 60;       // 8 horas
 const APP_SESSAO_TTL_S = 30 * 24 * 60 * 60; // 30 dias — apps de campo (operação/coletas) ficam logados
 const LINK_TTL_S = 15 * 60;             // 15 minutos
@@ -42,6 +43,7 @@ import { agentePermitido, nomeAgente, listarColetasComStatus, paginaLoginAgente,
 import { operadorPermitido, nomeOperador, listarOperacoes, listarColetasRecebiveis, iniciarOperacao, lerOperacao, definirTipoOperacao, registrarPesoEntrada, registrarFotoOperacao, servirFotoOperacao, paginaLoginOperacao, paginaAppOperacao, paginaReceberLote, paginaLoteDetalhe, adicionarMaterial, removerMaterial, concluirTriagem, paginaTriagem, paginaProcessamento, concluirProcessamento, paginaSaida, registrarSaida, concluirSaida } from './operacional.js';
 import { engenheiroPermitido, nomeEngenheiro, filaValidacao, operacoesValidadas, lerValidacaoOp, registrarValidacaoOp, paginaLoginEng, paginaFilaEng, paginaDossie, qrOperacao, validarOperacaoPublico, listarDestinos, lerDestino, salvarDestino, paginaDestinos, paginaDestinoForm, paginaRelatorio } from './engenharia.js';
 import { diretorPermitido, nomeDiretor, reunirDados, paginaLoginDiretoria, paginaPainelDiretoria } from './diretoria.js';
+import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe } from './cadastro.js';
 import { servirIcone, servirManifest, servirServiceWorker } from './pwa.js';
 import { googleConfigurado, iniciarGoogle, callbackGoogle } from './google-auth.js';
 
@@ -72,6 +74,7 @@ export default {
           operacao: !!env.OPERACAO_EMAILS, // módulo operacional (doca) ligado
           engenharia: !!env.ENG_EMAILS, // módulo de validação da Engenharia Ambiental ligado
           diretoria: !!env.DIRETORIA_EMAILS, // painel da diretoria ligado
+          escritorio: !!env.ESCRITORIO_EMAILS, // cadastro/comercial (Débora) ligado
           google: !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET), // login Google configurado
         },
       });
@@ -187,6 +190,10 @@ export default {
       if (pathname === '/api/diretoria/entrar' && request.method === 'POST') return await solicitarLinkDiretoria(request, env);
       if (pathname === '/entrar-diretoria' && request.method === 'GET') return await entrarComTokenDiretoria(request, env, url);
       if (pathname === '/api/diretoria/sair' && request.method === 'POST') return sairDiretoria();
+      // Acesso do ESCRITÓRIO/COMERCIAL (cadastro de clientes — a Débora).
+      if (pathname === '/api/cadastro/entrar' && request.method === 'POST') return await solicitarLinkEscritorio(request, env);
+      if (pathname === '/entrar-escritorio' && request.method === 'GET') return await entrarComTokenEscritorio(request, env, url);
+      if (pathname === '/api/cadastro/sair' && request.method === 'POST') return sairEscritorio();
       // Login com Google (interno) — ativa quando as credenciais estiverem configuradas.
       if (pathname === '/auth/google' && request.method === 'GET') {
         if (!googleConfigurado(env)) return html(paginaMensagem('Login Google indisponível', 'Ainda não configurado. Use o link por e-mail.'), 503);
@@ -208,6 +215,10 @@ export default {
           const s = await criarToken({ em: g.email, tipo: 'sessao_diretoria' }, SESSAO_TTL_S, env);
           return new Response(null, { status: 302, headers: { Location: '/diretoria', 'Set-Cookie': cookieDiretoria(s.valor, SESSAO_TTL_S) } });
         }
+        if (g.ctx === 'escritorio' && escritorioPermitido(g.email, env)) {
+          const s = await criarToken({ em: g.email, tipo: 'sessao_escritorio' }, SESSAO_TTL_S, env);
+          return new Response(null, { status: 302, headers: { Location: '/cadastro', 'Set-Cookie': cookieEscritorio(s.valor, SESSAO_TTL_S) } });
+        }
         return html(paginaMensagem('Acesso não liberado', `O e-mail ${esc(g.email)} entrou no Google, mas não está cadastrado para este acesso.`), 403);
       }
 
@@ -218,11 +229,49 @@ export default {
       const operacao = await lerSessaoOperacao(request, env);
       const eng = await lerSessaoEng(request, env);
       const diretoria = await lerSessaoDiretoria(request, env);
+      const escritorio = await lerSessaoEscritorio(request, env);
 
       // Painel da Diretoria (visão macro). Exige sessão de diretoria.
       if (pathname === '/diretoria' && request.method === 'GET') {
         if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
         return html(paginaPainelDiretoria(diretoria, await reunirDados(env)));
+      }
+
+      // Cadastro & Clientes (escritório/comercial — Débora). Base própria, sem Ploomes.
+      if (pathname === '/cadastro' && request.method === 'GET') {
+        if (!escritorio) return html(paginaLoginEscritorio(googleConfigurado(env)));
+        return html(paginaCadastroHome(escritorio, await listarClientes(env)));
+      }
+      if (pathname === '/cadastro/novo' && request.method === 'GET') {
+        if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
+        return html(paginaFormCliente(escritorio, url.searchParams.get('tipo') || 'PJ', null));
+      }
+      if (pathname === '/cadastro/editar' && request.method === 'GET') {
+        if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
+        const cli = await lerCliente(env, url.searchParams.get('id') || '');
+        if (!cli) return html(paginaMensagem('Cliente não encontrado', 'Volte e tente de novo.'), 404);
+        return html(paginaFormCliente(escritorio, cli.tipo, cli));
+      }
+      if (pathname === '/cadastro/cliente' && request.method === 'GET') {
+        if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
+        const cli = await lerCliente(env, url.searchParams.get('id') || '');
+        if (!cli) return html(paginaMensagem('Cliente não encontrado', 'Volte e tente de novo.'), 404);
+        return html(paginaClienteDetalhe(escritorio, cli));
+      }
+      if (pathname === '/api/cadastro/salvar' && request.method === 'POST') {
+        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = null; }
+        if (!b || (b.tipo !== 'PJ' && b.tipo !== 'PF')) return json({ ok: false, error: 'dados' }, 400);
+        if (b.tipo === 'PJ' && !String(b.razaoSocial || '').trim()) return json({ ok: false, error: 'Informe a razão social.' }, 400);
+        if (b.tipo === 'PF' && !String(b.nome || '').trim()) return json({ ok: false, error: 'Informe o nome.' }, 400);
+        let existente = null; if (b.id) existente = await lerCliente(env, b.id);
+        const salvo = await salvarCliente(env, existente ? { ...existente, ...b } : b);
+        return json({ ok: true, id: salvo.id });
+      }
+      if (pathname === '/api/cadastro/cnpj' && request.method === 'GET') {
+        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        const d = await consultarCNPJ(url.searchParams.get('n') || '');
+        return d ? json({ ok: true, ...d }) : json({ ok: false });
       }
 
       // App do agente de coletas.
@@ -823,6 +872,45 @@ async function lerSessaoDiretoria(request, env) {
   return { email: payload.em, nome: nomeDiretor(payload.em, env), role: 'diretoria' };
 }
 function cookieDiretoria(valor, maxAge) { return `${DIRETORIA_COOKIE}=${encodeURIComponent(valor)}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${maxAge}`; }
+
+// ---------------------------------------------------------------------------
+// Acesso do ESCRITÓRIO/COMERCIAL (cadastro de clientes — a Débora) — login próprio
+// ---------------------------------------------------------------------------
+async function solicitarLinkEscritorio(request, env) {
+  const generica = json({ ok: true, message: 'Se o e-mail estiver cadastrado, enviamos um link de acesso.' });
+  let input; try { input = await request.json(); } catch { return generica; }
+  const email = String(input?.email || '').trim().toLowerCase();
+  if (!/^\S+@\S+\.\S+$/.test(email) || !escritorioPermitido(email, env)) { console.log('escritorio_barrado'); return generica; }
+  if (env.PORTAL_KV) { const chave = `throttle:esc:${email}`; if (await env.PORTAL_KV.get(chave)) return generica; await env.PORTAL_KV.put(chave, '1', { expirationTtl: 60 }); }
+  const token = await criarToken({ em: email, tipo: 'login_escritorio' }, LINK_TTL_S, env);
+  if (env.PORTAL_KV) await env.PORTAL_KV.put(`nonce:${token.nonce}`, '1', { expirationTtl: LINK_TTL_S });
+  const linkBase = env.PORTAL_BASE_URL || new URL(request.url).origin;
+  const link = `${linkBase.replace(/\/+$/, '')}/entrar-escritorio?token=${encodeURIComponent(token.valor)}`;
+  try { await enviarEmailLogin({ nome: nomeEscritorio(email, env), email }, link, env); console.log('escritorio_email_ok'); }
+  catch (error) { console.error('escritorio_email_falhou', safeError(error)); }
+  return generica;
+}
+async function entrarComTokenEscritorio(request, env, url) {
+  const payload = await verificarToken(url.searchParams.get('token') || '', env);
+  if (!payload || payload.tipo !== 'login_escritorio') return html(paginaMensagem('Link inválido ou expirado', 'Peça um novo link de acesso.'), 400);
+  if (env.PORTAL_KV) {
+    const existe = await env.PORTAL_KV.get(`nonce:${payload.n}`);
+    if (!existe) return html(paginaMensagem('Este link já foi usado', 'Por segurança, cada link vale uma vez. Peça um novo.'), 400);
+    await env.PORTAL_KV.delete(`nonce:${payload.n}`);
+  }
+  if (!escritorioPermitido(payload.em, env)) return html(paginaMensagem('Acesso indisponível', 'E-mail não autorizado.'), 403);
+  const sessao = await criarToken({ em: payload.em, tipo: 'sessao_escritorio' }, SESSAO_TTL_S, env);
+  return new Response(null, { status: 302, headers: { Location: '/cadastro', 'Set-Cookie': cookieEscritorio(sessao.valor, SESSAO_TTL_S) } });
+}
+function sairEscritorio() { return new Response(null, { status: 302, headers: { Location: '/cadastro', 'Set-Cookie': cookieEscritorio('', 0) } }); }
+async function lerSessaoEscritorio(request, env) {
+  const cookie = (request.headers.get('Cookie') || '').split(';').map((s) => s.trim()).find((s) => s.startsWith(`${ESCRITORIO_COOKIE}=`));
+  if (!cookie) return null;
+  const payload = await verificarToken(decodeURIComponent(cookie.slice(ESCRITORIO_COOKIE.length + 1)), env);
+  if (!payload || payload.tipo !== 'sessao_escritorio' || !escritorioPermitido(payload.em, env)) return null;
+  return { email: payload.em, nome: nomeEscritorio(payload.em, env), role: 'escritorio' };
+}
+function cookieEscritorio(valor, maxAge) { return `${ESCRITORIO_COOKIE}=${encodeURIComponent(valor)}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${maxAge}`; }
 
 // ---------------------------------------------------------------------------
 // Ploomes: portão de acesso (contrato) e leitura/escrita de OS
