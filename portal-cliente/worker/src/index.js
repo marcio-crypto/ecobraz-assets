@@ -44,6 +44,8 @@ import { operadorPermitido, nomeOperador, listarOperacoes, listarColetasRecebive
 import { engenheiroPermitido, nomeEngenheiro, filaValidacao, operacoesValidadas, lerValidacaoOp, registrarValidacaoOp, paginaLoginEng, paginaFilaEng, paginaDossie, qrOperacao, validarOperacaoPublico, listarDestinos, lerDestino, salvarDestino, paginaDestinos, paginaDestinoForm, paginaRelatorio } from './engenharia.js';
 import { diretorPermitido, nomeDiretor, reunirDados, paginaLoginDiretoria, paginaPainelDiretoria } from './diretoria.js';
 import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, paginaLeads, paginaLeadDetalhe } from './cadastro.js';
+import { listarColetasOS, lerColetaOS, criarColetaOS, atualizarStatusOS, paginaColetasLista, paginaGerarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS } from './coletas.js';
+import { agentesDe } from './agente.js';
 import { servirIcone, servirManifest, servirServiceWorker } from './pwa.js';
 import { googleConfigurado, iniciarGoogle, callbackGoogle } from './google-auth.js';
 
@@ -167,6 +169,9 @@ export default {
       // Verificação pública do comprovante de coleta do agente (QR anti-fraude).
       if (pathname === '/qr-coleta' && request.method === 'GET') return await qrColeta(request, env, url);
       if (pathname === '/validar-coleta' && request.method === 'GET') return await validarColetaPublico(request, env, url);
+      // Verificação pública da Ordem de Coleta (QR anti-fraude).
+      if (pathname === '/qr-os' && request.method === 'GET') return await qrOS(request, env, url);
+      if (pathname === '/validar-os' && request.method === 'GET') return await validarOSPublico(request, env, url);
       // Selo PÚBLICO da metodologia (só confirma a validação da Villanova; não expõe a receita).
       if (pathname === '/validar-metodologia' && request.method === 'GET') return await validarMetodologiaPublico(request, env, url);
       if (pathname === '/qr-metodologia' && request.method === 'GET') return await qrMetodologia(request, env, url);
@@ -306,6 +311,45 @@ export default {
         const l = await lerLead(env, b.id);
         if (!l) return json({ ok: false, error: 'nao_encontrado' }, 404);
         l.status = 'tratado'; await salvarLead(env, l);
+        return json({ ok: true });
+      }
+
+      // Ordens de Coleta (escritório/comercial) — geração própria a partir do cliente.
+      if (pathname === '/coletas' && request.method === 'GET') {
+        if (!escritorio) return html(paginaLoginEscritorio(googleConfigurado(env)));
+        return html(paginaColetasLista(escritorio, await listarColetasOS(env)));
+      }
+      if (pathname === '/coletas/nova' && request.method === 'GET') {
+        if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
+        const cli = await lerCliente(env, url.searchParams.get('cliente') || '');
+        if (!cli) return html(paginaMensagem('Cliente não encontrado', 'Volte e tente de novo.'), 404);
+        const agentes = [...agentesDe(env).entries()].map(([email, nome]) => ({ email, nome }));
+        return html(paginaGerarColeta(escritorio, cli, agentes));
+      }
+      if (pathname === '/coletas/os' && request.method === 'GET') {
+        if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
+        const os = await lerColetaOS(env, url.searchParams.get('id') || '');
+        if (!os) return html(paginaMensagem('Coleta não encontrada', 'Volte e tente de novo.'), 404);
+        return html(paginaColetaOSDetalhe(escritorio, os));
+      }
+      if (pathname === '/coletas/os/comprovante' && request.method === 'GET') {
+        if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
+        const os = await lerColetaOS(env, url.searchParams.get('id') || '');
+        if (!os) return html(paginaMensagem('Coleta não encontrada', 'Volte e tente de novo.'), 404);
+        return html(paginaComprovanteOS(os, `/qr-os?id=${encodeURIComponent(os.id)}`));
+      }
+      if (pathname === '/api/coletas/criar' && request.method === 'POST') {
+        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = null; }
+        if (!b || !String(b.endereco || '').trim()) return json({ ok: false, error: 'Informe o endereço da coleta.' }, 400);
+        const os = await criarColetaOS(env, b, escritorio.email);
+        return json({ ok: true, id: os.id, numero: os.numero });
+      }
+      if (pathname === '/api/coletas/status' && request.method === 'POST') {
+        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = null; }
+        if (!b || !b.id || !b.status) return json({ ok: false, error: 'dados' }, 400);
+        await atualizarStatusOS(env, b.id, b.status);
         return json({ ok: true });
       }
 

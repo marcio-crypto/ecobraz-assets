@@ -235,8 +235,8 @@ export function paginaClienteDetalhe(user, cli) {
     </table>
     ${cli.tipo === 'PJ' ? `<div class="sec">Contatos</div>${contatos}` : ''}
   </div>
-  <div style="margin-top:14px"><a href="#" class="btn btn-p" style="opacity:.55;pointer-events:none">Gerar coleta (em breve)</a>
-    <div style="font-size:11px;color:#9aa7a4;margin-top:8px">A geração da Ordem de Coleta a partir do cliente entra no próximo passo.</div></div>
+  <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap"><a href="/coletas/nova?cliente=${esc(cli.id)}" class="btn btn-p">＋ Gerar coleta</a>
+    <a href="/coletas" class="btn btn-g">Ver todas as coletas</a></div>
 </div>
 </body></html>`;
 }
