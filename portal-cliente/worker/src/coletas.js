@@ -86,6 +86,15 @@ export async function atualizarStatusOS(env, id, status) {
   }
   return rec;
 }
+// Persiste um registro de OS já existente sem mexer no status (ex.: anexar as
+// notas fiscais vinculadas em os.notas). O índice não guarda notas, então basta
+// regravar o registro completo.
+export async function salvarColetaOSDireto(env, os) {
+  if (!env.PORTAL_KV || !os || !os.id) return null;
+  os.atualizadoEm = agora();
+  await env.PORTAL_KV.put(`os:${os.id}`, JSON.stringify(os));
+  return os;
+}
 function cidadeDoEndereco(e) { const m = String(e || '').match(/·\s*([^·]+?)\/[A-Z]{2}/); return m ? m[1].trim() : ''; }
 
 // --- Páginas (escritório) ---

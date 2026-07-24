@@ -27,6 +27,7 @@ export const PAPEIS = {
   operacao: { label: 'Operação (doca)', env: 'OPERACAO_EMAILS', fmt: 'nome', desc: 'Recepção, triagem, processamento e saída.' },
   engenharia: { label: 'Engenharia Ambiental', env: 'ENG_EMAILS', fmt: 'nome', desc: 'Validação técnica (RT), destinos e relatórios.' },
   diretoria: { label: 'Diretoria (visão macro)', env: 'DIRETORIA_EMAILS', fmt: 'nome', desc: 'Painel executivo: volume, prazos, alertas.' },
+  fiscal: { label: 'Fiscal / Contadora', env: 'FISCAL_EMAILS', fmt: 'nome', desc: 'Importa e concilia notas fiscais; vincula à coleta.' },
   validador: { label: 'Auditoria (Villanova ESG)', env: 'VALIDADOR_EMAILS', fmt: 'email', desc: 'Auditoria e validação de documentos/certificados.' },
 };
 
@@ -70,6 +71,7 @@ const APELIDOS_PAPEL = {
   operacao: 'operacao', 'operação': 'operacao', operacional: 'operacao', doca: 'operacao',
   engenharia: 'engenharia', 'engenharia ambiental': 'engenharia', engenheiro: 'engenharia', 'engenheiro ambiental': 'engenharia', rt: 'engenharia',
   diretoria: 'diretoria', diretor: 'diretoria', 'diretor de operacoes': 'diretoria', 'diretor de operações': 'diretoria', diretora: 'diretoria', macro: 'diretoria',
+  fiscal: 'fiscal', contador: 'fiscal', contadora: 'fiscal', contabilidade: 'fiscal', 'contábil': 'fiscal', contabil: 'fiscal', notas: 'fiscal', 'nota fiscal': 'fiscal', 'notas fiscais': 'fiscal',
   auditoria: 'validador', auditor: 'validador', auditora: 'validador', validador: 'validador', validacao: 'validador', 'validação': 'validador', esg: 'validador', 'villanova esg': 'validador', villanova: 'validador',
 };
 function mapPapel(s) { const k = String(s || '').toLowerCase().trim(); return APELIDOS_PAPEL[k] || (PAPEIS[k] ? k : ''); }

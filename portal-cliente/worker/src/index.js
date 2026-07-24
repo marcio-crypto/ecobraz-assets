@@ -25,6 +25,7 @@ const OPERACAO_COOKIE = 'portal_operacao';
 const ENG_COOKIE = 'portal_eng';
 const DIRETORIA_COOKIE = 'portal_diretoria';
 const ESCRITORIO_COOKIE = 'portal_escritorio';
+const FISCAL_COOKIE = 'portal_fiscal';
 const SESSAO_TTL_S = 8 * 60 * 60;       // 8 horas
 const APP_SESSAO_TTL_S = 30 * 24 * 60 * 60; // 30 dias — apps de campo (operação/coletas) ficam logados
 const LINK_TTL_S = 60 * 60;             // 60 minutos (folga contra atraso de entrega/greylisting de remetente novo)
@@ -46,6 +47,7 @@ import { engenheiroPermitido, nomeEngenheiro, filaValidacao, operacoesValidadas,
 import { diretorPermitido, nomeDiretor, reunirDados, paginaLoginDiretoria, paginaPainelDiretoria } from './diretoria.js';
 import { dadosPrevencao, paginaPrevencao, analisarColetaIA, salvarTabelaPrecos, pingIA } from './prevencao.js';
 import { sondarAnexosPloomes, paginaSondaAnexos } from './ploomes-docs.js';
+import { fiscalPermitido, nomeFiscal, listarNotas, lerNota, importarLote, vincularNota, sugerirVinculoSync, paginaFiscalLogin, paginaFiscalHome, paginaFiscalResultado, paginaFiscalNota } from './fiscal.js';
 import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, paginaLeads, paginaLeadDetalhe, paginaInicio } from './cadastro.js';
 import { listarColetasOS, lerColetaOS, criarColetaOS, atualizarStatusOS, paginaColetasLista, paginaGerarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga } from './coletas.js';
 import { listarVeiculos, lerVeiculo, salvarVeiculo, paginaFrota, paginaVeiculoForm, lerJornadaAtiva, abrirJornada, fecharJornada, registrarAbastecimento, tagColetaComVeiculo, servirFotoJornada, bannerJornada, paginaAbrirDia, paginaFecharDia, paginaAbastecer, placaDaColeta } from './frota.js';
@@ -251,6 +253,10 @@ export default {
       if (pathname === '/api/cadastro/entrar' && request.method === 'POST') return await solicitarLinkEscritorio(request, env);
       if (pathname === '/entrar-escritorio' && request.method === 'GET') return await entrarComTokenEscritorio(request, env, url);
       if (pathname === '/api/cadastro/sair' && request.method === 'POST') return sairEscritorio();
+      // Acesso do FISCAL (contadora — importação/conciliação de notas fiscais).
+      if (pathname === '/api/fiscal/entrar' && request.method === 'POST') return await solicitarLinkFiscal(request, env);
+      if (pathname === '/entrar-fiscal' && request.method === 'GET') return await entrarComTokenFiscal(request, env, url);
+      if (pathname === '/api/fiscal/sair' && request.method === 'POST') return sairFiscal();
       // Recebe leads do formulário do site (worker ecobraz-coletas), no lugar do Ploomes.
       // Protegido por segredo compartilhado (LEAD_INGEST_SECRET), servidor-a-servidor.
       if (pathname === '/api/lead' && request.method === 'POST') {
@@ -286,6 +292,10 @@ export default {
           const s = await criarToken({ em: g.email, tipo: 'sessao_escritorio' }, SESSAO_TTL_S, env);
           return new Response(null, { status: 302, headers: { Location: '/inicio', 'Set-Cookie': cookieEscritorio(s.valor, SESSAO_TTL_S) } });
         }
+        if (g.ctx === 'fiscal' && fiscalPermitido(g.email, env)) {
+          const s = await criarToken({ em: g.email, tipo: 'sessao_fiscal' }, SESSAO_TTL_S, env);
+          return new Response(null, { status: 302, headers: { Location: '/fiscal', 'Set-Cookie': cookieFiscal(s.valor, SESSAO_TTL_S) } });
+        }
         if (g.ctx === 'agente' && agentePermitido(g.email, env)) {
           const s = await criarToken({ em: g.email, tipo: 'sessao_agente' }, APP_SESSAO_TTL_S, env);
           return new Response(null, { status: 302, headers: { Location: '/agente', 'Set-Cookie': cookieAgente(s.valor, APP_SESSAO_TTL_S) } });
@@ -305,6 +315,7 @@ export default {
       const eng = await lerSessaoEng(request, env);
       const diretoria = await lerSessaoDiretoria(request, env);
       const escritorio = await lerSessaoEscritorio(request, env);
+      const fiscal = await lerSessaoFiscal(request, env);
 
       // Painel da Diretoria (visão macro). Exige sessão de diretoria.
       if (pathname === '/diretoria' && request.method === 'GET') {
@@ -485,6 +496,51 @@ export default {
         if (!b || !b.id || !b.status) return json({ ok: false, error: 'dados' }, 400);
         await atualizarStatusOS(env, b.id, b.status);
         return json({ ok: true });
+      }
+
+      // Fiscal & Notas (contadora): importação de NF-e e amarração à coleta.
+      if (pathname === '/fiscal' && request.method === 'GET') {
+        if (!fiscal) return html(paginaFiscalLogin(googleConfigurado(env)));
+        return html(paginaFiscalHome(fiscal, await listarNotas(env)));
+      }
+      if (pathname === '/fiscal/nota' && request.method === 'GET') {
+        if (!fiscal) return html(paginaFiscalLogin(googleConfigurado(env)));
+        const nota = await lerNota(env, url.searchParams.get('chave') || '');
+        if (!nota) return html(paginaMensagem('Nota não encontrada', 'Volte e tente de novo.'), 404);
+        const [clientes, coletas] = await Promise.all([listarClientes(env), listarColetasOS(env)]);
+        const sug = sugerirVinculoSync({ destDoc: nota.dest && nota.dest.doc }, clientes, coletas);
+        return html(paginaFiscalNota(fiscal, nota, sug, clientes));
+      }
+      if (pathname === '/api/fiscal/importar' && request.method === 'POST') {
+        if (!fiscal) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        const form = await request.formData().catch(() => null);
+        if (!form) return html(paginaMensagem('Envio inválido', 'Volte e tente de novo.'), 400);
+        const arquivos = [];
+        for (const f of form.getAll('xmls')) { if (f && typeof f.arrayBuffer === 'function') arquivos.push({ name: f.name || '', bytes: new Uint8Array(await f.arrayBuffer()) }); }
+        let csvTexto = '';
+        const csv = form.get('csv');
+        if (csv && typeof csv.arrayBuffer === 'function' && csv.size) { try { csvTexto = new TextDecoder('latin1').decode(await csv.arrayBuffer()); } catch { csvTexto = ''; } }
+        if (!arquivos.length) return html(paginaMensagem('Nenhum XML enviado', 'Selecione o .zip do IOB ou os arquivos .xml.'), 400);
+        const r = await importarLote(env, arquivos, csvTexto, fiscal.email);
+        return html(paginaFiscalResultado(fiscal, r));
+      }
+      if (pathname === '/api/fiscal/vincular' && request.method === 'POST') {
+        if (!fiscal) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = null; }
+        if (!b || !b.chave) return json({ ok: false, error: 'dados' }, 400);
+        const r = await vincularNota(env, b.chave, b, fiscal.email);
+        if (r.erro) return json({ ok: false, error: r.erro }, 400);
+        return json({ ok: true });
+      }
+      if (pathname === '/api/fiscal/coletas' && request.method === 'GET') {
+        if (!fiscal) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        const cid = url.searchParams.get('clienteId') || '';
+        const [clientes, coletas] = await Promise.all([listarClientes(env), listarColetasOS(env)]);
+        const cliente = clientes.find((c) => c.id === cid);
+        if (!cliente) return json({ coletas: [] });
+        const sug = sugerirVinculoSync({ destDoc: cliente.doc }, clientes, coletas);
+        const br = (iso) => { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : ''; };
+        return json({ coletas: (sug.coletas || []).map((o) => ({ id: o.id, numero: o.numero, dataAgendada: br(o.dataAgendada) })) });
       }
 
       // Frota (escritório): cadastro de veículos.
@@ -1228,6 +1284,45 @@ async function lerSessaoEscritorio(request, env) {
   return { email: payload.em, nome: nomeEscritorio(payload.em, env), role: 'escritorio' };
 }
 function cookieEscritorio(valor, maxAge) { return `${ESCRITORIO_COOKIE}=${encodeURIComponent(valor)}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${maxAge}`; }
+
+// ---------------------------------------------------------------------------
+// Acesso do FISCAL (contadora — importação de notas) — login próprio (espelha o escritório)
+// ---------------------------------------------------------------------------
+async function solicitarLinkFiscal(request, env) {
+  const generica = json({ ok: true, message: 'Se o e-mail estiver cadastrado, enviamos um link de acesso.' });
+  let input; try { input = await request.json(); } catch { return generica; }
+  const email = String(input?.email || '').trim().toLowerCase();
+  if (!/^\S+@\S+\.\S+$/.test(email) || !fiscalPermitido(email, env)) { console.log('fiscal_barrado'); return generica; }
+  if (env.PORTAL_KV) { const chave = `throttle:fis:${email}`; if (await env.PORTAL_KV.get(chave)) return generica; await env.PORTAL_KV.put(chave, '1', { expirationTtl: 60 }); }
+  const token = await criarToken({ em: email, tipo: 'login_fiscal' }, LINK_TTL_S, env);
+  if (env.PORTAL_KV) await env.PORTAL_KV.put(`nonce:${token.nonce}`, '1', { expirationTtl: LINK_TTL_S });
+  const linkBase = env.PORTAL_BASE_URL || new URL(request.url).origin;
+  const link = `${linkBase.replace(/\/+$/, '')}/entrar-fiscal?token=${encodeURIComponent(token.valor)}`;
+  try { await enviarEmailLogin({ nome: nomeFiscal(email, env), email }, link, env); console.log('fiscal_email_ok'); }
+  catch (error) { console.error('fiscal_email_falhou', safeError(error)); }
+  return generica;
+}
+async function entrarComTokenFiscal(request, env, url) {
+  const payload = await verificarToken(url.searchParams.get('token') || '', env);
+  if (!payload || payload.tipo !== 'login_fiscal') return html(paginaMensagem('Link inválido ou expirado', 'Peça um novo link de acesso.'), 400);
+  if (env.PORTAL_KV) {
+    const existe = await env.PORTAL_KV.get(`nonce:${payload.n}`);
+    if (!existe) return html(paginaMensagem('Este link já foi usado', 'Por segurança, cada link vale uma vez. Peça um novo.'), 400);
+    await env.PORTAL_KV.delete(`nonce:${payload.n}`);
+  }
+  if (!fiscalPermitido(payload.em, env)) return html(paginaMensagem('Acesso indisponível', 'E-mail não autorizado.'), 403);
+  const sessao = await criarToken({ em: payload.em, tipo: 'sessao_fiscal' }, SESSAO_TTL_S, env);
+  return new Response(null, { status: 302, headers: { Location: '/fiscal', 'Set-Cookie': cookieFiscal(sessao.valor, SESSAO_TTL_S) } });
+}
+function sairFiscal() { return new Response(null, { status: 302, headers: { Location: '/fiscal', 'Set-Cookie': cookieFiscal('', 0) } }); }
+async function lerSessaoFiscal(request, env) {
+  const cookie = (request.headers.get('Cookie') || '').split(';').map((s) => s.trim()).find((s) => s.startsWith(`${FISCAL_COOKIE}=`));
+  if (!cookie) return null;
+  const payload = await verificarToken(decodeURIComponent(cookie.slice(FISCAL_COOKIE.length + 1)), env);
+  if (!payload || payload.tipo !== 'sessao_fiscal' || !fiscalPermitido(payload.em, env)) return null;
+  return { email: payload.em, nome: nomeFiscal(payload.em, env), role: 'fiscal' };
+}
+function cookieFiscal(valor, maxAge) { return `${FISCAL_COOKIE}=${encodeURIComponent(valor)}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${maxAge}`; }
 
 // ---------------------------------------------------------------------------
 // Ploomes: portão de acesso (contrato) e leitura/escrita de OS
