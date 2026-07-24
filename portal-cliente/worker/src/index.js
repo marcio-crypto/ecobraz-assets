@@ -348,6 +348,40 @@ export default {
         if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
         return html(paginaSondaAnexos(diretoria, await sondarAnexosPloomes(env)));
       }
+      // Diagnóstico do Mercado Pago (só Diretoria) — descobre POR QUE o checkout falha,
+      // sem NUNCA expor a chave (mostra só presença, tipo TEST/PROD e o erro real do MP).
+      if (pathname === '/diretoria/mp-diag' && request.method === 'GET') {
+        if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
+        const tok = String(env.MERCADOPAGO_ACCESS_TOKEN || '');
+        const tipo = !tok ? 'AUSENTE' : tok.startsWith('TEST-') ? 'TESTE (sandbox)' : tok.startsWith('APP_USR-') ? 'PRODUÇÃO' : 'formato inesperado (não começa com TEST- nem APP_USR-)';
+        const base = env.PORTAL_BASE_URL || url.origin;
+        let mp;
+        if (!tok) { mp = { ok: false, erro: 'A variável MERCADOPAGO_ACCESS_TOKEN não existe no ambiente (confira o nome exato no Cloudflare).' }; }
+        else {
+          try { const pref = await criarPreferencia({ valor: 1, descricao: 'Diagnóstico MP (não é cobrança real)', externalReference: 'diag-' + novoId(), baseUrl: base, backPath: '/adote/obrigado' }, env); mp = { ok: true, temLink: !!pref.initPoint }; }
+          catch (e) { mp = { ok: false, erro: String((e && e.message) || e).slice(0, 400) }; }
+        }
+        const email = env.RESEND_API_KEY ? 'Resend configurado ✓' : (env.EGOI_TRANSACTIONAL_API_KEY || env.EGOI_API_KEY) ? 'e-Goi configurado ✓' : 'NENHUM — o e-mail de recarga não sai';
+        const L = (k, v, cor) => `<tr><td style="padding:9px 12px;border-bottom:1px solid #eef1f0;color:#556">${esc(k)}</td><td style="padding:9px 12px;border-bottom:1px solid #eef1f0;font-weight:700;color:${cor || '#10262B'}">${esc(v)}</td></tr>`;
+        return html(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Diagnóstico MP — Ecobraz</title></head>
+<body style="font-family:Montserrat,Arial,sans-serif;max-width:660px;margin:28px auto;padding:0 16px;color:#10262B">
+  <h1 style="font-size:21px;margin:0 0 4px">Diagnóstico — Mercado Pago</h1>
+  <p style="color:#667;font-size:13px;margin:0 0 16px">Não mostra a chave. Só verifica se ela funciona — e, se não, o motivo exato.</p>
+  <table style="width:100%;border-collapse:collapse;border:1px solid #eef1f0;border-radius:10px;overflow:hidden;font-size:14px">
+    ${L('Chave no ambiente', tok ? 'presente' : 'AUSENTE', tok ? '#1E7A3D' : '#B23A2E')}
+    ${L('Tipo da chave', tipo, tipo === 'PRODUÇÃO' ? '#B26A16' : (tok ? '#10262B' : '#B23A2E'))}
+    ${L('Endereço base', base)}
+    ${L('Gerar cobrança (teste)', mp.ok ? 'OK — cobrança gerada ✓' : 'FALHOU ✕', mp.ok ? '#1E7A3D' : '#B23A2E')}
+    ${mp.ok ? '' : L('Motivo real da falha', mp.erro, '#B23A2E')}
+    ${L('E-mail (para a recarga)', email, email.startsWith('NENHUM') ? '#B26A16' : '#1E7A3D')}
+  </table>
+  <div style="margin-top:16px;font-size:12.5px;color:#556;line-height:1.6">
+    <b>Como ler:</b> se "Gerar cobrança" está OK, o checkout funciona. Se FALHOU, o "Motivo real" mostra o erro do Mercado Pago
+    (ex.: <code>mp_pref_401</code> = chave inválida/errada; <code>sem_token_mp</code> = variável não encontrada; <code>mp_pref_400</code> = algo no pedido).
+  </div>
+  <p style="color:#9aa7a4;font-size:11px;margin-top:18px">Interno · Diretoria · página não indexada.</p>
+</body></html>`);
+      }
       if (pathname === '/api/diretoria/analisar' && request.method === 'POST') {
         if (!diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);
         let b; try { b = await request.json(); } catch { b = null; }
