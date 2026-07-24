@@ -113,23 +113,26 @@ b.onclick=async()=>{b.disabled=true;m.textContent='Enviando…';try{const r=awai
 e.addEventListener('keydown',ev=>{if(ev.key==='Enter')b.click();});</script></body></html>`;
 }
 
-export function paginaCadastroHome(user, clientes) {
+export function paginaCadastroHome(user, clientes, q = '', totalFiltrado = null, totalGeral = null) {
+  const tf = totalFiltrado == null ? clientes.length : totalFiltrado;
+  const tg = totalGeral == null ? clientes.length : totalGeral;
   const linhas = clientes.length ? clientes.map((c) => `<a href="/cadastro/cliente?id=${esc(c.id)}" style="display:flex;justify-content:space-between;align-items:center;gap:12px;text-decoration:none;background:#fff;border:1px solid #E4EBE9;border-radius:12px;padding:13px 15px;margin-bottom:9px">
       <div style="min-width:0"><div style="font-size:14px;font-weight:800;color:#10262B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(c.nome || '(sem nome)')}</div>
       <div style="font-size:12px;color:#7c8a87;margin-top:3px">${esc(c.doc || '')}${c.cidade ? ' · ' + esc(c.cidade) : ''}</div></div>
       <span style="flex:none;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;${c.tipo === 'PJ' ? 'background:#E3F0F3;color:#0B5B66' : 'background:#EAF2E6;color:#3f7a2e'}">${c.tipo === 'PJ' ? 'EMPRESA' : 'PESSOA FÍSICA'}</span>
-    </a>`).join('') : `<div class="card" style="text-align:center;color:#8fa39f;font-size:13.5px">Nenhum cliente cadastrado ainda.<br>Comece criando uma empresa ou pessoa física acima.</div>`;
+    </a>`).join('') : `<div class="card" style="text-align:center;color:#8fa39f;font-size:13.5px">${q ? 'Nenhum cliente encontrado para essa busca.' : 'Nenhum cliente cadastrado ainda.<br>Comece criando uma empresa ou pessoa física acima.'}</div>`;
+  const maisInfo = tf > clientes.length ? `<div style="font-size:11.5px;color:#8fa39f;text-align:center;margin-top:10px">Mostrando ${clientes.length} de ${tf} — refine a busca para ver os demais.</div>` : '';
   return `${head('Cadastro')}<body>${topo(user, 'cadastro')}
 <div class="wrap">
   <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
     <a href="/cadastro/novo?tipo=PJ" class="btn btn-d">＋ Nova empresa</a>
     <a href="/cadastro/novo?tipo=PF" class="btn btn-g">＋ Nova pessoa física</a>
   </div>
-  <input id="busca" placeholder="🔎 Buscar por nome ou documento…" style="margin-bottom:14px">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-size:13px;font-weight:800">Clientes</div><span style="font-size:11px;background:#E3F0F3;color:#0B5B66;font-weight:800;padding:3px 9px;border-radius:20px">${clientes.length}</span></div>
+  <form method="get" action="/cadastro" style="margin:0 0 14px"><input name="q" value="${esc(q)}" placeholder="🔎 Buscar por nome ou documento e apertar Enter…" autocomplete="off"></form>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-size:13px;font-weight:800">${q ? 'Resultados' : 'Clientes'}</div><span style="font-size:11px;background:#E3F0F3;color:#0B5B66;font-weight:800;padding:3px 9px;border-radius:20px">${q ? tf : tg}</span></div>
   <div id="lista">${linhas}</div>
+  ${maisInfo}
 </div>
-<script>const q=document.getElementById('busca');if(q)q.oninput=()=>{const t=q.value.toLowerCase();document.querySelectorAll('#lista>a').forEach(a=>{a.style.display=a.textContent.toLowerCase().includes(t)?'':'none';});};</script>
 </body></html>`;
 }
 

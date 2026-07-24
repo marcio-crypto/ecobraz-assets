@@ -240,7 +240,12 @@ export default {
       // Cadastro & Clientes (escritório/comercial — Débora). Base própria, sem Ploomes.
       if (pathname === '/cadastro' && request.method === 'GET') {
         if (!escritorio) return html(paginaLoginEscritorio(googleConfigurado(env)));
-        return html(paginaCadastroHome(escritorio, await listarClientes(env)));
+        const q = (url.searchParams.get('q') || '').trim();
+        const ql = q.toLowerCase();
+        const todos = await listarClientes(env);
+        const filtrados = ql ? todos.filter((c) => `${c.nome || ''} ${c.doc || ''}`.toLowerCase().includes(ql)) : todos;
+        const ordenados = [...filtrados].sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || ''), 'pt'));
+        return html(paginaCadastroHome(escritorio, ordenados.slice(0, 60), q, filtrados.length, todos.length));
       }
       if (pathname === '/cadastro/novo' && request.method === 'GET') {
         if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
