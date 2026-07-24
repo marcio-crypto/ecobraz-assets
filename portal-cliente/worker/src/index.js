@@ -41,7 +41,7 @@ import { qrCDF, validarCDF } from './validacao.js';
 import { paginaMetodologia } from './carbono-metodologia.js';
 import { lerValidacao, registrarValidacao, paginaAreaValidacao, qrMetodologia, validarMetodologiaPublico } from './validacao-metodologia.js';
 import { paginaPainelCarbono } from './carbono-painel.js';
-import { clientesComOperacoes, carbonoDoCliente, paginaCarbonoAnalista } from './carbono-motor.js';
+import { clientesComOperacoes, carbonoDoCliente, paginaCarbonoAnalista, paginaCarbonoAuditor } from './carbono-motor.js';
 import { agentePermitido, nomeAgente, listarColetasComStatus, paginaLoginAgente, paginaAppAgente, detalheColeta, lerEstadoColeta, registrarCheckin, registrarFoto, servirFotoColeta, paginaColetaDetalhe, registrarEncerramento, registrarReagendamento, qrColeta, validarColetaPublico, paginaComprovante } from './agente.js';
 import { operadorPermitido, nomeOperador, listarOperacoes, listarColetasRecebiveis, iniciarOperacao, lerOperacao, definirTipoOperacao, registrarPesoEntrada, registrarFotoOperacao, servirFotoOperacao, paginaLoginOperacao, paginaAppOperacao, paginaReceberLote, paginaLoteDetalhe, adicionarMaterial, removerMaterial, concluirTriagem, paginaTriagem, paginaProcessamento, concluirProcessamento, paginaSaida, registrarSaida, concluirSaida } from './operacional.js';
 import { engenheiroPermitido, nomeEngenheiro, filaValidacao, operacoesValidadas, lerValidacaoOp, registrarValidacaoOp, paginaLoginEng, paginaFilaEng, paginaDossie, qrOperacao, validarOperacaoPublico, listarDestinos, lerDestino, salvarDestino, paginaDestinos, paginaDestinoForm, paginaRelatorio, paginaCDF } from './engenharia.js';
@@ -877,10 +877,12 @@ export default {
         if (!sessao && !validador) return new Response(null, { status: 302, headers: { Location: '/', 'cache-control': 'no-store' } });
         return html(paginaMetodologia(env, await lerValidacao(env)));
       }
-      // Painel de carbono do cliente (prévia) — só cliente logado.
+      // Painel de carbono do cliente — ligado ao motor (peso/composição REAIS; tCO₂e
+      // pendente até a Villanova validar). Só cliente logado.
       if (pathname === '/painel-carbono' && request.method === 'GET') {
         if (!sessao) return new Response(null, { status: 302, headers: { Location: '/', 'cache-control': 'no-store' } });
-        return html(paginaPainelCarbono(sessao));
+        const dadosCli = await carbonoDoCliente(env, sessao.nome || '');
+        return html(paginaPainelCarbono(sessao, dadosCli, await lerValidacao(env)));
       }
       // Carbono — tela do ANALISTA (a cozinha): peso REAL por material × fator da metodologia.
       // Interno (engenharia/diretoria). Todo tCO₂e fica "pendente" até a Villanova validar os fatores.
@@ -891,6 +893,16 @@ export default {
         const clienteNome = url.searchParams.get('cliente') || '';
         const dados = clienteNome ? await carbonoDoCliente(env, clienteNome) : null;
         return html(paginaCarbonoAnalista(user, clientes, dados));
+      }
+      // Carbono — tela do AUDITOR (dossiê): metodologia (selo) + a conta + a cadeia de
+      // custódia. Villanova (validador) e, para conferência interna, engenharia/diretoria.
+      if (pathname === '/carbono/auditor' && request.method === 'GET') {
+        if (!validador && !eng && !diretoria) return new Response(null, { status: 302, headers: { Location: '/validacao', 'cache-control': 'no-store' } });
+        const user = validador || eng || diretoria;
+        const clientes = await clientesComOperacoes(env);
+        const clienteNome = url.searchParams.get('cliente') || '';
+        const dados = clienteNome ? await carbonoDoCliente(env, clienteNome) : null;
+        return html(paginaCarbonoAuditor(user, clientes, dados, await lerValidacao(env)));
       }
       if (pathname === '/api/os' && request.method === 'GET') {
         if (!sessao) return json({ ok: false, error: 'nao_autenticado' }, 401);

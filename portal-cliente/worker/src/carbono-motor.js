@@ -119,9 +119,9 @@ select{font-family:inherit;font-size:13px;border:1px solid #DDE1E6;border-radius
 .cat{font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px;background:#E7EFF0;color:#0B5B66}
 .cat.sem{background:#FBE9E7;color:#8a4b45}</style></head>`;
 }
-function topo() {
+function topo(sub, home) {
   return `<div style="background:${TEAL};padding:15px 20px"><div style="max-width:1000px;margin:0 auto;display:flex;justify-content:space-between;align-items:center">
-    <a href="/carbono/analista" style="text-decoration:none"><span style="color:#fff;font-size:16px;font-weight:800">ecobraz</span><span style="color:#92C430;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin-left:8px">carbono · analista</span></a>
+    <a href="${esc(home || '/carbono/analista')}" style="text-decoration:none"><span style="color:#fff;font-size:16px;font-weight:800">ecobraz</span><span style="color:#92C430;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin-left:8px">${esc(sub || 'carbono')}</span></a>
     <a href="/metodologia" style="color:#cfe3e0;font-size:12px;font-weight:700;text-decoration:none;border:1px solid #1c5b66;border-radius:8px;padding:7px 11px">Metodologia</a>
   </div></div>`;
 }
@@ -166,11 +166,77 @@ export function paginaCarbonoAnalista(user, clientes, dados) {
       ${c.semCategoria ? `<div style="font-size:11.5px;color:#8a4b45;margin-top:10px">⚠ Há material <b>sem categoria de fator</b> — precisa de classificação manual (curadoria) antes de contar no cálculo.</div>` : ''}
       <div style="font-size:11px;color:#9aa7a4;margin-top:10px">A = emissões evitadas (benefício, reportado à parte). O inventário do cliente (B, Escopo 3) e a neutralização (C, Adote) são números separados — a metodologia não os mistura.</div>`;
   }
-  return `${head('Carbono · Analista')}<body>${topo()}
+  return `${head('Carbono · Analista')}<body>${topo('carbono · analista', '/carbono/analista')}
 <div class="wrap">
   <h1 style="font-size:21px;margin:0 0 4px">Cálculo de carbono — Analista</h1>
   <p style="font-size:12.5px;color:#7c8a87;margin:0 0 14px">A cozinha: peso real por material × fator da metodologia. É o que alimenta o painel do cliente e o dossiê do auditor.</p>
   ${faixaStatus(dados)}
+  ${seletor}
+  ${corpo}
+</div>
+</body></html>`;
+}
+
+// ---------------------------------------------------------------------------
+// TELA DO AUDITOR — o dossiê que resiste a auditoria: metodologia (selo) +
+// a conta + a cadeia de custódia (evidências) por trás de cada número.
+// ---------------------------------------------------------------------------
+export function paginaCarbonoAuditor(user, clientes, dados, validacao) {
+  const validado = !!(validacao && validacao.hash);
+  const linkBtn = 'font-size:12px;font-weight:700;text-decoration:none;border:1px solid #cfe0dd;border-radius:8px;padding:8px 12px;color:#00333B;background:#fff';
+  const selo = `<div class="card" style="margin-bottom:16px;border-color:${validado ? '#bfe3c6' : '#f0d9b0'};background:${validado ? '#F1F8EC' : '#FFF9EE'}">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+      <div style="min-width:220px"><div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:${validado ? '#1E5B31' : '#8A6A16'}">Metodologia — ${validado ? '✓ validada' : 'aguardando validação'}</div>
+        <div style="font-size:13.5px;color:#28413f;margin-top:6px;line-height:1.55">${validado
+          ? `Validada por <b>${esc(validacao.validadoPor || 'Villanova ESG')}</b> em ${esc((validacao.em || '').slice(0, 10))} · versão ${esc(validacao.versao || '')}<div style="font-size:10.5px;color:#7c8a87;margin-top:4px;word-break:break-all">selo (hash): ${esc((validacao.hash || '').slice(0, 40))}…</div>`
+          : `A receita de cálculo <b>ainda não foi validada</b> pela Villanova ESG. Os pesos e as evidências já são reais; os tCO₂e ficam <b>pendentes</b> até a assinatura.`}</div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><a href="/metodologia" style="${linkBtn}">Ver metodologia</a><a href="/validacao" style="${linkBtn}">Área de validação</a></div>
+    </div></div>`;
+  const opts = ['<option value="">— escolher cliente —</option>'].concat((clientes || []).map((c) =>
+    `<option value="${esc(c.cliente)}" ${dados && norm(dados.clienteNome) === norm(c.cliente) ? 'selected' : ''}>${esc(c.cliente)} — ${nfmt(c.coletas)} coleta(s) · ${nfmt(c.entradaKg / 1000, 2)} t</option>`)).join('');
+  const seletor = `<div class="card" style="margin-bottom:16px"><label style="font-size:11px;font-weight:800;text-transform:uppercase;color:#7c8a87">Cliente a auditar</label>
+    <div style="margin-top:6px"><select id="cli" onchange="if(this.value)location.href='/carbono/auditor?cliente='+encodeURIComponent(this.value)">${opts}</select></div></div>`;
+
+  let corpo;
+  if (!dados) {
+    corpo = `<div class="card" style="text-align:center;color:#8fa39f;font-size:14px;padding:30px">Escolha um cliente para auditar a conta e a cadeia de custódia.</div>`;
+  } else {
+    const c = dados;
+    const linhas = c.linhas.length ? c.linhas.map((l) => `<tr>
+      <td><b>${esc(l.rotulo)}</b></td>
+      <td>${l.categoria ? `<span class="cat">${esc(l.categoria)}</span>` : '<span class="cat sem">sem categoria</span>'}</td>
+      <td style="text-align:right;white-space:nowrap">${nfmt(l.kg, 2)} kg</td>
+      <td>${l.fatorValor == null ? `<span class="pend">pendente</span>${l.fatorFonte ? `<div style="color:#9aa7a4;font-size:9px;margin-top:3px">${esc(l.fatorFonte)}</div>` : ''}` : `${esc(String(l.fatorValor))} ${esc(l.fatorUnidade || '')}`}</td>
+      <td style="text-align:right">${l.evitadoKg == null ? '<span class="pend">pendente</span>' : nfmt(l.evitadoKg / 1000, 3) + ' tCO₂e'}</td>
+    </tr>`).join('') : `<tr><td colspan="5" style="text-align:center;color:#8fa39f;padding:18px">Sem materiais triados.</td></tr>`;
+    const ops = (c.operacoes || []).map((o) => `<tr>
+      <td><b>${esc(o.numero || o.osId)}</b></td>
+      <td style="text-align:right;white-space:nowrap">${nfmt(o.entradaKg || 0, 0)} kg</td>
+      <td>${o.expirada ? '<span class="pend">registro expirado</span>' : `<a href="/coletas/os/carta?id=${esc(o.osId)}" style="color:#0B5B66;font-size:11.5px">Carta</a> · <a href="/coletas/os/manifesto?id=${esc(o.osId)}" style="color:#0B5B66;font-size:11.5px">Manifesto</a> · <a href="/coletas/os/cdf?id=${esc(o.osId)}" style="color:#0B5B66;font-size:11.5px">CDF</a>`}</td>
+    </tr>`).join('') || `<tr><td colspan="3" style="text-align:center;color:#8fa39f;padding:14px">—</td></tr>`;
+    corpo = `<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+        <div class="tile"><b>${nfmt(c.pesoEntradaKg / 1000, 2)}<span style="font-size:13px;color:#7c8a87"> t</span></b><span>peso recebido (real)</span></div>
+        <div class="tile"><b>${nfmt(c.coletas)}</b><span>operações auditáveis</span></div>
+        <div class="tile"><b style="color:#8A6A16;font-size:16px">${c.totalEvitadoT == null ? 'pendente' : nfmt(c.totalEvitadoT, 2) + ' tCO₂e'}</b><span>emissões evitadas (A)</span></div>
+      </div>
+      <div style="font-size:12px;font-weight:800;text-transform:uppercase;color:#00333B;margin:6px 0 8px">Conta (A — emissões evitadas)</div>
+      <div class="card" style="padding:0;overflow-x:auto;margin-bottom:18px">
+        <table><thead><tr><th>Material</th><th>Categoria</th><th style="text-align:right">Peso</th><th>Fator</th><th style="text-align:right">Evitado</th></tr></thead><tbody>${linhas}</tbody></table>
+      </div>
+      <div style="font-size:12px;font-weight:800;text-transform:uppercase;color:#00333B;margin:6px 0 8px">Cadeia de custódia (evidências por operação)</div>
+      <div class="card" style="padding:0;overflow-x:auto;margin-bottom:14px">
+        <table><thead><tr><th>Operação</th><th style="text-align:right">Entrada</th><th>Documentos vinculados</th></tr></thead><tbody>${ops}</tbody></table>
+      </div>
+      <div class="card" style="background:#F7FAF9">
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#00333B;margin-bottom:8px">O que este dossiê comprova</div>
+        <div style="font-size:12.5px;color:#28413f;line-height:1.7">✓ Cada quilo vem de uma <b>coleta rastreada</b> (foto + GPS no ato) → pesagem na doca → triagem por material → destinação.<br>✓ Cada operação tem <b>Carta de Descarte, Manifesto e CDF</b> (verificáveis por QR).<br>✓ A conta separa os 3 números (A evitado · B inventário · C neutralização) — <b>não há dupla contagem nem neutralização disfarçada</b>.<br>${validado ? '✓ Fatores <b>validados</b> pela Villanova ESG (selo acima).' : '⚠ Fatores <b>pendentes</b> de validação — nenhum tCO₂e é afirmado como final até a assinatura da Villanova.'}</div>
+      </div>`;
+  }
+  return `${head('Carbono · Auditor')}<body>${topo('carbono · auditor', '/carbono/auditor')}
+<div class="wrap">
+  <h1 style="font-size:21px;margin:0 0 4px">Dossiê de auditoria — Carbono</h1>
+  <p style="font-size:12.5px;color:#7c8a87;margin:0 0 14px">A conta e a cadeia de custódia por trás de cada número. É o que sustenta o relatório de ESG/CSRD do cliente e resiste a auditoria de terceira parte.</p>
+  ${selo}
   ${seletor}
   ${corpo}
 </div>
