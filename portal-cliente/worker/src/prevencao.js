@@ -19,58 +19,40 @@ const numBR = (n) => Number(n || 0).toLocaleString('pt-BR');
 const moedaBR = (n) => Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const soB64 = (s) => { const m = String(s || '').match(/base64,(.*)$/); return m ? m[1] : String(s || ''); };
 
-// Tabela de referência R$/kg por categoria de material. São VALORES DE PARTIDA
-// (ilustrativos) — a Diretoria ajusta na tela para os preços reais de mercado.
-export const TABELA_PADRAO = {
-  placa: { rotulo: 'Placas / PCB', preco: 15 },
-  cobre: { rotulo: 'Cobre', preco: 30 },
-  aluminio: { rotulo: 'Alumínio', preco: 8 },
-  ferro: { rotulo: 'Ferro / aço', preco: 1.5 },
-  cabo: { rotulo: 'Cabos / fios', preco: 5 },
-  bateria: { rotulo: 'Baterias', preco: 2 },
-  plastico: { rotulo: 'Plástico', preco: 1 },
-  tela: { rotulo: 'Monitores / telas', preco: 0.5 },
-  fonte: { rotulo: 'Fontes / gabinetes', preco: 2 },
-  sucata: { rotulo: 'Sucata comum', preco: 0.8 },
-};
-const CATS = Object.keys(TABELA_PADRAO);
-const APELIDOS = {
-  placa: ['placa', 'pcb', 'circuito', 'memoria', 'processador', 'ram'],
-  cobre: ['cobre', 'bobina'],
-  aluminio: ['aluminio', 'alumínio', 'dissipador'],
-  ferro: ['ferro', 'aco', 'aço', 'chapa', 'metal', 'carcaca', 'carcaça'],
-  cabo: ['cabo', 'fio', 'chicote'],
-  bateria: ['bateria', 'pilha', 'nobreak', 'no-break'],
-  plastico: ['plastico', 'plástico', 'polim', 'abs'],
-  tela: ['monitor', 'tela', 'lcd', 'crt', 'display', 'tv'],
-  fonte: ['fonte', 'gabinete', 'cpu', 'desktop', 'servidor', 'switch', 'roteador'],
-  sucata: ['sucata', 'diverso', 'misto', 'geral'],
-};
-function categoriaDe(m) {
-  const t = (String(m.rotulo || '') + ' ' + String(m.classe || '') + ' ' + String(m.ibama || '')).toLowerCase();
-  for (const cat of CATS) { if ((APELIDOS[cat] || []).some((k) => t.includes(k))) return cat; }
-  return 'sucata';
-}
+// Parâmetros de valor. Regra definida pelo Marcio (24/07/2026): valor por PESO =
+// R$ 1,00/kg (sempre); valor por LOTE = R$ 50,00 por unidade/lote (base, "uma pela
+// outra" — média, uns compensam os outros). São ESTIMATIVAS de referência até a
+// integração direta com a plataforma de leilão online. A Diretoria pode ajustar os
+// dois valores na tela; guardamos em KV (precos:materiais).
+export const VALOR_KG_PADRAO = 1;      // R$ por kg
+export const VALOR_LOTE_PADRAO = 50;   // R$ por lote (cada tipo separado na triagem vira 1 pallet/lote)
+
 export async function lerTabelaPrecos(env) {
-  const base = {}; for (const c of CATS) base[c] = { ...TABELA_PADRAO[c] };
-  try { const raw = env.PORTAL_KV ? await env.PORTAL_KV.get('precos:materiais') : null; if (raw) { const o = JSON.parse(raw); for (const c of CATS) if (o[c] != null) base[c].preco = Number(o[c]) || base[c].preco; } } catch { /* usa padrão */ }
-  return base;
+  const p = { kg: VALOR_KG_PADRAO, lote: VALOR_LOTE_PADRAO };
+  try {
+    const raw = env.PORTAL_KV ? await env.PORTAL_KV.get('precos:materiais') : null;
+    if (raw) { const o = JSON.parse(raw); if (Number.isFinite(Number(o.kg))) p.kg = Number(o.kg); if (Number.isFinite(Number(o.lote))) p.lote = Number(o.lote); }
+  } catch { /* usa padrão */ }
+  return p;
 }
 export async function salvarTabelaPrecos(env, precos) {
-  const o = {}; for (const c of CATS) { const v = Number(precos && precos[c]); if (Number.isFinite(v) && v >= 0) o[c] = v; }
-  if (env.PORTAL_KV) await env.PORTAL_KV.put('precos:materiais', JSON.stringify(o));
-  return o;
+  const p = {};
+  const kg = Number(precos && precos.kg); if (Number.isFinite(kg) && kg >= 0) p.kg = kg;
+  const lote = Number(precos && precos.lote); if (Number.isFinite(lote) && lote >= 0) p.lote = lote;
+  if (env.PORTAL_KV) await env.PORTAL_KV.put('precos:materiais', JSON.stringify(p));
+  return p;
 }
 
-// Valor estimado do lote: soma (kg do material × preço da categoria).
-export function valorEstimado(op, tabela) {
-  const linhas = []; let total = 0;
-  for (const m of (op.materiais || [])) {
-    const cat = categoriaDe(m); const preco = (tabela[cat] || {}).preco || 0;
-    const kg = Number(m.qtd) || 0; const v = kg * preco; total += v;
-    linhas.push({ rotulo: m.rotulo || (tabela[cat] || {}).rotulo || cat, cat, kg, preco, valor: v });
-  }
-  return { linhas, total };
+// Valor estimado do lote recebido, em DUAS óticas (regra fixa do Marcio):
+//  • por PESO = total de kg separados × R$/kg
+//  • por LOTE = nº de tipos separados na triagem (cada um vira pallet/lote) × R$/lote
+// Não somamos as duas — são leituras alternativas (evita contar em dobro).
+export function valorEstimado(op, params) {
+  const vkg = params && Number.isFinite(Number(params.kg)) ? Number(params.kg) : VALOR_KG_PADRAO;
+  const vlote = params && Number.isFinite(Number(params.lote)) ? Number(params.lote) : VALOR_LOTE_PADRAO;
+  const kg = somaMateriais(op);
+  const nLotes = (op.materiais || []).length;
+  return { kg, nLotes, vkg, vlote, porPeso: kg * vkg, porLote: nLotes * vlote };
 }
 
 // Reconciliação por peso (o controle real). status: ok | atencao | divergencia.
@@ -154,23 +136,24 @@ export async function analisarColetaIA(env, osId) {
 // Dados do painel + página (Diretoria)
 // ---------------------------------------------------------------------------
 export async function dadosPrevencao(env) {
-  const tabela = await lerTabelaPrecos(env);
+  const params = await lerTabelaPrecos(env);
   const idx = await listarOperacoes(env);
   const alvo = idx.filter((o) => o.etapa === 'validacao' || o.etapa === 'concluida').slice(0, 40);
   const itens = [];
   for (const resumo of alvo) {
     const op = await lerOperacao(env, resumo.osId); if (!op) continue;
     const rec = reconciliar(op);
-    const val = valorEstimado(op, tabela);
+    const val = valorEstimado(op, params);
     const ia = await lerAnaliseIA(env, op.osId);
-    itens.push({ osId: op.osId, numero: op.numero, cliente: op.cliente, rec, valorTotal: val.total, ia });
+    itens.push({ osId: op.osId, numero: op.numero, cliente: op.cliente, rec, val, ia });
   }
   const totais = itens.reduce((a, it) => {
-    a.valor += it.valorTotal;
+    a.valorPeso += it.val.porPeso;
+    a.valorLote += it.val.porLote;
     if (it.rec.status === 'divergencia') a.divergencias++;
     return a;
-  }, { valor: 0, divergencias: 0 });
-  return { itens, tabela, totais, iaOn: iaConfigurada(env) };
+  }, { valorPeso: 0, valorLote: 0, divergencias: 0 });
+  return { itens, params, totais, iaOn: iaConfigurada(env) };
 }
 
 function head(t) {
@@ -193,7 +176,7 @@ const STATUS_PILL = { ok: 'background:#E4F3E6;color:#1E5B31', atencao: 'backgrou
 const STATUS_TXT = { ok: 'BALANÇO OK', atencao: 'ATENÇÃO', divergencia: 'DIVERGÊNCIA' };
 
 export function paginaPrevencao(user, dados) {
-  const { itens, tabela, totais, iaOn } = dados;
+  const { itens, params, totais, iaOn } = dados;
   const linhas = itens.length ? itens.map((it) => {
     const ia = it.ia;
     const iaBloco = ia && ia.ok
@@ -207,45 +190,46 @@ export function paginaPrevencao(user, dados) {
         <div style="font-size:12px;color:#4F6469;margin-top:4px">Entrada ${numBR(it.rec.entrada)} kg · Saída ${numBR(it.rec.saida)} kg · ${esc(it.rec.motivo)}</div></div>
         <span class="pill" style="${STATUS_PILL[it.rec.status]}">${STATUS_TXT[it.rec.status]}</span>
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;border-top:1px solid #EEF1F0;padding-top:10px">
-        <div style="font-size:13px">Valor estimado (revenda/sucata): <b>R$ ${moedaBR(it.valorTotal)}</b></div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-top:10px;border-top:1px solid #EEF1F0;padding-top:10px">
+        <div style="font-size:12.5px;color:#4F6469;line-height:1.7">
+          Por peso: <b style="color:#10262B">R$ ${moedaBR(it.val.porPeso)}</b> <span style="color:#8fa39f">(${numBR(it.val.kg)} kg × R$ ${moedaBR(it.val.vkg)})</span><br>
+          Por lote: <b style="color:#10262B">R$ ${moedaBR(it.val.porLote)}</b> <span style="color:#8fa39f">(${it.val.nLotes} ${it.val.nLotes === 1 ? 'lote' : 'lotes'} × R$ ${moedaBR(it.val.vlote)})</span>
+        </div>
         ${iaOn ? `<button class="btn btn-g" onclick="analisar(this,'${esc(it.osId)}')">${ia && ia.ok ? '↻ Reanalisar fotos (IA)' : '🤖 Analisar fotos (IA)'}</button>` : ''}
       </div>
       ${iaBloco}
     </div>`;
   }).join('') : `<div class="card" style="text-align:center;color:#8fa39f">Nenhum lote recebido ainda para reconciliar.</div>`;
 
-  const precoInputs = CATS.map((c) => `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid #F2F5F4">
-    <span style="font-size:13px">${esc(tabela[c].rotulo)}</span>
-    <div>R$ <input id="p_${c}" inputmode="decimal" value="${esc(String(tabela[c].preco))}"> /kg</div></div>`).join('');
-
   return `${head('Prevenção de Perdas')}<body>${topo()}
 <div class="wrap">
   <div style="display:flex;gap:12px;flex-wrap:wrap;margin:2px 0 16px">
-    <div class="card" style="flex:1;min-width:180px"><div style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#7c8a87">Valor estimado no período</div><div style="font-size:24px;font-weight:800;margin-top:4px">R$ ${moedaBR(totais.valor)}</div></div>
-    <div class="card" style="flex:1;min-width:180px"><div style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#7c8a87">Divergências a investigar</div><div style="font-size:24px;font-weight:800;margin-top:4px;color:${totais.divergencias ? '#8a4b45' : '#1E5B31'}">${totais.divergencias}</div></div>
+    <div class="card" style="flex:1;min-width:150px"><div style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#7c8a87">Valor por peso</div><div style="font-size:22px;font-weight:800;margin-top:4px">R$ ${moedaBR(totais.valorPeso)}</div><div style="font-size:11px;color:#8fa39f;margin-top:2px">R$ ${moedaBR(params.kg)}/kg</div></div>
+    <div class="card" style="flex:1;min-width:150px"><div style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#7c8a87">Valor por lote</div><div style="font-size:22px;font-weight:800;margin-top:4px">R$ ${moedaBR(totais.valorLote)}</div><div style="font-size:11px;color:#8fa39f;margin-top:2px">R$ ${moedaBR(params.lote)}/lote</div></div>
+    <div class="card" style="flex:1;min-width:150px"><div style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#7c8a87">Divergências a investigar</div><div style="font-size:22px;font-weight:800;margin-top:4px;color:${totais.divergencias ? '#8a4b45' : '#1E5B31'}">${totais.divergencias}</div></div>
   </div>
 
   <div style="background:#EAF3FB;border:1px solid #cfe0ee;border-radius:12px;padding:12px 15px;margin-bottom:16px;font-size:12.5px;color:#2b4a63">
-    <b>Como ler este painel.</b> O controle firme é o <b>peso</b> (balanço de massa). A <b>IA nas fotos</b> é um apoio: aponta divergência visual grosseira para <b>investigar</b> — nunca é prova, nunca acusa ninguém. O <b>valor</b> é estimativa (peso × tabela abaixo).${iaOn ? '' : ' <b>IA ainda não ativada</b> (falta a chave da Anthropic no cofre).'}
+    <b>Como ler este painel.</b> O controle firme é o <b>peso</b> (balanço de massa). A <b>IA nas fotos</b> é um apoio: aponta divergência visual grosseira para <b>investigar</b> — nunca é prova, nunca acusa ninguém. O <b>valor</b> é estimativa: <b>por peso</b> (kg × R$/kg) e <b>por lote</b> (nº de tipos separados na triagem × R$/lote), até a integração com a plataforma de leilão.${iaOn ? '' : ' <b>IA ainda não ativada</b> (falta a chave da Anthropic no cofre).'}
   </div>
 
   <h2 style="font-size:16px;margin:0 0 10px">Lotes recebidos</h2>
   ${linhas}
 
   <div class="card" style="margin-top:18px">
-    <div style="font-size:14px;font-weight:800;margin-bottom:6px">Tabela de preços (R$/kg)</div>
-    <div style="font-size:12px;color:#7c8a87;margin-bottom:6px">Valores de referência para a estimativa. Ajuste para os preços reais e salve.</div>
-    ${precoInputs}
-    <div style="display:flex;gap:10px;align-items:center;margin-top:12px"><button class="btn btn-p" onclick="salvarPrecos()">Salvar preços</button><span id="mp" style="font-size:12.5px;color:#4F6469"></span></div>
+    <div style="font-size:14px;font-weight:800;margin-bottom:6px">Parâmetros de valor</div>
+    <div style="font-size:12px;color:#7c8a87;margin-bottom:10px">Base para a estimativa (uns lotes valem mais, outros menos — é a média). Ajuste e salve. No futuro isto vem direto da plataforma de leilão.</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid #F2F5F4"><span style="font-size:13px">Valor por peso</span><div>R$ <input id="p_kg" inputmode="decimal" value="${esc(String(params.kg))}"> /kg</div></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid #F2F5F4"><span style="font-size:13px">Valor por lote (unidade)</span><div>R$ <input id="p_lote" inputmode="decimal" value="${esc(String(params.lote))}"> /lote</div></div>
+    <div style="display:flex;gap:10px;align-items:center;margin-top:12px"><button class="btn btn-p" onclick="salvarPrecos()">Salvar</button><span id="mp" style="font-size:12.5px;color:#4F6469"></span></div>
   </div>
 </div>
 <script>
 function analisar(btn,osId){var t=btn.textContent;btn.disabled=true;btn.textContent='Analisando… (pode levar alguns segundos)';
   fetch('/api/diretoria/analisar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({osId:osId})}).then(r=>r.json()).then(j=>{if(j.ok||j.erro){location.reload();}else{btn.disabled=false;btn.textContent=t;}}).catch(function(){btn.disabled=false;btn.textContent=t;});}
-function salvarPrecos(){var precos={};${CATS.map((c) => `precos['${c}']=(document.getElementById('p_${c}')||{}).value;`).join('')}
+function salvarPrecos(){var precos={kg:(document.getElementById('p_kg')||{}).value,lote:(document.getElementById('p_lote')||{}).value};
   document.getElementById('mp').textContent='Salvando…';
-  fetch('/api/diretoria/precos',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({precos:precos})}).then(r=>r.json()).then(j=>{document.getElementById('mp').textContent=j.ok?'Preços salvos.':'Falha.';if(j.ok)setTimeout(function(){location.reload();},600);}).catch(function(){document.getElementById('mp').textContent='Sem conexão.';});}
+  fetch('/api/diretoria/precos',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({precos:precos})}).then(r=>r.json()).then(j=>{document.getElementById('mp').textContent=j.ok?'Salvo.':'Falha.';if(j.ok)setTimeout(function(){location.reload();},600);}).catch(function(){document.getElementById('mp').textContent='Sem conexão.';});}
 </script>
 </body></html>`;
 }
