@@ -354,14 +354,14 @@ export function paginaCDF(op, validacao, destinos, seloUrl) {
         </div>`
       : `<div style="background:#FFF4DE;border:1px solid #f0e0b8;border-radius:12px;padding:14px 16px;font-size:12.5px;color:#8A6A16"><b>Certificado pendente.</b> Este CDF só é emitido após a <b>validação técnica</b> da operação pela Engenharia Ambiental (RT). Aguarde a validação para gerar a versão final.</div>`}`;
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${esc(numCDF)} — Ecobraz</title>
-<style>@media print{.noprint{display:none!important}body{background:#fff!important}}*{box-sizing:border-box}</style></head>
+<style>@page{size:A4;margin:11mm}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}@media print{.noprint{display:none!important}html,body{background:#fff!important;margin:0!important}.doc-wrap{max-width:100%!important;margin:0!important;padding:0!important}.doc-card{border:none!important;border-radius:0!important;box-shadow:none!important}table,tr,img{page-break-inside:avoid}}</style></head>
 <body style="margin:0;background:#EDF1EF;font-family:Montserrat,'Segoe UI',Arial,Helvetica,sans-serif;color:#10262B">
-<div style="max-width:820px;margin:0 auto;padding:18px">
+<div class="doc-wrap" style="max-width:820px;margin:0 auto;padding:18px">
   <div class="noprint" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
     <a href="/coletas/os?id=${esc(op.osId)}" style="color:#4F6469;font-size:13px;font-weight:800;text-decoration:none">← Voltar</a>
     <button onclick="window.print()" style="background:#00333B;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:800">🖨️ Imprimir / Salvar PDF</button>
   </div>
-  <div style="background:#fff;border:1px solid #E1E8E5;border-radius:14px;overflow:hidden">
+  <div class="doc-card" style="background:#fff;border:1px solid #E1E8E5;border-radius:14px;overflow:hidden">
     <div style="background:#00333B;padding:22px 28px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
       <div><div style="font-size:27px;font-weight:800;color:#fff">ecobraz<span style="color:#92C430">.</span></div>
       <div style="font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#92C430;margin-top:7px">Certificado de Destinação Final</div></div>

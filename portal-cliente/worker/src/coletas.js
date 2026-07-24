@@ -277,14 +277,14 @@ const assinaturasDoc = (os, papeis) => `<div style="display:flex;gap:20px;margin
 
 function docHTML(titulo, os, seloUrl, corpo) {
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${esc(titulo)} — ${esc(os.numero)}</title>
-<style>@media print{.noprint{display:none!important}body{background:#fff!important}}*{box-sizing:border-box}</style></head>
+<style>@page{size:A4;margin:11mm}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}@media print{.noprint{display:none!important}html,body{background:#fff!important;margin:0!important}.doc-wrap{max-width:100%!important;margin:0!important;padding:0!important}.doc-card{border:none!important;border-radius:0!important;box-shadow:none!important}table,tr,img{page-break-inside:avoid}}</style></head>
 <body style="margin:0;background:#EDF1EF;font-family:Montserrat,'Segoe UI',Arial,Helvetica,sans-serif;color:#10262B">
-<div style="max-width:820px;margin:0 auto;padding:18px">
+<div class="doc-wrap" style="max-width:820px;margin:0 auto;padding:18px">
   <div class="noprint" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
     <a href="/coletas/os?id=${esc(os.id)}" style="color:#4F6469;font-size:13px;font-weight:800;text-decoration:none">← Voltar</a>
     <button onclick="window.print()" style="background:#00333B;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:800">🖨️ Imprimir / Salvar PDF</button>
   </div>
-  <div style="background:#fff;border:1px solid #E1E8E5;border-radius:14px;overflow:hidden">
+  <div class="doc-card" style="background:#fff;border:1px solid #E1E8E5;border-radius:14px;overflow:hidden">
     <div style="background:#00333B;padding:22px 28px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
       <div><div style="font-size:27px;font-weight:800;color:#fff">ecobraz<span style="color:#92C430">.</span></div>
       <div style="font-size:11px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#92C430;margin-top:7px">${esc(titulo)}</div></div>
@@ -381,14 +381,14 @@ export function paginaComprovanteOS(os, seloUrl) {
   const stepper = passos.map((p, i) => `<span style="display:inline-flex;align-items:center"><span style="background:${i === 0 ? '#92C430' : '#E7EDEA'};color:${i === 0 ? '#10262B' : '#7c8a87'};font-size:10.5px;font-weight:800;padding:5px 11px;border-radius:20px">${p}</span>${i < passos.length - 1 ? '<span style="color:#c2cdc9;margin:0 3px;font-weight:800">›</span>' : ''}</span>`).join('');
   const f = (l, v, span) => `<div style="${span ? 'grid-column:1/-1;' : ''}"><div style="font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#93a6a2">${esc(l)}</div><div style="font-size:13px;color:#10262B;font-weight:600;margin-top:3px;line-height:1.5">${esc(v || '—')}</div></div>`;
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${esc(os.numero)} — Ecobraz</title>
-<style>@media print{.noprint{display:none!important}body{background:#fff!important}}</style></head>
+<style>@page{size:A4;margin:11mm}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}@media print{.noprint{display:none!important}html,body{background:#fff!important;margin:0!important}.doc-wrap{max-width:100%!important;margin:0!important;padding:0!important}.doc-card{border:none!important;border-radius:0!important;box-shadow:none!important}table,tr,img{page-break-inside:avoid}}</style></head>
 <body style="margin:0;background:#EDF1EF;font-family:Montserrat,'Segoe UI',Arial,Helvetica,sans-serif;color:#10262B">
-<div style="max-width:820px;margin:0 auto;padding:18px">
+<div class="doc-wrap" style="max-width:820px;margin:0 auto;padding:18px">
   <div class="noprint" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
     <a href="/coletas/os?id=${esc(os.id)}" style="color:#4F6469;font-size:13px;font-weight:800;text-decoration:none">← Voltar</a>
     <button onclick="window.print()" style="background:#00333B;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:800">🖨️ Imprimir / Salvar PDF</button>
   </div>
-  <div style="background:#fff;border:1px solid #E1E8E5;border-radius:14px;overflow:hidden">
+  <div class="doc-card" style="background:#fff;border:1px solid #E1E8E5;border-radius:14px;overflow:hidden">
     <div style="background:#00333B;padding:22px 28px;display:flex;justify-content:space-between;align-items:flex-start">
       <div><div style="font-size:27px;font-weight:800;color:#fff">ecobraz<span style="color:#92C430">.</span></div><div style="font-size:11px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:#92C430;margin-top:7px">Ordem de Coleta</div></div>
       <div style="text-align:right"><div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#7fa6a3">Nº da OS</div><div style="font-size:21px;font-weight:800;color:#fff">${esc(os.numero)}</div><div style="font-size:11.5px;color:#cfe3e0;margin-top:7px">Emissão: <b style="color:#fff">${esc(dataBR(os.criadoEm))}</b></div></div>
