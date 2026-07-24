@@ -25,10 +25,23 @@ export async function sondarAnexosPloomes(env) {
       const r = await fetch(`${base}${path}`, { headers, signal: AbortSignal.timeout(ms || 7000) });
       const rec = { status: r.status };
       const ct = r.headers.get('content-type') || '';
-      if (r.ok && ct.includes('json')) { try { const j = await r.json(); rec.value = Array.isArray(j.value) ? j.value : (j && j.Id != null ? [j] : []); } catch { rec.value = []; } }
+      if (r.ok && ct.includes('json')) { try { const j = await r.json(); rec.value = Array.isArray(j.value) ? j.value : (j && j.Id != null ? [j] : []); if (j['@odata.count'] != null) rec.count = j['@odata.count']; } catch { rec.value = []; } }
       else if (!r.ok) { rec.corpo = (await r.text().catch(() => '')).slice(0, 120); }
       return rec;
     } catch (e) { return { erro: (e && e.name === 'TimeoutError') ? 'tempo esgotado' : String(e && e.message || e).slice(0, 90) }; }
+  };
+
+  // 0) Volume (contagem rápida via $count): dimensiona o trabalho em 1 chamada por entidade.
+  const contar = async (entidade, ms) => {
+    const r = await req(`/${entidade}?$top=0&$count=true`, ms);
+    if (r.erro) return { erro: r.erro };
+    if (r.status !== 200) return { status: r.status };
+    return { total: r.count != null ? r.count : null };
+  };
+  out.volume = {
+    contatos: await contar('Contacts', 7000),
+    documentos: await contar('Documents', 7000),
+    anexos: await contar('Attachments', 9000),
   };
 
   // 1) Um contato real (para escopar os anexos).
@@ -106,11 +119,19 @@ export function paginaSondaAnexos(user, d) {
       : `<div style="font-size:12.5px;color:#4F6469">via ${esc(d.download.via)} · ${pill(d.download.status)} · tipo <code>${esc(d.download.contentType || '?')}</code> · <b>${esc(String(d.download.bytes))} bytes</b> ${d.download.bytes > 0 && d.download.status === 200 ? '<span style="color:#1E5B31;font-weight:800">✓ arquivo baixou!</span>' : ''}</div>`}
   </div>` : '';
 
+  const vfmt = (x) => (x && x.total != null) ? `<b>${Number(x.total).toLocaleString('pt-BR')}</b>` : (x && x.status ? `<span style="color:#8a4b45">HTTP ${esc(String(x.status))}</span>` : `<span style="color:#8A6A16">${esc((x && x.erro) || '—')}</span>`);
+  const v = d.volume || {};
+  const estMB = (v.documentos && v.documentos.total) ? Math.round(v.documentos.total * 96694 / 1048576) : null;
+  const volume = `<div class="card">
+    <div style="font-size:13px;font-weight:800;margin-bottom:6px">Volume no Ploomes</div>
+    <div style="font-size:13px;color:#4F6469;line-height:1.9">Contatos: ${vfmt(v.contatos)}<br>Documentos (propostas/PDF): ${vfmt(v.documentos)}${estMB ? ` <span style="color:#8fa39f">(~${Number(estMB).toLocaleString('pt-BR')} MB estimados)</span>` : ''}<br>Anexos: ${vfmt(v.anexos)}</div>
+  </div>`;
+
   return `${head('Diagnóstico de anexos')}<body><div class="wrap">
   <a href="/diretoria" style="color:#00333B;font-size:12px;font-weight:800;text-decoration:none">← Diretoria</a>
   <h1 style="font-size:19px;margin:12px 0 4px">Diagnóstico — anexos no Ploomes</h1>
   <p style="font-size:13px;color:#4F6469;margin:0 0 16px">Só inspeção (nada é baixado para guardar, nem apagado). ${d.contatoId ? `Cliente de amostra: <code>#${esc(String(d.contatoId))}</code>.` : ''} Tire um print e me mande.</p>
-
+  ${volume}
   <div class="card">
     <div style="font-size:13px;font-weight:800;margin-bottom:2px">Testes na API</div>
     ${testes}
