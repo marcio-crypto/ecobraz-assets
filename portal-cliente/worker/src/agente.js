@@ -5,6 +5,7 @@
 
 import { tagsPWA } from './pwa.js';
 import qrcode from 'qrcode-generator';
+import { listarColetasOS, lerColetaOS, atualizarStatusOS } from './coletas.js';
 const STAGE_EM_TRANSPORTE = (env) => Number(env.COLETA_STAGE_EM_TRANSPORTE || 35313);
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const TE = new TextEncoder();
@@ -34,15 +35,15 @@ export function agentesDe(env) {
 export function agentePermitido(email, env) { return agentesDe(env).has(String(email || '').trim().toLowerCase()); }
 export function nomeAgente(email, env) { return agentesDe(env).get(String(email || '').trim().toLowerCase()) || String(email || '').split('@')[0]; }
 
-// Lê as coletas em "Em Transporte" no Ploomes (Vendas/Orders).
-export async function listarColetas(env) {
-  const base = env.PLOOMES_API_URL || 'https://public-api2.ploomes.com';
-  const headers = { 'User-Key': env.PLOOMES_USER_KEY, Accept: 'application/json' };
-  const stage = STAGE_EM_TRANSPORTE(env);
-  const r = await fetch(`${base}/Orders?$filter=StageId%20eq%20${stage}&$top=50&$orderby=Id%20desc&$select=Id,OrderNumber,ContactId,ContactName,Date`, { headers });
-  if (!r.ok) return [];
-  const arr = (await r.json()).value || [];
-  return arr.map((o) => ({ id: o.Id, numero: o.OrderNumber, cliente: o.ContactName || '', contactId: o.ContactId }));
+// Lê as coletas ATIVAS (agendada / em transporte) da NOSSA base — atribuídas ao motorista
+// (ou ainda sem motorista definido). Substitui a leitura do Ploomes.
+const COLETAS_ATIVAS = new Set(['agendada', 'em_transporte']);
+export async function listarColetas(env, agenteEmail) {
+  const todas = await listarColetasOS(env);
+  const email = String(agenteEmail || '').trim().toLowerCase();
+  return todas
+    .filter((c) => COLETAS_ATIVAS.has(c.status) && (!email || !c.agenteEmail || c.agenteEmail === email))
+    .map((c) => ({ id: c.id, numero: c.numero, cliente: c.clienteNome || '' }));
 }
 
 export function paginaLoginAgente() {
@@ -108,17 +109,13 @@ function agora() { try { return new Date().toISOString(); } catch { return ''; }
 function hhmm(iso) { const m = String(iso || '').match(/T(\d{2}:\d{2})/); return m ? m[1] : ''; }
 
 export async function detalheColeta(env, id) {
-  const { base, headers } = ploomesCfg(env);
-  const r = await fetch(`${base}/Orders?$filter=Id%20eq%20${Number(id)}&$top=1&$select=Id,OrderNumber,ContactId,ContactName,StageId&$expand=Contact($select=Name,StreetAddress,StreetAddressNumber,StreetAddressLine2,Neighborhood,City,StateName,ZipCode)`, { headers });
-  if (!r.ok) return null;
-  const o = ((await r.json()).value || [])[0]; if (!o) return null;
-  const c = o.Contact || {};
-  const endereco = [[c.StreetAddress, c.StreetAddressNumber].filter(Boolean).join(', '), c.StreetAddressLine2, c.Neighborhood, [c.City, c.StateName].filter(Boolean).join(' - '), c.ZipCode].filter(Boolean).join(' · ');
-  return { id: o.Id, numero: o.OrderNumber, cliente: o.ContactName || c.Name || '', stageId: o.StageId, endereco };
+  const os = await lerColetaOS(env, id);
+  if (!os) return null;
+  return { id: os.id, numero: os.numero, cliente: os.clienteNome || '', endereco: os.endereco || '', stageId: os.status };
 }
 export async function lerEstadoColeta(env, id) { if (!env.PORTAL_KV) return {}; const raw = await env.PORTAL_KV.get(`coleta:${id}`); return raw ? JSON.parse(raw) : {}; }
 async function salvarEstadoColeta(env, id, e) { if (env.PORTAL_KV) await env.PORTAL_KV.put(`coleta:${id}`, JSON.stringify(e).slice(0, 4000), { expirationTtl: 60 * 60 * 24 * 120 }); }
-export async function registrarCheckin(env, id, agente, geo) { const e = await lerEstadoColeta(env, id); e.checkin = { lat: Number(geo.lat), lon: Number(geo.lon), acc: Math.round(Number(geo.acc) || 0), em: agora(), agente: agente.email }; await salvarEstadoColeta(env, id, e); return e; }
+export async function registrarCheckin(env, id, agente, geo) { const e = await lerEstadoColeta(env, id); e.checkin = { lat: Number(geo.lat), lon: Number(geo.lon), acc: Math.round(Number(geo.acc) || 0), em: agora(), agente: agente.email }; await salvarEstadoColeta(env, id, e); try { await atualizarStatusOS(env, id, 'em_transporte'); } catch { /* ok */ } return e; }
 export async function registrarFoto(env, id, agente, b64) { const e = await lerEstadoColeta(env, id); if (env.PORTAL_KV) await env.PORTAL_KV.put(`coletafoto:${id}`, String(b64).slice(0, 3000000), { expirationTtl: 60 * 60 * 24 * 120 }); e.foto = { em: agora(), agente: agente.email }; await salvarEstadoColeta(env, id, e); return e; }
 export async function servirFotoColeta(env, id) {
   if (!env.PORTAL_KV) return new Response('sem foto', { status: 404 });
@@ -138,6 +135,7 @@ export async function registrarEncerramento(env, id, agente, dados) {
   e.status = 'encerrada';
   delete e.reagendar;
   await salvarEstadoColeta(env, id, e);
+  try { await atualizarStatusOS(env, id, 'na_unidade'); } catch { /* ok */ }
   return e;
 }
 export async function registrarReagendamento(env, id, agente, dados) {
@@ -151,8 +149,8 @@ export async function registrarReagendamento(env, id, agente, dados) {
 }
 
 // Lista as coletas do Ploomes JÁ com o status do NOSSO sistema (encerrada/reagendar/andamento).
-export async function listarColetasComStatus(env) {
-  const arr = await listarColetas(env);
+export async function listarColetasComStatus(env, agenteEmail) {
+  const arr = await listarColetas(env, agenteEmail);
   const out = [];
   for (const c of arr) {
     let e = {};

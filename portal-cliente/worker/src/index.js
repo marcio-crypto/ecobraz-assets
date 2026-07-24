@@ -361,7 +361,7 @@ export default {
       // App do agente de coletas.
       if (pathname === '/agente' && request.method === 'GET') {
         if (!agente) return html(paginaLoginAgente());
-        return html(paginaAppAgente(agente, await listarColetasComStatus(env)));
+        return html(paginaAppAgente(agente, await listarColetasComStatus(env, agente.email)));
       }
       if (pathname === '/agente/coleta' && request.method === 'GET') {
         if (!agente) return new Response(null, { status: 302, headers: { Location: '/agente', 'cache-control': 'no-store' } });

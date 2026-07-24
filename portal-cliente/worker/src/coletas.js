@@ -60,7 +60,7 @@ export async function criarColetaOS(env, dados, criadoPor) {
   if (env.PORTAL_KV) {
     await env.PORTAL_KV.put(`os:${id}`, JSON.stringify(rec));
     const idx = await listarColetasOS(env);
-    idx.unshift({ id, numero, status: 'agendada', clienteNome: rec.clienteNome, cidade: cidadeDoEndereco(rec.endereco), dataAgendada: rec.dataAgendada, agenteNome: rec.agenteNome, criadoEm: rec.criadoEm });
+    idx.unshift({ id, numero, status: 'agendada', clienteNome: rec.clienteNome, cidade: cidadeDoEndereco(rec.endereco), dataAgendada: rec.dataAgendada, agenteNome: rec.agenteNome, agenteEmail: rec.agenteEmail, criadoEm: rec.criadoEm });
     await env.PORTAL_KV.put('os:index', JSON.stringify(idx).slice(0, 900000));
   }
   return rec;
