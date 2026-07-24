@@ -132,6 +132,13 @@ input{width:100%;border:1px solid #DDE1E6;border-radius:10px;padding:12px;font-s
 .faq p{font-size:13.5px;color:#5c6f6b;line-height:1.6;margin:0 0 14px}
 .impact{background:#0d2a12;color:#EAF7E0;border-radius:18px;padding:28px 22px;text-align:center}
 .badge{display:inline-flex;align-items:center;gap:7px;background:#EAF3EF;color:#1E5B31;border-radius:20px;padding:7px 14px;font-size:12.5px;font-weight:700;margin:4px}
+.cmp{width:100%;border-collapse:collapse;font-size:13.5px;min-width:540px}
+.cmp th,.cmp td{padding:12px 14px;text-align:left;border-bottom:1px solid #EAF0EE;vertical-align:top}
+.cmp thead th{font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:#5c6f6b;font-weight:800}
+.cmp .eco{background:#F1F8EC}
+.cmp thead .eco{color:#3f6b1e;border-top:2px solid #92C430}
+.cmp td.no{color:#a06a62}.cmp td.yes{color:#1E7A3D;font-weight:700}
+.cmp td:first-child{font-weight:700;color:#10262B}
 @media(max-width:720px){.pains,.bens,.steps{grid-template-columns:1fr}.h1{font-size:25px}}
 </style></head>`;
 }
@@ -193,6 +200,25 @@ export function paginaLojaAdote() {
     <h2 style="color:#fff;margin-top:10px">Você financia a coleta que faltava — e fica com a prova</h2>
     <p style="font-size:15px;line-height:1.7;color:#CFE9C7;max-width:660px;margin:8px auto 0">Recolher o eletrônico na casa de uma pessoa custa caro: é a “última milha” que quase ninguém faz — e por isso esse lixo acaba no lixão ou no desmanche informal. No Adote um Bairro, a sua empresa <b>financia essa coleta</b>. Em troca, você recebe a <b>documentação auditável</b> de tudo que foi recolhido e realiza uma ação concreta: tira o lixo eletrônico da casa das pessoas e fecha o ciclo do jeito certo. É a sua marca ligada a um impacto que dá para provar — e que ninguém mais no mercado oferece.</p>
   </div>
+</div>
+
+<div class="sec" style="padding-top:6px">
+  <h2>O que só a Ecobraz entrega</h2>
+  <div class="sub">Jogar no lixo comum ou chamar um sucateiro é barato — até o dia da fiscalização, do vazamento ou da auditoria. Compare o que você realmente leva para casa.</div>
+  <div style="overflow-x:auto;border:1px solid #E4EBE9;border-radius:14px;background:#fff">
+    <table class="cmp">
+      <thead><tr><th></th><th>Descarte comum / sucateiro</th><th class="eco">Adote um Bairro · Ecobraz</th></tr></thead>
+      <tbody>
+        <tr><td>Certificado de Destinação Final (CDF)</td><td class="no">✗ Raramente</td><td class="eco yes">✓ Sempre, assinado por RT (CREA)</td></tr>
+        <tr><td>Rastreabilidade (peso, foto, documento)</td><td class="no">✗ Não</td><td class="eco yes">✓ De ponta a ponta</td></tr>
+        <tr><td>Destruição certificada de dados</td><td class="no">✗ Sem garantia</td><td class="eco yes">✓ Com comprovação</td></tr>
+        <tr><td>Coleta na casa das pessoas (última milha)</td><td class="no">✗ Não existe</td><td class="eco yes">✓ Você financia e leva a prova</td></tr>
+        <tr><td>Ação social e ambiental documentada</td><td class="no">✗ Não</td><td class="eco yes">✓ Sim, com evidência</td></tr>
+        <tr><td>Pronto para auditoria e licitação</td><td class="no">✗ Não</td><td class="eco yes">✓ Sim</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div style="font-size:12px;color:#8fa39f;text-align:center;margin-top:10px">O barato do descarte informal cobra caro depois. A prova é o que fica.</div>
 </div>
 
 <div class="sec" id="planos" style="padding-top:10px">
