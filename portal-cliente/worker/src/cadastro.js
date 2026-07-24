@@ -369,6 +369,7 @@ export function paginaInicio(user, stats) {
     ${card('/coletas', '📋', 'Ordens de Coleta', 'Abra e acompanhe as coletas. Comprovante com QR de rastreio.', badge(s.coletasAbertas != null ? `${num(s.coletasAbertas)} em aberto` : null, s.coletasAbertas > 0))}
     ${card('/leads', '📥', 'Leads do site', 'Solicitações que chegam pelo formulário do site.', badge(s.leadsNovos != null ? `${num(s.leadsNovos)} novos` : null, s.leadsNovos > 0))}
     ${card('/operacao', '🏭', 'Operação (doca)', 'Recepção, triagem, processamento e saída. Balanço de massa.', badge(s.aReceber != null && s.aReceber > 0 ? `${num(s.aReceber)} a receber` : null, true))}
+    ${card('/frota', '🚛', 'Frota', 'Veículos da empresa. O motorista faz o checklist ao abrir e fechar o dia.', badge(s.veiculos != null && s.veiculos > 0 ? `${num(s.veiculos)} veículos` : null))}
     ${card('/eng', '🔬', 'Engenharia Ambiental', 'Validação técnica (RT), destino final e relatórios de conformidade.')}
     ${card('/diretoria', '📊', 'Diretoria', 'Visão macro: volume, prazos e alertas.')}
   </div>

@@ -45,6 +45,7 @@ import { engenheiroPermitido, nomeEngenheiro, filaValidacao, operacoesValidadas,
 import { diretorPermitido, nomeDiretor, reunirDados, paginaLoginDiretoria, paginaPainelDiretoria } from './diretoria.js';
 import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, paginaLeads, paginaLeadDetalhe, paginaInicio } from './cadastro.js';
 import { listarColetasOS, lerColetaOS, criarColetaOS, atualizarStatusOS, paginaColetasLista, paginaGerarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS } from './coletas.js';
+import { listarVeiculos, lerVeiculo, salvarVeiculo, paginaFrota, paginaVeiculoForm, lerJornadaAtiva, abrirJornada, fecharJornada, registrarAbastecimento, tagColetaComVeiculo, servirFotoJornada, bannerJornada, paginaAbrirDia, paginaFecharDia, paginaAbastecer } from './frota.js';
 import { agentesDe } from './agente.js';
 import { servirIcone, servirManifest, servirServiceWorker } from './pwa.js';
 import { googleConfigurado, iniciarGoogle, callbackGoogle } from './google-auth.js';
@@ -257,12 +258,13 @@ export default {
         if (!escritorio) return html(paginaLoginEscritorio(googleConfigurado(env)));
         let stats = {};
         try {
-          const [clientes, coletas, leads] = await Promise.all([listarClientes(env), listarColetasOS(env), listarLeads(env)]);
+          const [clientes, coletas, leads, veiculos] = await Promise.all([listarClientes(env), listarColetasOS(env), listarLeads(env), listarVeiculos(env)]);
           stats = {
             clientes: clientes.length,
             coletasAbertas: coletas.filter((c) => c.status !== 'concluida' && c.status !== 'cancelada').length,
             aReceber: coletas.filter((c) => c.status === 'na_unidade').length,
             leadsNovos: leads.filter((l) => l.status !== 'tratado').length,
+            veiculos: veiculos.filter((v) => v.ativo !== false).length,
           };
         } catch { stats = {}; }
         return html(paginaInicio(escritorio, stats));
@@ -368,10 +370,77 @@ export default {
         return json({ ok: true });
       }
 
+      // Frota (escritório): cadastro de veículos.
+      if (pathname === '/frota' && request.method === 'GET') {
+        if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/inicio', 'cache-control': 'no-store' } });
+        return html(paginaFrota(escritorio, await listarVeiculos(env)));
+      }
+      if (pathname === '/frota/novo' && request.method === 'GET') {
+        if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/inicio', 'cache-control': 'no-store' } });
+        return html(paginaVeiculoForm(escritorio, null));
+      }
+      if (pathname === '/frota/veiculo' && request.method === 'GET') {
+        if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/inicio', 'cache-control': 'no-store' } });
+        const v = await lerVeiculo(env, url.searchParams.get('id') || '');
+        if (!v) return html(paginaMensagem('Veículo não encontrado', 'Volte e tente de novo.'), 404);
+        return html(paginaVeiculoForm(escritorio, v));
+      }
+      if (pathname === '/api/frota/salvar' && request.method === 'POST') {
+        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = null; }
+        if (!b) return json({ ok: false, error: 'dados' }, 400);
+        const r = await salvarVeiculo(env, b, escritorio.email);
+        if (r.erro) return json({ ok: false, error: r.erro }, 400);
+        return json({ ok: true, id: r.id });
+      }
+
       // App do agente de coletas.
       if (pathname === '/agente' && request.method === 'GET') {
         if (!agente) return html(paginaLoginAgente());
-        return html(paginaAppAgente(agente, await listarColetasComStatus(env, agente.email)));
+        // Abrir o dia é OBRIGATÓRIO: sem jornada aberta, mostra o checklist do veículo.
+        const jornada = await lerJornadaAtiva(env, agente.email);
+        if (!jornada) return html(paginaAbrirDia(agente, await listarVeiculos(env), ''));
+        return html(paginaAppAgente(agente, await listarColetasComStatus(env, agente.email), bannerJornada(jornada)));
+      }
+      if (pathname === '/agente/dia/fechar' && request.method === 'GET') {
+        if (!agente) return new Response(null, { status: 302, headers: { Location: '/agente', 'cache-control': 'no-store' } });
+        const jornada = await lerJornadaAtiva(env, agente.email);
+        if (!jornada) return new Response(null, { status: 302, headers: { Location: '/agente', 'cache-control': 'no-store' } });
+        return html(paginaFecharDia(agente, jornada));
+      }
+      if (pathname === '/agente/dia/abastecer' && request.method === 'GET') {
+        if (!agente) return new Response(null, { status: 302, headers: { Location: '/agente', 'cache-control': 'no-store' } });
+        const jornada = await lerJornadaAtiva(env, agente.email);
+        if (!jornada) return new Response(null, { status: 302, headers: { Location: '/agente', 'cache-control': 'no-store' } });
+        return html(paginaAbastecer(agente, jornada));
+      }
+      if (pathname === '/agente/jornada/foto' && request.method === 'GET') {
+        if (!agente) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        return await servirFotoJornada(env, url.searchParams.get('id') || '', url.searchParams.get('m') || '', url.searchParams.get('lado') || '');
+      }
+      if (pathname === '/api/agente/jornada/abrir' && request.method === 'POST') {
+        if (!agente) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = null; }
+        if (!b) return json({ ok: false, error: 'dados' }, 400);
+        const r = await abrirJornada(env, agente, b);
+        if (r.erro) return json({ ok: false, error: r.erro }, 400);
+        return json({ ok: true, id: r.jornada.id, alertas: r.alertas || [] });
+      }
+      if (pathname === '/api/agente/jornada/fechar' && request.method === 'POST') {
+        if (!agente) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = null; }
+        if (!b) return json({ ok: false, error: 'dados' }, 400);
+        const r = await fecharJornada(env, agente, b);
+        if (r.erro) return json({ ok: false, error: r.erro }, 400);
+        return json({ ok: true, km: r.jornada.kmRodado, alertas: r.alertas || [] });
+      }
+      if (pathname === '/api/agente/jornada/abastecer' && request.method === 'POST') {
+        if (!agente) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = null; }
+        if (!b) return json({ ok: false, error: 'dados' }, 400);
+        const r = await registrarAbastecimento(env, agente, b);
+        if (r.erro) return json({ ok: false, error: r.erro }, 400);
+        return json({ ok: true });
       }
       if (pathname === '/agente/coleta' && request.method === 'GET') {
         if (!agente) return new Response(null, { status: 302, headers: { Location: '/agente', 'cache-control': 'no-store' } });
@@ -397,6 +466,7 @@ export default {
         let b; try { b = await request.json(); } catch { b = null; }
         if (!b || !b.id || b.lat == null || b.lon == null) return json({ ok: false, error: 'dados' }, 400);
         await registrarCheckin(env, b.id, agente, { lat: b.lat, lon: b.lon, acc: b.acc });
+        try { await tagColetaComVeiculo(env, agente.email, b.id); } catch { /* jornada opcional no vínculo */ }
         return json({ ok: true });
       }
       if (pathname === '/api/agente/foto' && request.method === 'POST') {

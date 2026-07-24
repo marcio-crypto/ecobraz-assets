@@ -67,7 +67,7 @@ export function paginaLoginAgente() {
 </body></html>`;
 }
 
-export function paginaAppAgente(agente, coletas) {
+export function paginaAppAgente(agente, coletas, banner) {
   const badgeDe = (c) => c.encerrada
     ? '<span style="font-size:10px;font-weight:800;color:#1E5B31;background:#E4F3E6;padding:3px 8px;border-radius:20px;">ENCERRADA</span>'
     : c.reagendar
@@ -79,7 +79,7 @@ export function paginaAppAgente(agente, coletas) {
     const href = c.encerrada ? `/agente/coleta/comprovante?id=${c.id}` : `/agente/coleta?id=${c.id}`;
     const cta = c.encerrada ? 'Ver comprovante →' : 'Abrir coleta →';
     return `<a href="${href}" style="display:block;text-decoration:none;background:#fff;border:1px solid #E4EBE9;border-radius:16px;padding:15px 16px;margin-bottom:12px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;"><div style="font-size:14px;font-weight:800;color:#10262B;">OS ${esc(c.numero)}</div>${badgeDe(c)}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;"><div style="font-size:14px;font-weight:800;color:#10262B;">${esc(c.numero)}</div>${badgeDe(c)}</div>
       <div style="font-size:13px;color:#4F6469;margin-top:7px;">${esc(c.cliente || 'Cliente')}</div>
       <div style="font-size:12px;color:#3f8f3a;font-weight:700;margin-top:10px;">${cta}</div>
     </a>`;
@@ -93,6 +93,7 @@ export function paginaAppAgente(agente, coletas) {
   </div>
 </div>
 <div style="max-width:520px;margin:0 auto;padding:16px 16px 40px;">
+  ${banner || ''}
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="font-size:13px;font-weight:800;">Coletas em transporte</div><span style="font-size:11px;background:#E3F0F3;color:#0B5B66;font-weight:800;padding:3px 9px;border-radius:20px;">${coletas.length}</span></div>
   ${itens}
   <div style="font-size:10.5px;color:#9aa7a4;text-align:center;margin-top:14px;">Toque numa coleta para fazer o check-in por GPS e a foto da carga.</div>
