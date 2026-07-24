@@ -10,12 +10,12 @@
 
 import { tagsPWA } from './pwa.js';
 import { botaoGoogle } from './google-auth.js';
+import { listarColetasOS, lerColetaOS, atualizarStatusOS } from './coletas.js';
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const agora = () => { try { return new Date().toISOString(); } catch { return ''; } };
 const hhmm = (iso) => { const m = String(iso || '').match(/T(\d{2}:\d{2})/); return m ? m[1] : ''; };
 const dataHora = (iso) => { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}:\d{2})/); return m ? `${m[3]}/${m[2]} ${m[4]}` : ''; };
 function base64ParaBytes(b64) { const bin = atob(b64); const out = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i); return out; }
-function ploomesCfg(env) { return { base: (env.PLOOMES_API_URL || 'https://public-api2.ploomes.com').replace(/\/+$/, ''), headers: { 'User-Key': env.PLOOMES_USER_KEY, Accept: 'application/json' } }; }
 
 // --- Registro de operadores (fonte única: env OPERACAO_EMAILS) ---
 export function operadoresDe(env) {
@@ -81,20 +81,19 @@ export async function atualizarEtapaOperacao(env, osId, etapa, patch) {
   await salvarOperacao(env, op); return op;
 }
 
-// Coletas que podem ser recebidas na doca: Vendas recentes do Ploomes (o operador escolhe o lote que chegou).
+// Coletas que podem ser recebidas na doca: OS que o motorista JÁ ENTREGOU na unidade
+// (status "na_unidade"). Lê a NOSSA base (KV), não o Ploomes.
 export async function listarColetasRecebiveis(env) {
-  const { base, headers } = ploomesCfg(env);
-  const r = await fetch(`${base}/Orders?$top=30&$orderby=Id%20desc&$select=Id,OrderNumber,ContactName,Date`, { headers });
-  if (!r.ok) return [];
-  return ((await r.json()).value || []).map((o) => ({ osId: o.Id, numero: o.OrderNumber, cliente: o.ContactName || '' }));
+  const todas = await listarColetasOS(env);
+  return todas
+    .filter((c) => c.status === 'na_unidade')
+    .map((c) => ({ osId: c.id, numero: c.numero, cliente: c.clienteNome || '' }));
 }
 
 async function buscarColeta(env, osId) {
-  const { base, headers } = ploomesCfg(env);
-  const r = await fetch(`${base}/Orders?$filter=Id%20eq%20${Number(osId)}&$top=1&$select=Id,OrderNumber,ContactName`, { headers });
-  if (!r.ok) return null;
-  const o = ((await r.json()).value || [])[0]; if (!o) return null;
-  return { osId: o.Id, numero: o.OrderNumber, cliente: o.ContactName || '' };
+  const os = await lerColetaOS(env, osId);
+  if (!os) return null;
+  return { osId: os.id, numero: os.numero, cliente: os.clienteNome || '' };
 }
 
 export async function iniciarOperacao(env, osId, operador) {
@@ -104,6 +103,8 @@ export async function iniciarOperacao(env, osId, operador) {
   if (!c) return null;
   op = { osId: String(c.osId), numero: c.numero, cliente: c.cliente, tipo: 'padrao', etapa: 'recepcao', criadoEm: agora(), criadoPor: operador.email, entrada: null, fotos: {} };
   await salvarOperacao(env, op);
+  // A coleta chegou e foi recebida na doca: a Ordem de Coleta cumpriu seu ciclo.
+  try { await atualizarStatusOS(env, osId, 'concluida'); } catch { /* ok */ }
   return op;
 }
 
@@ -261,7 +262,7 @@ export function paginaReceberLote(coletas) {
       <button style="width:100%;text-align:left;background:#fff;border:1px solid #E4EBE9;border-radius:14px;padding:14px 15px;cursor:pointer">
         <div style="font-size:14px;font-weight:800;color:#10262B">OS ${esc(c.numero)}</div>
         <div style="font-size:13px;color:#4F6469;margin-top:5px">${esc(c.cliente || 'Cliente')}</div>
-      </button></form>`).join('') : `<div class="card" style="text-align:center;color:#8fa39f;font-size:13.5px">Não consegui listar as coletas agora.</div>`;
+      </button></form>`).join('') : `<div class="card" style="text-align:center;color:#8fa39f;font-size:13.5px">Nenhum lote aguardando recebimento.<br>Aparecem aqui as coletas que o motorista já entregou na unidade.</div>`;
   return `${head('Receber lote')}
 <div class="top"><a href="/operacao" style="color:#9FC6C1;font-size:12px;font-weight:800;letter-spacing:.08em;text-decoration:none">← RECEBER NOVO LOTE</a>
   <div style="color:#fff;font-size:18px;font-weight:800;margin-top:8px">Qual lote chegou na doca?</div></div>
