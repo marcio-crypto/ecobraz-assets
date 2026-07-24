@@ -34,7 +34,7 @@ import { paginaLogin, paginaPainel, paginaMensagem } from './paginas.js';
 import { LOGO_ESCURO_B64, LOGO_CLARO_B64 } from './logos.js';
 import { paginaCalculadora, estimativaCarbono, paginaCalculoDetalhado, calculoDetalhadoGHG } from './carbono.js';
 import { criarPreferencia, consultarPagamento } from './mercadopago.js';
-import { acharPacote, precoPacote, paginaLojaAdote, paginaObrigadoAdote, lerCredito, salvarCredito, novoCredito, aplicarCompra } from './adote.js';
+import { acharPacote, precoPacote, paginaLojaAdote, paginaObrigadoAdote, paginaDiagnostico, lerCredito, salvarCredito, novoCredito, aplicarCompra } from './adote.js';
 import { statusDaEtapa, valorProp, CAMPOS_OS } from './os-utils.js';
 import { qrCDF, validarCDF } from './validacao.js';
 import { paginaMetodologia } from './carbono-metodologia.js';
@@ -123,6 +123,7 @@ export default {
       }
       // Loja "Adote um Bairro" (pública): coleta pré-paga por tonelada.
       if (pathname === '/adote' && request.method === 'GET') return html(paginaLojaAdote());
+      if (pathname === '/diagnostico' && request.method === 'GET') return html(paginaDiagnostico());
       if (pathname === '/adote/obrigado' && request.method === 'GET') {
         const ref = url.searchParams.get('pedido');
         let ped = null, cred = null;

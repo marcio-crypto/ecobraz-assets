@@ -151,6 +151,7 @@ export function paginaLojaAdote() {
   <div class="h1">O eletrônico parado no seu estoque é um risco jurídico — e um vazamento de dados esperando acontecer.</div>
   <p class="lead">A Ecobraz recolhe, destina corretamente e te entrega o Certificado de Destinação Final. Você compra por tonelada, usa quando precisar — e ainda transforma o descarte da sua empresa em impacto social real.</p>
   <a href="#planos" class="cta">Ver planos e contratar →</a>
+  <a href="/diagnostico" style="display:inline-block;margin-left:14px;color:#fff;font-size:14px;font-weight:700;text-decoration:underline;text-underline-offset:3px">Ainda em dúvida? Faça o diagnóstico de 1 min →</a>
   <div style="font-size:12px;color:#9FC6C1;margin-top:16px">Destinação licenciada · Certificado com Responsável Técnico (CREA) · Rastreabilidade total</div>
 </div></div>
 
@@ -257,6 +258,69 @@ function contratar(btn){var m=document.getElementById('msg');
 }
 function v(id){var el=document.getElementById(id);return el?el.value.trim():'';}
 setTipo('avulso');
+</script>
+</body></html>`;
+}
+
+export function paginaDiagnostico() {
+  const q = (n, titulo, opcoes) => `<div class="qcard"><div class="qtit">${n}. ${titulo}</div>${opcoes.map((o) => `<label class="opt"><input type="radio" name="q${n}" value="${o.p}"${o.f ? ` data-flag="${o.f}"` : ''}><span>${o.l}</span></label>`).join('')}</div>`;
+  const quiz = [
+    q(1, 'Sua empresa tem equipamentos eletrônicos parados ou obsoletos guardados (PCs, servidores, notebooks, celulares, no-breaks)?', [
+      { l: 'Sim, vários', p: 2, f: 'Material acumulado sem destino definido' }, { l: 'Alguns', p: 1 }, { l: 'Nenhum', p: 0 }]),
+    q(2, 'Algum desses equipamentos já armazenou dados da empresa ou de clientes?', [
+      { l: 'Sim', p: 2, f: 'Dados sensíveis em equipamento sem destruição comprovada' }, { l: 'Não tenho certeza', p: 1, f: 'Você não sabe onde estão seus dados antigos' }, { l: 'Não', p: 0 }]),
+    q(3, 'Quando descarta eletrônico, você recebe um Certificado de Destinação Final (o documento que comprova o destino)?', [
+      { l: 'Nunca — ou não sei o que é', p: 2, f: 'Sem prova documentada de destinação correta' }, { l: 'Às vezes', p: 1 }, { l: 'Sempre', p: 0 }]),
+    q(4, 'Sua empresa já foi cobrada — por cliente, auditoria, licitação ou investidor — sobre descarte responsável, ESG ou sustentabilidade?', [
+      { l: 'Sim', p: 2, f: 'Pressão de ESG já batendo à porta, sem resposta pronta' }, { l: 'Ainda não, mas sinto que vem aí', p: 1 }, { l: 'Não', p: 0 }]),
+    q(5, 'Hoje, para onde vai o seu lixo eletrônico?', [
+      { l: 'Destinador licenciado, com documento', p: 0 }, { l: 'Sucateiro / catador comum', p: 2, f: 'Destino sem licença nem rastreabilidade' }, { l: 'Junto com o lixo comum', p: 3, f: 'Descarte irregular — risco jurídico direto' }, { l: 'Sinceramente, não sei', p: 2, f: 'Sem controle sobre o destino do seu resíduo' }]),
+  ].join('');
+
+  return `${headLoja('Termômetro de Exposição — Ecobraz')}<body>${topoLoja()}
+<div class="hero" style="padding:34px 18px 26px"><div class="in">
+  <div class="eyebrow">Diagnóstico gratuito · 1 minuto</div>
+  <div class="h1" style="font-size:25px">Sua empresa está mais exposta do que imagina com o lixo eletrônico?</div>
+  <p class="lead">Responda 5 perguntas rápidas e descubra seu nível de risco — jurídico, de dados e de reputação. Sem cadastro para ver o resultado.</p>
+</div></div>
+<div class="sec" id="quiz" style="padding-top:20px">
+  ${quiz}
+  <button class="cta" style="width:100%;margin-top:6px" onclick="calcular()">Ver meu resultado →</button>
+  <div id="qmsg" style="font-size:13px;color:#8a4b45;text-align:center;margin-top:10px"></div>
+  <p style="font-size:11px;color:#9aa7a4;text-align:center;margin-top:14px">Orientação inicial baseada nas suas respostas — não substitui avaliação técnica.</p>
+</div>
+<div class="sec" id="resultado" style="display:none;padding-top:6px"></div>
+<style>
+.qcard{background:#fff;border:1px solid #E4EBE9;border-radius:14px;padding:16px;margin-bottom:12px}
+.qtit{font-size:14.5px;font-weight:800;color:#00333B;margin-bottom:10px;line-height:1.4}
+.opt{display:flex;align-items:center;gap:10px;padding:11px 12px;border:1px solid #E4EBE9;border-radius:10px;margin-bottom:8px;cursor:pointer;font-size:14px;color:#28413f}
+.opt:hover{border-color:#92C430;background:#F7FBF2}
+.opt input{width:18px;height:18px;accent-color:#92C430;flex:none}
+</style>
+<script>
+var NIVEIS=[
+  {min:9,nome:'Exposição CRÍTICA',cor:'#B23A2E',bg:'#FBE9E7',txt:'Risco jurídico, de dados e de reputação — somados. Hoje, se te cobrarem, você não tem como comprovar destino correto. Isso precisa ser resolvido agora.'},
+  {min:6,nome:'Exposição ALTA',cor:'#C6553F',bg:'#FBECE6',txt:'Sua empresa corre risco real: material sem destino comprovado e nenhuma prova para auditoria. É o tipo de coisa que só vira problema quando já é tarde.'},
+  {min:3,nome:'Exposição MÉDIA',cor:'#8A6A16',bg:'#FFF4DE',txt:'Você tem pontos cegos. Falta principalmente a prova documentada — que é justamente o que a fiscalização e a auditoria pedem.'},
+  {min:0,nome:'Exposição BAIXA',cor:'#1E5B31',bg:'#E4F3E6',txt:'Você já cuida bem disso. O Adote um Bairro te leva além: transforma o descarte correto em ação social e em dado de ESG que fortalece a sua marca.'}
+];
+function calcular(){
+  var total=0,flags=[],faltou=false;
+  for(var i=1;i<=5;i++){var sel=document.querySelector('input[name="q'+i+'"]:checked');if(!sel){faltou=true;continue;}total+=Number(sel.value);var f=sel.getAttribute('data-flag');if(f)flags.push(f);}
+  if(faltou){document.getElementById('qmsg').textContent='Responda todas as 5 perguntas para ver seu resultado.';return;}
+  document.getElementById('qmsg').textContent='';
+  var n=NIVEIS.find(function(x){return total>=x.min;});
+  var bullets=flags.length?('<ul style="margin:12px 0 0;padding-left:18px;font-size:13.5px;color:#4F6469;line-height:1.7">'+flags.map(function(f){return '<li>⚠️ '+f+'</li>';}).join('')+'</ul>'):'';
+  var html='<div class="card" style="border:2px solid '+n.cor+';background:'+n.bg+'">'
+    +'<div style="font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:'+n.cor+'">Seu resultado</div>'
+    +'<div style="font-size:24px;font-weight:800;color:'+n.cor+';margin:6px 0 8px">'+n.nome+'</div>'
+    +'<div style="font-size:14px;color:#28413f;line-height:1.6">'+n.txt+'</div>'+bullets+'</div>'
+    +'<div class="card" style="margin-top:14px;text-align:center">'
+    +'<div style="font-size:16px;font-weight:800;color:#00333B;margin-bottom:6px">A Ecobraz resolve isso com prova na sua mão</div>'
+    +'<div style="font-size:13.5px;color:#5c6f6b;line-height:1.6;margin-bottom:14px">Coleta, destinação licenciada e Certificado de Destinação Final. Você contrata por tonelada e ainda financia a coleta na casa das pessoas — impacto social que fortalece a sua marca.</div>'
+    +'<a href="/adote#planos" class="cta">Ver planos e contratar →</a></div>';
+  var r=document.getElementById('resultado');r.innerHTML=html;r.style.display='block';r.scrollIntoView({behavior:'smooth'});
+}
 </script>
 </body></html>`;
 }
