@@ -115,9 +115,21 @@ export async function definirTipoOperacao(env, osId, tipo) {
   await salvarOperacao(env, op); return op;
 }
 
+// Lê número no padrão BR do operador. Corrige o bug de milhar: o JavaScript lê
+// "1.500" como 1,5 (erro de 1000×). Aceita "1.500"→1500, "1.234,56"→1234.56,
+// "1500,5"→1500.5, "1500.5"→1500.5, "1500"→1500.
+function numBR(v) {
+  let s = String(v == null ? '' : v).trim().replace(/[^0-9.,-]/g, '');
+  if (!s) return 0;
+  if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');       // vírgula = decimal; pontos = milhar
+  else if ((s.match(/\./g) || []).length > 1) s = s.replace(/\./g, '');  // vários pontos = milhar
+  else if (/^\d{1,3}\.\d{3}$/.test(s)) s = s.replace('.', '');           // ponto + 3 casas = milhar (1.500)
+  const n = Number(s);
+  return Number.isFinite(n) ? n : 0;
+}
 export async function registrarPesoEntrada(env, osId, operador, kg) {
   const op = await lerOperacao(env, osId); if (!op) return null;
-  const peso = Math.max(0, Number(String(kg).replace(',', '.')) || 0);
+  const peso = Math.max(0, numBR(kg));
   op.entrada = { pesoKg: peso, em: agora(), por: operador.email };
   await salvarOperacao(env, op); return op;
 }
@@ -174,7 +186,7 @@ export function balanco(op) {
 }
 export async function registrarSaida(env, osId, operador, d) {
   const op = await lerOperacao(env, osId); if (!op) return null;
-  const pesoKg = Math.max(0, Number(String(d && d.pesoKg).replace(',', '.')) || 0);
+  const pesoKg = Math.max(0, numBR(d && d.pesoKg));
   op.saida = { pesoKg, justificativa: String((d && d.justificativa) || '').slice(0, 400), em: agora(), por: operador.email };
   await salvarOperacao(env, op); return op;
 }
@@ -394,7 +406,7 @@ export async function adicionarMaterial(env, osId, operador, d) {
   const op = await lerOperacao(env, osId); if (!op) return null;
   op.materiais = op.materiais || [];
   if (op.materiais.length >= 40) return op;
-  const qtd = Math.max(0, Number(String(d && d.qtd).replace(',', '.')) || 0);
+  const qtd = Math.max(0, numBR(d && d.qtd));
   op.materiais.push({
     rotulo: String((d && d.rotulo) || 'Material').slice(0, 60),
     ibama: String((d && d.ibama) || '').slice(0, 20),
