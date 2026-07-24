@@ -27,7 +27,7 @@ const DIRETORIA_COOKIE = 'portal_diretoria';
 const ESCRITORIO_COOKIE = 'portal_escritorio';
 const SESSAO_TTL_S = 8 * 60 * 60;       // 8 horas
 const APP_SESSAO_TTL_S = 30 * 24 * 60 * 60; // 30 dias — apps de campo (operação/coletas) ficam logados
-const LINK_TTL_S = 15 * 60;             // 15 minutos
+const LINK_TTL_S = 60 * 60;             // 60 minutos (folga contra atraso de entrega/greylisting de remetente novo)
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' };
 
 import { paginaLogin, paginaPainel, paginaMensagem } from './paginas.js';
@@ -747,7 +747,7 @@ function paginaLoginValidador() {
     <div style="color:#9FC6C1;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;margin-top:10px;">Área de validação — Villanova ESG</div></div>
   <div style="background:#fff;border-radius:0 0 16px 16px;border:1px solid #E4EBE9;border-top:none;padding:28px;">
     <h1 style="margin:0 0 8px;font-size:20px;color:#00333B;">Entrar para validar</h1>
-    <p style="margin:0 0 18px;font-size:13.5px;color:#4F6469;line-height:1.6;">Informe seu e-mail autorizado. Enviamos um link de acesso (vale uma vez, expira em 15 minutos).</p>
+    <p style="margin:0 0 18px;font-size:13.5px;color:#4F6469;line-height:1.6;">Informe seu e-mail autorizado. Enviamos um link de acesso (vale uma vez, expira em 60 minutos).</p>
     <input id="e" type="email" placeholder="seu e-mail" style="width:100%;box-sizing:border-box;border:1px solid #DDE1E6;border-radius:9px;padding:12px 14px;font-size:14px;font-family:inherit;">
     <button id="b" style="width:100%;margin-top:12px;background:#92C430;color:#10262B;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:800;cursor:pointer;">Enviar link de acesso</button>
     <div id="m" style="font-size:13px;color:#4F6469;margin-top:14px;line-height:1.5;"></div>
@@ -1402,7 +1402,7 @@ async function enviarEmailLogin(cliente, link, env) {
     subject: 'Seu acesso ao Portal Ecobraz',
     to: [cliente.email],
     html_body: emailHtml(cliente, link),
-    text_body: `Olá,\n\nUse o link abaixo para acessar o Portal Ecobraz (vale uma vez, expira em 15 minutos):\n${link}\n\nSe você não pediu este acesso, ignore este e-mail.\n\nEcobraz`,
+    text_body: `Olá,\n\nUse o link abaixo para acessar o Portal Ecobraz (vale uma vez, expira em 60 minutos):\n${link}\n\nSe você não pediu este acesso, ignore este e-mail.\n\nEcobraz`,
     open_tracking: false,
     click_tracking: false,
   };
@@ -1424,7 +1424,7 @@ async function enviarViaResend(cliente, link, env) {
     to: [cliente.email],
     subject: 'Seu acesso ao Portal Ecobraz',
     html: emailHtml(cliente, link),
-    text: `Olá,\n\nUse o link abaixo para acessar o Portal Ecobraz (vale uma vez, expira em 15 minutos):\n${link}\n\nSe você não pediu este acesso, ignore este e-mail.\n\nEcobraz`,
+    text: `Olá,\n\nUse o link abaixo para acessar o Portal Ecobraz (vale uma vez, expira em 60 minutos):\n${link}\n\nSe você não pediu este acesso, ignore este e-mail.\n\nEcobraz`,
   };
   if (env.RESEND_REPLY_TO) payload.reply_to = env.RESEND_REPLY_TO;
   const r = await fetch('https://api.resend.com/emails', {
@@ -1594,7 +1594,7 @@ ${logo ? `<img src="${logo}" alt="Ecobraz Emigre" width="168" style="display:blo
 </td></tr>
 <tr><td style="padding:38px 32px 6px;">
 <h1 style="margin:0 0 14px;font-size:24px;line-height:1.2;letter-spacing:-.02em;color:#00333B;">Seu acesso${nome ? `, ${nome}` : ''}</h1>
-<p style="margin:0 0 26px;font-size:15px;line-height:1.65;color:#4F6469;">Clique no botão abaixo para entrar no Portal Ecobraz. O link vale <strong style="color:#10262B;">uma vez</strong> e expira em <strong style="color:#10262B;">15 minutos</strong>.</p>
+<p style="margin:0 0 26px;font-size:15px;line-height:1.65;color:#4F6469;">Clique no botão abaixo para entrar no Portal Ecobraz. O link vale <strong style="color:#10262B;">uma vez</strong> e expira em <strong style="color:#10262B;">60 minutos</strong>.</p>
 <table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="border-radius:10px;background:#92C430;">
 <a href="${esc(link)}" style="display:inline-block;padding:15px 32px;font-size:15px;font-weight:800;color:#10262B;text-decoration:none;">Entrar no Portal &rarr;</a>
 </td></tr></table>
