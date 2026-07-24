@@ -104,6 +104,35 @@ label{display:block;font-size:12px;font-weight:700;color:#4F6469;margin:10px 0 4
 input{width:100%;border:1px solid #DDE1E6;border-radius:10px;padding:12px;font-size:15px;font-family:inherit}
 .btn{background:#92C430;color:#10262B;border:none;border-radius:12px;padding:15px;font-size:15px;font-weight:800;cursor:pointer;width:100%}
 .card{background:#fff;border:1px solid #E4EBE9;border-radius:16px;padding:18px}
+.hero{background:linear-gradient(160deg,#00333B 0%,#014a45 100%);color:#fff;padding:44px 18px 40px}
+.hero .in{max-width:820px;margin:0 auto}
+.eyebrow{font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#9CE06B}
+.h1{font-size:30px;line-height:1.15;font-weight:800;margin:12px 0 12px;letter-spacing:-.02em}
+.lead{font-size:16px;line-height:1.6;color:#CFE3DF;margin:0 0 22px;max-width:640px}
+.cta{display:inline-block;background:#92C430;color:#0d2a12;border:none;border-radius:12px;padding:15px 26px;font-size:16px;font-weight:800;cursor:pointer;text-decoration:none}
+.cta:active{transform:translateY(1px)}
+.sec{max-width:900px;margin:0 auto;padding:34px 18px}
+.sec h2{font-size:23px;font-weight:800;color:#00333B;letter-spacing:-.02em;margin:0 0 6px;text-align:center}
+.sec .sub{font-size:14px;color:#5c6f6b;text-align:center;margin:0 auto 22px;max-width:560px;line-height:1.6}
+.pains{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.pain{background:#fff;border:1px solid #EADFDA;border-left:4px solid #C6553F;border-radius:14px;padding:16px}
+.pain .t{font-size:15px;font-weight:800;color:#00333B;margin:6px 0 4px}
+.pain .d{font-size:13px;color:#5c6f6b;line-height:1.55}
+.bens{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.ben{display:flex;gap:12px;background:#fff;border:1px solid #E4EBE9;border-radius:14px;padding:15px}
+.ben .ic{font-size:22px;flex:none}.ben .t{font-size:14.5px;font-weight:800;color:#00333B}.ben .d{font-size:12.5px;color:#5c6f6b;line-height:1.5;margin-top:2px}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;counter-reset:s}
+.step{background:#fff;border:1px solid #E4EBE9;border-radius:14px;padding:18px;position:relative}
+.step .n{width:30px;height:30px;border-radius:50%;background:#00333B;color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:14px}
+.step .t{font-size:14.5px;font-weight:800;color:#00333B;margin:10px 0 4px}.step .d{font-size:13px;color:#5c6f6b;line-height:1.5}
+.faq{max-width:720px;margin:0 auto}
+.faq details{background:#fff;border:1px solid #E4EBE9;border-radius:12px;padding:2px 16px;margin-bottom:10px}
+.faq summary{font-size:14.5px;font-weight:700;color:#00333B;cursor:pointer;padding:14px 0;list-style:none}
+.faq summary::-webkit-details-marker{display:none}
+.faq p{font-size:13.5px;color:#5c6f6b;line-height:1.6;margin:0 0 14px}
+.impact{background:#0d2a12;color:#EAF7E0;border-radius:18px;padding:28px 22px;text-align:center}
+.badge{display:inline-flex;align-items:center;gap:7px;background:#EAF3EF;color:#1E5B31;border-radius:20px;padding:7px 14px;font-size:12.5px;font-weight:700;margin:4px}
+@media(max-width:720px){.pains,.bens,.steps{grid-template-columns:1fr}.h1{font-size:25px}}
 </style></head>`;
 }
 function topoLoja() {
@@ -117,10 +146,57 @@ export function paginaLojaAdote() {
       <div class="un" id="un_${p.id}">${moedaBR(p.avulso / p.ton)} por tonelada</div>
     </div>`).join('');
   return `${headLoja('Adote um Bairro — Ecobraz')}<body>${topoLoja()}
-<div class="wrap">
-  <h1 style="font-size:23px;margin:6px 0 4px;color:#00333B">Contrate sua coleta por tonelada</h1>
-  <p style="font-size:14px;color:#4F6469;margin:0 0 14px;line-height:1.6">Compre o peso que precisar. O valor vira <b>crédito</b> e vai sendo consumido a cada coleta — com rastreabilidade e certificado de destinação.</p>
+<div class="hero"><div class="in">
+  <div class="eyebrow">Adote um Bairro · Descarte de eletrônicos</div>
+  <div class="h1">O eletrônico parado no seu estoque é um risco jurídico — e um vazamento de dados esperando acontecer.</div>
+  <p class="lead">A Ecobraz recolhe, destina corretamente e te entrega o Certificado de Destinação Final. Você compra por tonelada, usa quando precisar — e ainda transforma o descarte da sua empresa em impacto social real.</p>
+  <a href="#planos" class="cta">Ver planos e contratar →</a>
+  <div style="font-size:12px;color:#9FC6C1;margin-top:16px">Destinação licenciada · Certificado com Responsável Técnico (CREA) · Rastreabilidade total</div>
+</div></div>
 
+<div class="sec">
+  <h2>Por que sua empresa não pode ignorar isso</h2>
+  <div class="sub">O descarte de eletrônico não é só “jogar fora”. É responsabilidade legal, risco de dados e prova para auditoria — tudo no nome da sua empresa.</div>
+  <div class="pains">
+    <div class="pain"><div style="font-size:22px">⚖️</div><div class="t">A responsabilidade é sua — até o fim</div><div class="d">Pela Política Nacional de Resíduos Sólidos, quem gera o resíduo responde pela destinação correta. Descarte errado vira multa, embargo e passivo ambiental no CNPJ.</div></div>
+    <div class="pain"><div style="font-size:22px">🔒</div><div class="t">Seus dados saem pela porta</div><div class="d">HDs, servidores e celulares antigos guardam informação sigilosa. Sem destruição certificada, é um vazamento de dados pronto para explodir.</div></div>
+    <div class="pain"><div style="font-size:22px">📉</div><div class="t">Auditoria e ESG cobram prova</div><div class="d">Clientes, investidores e certificações exigem descarte responsável documentado. Sem papelada, sua empresa perde contrato e reputação.</div></div>
+  </div>
+</div>
+
+<div class="sec" style="padding-top:6px">
+  <h2>Uma contratação resolve os três</h2>
+  <div class="sub">Você terceiriza o problema inteiro e recebe a prova na mão.</div>
+  <div class="bens">
+    <div class="ben"><div class="ic">✅</div><div><div class="t">Conformidade legal</div><div class="d">Certificado de Destinação Final (CDF) e rastreabilidade via MTR — a prova que a fiscalização e a auditoria pedem.</div></div></div>
+    <div class="ben"><div class="ic">🔒</div><div><div class="t">Seus dados fora de circulação</div><div class="d">Equipamento destinado e rastreado não vira sucata revendida com seus arquivos dentro. O risco de vazamento sai da sua mão.</div></div></div>
+    <div class="ben"><div class="ic">🌱</div><div><div class="t">Impacto ESG de verdade</div><div class="d">Cada tonelada financia a coleta correta em bairros e comunidades. Sua marca ligada a algo que admiram.</div></div></div>
+    <div class="ben"><div class="ic">♻️</div><div><div class="t">Rastreabilidade que se sustenta</div><div class="d">Do caminhão ao destino final, cada quilo é pesado, fotografado e registrado — a trilha que segura em pé numa auditoria.</div></div></div>
+    <div class="ben"><div class="ic">💳</div><div><div class="t">Crédito pré-pago, sem surpresa</div><div class="d">Compra o peso que precisa e usa quando quiser. Sem mensalidade escondida, sem contrato amarrado.</div></div></div>
+    <div class="ben"><div class="ic">🔁</div><div><div class="t">Recorrente com 10% off</div><div class="d">Ative a renovação automática e nunca mais fique sem coleta — com desconto e zero preocupação.</div></div></div>
+  </div>
+</div>
+
+<div class="sec" style="padding-top:6px">
+  <h2>Como funciona</h2>
+  <div class="steps">
+    <div class="step"><div class="n">1</div><div class="t">Escolha e contrate</div><div class="d">Selecione o pacote (1, 5 ou 10 toneladas), avulso ou recorrente, e pague com segurança.</div></div>
+    <div class="step"><div class="n">2</div><div class="t">A gente coleta</div><div class="d">Agendamos e recolhemos o material na sua empresa. Você acompanha tudo pelo sistema.</div></div>
+    <div class="step"><div class="n">3</div><div class="t">Receba o certificado</div><div class="d">Triagem, destinação correta e o Certificado de Destinação Final assinado — prontos para a auditoria.</div></div>
+  </div>
+</div>
+
+<div class="sec" style="padding-top:6px">
+  <div class="impact">
+    <div class="eyebrow" style="color:#9CE06B">Por que “Adote um Bairro”</div>
+    <h2 style="color:#fff;margin-top:10px">Sua empresa resolve o problema e deixa um legado</h2>
+    <p style="font-size:15px;line-height:1.7;color:#CFE9C7;max-width:640px;margin:8px auto 0">Cada tonelada que você contrata é lixo eletrônico que teve o destino certo — em vez de acabar em aterro, lixão ou desmanche informal. É economia circular real, com documento que comprova. Sua marca ligada a uma atitude concreta, não a uma promessa vazia.</p>
+  </div>
+</div>
+
+<div class="sec" id="planos" style="padding-top:10px">
+  <h2>Escolha seu plano</h2>
+  <div class="sub">Quanto mais toneladas, menor o preço por tonelada. Na recorrência, ainda 10% de desconto.</div>
   <div class="seg" role="tablist">
     <button id="seg_avulso" class="on" onclick="setTipo('avulso')">Avulso</button>
     <button id="seg_recorrente" onclick="setTipo('recorrente')">Recorrente −10%</button>
@@ -139,7 +215,20 @@ export function paginaLojaAdote() {
     <button class="btn" style="margin-top:16px" onclick="contratar(this)">Contratar e pagar</button>
     <div id="msg" style="font-size:13px;color:#4F6469;margin-top:12px;text-align:center"></div>
   </div>
-  <div style="font-size:11px;color:#9aa7a4;text-align:center;margin-top:14px">Pagamento seguro via Mercado Pago. Ao contratar, você concorda com os termos de coleta e destinação da Ecobraz.</div>
+  <div style="margin-top:16px;text-align:center">
+    <span class="badge">🛡️ Destinação licenciada</span><span class="badge">📄 Certificado com RT (CREA)</span><span class="badge">📍 Rastreabilidade auditável</span><span class="badge">🔒 Pagamento seguro (Mercado Pago)</span>
+  </div>
+  <div style="font-size:11px;color:#9aa7a4;text-align:center;margin-top:12px">Pagamento seguro via Mercado Pago. Ao contratar, você concorda com os termos de coleta e destinação da Ecobraz.</div>
+</div>
+
+<div class="sec" style="padding-top:6px">
+  <h2>Perguntas frequentes</h2>
+  <div class="faq">
+    <details><summary>E se eu não usar todo o crédito?</summary><p>No avulso, o crédito fica guardado sem prazo de validade — você usa quando precisar, coleta a coleta.</p></details>
+    <details><summary>Como comprovo que foi destinado corretamente?</summary><p>Você recebe o Certificado de Destinação Final (CDF) e a trilha de rastreabilidade de cada coleta, com assinatura do Responsável Técnico — válidos para auditoria e órgãos ambientais.</p></details>
+    <details><summary>Preciso assinar contrato longo?</summary><p>Não. O avulso é compra única. O recorrente você ativa e cancela quando quiser — sem multa, sem fidelidade.</p></details>
+    <details><summary>Como funciona o desconto do crédito?</summary><p>Cada coleta é pesada na recepção da Ecobraz e esse peso é descontado do seu saldo. Você acompanha o saldo pelo sistema, com total transparência.</p></details>
+  </div>
 </div>
 <script>
 var TIPO='avulso', PAC=null;
