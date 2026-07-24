@@ -394,8 +394,8 @@ export function paginaComprovanteOS(os, seloUrl) {
       <div style="text-align:right"><div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#7fa6a3">Nº da OS</div><div style="font-size:21px;font-weight:800;color:#fff">${esc(os.numero)}</div><div style="font-size:11.5px;color:#cfe3e0;margin-top:7px">Emissão: <b style="color:#fff">${esc(dataBR(os.criadoEm))}</b></div></div>
     </div>
     <div style="background:#F2F6F4;border-bottom:1px solid #E4EBE9;padding:11px 28px;font-size:11px;color:#4F6469;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px">
-      <span><b style="color:#10262B">Ecobraz Gestão de Resíduos Eletroeletrônicos</b> · CNPJ <span style="color:#B23A2E">[preencher]</span></span>
-      <span>Lic. Ambiental <span style="color:#B23A2E">[nº]</span> · CADRI <span style="color:#B23A2E">[nº]</span></span>
+      <span><b style="color:#10262B">${esc(EMPRESA.razao)}</b></span>
+      <span>CNPJ ${esc(EMPRESA.cnpj)} · LO ${esc(EMPRESA.lo)}</span>
     </div>
     <div style="padding:12px 28px;border-bottom:1px solid #EEF1F0;background:#FBFDFC">
       <div style="font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#93a6a2;margin-bottom:8px">Cadeia de custódia rastreável</div>
@@ -427,7 +427,7 @@ export function paginaComprovanteOS(os, seloUrl) {
       <div style="margin-top:18px;border-top:1px dashed #E1E8E5;padding-top:12px;font-size:11px;color:#4F6469"><b style="color:#10262B">Aceite eletrônico:</b> registrado no sistema no momento da coleta (motorista) e do recebimento (Ecobraz), com data/hora e verificação por QR.</div>
     </div>
     <div style="background:#00333B;padding:13px 28px;font-size:10px;color:#9FC6C1;line-height:1.7">
-      <b style="color:#cfe3e0">Base legal:</b> Lei nº 12.305/2010 (PNRS) · Decreto nº 10.240/2020 (logística reversa de eletroeletrônicos) · classificação conforme ABNT NBR 10004:2004 · transporte manifestado (MTR/SINIR e SIGOR-CETESB) · destinação comprovada por CDF. Documento emitido eletronicamente e verificável pelo QR.
+      <b style="color:#cfe3e0">Base legal:</b> Lei nº 12.305/2010 (PNRS) · Decreto nº 10.240/2020 (logística reversa de eletroeletrônicos) · classificação conforme ABNT NBR 10004:2004 · transporte manifestado (MTR/SINIR e SIGOR-CETESB) · destinação comprovada por CDF. <b style="color:#cfe3e0">Emitente:</b> ${esc(EMPRESA.endereco)} · ${esc(EMPRESA.fone)} · ${esc(EMPRESA.email)}. Documento emitido eletronicamente e verificável pelo QR.
     </div>
   </div>
 </div></body></html>`;
