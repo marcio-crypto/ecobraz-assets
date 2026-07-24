@@ -8,11 +8,12 @@
 
 const MP_API = 'https://api.mercadopago.com';
 
-export async function criarPreferencia({ valor, descricao, externalReference, baseUrl }, env) {
+export async function criarPreferencia({ valor, descricao, externalReference, baseUrl, backPath }, env) {
   const token = env.MERCADOPAGO_ACCESS_TOKEN;
   if (!token) throw new Error('sem_token_mp');
   const base = String(baseUrl || '').replace(/\/+$/, '');
-  const retorno = `${base}/calculo-detalhado?pedido=${encodeURIComponent(externalReference)}`;
+  const caminho = (backPath || '/calculo-detalhado').replace(/^\/?/, '/');
+  const retorno = `${base}${caminho}?pedido=${encodeURIComponent(externalReference)}`;
   const body = {
     items: [{
       title: descricao || 'Cálculo detalhado de pegada de carbono — GHG Protocol',

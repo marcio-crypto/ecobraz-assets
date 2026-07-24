@@ -34,6 +34,7 @@ import { paginaLogin, paginaPainel, paginaMensagem } from './paginas.js';
 import { LOGO_ESCURO_B64, LOGO_CLARO_B64 } from './logos.js';
 import { paginaCalculadora, estimativaCarbono, paginaCalculoDetalhado, calculoDetalhadoGHG } from './carbono.js';
 import { criarPreferencia, consultarPagamento } from './mercadopago.js';
+import { acharPacote, precoPacote, paginaLojaAdote, paginaObrigadoAdote, lerCredito, salvarCredito, novoCredito, aplicarCompra } from './adote.js';
 import { statusDaEtapa, valorProp, CAMPOS_OS } from './os-utils.js';
 import { qrCDF, validarCDF } from './validacao.js';
 import { paginaMetodologia } from './carbono-metodologia.js';
@@ -120,6 +121,39 @@ export default {
           return json({ ok: false, error: 'nao_foi_possivel_cobrar', detalhe: String(error?.message || '').slice(0, 220) }, 502);
         }
       }
+      // Loja "Adote um Bairro" (pública): coleta pré-paga por tonelada.
+      if (pathname === '/adote' && request.method === 'GET') return html(paginaLojaAdote());
+      if (pathname === '/adote/obrigado' && request.method === 'GET') {
+        const ref = url.searchParams.get('pedido');
+        let ped = null, cred = null;
+        if (ref && env.PORTAL_KV) { const raw = await env.PORTAL_KV.get(`pedido:${String(ref).replace(/[^a-zA-Z0-9_-]/g, '')}`); ped = raw ? JSON.parse(raw) : null; if (ped) cred = await lerCredito(env, ped.clienteId); }
+        return html(paginaObrigadoAdote(ped, cred));
+      }
+      if (pathname === '/api/adote/contratar' && request.method === 'POST') {
+        const b = await request.json().catch(() => ({}));
+        const pac = acharPacote(b && b.pacoteId);
+        const tipo = b && b.tipo === 'recorrente' ? 'recorrente' : 'avulso';
+        if (!pac) return json({ ok: false, erro: 'Escolha um pacote válido.' }, 400);
+        const razaoSocial = String(b.razaoSocial || '').trim();
+        const cnpj = String(b.cnpj || '').replace(/\D/g, '');
+        const email = String(b.email || '').trim().toLowerCase();
+        if (!razaoSocial || cnpj.length !== 14 || !/^\S+@\S+\.\S+$/.test(email)) return json({ ok: false, erro: 'Preencha razão social, CNPJ (14 dígitos) e e-mail válido.' }, 400);
+        let cliente = null;
+        try {
+          const clientes = await listarClientes(env);
+          const resumo = clientes.find((c) => String(c.doc || '').replace(/\D/g, '') === cnpj);
+          if (resumo) cliente = await lerCliente(env, resumo.id);
+          if (!cliente) cliente = await salvarCliente(env, { tipo: 'PJ', razaoSocial, cnpj, email, telefone: String(b.telefone || '').trim(), endereco: { cidade: String(b.cidade || '').trim() }, origem: 'adote' });
+        } catch (e) { console.error('adote_cliente_falhou', safeError(e)); return json({ ok: false, erro: 'Falha ao registrar o cliente.' }, 500); }
+        const valor = precoPacote(pac, tipo);
+        const ref = novoId();
+        const baseUrl = env.PORTAL_BASE_URL || url.origin;
+        if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${ref}`, JSON.stringify({ produto: 'adote', status: 'pendente', clienteId: cliente.id, pacoteId: pac.id, tipo, valor, kg: pac.kg, email, criadoEm: nowS() }), { expirationTtl: 7 * 86400 });
+        try {
+          const pref = await criarPreferencia({ valor, descricao: `Adote um Bairro — ${pac.ton}t (${tipo === 'recorrente' ? 'recorrente' : 'avulso'})`, externalReference: ref, baseUrl, backPath: '/adote/obrigado' }, env);
+          return json({ ok: true, pedido: ref, init_point: pref.initPoint });
+        } catch (e) { console.error('adote_mp_falhou', safeError(e)); return json({ ok: false, erro: 'Não foi possível gerar o pagamento agora.' }, 502); }
+      }
       // Webhook do Mercado Pago: confirma o pagamento consultando a API (fonte da verdade).
       if (pathname === '/api/mp/webhook') {
         let paymentId = url.searchParams.get('data.id') || url.searchParams.get('id') || null;
@@ -135,9 +169,17 @@ export default {
             const ped = raw ? JSON.parse(raw) : { status: 'pendente' };
             if (ped.status !== 'pago') {
               ped.status = 'pago'; ped.paymentId = pg.id; ped.pagoEm = nowS();
-              await env.PORTAL_KV.put(chave, JSON.stringify(ped), { expirationTtl: 7 * 86400 });
-              console.log('mp_pago', { pedido: pg.externalReference, valor: pg.valor });
-              try { await enviarEmailNF(ped, pg, env); } catch (error) { console.error('nf_email_falhou', safeError(error)); }
+              await env.PORTAL_KV.put(chave, JSON.stringify(ped), { expirationTtl: 30 * 86400 });
+              console.log('mp_pago', { pedido: pg.externalReference, valor: pg.valor, produto: ped.produto || 'carbono' });
+              if (ped.produto === 'adote') {
+                // Libera o crédito da loja Adote um Bairro (peso comprado → saldo em kg).
+                try {
+                  const pac = acharPacote(ped.pacoteId);
+                  if (pac) { let cred = (await lerCredito(env, ped.clienteId)) || novoCredito(ped.clienteId); cred = aplicarCompra(cred, pac, ped.tipo, ped.valor, pg.externalReference, nowS()); await salvarCredito(env, cred); console.log('adote_credito', { cliente: ped.clienteId, saldo: cred.saldoKg }); }
+                } catch (error) { console.error('adote_credito_falhou', safeError(error)); }
+              } else {
+                try { await enviarEmailNF(ped, pg, env); } catch (error) { console.error('nf_email_falhou', safeError(error)); }
+              }
             }
           }
         }
