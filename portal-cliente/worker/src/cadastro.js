@@ -343,3 +343,38 @@ export function paginaLeadDetalhe(user, lead) {
 <script>const bt=document.getElementById('btrat');if(bt&&!bt.disabled)bt.onclick=async()=>{bt.disabled=true;document.getElementById('m').textContent='Salvando…';try{const r=await fetch('/api/leads/tratar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:'${esc(lead.id)}'})});if(r.ok){location.reload();}else{document.getElementById('m').textContent='Falha. Tente de novo.';bt.disabled=false;}}catch{document.getElementById('m').textContent='Sem conexão.';bt.disabled=false;}};</script>
 </body></html>`;
 }
+
+// Tela inicial (hub) — a "casa" que integra todos os módulos. Landing após o login interno.
+export function paginaInicio(user) {
+  const nome = (user && user.nome ? user.nome : '').split(/\s+/)[0] || 'equipe';
+  const card = (href, icon, titulo, desc) => `<a href="${href}" style="display:flex;flex-direction:column;text-decoration:none;background:#fff;border:1px solid #E4EBE9;border-radius:16px;padding:20px;min-height:152px">
+    <div style="font-size:28px;line-height:1">${icon}</div>
+    <div style="font-size:15.5px;font-weight:800;color:#10262B;margin-top:12px">${esc(titulo)}</div>
+    <div style="font-size:12.5px;color:#7c8a87;margin-top:5px;line-height:1.55;flex:1">${esc(desc)}</div>
+    <div style="font-size:12px;color:#3f8f3a;font-weight:800;margin-top:12px">Abrir →</div>
+  </a>`;
+  return `${head('Início')}<body>
+<div style="background:#00333B;padding:16px 20px"><div style="max-width:960px;margin:0 auto;display:flex;justify-content:space-between;align-items:center">
+  <div><span style="color:#fff;font-size:17px;font-weight:800">ecobraz</span><span style="color:#92C430;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin-left:8px">sistema</span></div>
+  <form method="post" action="/api/cadastro/sair" style="margin:0"><button class="btn" style="background:#0e4651;color:#cfe3e0;border:1px solid #1c5b66;padding:8px 12px;font-size:12px">Sair</button></form>
+</div></div>
+<div style="max-width:960px;margin:0 auto;padding:26px 18px 56px">
+  <h1 style="font-size:22px;margin:0 0 4px">Olá, ${esc(nome)} 👋</h1>
+  <p style="font-size:13.5px;color:#7c8a87;margin:0 0 22px">Bem-vindo ao sistema da Ecobraz. Por onde você quer começar?</p>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px" class="grid">
+    ${card('/cadastro', '🏢', 'Cadastro & Clientes', 'Empresas e pessoas físicas, com contatos embutidos. Busca rápida.')}
+    ${card('/coletas', '📋', 'Ordens de Coleta', 'Abra e acompanhe as coletas. Comprovante com QR de rastreio.')}
+    ${card('/leads', '📥', 'Leads do site', 'Solicitações que chegam pelo formulário do site.')}
+    ${card('/operacao', '🏭', 'Operação (doca)', 'Recepção, triagem, processamento e saída. Balanço de massa.')}
+    ${card('/eng', '🔬', 'Engenharia Ambiental', 'Validação técnica (RT), destino final e relatórios de conformidade.')}
+    ${card('/diretoria', '📊', 'Diretoria', 'Visão macro: volume, prazos e alertas.')}
+  </div>
+  <div style="margin-top:22px;background:#fff;border:1px solid #E4EBE9;border-radius:16px;padding:18px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+    <div><div style="font-size:14px;font-weight:800">🚚 App do Motorista</div><div style="font-size:12.5px;color:#7c8a87;margin-top:3px">O motorista usa no celular pra fazer as coletas em campo.</div></div>
+    <a href="/agente" class="btn btn-g" style="padding:10px 16px">Abrir app do motorista →</a>
+  </div>
+  <div style="font-size:11px;color:#9aa7a4;text-align:center;margin-top:20px">Cada área tem seu acesso. Se pedir login, é porque seu e-mail ainda não foi liberado para aquela área.</div>
+</div>
+<style>@media(max-width:720px){.grid{grid-template-columns:1fr 1fr!important}}@media(max-width:460px){.grid{grid-template-columns:1fr!important}}</style>
+</body></html>`;
+}

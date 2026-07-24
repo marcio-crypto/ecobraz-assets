@@ -43,7 +43,7 @@ import { agentePermitido, nomeAgente, listarColetasComStatus, paginaLoginAgente,
 import { operadorPermitido, nomeOperador, listarOperacoes, listarColetasRecebiveis, iniciarOperacao, lerOperacao, definirTipoOperacao, registrarPesoEntrada, registrarFotoOperacao, servirFotoOperacao, paginaLoginOperacao, paginaAppOperacao, paginaReceberLote, paginaLoteDetalhe, adicionarMaterial, removerMaterial, concluirTriagem, paginaTriagem, paginaProcessamento, concluirProcessamento, paginaSaida, registrarSaida, concluirSaida } from './operacional.js';
 import { engenheiroPermitido, nomeEngenheiro, filaValidacao, operacoesValidadas, lerValidacaoOp, registrarValidacaoOp, paginaLoginEng, paginaFilaEng, paginaDossie, qrOperacao, validarOperacaoPublico, listarDestinos, lerDestino, salvarDestino, paginaDestinos, paginaDestinoForm, paginaRelatorio } from './engenharia.js';
 import { diretorPermitido, nomeDiretor, reunirDados, paginaLoginDiretoria, paginaPainelDiretoria } from './diretoria.js';
-import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, paginaLeads, paginaLeadDetalhe } from './cadastro.js';
+import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, paginaLeads, paginaLeadDetalhe, paginaInicio } from './cadastro.js';
 import { listarColetasOS, lerColetaOS, criarColetaOS, atualizarStatusOS, paginaColetasLista, paginaGerarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS } from './coletas.js';
 import { agentesDe } from './agente.js';
 import { servirIcone, servirManifest, servirServiceWorker } from './pwa.js';
@@ -232,7 +232,7 @@ export default {
         }
         if (g.ctx === 'escritorio' && escritorioPermitido(g.email, env)) {
           const s = await criarToken({ em: g.email, tipo: 'sessao_escritorio' }, SESSAO_TTL_S, env);
-          return new Response(null, { status: 302, headers: { Location: '/cadastro', 'Set-Cookie': cookieEscritorio(s.valor, SESSAO_TTL_S) } });
+          return new Response(null, { status: 302, headers: { Location: '/inicio', 'Set-Cookie': cookieEscritorio(s.valor, SESSAO_TTL_S) } });
         }
         return html(paginaMensagem('Acesso não liberado', `O e-mail ${esc(g.email)} entrou no Google, mas não está cadastrado para este acesso.`), 403);
       }
@@ -252,6 +252,11 @@ export default {
         return html(paginaPainelDiretoria(diretoria, await reunirDados(env)));
       }
 
+      // Tela inicial (hub) — a "casa" que integra os módulos. Landing do login interno.
+      if (pathname === '/inicio' && request.method === 'GET') {
+        if (!escritorio) return html(paginaLoginEscritorio(googleConfigurado(env)));
+        return html(paginaInicio(escritorio));
+      }
       // Cadastro & Clientes (escritório/comercial — Débora). Base própria, sem Ploomes.
       if (pathname === '/cadastro' && request.method === 'GET') {
         if (!escritorio) return html(paginaLoginEscritorio(googleConfigurado(env)));
@@ -979,7 +984,7 @@ async function entrarComTokenEscritorio(request, env, url) {
   }
   if (!escritorioPermitido(payload.em, env)) return html(paginaMensagem('Acesso indisponível', 'E-mail não autorizado.'), 403);
   const sessao = await criarToken({ em: payload.em, tipo: 'sessao_escritorio' }, SESSAO_TTL_S, env);
-  return new Response(null, { status: 302, headers: { Location: '/cadastro', 'Set-Cookie': cookieEscritorio(sessao.valor, SESSAO_TTL_S) } });
+  return new Response(null, { status: 302, headers: { Location: '/inicio', 'Set-Cookie': cookieEscritorio(sessao.valor, SESSAO_TTL_S) } });
 }
 function sairEscritorio() { return new Response(null, { status: 302, headers: { Location: '/cadastro', 'Set-Cookie': cookieEscritorio('', 0) } }); }
 async function lerSessaoEscritorio(request, env) {
