@@ -193,6 +193,7 @@ export function paginaColetaOSDetalhe(user, os, seloUrl) {
     <div style="display:flex;gap:8px;flex-wrap:wrap;flex:none;justify-content:flex-end">
       <a href="/coletas/os/carta?id=${esc(os.id)}" class="btn btn-g" style="padding:9px 12px;font-size:12.5px">📄 Carta de Descarte</a>
       <a href="/coletas/os/manifesto?id=${esc(os.id)}" class="btn btn-g" style="padding:9px 12px;font-size:12.5px">📄 Manifesto de Carga</a>
+      <a href="/coletas/os/cdf?id=${esc(os.id)}" class="btn btn-g" style="padding:9px 12px;font-size:12.5px">🏅 Certificado (CDF)</a>
       <a href="/coletas/os/comprovante?id=${esc(os.id)}" class="btn btn-d" style="padding:9px 12px;font-size:12.5px">✅ Comprovante (QR)</a>
     </div>
   </div>

@@ -312,6 +312,68 @@ export function paginaDestinoForm(eng, destino) {
 // ---------------------------------------------------------------------------
 // Relatório final de conformidade (documento imprimível / PDF, à prova de auditoria)
 // ---------------------------------------------------------------------------
+// Identidade legal (dos modelos oficiais da Ecobraz).
+const EMPRESA_CDF = {
+  razao: 'ASSOCIAÇÃO AUXÍLIO À RECICLAGEM DE ELETRÔNICOS E INCLUSÃO DIGITAL — ECOBRAZ',
+  cnpj: '14.197.457/0001-42', lo: '30011495',
+  endereco: 'Rua Dona Maria Quedas, 230 — Jardim Andaraí — 02175-010 — São Paulo/SP',
+  fone: '(11) 4329-2001', email: 'contato@ecobraz.org.br',
+};
+const tdC = 'padding:9px 10px;border:1px solid #E4EBE9';
+
+// Certificado de Destinação Final (CDF) — documento enxuto para o cliente, gerado
+// da operação VALIDADA. Só certifica de fato quando há validação técnica do RT.
+export function paginaCDF(op, validacao, destinos, seloUrl) {
+  const b = balanco(op);
+  let emissao = ''; try { emissao = new Date().toLocaleDateString('pt-BR'); } catch { emissao = ''; }
+  const validada = !!(validacao && validacao.decisao === 'validada');
+  const numCDF = 'CDF-' + ((op.numero || '').replace(/[^0-9]/g, '') || '—');
+  const tipos = [...new Set((op.materiais || []).map((m) => m.destino))];
+  const destRows = tipos.map((t) => {
+    const usinas = (destinos || []).filter((d) => d.tipo === t && destinoStatus(d) === 'validado');
+    const kg = Math.round((b.porDestino[t] || 0) * 100) / 100;
+    return `<tr><td style="${tdC}">${esc(DESTINOS[t] || t)}</td><td style="${tdC};text-align:right">${String(kg).replace('.', ',')} kg</td><td style="${tdC}">${usinas.length ? usinas.map((u) => esc(u.razaoSocial || u.cnpj) + (u.lo ? ' (LO ' + esc(u.lo) + ')' : '')).join('; ') : 'Ecobraz — aterro zero'}</td></tr>`;
+  }).join('') || `<tr><td style="${tdC}" colspan="3">—</td></tr>`;
+  const eyebrow = (t) => `<div style="display:flex;align-items:center;gap:9px;margin:22px 0 8px"><span style="width:4px;height:16px;background:#92C430;border-radius:2px"></span><span style="font-size:12px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:#00333B">${esc(t)}</span></div>`;
+  const corpo = `
+    <div style="font-size:12.5px;color:#28413f;line-height:1.7;text-align:justify">A <b>${esc(EMPRESA_CDF.razao)}</b>, inscrita no CNPJ ${esc(EMPRESA_CDF.cnpj)}, licenciada sob LO ${esc(EMPRESA_CDF.lo)}, <b>CERTIFICA</b> que recebeu do gerador abaixo identificado, por meio da <b>Ordem de Serviço ${esc(op.numero)}</b>, a quantidade de <b>${String(b.entrada).replace('.', ',')} kg</b> de resíduos de equipamentos eletroeletrônicos (REEE), e promoveu sua <b>destinação final ambientalmente adequada</b>, nos termos da Política Nacional de Resíduos Sólidos (Lei nº 12.305/2010), conforme o detalhamento e a validação técnica a seguir.</div>
+    ${eyebrow('Gerador')}
+    <div style="font-size:13px;font-weight:700;color:#10262B">${esc(op.cliente || '—')}</div>
+    ${eyebrow('Destinação final')}
+    <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+      <thead><tr style="background:#F2F6F4;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#5c6f6b"><th style="${tdC};text-align:left">Tipo</th><th style="${tdC};text-align:right">Quantidade</th><th style="${tdC};text-align:left">Destino / usina homologada</th></tr></thead>
+      <tbody>${destRows}<tr><td style="${tdC};text-align:right;font-weight:800" colspan="1">Total recebido</td><td style="${tdC};text-align:right;font-weight:800">${String(b.entrada).replace('.', ',')} kg</td><td style="${tdC}"></td></tr></tbody>
+    </table>
+    ${eyebrow('Validação técnica')}
+    ${validada
+      ? `<div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;background:#F1F8EC;border:1px solid #cfe6b8;border-radius:12px;padding:16px 18px">
+          <div style="flex:1;min-width:220px"><div style="font-size:13.5px;font-weight:800;color:#1E5B31">✓ Operação validada pela Engenharia Ambiental</div>
+          <div style="font-size:12.5px;color:#28413f;margin-top:6px">Responsável Técnico: <b>${esc(validacao.rt || '—')}</b>${validacao.registro ? ' · ' + esc(validacao.registro) : ''}</div>
+          <div style="font-size:11px;color:#7c8a87;margin-top:2px">em ${esc(dataHora(validacao.em))}</div></div>
+          ${seloUrl ? `<div style="text-align:center"><img src="${esc(seloUrl)}" alt="QR" style="width:92px;height:92px;border:1px solid #E4EBE9;border-radius:8px;background:#fff"><div style="font-size:8.5px;color:#9aa7a4;margin-top:3px;text-transform:uppercase;letter-spacing:.05em">Verificar autenticidade</div></div>` : ''}
+        </div>`
+      : `<div style="background:#FFF4DE;border:1px solid #f0e0b8;border-radius:12px;padding:14px 16px;font-size:12.5px;color:#8A6A16"><b>Certificado pendente.</b> Este CDF só é emitido após a <b>validação técnica</b> da operação pela Engenharia Ambiental (RT). Aguarde a validação para gerar a versão final.</div>`}`;
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${esc(numCDF)} — Ecobraz</title>
+<style>@media print{.noprint{display:none!important}body{background:#fff!important}}*{box-sizing:border-box}</style></head>
+<body style="margin:0;background:#EDF1EF;font-family:Montserrat,'Segoe UI',Arial,Helvetica,sans-serif;color:#10262B">
+<div style="max-width:820px;margin:0 auto;padding:18px">
+  <div class="noprint" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <a href="/coletas/os?id=${esc(op.osId)}" style="color:#4F6469;font-size:13px;font-weight:800;text-decoration:none">← Voltar</a>
+    <button onclick="window.print()" style="background:#00333B;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:800">🖨️ Imprimir / Salvar PDF</button>
+  </div>
+  <div style="background:#fff;border:1px solid #E1E8E5;border-radius:14px;overflow:hidden">
+    <div style="background:#00333B;padding:22px 28px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+      <div><div style="font-size:27px;font-weight:800;color:#fff">ecobraz<span style="color:#92C430">.</span></div>
+      <div style="font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#92C430;margin-top:7px">Certificado de Destinação Final</div></div>
+      <div style="text-align:right"><div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#7fa6a3">Nº do certificado</div><div style="font-size:20px;font-weight:800;color:#fff">${esc(numCDF)}</div><div style="font-size:11.5px;color:#cfe3e0;margin-top:7px">Emissão: <b style="color:#fff">${esc(emissao)}</b></div></div>
+    </div>
+    <div style="background:#F2F6F4;border-bottom:1px solid #E4EBE9;padding:11px 28px;font-size:11px;color:#4F6469;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px"><span><b style="color:#10262B">${esc(EMPRESA_CDF.razao)}</b></span><span>CNPJ ${esc(EMPRESA_CDF.cnpj)} · LO ${esc(EMPRESA_CDF.lo)}</span></div>
+    <div style="padding:22px 28px 24px">${corpo}</div>
+    <div style="background:#00333B;padding:13px 28px;font-size:10px;color:#9FC6C1;line-height:1.7">Base legal: Lei nº 12.305/2010 (PNRS) · classificação ABNT NBR 10004 · ${esc(EMPRESA_CDF.endereco)} · ${esc(EMPRESA_CDF.fone)}. Documento emitido eletronicamente e verificável pelo QR.</div>
+  </div>
+</div></body></html>`;
+}
+
 export function paginaRelatorio(op, validacao, destinos, seloUrl) {
   const b = balanco(op);
   let emissao = ''; try { emissao = new Date().toLocaleDateString('pt-BR'); } catch { emissao = ''; }

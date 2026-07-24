@@ -42,7 +42,7 @@ import { lerValidacao, registrarValidacao, paginaAreaValidacao, qrMetodologia, v
 import { paginaPainelCarbono } from './carbono-painel.js';
 import { agentePermitido, nomeAgente, listarColetasComStatus, paginaLoginAgente, paginaAppAgente, detalheColeta, lerEstadoColeta, registrarCheckin, registrarFoto, servirFotoColeta, paginaColetaDetalhe, registrarEncerramento, registrarReagendamento, qrColeta, validarColetaPublico, paginaComprovante } from './agente.js';
 import { operadorPermitido, nomeOperador, listarOperacoes, listarColetasRecebiveis, iniciarOperacao, lerOperacao, definirTipoOperacao, registrarPesoEntrada, registrarFotoOperacao, servirFotoOperacao, paginaLoginOperacao, paginaAppOperacao, paginaReceberLote, paginaLoteDetalhe, adicionarMaterial, removerMaterial, concluirTriagem, paginaTriagem, paginaProcessamento, concluirProcessamento, paginaSaida, registrarSaida, concluirSaida } from './operacional.js';
-import { engenheiroPermitido, nomeEngenheiro, filaValidacao, operacoesValidadas, lerValidacaoOp, registrarValidacaoOp, paginaLoginEng, paginaFilaEng, paginaDossie, qrOperacao, validarOperacaoPublico, listarDestinos, lerDestino, salvarDestino, paginaDestinos, paginaDestinoForm, paginaRelatorio } from './engenharia.js';
+import { engenheiroPermitido, nomeEngenheiro, filaValidacao, operacoesValidadas, lerValidacaoOp, registrarValidacaoOp, paginaLoginEng, paginaFilaEng, paginaDossie, qrOperacao, validarOperacaoPublico, listarDestinos, lerDestino, salvarDestino, paginaDestinos, paginaDestinoForm, paginaRelatorio, paginaCDF } from './engenharia.js';
 import { diretorPermitido, nomeDiretor, reunirDados, paginaLoginDiretoria, paginaPainelDiretoria } from './diretoria.js';
 import { dadosPrevencao, paginaPrevencao, analisarColetaIA, salvarTabelaPrecos, pingIA } from './prevencao.js';
 import { sondarAnexosPloomes, paginaSondaAnexos } from './ploomes-docs.js';
@@ -457,6 +457,14 @@ export default {
         if (!os) return html(paginaMensagem('Coleta não encontrada', 'Volte e tente de novo.'), 404);
         try { os.veiculoPlaca = await placaDaColeta(env, os); } catch { /* ok */ }
         return html(paginaManifestoCarga(os, `/qr-os?id=${encodeURIComponent(os.id)}`));
+      }
+      if (pathname === '/coletas/os/cdf' && request.method === 'GET') {
+        if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
+        const osId = url.searchParams.get('id') || '';
+        const op = await lerOperacao(env, osId);
+        if (!op) return html(paginaMensagem('CDF ainda indisponível', 'O Certificado de Destinação Final é gerado depois que a coleta é recebida e processada na doca. Assim que a operação existir, ele fica disponível aqui.'), 404);
+        const val = await lerValidacaoOp(env, op.osId);
+        return html(paginaCDF(op, val, await listarDestinos(env), `/qr-operacao?id=${encodeURIComponent(op.osId)}`));
       }
       if (pathname === '/api/coletas/criar' && request.method === 'POST') {
         if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
