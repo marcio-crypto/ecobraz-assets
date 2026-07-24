@@ -209,11 +209,129 @@ async function buscar(){var q=document.getElementById('q').value.trim();var res=
   try{var r=await fetch('/api/diretoria/ploomes-buscar?q='+encodeURIComponent(q));var j=await r.json();var l=j.contatos||[];
     if(!l.length){res.innerHTML='<span style="color:#8fa39f;font-size:12.5px">nada encontrado</span>';return;}
     var h='<table><thead><tr><th>Tipo</th><th>Nome/Razão</th><th>Documento</th><th>E-mail</th><th>Cidade</th></tr></thead><tbody>';
-    l.forEach(function(c){h+='<tr><td>'+(c.tipo||'')+'</td><td>'+(c.nome||'')+(c.nome_fantasia&&c.nome_fantasia!==c.nome?' <span style="color:#9aa7a4">('+c.nome_fantasia+')</span>':'')+'</td><td>'+(c.documento||'')+'</td><td>'+(c.email||'')+'</td><td>'+(c.cidade||'')+(c.uf?'/'+c.uf:'')+'</td></tr>';});
+    l.forEach(function(c){h+='<tr><td>'+(c.tipo==='PJ'?'Empresa':'Pessoa')+'</td><td><a href="/diretoria/contato?id='+c.ploomes_id+'" style="color:#0B5B66;font-weight:700;text-decoration:none">'+(c.nome||'(sem nome)')+'</a>'+(c.nome_fantasia&&c.nome_fantasia!==c.nome?' <span style="color:#9aa7a4">('+c.nome_fantasia+')</span>':'')+'</td><td>'+(c.documento||'')+'</td><td>'+(c.email||'')+'</td><td>'+(c.cidade||'')+(c.uf?'/'+c.uf:'')+'</td></tr>';});
     h+='</tbody></table>';res.innerHTML=h;
   }catch(e){res.innerHTML='<span style="color:#8a4b45;font-size:12px">erro na busca</span>';}}
 </script></body></html>`;
 }
+
+// ---------------------------------------------------------------------------
+// TELA DE CONTATO NAVEGÁVEL (Diretoria) — empresa ↔ pessoas via company_id
+// ---------------------------------------------------------------------------
+// LIGA (não funde): traz um contato do D1 pelo ploomes_id + a EMPRESA dele
+// (quando company_id aponta para outro contato) + as PESSOAS ligadas a ele
+// (quem tem company_id = este id). Assim, abrindo uma empresa vejo as pessoas,
+// e abrindo uma pessoa vejo a empresa — navegável nos dois sentidos.
+const COLS_CONTATO = 'ploomes_id,tipo,nome,nome_fantasia,documento,email,telefone,cidade,uf,endereco,cnae_codigo,cnae_nome,company_id,criado_em';
+
+export async function detalheContato(env, id) {
+  if (!env.DB_PLOOMES) return { encontrado: false, erro: 'Banco D1 não vinculado (DB_PLOOMES).' };
+  const pid = Number(id);
+  if (!Number.isFinite(pid) || pid <= 0) return { encontrado: false, erro: 'Id inválido.' };
+  try {
+    const c = await env.DB_PLOOMES.prepare(`SELECT ${COLS_CONTATO} FROM contatos WHERE ploomes_id = ?1`).bind(pid).first();
+    if (!c) return { encontrado: false, id: pid };
+    // Empresa DESTE contato (se company_id aponta para outro contato existente).
+    let empresa = null;
+    if (c.company_id) {
+      empresa = (await env.DB_PLOOMES.prepare(`SELECT ${COLS_CONTATO} FROM contatos WHERE ploomes_id = ?1`).bind(Number(c.company_id)).first()) || null;
+    }
+    // Pessoas/contatos LIGADOS a este (quem tem company_id = este id).
+    const lig = await env.DB_PLOOMES.prepare(`SELECT ${COLS_CONTATO} FROM contatos WHERE company_id = ?1 ORDER BY tipo, nome LIMIT 500`).bind(pid).all();
+    return { encontrado: true, contato: c, empresa, ligados: (lig && lig.results) || [] };
+  } catch (e) {
+    return { encontrado: false, id: pid, erro: String((e && e.message) || e).slice(0, 140) };
+  }
+}
+
+// Formata CNPJ (14) / CPF (11) para leitura; devolve o original se não bater.
+function formataDoc(doc) {
+  const s = String(doc == null ? '' : doc).replace(/\D/g, '');
+  if (s.length === 14) return s.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+  if (s.length === 11) return s.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4');
+  return String(doc == null ? '' : doc);
+}
+
+// Uma linha clicável de contato ligado (abre o detalhe daquele contato).
+function linhaLigado(c) {
+  const ehPJ = c.tipo === 'PJ';
+  const nome = esc(c.nome || '(sem nome)');
+  const fant = c.nome_fantasia && c.nome_fantasia !== c.nome ? ` <span style="color:#9aa7a4">(${esc(c.nome_fantasia)})</span>` : '';
+  const sub = [c.documento ? formataDoc(c.documento) : '', c.email || '', [c.cidade, c.uf].filter(Boolean).join('/')].filter(Boolean).map((x) => esc(x)).join(' · ');
+  return `<a class="row" href="/diretoria/contato?id=${Number(c.ploomes_id)}"><span class="tag ${ehPJ ? 'pj' : 'pf'}">${ehPJ ? 'Empresa' : 'Pessoa'}</span><span class="rmain"><b>${nome}</b>${fant}<br><span class="rsub">${sub || '—'}</span></span><span class="arw">›</span></a>`;
+}
+
+export function paginaContatoDetalhe(user, d) {
+  const head = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Contato — Ecobraz</title>
+<style>*{box-sizing:border-box}body{margin:0;font-family:Montserrat,'Segoe UI',Arial,sans-serif;background:#F2F6F4;color:#10262B}
+.wrap{max-width:820px;margin:0 auto;padding:20px 18px 56px}.card{background:#fff;border:1px solid #E4EBE9;border-radius:14px;padding:18px;margin-bottom:14px}
+.top{color:#00333B;font-size:12px;font-weight:800;text-decoration:none}
+.tag{font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;white-space:nowrap}.tag.pj{background:#E7EFF0;color:#0B5B66}.tag.pf{background:#EAF2E6;color:#3f7a2e}
+dl{margin:0;display:grid;grid-template-columns:150px 1fr;gap:2px 14px}dt{font-size:11px;text-transform:uppercase;color:#7c8a87;padding:8px 0 2px;letter-spacing:.02em}dd{margin:0;font-size:14px;padding:8px 0 2px;word-break:break-word}
+@media(max-width:520px){dl{grid-template-columns:1fr}dt{padding-bottom:0}dd{padding-top:0;padding-bottom:8px;border-bottom:1px solid #F4F7F6}}
+.row{display:flex;align-items:center;gap:10px;padding:11px 8px;border-bottom:1px solid #F2F5F4;text-decoration:none;color:#10262B}.row:hover{background:#F7FAF9}.row:last-child{border-bottom:none}
+.rmain{flex:1}.rsub{font-size:11.5px;color:#7c8a87}.arw{color:#b4c0bd;font-size:18px}
+input{border:1px solid #DDE1E6;border-radius:10px;padding:11px 12px;font-size:14px;width:100%}
+h1{font-size:21px;margin:10px 0 4px;line-height:1.2}</style></head>`;
+  const back = `<a class="top" href="/diretoria/migrar-ploomes">← Contatos (Ploomes)</a>`;
+  if (!d || !d.encontrado) {
+    const msg = (d && d.erro) ? d.erro : `Contato ${d && d.id ? '#' + esc(String(d.id)) : ''} não encontrado na base migrada.`;
+    return `${head}<body><div class="wrap">${back}<div class="card" style="margin-top:12px;color:#8a4b45"><b>Não encontrei este contato.</b><br>${esc(msg)}</div>
+      <div class="card"><div style="font-size:13px;font-weight:800;margin-bottom:8px">Buscar outro contato</div><input id="q" placeholder="nome, CNPJ ou e-mail…" onkeydown="if(event.key==='Enter')buscar()"><div id="res" style="margin-top:10px"></div></div>${SCRIPT_BUSCA}</div></body></html>`;
+  }
+  const c = d.contato;
+  const ehPJ = c.tipo === 'PJ';
+  const cidade = [c.cidade, c.uf].filter(Boolean).join('/');
+  const cnae = [c.cnae_codigo, c.cnae_nome].filter(Boolean).join(' — ');
+  // Campos, na ordem certa para cada tipo.
+  const campos = [];
+  if (ehPJ) {
+    campos.push(['Razão social', c.nome]);
+    if (c.nome_fantasia && c.nome_fantasia !== c.nome) campos.push(['Nome fantasia', c.nome_fantasia]);
+    campos.push(['CNPJ', formataDoc(c.documento)]);
+    if (cnae) campos.push(['Setor (CNAE)', cnae]);
+  } else {
+    campos.push(['Nome', c.nome]);
+    if (c.documento) campos.push(['CPF', formataDoc(c.documento)]);
+  }
+  if (c.email) campos.push(['E-mail', c.email]);
+  if (c.telefone) campos.push(['Telefone', c.telefone]);
+  if (cidade) campos.push(['Cidade', cidade]);
+  if (c.endereco) campos.push(['Endereço', c.endereco]);
+  campos.push(['Ploomes ID', String(c.ploomes_id)]);
+  const dl = campos.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v || '—')}</dd>`).join('');
+  // Empresa deste contato (se houver).
+  const empresaBloco = d.empresa
+    ? `<div class="card"><div style="font-size:12px;font-weight:800;color:#7c8a87;text-transform:uppercase;margin-bottom:6px">Empresa vinculada</div>${linhaLigado(d.empresa)}</div>`
+    : (c.company_id ? `<div class="card" style="color:#8fa39f;font-size:12.5px">Vinculado à empresa Ploomes #${esc(String(c.company_id))}, mas ela não está na base migrada.</div>` : '');
+  // Pessoas/contatos ligados a este.
+  const ligados = d.ligados || [];
+  const ligadosBloco = ligados.length
+    ? `<div class="card"><div style="font-size:12px;font-weight:800;color:#7c8a87;text-transform:uppercase;margin-bottom:6px">${ehPJ ? 'Pessoas ligadas' : 'Contatos ligados'} <span class="tag pj" style="background:#EEF3F1;color:#0B5B66">${ligados.length}</span></div>${ligados.map((x) => linhaLigado(x)).join('')}</div>`
+    : '';
+  return `${head}<body><div class="wrap">
+  ${back}
+  <div style="display:flex;align-items:center;gap:10px;margin:12px 0 2px"><span class="tag ${ehPJ ? 'pj' : 'pf'}">${ehPJ ? 'Empresa (PJ)' : 'Pessoa (PF)'}</span></div>
+  <h1>${esc(ehPJ ? (c.nome || c.nome_fantasia || '(sem razão social)') : (c.nome || '(sem nome)'))}</h1>
+  <div class="card" style="margin-top:12px"><dl>${dl}</dl></div>
+  ${empresaBloco}
+  ${ligadosBloco}
+  <div class="card"><div style="font-size:13px;font-weight:800;margin-bottom:8px">Buscar outro contato</div><input id="q" placeholder="nome, CNPJ ou e-mail…" onkeydown="if(event.key==='Enter')buscar()"><div id="res" style="margin-top:10px"></div></div>
+  ${SCRIPT_BUSCA}
+  </div></body></html>`;
+}
+
+// Busca reutilizável (resultados clicáveis abrindo o detalhe). Usada no detalhe.
+const SCRIPT_BUSCA = `<script>
+async function buscar(){var q=document.getElementById('q').value.trim();var res=document.getElementById('res');if(!q){res.innerHTML='';return;}res.innerHTML='<span style="color:#7c8a87;font-size:12px">buscando…</span>';
+  try{var r=await fetch('/api/diretoria/ploomes-buscar?q='+encodeURIComponent(q));var j=await r.json();var l=j.contatos||[];
+    if(!l.length){res.innerHTML='<span style="color:#8fa39f;font-size:12.5px">nada encontrado</span>';return;}
+    var h='';l.forEach(function(c){var pj=c.tipo==='PJ';var fant=(c.nome_fantasia&&c.nome_fantasia!==c.nome)?' <span style=\\'color:#9aa7a4\\'>('+c.nome_fantasia+')</span>':'';
+      var sub=[c.documento||'',c.email||'',(c.cidade||'')+(c.uf?'/'+c.uf:'')].filter(Boolean).join(' · ');
+      h+='<a class="row" href="/diretoria/contato?id='+c.ploomes_id+'"><span class="tag '+(pj?'pj':'pf')+'">'+(pj?'Empresa':'Pessoa')+'</span><span class="rmain"><b>'+(c.nome||'')+'</b>'+fant+'<br><span class="rsub">'+(sub||'—')+'</span></span><span class="arw">›</span></a>';});
+    res.innerHTML=h;
+  }catch(e){res.innerHTML='<span style="color:#8a4b45;font-size:12px">erro na busca</span>';}}
+</script>`;
 
 export function paginaAmostraContatos(user, d) {
   const head = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Inspeção Ploomes — Contatos</title>

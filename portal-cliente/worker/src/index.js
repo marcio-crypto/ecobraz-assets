@@ -48,7 +48,7 @@ import { engenheiroPermitido, nomeEngenheiro, filaValidacao, operacoesValidadas,
 import { diretorPermitido, nomeDiretor, reunirDados, paginaLoginDiretoria, paginaPainelDiretoria } from './diretoria.js';
 import { dadosPrevencao, paginaPrevencao, analisarColetaIA, salvarTabelaPrecos, pingIA } from './prevencao.js';
 import { sondarAnexosPloomes, paginaSondaAnexos } from './ploomes-docs.js';
-import { amostraContatosPloomes, paginaAmostraContatos, importarLoteContatos, estatisticasMigracao, buscarContatos, paginaMigrarPloomes } from './ploomes-migracao.js';
+import { amostraContatosPloomes, paginaAmostraContatos, importarLoteContatos, estatisticasMigracao, buscarContatos, paginaMigrarPloomes, detalheContato, paginaContatoDetalhe } from './ploomes-migracao.js';
 import { fiscalPermitido, nomeFiscal, listarNotas, lerNota, importarLote, vincularNota, sugerirVinculoSync, paginaFiscalLogin, paginaFiscalHome, paginaFiscalResultado, paginaFiscalNota } from './fiscal.js';
 import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, paginaLeads, paginaLeadDetalhe, paginaInicio } from './cadastro.js';
 import { listarColetasOS, lerColetaOS, criarColetaOS, atualizarStatusOS, paginaColetasLista, paginaGerarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga } from './coletas.js';
@@ -366,6 +366,11 @@ export default {
       if (pathname === '/api/diretoria/ploomes-buscar' && request.method === 'GET') {
         if (!diretoria) return json({ ok: false, erro: 'nao_autenticado' }, 401);
         return json({ ok: true, contatos: await buscarContatos(env, url.searchParams.get('q'), 25) });
+      }
+      // Tela de contato navegável (empresa ↔ pessoas via company_id). Diretoria.
+      if (pathname === '/diretoria/contato' && request.method === 'GET') {
+        if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
+        return html(paginaContatoDetalhe(diretoria, await detalheContato(env, url.searchParams.get('id'))));
       }
       // Diagnóstico do Mercado Pago (só Diretoria) — descobre POR QUE o checkout falha,
       // sem NUNCA expor a chave (mostra só presença, tipo TEST/PROD e o erro real do MP).
