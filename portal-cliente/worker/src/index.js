@@ -43,6 +43,7 @@ import { agentePermitido, nomeAgente, listarColetasComStatus, paginaLoginAgente,
 import { operadorPermitido, nomeOperador, listarOperacoes, listarColetasRecebiveis, iniciarOperacao, lerOperacao, definirTipoOperacao, registrarPesoEntrada, registrarFotoOperacao, servirFotoOperacao, paginaLoginOperacao, paginaAppOperacao, paginaReceberLote, paginaLoteDetalhe, adicionarMaterial, removerMaterial, concluirTriagem, paginaTriagem, paginaProcessamento, concluirProcessamento, paginaSaida, registrarSaida, concluirSaida } from './operacional.js';
 import { engenheiroPermitido, nomeEngenheiro, filaValidacao, operacoesValidadas, lerValidacaoOp, registrarValidacaoOp, paginaLoginEng, paginaFilaEng, paginaDossie, qrOperacao, validarOperacaoPublico, listarDestinos, lerDestino, salvarDestino, paginaDestinos, paginaDestinoForm, paginaRelatorio } from './engenharia.js';
 import { diretorPermitido, nomeDiretor, reunirDados, paginaLoginDiretoria, paginaPainelDiretoria } from './diretoria.js';
+import { dadosPrevencao, paginaPrevencao, analisarColetaIA, salvarTabelaPrecos } from './prevencao.js';
 import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, paginaLeads, paginaLeadDetalhe, paginaInicio } from './cadastro.js';
 import { listarColetasOS, lerColetaOS, criarColetaOS, atualizarStatusOS, paginaColetasLista, paginaGerarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS } from './coletas.js';
 import { listarVeiculos, lerVeiculo, salvarVeiculo, paginaFrota, paginaVeiculoForm, lerJornadaAtiva, abrirJornada, fecharJornada, registrarAbastecimento, tagColetaComVeiculo, servirFotoJornada, bannerJornada, paginaAbrirDia, paginaFecharDia, paginaAbastecer } from './frota.js';
@@ -265,6 +266,25 @@ export default {
       if (pathname === '/diretoria' && request.method === 'GET') {
         if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
         return html(paginaPainelDiretoria(diretoria, await reunirDados(env)));
+      }
+      // Prevenção de perdas (só Diretoria): reconciliação por peso + IA nas fotos + valor.
+      if (pathname === '/diretoria/prevencao' && request.method === 'GET') {
+        if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
+        return html(paginaPrevencao(diretoria, await dadosPrevencao(env)));
+      }
+      if (pathname === '/api/diretoria/analisar' && request.method === 'POST') {
+        if (!diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = null; }
+        if (!b || !b.osId) return json({ ok: false, error: 'dados' }, 400);
+        const r = await analisarColetaIA(env, b.osId);
+        return json(r);
+      }
+      if (pathname === '/api/diretoria/precos' && request.method === 'POST') {
+        if (!diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = null; }
+        if (!b || !b.precos) return json({ ok: false, error: 'dados' }, 400);
+        await salvarTabelaPrecos(env, b.precos);
+        return json({ ok: true });
       }
 
       // Tela inicial (hub) — a "casa" que integra os módulos. Landing do login interno.

@@ -91,6 +91,11 @@ export function paginaPainelDiretoria(diretor, d) {
 </div></div>
 <div style="max-width:900px;margin:0 auto;padding:20px 18px 48px">
 
+  <a href="/diretoria/prevencao" style="display:flex;justify-content:space-between;align-items:center;gap:12px;text-decoration:none;background:#062f36;border:1px solid #12525d;border-radius:14px;padding:14px 16px;margin-bottom:16px;color:#eaf5f3">
+    <div><div style="font-size:14px;font-weight:800">🛡️ Prevenção de perdas</div><div style="font-size:12px;color:#9FC6C1;margin-top:2px">Reconciliação por peso, valor estimado e conferência das fotos por IA.</div></div>
+    <span style="font-size:12px;font-weight:800;color:#92C430">Abrir →</span>
+  </a>
+
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
     ${tile(d.total, 'Operações', 'no total registrado')}
     ${tile(d.toneladas.toString().replace('.', ',') + ' t', 'Processado', 'peso de entrada')}
