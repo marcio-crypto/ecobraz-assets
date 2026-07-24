@@ -463,6 +463,12 @@ export default {
         let b; try { b = await request.json(); } catch { b = null; }
         if (!b || !String(b.endereco || '').trim()) return json({ ok: false, error: 'Informe o endereço da coleta.' }, 400);
         const os = await criarColetaOS(env, b, escritorio.email);
+        // Avisa o cliente que a coleta foi agendada (best-effort: nunca bloqueia a criação).
+        try {
+          const cli = os.clienteId ? await lerCliente(env, os.clienteId) : null;
+          const emailCli = cli && (cli.email || (Array.isArray(cli.contatos) && cli.contatos[0] && cli.contatos[0].email) || '');
+          if (emailCli && env.RESEND_API_KEY) await enviarEmailStatus(emailCli, os.clienteNome, 'coleta_agendada', env);
+        } catch (error) { console.error('coleta_agendada_email_falhou', safeError(error)); }
         return json({ ok: true, id: os.id, numero: os.numero });
       }
       if (pathname === '/api/coletas/status' && request.method === 'POST') {
