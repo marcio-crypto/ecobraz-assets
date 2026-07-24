@@ -203,6 +203,21 @@ export async function registrarAbastecimento(env, agente, dados) {
 
 // Liga uma coleta ao veículo do dia (chamado no check-in). Grava o veículo no
 // estado da coleta e adiciona a OS à lista de coletas da jornada.
+// Resolve a placa do veículo de uma coleta, para os documentos (Carta/Manifesto):
+// 1) veículo marcado na coleta no check-in; 2) jornada ativa do motorista; 3) vazio.
+export async function placaDaColeta(env, os) {
+  if (!env.PORTAL_KV || !os) return '';
+  try {
+    const raw = await env.PORTAL_KV.get(`coleta:${os.id}`);
+    const e = raw ? JSON.parse(raw) : null;
+    if (e && e.veiculo && e.veiculo.placa) return e.veiculo.placa;
+  } catch { /* ignora */ }
+  try {
+    if (os.agenteEmail) { const j = await lerJornadaAtiva(env, os.agenteEmail); if (j && j.placa) return j.placa; }
+  } catch { /* ignora */ }
+  return '';
+}
+
 export async function tagColetaComVeiculo(env, agenteEmail, osId) {
   const j = await lerJornadaAtiva(env, agenteEmail);
   if (!j) return null;

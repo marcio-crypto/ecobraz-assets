@@ -307,7 +307,9 @@ export function paginaManifestoCarga(os, seloUrl) {
   const parte = (rot) => `<div style="flex:1;min-width:230px"><div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#93a6a2;margin-bottom:4px">${esc(rot)}</div><div style="font-size:12px;color:#28413f;line-height:1.5"><b>${esc(EMPRESA.razao)}</b><br>CNPJ ${esc(EMPRESA.cnpj)} · ${esc(EMPRESA.fone)}<br>${esc(EMPRESA.endereco)}</div></div>`;
   const corpo = `${blocoGerador(os)}
     ${eyebrowDoc('Descrição do material')}${tabelaItens(os)}
-    <div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:22px">${parte('Transportador')}${parte('Receptor')}</div>
+    ${eyebrowDoc('Transporte')}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px 26px">${campoDoc('Veículo (placa)', os.veiculoPlaca)}${campoDoc('Motorista', os.agenteNome)}</div>
+    <div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:18px">${parte('Transportador')}${parte('Receptor')}</div>
     ${os.patrocinadorNome ? blocoPatrocinioDoc(os) : ''}
     ${assinaturasDoc(os, [{ label: 'Gerador', slug: 'gerador' }, { label: 'Transportador', slug: 'transportador' }, { label: 'Receptor', slug: 'receptor' }])}`;
   return docHTML('Manifesto de Carga', os, seloUrl, corpo);
