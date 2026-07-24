@@ -50,22 +50,19 @@ export async function sondarAnexosPloomes(env) {
   out.contatoId = cid || null;
   out.testes.push({ rotulo: 'Contacts (1 amostra)', status: c.status, erro: c.erro });
 
-  // 2) Anexos: tenta escopar ao contato de amostra; só serve se VIER registro.
+  // 2) Anexos: o filtro por ContactId é rápido (200), mas o contato de amostra pode ter 0.
+  // O blanket COM $orderby estoura o tempo (força ordenar 10k linhas). Então: tenta o
+  // contato; depois um blanket SEM $orderby ($top pequeno), que costuma voltar rápido.
   let att = null;
-  if (cid) {
-    for (const f of [`ContactId%20eq%20${cid}`, `OwnerId%20eq%20${cid}`]) {
-      const a = await req(`/Attachments?$top=5&$filter=${f}`, 7000);
-      const it = a.value && a.value[0];
-      out.testes.push({ rotulo: `Attachments (filtro ${decodeURIComponent(f)})`, status: a.status, erro: a.erro, qtd: a.value ? a.value.length : undefined, campos: it ? Object.keys(it) : (a.value ? [] : undefined) });
-      if (a.status === 200 && it) { att = it; break; }
-    }
-  }
-  // Se o contato de amostra não tinha anexo, pega uma AMOSTRA GERAL (top pequeno não dá
-  // timeout — o $count já respondeu 10.556). É o que confirma a estrutura + download do anexo.
-  if (!att) {
-    const a = await req(`/Attachments?$top=3&$orderby=Id`, 8000);
+  const probes = [];
+  if (cid) probes.push({ q: `$top=5&$filter=ContactId%20eq%20${cid}`, ms: 7000 });
+  probes.push({ q: `$top=5`, ms: 12000 });          // sem $orderby: evita a ordenação que travou
+  probes.push({ q: `$top=1&$skip=100`, ms: 12000 }); // outro ponto da base, ainda sem ordenar
+  for (const p of probes) {
+    if (att) break;
+    const a = await req(`/Attachments?${p.q}`, p.ms);
     const it = a.value && a.value[0];
-    out.testes.push({ rotulo: 'Attachments (amostra geral, $top=3)', status: a.status, erro: a.erro, qtd: a.value ? a.value.length : undefined, campos: it ? Object.keys(it) : (a.value ? [] : undefined) });
+    out.testes.push({ rotulo: `Attachments (${decodeURIComponent(p.q)})`, status: a.status, erro: a.erro, qtd: a.value ? a.value.length : undefined, campos: it ? Object.keys(it) : (a.value ? [] : undefined) });
     if (a.status === 200 && it) att = it;
   }
 
