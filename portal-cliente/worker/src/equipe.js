@@ -63,6 +63,34 @@ export async function salvarUsuario(env, dados, criadoPor) {
   return rec;
 }
 
+// Traduz nomes amigáveis de papel (em português) para as chaves internas.
+const APELIDOS_PAPEL = {
+  motorista: 'motorista', agente: 'motorista', 'agente de coleta': 'motorista', 'agente de coletas': 'motorista', coletas: 'motorista',
+  escritorio: 'escritorio', 'escritório': 'escritorio', comercial: 'escritorio', cadastro: 'escritorio',
+  operacao: 'operacao', 'operação': 'operacao', operacional: 'operacao', doca: 'operacao',
+  engenharia: 'engenharia', 'engenharia ambiental': 'engenharia', engenheiro: 'engenharia', 'engenheiro ambiental': 'engenharia', rt: 'engenharia',
+  diretoria: 'diretoria', diretor: 'diretoria', 'diretor de operacoes': 'diretoria', 'diretor de operações': 'diretoria', diretora: 'diretoria', macro: 'diretoria',
+  auditoria: 'validador', auditor: 'validador', auditora: 'validador', validador: 'validador', validacao: 'validador', 'validação': 'validador', esg: 'validador', 'villanova esg': 'validador', villanova: 'validador',
+};
+function mapPapel(s) { const k = String(s || '').toLowerCase().trim(); return APELIDOS_PAPEL[k] || (PAPEIS[k] ? k : ''); }
+
+// Importa vários usuários de uma vez a partir de texto colado.
+// Uma pessoa por linha, campos separados por ; (ou | ou tab):
+//   Nome ; email ; CPF ; papel(es, vírgula) ; registro(CREA, opcional)
+export async function importarUsuarios(env, texto, criadoPor) {
+  const linhas = String(texto || '').split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const criados = [], erros = [];
+  for (const linha of linhas) {
+    const p = linha.split(/\s*[;|\t]\s*/);
+    const nome = p[0], email = p[1], cpf = p[2] || '', papeisStr = p[3] || '', registro = p[4] || '';
+    if (!email || !/^\S+@\S+\.\S+$/.test(email)) { erros.push({ linha, motivo: 'e-mail inválido ou ausente' }); continue; }
+    const papeis = String(papeisStr).split(/\s*,\s*/).map(mapPapel).filter(Boolean);
+    const r = await salvarUsuario(env, { nome, email, cpf, papeis, registro }, criadoPor);
+    if (r.erro) erros.push({ linha, motivo: r.erro }); else criados.push({ email: r.email, papeis });
+  }
+  return { criados, erros };
+}
+
 // Coração da integração aditiva: devolve um env com as listas de acesso de cada
 // papel acrescidas dos usuários ativos cadastrados. Defensivo: qualquer falha
 // devolve o env original (mantém o acesso atual intacto).
@@ -132,7 +160,10 @@ export function paginaEquipe(user, usuarios) {
 <div class="wrap">
   <div style="display:flex;justify-content:space-between;align-items:center;margin:0 0 6px"><h1 style="font-size:20px;margin:0">Equipe & Acessos</h1><span style="font-size:11px;background:#E3F0F3;color:#0B5B66;font-weight:800;padding:3px 9px;border-radius:20px">${ativos} com acesso</span></div>
   <p style="font-size:12.5px;color:#7c8a87;margin:0 0 14px">Cada pessoa entra pelo próprio e-mail (link mágico ou Google). O papel define o que ela vê.</p>
-  <a href="/equipe/novo" class="btn btn-d" style="margin-bottom:14px">＋ Cadastrar pessoa</a>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+    <a href="/equipe/novo" class="btn btn-d">＋ Cadastrar pessoa</a>
+    <a href="/equipe/importar" class="btn btn-g">📋 Colar lista (vários)</a>
+  </div>
   <div>${linhas}</div>
 </div>
 </body></html>`;
@@ -176,6 +207,39 @@ function salvar(){
   if(!/^\\S+@\\S+\\.\\S+$/.test(rec.email)){document.getElementById('m').textContent='E-mail inválido.';return;}
   document.getElementById('m').textContent='Salvando…';
   fetch('/api/equipe/salvar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(rec)}).then(r=>r.json()).then(j=>{if(j.ok){location.href='/equipe';}else{document.getElementById('m').textContent=j.error||'Falha ao salvar.';}}).catch(()=>document.getElementById('m').textContent='Sem conexão.');}
+</script>
+</body></html>`;
+}
+
+export function paginaEquipeImportar(user) {
+  const exemplo = 'Paulo Roberto Vieira dos Santos ; paulorvieirasantos@gmail.com ; 330.652.118-31 ; motorista\nMarcelo Aragão ; marcelo.oliveira@ecobraz.org.br ; 311.857.188-85 ; engenharia ; CREA 5062654748\nKarina Gargiulo da Cunha ; contact@villanovaesg.com ; 288.404.178-65 ; auditoria, diretoria';
+  const papeisTxt = Object.entries(PAPEIS).map(([k, d]) => `<code style="background:#EEF3F1;padding:1px 6px;border-radius:5px">${k}</code> ${esc(d.label)}`).join(' · ');
+  return `${head('Colar lista')}<body>${topo('equipe & acessos')}
+<div class="wrap">
+  <a href="/equipe" style="font-size:13px;font-weight:800;text-decoration:none;color:#4F6469">← Equipe</a>
+  <h1 style="font-size:20px;margin:10px 0 4px">Colar lista de pessoas</h1>
+  <p style="font-size:12.5px;color:#7c8a87;margin:0 0 14px">Uma pessoa por linha. Campos separados por ponto-e-vírgula:<br><b>Nome ; e-mail ; CPF ; papel(es) ; CREA (opcional)</b>. Pode marcar mais de um papel separando por vírgula.</p>
+  <div class="card">
+    <label>Cole aqui</label>
+    <textarea id="txt" rows="9" style="width:100%;border:1px solid #DDE1E6;border-radius:10px;padding:11px 12px;font-size:13px;font-family:ui-monospace,Menlo,Consolas,monospace" placeholder="${esc(exemplo)}"></textarea>
+    <div style="font-size:11.5px;color:#7c8a87;margin-top:8px">Papéis aceitos: ${papeisTxt}. Também entende sinônimos (ex.: "comercial" = escritório, "diretor de operações" = diretoria, "agente de coleta" = motorista).</div>
+    <div style="display:flex;gap:10px;align-items:center;margin-top:16px"><button class="btn btn-p" onclick="importar(this)">Importar todos</button><span id="m" style="font-size:13px;color:#4F6469"></span></div>
+    <div id="res" style="margin-top:14px"></div>
+  </div>
+  <div style="font-size:11px;color:#9aa7a4;text-align:center;margin-top:16px">O CPF fica guardado com segurança na nossa base — nunca sai em relatório público, nem em log.</div>
+</div>
+<script>
+function importar(b){var txt=document.getElementById('txt').value;if(!txt.trim()){document.getElementById('m').textContent='Cole a lista primeiro.';return;}
+  b.disabled=true;document.getElementById('m').textContent='Importando…';
+  fetch('/api/equipe/importar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({texto:txt})}).then(r=>r.json()).then(j=>{
+    b.disabled=false;
+    if(!j.ok){document.getElementById('m').textContent=j.error||'Falha.';return;}
+    document.getElementById('m').textContent='';
+    var h='<div style="background:#E4F3E6;border:1px solid #bfe3c6;border-radius:10px;padding:12px 14px;font-size:13px;color:#1E5B31"><b>'+j.criados.length+' pessoa(s) cadastrada(s).</b></div>';
+    if(j.erros&&j.erros.length){h+='<div style="background:#FBE9E7;border:1px solid #f2cfc9;border-radius:10px;padding:12px 14px;font-size:12.5px;color:#8a4b45;margin-top:8px"><b>'+j.erros.length+' linha(s) com problema:</b><ul style="margin:6px 0 0;padding-left:18px">'+j.erros.map(function(e){return '<li>'+(e.motivo||'erro')+' — <span style="color:#7c8a87">'+(e.linha||'').replace(/</g,'&lt;').slice(0,60)+'</span></li>';}).join('')+'</ul></div>';}
+    h+='<a href="/equipe" class="btn btn-d" style="margin-top:12px">Ver a equipe →</a>';
+    document.getElementById('res').innerHTML=h;
+  }).catch(function(){b.disabled=false;document.getElementById('m').textContent='Sem conexão.';});}
 </script>
 </body></html>`;
 }

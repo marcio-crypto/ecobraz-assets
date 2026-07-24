@@ -46,7 +46,7 @@ import { diretorPermitido, nomeDiretor, reunirDados, paginaLoginDiretoria, pagin
 import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, paginaLeads, paginaLeadDetalhe, paginaInicio } from './cadastro.js';
 import { listarColetasOS, lerColetaOS, criarColetaOS, atualizarStatusOS, paginaColetasLista, paginaGerarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS } from './coletas.js';
 import { listarVeiculos, lerVeiculo, salvarVeiculo, paginaFrota, paginaVeiculoForm, lerJornadaAtiva, abrirJornada, fecharJornada, registrarAbastecimento, tagColetaComVeiculo, servirFotoJornada, bannerJornada, paginaAbrirDia, paginaFecharDia, paginaAbastecer } from './frota.js';
-import { carregarEquipeNoEnv, listarUsuarios, lerUsuario, salvarUsuario, paginaEquipe, paginaUsuarioForm } from './equipe.js';
+import { carregarEquipeNoEnv, listarUsuarios, lerUsuario, salvarUsuario, importarUsuarios, paginaEquipe, paginaUsuarioForm, paginaEquipeImportar } from './equipe.js';
 import { agentesDe } from './agente.js';
 import { servirIcone, servirManifest, servirServiceWorker } from './pwa.js';
 import { googleConfigurado, iniciarGoogle, callbackGoogle, botaoGoogle } from './google-auth.js';
@@ -423,6 +423,17 @@ export default {
         const u = await lerUsuario(env, url.searchParams.get('email') || '');
         if (!u) return html(paginaMensagem('Pessoa não encontrada', 'Volte e tente de novo.'), 404);
         return html(paginaUsuarioForm(escritorio, u));
+      }
+      if (pathname === '/equipe/importar' && request.method === 'GET') {
+        if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/inicio', 'cache-control': 'no-store' } });
+        return html(paginaEquipeImportar(escritorio));
+      }
+      if (pathname === '/api/equipe/importar' && request.method === 'POST') {
+        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = null; }
+        if (!b || !b.texto) return json({ ok: false, error: 'cole a lista' }, 400);
+        const r = await importarUsuarios(env, b.texto, escritorio.email);
+        return json({ ok: true, criados: r.criados, erros: r.erros });
       }
       if (pathname === '/api/equipe/salvar' && request.method === 'POST') {
         if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
