@@ -154,6 +154,12 @@ jobs:
           PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
           PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
         run: node portal-cliente/diagnostico/inspeciona-orders.mjs
+      - name: Raio-X da migração (somente leitura do Ploomes) — quando sonda = raiox-migracao
+        if: ${{ github.event.inputs.sonda == 'raiox-migracao' }}
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+        run: node portal-cliente/diagnostico/raiox-migracao.mjs
       - name: Cadastra agente de teste (AGENTE_EMAILS) — quando sonda = cadastra-agente
         if: ${{ github.event.inputs.sonda == 'cadastra-agente' }}
         working-directory: portal-cliente/worker
