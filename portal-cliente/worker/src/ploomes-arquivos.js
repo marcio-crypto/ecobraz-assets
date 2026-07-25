@@ -212,7 +212,7 @@ export async function completarAnexos(env, offset, limit) {
 // Url + DealId/ContactId. Idempotente e retomável pelo Id.
 // ---------------------------------------------------------------------------
 const ANEXOS_ID_MAX = 25000000; // teto de varredura (maior Id de anexo visto ~17,4M; folga p/ recentes)
-const ANEXOS_ALVO = 200;        // itens por faixa que garantidamente cabem numa página do Ploomes
+const ANEXOS_ALVO = 100;        // itens por faixa que garantidamente cabem numa página do Ploomes
 export async function importarAnexosJanela(env, desdeId, janela) {
   if (!env.PLOOMES_USER_KEY) return { ok: false, erro: 'Falta a chave do Ploomes no cofre.' };
   if (!env.DB_PLOOMES) return { ok: false, erro: 'Banco D1 não vinculado (DB_PLOOMES).' };
