@@ -32,6 +32,39 @@
   Villanova: ERM Brasil, Anthesis Brasil, QIMA Brasil.
 - Urgência de caixa: máxima ("para ontem").
 
+## 1-bis. MODELO DE NEGÓCIO TRAVADO (Marcio, 25/07/2026)
+
+**A Ecobraz não muda o que faz — muda o quanto prova.** Oferta única B2B:
+- Coleta gratuita + sistema completo gratuito (rastreabilidade doca→destino, CDF com
+  QR anti-fraude, carbono, relatórios ESG prontos para entregar a auditor/banco/
+  fornecedor — ver doc 11).
+- Em troca: **contrato de 36 meses + exclusividade total de descarte** (não vende,
+  não leiloa, não descarta com terceiro) + **mínimo 1 descarte por trimestre**.
+- Objetivo: o cliente enxergar mais vantagem no contrato do que na venda do material
+  em leilão. Consignação (docs 04–06) permanece como degrau de resgate, via Ltda.
+
+Refinamentos de proteção (propostos pela equipe, 25/07):
+1. **Linguagem (respondido pelo Marcio em 25/07):** quem valida é a **Villanova ESG**
+   — empresa do grupo. Regra de honestidade obrigatória: Villanova NÃO é "terceira
+   parte" no sentido de auditoria (mesmo dono = parte relacionada). Fórmula segura e
+   forte: *"executado pela Ecobraz, verificado e validado pela Villanova ESG
+   [do mesmo grupo, declarado], com documentação PRONTA para auditoria independente
+   de terceira parte se o cliente desejar"*. Nunca vender a validação da Villanova
+   como auditoria independente — auditor descobre em minutos e destrói as duas marcas.
+   (O próprio SEMM já traz essa disciplina: "audit-grade descreve a evidência, não
+   uma opinião de auditoria".)
+2. **Régua de negociação não publicada:** mesa = 36m/tudo grátis; recuos internos
+   (24m/12m = menos módulos do sistema) para jurídico de multinacional e governo
+   (que não pode assinar exclusividade).
+3. **Mínimo trimestral como função do sistema** (lembrete de completude do dossiê),
+   não como cláusula punitiva de abertura.
+
+**Site (direção do Marcio):** reformular com DUAS comunicações — jornada PJ (técnica,
+prova, sistema em ação, comparativo leilão vs. contrato, CTA = demonstração) e
+jornada PF (simples, calorosa, "agendou-buscamos grátis", conectada à missão e ao
+Adote um Bairro). Governo = página própria dentro da jornada PJ. Reorganizar o
+conteúdo existente sob as jornadas, preservando SEO.
+
 ## 2. Arquitetura de marca
 
 - **Ecobraz** (ONG executora, 15+ anos): fala com PF, empresas e governo no Brasil.
