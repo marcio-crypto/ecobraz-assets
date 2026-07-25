@@ -45,7 +45,12 @@ master (R$ 50 mil) — para um programa ainda sem nenhum case, R$ 65 mil de entr
 pedir um salto de fé grande demais. E o critério do Marcio é exatamente esse: nem tão
 baixo que gere desconfiança, nem tão alto que não faça sentido.
 
-## 3. Tabela recalibrada (v2 — recomendação final)
+## 3. Tabela recalibrada (v2) — ✅ APROVADA em 25/07/2026
+
+> Marcio aprovou os valores junto com a tabela oficial da escada do sistema
+> (doc 16): "esses serão os valores". A tabela abaixo é a oficial do Adote um
+> Bairro. (Custo de processamento/t segue como estimativa a validar — afeta a
+> margem calculada, não o preço.)
 
 Custo estimado: R$ 3.000/t (R$ 1.750 coleta verificada + R$ 1.250 processamento
 **estimado, pendente validação do Marcio**).

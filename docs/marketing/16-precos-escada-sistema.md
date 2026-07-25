@@ -1,9 +1,12 @@
-# Preços da escada do sistema — proposta v1 (com âncoras de mercado)
+# Preços da escada do sistema — TABELA OFICIAL (aprovada)
 
 > Base: pesquisa de preços de 25/07/2026 (SaaS de carbono BR e internacional,
 > consultorias, verificação — fontes no relatório do pesquisador) + linha do grátis
-> decidida pelo Marcio (doc 15). **Status: PROPOSTA para o martelo do Marcio.**
-> Nomes ilustrativos (método de batismo no doc 15 §4-bis).
+> decidida pelo Marcio (doc 15).
+> **✅ Status: APROVADA pelo Marcio em 25/07/2026 — "esses serão os valores".**
+> A aprovação cobre a tabela da seção 2, incluindo a linha do Adote um Bairro
+> (tabela v2 do doc 03, que passa a valer como oficial).
+> Nomes seguem ilustrativos até o batismo (método do doc 15 §4-bis).
 
 ## 1. O que a pesquisa revelou (e por que joga a nosso favor)
 
