@@ -1,0 +1,171 @@
+<!-- Painel 2 — A disputa: Ecobraz vs. quem compra o material -->
+<meta charset="utf-8">
+<title>Ecobraz vs. quem compra — a matemática da disputa</title>
+<style>
+  .viz-root{
+    color-scheme:light;
+    --surface-1:#fcfcfb; --surface-2:#f2f1ee;
+    --text-primary:#0b0b0b; --text-secondary:#52514e; --text-muted:#8a887f;
+    --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a;
+    --neutral:#9b998f; --good:#008300; --serious:#b3423a; --grid:#e3e2dd;
+    font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
+    background:var(--surface-1); color:var(--text-primary);
+    max-width:880px; margin:0 auto; padding:24px 16px 48px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:where(:not([data-theme="light"])) .viz-root{
+      color-scheme:dark;
+      --surface-1:#1a1a19; --surface-2:#242422;
+      --text-primary:#fff; --text-secondary:#c3c2b7; --text-muted:#8a887f;
+      --s1:#3987e5; --s2:#d95926; --s3:#199e70;
+      --neutral:#8a887f; --good:#1baf7a; --serious:#e05d52; --grid:#33332f;
+    }
+  }
+  :root[data-theme="dark"] .viz-root{
+    color-scheme:dark;
+    --surface-1:#1a1a19; --surface-2:#242422;
+    --text-primary:#fff; --text-secondary:#c3c2b7; --text-muted:#8a887f;
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70;
+    --neutral:#8a887f; --good:#1baf7a; --serious:#e05d52; --grid:#33332f;
+  }
+  h1{font-size:22px;margin:0 0 4px} h2{font-size:15px;margin:34px 0 2px}
+  .sub{color:var(--text-secondary);font-size:12.5px;margin:0 0 12px}
+  svg{max-width:100%;height:auto;display:block}
+  .chartwrap{overflow-x:auto}
+  #tip{position:fixed;pointer-events:none;background:var(--text-primary);color:var(--surface-1);
+       font-size:12px;padding:6px 9px;border-radius:6px;opacity:0;transition:opacity .08s;z-index:9;max-width:260px}
+  .note{font-size:11.5px;color:var(--text-muted);line-height:1.5;margin-top:6px}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--text-secondary);margin:6px 0 2px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .dot{width:10px;height:10px;border-radius:3px;display:inline-block}
+  .foot{margin-top:32px;border-top:1px solid var(--grid);padding-top:14px;font-size:12px;color:var(--text-secondary);line-height:1.6}
+</style>
+<div class="viz-root">
+  <h1>A disputa: Ecobraz vs. quem compra o material 🥊</h1>
+  <p class="sub">A matemática apresentada do jeito que o CLIENTE vê — a ferramenta de venda em gráficos · valores de exemplo editáveis na planilha "Conta e Cenários" · 25/07/2026</p>
+
+  <h2>Round 1 — A conta de 36 meses (o prazo do nosso contrato)</h2>
+  <p class="sub">Empresa exemplo: lote vale R$ 150 mil na venda; gasta R$ 156 mil/ano com ESG (sistema + gente + validação). Em 36 meses:</p>
+  <div class="chartwrap"><svg id="round1" width="840" height="300" viewBox="0 0 840 300" role="img" aria-label="Comparação financeira em 36 meses: vender vs contrato Ecobraz"></svg></div>
+  <p class="note">Barras da esquerda: vender rende R$ 150 mil uma vez, mas os custos de ESG continuam (−R$ 468 mil) → saldo NEGATIVO de R$ 318 mil. Barra da direita: com o contrato, esses custos são eliminados → saldo POSITIVO de R$ 468 mil. Diferença: <b>R$ 786 mil a favor da Ecobraz</b> — sem contar o risco (Round 2).</p>
+
+  <h2>Round 2 — O que você ganha vs. o que você arrisca</h2>
+  <p class="sub">O ganho da venda é visível; o risco fica escondido. Colocados lado a lado, na mesma escala:</p>
+  <div class="chartwrap"><svg id="round2" width="840" height="170" viewBox="0 0 840 170" role="img" aria-label="Ganho da venda versus custo médio de uma violação de dados"></svg></div>
+  <p class="note">Uma violação de dados média no Brasil custa <b>R$ 7,19 milhões</b> (IBM, 2025) — <b>48 vezes</b> o ganho do lote do exemplo. E 42% dos discos vendidos como "limpos" no eBay continham dados sensíveis (Blancco). Quem vende sem sanitização certificada está, estatisticamente, vendendo os próprios dados junto. O passivo ambiental idem: vender não transfere a responsabilidade (Lei 12.305).</p>
+
+  <h2>Round 3 — E se o cliente FAZ QUESTÃO do dinheiro? (a consignação entra no ringue)</h2>
+  <p class="sub">Lote exemplo: 100 notebooks de 3 anos. O que o cliente embolsa em cada caminho:</p>
+  <div class="legend">
+    <span><span class="dot" style="background:var(--neutral)"></span>Dinheiro no bolso</span>
+    <span><span class="dot" style="background:var(--s3)"></span>Com certificados + risco zero</span>
+  </div>
+  <div class="chartwrap"><svg id="round3" width="840" height="200" viewBox="0 0 840 200" role="img" aria-label="Quanto o cliente embolsa em cada caminho"></svg></div>
+  <p class="note">No leilão direto ele embolsa R$ 34 mil a mais — carregando sozinho um risco médio de R$ 7,19 milhões e fazendo todo o trabalho. Na consignação Ecobraz, recebe R$ 48 mil <b>+ certificado por número de série + CDF + risco zero</b>. A diferença é o preço do seguro. E a doação com contrato zera custos de ESG (Round 1) — por isso ela vence quando o parque é velho.</p>
+
+  <h2>Round 4 — Quem ganha a briga, lote a lote</h2>
+  <p class="sub">Chance estimada de a Ecobraz vencer a disputa contra quem compra, por tipo de situação (estimativa da equipe com base nas pesquisas — docs 04, 09 e 13; será calibrada com resultados reais):</p>
+  <div class="chartwrap"><svg id="round4" width="840" height="230" viewBox="0 0 840 230" role="img" aria-label="Probabilidade estimada de vitória por segmento"></svg></div>
+  <p class="note">Onde o comprador é favorito (parque novo, financeiro decidindo sozinho), a resposta não é desistir — é a <b>consignação certificada</b>: capturamos o lote mesmo assim, com serviços pagos + parte do líquido. Nenhum lote precisa ser perdido para o Superbid.</p>
+
+  <div class="foot">
+    <b>Como usar isso na prática:</b> Round 1 e 2 são a apresentação para o decisor (a "Conta que Ninguém Fez", doc 12 — os valores se preenchem ao vivo com os números do cliente na planilha). Round 3 é a resposta para quem faz questão do cheque. Round 4 é o mapa interno da Silvana: diz qual oferta abrir em cada conta.<br><br>
+    <b>Honestidade:</b> valores dos Rounds 1–3 são o exemplo padrão da planilha (editáveis); os percentuais do Round 4 são estimativas qualificadas pelas 8 pesquisas, marcadas como estimativa até termos taxa de vitória real medida no Ploomes. Fontes dos números fixos: IBM Cost of a Data Breach 2025 (R$ 7,19 mi), Blancco 2019 (42%), Lei 12.305/2010.
+  </div>
+</div>
+<div id="tip"></div>
+<script>
+const css=v=>getComputedStyle(document.querySelector('.viz-root')).getPropertyValue(v).trim();
+const tip=document.getElementById('tip');
+const sT=(ev,h)=>{tip.innerHTML=h;tip.style.opacity=1;tip.style.left=Math.min(ev.clientX+12,innerWidth-270)+'px';tip.style.top=(ev.clientY+14)+'px';};
+const hT=()=>tip.style.opacity=0;
+function hook(svg){svg.querySelectorAll('[data-t]').forEach(el=>{el.addEventListener('mousemove',ev=>sT(ev,el.dataset.t));el.addEventListener('mouseleave',hT);});}
+
+// ---------- Round 1: barras divergentes 36 meses ----------
+(function(){
+  const svg=document.getElementById('round1'); const W=840,H=300,L=70,R=20;
+  const ymin=-550,ymax=550; const Y=v=>30+(H-70-30)*(1-(v-ymin)/(ymax-ymin)); const y0=Y(0);
+  let g='';
+  for(const gv of [-400,-200,0,200,400]){
+    g+=`<line x1="${L}" x2="${W-R}" y1="${Y(gv)}" y2="${Y(gv)}" stroke="${css('--grid')}" stroke-width="${gv===0?1.5:1}"/>`+
+       `<text x="${L-8}" y="${Y(gv)+4}" text-anchor="end" font-size="11" fill="${css('--text-secondary')}">${gv}</text>`;
+  }
+  g+=`<text x="${L-58}" y="22" font-size="10.5" fill="${css('--text-muted')}">R$ mil</text>`;
+  const bars=[
+    ['Venda do lote',150,100,css('--neutral'),'Receita única da venda: +R$ 150 mil'],
+    ['Custos ESG que continuam',-468,240,css('--serious'),'Sistema + mão de obra + validação seguem sendo pagos: −R$ 468 mil em 36 meses'],
+    ['SALDO vender',-318,380,css('--serious'),'Saldo do caminho VENDER: −R$ 318 mil (sem contar o risco)'],
+    ['SALDO contrato Ecobraz',468,555,css('--good'),'Custos de ESG eliminados pelo contrato: +R$ 468 mil de economia']
+  ];
+  const bw=100;
+  for(const [nome,v,x,cor,t] of bars){
+    const h=Math.abs(Y(v)-y0);
+    g+=`<rect x="${x}" y="${v>0?Y(v):y0}" width="${bw}" height="${h}" rx="4" fill="${cor}" data-t="<b>${nome}</b><br>${t}"/>`;
+    g+=`<text x="${x+bw/2}" y="${v>0?Y(v)-7:Y(v)+16}" text-anchor="middle" font-size="12.5" font-weight="700" fill="${css('--text-primary')}">${v>0?'+':''}${v}</text>`;
+    const laby=H-46;
+    nome.split(' ').reduce((acc,w)=>{const l=acc[acc.length-1];if((l+' '+w).length<=14&&l)acc[acc.length-1]=l+' '+w;else acc.push(w);return acc;},[]).forEach((ln,i)=>{
+      g+=`<text x="${x+bw/2}" y="${laby+i*13}" text-anchor="middle" font-size="11" fill="${css('--text-secondary')}">${ln}</text>`;});
+  }
+  g+=`<path d="M ${560+bw+8} ${Y(468)} L ${W-R-4} ${Y(468)} L ${W-R-4} ${Y(-318)} L ${380+bw+8} ${Y(-318)}" fill="none" stroke="${css('--text-muted')}" stroke-width="1" stroke-dasharray="3 3"/>`;
+  g+=`<text x="${W-R-8}" y="${(Y(468)+Y(-318))/2}" text-anchor="end" font-size="12.5" font-weight="700" fill="${css('--text-primary')}">Δ R$ 786 mil</text>`;
+  svg.innerHTML=g; hook(svg);
+})();
+
+// ---------- Round 2: ganho vs risco, mesma escala ----------
+(function(){
+  const svg=document.getElementById('round2'); const W=840,H=170,L=250,R=90,BH=34;
+  const max=7190; const bw=W-L-R;
+  const rows=[['Ganho da venda do lote',150,css('--neutral'),'R$ 150 mil — uma vez'],
+              ['Custo médio de UMA violação de dados',7190,css('--serious'),'R$ 7,19 milhões (IBM Cost of a Data Breach Brasil, 2025)']];
+  let g='';
+  rows.forEach((r,i)=>{
+    const y=26+i*(BH+30);
+    g+=`<text x="${L-10}" y="${y+BH/2-8}" text-anchor="end" font-size="12" fill="${css('--text-secondary')}">${r[0].split(' de UMA')[0]}</text>`;
+    if(r[0].includes('UMA')) g+=`<text x="${L-10}" y="${y+BH/2+7}" text-anchor="end" font-size="12" fill="${css('--text-secondary')}">de UMA violação de dados</text>`;
+    const w=Math.max(bw*r[1]/max,4);
+    g+=`<rect x="${L}" y="${y}" width="${w}" height="${BH}" rx="4" fill="${r[2]}" data-t="<b>${r[0]}</b><br>${r[3]}"/>`;
+    g+=`<text x="${L+w+8}" y="${y+BH/2+5}" font-size="13" font-weight="700" fill="${css('--text-primary')}">${r[1]>=1000?'R$ '+(r[1]/1000).toFixed(2).replace('.',',')+' mi':'R$ '+r[1]+' mil'}</text>`;
+  });
+  g+=`<text x="${L}" y="${H-8}" font-size="11.5" fill="${css('--text-muted')}">O risco é ~48× o ganho — e não aparece no boleto até o dia em que aparece.</text>`;
+  svg.innerHTML=g; hook(svg);
+})();
+
+// ---------- Round 3: o que o cliente embolsa ----------
+(function(){
+  const svg=document.getElementById('round3'); const W=840,H=200,L=250,R=110,BH=30;
+  const max=90; const bw=W-L-R;
+  const rows=[['Leilão direto (Superbid)',82.8,css('--neutral'),'R$ 82,8 mil no bolso — SEM certificado, risco todo dele, trabalho interno alto'],
+              ['Consignação Ecobraz',48.4,css('--s3'),'R$ 48,4 mil no bolso + certificados por nº de série + CDF + risco zero + trabalho zero'],
+              ['Doação com contrato',0,css('--s3'),'R$ 0 pelo lote — mas zera os custos de ESG (Round 1) e ganha o sistema completo']];
+  let g='';
+  rows.forEach((r,i)=>{
+    const y=18+i*(BH+26);
+    g+=`<text x="${L-10}" y="${y+BH-10}" text-anchor="end" font-size="12" fill="${css('--text-secondary')}">${r[0]}</text>`;
+    const w=Math.max(bw*r[1]/max,4);
+    g+=`<rect x="${L}" y="${y}" width="${w}" height="${BH}" rx="4" fill="${r[2]}" data-t="<b>${r[0]}</b><br>${r[3]}"/>`;
+    g+=`<text x="${L+w+8}" y="${y+BH-10}" font-size="12.5" font-weight="700" fill="${css('--text-primary')}">${r[1]===0?'R$ 0 + economia ESG':'R$ '+String(r[1]).replace('.',',')+' mil'}</text>`;
+    if(i===0) g+=`<text x="${L+w+8}" y="${y+BH+4}" font-size="10.5" fill="${css('--serious')}">⚠ risco R$ 7,19 mi é dele</text>`;
+  });
+  svg.innerHTML=g; hook(svg);
+})();
+
+// ---------- Round 4: chance de vitória por segmento ----------
+(function(){
+  const svg=document.getElementById('round4'); const W=840,H=230,L=390,R=70,BH=24,GAP=18;
+  const rows=[['Parque 4+ anos, lote misto, jurídico/ESG na mesa',80,css('--s1'),'Valor residual mínimo + risco alto → a conta aponta Ecobraz'],
+              ['Empresa com pressão ESG (banco, matriz, auditoria)',70,css('--s1'),'A documentação vale mais que o cheque'],
+              ['Empresa média, decisor operacional, sem pressão ESG',50,css('--s2'),'Disputa equilibrada — decide quem chega primeiro e com o comitê certo'],
+              ['Parque <3 anos homogêneo, financeiro decide sozinho',30,css('--s2'),'O cheque fala alto → aqui entra a CONSIGNAÇÃO para não perder o lote']];
+  const bw=W-L-R; let g='';
+  g+=`<text x="${L}" y="14" font-size="10.5" fill="${css('--text-muted')}">Chance estimada de a Ecobraz vencer (%) — estimativa, a calibrar com dados reais</text>`;
+  rows.forEach((r,i)=>{
+    const y=26+i*(BH+GAP);
+    const partes=r[0].length>44?[r[0].slice(0,r[0].lastIndexOf(' ',44)),r[0].slice(r[0].lastIndexOf(' ',44)+1)]:[r[0]];
+    partes.forEach((p,j)=>g+=`<text x="${L-10}" y="${y+10+j*13-(partes.length>1?4:-(BH/2-14))}" text-anchor="end" font-size="11.5" fill="${css('--text-secondary')}">${p}</text>`);
+    g+=`<rect x="${L}" y="${y}" width="${bw}" height="${BH}" rx="4" fill="${css('--surface-2')}"/>`;
+    g+=`<rect x="${L}" y="${y}" width="${Math.max(bw*r[1]/100,3)}" height="${BH}" rx="4" fill="${r[2]}" data-t="<b>${r[0]}</b><br>${r[3]}"/>`;
+    g+=`<text x="${L+bw*r[1]/100+8}" y="${y+BH-7}" font-size="12.5" font-weight="700" fill="${css('--text-primary')}">~${r[1]}%</text>`;
+  });
+  svg.innerHTML=g; hook(svg);
+})();
+</script>
