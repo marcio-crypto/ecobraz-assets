@@ -35,20 +35,31 @@
 de graça — você só descarta conosco"*. Se relatórios e cálculos viram tudo pago, o
 pitch quebra e a exclusividade de 36 meses perde a contrapartida percebida.
 
-**Proposta da equipe (aguarda martelo do Marcio):**
+**✅ DECIDIDO pelo Marcio (25/07/2026) — a linha é DIY vs. tudo-pronto:**
 
-| GRÁTIS com o contrato (o que sustenta a exclusividade) | PAGO (o que vai ALÉM do descarte) |
+> **GRÁTIS: entrega os dados rastreados que o cliente precisa para alimentar o
+> sistema dele ou passar para a equipe de ESG dele montar.
+> PAGO: entrega tudo PRONTO — ele não precisa fazer mais nada. Simples assim.**
+
+| GRÁTIS com o contrato (a matéria-prima) | PAGO (o trabalho pronto) |
 |---|---|
-| Portal, chamados, acompanhamento | Módulos de inventário de carbono (energia/frota/cadeia) |
-| TODA a documentação do descarte: NF, MTR, CDF com QR, laudos | Consultoria de preenchimento (Villanova) |
-| **Relatório de destinação/resíduos anual** (o "ESG do descarte" — mastigado, como prometido) | Relatórios ESG corporativos completos (BR/UE/Bancário) |
-| Estimativa de emissões da entrada | Verificação de evidências além do escopo do descarte |
-| Dados do Adote um Bairro patrocinado | Cotas do Adote um Bairro |
+| Portal, chamados, acompanhamento | Módulos de cálculo (o sistema calcula por ele) |
+| TODA a documentação rastreada do descarte: NF, MTR, CDF com QR, laudos, pesos, fotos | Consultoria de preenchimento (Villanova busca e preenche) |
+| Estimativa de emissões da entrada (a isca) | Validação de evidências pela Villanova |
+| Dados brutos exportáveis para o ESG dele usar | Relatórios ESG prontos e emitidos (BR/UE/Bancário) |
+| Dados das coletas do Adote patrocinadas | Cotas do Adote um Bairro |
 
-Regra de ouro: **tudo que nasce do descarte é grátis** (é a promessa do contrato);
-**tudo que cobre a empresa inteira é pago** (é outro produto — o cliente entende).
-Assim o vendedor nunca se contradiz: "seu descarte gera tudo isso de graça; se
-quiser o retrato da empresa inteira, temos os módulos".
+**Frase de venda da linha:** *"De graça, você recebe toda a prova — rastreada,
+auditável, exportável. Pago, você recebe o trabalho pronto — aperta o botão e
+entrega."* O grátis já elimina a maior dor (caçar documento de fornecedor); o pago
+elimina o resto do trabalho. Empresas pagam felizes por conveniência — é o modelo
+DIY vs. done-for-you, clássico e comprovado.
+
+**Ajuste decorrente no pitch (doc 12):** a virada das 4 perguntas passa a ser:
+*"Com o contrato, TODA a documentação e os dados rastreados saem de graça — sua
+equipe de ESG para de caçar papel. E se você não quiser nem montar o relatório,
+temos os módulos que entregam tudo pronto."* (Substitui o "fazemos tudo de graça"
+genérico — que agora seria promessa maior que a entrega.)
 
 ## 4. Nomes honestos dos módulos (antigreenwashing)
 
