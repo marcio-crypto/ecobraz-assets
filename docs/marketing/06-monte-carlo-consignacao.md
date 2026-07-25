@@ -86,6 +86,37 @@ P75 ≈ +R$ 6,7 mil/mês; P95 ≈ +R$ 37,5 mil/mês.
   reais de processamento, (c) os relatórios de pesquisa de concorrência ITAD e de
   riscos jurídicos (em andamento em 25/07).
 
+## 4-tris. ATUALIZAÇÃO com o [M] real (25/07/2026, informado pelo Marcio)
+
+**Fato novo: ~90% do faturamento de R$ 350 mil/mês vem dos 3 leilões mensais de
+material doado (~R$ 315 mil/mês); o resto é venda de matéria-prima para usinas.**
+Re-rodada a simulação com M = R$ 280–350 mil (antes: chute de R$ 120–250 mil):
+
+| Métrica | Com chute antigo | **Com M real** |
+|---|---:|---:|
+| Mediana acumulada 24m | −R$ 34 mil | **−R$ 36 mil** |
+| P5 (muito azarado) | −R$ 227 mil | **−R$ 396 mil** |
+| P(prejuízo > R$ 100 mil) | 13,2% | **18,4%** |
+| P(prejuízo > R$ 500 mil) | 0,1% | **2,2%** |
+| Mediana SE houver canibalização | −R$ 110 mil | **−R$ 219 mil** |
+| P(resultado positivo 24m) | 32,4% | 29,7% |
+
+**Leitura:** o cenário central quase não muda, mas a **cauda de risco dobra** — porque
+agora sabemos que praticamente TODA a receita da Ecobraz depende de leiloar material
+doado. Consequências estratégicas:
+1. As cercas anti-canibalização (doc 04) deixam de ser "boas práticas" e viram
+   **condição existencial** do negócio atual.
+2. **Escada de oferta obrigatória no comercial:** 1º sempre tentar a DOAÇÃO com
+   documentação (Ecobraz fica com 100% do valor do leilão); consignação é o degrau de
+   resgate para quem insiste em receber — nunca a oferta de abertura.
+3. A queda de R$ 1 mi → R$ 350 mil agora tem leitura precisa: **as empresas pararam de
+   doar = a Ecobraz perdeu estoque de leilão.** Recuperar volume de descarte É
+   recuperar receita de leilão — as duas brigas são a mesma.
+4. O parecer jurídico (doc 08) ganha urgência dobrada: além de desenhar a consignação,
+   precisa **confirmar a segurança do modelo atual** (90% da receita da ONG vindo de
+   leilão de material doado — padrão tolerado quando aplicado à missão, mas nessa
+   escala merece confirmação formal).
+
 ## 4-bis. Atualização pós-pesquisa jurídica (25/07/2026)
 
 A pesquisa de riscos (doc 08) identificou um **risco de cauda não modelado** nesta

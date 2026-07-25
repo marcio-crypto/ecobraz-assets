@@ -6,7 +6,7 @@
 
 ## Fatos novos (Marcio, 25/07/2026)
 
-- **A Ecobraz já tem contrato com a Superbid e com a Kawara** e costuma vender lá —
+- **A Ecobraz já tem contrato com a Superbid e com a Kwara (grupo Zuk)** e costuma vender lá —
   o canal de leilão do modelo já existe dentro de casa.
 - **Política vigente: nada que armazene dados é vendido.** Na consignação, isso vira
   regra de produto: toda mídia (HD/SSD/storage) é **removida e destruída com
@@ -90,7 +90,7 @@ do seguro, já com toda a documentação inclusa."
 ## Próximos passos do piloto
 
 - [ ] Marcio: substituir os valores ⚠️ pelos custos reais → recalcular os 4 cenários
-- [ ] Conferir a comissão real nos contratos Superbid/Kawara
+- [ ] Conferir a comissão real nos contratos Superbid/Kwara
 - [ ] Escolher 2–3 clientes perdidos para a oferta-piloto (sob proposta, sem site)
 - [ ] Análise jurídica/fiscal do enquadramento (ONG × consignação; possível uso de
       veículo do grupo)

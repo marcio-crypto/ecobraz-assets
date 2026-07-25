@@ -36,7 +36,7 @@ CUSTO_MENSAL = 4_000                  # comercial/admin/compliance enquanto ativ
 # M = receita mensal atual da Ecobraz com venda de material doado — NÃO INFORMADO.
 # Premissa: entre R$ 120k e R$ 250k/mês (parte dos R$ 350k de faturamento).
 P_CANIBALIZACAO = 0.40                # 40% de chance de doadores descobrirem e exigirem split
-M_LO, M_HI = 120_000, 250_000
+M_LO, M_HI = 280_000, 350_000  # ATUALIZADO 25/07: Marcio informou ~90% de R$350k = leilão de material doado
 FRACAO_AFETADA_LO, FRACAO_AFETADA_HI = 0.05, 0.25  # 5% a 25% da base afetada
 PERDA_LIQUIDA = 0.50                  # perde-se ~50% do valor do material afetado
                                        # (o resto volta como taxas de serviço)
