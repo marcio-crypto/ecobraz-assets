@@ -2394,6 +2394,25 @@
     },
     "groups": [
       {
+        "eyebrow": "O modelo Ecobraz",
+        "title": "Contrato contínuo, sistema e prova",
+        "sub": "O caminho recomendado para quem descarta com recorrência: contrato com coletas programadas, sistema de rastreabilidade incluso e documentação pronta para auditoria.",
+        "items": [
+          {
+            "title": "Descarte para empresas",
+            "href": "/para-empresas/",
+            "icon": "building",
+            "text": "O contrato contínuo: coletas programadas, sem custo de coleta, com prova em três padrões."
+          },
+          {
+            "title": "Sistema de rastreabilidade",
+            "href": "/sistema-de-rastreabilidade/",
+            "icon": "chart",
+            "text": "Registro na origem, QR de verificação, central documental e indicadores com metodologia."
+          }
+        ]
+      },
+      {
         "eyebrow": "Dados e infraestrutura de TI",
         "title": "Quando o problema envolve equipamentos e dados",
         "sub": "Do notebook no depósito ao data center inteiro — com o tratamento de dados registrado em cada etapa.",
@@ -3255,7 +3274,7 @@
     },
     "form": {
       "title": "Conte como quer participar",
-      "hint": "Retornamos com o desenho de adoção, contrapartidas e próximos passos.",
+      "hint": "Retornamos em até 24h úteis com o desenho de adoção, contrapartidas e próximos passos.",
       "material": "",
       "describeLabel": "Como você quer participar?",
       "describePlaceholder": "Ex.: patrocinar a adoção de um bairro em São Paulo",
@@ -3463,19 +3482,23 @@
       {
         "q": "Como acompanho o que foi feito?",
         "a": "Por relatórios periódicos do realizado no bairro — coleta, ações e registros. É a prestação de contas que sustenta o seu caso ESG."
+      },
+      {
+        "q": "A adoção conta para o ESG e o Escopo 3 da minha empresa?",
+        "a": "As ações e os números do território entram no seu relatório como impacto documentado, com registro e fonte. O desenho da adoção pode ser integrado ao seu plano de ESG — sem venda de créditos, selos ou compensações não lastreadas."
       }
     ],
     "related": [
       {
-        "title": "Ecobraz + Villanova ESG",
-        "href": "/ecobraz-villanova-esg/",
-        "icon": "chart",
-        "text": "Evidência estruturada para cadeias Brasil-Europa."
+        "title": "Descarte para empresas",
+        "href": "/para-empresas/",
+        "icon": "building",
+        "text": "O contrato contínuo com sistema de rastreabilidade incluso."
       },
       {
         "title": "Sobre a Ecobraz",
         "href": "/sobre/",
-        "icon": "building",
+        "icon": "box",
         "text": "A associação, o propósito e a trajetória desde 2011."
       },
       {
@@ -3489,6 +3512,735 @@
       "eyebrow": "Comece a conversa",
       "title": "Que bairro a sua marca vai adotar?",
       "text": "Conte o objetivo e o território de interesse. Retornamos com o desenho da adoção, contrapartidas e a proposta — sem compromisso."
+    }
+  },
+  {
+    "slug": "para-empresas",
+    "title": "Descarte para empresas: contrato contínuo, sistema e prova",
+    "crumb": "Para empresas",
+    "serviceType": "Programa de descarte corporativo contínuo com contrato, coletas programadas, sistema de rastreabilidade e documentação para auditoria",
+    "custom_excerpt": "O modelo da Ecobraz para empresas: contrato de descarte contínuo com coletas programadas, sistema de rastreabilidade incluso e documentação pronta para auditoria — no padrão brasileiro, europeu e no que os bancos costumam pedir.",
+    "meta_title": "Descarte de eletrônicos para empresas | Ecobraz",
+    "meta_description": "Contrato de descarte contínuo para empresas: coletas programadas, sistema de rastreabilidade incluso e documentação pronta para auditoria. Agende uma demonstração.",
+    "hub": {
+      "title": "Soluções corporativas",
+      "href": "/solucoes-corporativas/"
+    },
+    "hero": {
+      "eyebrow": "Contrato contínuo · Sistema incluso · Documentação para auditoria",
+      "sub": "Sua empresa gera descarte todo trimestre — e ainda paga para montar a prova depois? No modelo Ecobraz, o contrato organiza as coletas, o sistema registra cada etapa e a documentação sai pronta para auditoria: no padrão brasileiro, no europeu e no que os bancos costumam pedir.",
+      "cta": "Agendar demonstração",
+      "band": [
+        {
+          "title": "Contrato contínuo",
+          "text": "coletas programadas, sem custo de coleta"
+        },
+        {
+          "title": "Sistema incluso",
+          "text": "registro com QR, inventário e painel"
+        },
+        {
+          "title": "Prova em três padrões",
+          "text": "brasileiro, europeu e bancário — pronta para auditoria"
+        }
+      ]
+    },
+    "form": {
+      "title": "Peça uma demonstração",
+      "hint": "Retorno em até 24h úteis, com a agenda da demonstração e o desenho de contrato para a sua operação.",
+      "material": "",
+      "describeLabel": "Como é a sua operação?",
+      "describePlaceholder": "Ex.: 3 unidades em SP, descarte trimestral de TI e baterias",
+      "button": "Agendar demonstração",
+      "micro": "Sem compromisso — o contrato só é proposto depois da avaliação técnica da sua operação."
+    },
+    "recognize": {
+      "title": "Esta página é para a sua empresa se…",
+      "items": [
+        "A auditoria (ou a matriz) pediu evidência do descarte e o que existe são e-mails e PDFs espalhados",
+        "Hoje o lote é vendido para um comprador — e a prova do que acontece depois é problema seu",
+        "O time de ESG monta relatório caçando dados de descarte em planilha, a cada ciclo",
+        "O depósito acumula equipamento parado porque ninguém quer decidir o destino",
+        "O banco ou o cliente europeu começou a pedir números de Escopo 3 da cadeia"
+      ]
+    },
+    "painsTitle": "Vender a sucata parece receita — até a conta chegar",
+    "painsSub": "O que o comprador paga pelo lote não cobre o que ele deixa com você.",
+    "pains": [
+      {
+        "icon": "lock",
+        "title": "A responsabilidade não sai com o caminhão",
+        "text": "Pela Política Nacional de Resíduos Sólidos, a responsabilidade do gerador é compartilhada. Se o seu lote aparecer em canal irregular, quem responde é a sua empresa — anos depois da venda.",
+        "consequence": "Custo real: autuação ambiental e passivo jurídico com o CNPJ da sua empresa — sem prova de destinação para se defender."
+      },
+      {
+        "icon": "alert",
+        "title": "O valor da venda não paga o risco",
+        "text": "Para uma corporação, o que o comprador de sucata paga é irrelevante perto de uma multa, um incidente de dados ou uma manchete. A conta fecha ao contrário do que parece.",
+        "consequence": "Custo real: receita pequena e pontual contra exposição contínua — e nenhum dado aproveitável para o ESG."
+      },
+      {
+        "icon": "chart",
+        "title": "Sem registro, seu ESG recomeça do zero a cada ciclo",
+        "text": "Descarte sem sistema não gera série histórica: cada relatório é uma força-tarefa nova de coleta manual de evidências, sem metodologia declarada.",
+        "consequence": "Custo real: horas de equipe a cada ciclo — e números frágeis diante de auditoria ou banco."
+      }
+    ],
+    "contrast": {
+      "title": "Vender o lote vs. contrato contínuo com a Ecobraz",
+      "sub": "A diferença entre uma transação e uma rotina com prova acumulada.",
+      "before": {
+        "title": "Venda avulsa ao comprador",
+        "items": [
+          "Receita pequena e pontual, lote a lote",
+          "A prova da destinação é problema seu",
+          "Cada descarte é uma negociação nova",
+          "O material segue sem rastro verificável",
+          "Nenhuma série de dados para o relatório ESG"
+        ]
+      },
+      "after": {
+        "title": "Contrato contínuo Ecobraz",
+        "items": [
+          "Coletas programadas, sem custo de coleta",
+          "Cada coleta registrada no sistema, com QR",
+          "Documentação pronta para auditoria — padrão brasileiro, europeu e bancário",
+          "Inventário e indicadores no painel da diretoria",
+          "Uma rotina só, trimestre após trimestre"
+        ]
+      }
+    },
+    "gains": {
+      "title": "O que muda com o contrato",
+      "sub": "Entregas descritas pelo que é executado — sem promessa genérica.",
+      "items": [
+        {
+          "icon": "file",
+          "title": "Documentação em três padrões",
+          "text": "Inventário, MTR e CDF quando aplicáveis — organizados no formato brasileiro, no europeu e no que bancos costumam pedir."
+        },
+        {
+          "icon": "chart",
+          "title": "Indicadores com metodologia",
+          "text": "Números de carbono da operação de descarte, com metodologia e limites declarados."
+        },
+        {
+          "icon": "shield",
+          "title": "Risco tratado por escrito",
+          "text": "Cadeia de custódia registrada e escopo documentado antes de cada retirada."
+        },
+        {
+          "icon": "building",
+          "title": "Rotina sem fricção",
+          "text": "Calendário definido, um canal de contato e o depósito sempre limpo."
+        }
+      ]
+    },
+    "scope": {
+      "title": "O que o contrato inclui — e o que não promete",
+      "inTitle": "Inclui",
+      "outTitle": "Não promete",
+      "in": [
+        "Contrato de descarte contínuo com coletas programadas",
+        "Acesso ao sistema de rastreabilidade incluso",
+        "Inventário por coleta, MTR e CDF quando aplicáveis",
+        "Tratamento de dados (sanitização ou destruição) conforme escopo",
+        "Atendimento multi-unidades, avaliado por praça"
+      ],
+      "out": [
+        "Créditos, selos ou compensações não lastreados",
+        "Resultado de auditoria de terceiros — a documentação sai pronta para ela, quem audita é o auditor",
+        "Pilhas domésticas avulsas, toner, lâmpadas e resíduos químicos, biológicos ou radioativos",
+        "Promessa de condição bancária — com a documentação no padrão, quem pleiteia é a sua empresa"
+      ],
+      "conditions": "Periodicidade mínima, unidades atendidas, exclusividade do fluxo contratado e documentação são definidos na avaliação técnica, antes da assinatura.",
+      "outNote": "É a mesma régua do site inteiro: alegação só com fonte e escopo declarado — inclusive nas nossas."
+    },
+    "stepsTitle": "Do primeiro contato à rotina com prova",
+    "stepsSub": "Nenhum contrato é proposto sem demonstração e avaliação técnica.",
+    "steps": [
+      {
+        "title": "Descreva a operação",
+        "text": "Unidades, tipos de material, volume aproximado e o que a sua auditoria pede."
+      },
+      {
+        "title": "Demonstração",
+        "text": "Você vê o sistema funcionando — registro, QR, documentos e painel — em cerca de 30 minutos."
+      },
+      {
+        "title": "Avaliação e desenho",
+        "text": "Escopo, periodicidade, unidades e documentação definidos por escrito."
+      },
+      {
+        "title": "Primeira coleta registrada",
+        "text": "Retirada com inventário na origem e registro no sistema desde o primeiro dia."
+      },
+      {
+        "title": "Rotina contínua",
+        "text": "Coletas programadas e a prova acumulando período após período."
+      }
+    ],
+    "evidenceTitle": "O que a sua auditoria vai receber",
+    "evidence": [
+      {
+        "title": "Inventário por coleta",
+        "text": "Relação do que saiu, registrada na origem, coleta a coleta."
+      },
+      {
+        "title": "MTR e CDF",
+        "text": "Manifesto de transporte e certificado de destinação, quando aplicáveis ao material."
+      },
+      {
+        "title": "Cadeia de custódia com QR",
+        "text": "O percurso de cada lote verificável por código — da origem à destinação."
+      },
+      {
+        "title": "Relatório de dados",
+        "text": "Sanitização ou destruição de mídias registrada, conforme o escopo contratado."
+      },
+      {
+        "title": "Indicadores de carbono",
+        "text": "Números da operação de descarte com metodologia e limites declarados."
+      },
+      {
+        "title": "Dossiê para auditoria",
+        "text": "A documentação organizada, pronta para auditoria independente de terceira parte."
+      }
+    ],
+    "authority": "Atuação registrada em plataformas públicas de referência internacional. Cada alegação do site tem fonte, data e escopo declarados na página de evidências.",
+    "faqTitle": "O que diretores e gestores perguntam",
+    "faq": [
+      {
+        "q": "Quanto custa o contrato?",
+        "a": "O contrato de descarte contínuo não tem custo de coleta nem de acesso ao sistema. O compromisso é de vigência, de pelo menos um descarte por trimestre e de exclusividade do fluxo contratado. Módulos avançados do sistema e relatórios específicos são contratados à parte — as condições são apresentadas na demonstração."
+      },
+      {
+        "q": "Por que um contrato de 36 meses?",
+        "a": "É o horizonte que torna o modelo sustentável dos dois lados: a Ecobraz planeja a logística e mantém a coleta sem custo; a sua empresa acumula série histórica de dados comparável ano a ano — o que auditoria e banco valorizam. As condições de saída ficam definidas em contrato."
+      },
+      {
+        "q": "Hoje eu vendo meus lotes. Não estou perdendo dinheiro ao trocar?",
+        "a": "É a conta que fazemos com você na demonstração, com os seus números: de um lado, o valor da venda avulsa; do outro, o custo de montar prova manualmente, o risco da responsabilidade compartilhada e o valor dos dados para o seu ESG. Você decide com a planilha na mão."
+      },
+      {
+        "q": "O sistema substitui a auditoria?",
+        "a": "Não — e é importante dizer isso com clareza: o sistema registra e organiza a evidência, e a documentação sai pronta para auditoria independente de terceira parte. Quem audita é o auditor que a sua empresa escolher."
+      },
+      {
+        "q": "Atendem operações fora de São Paulo?",
+        "a": "Operações corporativas fora da Grande São Paulo são avaliadas caso a caso — multi-unidades entram no desenho do contrato com logística por praça."
+      }
+    ],
+    "related": [
+      {
+        "title": "Sistema de rastreabilidade",
+        "href": "/sistema-de-rastreabilidade/",
+        "icon": "chart",
+        "text": "O registro por QR, o painel e os relatórios — em detalhe."
+      },
+      {
+        "title": "Documentação e rastreabilidade",
+        "href": "/documentacao-e-rastreabilidade/",
+        "icon": "file",
+        "text": "Como a prova documental é construída, etapa a etapa."
+      },
+      {
+        "title": "Soluções corporativas",
+        "href": "/solucoes-corporativas/",
+        "icon": "box",
+        "text": "Todas as soluções organizadas por evento operacional."
+      }
+    ],
+    "final": {
+      "eyebrow": "Veja com os seus olhos",
+      "title": "Agende a demonstração e faça a conta com a gente",
+      "text": "Em cerca de 30 minutos você vê o sistema funcionando e recebe o desenho de contrato para a sua operação. Retorno em até 24h úteis."
+    }
+  },
+  {
+    "slug": "sistema-de-rastreabilidade",
+    "title": "Sistema de rastreabilidade: do QR na coleta ao relatório",
+    "crumb": "Sistema de rastreabilidade",
+    "serviceType": "Plataforma de rastreabilidade de descarte eletrônico com registro em campo, QR de verificação, central documental e indicadores para ESG",
+    "custom_excerpt": "O sistema que registra cada coleta na origem, dá QR de verificação à cadeia de custódia, reúne os documentos em um lugar e entrega números com metodologia declarada — incluso no contrato de descarte contínuo.",
+    "meta_title": "Sistema de rastreabilidade de descarte | Ecobraz",
+    "meta_description": "Registro de coletas na origem, QR de verificação, central de documentos e indicadores com metodologia declarada. Incluso no contrato contínuo — veja a demonstração.",
+    "hub": {
+      "title": "Soluções corporativas",
+      "href": "/solucoes-corporativas/"
+    },
+    "hero": {
+      "eyebrow": "Incluso no contrato contínuo · Sem custo de licença",
+      "sub": "Cada coleta registrada no ato pelo agente. Cada lote com QR de verificação. Cada documento no mesmo lugar. E os números que o seu ESG precisa saindo do sistema — não de uma planilha montada às pressas na véspera do relatório.",
+      "cta": "Agendar demonstração",
+      "band": [
+        {
+          "title": "Registro no ato",
+          "text": "o agente registra a coleta na origem, não depois"
+        },
+        {
+          "title": "QR de verificação",
+          "text": "a cadeia de custódia conferível por código"
+        },
+        {
+          "title": "Painel e relatórios",
+          "text": "números prontos para o seu ESG, com metodologia"
+        }
+      ]
+    },
+    "form": {
+      "title": "Veja o sistema funcionando",
+      "hint": "Retorno em até 24h úteis para agendar a demonstração.",
+      "material": "",
+      "describeLabel": "O que você precisa resolver?",
+      "describePlaceholder": "Ex.: evidência de descarte para o relatório ESG deste ano",
+      "button": "Agendar demonstração",
+      "micro": "Demonstração sem compromisso — o acesso ao sistema é incluso no contrato de descarte contínuo."
+    },
+    "recognize": {
+      "title": "Você precisa do sistema se…",
+      "items": [
+        "O relatório ESG é uma caça anual a certificados perdidos em e-mails",
+        "A auditoria pediu cadeia de custódia e o que existe é uma pasta de PDFs",
+        "A diretoria pergunta os números do descarte e ninguém tem resposta rápida",
+        "A matriz ou o cliente europeu pede dados de Escopo 3 da cadeia",
+        "Cada área guarda a própria planilha — e nenhuma bate com a outra"
+      ]
+    },
+    "painsTitle": "Prova espalhada não é prova",
+    "painsSub": "O problema não é a falta de documentos — é onde eles estão e o que não dizem.",
+    "pains": [
+      {
+        "icon": "file",
+        "title": "Certificado em pasta de e-mail é evidência frágil",
+        "text": "O documento existe, mas ninguém acha na hora da auditoria — e sem inventário e cadeia de custódia ligados a ele, prova menos do que parece.",
+        "consequence": "Custo real: horas de retrabalho a cada ciclo e ressalvas evitáveis no relatório."
+      },
+      {
+        "icon": "chart",
+        "title": "Número sem metodologia não sustenta relatório",
+        "text": "Um total de quilos sem método declarado vira alvo fácil: qualquer auditor pergunta de onde saiu — e a resposta 'da planilha' encerra a conversa.",
+        "consequence": "Custo real: indicadores descartados pela auditoria e credibilidade do relatório em queda."
+      },
+      {
+        "icon": "alert",
+        "title": "O improviso aparece na auditoria",
+        "text": "Processo que depende de memória e boa vontade funciona até o dia em que alguém sai de férias — ou da empresa. Auditoria enxerga isso em minutos.",
+        "consequence": "Custo real: apontamento de controle interno — e o descarte vira pauta de reunião pelos motivos errados."
+      }
+    ],
+    "contrast": {
+      "title": "Planilha e pastas vs. sistema de registro",
+      "sub": "O mesmo descarte, dois destinos muito diferentes na auditoria.",
+      "before": {
+        "title": "Como é hoje",
+        "items": [
+          "Certificados espalhados em e-mails e pastas",
+          "Planilha manual, sem metodologia declarada",
+          "Cadeia de custódia impossível de reconstituir",
+          "Números diferentes em cada área",
+          "Força-tarefa a cada relatório"
+        ]
+      },
+      "after": {
+        "title": "Com o sistema",
+        "items": [
+          "Registro no ato da coleta, na origem",
+          "QR de verificação por lote",
+          "Central única de documentos da operação",
+          "Indicadores com metodologia e limites declarados",
+          "Relatório por período, gerado do próprio sistema"
+        ]
+      }
+    },
+    "gains": {
+      "title": "O que o sistema entrega",
+      "sub": "Funções descritas pelo que fazem — a demonstração mostra tudo funcionando.",
+      "items": [
+        {
+          "icon": "shield",
+          "title": "QR de verificação",
+          "text": "Cada lote com código próprio — a custódia conferível por quem auditar."
+        },
+        {
+          "icon": "file",
+          "title": "Central documental",
+          "text": "Inventários, MTR, CDF e relatórios da operação em um só lugar."
+        },
+        {
+          "icon": "chart",
+          "title": "Indicadores de carbono",
+          "text": "Números da operação de descarte com metodologia e limites declarados."
+        },
+        {
+          "icon": "building",
+          "title": "Painel para a diretoria",
+          "text": "A visão executiva do descarte — volumes, períodos e documentos — sem depender de planilha."
+        }
+      ]
+    },
+    "scope": {
+      "title": "O que o sistema é — e o que não é",
+      "inTitle": "É",
+      "outTitle": "Não é",
+      "in": [
+        "Acesso incluso no contrato de descarte contínuo",
+        "Registro de coletas na origem, pelo agente",
+        "QR de verificação da cadeia de custódia",
+        "Central de documentos e relatórios por período",
+        "Indicadores com metodologia declarada"
+      ],
+      "out": [
+        "Não é auditoria independente — a documentação sai pronta para a auditoria de terceira parte que a sua empresa contratar",
+        "Não emite créditos de carbono, selos ou compensações",
+        "Não substitui o inventário completo de emissões da empresa — cobre a operação de descarte",
+        "Não é um software vendido avulso — ele existe para dar prova ao contrato de descarte"
+      ],
+      "conditions": "Módulos avançados e relatórios específicos são contratados à parte — as condições são apresentadas na demonstração, conforme a necessidade da sua operação.",
+      "outNote": "Dizer o que o sistema não faz é parte do produto: é isso que faz a evidência dele valer diante de quem audita."
+    },
+    "stepsTitle": "Como o sistema entra na sua rotina",
+    "stepsSub": "Da assinatura do contrato ao primeiro relatório.",
+    "steps": [
+      {
+        "title": "Contrato ativo",
+        "text": "O acesso ao sistema é criado com o contrato de descarte contínuo."
+      },
+      {
+        "title": "Perfis definidos",
+        "text": "Quem opera, quem consulta e quem recebe relatório — definido com a sua equipe."
+      },
+      {
+        "title": "Primeira coleta registrada",
+        "text": "O agente registra na origem; o lote nasce com QR e inventário."
+      },
+      {
+        "title": "Documentos acumulam",
+        "text": "MTR, CDF e relatórios entram na central, ligados a cada coleta."
+      },
+      {
+        "title": "Relatório por período",
+        "text": "Os números saem do sistema, com metodologia — prontos para o seu ciclo de ESG."
+      }
+    ],
+    "evidenceTitle": "O que fica registrado",
+    "evidence": [
+      {
+        "title": "Coleta a coleta",
+        "text": "Data, origem, materiais e responsável — registrados no ato."
+      },
+      {
+        "title": "QR por lote",
+        "text": "Verificação da cadeia de custódia por código, aberta a quem auditar."
+      },
+      {
+        "title": "Documentos vinculados",
+        "text": "Cada MTR, CDF e relatório ligado à coleta que o gerou."
+      },
+      {
+        "title": "Série histórica",
+        "text": "Volumes e indicadores acumulando período após período — comparáveis."
+      },
+      {
+        "title": "Exportação",
+        "text": "Relatórios por período para levar ao seu ESG, à auditoria ou ao banco."
+      },
+      {
+        "title": "Acesso controlado",
+        "text": "Perfis e permissões definidos pela sua empresa, com tratamento de dados conforme a LGPD."
+      }
+    ],
+    "authority": "Atuação registrada em plataformas públicas de referência internacional. Cada alegação do site tem fonte, data e escopo declarados na página de evidências.",
+    "faqTitle": "O que gestores de ESG e TI perguntam",
+    "faq": [
+      {
+        "q": "O sistema é gratuito mesmo?",
+        "a": "O acesso é incluso no contrato de descarte contínuo, sem custo de licença. Módulos avançados e relatórios específicos são contratados à parte — as condições são apresentadas na demonstração."
+      },
+      {
+        "q": "Quem da minha empresa acessa?",
+        "a": "Os perfis são definidos com a sua equipe: quem opera, quem consulta e quem recebe relatórios. O acesso é controlado e o tratamento de dados segue a LGPD."
+      },
+      {
+        "q": "Consigo exportar os dados?",
+        "a": "Sim — relatórios por período saem do sistema para o seu ciclo de ESG, para auditoria ou para o banco, com a metodologia dos indicadores declarada."
+      },
+      {
+        "q": "Serve como auditoria?",
+        "a": "Não. O sistema registra e organiza a evidência; a documentação sai pronta para auditoria independente de terceira parte. Quem audita é o auditor que a sua empresa escolher — e é assim que deve ser."
+      },
+      {
+        "q": "E se o contrato terminar?",
+        "a": "Os documentos emitidos na vigência — inventários, MTR, CDF e relatórios — são da sua empresa e permanecem com você. As condições de encerramento ficam definidas em contrato."
+      }
+    ],
+    "related": [
+      {
+        "title": "Descarte para empresas",
+        "href": "/para-empresas/",
+        "icon": "building",
+        "text": "O contrato contínuo que inclui o sistema — modelo completo."
+      },
+      {
+        "title": "Documentação e rastreabilidade",
+        "href": "/documentacao-e-rastreabilidade/",
+        "icon": "file",
+        "text": "Como cada documento da operação é construído."
+      },
+      {
+        "title": "Soluções corporativas",
+        "href": "/solucoes-corporativas/",
+        "icon": "box",
+        "text": "Todas as soluções organizadas por evento operacional."
+      }
+    ],
+    "final": {
+      "eyebrow": "Números que você defende em reunião",
+      "title": "Veja o sistema funcionando antes de decidir",
+      "text": "A demonstração mostra o registro, o QR, a central de documentos e o painel — com tempo para as suas perguntas. Retorno em até 24h úteis."
+    }
+  },
+  {
+    "slug": "parceiros",
+    "title": "Programa de Parceiros: venda ESG com execução de verdade",
+    "crumb": "Parceiros",
+    "serviceType": "Programa de parceria para consultorias e assessorias ESG oferecerem descarte contratado, sistema de rastreabilidade e programas de impacto aos seus clientes",
+    "custom_excerpt": "Para consultorias ESG, contabilidades e agências de sustentabilidade: ofereça à sua carteira a execução da Ecobraz — coleta contratada, sistema com QR e documentação pronta para auditoria — com comissão recorrente e conta registrada.",
+    "meta_title": "Programa de Parceiros ESG | Ecobraz",
+    "meta_description": "Consultorias ESG: ofereça execução real à sua carteira — coleta contratada, sistema e documentação para auditoria. Comissão recorrente. Candidate-se.",
+    "hub": {
+      "title": "Sobre a Ecobraz",
+      "href": "/sobre/"
+    },
+    "hero": {
+      "eyebrow": "Consultorias ESG · Contabilidades · Agências de sustentabilidade",
+      "sub": "A sua consultoria vende o conselho. A Ecobraz entrega a execução: coleta contratada, sistema com QR e documentação pronta para auditoria — no seu portfólio, com credenciamento e comissão recorrente pelo que a sua carteira assinar.",
+      "cta": "Candidatar minha empresa",
+      "band": [
+        {
+          "title": "Execução real",
+          "text": "coleta, destinação e documentação — quem executa assina"
+        },
+        {
+          "title": "Co-branded",
+          "text": "\"powered by Ecobraz\", com credenciamento e kit pronto"
+        },
+        {
+          "title": "Comissão recorrente",
+          "text": "enquanto o cliente da sua carteira permanecer"
+        }
+      ]
+    },
+    "form": {
+      "title": "Candidate a sua empresa",
+      "hint": "Retorno em até 24h úteis com os próximos passos do credenciamento.",
+      "material": "",
+      "describeLabel": "Conte sobre a sua empresa e a sua carteira",
+      "describePlaceholder": "Ex.: consultoria ESG com 20 clientes industriais em SP",
+      "button": "Enviar candidatura",
+      "micro": "Candidatura sem compromisso. O credenciamento inclui treinamento e adesão às regras de linguagem do programa."
+    },
+    "recognize": {
+      "title": "O programa é para a sua empresa se…",
+      "items": [
+        "O cliente pede execução — e você indica terceiros sem controle sobre o que entregam",
+        "As propostas de ESG empacam na mesma pergunta: 'e quem faz?'",
+        "Você quer receita recorrente além das horas de consultoria",
+        "Um diferencial de evidência (sistema, QR, documentação) fecharia contratos que hoje escapam",
+        "Sua marca não pode ser associada a executor que prometa o que não cumpre"
+      ]
+    },
+    "painsTitle": "Conselho sem execução perde o contrato",
+    "painsSub": "Três limites que toda consultoria sem braço operacional conhece.",
+    "pains": [
+      {
+        "icon": "alert",
+        "title": "A proposta trava na execução",
+        "text": "O diagnóstico convence, o plano convence — e na hora do 'quem executa?', a resposta vira uma indicação solta. O cliente sente a emenda.",
+        "consequence": "Custo real: contratos que encolhem para o papel e concorrentes com estrutura própria levando o projeto inteiro."
+      },
+      {
+        "icon": "building",
+        "title": "Montar operação própria não fecha a conta",
+        "text": "Caminhão, galpão, licenças ambientais, equipe de campo e responsabilidade legal — um investimento de anos para competir com quem já opera desde 2011.",
+        "consequence": "Custo real: capital imobilizado fora do seu negócio principal — ou a decisão certa de não tentar."
+      },
+      {
+        "icon": "shield",
+        "title": "Indicar qualquer executor arrisca a sua marca",
+        "text": "Se o executor indicado promete 'neutralização' que não existe ou some com a documentação, o cliente não culpa o executor — culpa quem indicou.",
+        "consequence": "Custo real: a confiança da carteira, que é o ativo da consultoria, exposta ao comportamento de terceiros."
+      }
+    ],
+    "contrast": {
+      "title": "Indicar por fora vs. vender como parceiro credenciado",
+      "sub": "A diferença entre apontar um fornecedor e incorporar uma execução ao seu portfólio.",
+      "before": {
+        "title": "Indicação avulsa",
+        "items": [
+          "Sem controle sobre a entrega",
+          "Nenhuma receita pela indicação",
+          "Sem evidência própria para mostrar ao cliente",
+          "Risco de conflito se o executor vender direto",
+          "Cada caso começa do zero"
+        ]
+      },
+      "after": {
+        "title": "Parceiro credenciado",
+        "items": [
+          "Execução com padrão declarado — quem executa assina",
+          "Comissão recorrente e bônus por contrato ativado",
+          "Sistema, QR e documentação no seu material de venda",
+          "Conta registrada com proteção definida em contrato",
+          "Kit pronto, treinamento e suporte em proposta"
+        ]
+      }
+    },
+    "gains": {
+      "title": "O que o parceiro leva",
+      "sub": "Condições e percentuais são apresentados na conversa de credenciamento.",
+      "items": [
+        {
+          "icon": "chart",
+          "title": "Receita recorrente",
+          "text": "Comissão enquanto o cliente da sua carteira permanecer — além do bônus por ativação de contrato."
+        },
+        {
+          "icon": "box",
+          "title": "Portfólio maior, sem operação",
+          "text": "Descarte contratado, sistema e Adote um Bairro vendíveis pela sua equipe."
+        },
+        {
+          "icon": "shield",
+          "title": "Marca protegida",
+          "text": "Regras de linguagem antigreenwashing valem para todos — inclusive para nós."
+        },
+        {
+          "icon": "file",
+          "title": "Kit de venda pronto",
+          "text": "Material co-branded, argumentos e documentação de exemplo — você não inventa slide."
+        }
+      ]
+    },
+    "scope": {
+      "title": "Quem entra — e o que o programa não aceita",
+      "inTitle": "Perfil de parceiro",
+      "outTitle": "Fora do programa",
+      "in": [
+        "Consultorias de ESG e sustentabilidade",
+        "Contabilidades e assessorias com carteira PJ",
+        "Certificadoras e agências sem operação própria de resíduos",
+        "Registro prévio de contas, com proteção definida em contrato",
+        "Treinamento e credenciamento obrigatórios antes da primeira venda"
+      ],
+      "out": [
+        "Empresas com operação própria de resíduos (conflito de canal)",
+        "White-label sem a marca Ecobraz — o QR valida em domínio Ecobraz, e isso é parte da confiança",
+        "Linguagem fora do padrão: nada de 'neutraliza', 'auditoria independente' ou promessa de crédito",
+        "Comissão sobre clientes que já são atendidos diretamente pela Ecobraz"
+      ],
+      "conditions": "Comissões, bônus, território e regras de registro de contas são formalizados no contrato de parceria, apresentado na conversa de credenciamento.",
+      "outNote": "Quebra das regras de linguagem leva a descredenciamento — é o que protege a sua marca, a nossa e a dos clientes."
+    },
+    "stepsTitle": "Da candidatura à primeira comissão",
+    "stepsSub": "O credenciamento é curto — e obrigatório.",
+    "steps": [
+      {
+        "title": "Candidatura",
+        "text": "Conte sobre a empresa, a carteira e como pretende vender."
+      },
+      {
+        "title": "Conversa de credenciamento",
+        "text": "Validação do perfil, condições comerciais e contrato de parceria."
+      },
+      {
+        "title": "Treinamento",
+        "text": "Produto, escopo, regras de linguagem e uso do kit — com verificação."
+      },
+      {
+        "title": "Registro de contas",
+        "text": "Você registra os CNPJs da sua carteira antes de abordar — proteção definida em contrato."
+      },
+      {
+        "title": "Venda com suporte",
+        "text": "Kit co-branded, apoio técnico em proposta e comissão recorrente pelo que ativar."
+      }
+    ],
+    "evidenceTitle": "O que você recebe ao ser credenciado",
+    "evidence": [
+      {
+        "title": "Kit comercial pronto",
+        "text": "Apresentações, argumentos e materiais co-branded para a sua equipe."
+      },
+      {
+        "title": "Treinamento com verificação",
+        "text": "Produto, escopo e linguagem — só vende quem foi credenciado."
+      },
+      {
+        "title": "Registro de contas",
+        "text": "Seus clientes registrados e protegidos, por regra contratual."
+      },
+      {
+        "title": "Suporte em proposta",
+        "text": "Apoio técnico da Ecobraz nas oportunidades que você levar."
+      },
+      {
+        "title": "Documentação de exemplo",
+        "text": "O que o cliente final recebe — para mostrar, não para prometer."
+      },
+      {
+        "title": "Selo de credenciado",
+        "text": "Uso da marca do programa conforme o contrato de parceria."
+      }
+    ],
+    "authority": "Atuação registrada em plataformas públicas de referência internacional. Cada alegação do site tem fonte, data e escopo declarados na página de evidências.",
+    "faqTitle": "O que consultorias perguntam antes de entrar",
+    "faq": [
+      {
+        "q": "Quanto a minha empresa ganha?",
+        "a": "Comissão recorrente sobre o que a sua carteira assinar — enquanto o cliente permanecer — e bônus por contrato de descarte ativado. Percentuais e condições são apresentados na conversa de credenciamento e formalizados no contrato de parceria."
+      },
+      {
+        "q": "A Ecobraz pode vender direto para um cliente meu?",
+        "a": "O registro prévio de contas existe exatamente para isso: cliente registrado por você fica protegido pelas regras do contrato de parceria. Clientes que já são da Ecobraz não geram comissão — a régua vale para os dois lados."
+      },
+      {
+        "q": "Posso usar a minha marca?",
+        "a": "O modelo é co-branded: a sua marca ao lado de 'powered by Ecobraz'. Não é white-label puro — o QR de verificação valida em domínio Ecobraz, e é isso que dá confiança ao cliente final."
+      },
+      {
+        "q": "Em nome de quem sai a documentação?",
+        "a": "Sempre em nome do cliente final — nunca do parceiro. É a regra que mantém a evidência utilizável em auditoria."
+      },
+      {
+        "q": "Que regras preciso aceitar?",
+        "a": "O mesmo padrão de linguagem do site da Ecobraz: sem 'neutraliza', sem 'auditoria independente' onde não há, sem promessa de crédito bancário. A quebra leva a descredenciamento — é o que protege a sua marca também."
+      }
+    ],
+    "related": [
+      {
+        "title": "Descarte para empresas",
+        "href": "/para-empresas/",
+        "icon": "building",
+        "text": "O contrato contínuo que a sua carteira vai assinar."
+      },
+      {
+        "title": "Sistema de rastreabilidade",
+        "href": "/sistema-de-rastreabilidade/",
+        "icon": "chart",
+        "text": "O diferencial de evidência que entra no seu portfólio."
+      },
+      {
+        "title": "Programa Adote um Bairro",
+        "href": "/programa-adote-um-bairro/",
+        "icon": "box",
+        "text": "O programa de impacto que completa a oferta."
+      }
+    ],
+    "final": {
+      "eyebrow": "Sua carteira já confia em você",
+      "title": "Agora ela pode comprar execução — pela sua mão",
+      "text": "Envie a candidatura com um resumo da sua empresa e da carteira. Retorno em até 24h úteis com os próximos passos do credenciamento."
     }
   }
 ]

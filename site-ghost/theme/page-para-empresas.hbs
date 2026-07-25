@@ -1,0 +1,201 @@
+{{!< default}}
+{{! Gerado por scripts/build-landing-pages.mjs a partir de landing/landing-pages.json — não edite à mão. }}
+{{#contentFor "head"}}
+<link rel="stylesheet" href="{{asset "css/landing.css"}}">
+{{/contentFor}}
+
+<section class="hx-hero">
+  <div class="container hx-crumbs"><a href="{{@site.url}}/">Início</a> › <a href="{{@site.url}}/solucoes-corporativas/">Soluções corporativas</a> › Para empresas</div>
+  <div class="container hx-hero-grid">
+    <div>
+      <span class="hx-label on-dark">Contrato contínuo · Sistema incluso · Documentação para auditoria</span>
+      <h1>Descarte para empresas: contrato contínuo, sistema e prova</h1>
+      <p class="hx-sub">Sua empresa gera descarte todo trimestre — e ainda paga para montar a prova depois? No modelo Ecobraz, o contrato organiza as coletas, o sistema registra cada etapa e a documentação sai pronta para auditoria: no padrão brasileiro, no europeu e no que os bancos costumam pedir.</p>
+      <div class="hx-hero-ctas">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=para-empresas" data-track="para-empresas_hero_cta">Agendar demonstração</a>
+        <a class="button hx-btn-outline-dark" href="#como-funciona" data-track="para-empresas_hero_como">Como funciona</a>
+      </div>
+      <div class="hx-hero-band">
+        <span><strong>Contrato contínuo</strong>coletas programadas, sem custo de coleta</span>
+        <span><strong>Sistema incluso</strong>registro com QR, inventário e painel</span>
+        <span><strong>Prova em três padrões</strong>brasileiro, europeu e bancário — pronta para auditoria</span>
+      </div>
+    </div>
+    <form class="hx-quote" id="avaliacao" method="get" action="{{@site.url}}/agendamento/">
+      <span class="hx-label">Avaliação técnica</span>
+      <h2>Peça uma demonstração</h2>
+      <p class="hx-hint">Retorno em até 24h úteis, com a agenda da demonstração e o desenho de contrato para a sua operação.</p>
+      <input type="hidden" name="perfil" value="empresa">
+      <input type="hidden" name="origem" value="para-empresas">
+      
+      <div class="hx-field">
+        <label for="lp-desc">Como é a sua operação?</label>
+        <input id="lp-desc" name="descricao" placeholder="Ex.: 3 unidades em SP, descarte trimestral de TI e baterias">
+      </div>
+      <div class="hx-field">
+        <label for="lp-local">CEP ou cidade da retirada</label>
+        <input id="lp-local" name="local" placeholder="Ex.: 02175-010 ou São Paulo">
+      </div>
+      <button class="button" type="submit" data-track="para-empresas_hero_form">Agendar demonstração →</button>
+      <div class="hx-or-wa">ou <a href="{{@custom.whatsapp_url}}" rel="noopener" data-track="para-empresas_hero_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> falar com a equipe no WhatsApp</a></div>
+      <p class="hx-micro">Sem compromisso — o contrato só é proposto depois da avaliação técnica da sua operação.</p>
+    </form>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container hx-reco">
+    <div>
+      <span class="hx-label">Você se reconhece?</span>
+      <h2>Esta página é para a sua empresa se…</h2>
+      <p class="hx-reco-cta">Bastou um item da lista ser verdade aí dentro? Então esta página foi escrita para você — <a href="#avaliacao">descreva a situação em 1 minuto</a> e receba um retorno técnico, não um telemarketing.</p>
+    </div>
+    <ul class="hx-reco-list"><li>A auditoria (ou a matriz) pediu evidência do descarte e o que existe são e-mails e PDFs espalhados</li><li>Hoje o lote é vendido para um comprador — e a prova do que acontece depois é problema seu</li><li>O time de ESG monta relatório caçando dados de descarte em planilha, a cada ciclo</li><li>O depósito acumula equipamento parado porque ninguém quer decidir o destino</li><li>O banco ou o cliente europeu começou a pedir números de Escopo 3 da cadeia</li></ul>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">O que está em jogo</span><h2>Vender a sucata parece receita — até a conta chegar</h2></div>
+      <p>O que o comprador paga pelo lote não cobre o que ele deixa com você.</p>
+    </div>
+    <div class="hx-sol-grid">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>A responsabilidade não sai com o caminhão</h3><p>Pela Política Nacional de Resíduos Sólidos, a responsabilidade do gerador é compartilhada. Se o seu lote aparecer em canal irregular, quem responde é a sua empresa — anos depois da venda.</p><span class="hx-cost">Custo real: autuação ambiental e passivo jurídico com o CNPJ da sua empresa — sem prova de destinação para se defender.</span></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18h.01"/></svg></span><h3>O valor da venda não paga o risco</h3><p>Para uma corporação, o que o comprador de sucata paga é irrelevante perto de uma multa, um incidente de dados ou uma manchete. A conta fecha ao contrário do que parece.</p><span class="hx-cost">Custo real: receita pequena e pontual contra exposição contínua — e nenhum dado aproveitável para o ESG.</span></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>Sem registro, seu ESG recomeça do zero a cada ciclo</h3><p>Descarte sem sistema não gera série histórica: cada relatório é uma força-tarefa nova de coleta manual de evidências, sem metodologia declarada.</p><span class="hx-cost">Custo real: horas de equipe a cada ciclo — e números frágeis diante de auditoria ou banco.</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">A virada</span><h2>Vender o lote vs. contrato contínuo com a Ecobraz</h2></div>
+      <p>A diferença entre uma transação e uma rotina com prova acumulada.</p>
+    </div>
+    <div class="hx-contrast">
+      <div class="hx-before"><h3>Venda avulsa ao comprador</h3><ul><li>Receita pequena e pontual, lote a lote</li><li>A prova da destinação é problema seu</li><li>Cada descarte é uma negociação nova</li><li>O material segue sem rastro verificável</li><li>Nenhuma série de dados para o relatório ESG</li></ul></div>
+      <div class="hx-after"><h3>Contrato contínuo Ecobraz</h3><ul><li>Coletas programadas, sem custo de coleta</li><li>Cada coleta registrada no sistema, com QR</li><li>Documentação pronta para auditoria — padrão brasileiro, europeu e bancário</li><li>Inventário e indicadores no painel da diretoria</li><li>Uma rotina só, trimestre após trimestre</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">O que você ganha</span><h2>O que muda com o contrato</h2></div>
+      <p>Entregas descritas pelo que é executado — sem promessa genérica.</p>
+    </div>
+    <div class="hx-sol-grid g4">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Documentação em três padrões</h3><p>Inventário, MTR e CDF quando aplicáveis — organizados no formato brasileiro, no europeu e no que bancos costumam pedir.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>Indicadores com metodologia</h3><p>Números de carbono da operação de descarte, com metodologia e limites declarados.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span><h3>Risco tratado por escrito</h3><p>Cadeia de custódia registrada e escopo documentado antes de cada retirada.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="3" width="16" height="18"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2M10 21v-3h4v3"/></svg></span><h3>Rotina sem fricção</h3><p>Calendário definido, um canal de contato e o depósito sempre limpo.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Escopo claro</span><h2>O que o contrato inclui — e o que não promete</h2></div>
+      <p>Escopo declarado antes do agendamento reduz retrabalho e surpresa. Cada lote é avaliado tecnicamente.</p>
+    </div>
+    <div class="hx-scope">
+      <div class="hx-yes"><h3>Inclui</h3><ul><li>Contrato de descarte contínuo com coletas programadas</li><li>Acesso ao sistema de rastreabilidade incluso</li><li>Inventário por coleta, MTR e CDF quando aplicáveis</li><li>Tratamento de dados (sanitização ou destruição) conforme escopo</li><li>Atendimento multi-unidades, avaliado por praça</li></ul><p>Periodicidade mínima, unidades atendidas, exclusividade do fluxo contratado e documentação são definidos na avaliação técnica, antes da assinatura.</p></div>
+      <div class="hx-not"><h3>Não promete</h3><ul><li>Créditos, selos ou compensações não lastreados</li><li>Resultado de auditoria de terceiros — a documentação sai pronta para ela, quem audita é o auditor</li><li>Pilhas domésticas avulsas, toner, lâmpadas e resíduos químicos, biológicos ou radioativos</li><li>Promessa de condição bancária — com a documentação no padrão, quem pleiteia é a sua empresa</li></ul><p>É a mesma régua do site inteiro: alegação só com fonte e escopo declarado — inclusive nas nossas.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt" id="como-funciona">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Processo</span><h2>Do primeiro contato à rotina com prova</h2></div>
+      <p>Nenhum contrato é proposto sem demonstração e avaliação técnica.</p>
+    </div>
+    <div class="hx-steps">
+        <div class="hx-step"><h3>Descreva a operação</h3><p>Unidades, tipos de material, volume aproximado e o que a sua auditoria pede.</p></div>
+        <div class="hx-step"><h3>Demonstração</h3><p>Você vê o sistema funcionando — registro, QR, documentos e painel — em cerca de 30 minutos.</p></div>
+        <div class="hx-step"><h3>Avaliação e desenho</h3><p>Escopo, periodicidade, unidades e documentação definidos por escrito.</p></div>
+        <div class="hx-step"><h3>Primeira coleta registrada</h3><p>Retirada com inventário na origem e registro no sistema desde o primeiro dia.</p></div>
+        <div class="hx-step"><h3>Rotina contínua</h3><p>Coletas programadas e a prova acumulando período após período.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Evidência da operação</span><h2>O que a sua auditoria vai receber</h2></div>
+      <p>A documentação reflete o que foi efetivamente executado em cada lote — sem promessa genérica.</p>
+    </div>
+    <div class="hx-docs">
+        <div class="hx-doc"><h3>Inventário por coleta</h3><p>Relação do que saiu, registrada na origem, coleta a coleta.</p></div>
+        <div class="hx-doc"><h3>MTR e CDF</h3><p>Manifesto de transporte e certificado de destinação, quando aplicáveis ao material.</p></div>
+        <div class="hx-doc"><h3>Cadeia de custódia com QR</h3><p>O percurso de cada lote verificável por código — da origem à destinação.</p></div>
+        <div class="hx-doc"><h3>Relatório de dados</h3><p>Sanitização ou destruição de mídias registrada, conforme o escopo contratado.</p></div>
+        <div class="hx-doc"><h3>Indicadores de carbono</h3><p>Números da operação de descarte com metodologia e limites declarados.</p></div>
+        <div class="hx-doc"><h3>Dossiê para auditoria</h3><p>A documentação organizada, pronta para auditoria independente de terceira parte.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-authority">
+      <div>
+        <span class="hx-label on-dark">Autoridade verificável</span>
+        <strong>Associação Auxílio à Reciclagem de Eletrônicos e Inclusão Digital — CNPJ 14.197.457/0001-42</strong>
+        <p>Atuação registrada em plataformas públicas de referência internacional. Cada alegação do site tem fonte, data e escopo declarados na página de evidências.</p>
+      </div>
+      <a href="{{@site.url}}/evidencias/" data-track="para-empresas_evidencias">Ver evidências públicas →</a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Perguntas frequentes</span><h2>O que diretores e gestores perguntam</h2></div>
+    </div>
+    <div class="hx-faq">
+        <details><summary>Quanto custa o contrato?</summary><p>O contrato de descarte contínuo não tem custo de coleta nem de acesso ao sistema. O compromisso é de vigência, de pelo menos um descarte por trimestre e de exclusividade do fluxo contratado. Módulos avançados do sistema e relatórios específicos são contratados à parte — as condições são apresentadas na demonstração.</p></details>
+        <details><summary>Por que um contrato de 36 meses?</summary><p>É o horizonte que torna o modelo sustentável dos dois lados: a Ecobraz planeja a logística e mantém a coleta sem custo; a sua empresa acumula série histórica de dados comparável ano a ano — o que auditoria e banco valorizam. As condições de saída ficam definidas em contrato.</p></details>
+        <details><summary>Hoje eu vendo meus lotes. Não estou perdendo dinheiro ao trocar?</summary><p>É a conta que fazemos com você na demonstração, com os seus números: de um lado, o valor da venda avulsa; do outro, o custo de montar prova manualmente, o risco da responsabilidade compartilhada e o valor dos dados para o seu ESG. Você decide com a planilha na mão.</p></details>
+        <details><summary>O sistema substitui a auditoria?</summary><p>Não — e é importante dizer isso com clareza: o sistema registra e organiza a evidência, e a documentação sai pronta para auditoria independente de terceira parte. Quem audita é o auditor que a sua empresa escolher.</p></details>
+        <details><summary>Atendem operações fora de São Paulo?</summary><p>Operações corporativas fora da Grande São Paulo são avaliadas caso a caso — multi-unidades entram no desenho do contrato com logística por praça.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Soluções relacionadas</span><h2>Também pode fazer parte da sua operação</h2></div>
+    </div>
+    <div class="hx-sol-grid">
+        <a class="hx-sol" href="{{@site.url}}/sistema-de-rastreabilidade/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>Sistema de rastreabilidade</h3><p>O registro por QR, o painel e os relatórios — em detalhe.</p><span class="hx-go">Ver solução →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/documentacao-e-rastreabilidade/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Documentação e rastreabilidade</h3><p>Como a prova documental é construída, etapa a etapa.</p><span class="hx-go">Ver solução →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/solucoes-corporativas/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><h3>Soluções corporativas</h3><p>Todas as soluções organizadas por evento operacional.</p><span class="hx-go">Ver solução →</span></a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-final">
+      <div>
+        <span class="hx-label on-dark">Veja com os seus olhos</span>
+        <h2>Agende a demonstração e faça a conta com a gente</h2>
+        <p>Em cerca de 30 minutos você vê o sistema funcionando e recebe o desenho de contrato para a sua operação. Retorno em até 24h úteis.</p>
+      </div>
+      <div class="hx-actions">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=para-empresas" data-track="para-empresas_final_cta">Agendar demonstração</a>
+        <a class="button hx-btn-wa" href="{{@custom.whatsapp_url}}" rel="noopener" data-track="para-empresas_final_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> WhatsApp</a>
+      </div>
+    </div>
+  </div>
+</section>
+

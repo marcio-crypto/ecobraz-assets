@@ -1,0 +1,201 @@
+{{!< default}}
+{{! Gerado por scripts/build-landing-pages.mjs a partir de landing/landing-pages.json — não edite à mão. }}
+{{#contentFor "head"}}
+<link rel="stylesheet" href="{{asset "css/landing.css"}}">
+{{/contentFor}}
+
+<section class="hx-hero">
+  <div class="container hx-crumbs"><a href="{{@site.url}}/">Início</a> › <a href="{{@site.url}}/solucoes-corporativas/">Soluções corporativas</a> › Sistema de rastreabilidade</div>
+  <div class="container hx-hero-grid">
+    <div>
+      <span class="hx-label on-dark">Incluso no contrato contínuo · Sem custo de licença</span>
+      <h1>Sistema de rastreabilidade: do QR na coleta ao relatório</h1>
+      <p class="hx-sub">Cada coleta registrada no ato pelo agente. Cada lote com QR de verificação. Cada documento no mesmo lugar. E os números que o seu ESG precisa saindo do sistema — não de uma planilha montada às pressas na véspera do relatório.</p>
+      <div class="hx-hero-ctas">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=sistema-de-rastreabilidade" data-track="sistema-de-rastreabilidade_hero_cta">Agendar demonstração</a>
+        <a class="button hx-btn-outline-dark" href="#como-funciona" data-track="sistema-de-rastreabilidade_hero_como">Como funciona</a>
+      </div>
+      <div class="hx-hero-band">
+        <span><strong>Registro no ato</strong>o agente registra a coleta na origem, não depois</span>
+        <span><strong>QR de verificação</strong>a cadeia de custódia conferível por código</span>
+        <span><strong>Painel e relatórios</strong>números prontos para o seu ESG, com metodologia</span>
+      </div>
+    </div>
+    <form class="hx-quote" id="avaliacao" method="get" action="{{@site.url}}/agendamento/">
+      <span class="hx-label">Avaliação técnica</span>
+      <h2>Veja o sistema funcionando</h2>
+      <p class="hx-hint">Retorno em até 24h úteis para agendar a demonstração.</p>
+      <input type="hidden" name="perfil" value="empresa">
+      <input type="hidden" name="origem" value="sistema-de-rastreabilidade">
+      
+      <div class="hx-field">
+        <label for="lp-desc">O que você precisa resolver?</label>
+        <input id="lp-desc" name="descricao" placeholder="Ex.: evidência de descarte para o relatório ESG deste ano">
+      </div>
+      <div class="hx-field">
+        <label for="lp-local">CEP ou cidade da retirada</label>
+        <input id="lp-local" name="local" placeholder="Ex.: 02175-010 ou São Paulo">
+      </div>
+      <button class="button" type="submit" data-track="sistema-de-rastreabilidade_hero_form">Agendar demonstração →</button>
+      <div class="hx-or-wa">ou <a href="{{@custom.whatsapp_url}}" rel="noopener" data-track="sistema-de-rastreabilidade_hero_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> falar com a equipe no WhatsApp</a></div>
+      <p class="hx-micro">Demonstração sem compromisso — o acesso ao sistema é incluso no contrato de descarte contínuo.</p>
+    </form>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container hx-reco">
+    <div>
+      <span class="hx-label">Você se reconhece?</span>
+      <h2>Você precisa do sistema se…</h2>
+      <p class="hx-reco-cta">Bastou um item da lista ser verdade aí dentro? Então esta página foi escrita para você — <a href="#avaliacao">descreva a situação em 1 minuto</a> e receba um retorno técnico, não um telemarketing.</p>
+    </div>
+    <ul class="hx-reco-list"><li>O relatório ESG é uma caça anual a certificados perdidos em e-mails</li><li>A auditoria pediu cadeia de custódia e o que existe é uma pasta de PDFs</li><li>A diretoria pergunta os números do descarte e ninguém tem resposta rápida</li><li>A matriz ou o cliente europeu pede dados de Escopo 3 da cadeia</li><li>Cada área guarda a própria planilha — e nenhuma bate com a outra</li></ul>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">O que está em jogo</span><h2>Prova espalhada não é prova</h2></div>
+      <p>O problema não é a falta de documentos — é onde eles estão e o que não dizem.</p>
+    </div>
+    <div class="hx-sol-grid">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Certificado em pasta de e-mail é evidência frágil</h3><p>O documento existe, mas ninguém acha na hora da auditoria — e sem inventário e cadeia de custódia ligados a ele, prova menos do que parece.</p><span class="hx-cost">Custo real: horas de retrabalho a cada ciclo e ressalvas evitáveis no relatório.</span></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>Número sem metodologia não sustenta relatório</h3><p>Um total de quilos sem método declarado vira alvo fácil: qualquer auditor pergunta de onde saiu — e a resposta 'da planilha' encerra a conversa.</p><span class="hx-cost">Custo real: indicadores descartados pela auditoria e credibilidade do relatório em queda.</span></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18h.01"/></svg></span><h3>O improviso aparece na auditoria</h3><p>Processo que depende de memória e boa vontade funciona até o dia em que alguém sai de férias — ou da empresa. Auditoria enxerga isso em minutos.</p><span class="hx-cost">Custo real: apontamento de controle interno — e o descarte vira pauta de reunião pelos motivos errados.</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">A virada</span><h2>Planilha e pastas vs. sistema de registro</h2></div>
+      <p>O mesmo descarte, dois destinos muito diferentes na auditoria.</p>
+    </div>
+    <div class="hx-contrast">
+      <div class="hx-before"><h3>Como é hoje</h3><ul><li>Certificados espalhados em e-mails e pastas</li><li>Planilha manual, sem metodologia declarada</li><li>Cadeia de custódia impossível de reconstituir</li><li>Números diferentes em cada área</li><li>Força-tarefa a cada relatório</li></ul></div>
+      <div class="hx-after"><h3>Com o sistema</h3><ul><li>Registro no ato da coleta, na origem</li><li>QR de verificação por lote</li><li>Central única de documentos da operação</li><li>Indicadores com metodologia e limites declarados</li><li>Relatório por período, gerado do próprio sistema</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">O que você ganha</span><h2>O que o sistema entrega</h2></div>
+      <p>Funções descritas pelo que fazem — a demonstração mostra tudo funcionando.</p>
+    </div>
+    <div class="hx-sol-grid g4">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span><h3>QR de verificação</h3><p>Cada lote com código próprio — a custódia conferível por quem auditar.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Central documental</h3><p>Inventários, MTR, CDF e relatórios da operação em um só lugar.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>Indicadores de carbono</h3><p>Números da operação de descarte com metodologia e limites declarados.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="3" width="16" height="18"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2M10 21v-3h4v3"/></svg></span><h3>Painel para a diretoria</h3><p>A visão executiva do descarte — volumes, períodos e documentos — sem depender de planilha.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Escopo claro</span><h2>O que o sistema é — e o que não é</h2></div>
+      <p>Escopo declarado antes do agendamento reduz retrabalho e surpresa. Cada lote é avaliado tecnicamente.</p>
+    </div>
+    <div class="hx-scope">
+      <div class="hx-yes"><h3>É</h3><ul><li>Acesso incluso no contrato de descarte contínuo</li><li>Registro de coletas na origem, pelo agente</li><li>QR de verificação da cadeia de custódia</li><li>Central de documentos e relatórios por período</li><li>Indicadores com metodologia declarada</li></ul><p>Módulos avançados e relatórios específicos são contratados à parte — as condições são apresentadas na demonstração, conforme a necessidade da sua operação.</p></div>
+      <div class="hx-not"><h3>Não é</h3><ul><li>Não é auditoria independente — a documentação sai pronta para a auditoria de terceira parte que a sua empresa contratar</li><li>Não emite créditos de carbono, selos ou compensações</li><li>Não substitui o inventário completo de emissões da empresa — cobre a operação de descarte</li><li>Não é um software vendido avulso — ele existe para dar prova ao contrato de descarte</li></ul><p>Dizer o que o sistema não faz é parte do produto: é isso que faz a evidência dele valer diante de quem audita.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt" id="como-funciona">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Processo</span><h2>Como o sistema entra na sua rotina</h2></div>
+      <p>Da assinatura do contrato ao primeiro relatório.</p>
+    </div>
+    <div class="hx-steps">
+        <div class="hx-step"><h3>Contrato ativo</h3><p>O acesso ao sistema é criado com o contrato de descarte contínuo.</p></div>
+        <div class="hx-step"><h3>Perfis definidos</h3><p>Quem opera, quem consulta e quem recebe relatório — definido com a sua equipe.</p></div>
+        <div class="hx-step"><h3>Primeira coleta registrada</h3><p>O agente registra na origem; o lote nasce com QR e inventário.</p></div>
+        <div class="hx-step"><h3>Documentos acumulam</h3><p>MTR, CDF e relatórios entram na central, ligados a cada coleta.</p></div>
+        <div class="hx-step"><h3>Relatório por período</h3><p>Os números saem do sistema, com metodologia — prontos para o seu ciclo de ESG.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Evidência da operação</span><h2>O que fica registrado</h2></div>
+      <p>A documentação reflete o que foi efetivamente executado em cada lote — sem promessa genérica.</p>
+    </div>
+    <div class="hx-docs">
+        <div class="hx-doc"><h3>Coleta a coleta</h3><p>Data, origem, materiais e responsável — registrados no ato.</p></div>
+        <div class="hx-doc"><h3>QR por lote</h3><p>Verificação da cadeia de custódia por código, aberta a quem auditar.</p></div>
+        <div class="hx-doc"><h3>Documentos vinculados</h3><p>Cada MTR, CDF e relatório ligado à coleta que o gerou.</p></div>
+        <div class="hx-doc"><h3>Série histórica</h3><p>Volumes e indicadores acumulando período após período — comparáveis.</p></div>
+        <div class="hx-doc"><h3>Exportação</h3><p>Relatórios por período para levar ao seu ESG, à auditoria ou ao banco.</p></div>
+        <div class="hx-doc"><h3>Acesso controlado</h3><p>Perfis e permissões definidos pela sua empresa, com tratamento de dados conforme a LGPD.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-authority">
+      <div>
+        <span class="hx-label on-dark">Autoridade verificável</span>
+        <strong>Associação Auxílio à Reciclagem de Eletrônicos e Inclusão Digital — CNPJ 14.197.457/0001-42</strong>
+        <p>Atuação registrada em plataformas públicas de referência internacional. Cada alegação do site tem fonte, data e escopo declarados na página de evidências.</p>
+      </div>
+      <a href="{{@site.url}}/evidencias/" data-track="sistema-de-rastreabilidade_evidencias">Ver evidências públicas →</a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Perguntas frequentes</span><h2>O que gestores de ESG e TI perguntam</h2></div>
+    </div>
+    <div class="hx-faq">
+        <details><summary>O sistema é gratuito mesmo?</summary><p>O acesso é incluso no contrato de descarte contínuo, sem custo de licença. Módulos avançados e relatórios específicos são contratados à parte — as condições são apresentadas na demonstração.</p></details>
+        <details><summary>Quem da minha empresa acessa?</summary><p>Os perfis são definidos com a sua equipe: quem opera, quem consulta e quem recebe relatórios. O acesso é controlado e o tratamento de dados segue a LGPD.</p></details>
+        <details><summary>Consigo exportar os dados?</summary><p>Sim — relatórios por período saem do sistema para o seu ciclo de ESG, para auditoria ou para o banco, com a metodologia dos indicadores declarada.</p></details>
+        <details><summary>Serve como auditoria?</summary><p>Não. O sistema registra e organiza a evidência; a documentação sai pronta para auditoria independente de terceira parte. Quem audita é o auditor que a sua empresa escolher — e é assim que deve ser.</p></details>
+        <details><summary>E se o contrato terminar?</summary><p>Os documentos emitidos na vigência — inventários, MTR, CDF e relatórios — são da sua empresa e permanecem com você. As condições de encerramento ficam definidas em contrato.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Soluções relacionadas</span><h2>Também pode fazer parte da sua operação</h2></div>
+    </div>
+    <div class="hx-sol-grid">
+        <a class="hx-sol" href="{{@site.url}}/para-empresas/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="3" width="16" height="18"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2M10 21v-3h4v3"/></svg></span><h3>Descarte para empresas</h3><p>O contrato contínuo que inclui o sistema — modelo completo.</p><span class="hx-go">Ver solução →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/documentacao-e-rastreabilidade/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Documentação e rastreabilidade</h3><p>Como cada documento da operação é construído.</p><span class="hx-go">Ver solução →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/solucoes-corporativas/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><h3>Soluções corporativas</h3><p>Todas as soluções organizadas por evento operacional.</p><span class="hx-go">Ver solução →</span></a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-final">
+      <div>
+        <span class="hx-label on-dark">Números que você defende em reunião</span>
+        <h2>Veja o sistema funcionando antes de decidir</h2>
+        <p>A demonstração mostra o registro, o QR, a central de documentos e o painel — com tempo para as suas perguntas. Retorno em até 24h úteis.</p>
+      </div>
+      <div class="hx-actions">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=sistema-de-rastreabilidade" data-track="sistema-de-rastreabilidade_final_cta">Agendar demonstração</a>
+        <a class="button hx-btn-wa" href="{{@custom.whatsapp_url}}" rel="noopener" data-track="sistema-de-rastreabilidade_final_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> WhatsApp</a>
+      </div>
+    </div>
+  </div>
+</section>
+
