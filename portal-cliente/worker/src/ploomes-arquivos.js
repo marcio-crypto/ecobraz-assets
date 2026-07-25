@@ -204,6 +204,47 @@ export async function completarAnexos(env, offset, limit) {
 }
 
 // ---------------------------------------------------------------------------
+// ENUMERADOR UNIVERSAL por JANELAS de Id — pega TODOS os anexos (qualquer tipo de
+// dono: coleta, cliente, anotação, mensagem/chat, produto…) sem depender de
+// varrer cada entidade. O /Attachments não deixa ordenar nem listar tudo (estoura),
+// MAS uma faixa limitada de Id (Id gt X and Id le X+W) é indexada e volta rápida.
+// Janela pequena o bastante para caber em $top=1000 sem truncar. O item já traz
+// Url + DealId/ContactId. Idempotente e retomável pelo Id.
+// ---------------------------------------------------------------------------
+const ANEXOS_ID_MAX = 20000000; // teto de varredura (maior Id de anexo visto ~17,4M)
+export async function importarAnexosJanela(env, desdeId, janela) {
+  if (!env.PLOOMES_USER_KEY) return { ok: false, erro: 'Falta a chave do Ploomes no cofre.' };
+  if (!env.DB_PLOOMES) return { ok: false, erro: 'Banco D1 não vinculado (DB_PLOOMES).' };
+  if (!env.R2_ARQUIVOS) return { ok: false, erro: 'Depósito R2 ainda não ligado. Ative o R2 no painel da Cloudflare.' };
+  const W = Math.min(Math.max(Number(janela) || 100000, 5000), 1000000);
+  const X = Math.max(Number(desdeId) || 0, 0);
+  const Y = X + W;
+  const r = await reqJSON(env, `/Attachments?$filter=Id%20gt%20${X}%20and%20Id%20le%20${Y}&$top=1000`, 15000);
+  if (r.erro) return { ok: false, erro: r.erro, desdeId: X };
+  if (r.status !== 200) return { ok: false, erro: `HTTP ${r.status}`, desdeId: X };
+  const anexos = r.value || [];
+  let gravados = 0, falhas = 0, bytes = 0;
+  for (const a of anexos) {
+    const key = `anexo/${a.Id}`;
+    if (await jaImportado(env, key)) continue;
+    let url = a.Url, ct = a.ContentType, fn = a.FileName || a.Name;
+    if (!url) {
+      const one = await reqJSON(env, `/Attachments(${a.Id})`, 10000);
+      const it = one.value && one.value[0];
+      if (it) { url = it.Url; ct = ct || it.ContentType; fn = fn || it.FileName || it.Name; }
+    }
+    if (!url) { falhas++; continue; }
+    const dl = await baixarParaR2(env, key, url, ct);
+    if (!dl.ok) { falhas++; continue; }
+    await gravarMeta(env, { r2_key: key, fonte: 'anexo', ploomes_id: a.Id, deal_id: a.DealId || null, contact_id: a.ContactId || null, nome_arquivo: fn, content_type: dl.contentType, tamanho: dl.tamanho, criado_em: a.CreateDate || '' });
+    gravados++; if (dl.tamanho) bytes += dl.tamanho;
+  }
+  await gravarEstado(env, 'anexos_janela_cursor', Y);
+  // Se uma janela vier com 1000 (o teto), pode ter truncado — sinaliza para diminuir.
+  return { ok: true, vistos: anexos.length, gravados, falhas, bytes, truncado: anexos.length >= 1000, proximoId: Y, fim: Y >= ANEXOS_ID_MAX };
+}
+
+// ---------------------------------------------------------------------------
 // DOCUMENTOS (Documents/propostas) — retomável pelo Id. Cada um: baixa DocumentUrl.
 // ---------------------------------------------------------------------------
 export async function importarLoteDocumentos(env, desdeId, top) {
@@ -247,6 +288,7 @@ export async function estatisticasArquivos(env) {
     } catch { /* tabela ainda não criada */ }
     out.cursores.anexos = Number(await lerEstado(env, 'anexos_cursor', '0')) || 0;
     out.cursores.anexosContatos = Number(await lerEstado(env, 'anexos_contatos_cursor', '0')) || 0;
+    out.cursores.anexosJanela = Number(await lerEstado(env, 'anexos_janela_cursor', '0')) || 0;
     out.cursores.documentos = Number(await lerEstado(env, 'documentos_cursor', '0')) || 0;
   }
   return out;
@@ -343,14 +385,20 @@ export function paginaMigrarArquivos(user, s) {
     <div class="bar"><div id="anexoBar" style="width:${anexPct}%"></div></div>
     <div id="anexoTxt" style="font-size:12px;color:#7c8a87;margin:6px 0 12px">${anexPct}%</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <button class="btn btn-p" onclick="rodarCompletar(this)" ${s.r2Ligado ? '' : 'disabled'}>⟳ Completar (recuperar os que faltaram)</button>
-      <button class="btn btn-g" onclick="rodar('deal',this)" ${s.r2Ligado ? '' : 'disabled'}>Varrer coletas</button>
-      <button class="btn btn-g" onclick="rodar('cont',this)" ${s.r2Ligado ? '' : 'disabled'}>Varrer clientes</button>
-      <button class="btn btn-g" onclick="PARAR.deal=true;PARAR.cont=true;PARAR.compl=true">■ Parar</button>
+      <button class="btn btn-p" onclick="rodarJanela(this)" ${s.r2Ligado ? '' : 'disabled'}>▶ Buscar TODOS os anexos</button>
+      <button class="btn btn-g" onclick="PARAR.jan=true;PARAR.deal=true;PARAR.cont=true;PARAR.compl=true">■ Parar</button>
     </div>
-    <div id="completSt" style="font-size:12.5px;color:#4F6469;margin-top:10px"></div>
-    <div id="dealSt" style="font-size:12.5px;color:#4F6469;margin-top:4px"></div>
-    <div id="contSt" style="font-size:12.5px;color:#4F6469;margin-top:4px"></div>
+    <div id="janSt" style="font-size:12.5px;color:#4F6469;margin-top:10px"></div>
+    <details style="margin-top:8px"><summary style="font-size:11.5px;color:#8fa39f;cursor:pointer">métodos antigos (não precisa)</summary>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+        <button class="btn btn-g" onclick="rodarCompletar(this)" ${s.r2Ligado ? '' : 'disabled'}>⟳ Completar</button>
+        <button class="btn btn-g" onclick="rodar('deal',this)" ${s.r2Ligado ? '' : 'disabled'}>Varrer coletas</button>
+        <button class="btn btn-g" onclick="rodar('cont',this)" ${s.r2Ligado ? '' : 'disabled'}>Varrer clientes</button>
+      </div>
+      <div id="completSt" style="font-size:12px;color:#4F6469;margin-top:6px"></div>
+      <div id="dealSt" style="font-size:12px;color:#4F6469;margin-top:4px"></div>
+      <div id="contSt" style="font-size:12px;color:#4F6469;margin-top:4px"></div>
+    </details>
   </div>
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px"><div style="font-size:14px;font-weight:800">Documentos</div><div style="font-size:12px;color:#7c8a87"><b id="docI">${docI.toLocaleString('pt-BR')}</b> de <b>${docT.toLocaleString('pt-BR')}</b></div></div>
@@ -366,7 +414,8 @@ export function paginaMigrarArquivos(user, s) {
 </div>
 <script>
 var PARAR={};
-var CUR={deal:${curA}, cont:${Number((s.cursores && s.cursores.anexosContatos) || 0)}, doc:${curD}};
+var CUR={deal:${curA}, cont:${Number((s.cursores && s.cursores.anexosContatos) || 0)}, jan:${Number((s.cursores && s.cursores.anexosJanela) || 0)}, doc:${curD}};
+var ID_MAX=${ANEXOS_ID_MAX};
 var TOT={anexo:${anexT}, doc:${docT}};
 var FEITO={anexo:${anexI}, doc:${docI}};
 var BYTES0=${bytes}, BYTES=0;
@@ -385,6 +434,15 @@ async function rodar(which,btn){var c=CFG[which];PARAR[which]=false;btn.disabled
     if(j.fim){st.textContent='✅ Varredura concluída.'+extra;break;}
     st.textContent='Importando… +'+(j.gravados||0)+' neste lote'+extra;
     await new Promise(function(r){setTimeout(r,150);});}
+  btn.disabled=false;}
+async function rodarJanela(btn){PARAR.jan=false;btn.disabled=true;var st=document.getElementById('janSt');st.textContent='Buscando por faixas de Id…';var trunc=0;
+  while(!PARAR.jan){var j;try{var r=await fetch('/api/diretoria/arquivos-janela?desdeId='+CUR.jan,{method:'POST'});j=await r.json();}catch(e){st.textContent='Erro de conexão — clique de novo para retomar.';break;}
+    if(!j.ok){st.textContent='Parou: '+(j.erro||'erro')+' — clique de novo para retomar.';break;}
+    FEITO.anexo+=(j.gravados||0);if(j.bytes)BYTES+=j.bytes;CUR.jan=j.proximoId;if(j.truncado)trunc++;setBar('anexo');setMB();
+    var pct=Math.min(100,Math.round(CUR.jan/ID_MAX*100));
+    if(j.fim){st.textContent='✅ Varredura completa! '+FEITO.anexo.toLocaleString('pt-BR')+' anexos guardados.'+(trunc?(' ⚠ '+trunc+' faixa(s) cheia(s) — me avise.'):'');break;}
+    st.textContent='Buscando… '+pct+'% da faixa de Ids · '+FEITO.anexo.toLocaleString('pt-BR')+' anexos'+(j.gravados?(' (+'+j.gravados+')'):'');
+    await new Promise(function(r){setTimeout(r,90);});}
   btn.disabled=false;}
 async function rodarCompletar(btn){PARAR.compl=false;btn.disabled=true;var st=document.getElementById('completSt');st.textContent='Revisando cada coleta/cliente pelo filtro direto…';var off=0;
   while(!PARAR.compl){var j;try{var r=await fetch('/api/diretoria/arquivos-completar?offset='+off,{method:'POST'});j=await r.json();}catch(e){st.textContent='Erro de conexão — clique de novo para retomar.';break;}
