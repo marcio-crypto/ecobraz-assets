@@ -117,6 +117,27 @@ jobs:
           echo "Atalho WhatsApp no hero do agendamento:"
           curl -sSL --max-time 30 -A "Mozilla/5.0 (compatible; EcobrazCheck/1.0)" "https://ecobraz.org/agendamento/" \
             | grep -o 'agendamento_hero_whatsapp' | head -1 || echo "  NAO ENCONTRADO"
+      - name: Verificação final do lote 1 (auditoria total)
+        run: |
+          set +e
+          UA="Mozilla/5.0 (compatible; EcobrazAudit/1.0)"
+          echo "== titulos proprios dos canais =="
+          for p in /museu/ /noticias-esg/; do
+            t=$(curl -sSL --max-time 20 -A "$UA" "https://ecobraz.org$p" | grep -oE '<title>[^<]*' | head -1)
+            echo "  $p -> $t"
+          done
+          echo "== hero da pagina B2C sem perfil=empresa =="
+          curl -sSL --max-time 20 -A "$UA" https://ecobraz.org/descarte-de-geladeira-velha/ | grep -oE 'agendamento/\?[^"]*' | head -3 | sed 's/^/  /'
+          echo "== agendamento: method=post, honeypot, atalho WA =="
+          body=$(curl -sSL --max-time 20 -A "$UA" https://ecobraz.org/agendamento/)
+          printf '%s' "$body" | grep -q 'method="post"' && echo "  method=post: SIM" || echo "  method=post: NAO"
+          printf '%s' "$body" | grep -q 'name="website"' && echo "  honeypot website: SIM" || echo "  honeypot: NAO"
+          echo "== og:image absoluta no /blog/ =="
+          curl -sSL --max-time 20 -A "$UA" https://ecobraz.org/blog/ | grep -oE '<meta property="og:image" content="[^"]*' | head -1 | sed 's/^/  /'
+          echo "== hreflang numa pagina comercial (pos-reaplicacao) =="
+          curl -sSL --max-time 20 -A "$UA" https://ecobraz.org/solucoes-corporativas/ | grep -oE '<link rel="alternate" hreflang="[^"]*" href="[^"]*"' | head -3 | sed 's/^/  /'
+          echo "== meta_title corrigido num post que ranqueia =="
+          curl -sSL --max-time 20 -A "$UA" https://ecobraz.org/blog/o-impacto-ambiental-do-descarte-incorreto-de-eletrodomesticos/ | grep -oE '<title>[^<]*' | head -1 | sed 's/^/  /'
       - name: Páginas ao vivo — procurar cards.min.js
         run: |
           set +e
