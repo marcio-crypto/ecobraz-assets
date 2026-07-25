@@ -161,6 +161,49 @@ export async function importarLoteAnexosContatos(env, desdeContactId, topContato
 }
 
 // ---------------------------------------------------------------------------
+// COMPLETAR: o $expand devolve MENOS anexos que o real em algumas coletas. Aqui
+// revisamos cada "pai" (coleta/cliente que já tem anexo no nosso banco) com o
+// FILTRO DIRETO (/Attachments?$filter=DealId eq X) — que é rápido e traz a lista
+// COMPLETA — e importamos o que faltou. Retomável por offset na lista de pais.
+// ---------------------------------------------------------------------------
+export async function completarAnexos(env, offset, limit) {
+  if (!env.PLOOMES_USER_KEY) return { ok: false, erro: 'Falta a chave do Ploomes no cofre.' };
+  if (!env.DB_PLOOMES) return { ok: false, erro: 'Banco D1 não vinculado (DB_PLOOMES).' };
+  if (!env.R2_ARQUIVOS) return { ok: false, erro: 'Depósito R2 ainda não ligado. Ative o R2 no painel da Cloudflare.' };
+  const L = Math.min(Math.max(Number(limit) || 8, 1), 20);
+  const O = Math.max(Number(offset) || 0, 0);
+  let pais;
+  try {
+    const r = await env.DB_PLOOMES.prepare(
+      "SELECT tipo, pid FROM (SELECT 'D' AS tipo, deal_id AS pid FROM arquivos_ploomes WHERE fonte='anexo' AND deal_id IS NOT NULL GROUP BY deal_id UNION SELECT 'C' AS tipo, contact_id AS pid FROM arquivos_ploomes WHERE fonte='anexo' AND deal_id IS NULL AND contact_id IS NOT NULL GROUP BY contact_id) ORDER BY tipo, pid LIMIT ?1 OFFSET ?2",
+    ).bind(L, O).all();
+    pais = r.results || [];
+  } catch (e) { return { ok: false, erro: 'D1: ' + String((e && e.message) || e).slice(0, 100), offset: O }; }
+  let gravados = 0, falhas = 0, bytes = 0, vistos = 0;
+  for (const p of pais) {
+    const campo = p.tipo === 'D' ? 'DealId' : 'ContactId';
+    const full = await reqJSON(env, `/Attachments?$filter=${campo}%20eq%20${Number(p.pid)}&$top=300`, 12000);
+    for (const a of (full.value || [])) {
+      vistos++;
+      const key = `anexo/${a.Id}`;
+      if (await jaImportado(env, key)) continue;   // já tínhamos — não rebaixa
+      let url = a.Url, ct = a.ContentType, fn = a.FileName || a.Name;
+      if (!url) {
+        const one = await reqJSON(env, `/Attachments(${a.Id})`, 10000);
+        const it = one.value && one.value[0];
+        if (it) { url = it.Url; ct = ct || it.ContentType; fn = fn || it.FileName || it.Name; }
+      }
+      if (!url) { falhas++; continue; }
+      const dl = await baixarParaR2(env, key, url, ct);
+      if (!dl.ok) { falhas++; continue; }
+      await gravarMeta(env, { r2_key: key, fonte: 'anexo', ploomes_id: a.Id, deal_id: a.DealId || (p.tipo === 'D' ? p.pid : null), contact_id: a.ContactId || (p.tipo === 'C' ? p.pid : null), nome_arquivo: fn, content_type: dl.contentType, tamanho: dl.tamanho, criado_em: a.CreateDate || '' });
+      gravados++; if (dl.tamanho) bytes += dl.tamanho;
+    }
+  }
+  return { ok: true, paisLidos: pais.length, vistos, gravados, falhas, bytes, proximoOffset: O + pais.length, fim: pais.length < L };
+}
+
+// ---------------------------------------------------------------------------
 // DOCUMENTOS (Documents/propostas) — retomável pelo Id. Cada um: baixa DocumentUrl.
 // ---------------------------------------------------------------------------
 export async function importarLoteDocumentos(env, desdeId, top) {
@@ -300,11 +343,13 @@ export function paginaMigrarArquivos(user, s) {
     <div class="bar"><div id="anexoBar" style="width:${anexPct}%"></div></div>
     <div id="anexoTxt" style="font-size:12px;color:#7c8a87;margin:6px 0 12px">${anexPct}%</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <button class="btn btn-p" onclick="rodar('deal',this)" ${s.r2Ligado ? '' : 'disabled'}>▶ Varrer coletas</button>
-      <button class="btn btn-p" onclick="rodar('cont',this)" ${s.r2Ligado ? '' : 'disabled'}>▶ Varrer clientes</button>
-      <button class="btn btn-g" onclick="PARAR.deal=true;PARAR.cont=true">■ Parar</button>
+      <button class="btn btn-p" onclick="rodarCompletar(this)" ${s.r2Ligado ? '' : 'disabled'}>⟳ Completar (recuperar os que faltaram)</button>
+      <button class="btn btn-g" onclick="rodar('deal',this)" ${s.r2Ligado ? '' : 'disabled'}>Varrer coletas</button>
+      <button class="btn btn-g" onclick="rodar('cont',this)" ${s.r2Ligado ? '' : 'disabled'}>Varrer clientes</button>
+      <button class="btn btn-g" onclick="PARAR.deal=true;PARAR.cont=true;PARAR.compl=true">■ Parar</button>
     </div>
-    <div id="dealSt" style="font-size:12.5px;color:#4F6469;margin-top:10px"></div>
+    <div id="completSt" style="font-size:12.5px;color:#4F6469;margin-top:10px"></div>
+    <div id="dealSt" style="font-size:12.5px;color:#4F6469;margin-top:4px"></div>
     <div id="contSt" style="font-size:12.5px;color:#4F6469;margin-top:4px"></div>
   </div>
   <div class="card">
@@ -340,6 +385,14 @@ async function rodar(which,btn){var c=CFG[which];PARAR[which]=false;btn.disabled
     if(j.fim){st.textContent='✅ Varredura concluída.'+extra;break;}
     st.textContent='Importando… +'+(j.gravados||0)+' neste lote'+extra;
     await new Promise(function(r){setTimeout(r,150);});}
+  btn.disabled=false;}
+async function rodarCompletar(btn){PARAR.compl=false;btn.disabled=true;var st=document.getElementById('completSt');st.textContent='Revisando cada coleta/cliente pelo filtro direto…';var off=0;
+  while(!PARAR.compl){var j;try{var r=await fetch('/api/diretoria/arquivos-completar?offset='+off,{method:'POST'});j=await r.json();}catch(e){st.textContent='Erro de conexão — clique de novo para retomar.';break;}
+    if(!j.ok){st.textContent='Parou: '+(j.erro||'erro')+' — clique de novo para retomar.';break;}
+    FEITO.anexo+=(j.gravados||0);if(j.bytes)BYTES+=j.bytes;off=j.proximoOffset;setBar('anexo');setMB();
+    if(j.fim){st.textContent='✅ Revisão concluída — recuperados os anexos que o expand tinha deixado passar.';break;}
+    st.textContent='Revisando… pai '+off+' de ~1.772 · +'+(j.gravados||0)+' recuperados neste lote';
+    await new Promise(function(r){setTimeout(r,120);});}
   btn.disabled=false;}
 </script></body></html>`;
 }
