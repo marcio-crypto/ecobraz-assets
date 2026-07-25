@@ -1,0 +1,90 @@
+name: Ecobraz — auditoria ao vivo ampla (páginas, sitemap, redirects, form)
+
+# Auditoria profunda do site AO VIVO, rodando num runner do GitHub (o ambiente
+# do assistente é bloqueado pelo Cloudflare). Não altera nada — só leitura.
+#  1) ~35 URLs-chave: status, título, meta description, canonical, GA, Clarity,
+#     botão flutuante (1x), tempo de resposta.
+#  2) Infra: robots.txt, sitemap.xml (+ amostra de 25 páginas e 25 posts com HEAD),
+#     página 404, redirects www/http/lp, favicon, headers de segurança.
+#  3) Formulário: preflight CORS (OPTIONS) no endpoint do Worker — sem criar lead.
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Páginas-chave (status, title, meta, canonical, GA, Clarity, float, tempo)
+        run: |
+          set +e
+          UA="Mozilla/5.0 (compatible; EcobrazAudit/1.0)"
+          urls="/ /en/ /blog/ /agendamento/ /sobre/ /como-funciona/ /coletas-recorrentes/ /logistica-reversa/ /evidencias/ /publicacoes/ /politica-de-privacidade/ /pontos-de-coleta/ /coleta-de-lixo-eletronico/ /coleta-de-lixo-eletronico-para-empresas/ /coleta-de-lixo-eletronico-em-sao-paulo/ /coleta-de-lixo-eletronico-em-guarulhos/ /coleta-de-lixo-eletronico-no-abc/ /coleta-de-lixo-eletronico-em-campinas/ /descarte-de-eletrodomesticos/ /descarte-de-geladeira-velha/ /descarte-de-maquina-de-lavar/ /descarte-de-televisao/ /descarte-de-cabos-e-fios/ /descarte-de-impressoras/ /descarte-de-celulares-e-tablets/ /descarte-de-equipamentos-hospitalares/ /descarte-de-baterias-e-nobreaks/ /solucoes-corporativas/ /solucoes-por-setor/ /materiais-e-equipamentos-coletados/ /programa-adote-um-bairro/ /secure-data-sanitisation/ /industry-solutions/ /materials-we-collect/ /autor/marcio-villanova/ /autor/marcelo-aragao/ /noticias-esg/ /museu/ /public-evidence/ /blog/lixo-eletronico-no-brasil-numeros-atualizados-2025/"
+          for p in $urls; do
+            u="https://ecobraz.org$p"
+            body=$(curl -sSL --max-time 30 -A "$UA" -w "\n__CODE__%{http_code}__TIME__%{time_total}" "$u")
+            code=$(printf '%s' "$body" | grep -o '__CODE__[0-9]*' | sed 's/__CODE__//')
+            t=$(printf '%s' "$body" | grep -o '__TIME__[0-9.]*' | sed 's/__TIME__//')
+            title=$(printf '%s' "$body" | grep -oE '<title>[^<]*' | head -1 | cut -c8-60)
+            [ -n "$title" ] && ttl="T" || ttl="-"
+            printf '%s' "$body" | grep -q 'name="description"' && desc="D" || desc="-"
+            printf '%s' "$body" | grep -q 'rel="canonical"' && can="C" || can="-"
+            printf '%s' "$body" | grep -qE 'googletagmanager|gtag' && ga="G" || ga="-"
+            printf '%s' "$body" | grep -qiE 'clarity' && cl="Y" || cl="-"
+            fl=$(printf '%s' "$body" | grep -o 'hx-wa-float' | wc -l | tr -d ' ')
+            echo "[$code ${t}s $ttl$desc$can$ga$cl f=$fl] $p  ($title)"
+          done
+      - name: Infra (robots, sitemap+amostra, 404, redirects, favicon, headers)
+        run: |
+          set +e
+          UA="Mozilla/5.0 (compatible; EcobrazAudit/1.0)"
+          echo "== robots.txt =="
+          curl -sS --max-time 20 -A "$UA" https://ecobraz.org/robots.txt | head -10
+          echo ""
+          echo "== sitemap index =="
+          curl -sS --max-time 20 -A "$UA" https://ecobraz.org/sitemap.xml | grep -oE '<loc>[^<]*' | sed 's/<loc>//' | head -8
+          for sm in sitemap-pages.xml sitemap-posts.xml; do
+            echo ""
+            echo "== $sm =="
+            urls=$(curl -sS --max-time 20 -A "$UA" "https://ecobraz.org/$sm" | grep -oE '<loc>[^<]*' | sed 's/<loc>//')
+            total=$(echo "$urls" | grep -c .)
+            echo "URLs no $sm: $total — testando amostra de 25 (HEAD):"
+            bad=0
+            for u in $(echo "$urls" | shuf -n 25 --random-source=<(yes 42)); do
+              c=$(curl -sS -o /dev/null --max-time 20 -A "$UA" -w '%{http_code}' "$u")
+              if [ "$c" != "200" ]; then echo "  !! $c $u"; bad=$((bad+1)); fi
+            done
+            echo "amostra: $((25<total?25:total)) testadas, $bad com problema"
+          done
+          echo ""
+          echo "== 404 esperado =="
+          curl -sS -o /dev/null --max-time 20 -A "$UA" -w 'GET /pagina-inexistente-xyz/ -> %{http_code}\n' https://ecobraz.org/pagina-inexistente-xyz/
+          echo ""
+          echo "== redirects básicos =="
+          for u in "http://ecobraz.org/" "https://www.ecobraz.org/" "https://lp.ecobraz.org/" "https://lp.ecobraz.org/qualquer-coisa"; do
+            curl -sS -o /dev/null --max-time 20 -A "$UA" -w "%{http_code} $u -> " "$u"
+            curl -sSI --max-time 20 -A "$UA" "$u" | grep -i '^location:' | head -1 || echo "(sem location)"
+          done
+          echo ""
+          echo "== favicon =="
+          curl -sS -o /dev/null --max-time 20 -A "$UA" -w 'favicon.ico -> %{http_code}\n' https://ecobraz.org/favicon.ico
+          echo ""
+          echo "== headers de segurança (home) =="
+          curl -sSI --max-time 20 -A "$UA" https://ecobraz.org/ | grep -iE '^(strict-transport|x-content-type|x-frame|referrer-policy|content-security|server):' || echo "(nenhum encontrado)"
+      - name: Formulário — endpoint e CORS (sem criar lead)
+        run: |
+          set +e
+          UA="Mozilla/5.0 (compatible; EcobrazAudit/1.0)"
+          ep=$(curl -sSL --max-time 20 -A "$UA" https://ecobraz.org/agendamento/ | grep -oE 'data-endpoint="[^"]*"' | head -1 | sed 's/data-endpoint="//;s/"//')
+          echo "endpoint no HTML: ${ep:-NAO ENCONTRADO}"
+          if [ -n "$ep" ]; then
+            echo "preflight OPTIONS (Origin https://ecobraz.org):"
+            curl -sS -o /dev/null --max-time 20 -X OPTIONS "$ep" \
+              -H "Origin: https://ecobraz.org" -H "Access-Control-Request-Method: POST" \
+              -w '  status: %{http_code}\n'
+            curl -sSI --max-time 20 -X OPTIONS "$ep" -H "Origin: https://ecobraz.org" -H "Access-Control-Request-Method: POST" \
+              | grep -iE '^access-control' | sed 's/^/  /'
+          fi
