@@ -65,6 +65,26 @@ asseguração independente".
 ser validada — nunca como abatimento oficial (princípio do roadmap; mesmo ajuste da
 tela 10 no doc 14).
 
+## 4-bis. Nota do Marcio (25/07/2026) + método de batismo
+
+**Todos os nomes desta arquitetura são ilustrativos** — a decisão final será tomada
+"com inteligência, blindada e com pesquisa de mercado; um nome errado pode brecar a
+venda; tudo pensado para converter ao máximo; cada detalhe conta."
+
+Método travado para quando formos batizar (nomes de módulos, pacotes e telas):
+1. **Clareza vence criatividade**: o nome tem que dizer o que o produto faz em 2
+   segundos para quem nunca ouviu falar (teste: ler só o nome e perguntar "o que
+   você acha que isso é?").
+2. **Sobreviver à auditoria**: nenhum nome pode prometer mais do que entrega
+   (inventário ≠ estimativa; verificado ≠ auditado por terceiro).
+3. **Testar antes de travar**: 2–3 opções de nome apresentadas a 5–10 clientes
+   reais da base (ou nos primeiros pitches da Reconquista) — o que converter mais,
+   fica.
+4. **Blindagem**: checagem INPI + domínio + colisão com marcas do setor antes de
+   qualquer material público.
+5. **Consistência**: o nome no sistema = nome na proposta = nome no site = nome na
+   NF. Nome que muda de tela para tela mata a confiança.
+
 ## 5. Próximos passos
 
 - [ ] Pesquisa de preços (em andamento 25/07): SaaS de carbono BR e internacional,
