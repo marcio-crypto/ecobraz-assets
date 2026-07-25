@@ -220,31 +220,17 @@ export async function diagnosticoAnexos(env) {
   // Negócio com MAIS anexos no nosso banco (consulta local, rápida).
   let topDeal = null;
   try { topDeal = await env.DB_PLOOMES.prepare("SELECT deal_id, COUNT(*) AS n FROM arquivos_ploomes WHERE fonte='anexo' AND deal_id IS NOT NULL GROUP BY deal_id ORDER BY n DESC LIMIT 1").first(); } catch { /* ignore */ }
-  // Um anexo real do nosso banco (para ver TODOS os campos de vínculo dele).
-  let sampleId = null;
-  try { const r = await env.DB_PLOOMES.prepare("SELECT ploomes_id FROM arquivos_ploomes WHERE fonte='anexo' ORDER BY ploomes_id DESC LIMIT 1").first(); sampleId = r && r.ploomes_id ? Number(r.ploomes_id) : null; } catch { /* ignore */ }
   const trabalho = (async () => {
-    const [cnt, one, ord, ordCnt] = await Promise.all([
-      reqJSON(env, '/Attachments?$top=0&$count=true', 8000),
-      sampleId ? reqJSON(env, `/Attachments(${sampleId})`, 8000) : Promise.resolve(null),
-      reqJSON(env, '/Orders?$top=1&$expand=Attachments', 8000),
-      reqJSON(env, '/Orders?$top=0&$count=true', 8000),
-    ]);
+    // Conta os anexos POR EntityId (tipo do dono). Assim vejo exatamente onde estão.
+    const ids = [1, 2, 3, 4, 5, 6, 8, 9, 10];
+    const calls = [reqJSON(env, '/Attachments?$top=0&$count=true', 8000)].concat(
+      ids.map((k) => reqJSON(env, `/Attachments?$filter=EntityId%20eq%20${k}&$top=0&$count=true`, 8000)),
+    );
+    const res = await Promise.all(calls);
     const out = { ok: true };
-    out.countReal = cnt.count != null ? cnt.count : (cnt.erro || `HTTP ${cnt.status}`);
-    // (1) Campos de um anexo real — revela DealId/ContactId e QUALQUER outro campo *Id de vínculo.
-    const a = one && (one.value ? one.value[0] : (one.Id != null ? one : null));
-    if (a) {
-      const vinc = {};
-      for (const k of Object.keys(a)) if (/id$/i.test(k)) vinc[k] = a[k];
-      out.anexoCampos = Object.keys(a);
-      out.anexoVinculos = vinc;
-    } else if (one) { out.anexoErro = one.erro || `HTTP ${one.status}`; }
-    // (2) As OS (Orders) têm anexos? Quantas OS existem?
-    const o = ord && ord.value && ord.value[0];
-    out.ordersTotal = (ordCnt && ordCnt.count != null) ? ordCnt.count : ((ordCnt && ordCnt.erro) || `HTTP ${ordCnt && ordCnt.status}`);
-    out.orderTemAttachments = o ? (Array.isArray(o.Attachments) ? o.Attachments.length : 'sem campo Attachments') : ((ord && ord.erro) || `HTTP ${ord && ord.status}`);
-    out.orderCampos = o ? Object.keys(o) : null;
+    out.countReal = res[0].count != null ? res[0].count : (res[0].erro || `HTTP ${res[0].status}`);
+    const nome = { 1: 'Contato', 2: 'Negócio/Coleta', 3: 'OS (Order)', 4: 'Anotação', 5: 'Interação', 6: 'E-mail', 8: 'Lead', 9: 'Tarefa', 10: 'Documento' };
+    out.porEntidade = ids.map((k, i) => ({ entityId: k, nome: nome[k] || '?', count: res[i + 1].count != null ? res[i + 1].count : (res[i + 1].erro || `HTTP ${res[i + 1].status}`) }));
     return out;
   })();
   // Teto rígido: devolve a página em no máx. 13s, mesmo se o Ploomes travar.
@@ -256,24 +242,12 @@ export function paginaDiagAnexos(user, d) {
   const head = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Diagnóstico de anexos</title>
 <style>body{margin:0;font-family:Montserrat,'Segoe UI',Arial,sans-serif;background:#F2F6F4;color:#10262B}.wrap{max-width:820px;margin:0 auto;padding:20px 18px 56px}.card{background:#fff;border:1px solid #E4EBE9;border-radius:14px;padding:16px;margin-bottom:12px}code{background:#EEF3F1;border-radius:5px;padding:1px 6px;font-size:12.5px}.pill{font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px}</style></head><body><div class="wrap"><a href="/diretoria/migrar-arquivos" style="color:#00333B;font-size:12px;font-weight:800;text-decoration:none">← Arquivos</a>`;
   if (!d || d.ok === false) return `${head}<div class="card" style="color:#8a4b45;margin-top:12px">${esc((d && d.erro) || 'erro')}</div></div></body></html>`;
-  const vinc = d.anexoVinculos || {};
-  const vincLinhas = Object.keys(vinc).length ? Object.entries(vinc).map(([k, v]) => `<div style="font-size:12.5px;padding:2px 0"><code>${esc(k)}</code> = <b>${v == null ? '<span style="color:#b02a37">null (vazio)</span>' : esc(String(v))}</b></div>`).join('') : '<div style="color:#8fa39f;font-size:12.5px">—</div>';
-  const anexoBloco = d.anexoCampos ? `<div class="card">
-    <div style="font-size:13px;font-weight:800;margin-bottom:6px">Campos de vínculo de um anexo real</div>
-    ${vincLinhas}
-    <div style="font-size:11px;color:#8fa39f;margin-top:8px">Todos os campos: ${(d.anexoCampos || []).map((k) => `<code>${esc(k)}</code>`).join(' ')}</div>
-  </div>` : (d.anexoErro ? `<div class="card" style="color:#8a4b45">Anexo: ${esc(d.anexoErro)}</div>` : '');
-  const ordBloco = `<div class="card">
-    <div style="font-size:13px;font-weight:800;margin-bottom:6px">As Ordens de Serviço (OS/Orders) têm anexos?</div>
-    <div style="font-size:12.5px">Total de OS no Ploomes: <b>${esc(String(d.ordersTotal))}</b></div>
-    <div style="font-size:12.5px;margin-top:4px">Uma OS de amostra → anexos: <b>${esc(String(d.orderTemAttachments))}</b></div>
-    ${d.orderCampos ? `<div style="font-size:11px;color:#8fa39f;margin-top:8px">Campos da OS: ${(d.orderCampos || []).map((k) => `<code>${esc(k)}</code>`).join(' ')}</div>` : ''}
-  </div>`;
+  const linhas = (d.porEntidade || []).map((e) => `<tr><td style="padding:6px 8px;border-bottom:1px solid #F2F5F4">${esc(String(e.entityId))}</td><td style="padding:6px 8px;border-bottom:1px solid #F2F5F4">${esc(e.nome)}</td><td style="padding:6px 8px;border-bottom:1px solid #F2F5F4;text-align:right;font-weight:800">${typeof e.count === 'number' ? e.count.toLocaleString('pt-BR') : esc(String(e.count))}</td></tr>`).join('');
   return `${head}
-  <h1 style="font-size:19px;margin:12px 0 4px">Diagnóstico — onde estão os anexos que faltam</h1>
-  <div class="card"><div style="font-size:13px">Total real de anexos no Ploomes: <b>${esc(String(d.countReal))}</b> · no nosso banco já temos <b>4.085</b> (coletas+clientes).</div></div>
-  ${anexoBloco}
-  ${ordBloco}
+  <h1 style="font-size:19px;margin:12px 0 4px">Diagnóstico — anexos por tipo de dono (EntityId)</h1>
+  <div class="card"><div style="font-size:13px">Total real de anexos no Ploomes: <b>${esc(String(d.countReal))}</b> · já temos no banco <b>4.085</b> (Negócio 3.488 + Contato 597).</div></div>
+  <div class="card"><table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr><th style="text-align:left;padding:6px 8px;font-size:10px;text-transform:uppercase;color:#7c8a87">EntityId</th><th style="text-align:left;padding:6px 8px;font-size:10px;text-transform:uppercase;color:#7c8a87">Tipo</th><th style="text-align:right;padding:6px 8px;font-size:10px;text-transform:uppercase;color:#7c8a87">Anexos</th></tr></thead><tbody>${linhas}</tbody></table>
+  <div style="font-size:11.5px;color:#8fa39f;margin-top:8px">O(s) tipo(s) com número grande fora de "Negócio" é onde estão os que faltam — vou varrer aquele tipo.</div></div>
   <div style="font-size:11.5px;color:#8fa39f">Só leitura. Tire um print e me mande.</div>
   </div></body></html>`;
 }
