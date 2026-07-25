@@ -216,27 +216,28 @@ export async function estatisticasArquivos(env) {
 // Só leitura; nada é gravado.
 // ---------------------------------------------------------------------------
 export async function diagnosticoAnexos(env) {
-  const out = { ok: true, testes: [] };
   if (!env.PLOOMES_USER_KEY) return { ok: false, erro: 'Falta a chave do Ploomes.' };
-  const cnt = await reqJSON(env, '/Attachments?$top=0&$count=true', 9000);
+  // Negócio com MAIS anexos no nosso banco (consulta local, rápida).
+  let topDeal = null;
+  try { topDeal = await env.DB_PLOOMES.prepare("SELECT deal_id, COUNT(*) AS n FROM arquivos_ploomes WHERE fonte='anexo' AND deal_id IS NOT NULL GROUP BY deal_id ORDER BY n DESC LIMIT 1").first(); } catch { /* ignore */ }
+  const dealId = topDeal && topDeal.deal_id ? Number(topDeal.deal_id) : null;
+  // TODOS os testes ao Ploomes em PARALELO (em série a página passava de 50s e não abria).
+  const [cnt, t2, t3, exp, df] = await Promise.all([
+    reqJSON(env, '/Attachments?$top=0&$count=true', 10000),
+    reqJSON(env, '/Attachments?$filter=Id%20gt%200&$top=5', 10000),
+    reqJSON(env, '/Attachments?$filter=Id%20gt%200&$top=5&$orderby=Id', 10000),
+    dealId ? reqJSON(env, `/Deals(${dealId})?$expand=Attachments`, 10000) : Promise.resolve(null),
+    dealId ? reqJSON(env, `/Attachments?$filter=DealId%20eq%20${dealId}&$top=0&$count=true`, 10000) : Promise.resolve(null),
+  ]);
+  const out = { ok: true, testes: [] };
   out.countReal = cnt.count != null ? cnt.count : (cnt.erro || `HTTP ${cnt.status}`);
-  // (2a) enumerar por Id SEM $orderby
-  const t2 = await reqJSON(env, '/Attachments?$filter=Id%20gt%200&$top=5', 12000);
   out.testes.push({ nome: 'Attachments Id gt 0 · $top=5 (sem orderby)', status: t2.status, erro: t2.erro, qtd: t2.value ? t2.value.length : null, ids: (t2.value || []).map((a) => a.Id) });
-  // (2b) enumerar por Id COM $orderby
-  const t3 = await reqJSON(env, '/Attachments?$filter=Id%20gt%200&$top=5&$orderby=Id', 12000);
   out.testes.push({ nome: 'Attachments Id gt 0 · $top=5 · $orderby=Id', status: t3.status, erro: t3.erro, qtd: t3.value ? t3.value.length : null, ids: (t3.value || []).map((a) => a.Id) });
-  // (3) $expand corta anexos por registro? Pega o negócio com MAIS anexos no nosso banco.
-  try {
-    const top = await env.DB_PLOOMES.prepare("SELECT deal_id, COUNT(*) AS n FROM arquivos_ploomes WHERE fonte='anexo' AND deal_id IS NOT NULL GROUP BY deal_id ORDER BY n DESC LIMIT 1").first();
-    if (top && top.deal_id) {
-      const exp = await reqJSON(env, `/Deals(${top.deal_id})?$expand=Attachments`, 12000);
-      const dealObj = exp.value && exp.value[0];
-      const expandN = dealObj && Array.isArray(dealObj.Attachments) ? dealObj.Attachments.length : (exp.erro || `HTTP ${exp.status}`);
-      const df = await reqJSON(env, `/Attachments?$filter=DealId%20eq%20${top.deal_id}&$top=0&$count=true`, 9000);
-      out.expandNegocio = { dealId: top.deal_id, nossoBanco: top.n, expandRetornou: expandN, filtroDireto: df.count != null ? df.count : (df.erro || `HTTP ${df.status}`) };
-    }
-  } catch (e) { out.expandNegocio = { erro: String((e && e.message) || e).slice(0, 80) }; }
+  if (dealId) {
+    const dealObj = exp && exp.value && exp.value[0];
+    const expandN = dealObj && Array.isArray(dealObj.Attachments) ? dealObj.Attachments.length : ((exp && exp.erro) || `HTTP ${exp && exp.status}`);
+    out.expandNegocio = { dealId, nossoBanco: topDeal.n, expandRetornou: expandN, filtroDireto: (df && df.count != null) ? df.count : ((df && df.erro) || `HTTP ${df && df.status}`) };
+  }
   return out;
 }
 
