@@ -115,6 +115,11 @@ jobs:
           GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
           GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
         run: node site-ghost/scripts/sync-pages.mjs site-ghost/content/autor-pages.json
+      - name: Reaplica hreflang bilíngue (o sync sobrescreve o codeinjection_head)
+        env:
+          GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
+          GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
+        run: node site-ghost/scripts/aplica-hreflang.mjs
       - name: Instala o gerador de capas dos posts
         run: |
           npm init -y >/dev/null

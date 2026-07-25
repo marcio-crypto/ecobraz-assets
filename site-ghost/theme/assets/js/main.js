@@ -86,9 +86,27 @@
     const profile = params.get('perfil');
     const profileInput = profile && form.querySelector(`[name="profile"][value="${profile === 'pessoa-fisica' ? 'pessoa_fisica' : profile}"]`);
     if (profileInput) profileInput.checked = true;
-    const material = params.get('material');
+    // Landings EN mandam o material em inglês — traduz para a opção PT equivalente do select.
+    const materialMapEn = {'Electronics': 'Eletrônicos', 'IT and computing': 'Informática e TI', 'Servers and data centre': 'Servidores e data center'};
+    const materialRaw = params.get('material');
+    const material = materialMapEn[materialRaw] || materialRaw;
     const materialInput = form.querySelector('[name="material_category"]');
     if (material && materialInput && Array.from(materialInput.options).some((option) => option.value === material)) materialInput.value = material;
+
+    // Continuidade dos mini-formulários do hero (landings): aproveita local/descricao
+    // da URL para a pessoa não redigitar CEP/cidade e a descrição do lote.
+    const local = (params.get('local') || '').trim();
+    if (local) {
+        const cepInput = form.querySelector('[name="postal_code"]');
+        const cityInput = form.querySelector('[name="city"]');
+        if (/^\d{5}-?\d{3}$/.test(local.replace(/\s/g, ''))) { if (cepInput && !cepInput.value) cepInput.value = local; }
+        else if (cityInput && !cityInput.value) cityInput.value = local;
+    }
+    const descricaoLote = (params.get('descricao') || '').trim();
+    if (descricaoLote) {
+        const descInput = form.querySelector('[name="material_description"]');
+        if (descInput && !descInput.value) descInput.value = descricaoLote;
+    }
 
     // Equipamentos hospitalares exigem declaração explícita de ausência de contaminação.
     const hospitalBlock = form.querySelector('[data-hospital-declaration]');

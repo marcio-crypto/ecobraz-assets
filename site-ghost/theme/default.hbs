@@ -20,7 +20,8 @@
       {{#is "post, page, tag, author, error"}}
       <title>{{meta_title}}</title>
       {{else}}
-      <title>Conteúdos sobre lixo eletrônico e reciclagem | Ecobraz</title>
+      {{!-- Canais custom (museu, noticias-esg, blog paginado): título próprio via contentFor, senão o meta_title do Ghost --}}
+      <title>{{#block "routeTitle"}}{{meta_title}}{{/block}}</title>
       {{/is}}
     {{/is}}
     {{#if @custom.ga_measurement_id}}

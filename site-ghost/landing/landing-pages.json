@@ -2687,7 +2687,7 @@
       "eyebrow": "Escopo negativo — declarado sempre",
       "title": "O que NÃO coletamos, em nenhuma hipótese",
       "text": "Pilhas domésticas avulsas (AA, AAA e similares), toner e cartuchos, lâmpadas, óleo, isopor, embalagens e resíduos químicos, biológicos, radioativos ou contaminados. Esses materiais exigem cadeias específicas e não fazem parte dos nossos serviços.",
-      "href": "/agendamento/",
+      "href": "/agendamento/?origem=materiais-e-equipamentos-coletados",
       "linkLabel": "Solicitar coleta do que coletamos"
     },
     "final": {

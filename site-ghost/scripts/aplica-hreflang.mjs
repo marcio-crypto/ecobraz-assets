@@ -11,14 +11,18 @@ const FIM = '<!--/ecb-hreflang-->';
 const adminUrl = String(process.env.GHOST_ADMIN_URL || '').replace(/\/$/, '');
 const adminKey = String(process.env.GHOST_ADMIN_API_KEY || '');
 const [id, secret] = adminKey.split(':');
-const agora = Math.floor(Date.now() / 1000);
 const enc = (v) => Buffer.from(JSON.stringify(v)).toString('base64url');
-const unsigned = `${enc({alg: 'HS256', typ: 'JWT', kid: id})}.${enc({iat: agora, exp: agora + 300, aud: '/admin/'})}`;
-const token = `${unsigned}.${crypto.createHmac('sha256', Buffer.from(secret, 'hex')).update(unsigned).digest('base64url')}`;
-const headers = {Authorization: `Ghost ${token}`, 'Accept-Version': 'v5.0', 'Content-Type': 'application/json'};
+// Token novo a cada chamada: o JWT do Ghost vale 5 min e este script roda ~500
+// requisições — um token único morria no meio de execuções longas (401).
+const makeHeaders = () => {
+  const agora = Math.floor(Date.now() / 1000);
+  const unsigned = `${enc({alg: 'HS256', typ: 'JWT', kid: id})}.${enc({iat: agora, exp: agora + 300, aud: '/admin/'})}`;
+  const token = `${unsigned}.${crypto.createHmac('sha256', Buffer.from(secret, 'hex')).update(unsigned).digest('base64url')}`;
+  return {Authorization: `Ghost ${token}`, 'Accept-Version': 'v5.0', 'Content-Type': 'application/json'};
+};
 
 const api = async (method, path, body) => {
-  const r = await fetch(`${adminUrl}/ghost/api/admin/${path}`, {method, headers, body: body ? JSON.stringify(body) : undefined});
+  const r = await fetch(`${adminUrl}/ghost/api/admin/${path}`, {method, headers: makeHeaders(), body: body ? JSON.stringify(body) : undefined});
   if (!r.ok) throw new Error(`${method} ${path}: ${r.status} ${(await r.text()).slice(0, 300)}`);
   return r.json();
 };
