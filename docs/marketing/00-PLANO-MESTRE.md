@@ -42,6 +42,16 @@
   não leiloa, não descarta com terceiro) + **mínimo 1 descarte por trimestre**.
 - Objetivo: o cliente enxergar mais vantagem no contrato do que na venda do material
   em leilão. Consignação (docs 04–06) permanece como degrau de resgate, via Ltda.
+- **Adendo (Marcio, 25/07): a documentação sai em TRÊS padrões** — legislação
+  brasileira, legislação europeia e **o padrão que os bancos pedem em linhas de
+  crédito sustentável**. Regra de linguagem para o padrão bancário: dizer
+  "documentação no padrão que bancos exigem para linhas de crédito sustentável /
+  ESG-linked" e "pode contribuir para o acesso a melhores condições" — NUNCA
+  prometer "seu crédito vai ficar mais barato" (a decisão de taxa é do banco;
+  promessa de resultado financeiro de terceiro quebra o padrão de honestidade e
+  pode gerar passivo). ⚠️ Validar com o Marcio quais exigências bancárias
+  específicas o sistema cobre (Febraban/autorregulação, KPIs de sustentability-linked
+  loans) para o material citar com precisão.
 
 Refinamentos de proteção (propostos pela equipe, 25/07):
 1. **Linguagem (respondido pelo Marcio em 25/07):** quem valida é a **Villanova ESG**
