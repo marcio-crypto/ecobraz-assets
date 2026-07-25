@@ -37,6 +37,29 @@
 Nota: mesmo que o cliente conteste cada linha, a força do pitch está em ELE fazer a
 conta — qualquer número que ele disser já é maior que zero.
 
+## 3-bis. O comparativo definitivo — "Vender ou Descartar?" (Marcio, 25/07/2026)
+
+A comparação sempre fechada no **horizonte de 36 meses** (o prazo do contrato):
+
+| | **Vender/leiloar o material** | **Contrato Ecobraz** |
+|---|---|---|
+| O que você recebe | Um valor baixo, uma vez — imaterial para uma grande corporação | R$ 0 pelo material |
+| O que acontece com o material | O comprador faz **o que quiser** — você vendeu, ele não tem obrigação de documentar nada | Rastreado doca→destino, pesado, certificado com QR |
+| Documentação para o seu ESG | **Nenhuma** — a venda não gera evidência utilizável | Dossiê completo: BR + UE/Escopo 3 + padrão bancário |
+| Seus custos de ESG (sistema + gente + validação) | **Continuam todos** (~R$ 90–240 mil/ano, estimativa) | **Zerados ou reduzidos** — entregamos mastigado |
+| Risco (LGPD, passivo ambiental, reputação) | **Todo seu** — e a responsabilidade não viaja com o lote (Lei 12.305) | Zero — com prova |
+| Crédito bancário | Taxa cheia | Pode **pleitear** linhas sustentáveis com dossiê auditável |
+| **Conta em 36 meses (ilustrativa)** | **+R$ 150 mil (venda) − R$ 270 a 720 mil (custos ESG que continuam) − risco = NEGATIVA** | **+R$ 270 a 720 mil de economia + risco zero = POSITIVA** |
+
+**O insight da materialidade (usar com decisor sênior):** o dinheiro da venda é
+irrelevante na escala de uma grande corporação (não move nenhum indicador); o risco
+e os custos recorrentes de ESG são materiais. Vender otimiza o número que não importa
+e piora os dois que importam.
+
+**A frase-síntese:** *"Vender o material não é receita — é trocar uma economia anual
+de seis dígitos por um troco único, ficando com todos os custos e todos os riscos.
+Na ponta do lápis, descartar com a Ecobraz rende mais."*
+
 ## 4. Regras de honestidade (travadas no plano-mestre, valem aqui)
 
 - "**Pode pleitear** crédito mais barato" ✅ · "seu crédito FICA mais barato" ❌
