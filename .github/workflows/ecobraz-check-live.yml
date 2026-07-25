@@ -24,6 +24,9 @@ jobs:
             "https://ecobraz.org/public/cards.min.js" \
             "https://ecobraz.org/public/cards.min.js?v=df3fd72764" \
             "https://ecobraz.org/public/cards.min.css" \
+            "https://ecobraz.org/public/cards.min.css?v=df3fd72764" \
+            "https://ecobraz.org/public/cards.min.css?v=54730c7ae2" \
+            "https://ecobraz.org/public/cards.min.js?v=54730c7ae2" \
             "https://ecobraz.org/public/ghost-sdk.min.js"; do
             echo "===================================================="
             echo "URL: $u"

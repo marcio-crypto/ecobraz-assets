@@ -1,0 +1,77 @@
+name: Ecobraz — puxar insights do Clarity (API)
+
+# Puxa os dados do Microsoft Clarity (project-live-insights) usando a chave de
+# API guardada no segredo CLARITY_API_TOKEN. A API do Clarity só devolve os
+# ÚLTIMOS 1 a 3 dias (é o limite dela) e no máximo ~10 chamadas por dia.
+#
+# Este workflow faz 2 chamadas: (1) totais e (2) por página (dimension1=URL),
+# e imprime o JSON já organizado. A chave NUNCA é impressa.
+#
+# Como configurar (feito pelo Marcio, uma vez):
+#   1) No Clarity: Settings (Configurações) -> Data export -> Generate new API token.
+#   2) No GitHub: repo Settings -> Secrets and variables -> Actions ->
+#      New repository secret -> Name: CLARITY_API_TOKEN -> Secret: (colar a chave) -> Add secret.
+
+on:
+  workflow_dispatch:
+    inputs:
+      num_days:
+        description: 'Quantos dias (1 a 3 — limite da API do Clarity)'
+        type: choice
+        options: ['1', '2', '3']
+        default: '3'
+
+permissions:
+  contents: read
+
+jobs:
+  clarity:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Buscar insights do Clarity
+        env:
+          CLARITY_API_TOKEN: ${{ secrets.CLARITY_API_TOKEN }}
+          NUM_DAYS: ${{ inputs.num_days }}
+        run: |
+          node --input-type=module <<'NODE'
+          const token = String(process.env.CLARITY_API_TOKEN || '');
+          const days = ['1','2','3'].includes(process.env.NUM_DAYS) ? process.env.NUM_DAYS : '3';
+          if (!token) { console.log('Falta o segredo CLARITY_API_TOKEN. Configure conforme o cabeçalho deste workflow.'); process.exit(1); }
+          const BASE = 'https://www.clarity.ms/export-data/api/v1/project-live-insights';
+          const H = { Authorization: `Bearer ${token}` };
+
+          const call = async (extra) => {
+            const url = `${BASE}?numOfDays=${days}${extra || ''}`;
+            const r = await fetch(url, { headers: H });
+            const txt = await r.text();
+            if (!r.ok) {
+              console.log(`Chamada falhou (HTTP ${r.status}). Resposta: ${txt.slice(0,300)}`);
+              if (r.status === 401 || r.status === 403) console.log('  >> Token inválido/sem permissão — gere um novo no Clarity (Settings -> Data export).');
+              if (r.status === 429) console.log('  >> Limite de chamadas do dia atingido (a API permite ~10/dia). Tente amanhã.');
+              return null;
+            }
+            try { return JSON.parse(txt); } catch { console.log('Resposta não-JSON:', txt.slice(0,300)); return null; }
+          };
+
+          const show = (title, data) => {
+            console.log(`\n================= ${title} =================`);
+            if (!data) { console.log('(sem dados)'); return; }
+            const arr = Array.isArray(data) ? data : [data];
+            for (const m of arr) {
+              const name = m.metricName || m.metric || '(métrica)';
+              console.log(`\n### ${name}`);
+              const info = m.information || m.info || [];
+              for (const row of (Array.isArray(info) ? info : [info])) {
+                console.log('  ' + JSON.stringify(row));
+              }
+            }
+          };
+
+          console.log(`Período: últimos ${days} dia(s). (A API do Clarity só cobre até 3 dias.)`);
+          const totals = await call('');
+          show('TOTAIS (sem dimensão)', totals);
+          const byUrl = await call('&dimension1=URL');
+          show('POR PÁGINA (dimension1=URL)', byUrl);
+          const byDevice = await call('&dimension1=Device');
+          show('POR DISPOSITIVO (dimension1=Device)', byDevice);
+          NODE
