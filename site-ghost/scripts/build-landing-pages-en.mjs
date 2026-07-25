@@ -58,6 +58,7 @@ function renderTemplate(p) {
   const related = p.related.map((r) => `<a class="hx-sol" href="{{@site.url}}${r.href}"><span class="hx-icon">${icons[r.icon] || icons.box}</span><h3>${esc(r.title)}</h3><p>${esc(r.text)}</p><span class="hx-go">View solution →</span></a>`).join('\n        ');
 
   return `{{!< default}}
+{{#contentFor "htmlLang"}}en{{/contentFor}}
 {{! Gerado por scripts/build-landing-pages.mjs a partir de landing/landing-pages-en.json — nao edite a mao. }}
 {{#contentFor "head"}}
 <link rel="stylesheet" href="{{asset "css/landing.css"}}">
@@ -248,7 +249,6 @@ ${referenciaSection(p, slug)}<section class="hx-block" style="padding-top:0">
   </div>
 </section>
 
-<a class="hx-wa-float" href="{{@custom.whatsapp_url}}" rel="noopener" aria-label="Talk on WhatsApp" data-track="${slug}_whatsapp_flutuante">${wa}<span>Talk on WhatsApp</span></a>
 `;
 }
 
@@ -267,6 +267,7 @@ function renderHubTemplate(p) {
 </section>`).join('\n\n');
 
   return `{{!< default}}
+{{#contentFor "htmlLang"}}en{{/contentFor}}
 {{! Gerado por scripts/build-landing-pages.mjs a partir de landing/landing-pages-en.json — nao edite a mao. }}
 {{#contentFor "head"}}
 <link rel="stylesheet" href="{{asset "css/landing.css"}}">
@@ -318,7 +319,6 @@ ${referenciaSection(p, slug)}<section class="hx-block alt">
   </div>
 </section>
 
-<a class="hx-wa-float" href="{{@custom.whatsapp_url}}" rel="noopener" aria-label="Talk on WhatsApp" data-track="${slug}_whatsapp_flutuante">${wa}<span>Talk on WhatsApp</span></a>
 `;
 }
 

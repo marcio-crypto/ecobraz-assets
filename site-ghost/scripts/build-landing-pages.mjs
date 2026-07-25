@@ -248,7 +248,6 @@ ${referenciaSection(p, slug)}<section class="hx-block" style="padding-top:0">
   </div>
 </section>
 
-<a class="hx-wa-float" href="{{@custom.whatsapp_url}}" rel="noopener" aria-label="Falar no WhatsApp" data-track="${slug}_whatsapp_flutuante">${wa}<span>Falar no WhatsApp</span></a>
 `;
 }
 
@@ -318,7 +317,6 @@ ${referenciaSection(p, slug)}<section class="hx-block alt">
   </div>
 </section>
 
-<a class="hx-wa-float" href="{{@custom.whatsapp_url}}" rel="noopener" aria-label="Falar no WhatsApp" data-track="${slug}_whatsapp_flutuante">${wa}<span>Falar no WhatsApp</span></a>
 `;
 }
 
