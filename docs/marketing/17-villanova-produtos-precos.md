@@ -5,8 +5,45 @@
 > (que fornece o Escopo 3 executado, inclusive via Adote um Bairro).
 > Produtos pensados por ele: consultoria · avaliação de documentos · montagem e
 > acompanhamento de projeto baseado no Adote um Bairro.
-> **Status: proposta de estruturação; preços preliminares aguardando a pesquisa de
-> benchmarks europeus (em andamento) e o martelo do Marcio.**
+> **Status: estrutura + preços CALIBRADOS pela pesquisa europeia de 25/07/2026 —
+> aguardando o martelo do Marcio.** (Seção 5 = tabela final calibrada; as faixas
+> preliminares das seções 1.x foram substituídas por ela.)
+
+## 5. TABELA CALIBRADA (pós-pesquisa europeia — para o martelo)
+
+**O que a pesquisa mandou corrigir:** minha proposta preliminar estava BARATA demais
+no P3. Dados: boutique europeia entrega CSRD por €25–75 mil (Big 4: €150 mil — o
+mercado já aceita boutique a 25–40% do preço); readiness assessment €5–15 mil;
+retainer ESG €2–15 mil/mês; consultoria Scope 3 €15–25 mil; e a regra que a fonte
+italiana confirma: **preço baixo demais sinaliza baixa qualidade num mercado que usa
+preço como proxy** — a Villanova deve se posicionar no PISO da faixa boutique, nunca
+abaixo dela. Com custo de entrega brasileiro, o piso europeu já dá margem excelente.
+
+| Produto | Preço calibrado | Âncora de mercado |
+|---|---|---|
+| **P1a — Diagnóstico SEMM da filial/empresa** | **€ 6.500** (pequena) / **€ 9.500** (média) / **€ 14.500** (grande/multi-site) | CSRD readiness €5–15 mil; PMI Itália €5–25 mil |
+| **P1b — Assessment SEMM por fornecedor** (para o comprador europeu avaliar a cadeia) | **€ 1.900/fornecedor** · pacote-piloto 5 fornecedores **€ 8.500** | acima do EcoVadis (€270–1.400, questionário raso), na faixa do SMETA (€1.500–2.500, sem leitura regulatória) — exatamente no vão do mercado |
+| **P2 — Gestão Documental Contínua (retainer)** | **€ 1.900/mês** (essencial) / **€ 2.900/mês** (padrão) / **€ 4.500/mês** (com SLA e volume definidos) — contrato anual | retainers ESG €2–15 mil/mês; abaixo de €1.500 vira "helpdesk" (regra da pesquisa) |
+| **P3 — Programa Escopo 3 Brasil (com Ecobraz/Adote)** | **Setup € 12.000** (pequeno) **a € 20.000** (médio+) + **acompanhamento € 2.500/mês** (12m, relatório anual incluído) · cotas Adote à parte, em R$ pela Ecobraz (tabela v2) | consultoria Scope 3 €15–25 mil; implementação boutique €25–75 mil; setup abaixo de €12 mil minaria credibilidade |
+| **P4 — Verificação avulsa de dossiê/relatório** | **€ 3.500–7.500** por escopo | SPO de mercado: US$ 10–100 mil (acadêmico); verificação ABNT BR R$ 7,2 mil |
+
+**Regras comerciais calibradas:**
+- **Sem desconto de tabela.** Entrada de cliente novo = **piloto com escopo reduzido a
+  preço cheio por unidade** (ex.: 3 fornecedores em vez de 10) ou 1º fornecedor
+  bonificado mediante case com autorização — nunca preço baixo permanente (impossível
+  subir depois; sinaliza pouco valor).
+- Posicionamento de venda: a Villanova ocupa o **vão** entre o questionário EcoVadis
+  (barato e raso), a auditoria SMETA (pontual, sem tradução regulatória) e a
+  consultoria CSRD local (cara e sem braço no Brasil) — ninguém entrega "documentação
+  do fornecedor brasileiro lida em chave CSRD/EUDR/CBAM". Frase: *"a boutique de
+  Milão não tem gente no Brasil; a auditoria tem gente mas não tem leitura; nós temos
+  os dois."*
+- Lacuna aproveitável: consultoria EUDR **não tem preço público em lugar nenhum** e
+  as plataformas (€12–150 mil/ano) são desproporcionais para operadores pequenos —
+  espaço para propor por fase fechada, sem âncora contra nós.
+- Potencial ilustrativo: 3 diagnósticos + 2 retainers padrão + 1 programa P3 no 1º
+  ano ≈ **€ 90–110 mil (~R$ 550–680 mil/ano)** — com estrutura de custo brasileira.
+  ⚠️ Estimativa; depende de fechar os primeiros contratos na viagem/ABM.
 
 ## 1. O portfólio estruturado (4 produtos, funil claro)
 
