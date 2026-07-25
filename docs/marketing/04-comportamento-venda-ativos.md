@@ -102,9 +102,10 @@ real desse vazamento de receita.
 - Persona 4 (quem quer vender) passa a ter DUAS respostas: o argumento de risco
   (Movimento 1) e a alternativa que preserva a receita (Movimento 2, se aprovado).
 - A calculadora de risco (Fase 2) usa os números da seção 2, com as fontes.
-- Nota: a pesquisa encontrou lotes de "VM Eletrônicos" no Superbid — verificar com o
-  Marcio se é estrutura do próprio grupo (o e-mail do CNPJ da Villanova é
-  vmeletronicoss@gmail.com); se for, o canal de leilão certificado já existe dentro de casa.
+- **Canal confirmado (Marcio, 25/07/2026):** a Ecobraz já tem contrato com a Superbid
+  e com a Kawara e costuma vender lá — **nunca nada que armazene dados**. O canal de
+  leilão do modelo já existe dentro de casa; cenários numéricos em
+  `05-consignacao-cenarios.md`.
 
 ## 5. Pendências
 
