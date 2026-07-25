@@ -1,5 +1,18 @@
 # Blueprint dos Sites — diagnóstico consolidado + plano de reforma (para aprovação)
 
+> **RE-VALIDAÇÃO AO VIVO (25/07/2026, ~21h UTC — a pedido do Marcio, que corrigiu
+> itens no site):** auditoria ao vivo via runner (40 páginas todas 200, sitemap ok,
+> redirects ok, CORS ok) + exportação do conteúdo real do Ghost comparada.
+> Resultado: ✅ já corrigido ao vivo — "gratuita" agora aparece nas páginas PF
+> (geladeira, eletrodomésticos, coleta-de-lixo-eletronico) e o title da home está
+> neutro ("Coleta e descarte de lixo eletrônico"), não mais corporativo.
+> ✔️ CONFIRMADOS ao vivo (continuam valendo): /solucoes-corporativas/, /agendamento/
+> e /programa-adote-um-bairro/ seguem com ZERO menções a portal/sistema/QR/36 meses/
+> exclusividade — os achados nº 4 e 5 (sistema não é vendido; modelo comercial
+> ausente) permanecem os centrais do blueprint. Limitação declarada: a exportação não
+> traz data de edição por página, e o site bloqueia leitura direta deste ambiente —
+> a comparação foi por conteúdo, não por data.
+
 > Consolida as 3 análises de 25/07/2026 (UX/conversão Ecobraz · pesquisa CRO ·
 > UX/conversão Villanova — relatórios completos nos agentes). **Aguarda aprovação do
 > Marcio antes de qualquer execução.** Guardrails de SEO: doc 18 (invioláveis).
