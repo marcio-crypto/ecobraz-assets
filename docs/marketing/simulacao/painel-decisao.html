@@ -1,0 +1,207 @@
+<!-- Painel de decisão — Ecobraz: vale a pena seguir o caminho? -->
+<meta charset="utf-8">
+<title>Ecobraz — Vale a pena? Probabilidades do caminho</title>
+<style>
+  .viz-root{
+    color-scheme:light;
+    --surface-1:#fcfcfb; --surface-2:#f2f1ee;
+    --text-primary:#0b0b0b; --text-secondary:#52514e; --text-muted:#8a887f;
+    --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100;
+    --neutral:#9b998f; --good:#008300; --grid:#e3e2dd;
+    font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
+    background:var(--surface-1); color:var(--text-primary);
+    max-width:880px; margin:0 auto; padding:24px 16px 48px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:where(:not([data-theme="light"])) .viz-root{
+      color-scheme:dark;
+      --surface-1:#1a1a19; --surface-2:#242422;
+      --text-primary:#fff; --text-secondary:#c3c2b7; --text-muted:#8a887f;
+      --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
+      --neutral:#8a887f; --good:#1baf7a; --grid:#33332f;
+    }
+  }
+  :root[data-theme="dark"] .viz-root{
+    color-scheme:dark;
+    --surface-1:#1a1a19; --surface-2:#242422;
+    --text-primary:#fff; --text-secondary:#c3c2b7; --text-muted:#8a887f;
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
+    --neutral:#8a887f; --good:#1baf7a; --grid:#33332f;
+  }
+  h1{font-size:22px;margin:0 0 4px} h2{font-size:15px;margin:34px 0 2px}
+  .sub{color:var(--text-secondary);font-size:12.5px;margin:0 0 14px}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:14px}
+  .tile{background:var(--surface-2);border-radius:10px;padding:14px 16px}
+  .tile .v{font-size:26px;font-weight:700} .tile .l{font-size:12px;color:var(--text-secondary);margin-top:2px;line-height:1.35}
+  .verdict{border-left:4px solid var(--good)}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--text-secondary);margin:6px 0 2px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .sw{width:14px;height:3px;border-radius:2px;display:inline-block}
+  .dot{width:10px;height:10px;border-radius:3px;display:inline-block}
+  svg{max-width:100%;height:auto;display:block}
+  .chartwrap{overflow-x:auto}
+  #tip{position:fixed;pointer-events:none;background:var(--text-primary);color:var(--surface-1);
+       font-size:12px;padding:6px 9px;border-radius:6px;opacity:0;transition:opacity .08s;z-index:9;max-width:240px}
+  .note{font-size:11.5px;color:var(--text-muted);line-height:1.5;margin-top:8px}
+  .foot{margin-top:36px;border-top:1px solid var(--grid);padding-top:14px;font-size:12px;color:var(--text-secondary);line-height:1.6}
+  table.tbl{border-collapse:collapse;font-size:12px;margin-top:8px}
+  .tbl td,.tbl th{padding:4px 10px;border-bottom:1px solid var(--grid);text-align:right}
+  .tbl th:first-child,.tbl td:first-child{text-align:left}
+</style>
+<div class="viz-root">
+  <h1>Vale a pena seguir esse caminho?</h1>
+  <p class="sub">Simulação de Monte Carlo — 20.000 cenários, 24 meses, premissas conservadoras · Ecobraz, 25/07/2026<br>
+  Caminho = Reconquista da base (contrato 36m + sistema) + Adote um Bairro + serviços + piloto de consignação</p>
+
+  <div class="tiles">
+    <div class="tile verdict"><div class="v">SIM ✅</div><div class="l">Veredito: em <b>99%</b> dos cenários o faturamento fica MAIOR que os R$ 350 mil de hoje já no mês 12</div></div>
+    <div class="tile"><div class="v" id="t1">R$ 444 mil</div><div class="l">Faturamento mensal mais provável no mês 12 (mediana) — faixa típica: R$ 379 a 563 mil</div></div>
+    <div class="tile"><div class="v">72%</div><div class="l">Chance de atingir R$ 450 mil/mês em 24 meses (46% já em 12 meses)</div></div>
+    <div class="tile"><div class="v">40%</div><div class="l">Chance da meta cheia (R$ 550 mil/mês) em 24 meses — em 12 meses: 12%</div></div>
+  </div>
+  <p class="note">Não fazer nada: nos mesmos cenários, a base atual <b>erode para ~R$ 334 mil</b> no mês 12 (o mercado que derrubou de R$ 1 mi para 350 mil continua agindo). O risco de agir é limitado; o risco de não agir é certo.</p>
+
+  <h2>Trajetória do faturamento — caminho novo vs. não fazer nada</h2>
+  <p class="sub">Linha azul = mediana do caminho; faixa azul = 80% dos cenários (P10–P90); linha cinza = seguir como está.</p>
+  <div class="legend">
+    <span><span class="sw" style="background:var(--s1)"></span>Caminho novo (mediana)</span>
+    <span><span class="sw" style="background:var(--s1);opacity:.25;height:10px"></span>Faixa de 80% dos cenários</span>
+    <span><span class="sw" style="background:var(--neutral)"></span>Não fazer nada</span>
+    <span><span class="sw" style="background:var(--text-muted);height:1px;border-top:2px dotted var(--text-muted);background:none"></span>Metas (450 / 550)</span>
+  </div>
+  <div class="chartwrap"><svg id="fan" width="840" height="330" viewBox="0 0 840 330" role="img" aria-label="Trajetória de faturamento simulada em 24 meses"></svg></div>
+
+  <h2>De onde vem o dinheiro novo (mês 12, cenário mediano)</h2>
+  <p class="sub">A Reconquista da base é o motor — o resto complementa. Consignação e serviços só aparecem nos cenários otimistas.</p>
+  <div class="legend">
+    <span><span class="dot" style="background:var(--neutral)"></span>Base atual (erodida)</span>
+    <span><span class="dot" style="background:var(--s1)"></span>Reconquista (contratos)</span>
+    <span><span class="dot" style="background:var(--s2)"></span>Adote um Bairro</span>
+    <span><span class="dot" style="background:var(--s3)"></span>Serviços + consignação</span>
+  </div>
+  <div class="chartwrap"><svg id="stack" width="840" height="110" viewBox="0 0 840 110" role="img" aria-label="Composição do faturamento no mês 12"></svg></div>
+
+  <h2>As probabilidades, uma a uma</h2>
+  <div class="chartwrap"><svg id="probs" width="840" height="240" viewBox="0 0 840 240" role="img" aria-label="Probabilidades de cada marco"></svg></div>
+
+  <h2>Leitura honesta</h2>
+  <div class="foot" style="border:none;padding:0;margin-top:6px">
+    <b>1.</b> O caminho quase certamente melhora o faturamento (99%) e provavelmente leva a ~R$ 444 mil/mês em 1 ano — mas a <b>meta cheia de R$ 550 mil é história de 18–24 meses</b>, não de 12 (40% em 24m). Quem prometer diferente estará chutando.<br>
+    <b>2.</b> O motor é um só: <b>recuperar doadores com o contrato de 36 meses + sistema</b> (~R$ 89 mil/mês novos no cenário mediano). Adote, serviços e consignação somam, mas não carregam o piano.<br>
+    <b>3.</b> O que mais derruba os cenários ruins: execução com equipe pequena (modelada: 25% de chance de entregar só 30–60% do plano) e taxa de conversão da base morna — <b>os primeiros 30 dias de campanha substituem esses chutes por dados reais.</b><br>
+    <b>4.</b> Não fazer nada perde em 100% dos cenários simulados.
+  </div>
+
+  <details style="margin-top:18px"><summary style="font-size:12.5px;color:var(--text-secondary);cursor:pointer">Ver os números em tabela + premissas</summary>
+    <table class="tbl"><tr><th>Métrica</th><th>Mês 12</th><th>Mês 24</th></tr>
+      <tr><td>Cenário ruim (P10)</td><td>R$ 379 mil</td><td>R$ 397 mil</td></tr>
+      <tr><td>Mediana (P50)</td><td>R$ 444 mil</td><td>R$ 515 mil</td></tr>
+      <tr><td>Cenário bom (P90)</td><td>R$ 563 mil</td><td>R$ 743 mil</td></tr>
+      <tr><td>P(≥ R$ 450 mil)</td><td>46%</td><td>72%</td></tr>
+      <tr><td>P(≥ R$ 550 mil)</td><td>12%</td><td>40%</td></tr>
+      <tr><td>Não fazer nada (mediana)</td><td>R$ 334 mil</td><td>R$ 318 mil</td></tr>
+    </table>
+    <p class="note">Premissas conservadoras (todas editáveis no script <code>docs/marketing/simulacao/mc-caminho-completo.py</code>): funil da base morna com resposta 10–30%, proposta 30–60%, fechamento 15–40%; R$ 4–15 mil/mês de material por contrato recuperado; Adote 0–6 cotas até o mês 12 (teto de capacidade R$ 32 mil/mês); consignação só em 40% dos cenários (jurídico + piloto); 25% de chance de execução parcial (30–60% do plano); erosão da base de 0 a −0,8%/mês. Números = estimativas para decisão, não promessa — serão recalibrados com os dados reais das primeiras semanas.</p>
+  </details>
+</div>
+<div id="tip"></div>
+<script>
+const css = v => getComputedStyle(document.querySelector('.viz-root')).getPropertyValue(v).trim();
+const fmt = v => 'R$ ' + Math.round(v/1000) + ' mil';
+const tip = document.getElementById('tip');
+function showTip(ev, html){ tip.innerHTML = html; tip.style.opacity = 1;
+  tip.style.left = Math.min(ev.clientX + 12, innerWidth - 250) + 'px'; tip.style.top = (ev.clientY + 14) + 'px'; }
+function hideTip(){ tip.style.opacity = 0; }
+
+// ---------- dados da simulação (mc_caminho_completo.py, 25/07/2026) ----------
+const p10=[350,348,346,353,361,363,365,367,370,372,374,377,379,381,382,384,385,387,388,390,391,393,394,396,397];
+const p50=[350,350,349,364,385,392,399,407,414,421,429,436,444,450,455,462,467,473,479,485,491,497,503,509,515];
+const p90=[350,351,352,382,430,446,463,480,496,513,529,546,563,578,592,608,623,638,653,668,683,698,713,727,743];
+const sq =[350,349,347,346,344,343,342,340,339,338,336,335,334,332,331,330,328,327,326,324,323,322,320,319,318];
+
+// ---------- gráfico 1: trajetória (fan) ----------
+(function(){
+  const svg=document.getElementById('fan'); const W=840,H=330,L=56,R=14,T=12,B=34;
+  const ymin=300, ymax=760;
+  const X=m=>L+(W-L-R)*m/24, Y=v=>T+(H-T-B)*(1-(v-ymin)/(ymax-ymin));
+  let g='';
+  for(const gv of [300,400,500,600,700]){
+    g+=`<line x1="${L}" x2="${W-R}" y1="${Y(gv)}" y2="${Y(gv)}" stroke="${css('--grid')}" stroke-width="1"/>`+
+       `<text x="${L-8}" y="${Y(gv)+4}" text-anchor="end" font-size="11" fill="${css('--text-secondary')}">${gv}</text>`;
+  }
+  for(const m of [0,3,6,9,12,15,18,21,24])
+    g+=`<text x="${X(m)}" y="${H-18}" text-anchor="middle" font-size="11" fill="${css('--text-secondary')}">${m}</text>`;
+  g+=`<text x="${L-40}" y="${T+2}" font-size="10.5" fill="${css('--text-muted')}">R$ mil/mês</text>`;
+  g+=`<text x="${W/2}" y="${H-3}" font-size="10.5" text-anchor="middle" fill="${css('--text-muted')}">meses a partir de hoje</text>`;
+  // metas
+  for(const [mv,lab] of [[550,'meta R$ 550 mil'],[450,'R$ 450 mil']])
+    g+=`<line x1="${L}" x2="${W-R}" y1="${Y(mv)}" y2="${Y(mv)}" stroke="${css('--text-muted')}" stroke-width="1.5" stroke-dasharray="2 5"/>`+
+       `<text x="${W-R}" y="${Y(mv)-5}" text-anchor="end" font-size="11" fill="${css('--text-secondary')}">${lab}</text>`;
+  // banda P10-P90
+  let band='M'+p10.map((v,m)=>`${X(m)},${Y(v)}`).join(' L');
+  band+=' L'+p90.map((v,m)=>`${X(24-m)},${Y(p90[24-m])}`).join(' L')+' Z';
+  g+=`<path d="${band}" fill="${css('--s1')}" opacity="0.18"/>`;
+  const line=a=>'M'+a.map((v,m)=>`${X(m)},${Y(v)}`).join(' L');
+  g+=`<path d="${line(sq)}" fill="none" stroke="${css('--neutral')}" stroke-width="2"/>`;
+  g+=`<path d="${line(p50)}" fill="none" stroke="${css('--s1')}" stroke-width="2.5"/>`;
+  g+=`<text x="${X(24)-4}" y="${Y(p50[24])-8}" text-anchor="end" font-size="11.5" font-weight="600" fill="${css('--text-primary')}">R$ ${p50[24]} mil</text>`;
+  g+=`<text x="${X(24)-4}" y="${Y(sq[24])+15}" text-anchor="end" font-size="11" fill="${css('--text-secondary')}">R$ ${sq[24]} mil</text>`;
+  g+=`<line id="cross" y1="${T}" y2="${H-B}" stroke="${css('--text-muted')}" stroke-width="1" opacity="0"/>`;
+  svg.innerHTML=g;
+  svg.addEventListener('mousemove',ev=>{
+    const r=svg.getBoundingClientRect(); const sx=(ev.clientX-r.left)*(W/r.width);
+    const m=Math.max(0,Math.min(24,Math.round((sx-L)/((W-L-R)/24))));
+    const c=svg.querySelector('#cross'); c.setAttribute('x1',X(m)); c.setAttribute('x2',X(m)); c.setAttribute('opacity',.6);
+    showTip(ev,`<b>Mês ${m}</b><br>Caminho novo: R$ ${p50[m]} mil <span style="opacity:.7">(${p10[m]}–${p90[m]})</span><br>Não fazer nada: R$ ${sq[m]} mil`);
+  });
+  svg.addEventListener('mouseleave',()=>{hideTip(); svg.querySelector('#cross').setAttribute('opacity',0);});
+})();
+
+// ---------- gráfico 2: composição (barra empilhada) ----------
+(function(){
+  const svg=document.getElementById('stack'); const W=840,H=110,L=8,R=8;
+  const seg=[['Base atual (erodida)',334,css('--neutral')],
+             ['Reconquista',89,css('--s1')],
+             ['Adote um Bairro',10,css('--s2')],
+             ['Serviços + consignação',11,css('--s3')]];
+  const total=seg.reduce((a,s)=>a+s[1],0); const bw=W-L-R;
+  let x=L,g='';
+  for(const [nome,v,cor] of seg){
+    const w=bw*v/total-2;
+    g+=`<rect x="${x}" y="30" width="${Math.max(w,2)}" height="34" rx="4" fill="${cor}" data-n="${nome}" data-v="${v}"/>`;
+    if(w>90) g+=`<text x="${x+w/2}" y="51" text-anchor="middle" font-size="11.5" fill="#fff" pointer-events="none">R$ ${v} mil</text>`;
+    x+=w+2;
+  }
+  g+=`<text x="${L}" y="18" font-size="11.5" fill="${css('--text-secondary')}">Total mediano no mês 12: <tspan font-weight="700" fill="${css('--text-primary')}">R$ ${total} mil/mês</tspan> — sendo R$ ${total-334} mil de receita nova</text>`;
+  g+=`<text x="${L}" y="88" font-size="10.5" fill="${css('--text-muted')}">Serviços e consignação têm mediana ~zero (só entram nos cenários bons) — mostrados aqui no cenário em que acontecem.</text>`;
+  svg.innerHTML=g;
+  svg.querySelectorAll('rect').forEach(rc=>{
+    rc.addEventListener('mousemove',ev=>showTip(ev,`<b>${rc.dataset.n}</b><br>R$ ${rc.dataset.v} mil/mês (mediana, mês 12)`));
+    rc.addEventListener('mouseleave',hideTip);
+  });
+})();
+
+// ---------- gráfico 3: barras de probabilidade ----------
+(function(){
+  const svg=document.getElementById('probs'); const W=840,H=240,L=330,R=70,BH=22,GAP=14,T=10;
+  const rows=[['Faturamento MAIOR que hoje (mês 12)',99,css('--good')],
+              ['Chegar a R$ 450 mil/mês em 24 meses',72,css('--s1')],
+              ['Chegar a R$ 450 mil/mês em 12 meses',46,css('--s1')],
+              ['Meta cheia R$ 550 mil/mês em 24 meses',40,css('--s2')],
+              ['Meta cheia R$ 550 mil/mês em 12 meses',12,css('--s2')],
+              ['Não fazer nada e o faturamento cair',100,css('--neutral')]];
+  const bw=W-L-R; let g='';
+  rows.forEach((r,i)=>{
+    const y=T+i*(BH+GAP);
+    g+=`<text x="${L-10}" y="${y+BH-7}" text-anchor="end" font-size="12" fill="${css('--text-secondary')}">${r[0]}</text>`;
+    g+=`<rect x="${L}" y="${y}" width="${bw}" height="${BH}" rx="4" fill="${css('--surface-2')}"/>`;
+    g+=`<rect x="${L}" y="${y}" width="${Math.max(bw*r[1]/100,3)}" height="${BH}" rx="4" fill="${r[2]}" data-n="${r[0]}" data-v="${r[1]}"/>`;
+    g+=`<text x="${L+bw*r[1]/100+8}" y="${y+BH-6}" font-size="12.5" font-weight="700" fill="${css('--text-primary')}">${r[1]}%</text>`;
+  });
+  svg.innerHTML=g;
+  svg.querySelectorAll('rect[data-n]').forEach(rc=>{
+    rc.addEventListener('mousemove',ev=>showTip(ev,`<b>${rc.dataset.n}</b><br>${rc.dataset.v}% dos 20.000 cenários`));
+    rc.addEventListener('mouseleave',hideTip);
+  });
+})();
+</script>
