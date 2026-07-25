@@ -86,6 +86,15 @@ P75 ≈ +R$ 6,7 mil/mês; P95 ≈ +R$ 37,5 mil/mês.
   reais de processamento, (c) os relatórios de pesquisa de concorrência ITAD e de
   riscos jurídicos (em andamento em 25/07).
 
+## 4-bis. Atualização pós-pesquisa jurídica (25/07/2026)
+
+A pesquisa de riscos (doc 08) identificou um **risco de cauda não modelado** nesta
+simulação: se a consignação rodar dentro da ONG, há risco de descaracterização da
+isenção tributária com autuação retroativa de 5 anos — perda potencial muito maior
+que qualquer cenário simulado. **Mitigação estrutural: operar via Ltda do grupo**
+(ver doc 08). Com a estrutura correta, os números desta simulação voltam a valer;
+sem ela, esta simulação SUBESTIMA o risco.
+
 ## 5. Números que faltam do Marcio para a versão final
 
 - [ ] **[M] Receita mensal atual com venda de material doado** (o driver nº 1 do risco)
