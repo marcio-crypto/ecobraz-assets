@@ -113,7 +113,51 @@ export async function importarLoteAnexos(env, desdeDealId, topDeals) {
     if (baixados >= CAP) { cortadoPorCap = true; break; }
   }
   await gravarEstado(env, 'anexos_cursor', maxId);
-  return { ok: true, dealsLidos: deals.length, anexosVistos, gravados, falhas, bytes, ultimoDealId: maxId, fim: deals.length < N && !cortadoPorCap };
+  // "fim" SÓ quando a página vem realmente vazia (o Ploomes manda página curta no meio;
+  // usar deals.length<N marcava fim cedo demais e perdia coletas).
+  return { ok: true, dealsLidos: deals.length, anexosVistos, gravados, falhas, bytes, ultimoDealId: maxId, fim: deals.length === 0 };
+}
+
+// ---------------------------------------------------------------------------
+// ANEXOS via CLIENTES (Contacts) — muitos anexos ficam no contato (não na coleta).
+// Enumera contatos com $expand=Attachments. Dedup pela chave (anexo/Id): se a
+// varredura das coletas já pegou, pula. Retomável pelo Id do contato.
+// ---------------------------------------------------------------------------
+export async function importarLoteAnexosContatos(env, desdeContactId, topContatos) {
+  if (!env.PLOOMES_USER_KEY) return { ok: false, erro: 'Falta a chave do Ploomes no cofre.' };
+  if (!env.DB_PLOOMES) return { ok: false, erro: 'Banco D1 não vinculado (DB_PLOOMES).' };
+  if (!env.R2_ARQUIVOS) return { ok: false, erro: 'Depósito R2 ainda não ligado. Ative o R2 no painel da Cloudflare.' };
+  const N = Math.min(Math.max(Number(topContatos) || 40, 1), 80);
+  const CAP = 25;
+  const D = Math.max(Number(desdeContactId) || 0, 0);
+  const r = await reqJSON(env, `/Contacts?$top=${N}&$orderby=Id&$filter=Id%20gt%20${D}&$expand=Attachments`, 25000);
+  if (r.erro) return { ok: false, erro: r.erro, desdeContactId: D };
+  if (r.status !== 200) return { ok: false, erro: `HTTP ${r.status}`, desdeContactId: D };
+  const contatos = r.value || [];
+  let maxId = D, gravados = 0, anexosVistos = 0, falhas = 0, bytes = 0, baixados = 0, cortadoPorCap = false;
+  for (const c of contatos) {
+    const anexos = Array.isArray(c.Attachments) ? c.Attachments : [];
+    for (const a of anexos) {
+      anexosVistos++;
+      const key = `anexo/${a.Id}`;
+      if (await jaImportado(env, key)) continue;   // dedup: já veio pela varredura das coletas
+      let url = a.Url, ct = a.ContentType, fn = a.FileName || a.Name, dealId = a.DealId || null;
+      if (!url) {
+        const one = await reqJSON(env, `/Attachments(${a.Id})`, 12000);
+        const it = one.value && one.value[0];
+        if (it) { url = it.Url; ct = ct || it.ContentType; fn = fn || it.FileName || it.Name; dealId = dealId || it.DealId; }
+      }
+      if (!url) { falhas++; continue; }
+      const dl = await baixarParaR2(env, key, url, ct);
+      if (!dl.ok) { falhas++; continue; }
+      await gravarMeta(env, { r2_key: key, fonte: 'anexo', ploomes_id: a.Id, deal_id: dealId, contact_id: c.Id, nome_arquivo: fn, content_type: dl.contentType, tamanho: dl.tamanho, criado_em: a.CreateDate || '' });
+      gravados++; baixados++; if (dl.tamanho) bytes += dl.tamanho;
+    }
+    maxId = c.Id;
+    if (baixados >= CAP) { cortadoPorCap = true; break; }
+  }
+  await gravarEstado(env, 'anexos_contatos_cursor', maxId);
+  return { ok: true, contatosLidos: contatos.length, anexosVistos, gravados, falhas, bytes, ultimoContactId: maxId, fim: contatos.length === 0 };
 }
 
 // ---------------------------------------------------------------------------
@@ -141,7 +185,7 @@ export async function importarLoteDocumentos(env, desdeId, top) {
     gravados++; if (dl.tamanho) bytes += dl.tamanho;
   }
   await gravarEstado(env, 'documentos_cursor', maxId);
-  return { ok: true, lidos: docs.length, gravados, falhas, bytes, ultimoId: maxId, fim: docs.length < N };
+  return { ok: true, lidos: docs.length, gravados, falhas, bytes, ultimoId: maxId, fim: docs.length === 0 };
 }
 
 // ---------------------------------------------------------------------------
@@ -159,6 +203,7 @@ export async function estatisticasArquivos(env) {
       for (const row of (t.results || [])) out.importado[row.fonte || '?'] = { n: row.n, bytes: row.bytes };
     } catch { /* tabela ainda não criada */ }
     out.cursores.anexos = Number(await lerEstado(env, 'anexos_cursor', '0')) || 0;
+    out.cursores.anexosContatos = Number(await lerEstado(env, 'anexos_contatos_cursor', '0')) || 0;
     out.cursores.documentos = Number(await lerEstado(env, 'documentos_cursor', '0')) || 0;
   }
   return out;
@@ -200,23 +245,52 @@ export function paginaMigrarArquivos(user, s) {
   <h1 style="font-size:20px;margin:12px 0 4px">Migração do Ploomes — Arquivos</h1>
   <p style="font-size:13px;color:#4F6469;margin:0 0 14px">Copia os arquivos do Ploomes para o depósito próprio (R2), amarrando cada um à coleta/cliente de origem. É retomável e não duplica — pode fechar e voltar. Guardado até agora: <b id="mbTot">${mb ? mb.toLocaleString('pt-BR', { maximumFractionDigits: 0 }) + ' MB' : '0 MB'}</b>.</p>
   ${aviso}
-  ${bloco('Anexos', 'NF, certificados, MTR e fotos — pendurados nas coletas.', 'anx', anexPct, anexI, anexT, !s.r2Ligado)}
-  ${bloco('Documentos', 'Propostas geradas (PDF).', 'doc', docPct, docI, docT, !s.r2Ligado)}
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px"><div style="font-size:14px;font-weight:800">Anexos</div><div style="font-size:12px;color:#7c8a87"><b id="anexoI">${anexI.toLocaleString('pt-BR')}</b> de <b>${anexT.toLocaleString('pt-BR')}</b></div></div>
+    <div style="font-size:11.5px;color:#8fa39f;margin-bottom:8px">NF, certificados, MTR e fotos. Ficam nas <b>coletas</b> E nos <b>clientes</b> — as duas varreduras juntas cobrem tudo (não duplica).</div>
+    <div class="bar"><div id="anexoBar" style="width:${anexPct}%"></div></div>
+    <div id="anexoTxt" style="font-size:12px;color:#7c8a87;margin:6px 0 12px">${anexPct}%</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-p" onclick="rodar('deal',this)" ${s.r2Ligado ? '' : 'disabled'}>▶ Varrer coletas</button>
+      <button class="btn btn-p" onclick="rodar('cont',this)" ${s.r2Ligado ? '' : 'disabled'}>▶ Varrer clientes</button>
+      <button class="btn btn-g" onclick="PARAR.deal=true;PARAR.cont=true">■ Parar</button>
+    </div>
+    <div id="dealSt" style="font-size:12.5px;color:#4F6469;margin-top:10px"></div>
+    <div id="contSt" style="font-size:12.5px;color:#4F6469;margin-top:4px"></div>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px"><div style="font-size:14px;font-weight:800">Documentos</div><div style="font-size:12px;color:#7c8a87"><b id="docI">${docI.toLocaleString('pt-BR')}</b> de <b>${docT.toLocaleString('pt-BR')}</b></div></div>
+    <div style="font-size:11.5px;color:#8fa39f;margin-bottom:8px">Propostas geradas (PDF).</div>
+    <div class="bar"><div id="docBar" style="width:${docPct}%"></div></div>
+    <div id="docTxt" style="font-size:12px;color:#7c8a87;margin:6px 0 12px">${docPct}%</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-p" onclick="rodar('doc',this)" ${s.r2Ligado ? '' : 'disabled'}>▶ Importar documentos</button>
+      <button class="btn btn-g" onclick="PARAR.doc=true">■ Parar</button>
+    </div>
+    <div id="docSt" style="font-size:12.5px;color:#4F6469;margin-top:10px"></div>
+  </div>
 </div>
 <script>
-var PARAR={}, CUR={anx:${curA}, doc:${curD}}, TOT={anx:${anexT}, doc:${docT}}, FEITO={anx:${anexI}, doc:${docI}}, BYTES0=${bytes}, BYTES={anx:0,doc:0};
-var API={anx:'/api/diretoria/arquivos-anexos', doc:'/api/diretoria/arquivos-docs'};
-function setBar(id){var p=TOT[id]?Math.min(100,Math.round(FEITO[id]/TOT[id]*100)):0;document.getElementById(id+'Bar').style.width=p+'%';document.getElementById(id+'Txt').textContent=p+'% · '+FEITO[id].toLocaleString('pt-BR')+' / '+TOT[id].toLocaleString('pt-BR');document.getElementById(id+'I').textContent=FEITO[id].toLocaleString('pt-BR');}
-function setMB(){var t=(BYTES0+BYTES.anx+BYTES.doc)/1048576;document.getElementById('mbTot').textContent=(t>=1?Math.round(t).toLocaleString('pt-BR'):t.toFixed(1))+' MB';}
-async function umLote(id){var p=id==='anx'?('desdeDealId='+CUR[id]):('desdeId='+CUR[id]);var r=await fetch(API[id]+'?'+p,{method:'POST'});return r.json();}
-async function rodar(id,btn){PARAR[id]=false;btn.disabled=true;document.getElementById(id+'Stop').disabled=false;var st=document.getElementById(id+'St');st.textContent='Importando…';
-  while(!PARAR[id]){var j;try{j=await umLote(id);}catch(e){st.textContent='Erro de conexão — clique de novo para retomar.';break;}
+var PARAR={};
+var CUR={deal:${curA}, cont:${Number((s.cursores && s.cursores.anexosContatos) || 0)}, doc:${curD}};
+var TOT={anexo:${anexT}, doc:${docT}};
+var FEITO={anexo:${anexI}, doc:${docI}};
+var BYTES0=${bytes}, BYTES=0;
+var CFG={
+  deal:{api:'/api/diretoria/arquivos-anexos', q:'desdeDealId', last:'ultimoDealId', bar:'anexo', st:'dealSt'},
+  cont:{api:'/api/diretoria/arquivos-anexos-contatos', q:'desdeContactId', last:'ultimoContactId', bar:'anexo', st:'contSt'},
+  doc:{api:'/api/diretoria/arquivos-docs', q:'desdeId', last:'ultimoId', bar:'doc', st:'docSt'}
+};
+function setBar(bar){var t=TOT[bar],f=FEITO[bar];var p=t?Math.min(100,Math.round(f/t*100)):0;document.getElementById(bar+'Bar').style.width=p+'%';document.getElementById(bar+'Txt').textContent=p+'% · '+f.toLocaleString('pt-BR')+' / '+t.toLocaleString('pt-BR');document.getElementById(bar+'I').textContent=f.toLocaleString('pt-BR');}
+function setMB(){var m=(BYTES0+BYTES)/1048576;document.getElementById('mbTot').textContent=(m>=1?Math.round(m).toLocaleString('pt-BR'):m.toFixed(1))+' MB';}
+async function rodar(which,btn){var c=CFG[which];PARAR[which]=false;btn.disabled=true;var st=document.getElementById(c.st);st.textContent='Importando…';
+  while(!PARAR[which]){var j;try{var r=await fetch(c.api+'?'+c.q+'='+CUR[which],{method:'POST'});j=await r.json();}catch(e){st.textContent='Erro de conexão — clique de novo para retomar.';break;}
     if(!j.ok){st.textContent='Parou: '+(j.erro||'erro')+' — clique de novo para retomar.';break;}
-    FEITO[id]+=(j.gravados||0);if(j.bytes)BYTES[id]+=j.bytes;CUR[id]=(id==='anx'?j.ultimoDealId:j.ultimoId);setBar(id);setMB();
-    var extra=(j.falhas?(' · '+j.falhas+' sem arquivo/erro'):'');
-    if(j.fim){st.textContent='✅ Concluído! '+FEITO[id].toLocaleString('pt-BR')+' guardados.'+extra;break;}
+    FEITO[c.bar]+=(j.gravados||0);if(j.bytes)BYTES+=j.bytes;CUR[which]=j[c.last];setBar(c.bar);setMB();
+    var extra=(j.falhas?(' · '+j.falhas+' sem link'):'');
+    if(j.fim){st.textContent='✅ Varredura concluída.'+extra;break;}
     st.textContent='Importando… +'+(j.gravados||0)+' neste lote'+extra;
     await new Promise(function(r){setTimeout(r,150);});}
-  btn.disabled=false;document.getElementById(id+'Stop').disabled=true;}
+  btn.disabled=false;}
 </script></body></html>`;
 }

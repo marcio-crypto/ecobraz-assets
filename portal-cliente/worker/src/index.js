@@ -49,7 +49,7 @@ import { diretorPermitido, nomeDiretor, reunirDados, paginaLoginDiretoria, pagin
 import { dadosPrevencao, paginaPrevencao, analisarColetaIA, salvarTabelaPrecos, pingIA } from './prevencao.js';
 import { sondarAnexosPloomes, paginaSondaAnexos } from './ploomes-docs.js';
 import { amostraContatosPloomes, paginaAmostraContatos, importarLoteContatos, estatisticasMigracao, buscarContatos, paginaMigrarPloomes, detalheContato, paginaContatoDetalhe } from './ploomes-migracao.js';
-import { importarLoteAnexos, importarLoteDocumentos, estatisticasArquivos, paginaMigrarArquivos } from './ploomes-arquivos.js';
+import { importarLoteAnexos, importarLoteAnexosContatos, importarLoteDocumentos, estatisticasArquivos, paginaMigrarArquivos } from './ploomes-arquivos.js';
 import { fiscalPermitido, nomeFiscal, listarNotas, lerNota, importarLote, vincularNota, sugerirVinculoSync, paginaFiscalLogin, paginaFiscalHome, paginaFiscalResultado, paginaFiscalNota } from './fiscal.js';
 import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, paginaLeads, paginaLeadDetalhe, paginaInicio } from './cadastro.js';
 import { listarColetasOS, lerColetaOS, criarColetaOS, atualizarStatusOS, paginaColetasLista, paginaGerarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga } from './coletas.js';
@@ -381,6 +381,10 @@ export default {
       if (pathname === '/api/diretoria/arquivos-anexos' && request.method === 'POST') {
         if (!diretoria) return json({ ok: false, erro: 'nao_autenticado' }, 401);
         return json(await importarLoteAnexos(env, url.searchParams.get('desdeDealId'), url.searchParams.get('top')));
+      }
+      if (pathname === '/api/diretoria/arquivos-anexos-contatos' && request.method === 'POST') {
+        if (!diretoria) return json({ ok: false, erro: 'nao_autenticado' }, 401);
+        return json(await importarLoteAnexosContatos(env, url.searchParams.get('desdeContactId'), url.searchParams.get('top')));
       }
       if (pathname === '/api/diretoria/arquivos-docs' && request.method === 'POST') {
         if (!diretoria) return json({ ok: false, erro: 'nao_autenticado' }, 401);
