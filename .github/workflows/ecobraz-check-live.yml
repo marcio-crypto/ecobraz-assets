@@ -78,6 +78,24 @@ jobs:
             echo "  >> Não consegui extrair o hash fresco — checar manualmente."
           fi
 
+      - name: Verificar CTA de topo (botões estilizados) nas 2 páginas
+        run: |
+          set +e
+          for u in \
+            "https://ecobraz.org/coleta-de-lixo-eletronico-para-empresas/" \
+            "https://ecobraz.org/descarte-de-eletrodomesticos/"; do
+            echo "===================================================="
+            echo "URL: $u"
+            body=$(curl -sSL --max-time 30 -A "Mozilla/5.0 (compatible; EcobrazCheck/1.0)" "$u")
+            wa=$(printf '%s' "$body" | grep -o 'Falar no WhatsApp' | head -1)
+            wabg=$(printf '%s' "$body" | grep -o '#0B6B38' | head -1)
+            pribg=$(printf '%s' "$body" | grep -o '#92C430' | head -1)
+            echo "  Texto 'Falar no WhatsApp':           ${wa:-NAO}"
+            echo "  Botão WhatsApp estilizado (#0B6B38): ${wabg:-NAO}"
+            echo "  Botão principal estilizado (#92C430):${pribg:-NAO}"
+            printf '%s' "$body" | grep -oE 'wa\.me/5511912728412' | head -1 | sed 's/^/    wa.me -> /'
+            printf '%s' "$body" | grep -oE 'agendamento/\?[^"]*origem=(coleta-de-lixo-eletronico-para-empresas|descarte-de-eletrodomesticos)' | head -1 | sed 's/^/    agendar -> /'
+          done
       - name: Páginas ao vivo — procurar cards.min.js
         run: |
           set +e
