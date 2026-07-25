@@ -50,14 +50,14 @@
 </style>
 <div class="viz-root">
   <h1>Vale a pena seguir esse caminho?</h1>
-  <p class="sub">Simulação de Monte Carlo — 20.000 cenários, 24 meses, premissas conservadoras · Ecobraz, 25/07/2026<br>
-  Caminho = Reconquista da base (contrato 36m + sistema) + Adote um Bairro + serviços + piloto de consignação</p>
+  <p class="sub">Simulação de Monte Carlo v2 — 20.000 cenários, 24 meses, premissas conservadoras · Ecobraz, 25/07/2026<br>
+  Caminho = Reconquista (contrato 36m + sistema) + Adote um Bairro + <b>escada do sistema (preços aprovados)</b> + serviços + consignação</p>
 
   <div class="tiles">
     <div class="tile verdict"><div class="v">SIM ✅</div><div class="l">Veredito: em <b>99%</b> dos cenários o faturamento fica MAIOR que os R$ 350 mil de hoje já no mês 12</div></div>
-    <div class="tile"><div class="v" id="t1">R$ 444 mil</div><div class="l">Faturamento mensal mais provável no mês 12 (mediana) — faixa típica: R$ 379 a 563 mil</div></div>
-    <div class="tile"><div class="v">72%</div><div class="l">Chance de atingir R$ 450 mil/mês em 24 meses (46% já em 12 meses)</div></div>
-    <div class="tile"><div class="v">40%</div><div class="l">Chance da meta cheia (R$ 550 mil/mês) em 24 meses — em 12 meses: 12%</div></div>
+    <div class="tile"><div class="v" id="t1">R$ 454 mil</div><div class="l">Faturamento mensal mais provável no mês 12 (mediana) — faixa típica: R$ 383 a 582 mil</div></div>
+    <div class="tile"><div class="v">77%</div><div class="l">Chance de atingir R$ 450 mil/mês em 24 meses (52% já em 12 meses)</div></div>
+    <div class="tile"><div class="v">46%</div><div class="l">Chance da meta cheia (R$ 550 mil/mês) em 24 meses — em 12 meses: 15%</div></div>
   </div>
   <p class="note">Não fazer nada: nos mesmos cenários, a base atual <b>erode para ~R$ 334 mil</b> no mês 12 (o mercado que derrubou de R$ 1 mi para 350 mil continua agindo). O risco de agir é limitado; o risco de não agir é certo.</p>
 
@@ -77,6 +77,7 @@
     <span><span class="dot" style="background:var(--neutral)"></span>Base atual (erodida)</span>
     <span><span class="dot" style="background:var(--s1)"></span>Reconquista (contratos)</span>
     <span><span class="dot" style="background:var(--s2)"></span>Adote um Bairro</span>
+    <span><span class="dot" style="background:var(--s4)"></span>Escada do sistema</span>
     <span><span class="dot" style="background:var(--s3)"></span>Serviços + consignação</span>
   </div>
   <div class="chartwrap"><svg id="stack" width="840" height="110" viewBox="0 0 840 110" role="img" aria-label="Composição do faturamento no mês 12"></svg></div>
@@ -86,22 +87,22 @@
 
   <h2>Leitura honesta</h2>
   <div class="foot" style="border:none;padding:0;margin-top:6px">
-    <b>1.</b> O caminho quase certamente melhora o faturamento (99%) e provavelmente leva a ~R$ 444 mil/mês em 1 ano — mas a <b>meta cheia de R$ 550 mil é história de 18–24 meses</b>, não de 12 (40% em 24m). Quem prometer diferente estará chutando.<br>
-    <b>2.</b> O motor é um só: <b>recuperar doadores com o contrato de 36 meses + sistema</b> (~R$ 89 mil/mês novos no cenário mediano). Adote, serviços e consignação somam, mas não carregam o piano.<br>
+    <b>1.</b> O caminho quase certamente melhora o faturamento (99%) e provavelmente leva a ~R$ 454 mil/mês em 1 ano — mas a <b>meta cheia de R$ 550 mil é história de 18–24 meses</b>, não de 12 (46% em 24m). Quem prometer diferente estará chutando.<br>
+    <b>2.</b> O motor é um só: <b>recuperar doadores com o contrato de 36 meses + sistema</b> (~R$ 89 mil/mês novos no cenário mediano). A escada do sistema soma R$ 10–18 mil/mês recorrentes e cresce com cada contrato; Adote, serviços e consignação complementam.<br>
     <b>3.</b> O que mais derruba os cenários ruins: execução com equipe pequena (modelada: 25% de chance de entregar só 30–60% do plano) e taxa de conversão da base morna — <b>os primeiros 30 dias de campanha substituem esses chutes por dados reais.</b><br>
     <b>4.</b> Não fazer nada perde em 100% dos cenários simulados.
   </div>
 
   <details style="margin-top:18px"><summary style="font-size:12.5px;color:var(--text-secondary);cursor:pointer">Ver os números em tabela + premissas</summary>
     <table class="tbl"><tr><th>Métrica</th><th>Mês 12</th><th>Mês 24</th></tr>
-      <tr><td>Cenário ruim (P10)</td><td>R$ 379 mil</td><td>R$ 397 mil</td></tr>
-      <tr><td>Mediana (P50)</td><td>R$ 444 mil</td><td>R$ 515 mil</td></tr>
-      <tr><td>Cenário bom (P90)</td><td>R$ 563 mil</td><td>R$ 743 mil</td></tr>
-      <tr><td>P(≥ R$ 450 mil)</td><td>46%</td><td>72%</td></tr>
-      <tr><td>P(≥ R$ 550 mil)</td><td>12%</td><td>40%</td></tr>
+      <tr><td>Cenário ruim (P10)</td><td>R$ 383 mil</td><td>R$ 405 mil</td></tr>
+      <tr><td>Mediana (P50)</td><td>R$ 454 mil</td><td>R$ 535 mil</td></tr>
+      <tr><td>Cenário bom (P90)</td><td>R$ 582 mil</td><td>R$ 775 mil</td></tr>
+      <tr><td>P(≥ R$ 450 mil)</td><td>52%</td><td>77%</td></tr>
+      <tr><td>P(≥ R$ 550 mil)</td><td>15%</td><td>46%</td></tr>
       <tr><td>Não fazer nada (mediana)</td><td>R$ 334 mil</td><td>R$ 318 mil</td></tr>
     </table>
-    <p class="note">Premissas conservadoras (todas editáveis no script <code>docs/marketing/simulacao/mc-caminho-completo.py</code>): funil da base morna com resposta 10–30%, proposta 30–60%, fechamento 15–40%; R$ 4–15 mil/mês de material por contrato recuperado; Adote 0–6 cotas até o mês 12 (teto de capacidade R$ 32 mil/mês); consignação só em 40% dos cenários (jurídico + piloto); 25% de chance de execução parcial (30–60% do plano); erosão da base de 0 a −0,8%/mês. Números = estimativas para decisão, não promessa — serão recalibrados com os dados reais das primeiras semanas.</p>
+    <p class="note">Premissas conservadoras (todas editáveis no script <code>docs/marketing/simulacao/mc-caminho-v2.py</code>): funil da base morna com resposta 10–30%, proposta 30–60%, fechamento 15–40%; R$ 4–15 mil/mês de material por contrato recuperado; Adote 0–6 cotas até o mês 12 (teto de capacidade R$ 32 mil/mês); consignação só em 40% dos cenários (jurídico + piloto); escada do sistema (preços aprovados doc 16) com adesão conservadora: 15–40% dos contratos em módulos, 20–50% em relatórios, 5–20% em consultoria (capacidade Villanova limitada a ~3 contas), a partir do mês 4; 25% de chance de execução parcial (30–60% do plano); erosão da base de 0 a −0,8%/mês. Números = estimativas para decisão, não promessa — serão recalibrados com os dados reais das primeiras semanas.</p>
   </details>
 </div>
 <div id="tip"></div>
@@ -114,9 +115,9 @@ function showTip(ev, html){ tip.innerHTML = html; tip.style.opacity = 1;
 function hideTip(){ tip.style.opacity = 0; }
 
 // ---------- dados da simulação (mc_caminho_completo.py, 25/07/2026) ----------
-const p10=[350,348,346,353,361,363,365,367,370,372,374,377,379,381,382,384,385,387,388,390,391,393,394,396,397];
-const p50=[350,350,349,364,385,392,399,407,414,421,429,436,444,450,455,462,467,473,479,485,491,497,503,509,515];
-const p90=[350,351,352,382,430,446,463,480,496,513,529,546,563,578,592,608,623,638,653,668,683,698,713,727,743];
+const p10=[350,348,346,353,361,364,368,370,373,376,378,381,383,385,387,389,391,393,394,396,398,400,401,403,405];
+const p50=[350,350,349,363,386,395,405,413,421,430,438,446,454,461,468,475,481,488,495,502,508,515,522,528,535];
+const p90=[350,351,352,382,433,452,473,491,509,527,546,564,582,598,614,630,646,662,679,695,711,727,743,759,775];
 const sq =[350,349,347,346,344,343,342,340,339,338,336,335,334,332,331,330,328,327,326,324,323,322,320,319,318];
 
 // ---------- gráfico 1: trajetória (fan) ----------
@@ -163,6 +164,7 @@ const sq =[350,349,347,346,344,343,342,340,339,338,336,335,334,332,331,330,328,3
   const seg=[['Base atual (erodida)',334,css('--neutral')],
              ['Reconquista',89,css('--s1')],
              ['Adote um Bairro',10,css('--s2')],
+             ['Escada do sistema (módulos+relatórios+consultoria)',10,css('--s4')],
              ['Serviços + consignação',11,css('--s3')]];
   const total=seg.reduce((a,s)=>a+s[1],0); const bw=W-L-R;
   let x=L,g='';
@@ -173,7 +175,7 @@ const sq =[350,349,347,346,344,343,342,340,339,338,336,335,334,332,331,330,328,3
     x+=w+2;
   }
   g+=`<text x="${L}" y="18" font-size="11.5" fill="${css('--text-secondary')}">Total mediano no mês 12: <tspan font-weight="700" fill="${css('--text-primary')}">R$ ${total} mil/mês</tspan> — sendo R$ ${total-334} mil de receita nova</text>`;
-  g+=`<text x="${L}" y="88" font-size="10.5" fill="${css('--text-muted')}">Serviços e consignação têm mediana ~zero (só entram nos cenários bons) — mostrados aqui no cenário em que acontecem.</text>`;
+  g+=`<text x="${L}" y="88" font-size="10.5" fill="${css('--text-muted')}">Escada mediana: R$ 10 mil no mês 12, subindo a R$ 18 mil no mês 24. Serviços/consignação só entram nos cenários bons.</text>`;
   svg.innerHTML=g;
   svg.querySelectorAll('rect').forEach(rc=>{
     rc.addEventListener('mousemove',ev=>showTip(ev,`<b>${rc.dataset.n}</b><br>R$ ${rc.dataset.v} mil/mês (mediana, mês 12)`));
@@ -185,10 +187,10 @@ const sq =[350,349,347,346,344,343,342,340,339,338,336,335,334,332,331,330,328,3
 (function(){
   const svg=document.getElementById('probs'); const W=840,H=240,L=330,R=70,BH=22,GAP=14,T=10;
   const rows=[['Faturamento MAIOR que hoje (mês 12)',99,css('--good')],
-              ['Chegar a R$ 450 mil/mês em 24 meses',72,css('--s1')],
-              ['Chegar a R$ 450 mil/mês em 12 meses',46,css('--s1')],
-              ['Meta cheia R$ 550 mil/mês em 24 meses',40,css('--s2')],
-              ['Meta cheia R$ 550 mil/mês em 12 meses',12,css('--s2')],
+              ['Chegar a R$ 450 mil/mês em 24 meses',77,css('--s1')],
+              ['Chegar a R$ 450 mil/mês em 12 meses',52,css('--s1')],
+              ['Meta cheia R$ 550 mil/mês em 24 meses',46,css('--s2')],
+              ['Meta cheia R$ 550 mil/mês em 12 meses',15,css('--s2')],
               ['Não fazer nada e o faturamento cair',100,css('--neutral')]];
   const bw=W-L-R; let g='';
   rows.forEach((r,i)=>{
