@@ -138,6 +138,20 @@ jobs:
           curl -sSL --max-time 20 -A "$UA" https://ecobraz.org/solucoes-corporativas/ | grep -oE '<link rel="alternate" hreflang="[^"]*" href="[^"]*"' | head -3 | sed 's/^/  /'
           echo "== meta_title corrigido num post que ranqueia =="
           curl -sSL --max-time 20 -A "$UA" https://ecobraz.org/blog/o-impacto-ambiental-do-descarte-incorreto-de-eletrodomesticos/ | grep -oE '<title>[^<]*' | head -1 | sed 's/^/  /'
+      - name: Verificar as 3 regras novas do Cloudflare (backlinks + www)
+        run: |
+          set +e
+          UA="Mozilla/5.0 (compatible; EcobrazAudit/1.0)"
+          t(){
+            echo "== $1"
+            curl -sS -o /dev/null --max-time 20 -A "$UA" -w "  status inicial: %{http_code}\n" "$1"
+            curl -sSI --max-time 20 -A "$UA" "$1" | grep -i '^location:' | head -1 | sed 's/^/  /'
+            curl -sS -o /dev/null -L --max-time 20 -A "$UA" -w "  final apos redirects: %{http_code} em %{url_effective}\n" "$1"
+          }
+          t "https://ecobraz.org/projetos/para-voce/coleta-gratuita-de-e-lixo"
+          t "https://ecobraz.org/pt_BR/blog/ecobraz-emigre-lanca-servico-exclusivo-de-processamento-de-fios-e-cabos-eletricos-para-recicladoras-e-ferros-velhos"
+          t "https://www.ecobraz.org/"
+          t "https://www.ecobraz.org/sobre/"
       - name: Páginas ao vivo — procurar cards.min.js
         run: |
           set +e
