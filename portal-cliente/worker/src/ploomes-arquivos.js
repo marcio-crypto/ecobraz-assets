@@ -221,24 +221,28 @@ export async function diagnosticoAnexos(env) {
   let topDeal = null;
   try { topDeal = await env.DB_PLOOMES.prepare("SELECT deal_id, COUNT(*) AS n FROM arquivos_ploomes WHERE fonte='anexo' AND deal_id IS NOT NULL GROUP BY deal_id ORDER BY n DESC LIMIT 1").first(); } catch { /* ignore */ }
   const dealId = topDeal && topDeal.deal_id ? Number(topDeal.deal_id) : null;
-  // TODOS os testes ao Ploomes em PARALELO (em série a página passava de 50s e não abria).
-  const [cnt, t2, t3, exp, df] = await Promise.all([
-    reqJSON(env, '/Attachments?$top=0&$count=true', 10000),
-    reqJSON(env, '/Attachments?$filter=Id%20gt%200&$top=5', 10000),
-    reqJSON(env, '/Attachments?$filter=Id%20gt%200&$top=5&$orderby=Id', 10000),
-    dealId ? reqJSON(env, `/Deals(${dealId})?$expand=Attachments`, 10000) : Promise.resolve(null),
-    dealId ? reqJSON(env, `/Attachments?$filter=DealId%20eq%20${dealId}&$top=0&$count=true`, 10000) : Promise.resolve(null),
-  ]);
-  const out = { ok: true, testes: [] };
-  out.countReal = cnt.count != null ? cnt.count : (cnt.erro || `HTTP ${cnt.status}`);
-  out.testes.push({ nome: 'Attachments Id gt 0 · $top=5 (sem orderby)', status: t2.status, erro: t2.erro, qtd: t2.value ? t2.value.length : null, ids: (t2.value || []).map((a) => a.Id) });
-  out.testes.push({ nome: 'Attachments Id gt 0 · $top=5 · $orderby=Id', status: t3.status, erro: t3.erro, qtd: t3.value ? t3.value.length : null, ids: (t3.value || []).map((a) => a.Id) });
-  if (dealId) {
-    const dealObj = exp && exp.value && exp.value[0];
-    const expandN = dealObj && Array.isArray(dealObj.Attachments) ? dealObj.Attachments.length : ((exp && exp.erro) || `HTTP ${exp && exp.status}`);
-    out.expandNegocio = { dealId, nossoBanco: topDeal.n, expandRetornou: expandN, filtroDireto: (df && df.count != null) ? df.count : ((df && df.erro) || `HTTP ${df && df.status}`) };
-  }
-  return out;
+  const trabalho = (async () => {
+    // Testes ao Ploomes em PARALELO, timeouts curtos (8s). O que importa: a contagem
+    // real, o teste de enumerar por Id, e se o $expand corta anexos por registro.
+    const [cnt, t2, exp, df] = await Promise.all([
+      reqJSON(env, '/Attachments?$top=0&$count=true', 8000),
+      reqJSON(env, '/Attachments?$filter=Id%20gt%200&$top=5', 8000),
+      dealId ? reqJSON(env, `/Deals(${dealId})?$expand=Attachments`, 8000) : Promise.resolve(null),
+      dealId ? reqJSON(env, `/Attachments?$filter=DealId%20eq%20${dealId}&$top=0&$count=true`, 8000) : Promise.resolve(null),
+    ]);
+    const out = { ok: true, testes: [] };
+    out.countReal = cnt.count != null ? cnt.count : (cnt.erro || `HTTP ${cnt.status}`);
+    out.testes.push({ nome: 'Enumerar por Id: Attachments Id gt 0 · $top=5 (sem orderby)', status: t2.status, erro: t2.erro, qtd: t2.value ? t2.value.length : null, ids: (t2.value || []).map((a) => a.Id) });
+    if (dealId) {
+      const dealObj = exp && exp.value && exp.value[0];
+      const expandN = dealObj && Array.isArray(dealObj.Attachments) ? dealObj.Attachments.length : ((exp && exp.erro) || `HTTP ${exp && exp.status}`);
+      out.expandNegocio = { dealId, nossoBanco: topDeal.n, expandRetornou: expandN, filtroDireto: (df && df.count != null) ? df.count : ((df && df.erro) || `HTTP ${df && df.status}`) };
+    }
+    return out;
+  })();
+  // Teto rígido: devolve a página em no máx. 13s, mesmo se o Ploomes travar.
+  const teto = new Promise((resolve) => setTimeout(() => resolve({ ok: true, parcial: true, testes: [], countReal: 'o Ploomes não respondeu a tempo (está lento agora) — recarregue em instantes' }), 13000));
+  return await Promise.race([trabalho, teto]);
 }
 
 export function paginaDiagAnexos(user, d) {
