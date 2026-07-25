@@ -53,22 +53,45 @@ risco por vocês?". Municiar o campeão interno (TI) com o kit que o protege pes
 
 **Movimento 2 — Capturar a receita em vez de negá-la (novo produto — DECISÃO do Marcio).**
 Os ITADs sérios do mundo (Iron Mountain, SK tes, Ingram) não dizem "não venda" — dizem
-**"você recebe o cheque, nós assumimos o risco"**. Modelos que NÃO exigem comprar o
-material:
-- **Consignação / revenue share:** a Ecobraz sanitiza (certificado por nº de série),
-  revende em nome do cliente e repassa 50–80% do resultado (padrão de mercado);
-  fica com o percentual + emite toda a documentação. Sem capital imobilizado.
-- **Híbrido autofinanciado:** a receita dos ativos com valor paga a destinação
-  documentada do resto — proposta "custo zero + cheque + certificado", que vence a
-  proposta atual ("custo zero" apenas) exatamente onde ela perde hoje: a receita.
-- **"Compliance as a layer" sobre o leilão:** sanitização certificada + documentação
-  ANTES de o lote ir a leilão. A pesquisa não encontrou nenhum player brasileiro
-  ofertando isso explicitamente — **espaço em branco no mercado**.
+**"você recebe o cheque, nós assumimos o risco"**.
 
-⚠️ Pontos a resolver antes de lançar: enquadramento jurídico/fiscal de uma ONG operando
-consignação (pode exigir veículo próprio — possivelmente a própria estrutura societária
-já existente do grupo), e coerência com o discurso ("revenda certificada com
-rastreabilidade" ≠ atravessador — a diferença é o certificado por série e o CDF do resto).
+*Desenho refinado em 25/07/2026 após objeções do Marcio (corretas: lote vem com lixo
+junto; HDs nunca são comercializados; split simples sobre o bruto não fecharia a conta;
+risco de canibalizar os doadores atuais):*
+
+**As três camadas de receita (o cliente paga duas antes de qualquer divisão):**
+1. **Serviço pago, garantido, independente do leilão:** triagem, descaracterização,
+   sanitização e destruição certificada de HDs (nunca vão a leilão — viram o serviço
+   pago que já existe), logística e destinação documentada do refugo do lote.
+   Cobrado por item/kg. Pior cenário (lote todo lixo) = contrato de serviço pago normal.
+2. **Split sobre o LÍQUIDO do comercializável:** só o que sobra como vendável vai a
+   leilão; o percentual (60/40, 70/30 — negociável por lote) incide após os custos.
+3. **Arrasto:** cada lote vende laudo + sanitização + CDF + contrato + sistema.
+
+*Exemplo ilustrativo (números internos, a validar):* lote de 100 notebooks de 3 anos →
+revenda ~R$ 100 mil brutos; serviços cobrados ~R$ 15 mil; split 30% do líquido ~R$ 25 mil
+→ **~R$ 40 mil/lote para a Ecobraz**, de um cliente que hoje rende zero. Cliente sai com
+~R$ 60 mil + certificados + risco zero (vs. ~R$ 92 mil do leilão direto carregando risco
+médio de R$ 7,19 mi — a diferença é o preço do seguro, e é assim que se vende).
+
+**As três cercas anti-canibalização (proteger os doadores atuais):**
+1. **Avaliação prévia transparente:** a conta é mostrada ao cliente. Lote velho (5+ anos,
+   perfil típico do doador) → valor residual − processamento = negativo → recomendação
+   honesta: destinação gratuita com documentação. A matemática mantém o doador doador.
+2. **Corte de elegibilidade:** só lotes com valor residual comprovado (~<4 anos, volume
+   mínimo) — exatamente o perfil que hoje vai ao Superbid e não chega à Ecobraz.
+3. **Canal fechado:** sob proposta, sem página no site, sem tabela pública; oferta ativa
+   apenas a clientes perdidos/leiloadores. Doadores nunca são abordados com isso.
+
+**Comparação certa:** não é "consignação vs. doação" (doador segue igual, com Adote um
+Bairro e sistema como valor) — é **"consignação vs. zero"**: esses lotes já vão a leilão.
+
+⚠️ Antes de lançar: (1) enquadramento jurídico/fiscal de ONG operando consignação (pode
+exigir veículo próprio do grupo); (2) coerência de discurso ("revenda certificada com
+rastreabilidade por série + CDF do refugo" ≠ atravessador); (3) **piloto silencioso** com
+2–3 clientes já perdidos para leilão — medir a conta real antes de decidir se vira
+produto; (4) risco residual de canibalização não é zero (cliente conversa com cliente) —
+decisão consciente do Marcio.
 
 **Movimento 3 — Validar com dados próprios.** Entrevistas com clientes perdidos +
 registrar no Ploomes o motivo de cada perda ("vendeu/leiloou") para medir o tamanho
