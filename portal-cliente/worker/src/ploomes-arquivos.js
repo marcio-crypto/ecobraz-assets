@@ -220,28 +220,35 @@ export async function diagnosticoAnexos(env) {
   // Negócio com MAIS anexos no nosso banco (consulta local, rápida).
   let topDeal = null;
   try { topDeal = await env.DB_PLOOMES.prepare("SELECT deal_id, COUNT(*) AS n FROM arquivos_ploomes WHERE fonte='anexo' AND deal_id IS NOT NULL GROUP BY deal_id ORDER BY n DESC LIMIT 1").first(); } catch { /* ignore */ }
-  const dealId = topDeal && topDeal.deal_id ? Number(topDeal.deal_id) : null;
+  // Um anexo real do nosso banco (para ver TODOS os campos de vínculo dele).
+  let sampleId = null;
+  try { const r = await env.DB_PLOOMES.prepare("SELECT ploomes_id FROM arquivos_ploomes WHERE fonte='anexo' ORDER BY ploomes_id DESC LIMIT 1").first(); sampleId = r && r.ploomes_id ? Number(r.ploomes_id) : null; } catch { /* ignore */ }
   const trabalho = (async () => {
-    // Testes ao Ploomes em PARALELO, timeouts curtos (8s). O que importa: a contagem
-    // real, o teste de enumerar por Id, e se o $expand corta anexos por registro.
-    const [cnt, t2, exp, df] = await Promise.all([
+    const [cnt, one, ord, ordCnt] = await Promise.all([
       reqJSON(env, '/Attachments?$top=0&$count=true', 8000),
-      reqJSON(env, '/Attachments?$filter=Id%20gt%200&$top=5', 8000),
-      dealId ? reqJSON(env, `/Deals(${dealId})?$expand=Attachments`, 8000) : Promise.resolve(null),
-      dealId ? reqJSON(env, `/Attachments?$filter=DealId%20eq%20${dealId}&$top=0&$count=true`, 8000) : Promise.resolve(null),
+      sampleId ? reqJSON(env, `/Attachments(${sampleId})`, 8000) : Promise.resolve(null),
+      reqJSON(env, '/Orders?$top=1&$expand=Attachments', 8000),
+      reqJSON(env, '/Orders?$top=0&$count=true', 8000),
     ]);
-    const out = { ok: true, testes: [] };
+    const out = { ok: true };
     out.countReal = cnt.count != null ? cnt.count : (cnt.erro || `HTTP ${cnt.status}`);
-    out.testes.push({ nome: 'Enumerar por Id: Attachments Id gt 0 · $top=5 (sem orderby)', status: t2.status, erro: t2.erro, qtd: t2.value ? t2.value.length : null, ids: (t2.value || []).map((a) => a.Id) });
-    if (dealId) {
-      const dealObj = exp && exp.value && exp.value[0];
-      const expandN = dealObj && Array.isArray(dealObj.Attachments) ? dealObj.Attachments.length : ((exp && exp.erro) || `HTTP ${exp && exp.status}`);
-      out.expandNegocio = { dealId, nossoBanco: topDeal.n, expandRetornou: expandN, filtroDireto: (df && df.count != null) ? df.count : ((df && df.erro) || `HTTP ${df && df.status}`) };
-    }
+    // (1) Campos de um anexo real — revela DealId/ContactId e QUALQUER outro campo *Id de vínculo.
+    const a = one && (one.value ? one.value[0] : (one.Id != null ? one : null));
+    if (a) {
+      const vinc = {};
+      for (const k of Object.keys(a)) if (/id$/i.test(k)) vinc[k] = a[k];
+      out.anexoCampos = Object.keys(a);
+      out.anexoVinculos = vinc;
+    } else if (one) { out.anexoErro = one.erro || `HTTP ${one.status}`; }
+    // (2) As OS (Orders) têm anexos? Quantas OS existem?
+    const o = ord && ord.value && ord.value[0];
+    out.ordersTotal = (ordCnt && ordCnt.count != null) ? ordCnt.count : ((ordCnt && ordCnt.erro) || `HTTP ${ordCnt && ordCnt.status}`);
+    out.orderTemAttachments = o ? (Array.isArray(o.Attachments) ? o.Attachments.length : 'sem campo Attachments') : ((ord && ord.erro) || `HTTP ${ord && ord.status}`);
+    out.orderCampos = o ? Object.keys(o) : null;
     return out;
   })();
   // Teto rígido: devolve a página em no máx. 13s, mesmo se o Ploomes travar.
-  const teto = new Promise((resolve) => setTimeout(() => resolve({ ok: true, parcial: true, testes: [], countReal: 'o Ploomes não respondeu a tempo (está lento agora) — recarregue em instantes' }), 13000));
+  const teto = new Promise((resolve) => setTimeout(() => resolve({ ok: true, parcial: true, countReal: 'o Ploomes não respondeu a tempo (está lento agora) — recarregue em instantes' }), 13000));
   return await Promise.race([trabalho, teto]);
 }
 
@@ -249,15 +256,24 @@ export function paginaDiagAnexos(user, d) {
   const head = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Diagnóstico de anexos</title>
 <style>body{margin:0;font-family:Montserrat,'Segoe UI',Arial,sans-serif;background:#F2F6F4;color:#10262B}.wrap{max-width:820px;margin:0 auto;padding:20px 18px 56px}.card{background:#fff;border:1px solid #E4EBE9;border-radius:14px;padding:16px;margin-bottom:12px}code{background:#EEF3F1;border-radius:5px;padding:1px 6px;font-size:12.5px}.pill{font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px}</style></head><body><div class="wrap"><a href="/diretoria/migrar-arquivos" style="color:#00333B;font-size:12px;font-weight:800;text-decoration:none">← Arquivos</a>`;
   if (!d || d.ok === false) return `${head}<div class="card" style="color:#8a4b45;margin-top:12px">${esc((d && d.erro) || 'erro')}</div></div></body></html>`;
-  const pill = (st) => `<span class="pill" style="background:${st === 200 ? '#E4F3E6' : '#FFF4DE'};color:${st === 200 ? '#1E5B31' : '#8A6A16'}">${st != null ? 'HTTP ' + st : '—'}</span>`;
-  const testes = (d.testes || []).map((t) => `<div style="padding:9px 0;border-top:1px solid #F2F5F4"><div style="font-size:13px;font-weight:700">${esc(t.nome)} ${t.status != null ? pill(t.status) : `<span class="pill" style="background:#FDE7E3;color:#8a4b45">${esc(t.erro || 'erro')}</span>`}</div><div style="font-size:12px;color:#4F6469;margin-top:4px">${t.qtd != null ? `voltou <b>${t.qtd}</b> registro(s); Ids: ${(t.ids || []).map((x) => `<code>${esc(String(x))}</code>`).join(' ') || '—'}` : (t.erro ? esc(t.erro) : '—')}</div></div>`).join('');
-  const ex = d.expandNegocio;
-  const exBloco = ex ? `<div class="card"><div style="font-size:13px;font-weight:800;margin-bottom:6px">O "expandir" corta anexos por registro?</div>${ex.erro ? esc(ex.erro) : `Negócio <code>${esc(String(ex.dealId))}</code> — no nosso banco: <b>${esc(String(ex.nossoBanco))}</b> · o <code>$expand</code> devolveu: <b>${esc(String(ex.expandRetornou))}</b> · filtro direto (contagem real): <b>${esc(String(ex.filtroDireto))}</b><div style="font-size:12px;color:#8fa39f;margin-top:6px">${(typeof ex.expandRetornou === 'number' && typeof ex.filtroDireto === 'number' && ex.filtroDireto > ex.expandRetornou) ? '⚠ O expand devolve MENOS que o real → é ele que está cortando. A correção é buscar por filtro direto.' : 'Se os números baterem, o expand não é o problema — os que faltam estão em outra entidade.'}</div>`}</div>` : '';
+  const vinc = d.anexoVinculos || {};
+  const vincLinhas = Object.keys(vinc).length ? Object.entries(vinc).map(([k, v]) => `<div style="font-size:12.5px;padding:2px 0"><code>${esc(k)}</code> = <b>${v == null ? '<span style="color:#b02a37">null (vazio)</span>' : esc(String(v))}</b></div>`).join('') : '<div style="color:#8fa39f;font-size:12.5px">—</div>';
+  const anexoBloco = d.anexoCampos ? `<div class="card">
+    <div style="font-size:13px;font-weight:800;margin-bottom:6px">Campos de vínculo de um anexo real</div>
+    ${vincLinhas}
+    <div style="font-size:11px;color:#8fa39f;margin-top:8px">Todos os campos: ${(d.anexoCampos || []).map((k) => `<code>${esc(k)}</code>`).join(' ')}</div>
+  </div>` : (d.anexoErro ? `<div class="card" style="color:#8a4b45">Anexo: ${esc(d.anexoErro)}</div>` : '');
+  const ordBloco = `<div class="card">
+    <div style="font-size:13px;font-weight:800;margin-bottom:6px">As Ordens de Serviço (OS/Orders) têm anexos?</div>
+    <div style="font-size:12.5px">Total de OS no Ploomes: <b>${esc(String(d.ordersTotal))}</b></div>
+    <div style="font-size:12.5px;margin-top:4px">Uma OS de amostra → anexos: <b>${esc(String(d.orderTemAttachments))}</b></div>
+    ${d.orderCampos ? `<div style="font-size:11px;color:#8fa39f;margin-top:8px">Campos da OS: ${(d.orderCampos || []).map((k) => `<code>${esc(k)}</code>`).join(' ')}</div>` : ''}
+  </div>`;
   return `${head}
-  <h1 style="font-size:19px;margin:12px 0 4px">Diagnóstico — anexos que faltam</h1>
-  <div class="card"><div style="font-size:13px">Total real de anexos no Ploomes: <b>${esc(String(d.countReal))}</b></div></div>
-  <div class="card"><div style="font-size:13px;font-weight:800;margin-bottom:2px">Dá para enumerar direto por Id?</div>${testes}</div>
-  ${exBloco}
+  <h1 style="font-size:19px;margin:12px 0 4px">Diagnóstico — onde estão os anexos que faltam</h1>
+  <div class="card"><div style="font-size:13px">Total real de anexos no Ploomes: <b>${esc(String(d.countReal))}</b> · no nosso banco já temos <b>4.085</b> (coletas+clientes).</div></div>
+  ${anexoBloco}
+  ${ordBloco}
   <div style="font-size:11.5px;color:#8fa39f">Só leitura. Tire um print e me mande.</div>
   </div></body></html>`;
 }
