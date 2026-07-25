@@ -54,7 +54,7 @@ Villanova ESG (San Paolo, Brasile · filiale italiana in apertura nel 2026) — 
 Marcio Villanova (ORCID 0009-0001-8072-6287), autore del framework SEMM.
 Partner operativo: Ecobraz (San Paolo, dal 2009).
 
-**villanovaesg.com · [e-mail @villanovaesg.com da definire] · [telefono/WhatsApp da definire]**
+**villanovaesg.com · contact@villanovaesg.com · [telefono/WhatsApp da definire]**
 
 ---
 

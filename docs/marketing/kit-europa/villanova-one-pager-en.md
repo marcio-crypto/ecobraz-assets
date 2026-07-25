@@ -51,7 +51,7 @@ Villanova ESG (São Paulo, Brazil · Italian branch opening 2026) — founded by
 Marcio Villanova (ORCID 0009-0001-8072-6287), author of the SEMM framework.
 Operational partner: Ecobraz (São Paulo, since 2009).
 
-**villanovaesg.com · [e-mail @villanovaesg.com a definir] · [telefone/WhatsApp a definir]**
+**villanovaesg.com · contact@villanovaesg.com · [telefone/WhatsApp a definir]**
 
 ---
 

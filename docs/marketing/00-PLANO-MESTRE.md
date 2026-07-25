@@ -75,8 +75,10 @@ a 2–3 clientes próximos (NDA proíbe divulgar sem consentimento, não com con
 | Serviços pagos (laudo, sanitização/destruição de HD, hospitalar) | 2, 3 | Receita variável de maior ticket | curto |
 | Villanova ESG (gestão documental BR–UE) | 6 | Maior ticket e margem; motor de médio/longo prazo | médio/longo |
 
-Nota travada: pilhas/lâmpadas/toner saem da comunicação ativa (decisão Marcio 25/07/2026 —
-confirmar se o site mantém "sob consulta" ou remove de vez).
+Nota travada: pilhas/lâmpadas/toner **fora do portfólio** (decisão Marcio 25/07/2026 —
+"focar em produtos que não geram custo de descarte"). Verificado em 25/07: o site já
+está 100% alinhado — todas as menções são de escopo negativo ("não coletamos"), sem
+nenhuma oferta ativa; redirects de URLs antigas permanecem por SEO.
 
 ## 5. Canais e orçamento (~R$ 15.000/mês de mídia + equipe atual)
 
