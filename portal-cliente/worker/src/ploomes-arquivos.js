@@ -221,16 +221,17 @@ export async function diagnosticoAnexos(env) {
   let topDeal = null;
   try { topDeal = await env.DB_PLOOMES.prepare("SELECT deal_id, COUNT(*) AS n FROM arquivos_ploomes WHERE fonte='anexo' AND deal_id IS NOT NULL GROUP BY deal_id ORDER BY n DESC LIMIT 1").first(); } catch { /* ignore */ }
   const trabalho = (async () => {
-    // Conta os anexos POR EntityId (tipo do dono). Assim vejo exatamente onde estão.
-    const ids = [1, 2, 3, 4, 5, 6, 8, 9, 10];
-    const calls = [reqJSON(env, '/Attachments?$top=0&$count=true', 8000)].concat(
-      ids.map((k) => reqJSON(env, `/Attachments?$filter=EntityId%20eq%20${k}&$top=0&$count=true`, 8000)),
+    // (A) Enumeração por tipo dá certo (com ordenação, rápido) e traz a Url no próprio item?
+    // (B) Onde estão os ~4.969 que faltam — testa os EntityIds que não vi (7, 11..18).
+    const extraIds = [7, 11, 12, 13, 14, 15, 16, 17, 18];
+    const calls = [reqJSON(env, '/Attachments?$filter=EntityId%20eq%202%20and%20Id%20gt%200&$orderby=Id&$top=5', 9000)].concat(
+      extraIds.map((k) => reqJSON(env, `/Attachments?$filter=EntityId%20eq%20${k}&$top=0&$count=true`, 8000)),
     );
     const res = await Promise.all(calls);
     const out = { ok: true };
-    out.countReal = res[0].count != null ? res[0].count : (res[0].erro || `HTTP ${res[0].status}`);
-    const nome = { 1: 'Contato', 2: 'Negócio/Coleta', 3: 'OS (Order)', 4: 'Anotação', 5: 'Interação', 6: 'E-mail', 8: 'Lead', 9: 'Tarefa', 10: 'Documento' };
-    out.porEntidade = ids.map((k, i) => ({ entityId: k, nome: nome[k] || '?', count: res[i + 1].count != null ? res[i + 1].count : (res[i + 1].erro || `HTTP ${res[i + 1].status}`) }));
+    const enr = res[0]; const a0 = enr.value && enr.value[0];
+    out.enumTeste = { status: enr.status, erro: enr.erro, qtd: enr.value ? enr.value.length : null, temUrl: a0 ? (a0.Url ? 'SIM' : 'NÃO') : '—' };
+    out.porEntidade = extraIds.map((k, i) => ({ entityId: k, nome: '?', count: res[i + 1].count != null ? res[i + 1].count : (res[i + 1].erro || `HTTP ${res[i + 1].status}`) }));
     return out;
   })();
   // Teto rígido: devolve a página em no máx. 13s, mesmo se o Ploomes travar.
@@ -241,13 +242,18 @@ export async function diagnosticoAnexos(env) {
 export function paginaDiagAnexos(user, d) {
   const head = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Diagnóstico de anexos</title>
 <style>body{margin:0;font-family:Montserrat,'Segoe UI',Arial,sans-serif;background:#F2F6F4;color:#10262B}.wrap{max-width:820px;margin:0 auto;padding:20px 18px 56px}.card{background:#fff;border:1px solid #E4EBE9;border-radius:14px;padding:16px;margin-bottom:12px}code{background:#EEF3F1;border-radius:5px;padding:1px 6px;font-size:12.5px}.pill{font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px}</style></head><body><div class="wrap"><a href="/diretoria/migrar-arquivos" style="color:#00333B;font-size:12px;font-weight:800;text-decoration:none">← Arquivos</a>`;
-  if (!d || d.ok === false) return `${head}<div class="card" style="color:#8a4b45;margin-top:12px">${esc((d && d.erro) || 'erro')}</div></div></body></html>`;
-  const linhas = (d.porEntidade || []).map((e) => `<tr><td style="padding:6px 8px;border-bottom:1px solid #F2F5F4">${esc(String(e.entityId))}</td><td style="padding:6px 8px;border-bottom:1px solid #F2F5F4">${esc(e.nome)}</td><td style="padding:6px 8px;border-bottom:1px solid #F2F5F4;text-align:right;font-weight:800">${typeof e.count === 'number' ? e.count.toLocaleString('pt-BR') : esc(String(e.count))}</td></tr>`).join('');
+  if (!d || d.ok === false || d.parcial) return `${head}<div class="card" style="color:#8a4b45;margin-top:12px">${esc((d && d.erro) || (d && d.parcial ? 'O Ploomes demorou a responder (está lento agora). Recarregue em instantes.' : 'erro'))}</div></div></body></html>`;
+  const e = d.enumTeste || {};
+  const enumOk = e.status === 200 && e.qtd > 0 && e.temUrl === 'SIM';
+  const enumBloco = `<div class="card"><div style="font-size:13px;font-weight:800;margin-bottom:6px">(A) Dá para listar anexos por tipo, ordenado?</div>
+    <div style="font-size:12.5px">Consulta <code>EntityId eq 2 · Id gt 0 · $orderby=Id · $top=5</code>: ${e.status != null ? `<b>HTTP ${esc(String(e.status))}</b>` : `<b style="color:#8a4b45">${esc(e.erro || 'erro')}</b>`} · voltou <b>${esc(String(e.qtd == null ? '—' : e.qtd))}</b> · traz a Url no item? <b>${esc(String(e.temUrl))}</b></div>
+    <div style="font-size:12px;color:${enumOk ? '#1E5B31' : '#8A6A16'};margin-top:6px">${enumOk ? '✅ Perfeito — posso enumerar tudo direto por tipo (pega os 578 + 924 + os que faltam).' : '⚠ Se falhou, uso o caminho por "pai" para cada tipo.'}</div></div>`;
+  const linhas = (d.porEntidade || []).map((x) => `<tr><td style="padding:6px 8px;border-bottom:1px solid #F2F5F4">${esc(String(x.entityId))}</td><td style="padding:6px 8px;border-bottom:1px solid #F2F5F4;text-align:right;font-weight:800">${typeof x.count === 'number' ? x.count.toLocaleString('pt-BR') : esc(String(x.count))}</td></tr>`).join('');
   return `${head}
-  <h1 style="font-size:19px;margin:12px 0 4px">Diagnóstico — anexos por tipo de dono (EntityId)</h1>
-  <div class="card"><div style="font-size:13px">Total real de anexos no Ploomes: <b>${esc(String(d.countReal))}</b> · já temos no banco <b>4.085</b> (Negócio 3.488 + Contato 597).</div></div>
-  <div class="card"><table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr><th style="text-align:left;padding:6px 8px;font-size:10px;text-transform:uppercase;color:#7c8a87">EntityId</th><th style="text-align:left;padding:6px 8px;font-size:10px;text-transform:uppercase;color:#7c8a87">Tipo</th><th style="text-align:right;padding:6px 8px;font-size:10px;text-transform:uppercase;color:#7c8a87">Anexos</th></tr></thead><tbody>${linhas}</tbody></table>
-  <div style="font-size:11.5px;color:#8fa39f;margin-top:8px">O(s) tipo(s) com número grande fora de "Negócio" é onde estão os que faltam — vou varrer aquele tipo.</div></div>
+  <h1 style="font-size:19px;margin:12px 0 4px">Diagnóstico — enumerar por tipo + achar os que faltam</h1>
+  ${enumBloco}
+  <div class="card"><div style="font-size:13px;font-weight:800;margin-bottom:6px">(B) Anexos nos tipos que ainda não vi</div><table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr><th style="text-align:left;padding:6px 8px;font-size:10px;text-transform:uppercase;color:#7c8a87">EntityId</th><th style="text-align:right;padding:6px 8px;font-size:10px;text-transform:uppercase;color:#7c8a87">Anexos</th></tr></thead><tbody>${linhas}</tbody></table>
+  <div style="font-size:11.5px;color:#8fa39f;margin-top:8px">Já mapeado: Contato(1)=597, Negócio(2)=4.066, Anotação(4)=924. Faltam ~4.969 — devem aparecer aqui.</div></div>
   <div style="font-size:11.5px;color:#8fa39f">Só leitura. Tire um print e me mande.</div>
   </div></body></html>`;
 }
