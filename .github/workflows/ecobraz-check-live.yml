@@ -96,6 +96,27 @@ jobs:
             printf '%s' "$body" | grep -oE 'wa\.me/5511912728412' | head -1 | sed 's/^/    wa.me -> /'
             printf '%s' "$body" | grep -oE 'agendamento/\?[^"]*origem=(coleta-de-lixo-eletronico-para-empresas|descarte-de-eletrodomesticos)' | head -1 | sed 's/^/    agendar -> /'
           done
+      - name: Verificar WhatsApp flutuante global (1 por página, sem duplicar)
+        run: |
+          set +e
+          for u in \
+            "https://ecobraz.org/" \
+            "https://ecobraz.org/agendamento/" \
+            "https://ecobraz.org/solucoes-corporativas/" \
+            "https://ecobraz.org/secure-data-sanitisation/" \
+            "https://ecobraz.org/blog/"; do
+            echo "===================================================="
+            echo "URL: $u"
+            body=$(curl -sSL --max-time 30 -A "Mozilla/5.0 (compatible; EcobrazCheck/1.0)" "$u")
+            n=$(printf '%s' "$body" | grep -o 'hx-wa-float' | wc -l | tr -d ' ')
+            echo "  Botões flutuantes hx-wa-float: $n (esperado: 1)"
+            lang=$(printf '%s' "$body" | grep -oE '<html lang="[^"]*"' | head -1)
+            echo "  $lang"
+          done
+          echo "===================================================="
+          echo "Atalho WhatsApp no hero do agendamento:"
+          curl -sSL --max-time 30 -A "Mozilla/5.0 (compatible; EcobrazCheck/1.0)" "https://ecobraz.org/agendamento/" \
+            | grep -o 'agendamento_hero_whatsapp' | head -1 || echo "  NAO ENCONTRADO"
       - name: Páginas ao vivo — procurar cards.min.js
         run: |
           set +e
