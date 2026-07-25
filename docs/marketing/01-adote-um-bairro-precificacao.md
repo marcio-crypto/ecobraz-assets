@@ -3,6 +3,11 @@
 > **Status: PROPOSTA para decisão do Marcio** (autorizada por ele em 25/07/2026: "você é o
 > especialista"). Nenhum preço abaixo está em vigor até ele bater o martelo.
 > Base: números informados pelo Marcio em 25/07/2026.
+>
+> ⚠️ **ATUALIZAÇÃO 25/07/2026:** após pesquisa de mercado (3 pesquisas independentes),
+> a tabela deste documento (v1) foi **recalibrada** — ver
+> `03-pesquisa-mercado-precificacao.md`, seção 3 (tabela v2, recomendação final).
+> Este documento permanece como registro da lógica de custo e do modelo comercial.
 
 ## 1. A conta de custo (base verificável)
 
