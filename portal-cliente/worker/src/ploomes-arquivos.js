@@ -211,14 +211,28 @@ export async function completarAnexos(env, offset, limit) {
 // Janela pequena o bastante para caber em $top=1000 sem truncar. O item já traz
 // Url + DealId/ContactId. Idempotente e retomável pelo Id.
 // ---------------------------------------------------------------------------
-const ANEXOS_ID_MAX = 20000000; // teto de varredura (maior Id de anexo visto ~17,4M)
+const ANEXOS_ID_MAX = 25000000; // teto de varredura (maior Id de anexo visto ~17,4M; folga p/ recentes)
+const ANEXOS_ALVO = 200;        // itens por faixa que garantidamente cabem numa página do Ploomes
 export async function importarAnexosJanela(env, desdeId, janela) {
   if (!env.PLOOMES_USER_KEY) return { ok: false, erro: 'Falta a chave do Ploomes no cofre.' };
   if (!env.DB_PLOOMES) return { ok: false, erro: 'Banco D1 não vinculado (DB_PLOOMES).' };
   if (!env.R2_ARQUIVOS) return { ok: false, erro: 'Depósito R2 ainda não ligado. Ative o R2 no painel da Cloudflare.' };
-  const W = Math.min(Math.max(Number(janela) || 100000, 5000), 1000000);
   const X = Math.max(Number(desdeId) || 0, 0);
+  if (X >= ANEXOS_ID_MAX) return { ok: true, vistos: 0, countFaixa: 0, gravados: 0, falhas: 0, bytes: 0, proximoId: X, fim: true };
+  // AUTO-AJUSTE: começa com uma faixa grande e ENCOLHE até a contagem caber numa
+  // página (<= ALVO). Assim regiões densas (rajadas de anexos) nunca truncam, e
+  // regiões vazias avançam em saltos grandes. A contagem por faixa de Id é rápida.
+  let W = Math.min(Math.max(Number(janela) || 400000, 2000), 4000000);
+  let count = null;
+  for (let i = 0; i < 14; i++) {
+    const c = await reqJSON(env, `/Attachments?$filter=Id%20gt%20${X}%20and%20Id%20le%20${X + W}&$top=0&$count=true`, 8000);
+    if (c.count == null) { W = Math.max(Math.floor(W / 2), 1000); continue; } // timeout: encolhe e tenta
+    count = c.count;
+    if (count <= ANEXOS_ALVO || W <= 1000) break;
+    W = Math.max(Math.floor(W / 2), 1000);
+  }
   const Y = X + W;
+  if (count === 0) { await gravarEstado(env, 'anexos_janela_cursor', Y); return { ok: true, vistos: 0, countFaixa: 0, gravados: 0, falhas: 0, bytes: 0, proximoId: Y, fim: Y >= ANEXOS_ID_MAX }; }
   const r = await reqJSON(env, `/Attachments?$filter=Id%20gt%20${X}%20and%20Id%20le%20${Y}&$top=1000`, 15000);
   if (r.erro) return { ok: false, erro: r.erro, desdeId: X };
   if (r.status !== 200) return { ok: false, erro: `HTTP ${r.status}`, desdeId: X };
@@ -240,8 +254,9 @@ export async function importarAnexosJanela(env, desdeId, janela) {
     gravados++; if (dl.tamanho) bytes += dl.tamanho;
   }
   await gravarEstado(env, 'anexos_janela_cursor', Y);
-  // Se uma janela vier com 1000 (o teto), pode ter truncado — sinaliza para diminuir.
-  return { ok: true, vistos: anexos.length, gravados, falhas, bytes, truncado: anexos.length >= 1000, proximoId: Y, fim: Y >= ANEXOS_ID_MAX };
+  // truncado = ainda veio menos que a contagem da faixa (não deveria acontecer com o auto-ajuste).
+  const truncado = (count != null && anexos.length < count);
+  return { ok: true, vistos: anexos.length, countFaixa: count, gravados, falhas, bytes, truncado, proximoId: Y, fim: Y >= ANEXOS_ID_MAX };
 }
 
 // ---------------------------------------------------------------------------
