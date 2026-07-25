@@ -1,0 +1,80 @@
+name: "Ecobraz/Villanova — verificação de conteúdo ao vivo (re-análise)"
+
+on:
+  workflow_dispatch:
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Baixar páginas-chave e extrair sinais de conteúdo
+        run: |
+          set +e
+          UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
+
+          fetch () { curl -sL --max-time 30 -A "$UA" "$1"; }
+          code () { curl -s -o /dev/null -w "%{http_code}" --max-time 30 -A "$UA" -L "$1"; }
+
+          {
+            echo "## Status HTTP das URLs críticas (mapa de backlinks)"
+            for u in \
+              "https://ecobraz.org/" \
+              "https://ecobraz.org/pt_BR/blog/ecobraz-emigre-lanca-servico-exclusivo-de-processamento-de-fios-e-cabos-eletricos-para-recicladoras-e-ferros-velhos" \
+              "https://ecobraz.org/de/blog/logistica-reversa-de-eletronicos-como-as-empresas-podem-se-adequar-a-legislacao-brasileira" \
+              "https://ecobraz.org/de/blog/reciclagem-de-eletronicos-como-sua-empresa-pode-reduzir-custos-e-gerar-impacto-positivo" \
+              "https://ecobraz.org/projetos/para-voce/coleta-gratuita-de-e-lixo" \
+              "https://ecobraz.org/noticias-esg/" \
+              "https://ecobraz.org/agendamento/" \
+              "https://www.villanovaesg.com/" ; do
+              echo "- $(code "$u")  $u"
+            done
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          HOME_HTML=$(fetch "https://ecobraz.org/")
+          {
+            echo "## Home Ecobraz — sinais de conteúdo"
+            echo '```'
+            echo "TITLE: $(echo "$HOME_HTML" | grep -oP '(?<=<title>).*?(?=</title>)' | head -1)"
+            echo "H1: $(echo "$HOME_HTML" | grep -oP '<h1[^>]*>.*?</h1>' | sed 's/<[^>]*>//g' | head -2)"
+            echo "H2s (primeiros 8):"
+            echo "$HOME_HTML" | grep -oP '<h2[^>]*>.*?</h2>' | sed 's/<[^>]*>//g' | head -8
+            echo "--- ocorrências (contagem) ---"
+            for termo in "grátis" "gratuita" "gratuito" "residencial" "sua casa" "pessoa física" "portal" "sistema" "rastreab" "36 meses" "exclusividade" "QR" "workers.dev"; do
+              n=$(echo "$HOME_HTML" | grep -io "$termo" | wc -l)
+              echo "home: '$termo' = $n"
+            done
+            echo "--- CTAs (texto de <a class=button ou hx-cta, primeiros 12) ---"
+            echo "$HOME_HTML" | grep -oP '<a[^>]*class="[^"]*(button|cta|hx-btn)[^"]*"[^>]*>.*?</a>' | sed 's/<[^>]*>//g' | head -12
+            echo '```'
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          AG_HTML=$(fetch "https://ecobraz.org/agendamento/")
+          {
+            echo "## /agendamento/ — sinais"
+            echo '```'
+            echo "TITLE: $(echo "$AG_HTML" | grep -oP '(?<=<title>).*?(?=</title>)' | head -1)"
+            for termo in "grátis" "gratuita" "cadeia de custódia" "Inventário" "prazo" "horas úteis" "24h" "48h"; do
+              n=$(echo "$AG_HTML" | grep -io "$termo" | wc -l)
+              echo "agendamento: '$termo' = $n"
+            done
+            echo '```'
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          VN_HTML=$(fetch "https://www.villanovaesg.com/")
+          {
+            echo "## Home Villanova — sinais"
+            echo '```'
+            echo "TITLE: $(echo "$VN_HTML" | grep -oP '(?<=<title>).*?(?=</title>)' | head -1)"
+            echo "H1: $(echo "$VN_HTML" | grep -oP '<h1[^>]*>.*?</h1>' | sed 's/<[^>]*>//g' | head -2)"
+            for termo in "SEMM" "Submit the buyer request" "scoping" "€" "Scope 3" "Italian" "italiano" "compliance officer" "European compan"; do
+              n=$(echo "$VN_HTML" | grep -io "$termo" | wc -l)
+              echo "villanova: '$termo' = $n"
+            done
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "Concluído. Veja o resumo do job."
