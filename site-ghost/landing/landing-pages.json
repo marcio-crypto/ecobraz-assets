@@ -3843,6 +3843,12 @@
         "href": "/coleta-avulsa-para-empresas/",
         "icon": "truck",
         "text": "Descarte eventual? Uma coleta com começo, meio e fim."
+      },
+      {
+        "title": "Soluções por ativo e evento",
+        "href": "/solucoes-corporativas/",
+        "icon": "box",
+        "text": "Servidores, dados/LGPD, desmobilização, devoluções — página a página."
       }
     ],
     "final": {
