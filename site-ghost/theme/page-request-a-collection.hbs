@@ -1,8 +1,7 @@
 {{!< default}}
 
-{{#contentFor "head"}}
-<meta name="description" content="Request an assessment for electronic waste collection and disposal. Tell us the materials, volume and location for Ecobraz service.">
-{{/contentFor}}
+{{!-- A meta description vem do próprio Ghost (campo meta_description da página
+     em en-paginas.json) — não duplicar aqui: a auditoria exige exatamente 1. --}}
 <section class="form-hero"><div class="container form-hero-grid"><div><span class="eyebrow">Collection request</span><h1>Request a collection assessment</h1><p>Share the initial details of your operation. Submitting does not automatically confirm the collection; our team will assess location, materials, volume and requirements.</p><p style="margin-top:18px"><a class="button hx-btn-wa" href="{{@custom.whatsapp_url}}" rel="noopener" data-track="request_hero_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="margin-right:8px"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> Prefer it faster? Message us on WhatsApp</a></p></div><div class="form-trust"><strong>What happens next?</strong><ol><li>We receive your request.</li><li>The team checks feasibility.</li><li>We get back to you <strong>within 24 business hours</strong> to confirm the scope.</li></ol></div></div></section>
 <section class="section form-section"><div class="container form-layout">
     <form class="collection-form" method="post" data-collection-form data-endpoint="{{#if @custom.collection_endpoint}}{{@custom.collection_endpoint}}{{else}}https://ecobraz-coletas.ti-0ab.workers.dev/api/coletas{{/if}}" novalidate>

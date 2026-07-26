@@ -3612,7 +3612,7 @@
       "cta": "Agendar demonstração",
       "band": [
         {
-          "title": "Contrato contínuo",
+          "title": "Contrato de 36 meses",
           "text": "coletas programadas, sem custo de coleta"
         },
         {
@@ -3734,7 +3734,7 @@
         "Promessa de condição bancária — com a documentação no padrão, quem pleiteia é a sua empresa"
       ],
       "conditions": "Periodicidade mínima, unidades atendidas, exclusividade do fluxo contratado e documentação são definidos na avaliação técnica, antes da assinatura.",
-      "outNote": "É a mesma régua do site inteiro: alegação só com fonte e escopo declarado — inclusive nas nossas."
+      "outNote": "Condições de saída e a portabilidade dos documentos emitidos ficam escritas no contrato — se sair, o histórico é seu."
     },
     "stepsTitle": "Do primeiro contato à rotina com prova",
     "stepsSub": "Nenhum contrato é proposto sem demonstração e avaliação técnica.",
@@ -3768,7 +3768,7 @@
       },
       {
         "title": "MTR e CDF",
-        "text": "Manifesto de transporte e certificado de destinação, quando aplicáveis ao material."
+        "text": "MTR (Manifesto de Transporte de Resíduos) e CDF (Certificado de Destinação Final), quando aplicáveis ao material."
       },
       {
         "title": "Cadeia de custódia com QR",
@@ -3792,7 +3792,7 @@
     "faq": [
       {
         "q": "Quanto custa o contrato?",
-        "a": "O contrato de descarte contínuo não tem custo de coleta nem de acesso ao sistema. O compromisso é de vigência, de pelo menos um descarte por trimestre e de exclusividade do fluxo contratado. Módulos avançados do sistema e relatórios específicos são contratados à parte — as condições são apresentadas na demonstração."
+        "a": "A conta é transparente: a Ecobraz se remunera com a destinação e a valorização do material coletado — por isso não cobra a coleta nem o acesso ao sistema. O contrato tem vigência de 36 meses, com pelo menos um descarte por trimestre e exclusividade do fluxo contratado. Módulos avançados do sistema e relatórios específicos são contratados à parte — as condições completas são apresentadas na demonstração."
       },
       {
         "q": "Por que um contrato de 36 meses?",
@@ -3800,7 +3800,7 @@
       },
       {
         "q": "Hoje eu vendo meus lotes. Não estou perdendo dinheiro ao trocar?",
-        "a": "É a conta que fazemos com você na demonstração, com os seus números: de um lado, o valor da venda avulsa; do outro, o custo de montar prova manualmente, o risco da responsabilidade compartilhada e o valor dos dados para o seu ESG. Você decide com a planilha na mão."
+        "a": "É a conta que fazemos com você na demonstração, com os seus números: de um lado, o valor da venda avulsa; do outro, o custo de montar prova manualmente, o risco da responsabilidade compartilhada (Lei 12.305/2010) e o valor dos dados para o seu ESG. E um esclarecimento importante: a exclusividade vale para as categorias e unidades definidas em contrato — não para tudo que a sua empresa descarta."
       },
       {
         "q": "O sistema substitui a auditoria?",
@@ -4230,7 +4230,7 @@
         "Consultorias de ESG e sustentabilidade",
         "Contabilidades e assessorias com carteira PJ",
         "Certificadoras e agências sem operação própria de resíduos",
-        "Registro prévio de contas, com proteção definida em contrato",
+        "Registro prévio de contas: proteção de 6 meses por conta registrada, renovável enquanto houver negociação ativa",
         "Treinamento e credenciamento obrigatórios antes da primeira venda"
       ],
       "out": [
@@ -4302,7 +4302,7 @@
       },
       {
         "q": "A Ecobraz pode vender direto para um cliente meu?",
-        "a": "O registro prévio de contas existe exatamente para isso: cliente registrado por você fica protegido pelas regras do contrato de parceria. Clientes que já são da Ecobraz não geram comissão — a régua vale para os dois lados."
+        "a": "O registro prévio de contas existe exatamente para isso: conta registrada fica protegida por 6 meses, renovável enquanto houver negociação ativa — e cliente registrado que procurar a Ecobraz diretamente é redirecionado ao parceiro durante a proteção. Você registra conta a conta, quando decidir abordar — não precisa entregar a carteira inteira. Clientes que já são da Ecobraz não geram comissão: a régua vale para os dois lados."
       },
       {
         "q": "Posso usar a minha marca?",
@@ -4376,7 +4376,7 @@
     },
     "form": {
       "title": "Peça sua coleta em 1 minuto",
-      "hint": "Retorno em até 24h úteis.",
+      "hint": "Retorno em até 24h úteis. Prefere falar com gente? Ligue (11) 4329-2001 ou chame no WhatsApp.",
       "material": "",
       "describeLabel": "O que você quer descartar?",
       "describePlaceholder": "Ex.: 1 geladeira e 2 monitores",
@@ -4483,11 +4483,12 @@
         "Móveis, entulho e itens não eletrônicos",
         "Resíduos químicos ou contaminados"
       ],
-      "conditions": "A coleta é confirmada na avaliação: endereço, acesso (escada, elevador), tipo e quantidade de material. Em alguns casos, a equipe pode indicar um ponto de entrega ou o envio pelos Correios.",
-      "outNote": "Para os itens que não buscamos, indicamos os canais oficiais de logística reversa dos fabricantes."
+      "conditions": "Antes de agendar, a equipe confirma com você: endereço, acesso (escada, elevador) e o que você tem para descartar. Em alguns casos, indicamos um ponto de entrega ou o envio pelos Correios.",
+      "outNote": "Para os itens que não buscamos, indicamos os canais oficiais de logística reversa dos fabricantes.",
+      "sub": "A gente fala tudo antes: o que buscamos, o que não buscamos — e confirma os detalhes com você antes de ir."
     },
     "stepsTitle": "Como funciona, em 3 passos",
-    "stepsSub": "Do pedido ao comprovante — sem burocracia.",
+    "stepsSub": "Do pedido ao comprovante — sem burocracia e sem letra miúda.",
     "steps": [
       {
         "title": "Conte o que você tem",
@@ -4554,7 +4555,7 @@
     "faq": [
       {
         "q": "É grátis mesmo?",
-        "a": "Para residências na Grande São Paulo, sim — a gratuidade é confirmada na avaliação do endereço e do material, antes de qualquer agendamento. Sem pegadinha e sem custo surpresa."
+        "a": "Sim — para residências na Grande São Paulo: a capital e cidades vizinhas como Guarulhos, Osasco, Santo André, São Bernardo, São Caetano e Diadema. Na avaliação confirmamos o seu endereço e o material. E se algum caso não for gratuito, avisamos antes, com o valor — nada de surpresa na porta."
       },
       {
         "q": "Moro fora da Grande São Paulo. Tem jeito?",
