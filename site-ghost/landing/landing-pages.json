@@ -4282,5 +4282,265 @@
       "title": "Agora ela pode comprar execução — pela sua mão",
       "text": "Envie a candidatura com um resumo da sua empresa e da carteira. Retorno em até 24h úteis com os próximos passos do credenciamento."
     }
+  },
+  {
+    "slug": "coleta-gratuita",
+    "title": "Coleta gratuita de lixo eletrônico na sua casa",
+    "crumb": "Coleta gratuita",
+    "serviceType": "Coleta residencial gratuita de resíduos eletrônicos na Grande São Paulo, mediante avaliação de endereço e material",
+    "custom_excerpt": "A Ecobraz busca seus eletrônicos parados em casa, sem custo, na Grande São Paulo — com dia combinado e comprovante do que saiu. Gratuidade confirmada na avaliação.",
+    "meta_title": "Coleta gratuita de lixo eletrônico | Ecobraz",
+    "meta_description": "TV velha, computador parado, geladeira que já era? A Ecobraz coleta na sua casa, sem custo, na Grande São Paulo — com comprovante. Agende em 1 minuto.",
+    "hub": {
+      "title": "Como funciona",
+      "href": "/como-funciona/"
+    },
+    "hero": {
+      "eyebrow": "Residências · Grande São Paulo · Sem custo",
+      "sub": "Aquela TV velha, o computador parado, a geladeira que já era: a Ecobraz busca na sua casa, sem custo, e dá o destino certo — com direito a comprovante. É só contar o que você tem e onde você está.",
+      "cta": "Agendar coleta gratuita",
+      "band": [
+        {
+          "title": "Grátis",
+          "text": "para residências na Grande São Paulo"
+        },
+        {
+          "title": "Dia combinado",
+          "text": "a equipe confirma tudo com você antes"
+        },
+        {
+          "title": "Comprovante",
+          "text": "você recebe o registro do que saiu"
+        }
+      ]
+    },
+    "form": {
+      "title": "Peça sua coleta em 1 minuto",
+      "hint": "Retorno em até 24h úteis.",
+      "material": "",
+      "describeLabel": "O que você quer descartar?",
+      "describePlaceholder": "Ex.: 1 geladeira e 2 monitores",
+      "button": "Agendar coleta gratuita",
+      "micro": "A gratuidade é confirmada na avaliação do endereço e do material — sem pegadinha."
+    },
+    "recognize": {
+      "title": "Isso parece com a sua casa?",
+      "items": [
+        "Tem eletrônico parado ocupando espaço há meses (ou anos)",
+        "Não sabe onde jogar — e sabe que no lixo comum não pode",
+        "Não quer pagar frete ou caçamba para se livrar das coisas",
+        "Tem medo do que pode acontecer com os dados do computador velho",
+        "Quer ter certeza de que vai para o destino certo, não para um lixão"
+      ]
+    },
+    "painsTitle": "Por que não pode ir para o lixo comum",
+    "painsSub": "Três motivos para dar o destino certo — pelo planeta e por você.",
+    "pains": [
+      {
+        "icon": "alert",
+        "title": "Metais pesados no solo e na água",
+        "text": "Eletrônicos carregam chumbo, mercúrio e cádmio. No lixo comum, isso vaza para o solo e para a água que volta para a sua torneira.",
+        "consequence": "É por isso que a lei manda dar destino específico ao lixo eletrônico — ele não é lixo comum."
+      },
+      {
+        "icon": "lock",
+        "title": "Seus dados continuam no aparelho",
+        "text": "Computador, notebook e celular guardam fotos, senhas e documentos mesmo 'apagados'. Na calçada, isso vira risco de verdade.",
+        "consequence": "O destino certo inclui o cuidado com o que está dentro — pergunte à equipe na avaliação."
+      },
+      {
+        "icon": "building",
+        "title": "Espaço ocupado e problema adiado",
+        "text": "O armário, a garagem e o quartinho viram depósito de aparelho morto — e a decisão fica sempre para depois.",
+        "consequence": "Uma solicitação de 1 minuto resolve o que está aí parado há anos."
+      }
+    ],
+    "contrast": {
+      "title": "Na calçada vs. com a Ecobraz",
+      "sub": "O mesmo aparelho, dois destinos muito diferentes.",
+      "before": {
+        "title": "Deixar na calçada",
+        "items": [
+          "Pode acabar em lixão ou desmonte irregular",
+          "Seus dados ficam à deriva",
+          "Contamina solo e água",
+          "Nenhum comprovante",
+          "Continua sendo problema seu"
+        ]
+      },
+      "after": {
+        "title": "Coleta da Ecobraz",
+        "items": [
+          "Sem custo para residências na Grande SP",
+          "Dia combinado com você",
+          "Destino certificado desde 2011",
+          "Comprovante do que foi retirado",
+          "Aparelhos bons podem virar inclusão digital"
+        ]
+      }
+    },
+    "gains": {
+      "title": "O que você ganha (além do espaço)",
+      "sub": "Simples assim — descrito pelo que acontece de verdade.",
+      "items": [
+        {
+          "icon": "shield",
+          "title": "Sem custo",
+          "text": "Coleta residencial gratuita na Grande SP, confirmada na avaliação."
+        },
+        {
+          "icon": "truck",
+          "title": "Sem carregar peso",
+          "text": "A equipe retira no endereço, no dia combinado."
+        },
+        {
+          "icon": "file",
+          "title": "Comprovante",
+          "text": "Registro do que saiu da sua casa — preto no branco."
+        },
+        {
+          "icon": "chart",
+          "title": "Impacto real",
+          "text": "Aparelhos reaproveitáveis podem virar inclusão digital pelo Projeto Reciclando."
+        }
+      ]
+    },
+    "scope": {
+      "title": "O que a gente busca — e o que não busca",
+      "inTitle": "Buscamos",
+      "outTitle": "Não buscamos",
+      "in": [
+        "Computadores, notebooks e monitores",
+        "TVs e aparelhos de som e vídeo",
+        "Geladeiras, máquinas de lavar e micro-ondas",
+        "Celulares, tablets e pequenos eletrônicos",
+        "Impressoras (sem toner) e cabos"
+      ],
+      "out": [
+        "Pilhas domésticas avulsas (AA, AAA)",
+        "Lâmpadas",
+        "Toner e cartuchos",
+        "Móveis, entulho e itens não eletrônicos",
+        "Resíduos químicos ou contaminados"
+      ],
+      "conditions": "A coleta é confirmada na avaliação: endereço, acesso (escada, elevador), tipo e quantidade de material. Em alguns casos, a equipe pode indicar um ponto de entrega ou o envio pelos Correios.",
+      "outNote": "Para os itens que não buscamos, indicamos os canais oficiais de logística reversa dos fabricantes."
+    },
+    "stepsTitle": "Como funciona, em 3 passos",
+    "stepsSub": "Do pedido ao comprovante — sem burocracia.",
+    "steps": [
+      {
+        "title": "Conte o que você tem",
+        "text": "Preencha o pedido em 1 minuto: o que é, quanto é e onde está."
+      },
+      {
+        "title": "A equipe confirma",
+        "text": "Retorno em até 24h úteis com o dia e os detalhes da retirada."
+      },
+      {
+        "title": "Coleta na sua porta",
+        "text": "A equipe retira, você recebe o comprovante — e o espaço de volta."
+      }
+    ],
+    "evidenceTitle": "Por que confiar",
+    "evidence": [
+      {
+        "title": "★ 4,9 no Google",
+        "text": "354 avaliações públicas — a maioria de gente que descartou de casa, como você."
+      },
+      {
+        "title": "Desde 2011",
+        "text": "Associação da sociedade civil com CNPJ ativo e atuação registrada."
+      },
+      {
+        "title": "Comprovante da retirada",
+        "text": "Registro do que saiu — clientes citam isso nas avaliações."
+      },
+      {
+        "title": "Destino certificado",
+        "text": "O material segue para triagem e destinação documentada."
+      },
+      {
+        "title": "Registro público internacional",
+        "text": "ONU, plataforma da UE e relatório do World Bank Group — na página de evidências."
+      },
+      {
+        "title": "Inclusão digital",
+        "text": "Aparelhos reaproveitáveis podem ganhar nova vida pelo Projeto Reciclando."
+      }
+    ],
+    "authority": "Atuação registrada em plataformas públicas de referência internacional. Cada alegação do site tem fonte, data e escopo declarados na página de evidências.",
+    "depoimentos": {
+      "titulo": "Quem já pediu, conta como foi",
+      "nota": "4,9",
+      "total": "354",
+      "url": "https://share.google/DrfOh7JDdkShOvcQy",
+      "itens": [
+        {
+          "autor": "Sandra Barbosa",
+          "texto": "Acabaram de retirar. Todo processo perfeito com a promessa! Sem burocracia, gratuito, vieram em menos de 10 dias, atendimento do início ao fim muito bom! Parabéns! Por mais organizações e empresas assim!"
+        },
+        {
+          "autor": "Michelle Lopes",
+          "texto": "Entrei em contato com a Ecobraz e fui prontamente atendida! Fui até o correio e despachei 2 caixas com muitos equipamentos que eu juntava a anos , não tive custo algum! Eles foram muito atenciosos e gentis no atendimento! Eu super recomendo!"
+        },
+        {
+          "autor": "Alexandre Viana",
+          "texto": "No geral é uma ótima empresa. Atendimento é muito bom e rápido, sem contar que todo o processo ocorreu de forma tranquila e sem problemas. Recomendo para que esteja considerando entrar em contato para a doação de eletrônicos que não funcionam mais."
+        }
+      ]
+    },
+    "faqTitle": "Perguntas de quem vai descartar de casa",
+    "faq": [
+      {
+        "q": "É grátis mesmo?",
+        "a": "Para residências na Grande São Paulo, sim — a gratuidade é confirmada na avaliação do endereço e do material, antes de qualquer agendamento. Sem pegadinha e sem custo surpresa."
+      },
+      {
+        "q": "Moro fora da Grande São Paulo. Tem jeito?",
+        "a": "Descreva o que você tem e a sua cidade: a equipe avalia e, em alguns casos, orienta o envio pelos Correios ou indica um ponto de entrega — clientes de outras regiões já fizeram assim."
+      },
+      {
+        "q": "Vocês sobem no apartamento?",
+        "a": "O acesso (escada, elevador, distância até o veículo) faz parte da avaliação. Descreva a situação no pedido que a equipe confirma como será a retirada."
+      },
+      {
+        "q": "E os meus dados no computador velho?",
+        "a": "Se puder, faça backup e restaure o aparelho antes. Na dúvida, diga no pedido que o equipamento tem dados — a equipe orienta o caminho na avaliação."
+      },
+      {
+        "q": "Quando vocês vêm?",
+        "a": "Você recebe retorno em até 24h úteis e o dia da coleta é combinado com você na sequência, conforme a rota da sua região."
+      },
+      {
+        "q": "Recebo algum comprovante?",
+        "a": "Sim — o registro do que foi retirado. É um dos pontos que os clientes mais citam nas avaliações públicas."
+      }
+    ],
+    "related": [
+      {
+        "title": "Pontos de coleta",
+        "href": "/pontos-de-coleta/",
+        "icon": "box",
+        "text": "Prefere levar? Veja onde entregar seus eletrônicos."
+      },
+      {
+        "title": "Descarte de geladeira velha",
+        "href": "/descarte-de-geladeira-velha/",
+        "icon": "truck",
+        "text": "Linha branca tem cuidados próprios — veja como funciona."
+      },
+      {
+        "title": "Como funciona",
+        "href": "/como-funciona/",
+        "icon": "file",
+        "text": "O caminho completo do seu aparelho depois da coleta."
+      }
+    ],
+    "final": {
+      "eyebrow": "1 minuto e pronto",
+      "title": "Seu e-lixo resolvido ainda esta semana?",
+      "text": "Conte o que você tem e onde está. Retorno em até 24h úteis — e o espaço da sua casa de volta."
+    }
   }
 ]
