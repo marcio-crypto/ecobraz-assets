@@ -220,7 +220,7 @@ export async function completarAnexos(env, offset, limit) {
 // Url + DealId/ContactId. Idempotente e retomável pelo Id.
 // ---------------------------------------------------------------------------
 const ANEXOS_ID_MAX = 25000000; // teto de varredura (maior Id de anexo visto ~17,4M; folga p/ recentes)
-const ANEXOS_ALVO = 100;        // itens por faixa que garantidamente cabem numa página do Ploomes
+const ANEXOS_ALVO = 60;         // itens por faixa: baixo o bastante p/ caber na página E no limite de subrequests do Worker
 export async function importarAnexosJanela(env, desdeId, janela) {
   if (!env.PLOOMES_USER_KEY) return { ok: false, erro: 'Falta a chave do Ploomes no cofre.' };
   if (!env.DB_PLOOMES) return { ok: false, erro: 'Banco D1 não vinculado (DB_PLOOMES).' };
@@ -230,14 +230,14 @@ export async function importarAnexosJanela(env, desdeId, janela) {
   // AUTO-AJUSTE: começa com uma faixa grande e ENCOLHE até a contagem caber numa
   // página (<= ALVO). Assim regiões densas (rajadas de anexos) nunca truncam, e
   // regiões vazias avançam em saltos grandes. A contagem por faixa de Id é rápida.
-  let W = Math.min(Math.max(Number(janela) || 400000, 2000), 4000000);
+  let W = Math.min(Math.max(Number(janela) || 400000, 500), 4000000);
   let count = null;
-  for (let i = 0; i < 14; i++) {
+  for (let i = 0; i < 20; i++) {
     const c = await reqJSON(env, `/Attachments?$filter=Id%20gt%20${X}%20and%20Id%20le%20${X + W}&$top=0&$count=true`, 8000);
-    if (c.count == null) { W = Math.max(Math.floor(W / 2), 1000); continue; } // timeout: encolhe e tenta
+    if (c.count == null) { W = Math.max(Math.floor(W / 2), 40); continue; } // timeout: encolhe e tenta
     count = c.count;
-    if (count <= ANEXOS_ALVO || W <= 1000) break;
-    W = Math.max(Math.floor(W / 2), 1000);
+    if (count <= ANEXOS_ALVO || W <= 40) break;
+    W = Math.max(Math.floor(W / 2), 40);
   }
   const Y = X + W;
   if (count === 0) { await gravarEstado(env, 'anexos_janela_cursor', Y); return { ok: true, vistos: 0, countFaixa: 0, gravados: 0, falhas: 0, bytes: 0, proximoId: Y, fim: Y >= ANEXOS_ID_MAX }; }
@@ -265,6 +265,38 @@ export async function importarAnexosJanela(env, desdeId, janela) {
   // truncado = ainda veio menos que a contagem da faixa (não deveria acontecer com o auto-ajuste).
   const truncado = (count != null && anexos.length < count);
   return { ok: true, vistos: anexos.length, countFaixa: count, gravados, falhas, bytes, truncado, proximoId: Y, fim: Y >= ANEXOS_ID_MAX };
+}
+
+// ---------------------------------------------------------------------------
+// RECUPERAR FALHAS: re-baixa só os anexos registrados em anexos_falhas, em lotes
+// PEQUENOS (para não estourar o limite de subrequests do Worker — que foi o que
+// derrubou parte deles na varredura densa). Cada sucesso some da lista de falhas.
+// ---------------------------------------------------------------------------
+export async function reprocessarFalhas(env, limit) {
+  if (!env.PLOOMES_USER_KEY) return { ok: false, erro: 'Falta a chave do Ploomes no cofre.' };
+  if (!env.DB_PLOOMES) return { ok: false, erro: 'Banco D1 não vinculado (DB_PLOOMES).' };
+  if (!env.R2_ARQUIVOS) return { ok: false, erro: 'Depósito R2 ainda não ligado. Ative o R2 no painel da Cloudflare.' };
+  const L = Math.min(Math.max(Number(limit) || 15, 1), 30);
+  let rows;
+  try { const r = await env.DB_PLOOMES.prepare('SELECT ploomes_id, deal_id, contact_id FROM anexos_falhas ORDER BY ploomes_id LIMIT ?1').bind(L).all(); rows = r.results || []; }
+  catch (e) { return { ok: false, erro: 'D1: ' + String((e && e.message) || e).slice(0, 100) }; }
+  let gravados = 0, aindaFalha = 0, bytes = 0;
+  for (const f of rows) {
+    const id = f.ploomes_id;
+    const key = `anexo/${id}`;
+    if (await jaImportado(env, key)) { await limparFalha(env, id); continue; }
+    const one = await reqJSON(env, `/Attachments(${id})`, 12000);
+    const a = one.value && one.value[0];
+    if (!a || !a.Url) { aindaFalha++; await logFalha(env, id, f.deal_id, f.contact_id, a ? 'sem_url' : (one.erro || `HTTP ${one.status}`)); continue; }
+    const dl = await baixarParaR2(env, key, a.Url, a.ContentType);
+    if (!dl.ok) { aindaFalha++; await logFalha(env, id, f.deal_id, f.contact_id, dl.erro || 'download_falhou'); continue; }
+    await gravarMeta(env, { r2_key: key, fonte: 'anexo', ploomes_id: id, deal_id: a.DealId || f.deal_id || null, contact_id: a.ContactId || f.contact_id || null, nome_arquivo: a.FileName || a.Name, content_type: dl.contentType, tamanho: dl.tamanho, criado_em: a.CreateDate || '' });
+    await limparFalha(env, id);
+    gravados++; if (dl.tamanho) bytes += dl.tamanho;
+  }
+  let restam = 0;
+  try { const c = await env.DB_PLOOMES.prepare('SELECT COUNT(*) AS n FROM anexos_falhas').first(); restam = (c && c.n) || 0; } catch { /* ignore */ }
+  return { ok: true, tentados: rows.length, gravados, aindaFalha, bytes, restam, fim: rows.length === 0 };
 }
 
 // ---------------------------------------------------------------------------
@@ -412,6 +444,11 @@ export function paginaMigrarArquivos(user, s) {
       <button class="btn btn-g" onclick="PARAR.jan=true;PARAR.deal=true;PARAR.cont=true;PARAR.compl=true">■ Parar</button>
     </div>
     <div id="janSt" style="font-size:12.5px;color:#4F6469;margin-top:10px"></div>
+    <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-g" onclick="rodarReprocessar(this)" ${s.r2Ligado ? '' : 'disabled'}>⤓ Recuperar os que faltaram</button>
+      <span style="font-size:11.5px;color:#8fa39f">Re-baixa, em lotes pequenos, só os anexos que ficaram sem baixar (bateram no limite do Worker).</span>
+    </div>
+    <div id="repSt" style="font-size:12.5px;color:#4F6469;margin-top:8px"></div>
     <details style="margin-top:8px"><summary style="font-size:11.5px;color:#8fa39f;cursor:pointer">métodos antigos (não precisa)</summary>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
         <button class="btn btn-g" onclick="rodarCompletar(this)" ${s.r2Ligado ? '' : 'disabled'}>⟳ Completar</button>
@@ -466,6 +503,15 @@ async function rodarJanela(btn){PARAR.jan=false;btn.disabled=true;var st=documen
     if(j.fim){st.textContent='✅ Varredura completa! '+FEITO.anexo.toLocaleString('pt-BR')+' anexos guardados.'+(falh?(' · '+falh.toLocaleString('pt-BR')+' não baixaram (registrados p/ análise)'):'')+(trunc?(' ⚠ '+trunc+' faixa(s) cheia(s)'):'');break;}
     st.textContent='Buscando… '+pct+'% da faixa de Ids · '+FEITO.anexo.toLocaleString('pt-BR')+' anexos'+(j.gravados?(' (+'+j.gravados+')'):'');
     await new Promise(function(r){setTimeout(r,90);});}
+  btn.disabled=false;}
+async function rodarReprocessar(btn){PARAR.rep=false;btn.disabled=true;var st=document.getElementById('repSt');st.textContent='Recuperando os que faltaram, em lotes pequenos…';var rec=0;
+  while(!PARAR.rep){var j;try{var r=await fetch('/api/diretoria/arquivos-reprocessar',{method:'POST'});j=await r.json();}catch(e){st.textContent='Erro de conexão — clique de novo para retomar.';break;}
+    if(!j.ok){st.textContent='Parou: '+(j.erro||'erro')+' — clique de novo para retomar.';break;}
+    FEITO.anexo+=(j.gravados||0);rec+=(j.gravados||0);if(j.bytes)BYTES+=j.bytes;setBar('anexo');setMB();
+    if(j.fim||j.restam===0){st.textContent='✅ Pronto! Recuperados '+rec.toLocaleString('pt-BR')+' nesta rodada. Não restou nenhum pendente.';break;}
+    if(!j.gravados){st.textContent='Recuperados '+rec.toLocaleString('pt-BR')+'. Ainda restam '+Number(j.restam||0).toLocaleString('pt-BR')+' que não voltaram — clique de novo para tentar mais, ou me avise para eu analisar.';break;}
+    st.textContent='Recuperando… '+rec.toLocaleString('pt-BR')+' recuperados · restam '+Number(j.restam||0).toLocaleString('pt-BR')+'.';
+    await new Promise(function(r){setTimeout(r,120);});}
   btn.disabled=false;}
 async function rodarCompletar(btn){PARAR.compl=false;btn.disabled=true;var st=document.getElementById('completSt');st.textContent='Revisando cada coleta/cliente pelo filtro direto…';var off=0;
   while(!PARAR.compl){var j;try{var r=await fetch('/api/diretoria/arquivos-completar?offset='+off,{method:'POST'});j=await r.json();}catch(e){st.textContent='Erro de conexão — clique de novo para retomar.';break;}
