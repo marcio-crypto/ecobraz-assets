@@ -1,0 +1,215 @@
+{{!< default}}
+{{! Gerado por scripts/build-landing-pages.mjs a partir de landing/landing-pages.json — não edite à mão. }}
+{{#contentFor "head"}}
+<link rel="stylesheet" href="{{asset "css/landing.css"}}">
+{{/contentFor}}
+
+<section class="hx-hero">
+  <div class="container hx-crumbs"><a href="{{@site.url}}/">Início</a> › <a href="{{@site.url}}/como-funciona/">Como funciona</a> › Para condomínios</div>
+  <div class="container hx-hero-grid">
+    <div>
+      <span class="hx-label on-dark">Síndicos · Administradoras · Zeladoria</span>
+      <h1>Coleta de eletrônicos em condomínios, com comprovante para a ata</h1>
+      <p class="hx-sub">Os moradores acumulam eletrônico velho e cobram uma solução? A Ecobraz organiza a coleta na área comum — com campanha para os moradores, dia combinado com a zeladoria e o comprovante do que saiu, pronto para registrar em ata.</p>
+      <div class="hx-hero-ctas">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=para-condominios" data-track="para-condominios_hero_cta">Organizar a coleta do condomínio</a>
+        <a class="button hx-btn-outline-dark" href="#como-funciona" data-track="para-condominios_hero_como">Como funciona</a>
+      </div>
+      <div class="hx-hero-band">
+        <span><strong>Sem custo para o condomínio</strong>na maioria dos casos — confirmado na avaliação</span>
+        <span><strong>Campanha com moradores</strong>modelo de aviso para elevador e grupo do prédio</span>
+        <span><strong>Comprovante para a ata</strong>a prova que a assembleia quer ver</span>
+      </div>
+    </div>
+    <form class="hx-quote" id="avaliacao" method="get" action="{{@site.url}}/agendamento/">
+      <span class="hx-label">Avaliação técnica</span>
+      <h2>Conte sobre o condomínio</h2>
+      <p class="hx-hint">Retorno em até 24h úteis. Prefere falar com gente? Ligue (11) 4329-2001 ou chame no WhatsApp.</p>
+      <input type="hidden" name="perfil" value="empresa">
+      <input type="hidden" name="origem" value="para-condominios">
+      
+      <div class="hx-field">
+        <label for="lp-desc">Como é o condomínio?</label>
+        <input id="lp-desc" name="descricao" placeholder="Ex.: 120 unidades, 2 torres, em Santana">
+      </div>
+      <div class="hx-field">
+        <label for="lp-local">CEP ou cidade da retirada</label>
+        <input id="lp-local" name="local" placeholder="Ex.: 02175-010 ou São Paulo">
+      </div>
+      <button class="button" type="submit" data-track="para-condominios_hero_form">Organizar a coleta →</button>
+      <div class="hx-or-wa">ou <a href="{{@custom.whatsapp_url}}" rel="noopener" data-track="para-condominios_hero_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> falar com a equipe no WhatsApp</a></div>
+      <p class="hx-micro">O formato — data, ponto de coleta e campanha — é desenhado com o síndico na avaliação, antes de qualquer compromisso.</p>
+    </form>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container hx-reco">
+    <div>
+      <span class="hx-label">Você se reconhece?</span>
+      <h2>Se você é síndico, isso vai soar familiar</h2>
+      <p class="hx-reco-cta">Bastou um item da lista ser verdade aí dentro? Então esta página foi escrita para você — <a href="#avaliacao">descreva a situação em 1 minuto</a> e receba um retorno técnico, não um telemarketing.</p>
+    </div>
+    <ul class="hx-reco-list"><li>A assembleia cobrou uma solução para o e-lixo dos moradores</li><li>O depósito ou a garagem virou cemitério de TV, micro-ondas e computador</li><li>Morador deixa eletrônico na área comum e ninguém sabe o destino</li><li>Você não quer caçamba irregular respingando no CNPJ do condomínio</li><li>Quer uma ação ambiental visível — que valorize o prédio e renda uma boa ata</li></ul>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">O que está em jogo</span><h2>O e-lixo do prédio é um problema do prédio</h2></div>
+      <p>Três motivos para o síndico organizar — antes que se organize sozinho, do jeito errado.</p>
+    </div>
+    <div class="hx-sol-grid">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="3" width="16" height="18"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2M10 21v-3h4v3"/></svg></span><h3>O achados-e-perdidos vira lixão interno</h3><p>Sem um caminho oficial, o eletrônico do morador acaba na área comum, no depósito ou na calçada — e a reclamação chega para você.</p><span class="hx-cost">Custo real: espaço comum ocupado, atrito entre moradores e a zeladoria apagando incêndio.</span></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18h.01"/></svg></span><h3>Descarte irregular respinga no condomínio</h3><p>Se o material do prédio aparecer em canal irregular, a responsabilidade pelo resíduo alcança quem o gerou — e o condomínio tem CNPJ.</p><span class="hx-cost">Custo real: dor de cabeça jurídica que uma coleta documentada evitaria por zero reais.</span></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>Sem comprovante, a assembleia desconfia</h3><p>Síndico que contrata sem papel responde sozinho. Com o comprovante do que saiu, a prestação de contas se defende sozinha.</p><span class="hx-cost">Custo real: desgaste político seu — o ativo mais caro de um mandato.</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">A virada</span><h2>Cada um se vira vs. coleta organizada</h2></div>
+      <p>O mesmo prédio, duas gestões muito diferentes.</p>
+    </div>
+    <div class="hx-contrast">
+      <div class="hx-before"><h3>Como costuma ser</h3><ul><li>Eletrônico acumulando em área comum</li><li>Zelador negocia com carroceiro ou caçamba</li><li>Nenhum comprovante do destino</li><li>Reclamação recorrente em assembleia</li><li>Risco respingando no condomínio</li></ul></div>
+      <div class="hx-after"><h3>Com a Ecobraz</h3><ul><li>Campanha avisada no elevador e no grupo</li><li>Dia combinado com a zeladoria</li><li>Retirada na área comum, sem custo na maioria dos casos</li><li>Comprovante do que saiu — direto para a ata</li><li>Destinação documentada desde 2011</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">O que você ganha</span><h2>O que o síndico leva</h2></div>
+      <p>Desenhado para quem responde à assembleia — não a uma auditoria corporativa.</p>
+    </div>
+    <div class="hx-sol-grid g4">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span><h3>Sem custo na maioria dos casos</h3><p>Confirmado na avaliação de volume, materiais e acesso — e se houver custo, dizemos antes, com o valor.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M1 7h13v10H1zM14 10h4l4 4v3h-8z"/><circle cx="6" cy="19" r="1.6"/><circle cx="18" cy="19" r="1.6"/></svg></span><h3>Logística com a zeladoria</h3><p>Ponto de coleta na área comum e horário combinado — sem bagunça no dia.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Comprovante para a ata</h3><p>O registro do que foi retirado — sua prestação de contas pronta.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>Campanha que engaja</h3><p>Modelo de aviso pronto; o 'dia do eletrônico' vira ação ambiental visível do condomínio.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Escopo claro</span><h2>O que entra na coleta do condomínio</h2></div>
+      <p>Escopo declarado antes do agendamento reduz retrabalho e surpresa. Cada lote é avaliado tecnicamente.</p>
+    </div>
+    <div class="hx-scope">
+      <div class="hx-yes"><h3>Entra</h3><ul><li>Eletrônicos e eletrodomésticos dos moradores (TVs, computadores, micro-ondas…)</li><li>Equipamentos da administração (interfones, CFTV, informática da portaria)</li><li>Campanha 'dia do eletrônico' com data marcada</li><li>Periodicidade combinada (ex.: semestral) — sem fidelidade obrigatória</li><li>Grandes volumes e geladeiras — avaliados no desenho</li></ul><p>O formato é definido com o síndico na avaliação: data, ponto de coleta, volume esperado e acesso. E se algum caso tiver custo, avisamos antes, com o valor.</p></div>
+      <div class="hx-not"><h3>Não entra</h3><ul><li>Móveis, entulho e resíduos de obra</li><li>Pilhas domésticas avulsas, lâmpadas e toner</li><li>Resíduos químicos ou contaminados</li><li>Retirada dentro das unidades — o ponto de coleta é a área comum, combinado com a zeladoria</li></ul><p>Para os itens que não entram, indicamos os canais oficiais de logística reversa.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt" id="como-funciona">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Processo</span><h2>Do pedido à ata, em 5 passos</h2></div>
+      <p>Sem fidelidade obrigatória — compatível com mandato de 2 anos.</p>
+    </div>
+    <div class="hx-steps">
+        <div class="hx-step"><h3>Descreva o condomínio</h3><p>Unidades, torres, bairro e o que costuma acumular.</p></div>
+        <div class="hx-step"><h3>Desenho do formato</h3><p>Data, ponto de coleta e campanha, combinados com você e a zeladoria.</p></div>
+        <div class="hx-step"><h3>Aviso aos moradores</h3><p>Modelo de comunicado pronto para o elevador e o grupo do prédio.</p></div>
+        <div class="hx-step"><h3>Coleta na área comum</h3><p>Equipe no dia combinado, retirada registrada.</p></div>
+        <div class="hx-step"><h3>Comprovante entregue</h3><p>O registro do que saiu — pronto para a ata e a prestação de contas.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Evidência da operação</span><h2>O que você mostra na assembleia</h2></div>
+      <p>A documentação reflete o que foi efetivamente executado em cada lote — sem promessa genérica.</p>
+    </div>
+    <div class="hx-docs">
+        <div class="hx-doc"><h3>Comprovante da retirada</h3><p>Relação do que saiu do condomínio — clientes citam 'o papel' nas avaliações.</p></div>
+        <div class="hx-doc"><h3>★ 4,9 no Google</h3><p>354 avaliações públicas — qualquer morador confere no celular.</p></div>
+        <div class="hx-doc"><h3>Desde 2011</h3><p>Associação com CNPJ ativo — não é atravessador de sucata.</p></div>
+        <div class="hx-doc"><h3>Destinação documentada</h3><p>O material segue para triagem e destinação com registro.</p></div>
+        <div class="hx-doc"><h3>Dados dos moradores</h3><p>Aparelhos com memória não são revendidos com dados — seguem para desmontagem e reciclagem.</p></div>
+        <div class="hx-doc"><h3>Sem fidelidade obrigatória</h3><p>Periodicidade combinada — o próximo síndico não herda amarra nenhuma.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-authority">
+      <div>
+        <span class="hx-label on-dark">Autoridade verificável</span>
+        <strong>Associação Auxílio à Reciclagem de Eletrônicos e Inclusão Digital — CNPJ 14.197.457/0001-42</strong>
+        <p>Atuação registrada em plataformas públicas de referência internacional. Cada alegação do site tem fonte, data e escopo declarados na página de evidências.</p>
+      </div>
+      <a href="{{@site.url}}/evidencias/" data-track="para-condominios_evidencias">Ver evidências públicas →</a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Avaliações públicas</span><h2>Quem já coletou com a Ecobraz, recomenda</h2></div>
+      <p><span style="color:#F5B940">★</span> <strong>4,9</strong> em <a class="hx-src" href="https://share.google/DrfOh7JDdkShOvcQy" rel="noopener" data-track="para-condominios_avaliacoes_google">354 avaliações públicas no Google →</a></p>
+    </div>
+    <div class="hx-docs">
+        <div class="hx-doc"><p style="color:#F5B940;letter-spacing:2px;margin:0 0 8px">★★★★★</p><p style="font-size:14px;color:var(--ink);margin:0 0 10px">“Já utilizei o serviço 2 vezes na empresa e o atendimento e comprometimento da Ecobraz foram nota 1.000! Recomendo para quem não quer ter dor de cabeça no descarte de eletrônicos.”</p><h3 style="font-size:13px;color:var(--muted)">— Marina Sanches, no Google</h3></div>
+        <div class="hx-doc"><p style="color:#F5B940;letter-spacing:2px;margin:0 0 8px">★★★★★</p><p style="font-size:14px;color:var(--ink);margin:0 0 10px">“Acabaram de retirar. Todo processo perfeito com a promessa! Sem burocracia, gratuito, vieram em menos de 10 dias, atendimento do início ao fim muito bom! Parabéns! Por mais organizações e empresas assim!”</p><h3 style="font-size:13px;color:var(--muted)">— Sandra Barbosa, no Google</h3></div>
+        <div class="hx-doc"><p style="color:#F5B940;letter-spacing:2px;margin:0 0 8px">★★★★★</p><p style="font-size:14px;color:var(--ink);margin:0 0 10px">“Fui bem atendida e prontamente consegui resolver sobre a minha questão. A empresa retirou os itens em poucos dias e eu fiquei contente em poder contribuir para o descarte correto e seguro. Recomendo!”</p><h3 style="font-size:13px;color:var(--muted)">— michele marin, no Google</h3></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Perguntas frequentes</span><h2>O que síndicos perguntam</h2></div>
+    </div>
+    <div class="hx-faq">
+        <details><summary>Custa alguma coisa para o condomínio?</summary><p>Na maioria dos casos, não — a avaliação confirma, considerando volume, materiais e acesso. Se o seu caso tiver custo, dizemos antes, com o valor. Sem surpresa na prestação de contas.</p></details>
+        <details><summary>Preciso assinar contrato de 36 meses?</summary><p>Não. Condomínio não precisa de fidelidade: dá para fazer uma campanha única ou combinar periodicidade (ex.: a cada 6 meses) — compatível com mandato de 2 anos. O contrato contínuo existe para quem quiser formalizar rotina, como opção.</p></details>
+        <details><summary>Quem assina e o que levo para a assembleia?</summary><p>O síndico ou a administradora. Para a assembleia: o comprovante do que foi retirado, o CNPJ da Ecobraz (14.197.457/0001-42, desde 2011) e as avaliações públicas — material que sustenta a ata.</p></details>
+        <details><summary>Como funciona a campanha com os moradores?</summary><p>Definida a data, você recebe um modelo de comunicado para o elevador e o grupo do prédio; os moradores levam os aparelhos ao ponto combinado na área comum até o dia da coleta.</p></details>
+        <details><summary>E os dados nos computadores dos moradores?</summary><p>Aparelhos com memória não são revendidos com dados — seguem para desmontagem e reciclagem. Recomende aos moradores fazer backup quando possível; dúvidas específicas, a equipe orienta.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Soluções relacionadas</span><h2>Também pode fazer parte da sua operação</h2></div>
+    </div>
+    <div class="hx-sol-grid">
+        <a class="hx-sol" href="{{@site.url}}/coleta-gratuita/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M1 7h13v10H1zM14 10h4l4 4v3h-8z"/><circle cx="6" cy="19" r="1.6"/><circle cx="18" cy="19" r="1.6"/></svg></span><h3>Coleta gratuita em casa</h3><p>Para o morador que quer resolver individualmente.</p><span class="hx-go">Ver solução →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/para-empresas/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="3" width="16" height="18"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2M10 21v-3h4v3"/></svg></span><h3>Descarte para empresas</h3><p>Para a administradora com carteira de condomínios comerciais.</p><span class="hx-go">Ver solução →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/pontos-de-coleta/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><h3>Pontos de coleta</h3><p>Onde entregar diretamente, se preferir.</p><span class="hx-go">Ver solução →</span></a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-final">
+      <div>
+        <span class="hx-label on-dark">Boa ata se constrói assim</span>
+        <h2>Organize o dia do eletrônico do seu condomínio</h2>
+        <p>Descreva o condomínio e receba o desenho da coleta — data, campanha e comprovante. Retorno em até 24h úteis.</p>
+      </div>
+      <div class="hx-actions">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=para-condominios" data-track="para-condominios_final_cta">Organizar a coleta do condomínio</a>
+        <a class="button hx-btn-wa" href="{{@custom.whatsapp_url}}" rel="noopener" data-track="para-condominios_final_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> WhatsApp</a>
+      </div>
+    </div>
+  </div>
+</section>
+

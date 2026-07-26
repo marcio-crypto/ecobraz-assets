@@ -1,0 +1,215 @@
+{{!< default}}
+{{! Gerado por scripts/build-landing-pages.mjs a partir de landing/landing-pages.json — não edite à mão. }}
+{{#contentFor "head"}}
+<link rel="stylesheet" href="{{asset "css/landing.css"}}">
+{{/contentFor}}
+
+<section class="hx-hero">
+  <div class="container hx-crumbs"><a href="{{@site.url}}/">Início</a> › <a href="{{@site.url}}/solucoes-corporativas/">Soluções corporativas</a> › Coleta avulsa</div>
+  <div class="container hx-hero-grid">
+    <div>
+      <span class="hx-label on-dark">PMEs · Descarte eventual · Sem fidelidade</span>
+      <h1>Coleta avulsa para empresas: sem contrato e sem mensalidade</h1>
+      <p class="hx-sub">Juntou equipamento parado no depósito e só quer resolver — sem assinar nada? A coleta avulsa é isso: você descreve o lote, recebe as condições por escrito antes de agendar (muitos materiais com valor de reciclagem saem sem custo) e fica com o comprovante da destinação.</p>
+      <div class="hx-hero-ctas">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=coleta-avulsa-para-empresas" data-track="coleta-avulsa-para-empresas_hero_cta">Pedir avaliação do lote</a>
+        <a class="button hx-btn-outline-dark" href="#como-funciona" data-track="coleta-avulsa-para-empresas_hero_como">Como funciona</a>
+      </div>
+      <div class="hx-hero-band">
+        <span><strong>Sem contrato</strong>uma coleta com começo, meio e fim</span>
+        <span><strong>Condições antes</strong>avaliação por escrito — sem surpresa</span>
+        <span><strong>Comprovante</strong>a prova da destinação fica com você</span>
+      </div>
+    </div>
+    <form class="hx-quote" id="avaliacao" method="get" action="{{@site.url}}/agendamento/">
+      <span class="hx-label">Avaliação técnica</span>
+      <h2>Descreva o lote em 1 minuto</h2>
+      <p class="hx-hint">Retorno em até 24h úteis, com as condições por escrito.</p>
+      <input type="hidden" name="perfil" value="empresa">
+      <input type="hidden" name="origem" value="coleta-avulsa-para-empresas">
+      
+      <div class="hx-field">
+        <label for="lp-desc">O que precisa sair?</label>
+        <input id="lp-desc" name="descricao" placeholder="Ex.: 15 computadores, 3 impressoras e placas, em Osasco">
+      </div>
+      <div class="hx-field">
+        <label for="lp-local">CEP ou cidade da retirada</label>
+        <input id="lp-local" name="local" placeholder="Ex.: 02175-010 ou São Paulo">
+      </div>
+      <button class="button" type="submit" data-track="coleta-avulsa-para-empresas_hero_form">Pedir avaliação →</button>
+      <div class="hx-or-wa">ou <a href="{{@custom.whatsapp_url}}" rel="noopener" data-track="coleta-avulsa-para-empresas_hero_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> falar com a equipe no WhatsApp</a></div>
+      <p class="hx-micro">A avaliação diz o que entra, o que não entra e se há algum custo — antes de qualquer agendamento.</p>
+    </form>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container hx-reco">
+    <div>
+      <span class="hx-label">Você se reconhece?</span>
+      <h2>É a sua empresa se…</h2>
+      <p class="hx-reco-cta">Bastou um item da lista ser verdade aí dentro? Então esta página foi escrita para você — <a href="#avaliacao">descreva a situação em 1 minuto</a> e receba um retorno técnico, não um telemarketing.</p>
+    </div>
+    <ul class="hx-reco-list"><li>O depósito acumulou anos de computador, impressora e placa</li><li>Não existe departamento de ESG — quem resolve é você</li><li>Contrato longo não faz sentido para quem descarta a cada 1 ou 2 anos</li><li>Você já vendeu para o ferro-velho e ficou com a pulga atrás da orelha</li><li>O contador, um cliente ou a certificação pediu comprovante do descarte</li></ul>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">O que está em jogo</span><h2>O ferro-velho é barato até o dia em que fica caro</h2></div>
+      <p>O que o descarte informal deixa com a sua empresa.</p>
+    </div>
+    <div class="hx-sol-grid">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18h.01"/></svg></span><h3>A responsabilidade não sai com a sucata</h3><p>Pela Lei 12.305/2010, a responsabilidade do gerador é compartilhada: se o material da sua empresa aparecer em canal irregular, quem responde é o seu CNPJ — anos depois.</p><span class="hx-cost">Custo real: autuação e passivo jurídico, sem nenhum papel para se defender.</span></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="3" width="16" height="18"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2M10 21v-3h4v3"/></svg></span><h3>Depósito parado é dinheiro parado</h3><p>Metros quadrados guardando equipamento morto, inventário que não fecha e a decisão sempre adiada.</p><span class="hx-cost">Custo real: espaço, organização e tempo — para guardar o que não volta mais.</span></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Sem comprovante, sem defesa</h3><p>Cada vez mais clientes, certificações e contadores pedem evidência do descarte correto — e nota de ferro-velho não é evidência.</p><span class="hx-cost">Custo real: uma exigência simples que trava um contrato maior.</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">A virada</span><h2>Ferro-velho vs. coleta avulsa documentada</h2></div>
+      <p>O mesmo lote, dois finais muito diferentes.</p>
+    </div>
+    <div class="hx-contrast">
+      <div class="hx-before"><h3>Ferro-velho / carroceiro</h3><ul><li>Alguns reais pelo lote — e olhe lá</li><li>Nenhum comprovante do destino</li><li>Responsabilidade continua com o seu CNPJ</li><li>Dados nos HDs seguem com o aparelho</li><li>Cada descarte é uma incógnita</li></ul></div>
+      <div class="hx-after"><h3>Coleta avulsa Ecobraz</h3><ul><li>Condições por escrito antes de agendar</li><li>Sem custo na maioria dos materiais com valor de reciclagem</li><li>Comprovante da destinação no final</li><li>Aparelhos com memória não são revendidos com dados</li><li>Sem contrato, sem mensalidade, sem fidelidade</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">O que você ganha</span><h2>O que a sua empresa leva</h2></div>
+      <p>Uma coleta resolvida — e a porta aberta se um dia quiser rotina.</p>
+    </div>
+    <div class="hx-sol-grid g4">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span><h3>Risco resolvido</h3><p>Destinação documentada em vez de incógnita — o CNPJ agradece.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><h3>Zero burocracia</h3><p>Descreveu, recebeu as condições, agendou, resolveu.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Comprovante no final</h3><p>O registro da destinação — MTR e CDF quando aplicáveis ao material.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>Sem amarra nenhuma</h3><p>Se o descarte virar rotina, o contrato contínuo existe — como opção, nunca obrigação.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Escopo claro</span><h2>O que entra — e o que é bom saber antes</h2></div>
+      <p>Escopo declarado antes do agendamento reduz retrabalho e surpresa. Cada lote é avaliado tecnicamente.</p>
+    </div>
+    <div class="hx-scope">
+      <div class="hx-yes"><h3>Entra</h3><ul><li>Computadores, notebooks, monitores e periféricos</li><li>Impressoras (sem toner) e equipamentos de escritório</li><li>Placas, componentes e sucata eletrônica</li><li>Baterias e nobreaks — mediante avaliação</li><li>Máquinas e equipamentos — mediante avaliação</li></ul><p>A avaliação responde por escrito: o que entra, a logística, se há custo e qual documentação acompanha — antes de qualquer agendamento.</p></div>
+      <div class="hx-not"><h3>Bom saber</h3><ul><li>Não compramos lotes: a remuneração da Ecobraz vem da destinação e valorização do material — você recebe a coleta (sem custo na maioria dos casos) e a documentação</li><li>Pilhas domésticas avulsas, toner, lâmpadas e contaminados não entram</li><li>Volumes muito pequenos ou acesso difícil podem ter custo — sempre informado antes, com o valor</li><li>Equipamentos com dados: não são revendidos; tratamento formal com relatório é serviço à parte</li></ul><p>Transparência primeiro: preferimos dizer 'este lote tem custo' antes, a surpreender depois.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt" id="como-funciona">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Processo</span><h2>Como funciona, sem enrolação</h2></div>
+      <p>Da descrição ao comprovante.</p>
+    </div>
+    <div class="hx-steps">
+        <div class="hx-step"><h3>Descreva o lote</h3><p>O que é, quanto é, onde está — 1 minuto no formulário ou WhatsApp.</p></div>
+        <div class="hx-step"><h3>Condições por escrito</h3><p>Retorno em até 24h úteis: o que entra, custo (se houver) e documentação.</p></div>
+        <div class="hx-step"><h3>Agendamento</h3><p>Data combinada com a sua equipe.</p></div>
+        <div class="hx-step"><h3>Retirada registrada</h3><p>Coleta com registro do que saiu.</p></div>
+        <div class="hx-step"><h3>Comprovante</h3><p>A documentação da destinação — sua defesa e seu arquivo.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Evidência da operação</span><h2>Por que empresas como a sua confiam</h2></div>
+      <p>A documentação reflete o que foi efetivamente executado em cada lote — sem promessa genérica.</p>
+    </div>
+    <div class="hx-docs">
+        <div class="hx-doc"><h3>★ 4,9 no Google</h3><p>354 avaliações públicas — incluindo empresas que descartam todo ano.</p></div>
+        <div class="hx-doc"><h3>Comprovante de verdade</h3><p>MTR (Manifesto de Transporte de Resíduos) e CDF (Certificado de Destinação Final), quando aplicáveis ao material e ao serviço.</p></div>
+        <div class="hx-doc"><h3>Desde 2011</h3><p>Associação com CNPJ ativo e operação documentada.</p></div>
+        <div class="hx-doc"><h3>Condições antes, sempre</h3><p>Nenhum agendamento sem você saber o que entra e o que custa (quando custa).</p></div>
+        <div class="hx-doc"><h3>Dados protegidos</h3><p>Aparelhos com memória não são revendidos com dados.</p></div>
+        <div class="hx-doc"><h3>Registro público internacional</h3><p>ONU, plataforma da UE e World Bank Group — registros com escopo declarado, na página de evidências.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-authority">
+      <div>
+        <span class="hx-label on-dark">Autoridade verificável</span>
+        <strong>Associação Auxílio à Reciclagem de Eletrônicos e Inclusão Digital — CNPJ 14.197.457/0001-42</strong>
+        <p>Atuação registrada em plataformas públicas de referência internacional. Cada alegação do site tem fonte, data e escopo declarados na página de evidências.</p>
+      </div>
+      <a href="{{@site.url}}/evidencias/" data-track="coleta-avulsa-para-empresas_evidencias">Ver evidências públicas →</a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Avaliações públicas</span><h2>Empresas que descartam de tempos em tempos</h2></div>
+      <p><span style="color:#F5B940">★</span> <strong>4,9</strong> em <a class="hx-src" href="https://share.google/DrfOh7JDdkShOvcQy" rel="noopener" data-track="coleta-avulsa-para-empresas_avaliacoes_google">354 avaliações públicas no Google →</a></p>
+    </div>
+    <div class="hx-docs">
+        <div class="hx-doc"><p style="color:#F5B940;letter-spacing:2px;margin:0 0 8px">★★★★★</p><p style="font-size:14px;color:var(--ink);margin:0 0 10px">“Ao menos uma vez por ano preciso fazer descarte de eletrônicos e afins, sempre utilizei os serviços da Ecobraz, empresa extremamente profissional, os equipamentos descartados são devidamente documentados, são muito responsáveis no que fazem.”</p><h3 style="font-size:13px;color:var(--muted)">— Casa Dos Machos Ferramentas, no Google</h3></div>
+        <div class="hx-doc"><p style="color:#F5B940;letter-spacing:2px;margin:0 0 8px">★★★★★</p><p style="font-size:14px;color:var(--ink);margin:0 0 10px">“De tempos em tempos, temos equipamentos para fazer o descarte corretamente e já utilizei outras empresas, mas posso afirmar, a equipe da Ecobraz foi a melhor até hoje, é extremamente profissional, atendimento simpático e retirada eficaz. Parabéns a equipe e pelo trabalho.”</p><h3 style="font-size:13px;color:var(--muted)">— PS Yamada, no Google</h3></div>
+        <div class="hx-doc"><p style="color:#F5B940;letter-spacing:2px;margin:0 0 8px">★★★★★</p><p style="font-size:14px;color:var(--ink);margin:0 0 10px">“Fui bem atendida e prontamente consegui resolver sobre a minha questão. A empresa retirou os itens em poucos dias e eu fiquei contente em poder contribuir para o descarte correto e seguro. Recomendo!”</p><h3 style="font-size:13px;color:var(--muted)">— michele marin, no Google</h3></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Perguntas frequentes</span><h2>O que donos e gerentes perguntam</h2></div>
+    </div>
+    <div class="hx-faq">
+        <details><summary>Quanto custa?</summary><p>Muitos materiais com valor de reciclagem (informática, placas, cabos) saem sem custo — a avaliação confirma. Quando há custo (volume muito pequeno, acesso difícil, material sem valor de recuperação), dizemos antes, por escrito, com o valor. Você decide sabendo tudo.</p></details>
+        <details><summary>Vocês pagam pelo meu lote?</summary><p>Não — não compramos sucata. A remuneração da Ecobraz vem da destinação e valorização do material; o que a sua empresa recebe é a coleta (sem custo na maioria dos casos) e a documentação da destinação. Se a sua prioridade for vender o lote, essa conta vale uma conversa: o comparativo está na página do contrato contínuo.</p></details>
+        <details><summary>Emitem MTR e CDF?</summary><p>Quando aplicáveis ao material e ao serviço executado, sim — MTR é o Manifesto de Transporte de Resíduos e CDF é o Certificado de Destinação Final. A avaliação já diz qual documentação acompanha o seu lote.</p></details>
+        <details><summary>Atendem meu porte?</summary><p>De uma dúzia de itens a caminhões — descreva o lote que a avaliação responde. Empresas menores são a maioria das coletas avulsas.</p></details>
+        <details><summary>E se a gente passar a descartar sempre?</summary><p>Aí existe o contrato de descarte contínuo — coletas programadas, sistema de rastreabilidade incluso e documentação completa. Mas é opção, nunca pré-requisito: dá para começar (e ficar) no avulso.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Soluções relacionadas</span><h2>Também pode fazer parte da sua operação</h2></div>
+    </div>
+    <div class="hx-sol-grid">
+        <a class="hx-sol" href="{{@site.url}}/para-empresas/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="3" width="16" height="18"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2M10 21v-3h4v3"/></svg></span><h3>Descarte para empresas (contrato)</h3><p>Para quem descarta com recorrência: rotina, sistema e série histórica.</p><span class="hx-go">Ver solução →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/documentacao-e-rastreabilidade/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Documentação e rastreabilidade</h3><p>O que cada documento comprova.</p><span class="hx-go">Ver solução →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/solucoes-corporativas/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><h3>Soluções corporativas</h3><p>Todas as soluções por evento operacional.</p><span class="hx-go">Ver solução →</span></a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-final">
+      <div>
+        <span class="hx-label on-dark">Resolva esta semana</span>
+        <h2>Descreva o lote e receba as condições por escrito</h2>
+        <p>Sem contrato, sem mensalidade, sem surpresa — e com o comprovante no final. Retorno em até 24h úteis.</p>
+      </div>
+      <div class="hx-actions">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=coleta-avulsa-para-empresas" data-track="coleta-avulsa-para-empresas_final_cta">Pedir avaliação do lote</a>
+        <a class="button hx-btn-wa" href="{{@custom.whatsapp_url}}" rel="noopener" data-track="coleta-avulsa-para-empresas_final_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> WhatsApp</a>
+      </div>
+    </div>
+  </div>
+</section>
+

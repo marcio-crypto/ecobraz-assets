@@ -2457,6 +2457,12 @@
             "href": "/sistema-de-rastreabilidade/",
             "icon": "chart",
             "text": "Registro na origem, QR de verificação, central documental e indicadores com metodologia."
+          },
+          {
+            "title": "Coleta avulsa (sem contrato)",
+            "href": "/coleta-avulsa-para-empresas/",
+            "icon": "truck",
+            "text": "Para o descarte eventual: condições por escrito, comprovante no final, sem fidelidade."
           }
         ]
       },
@@ -3792,11 +3798,11 @@
     "faq": [
       {
         "q": "Quanto custa o contrato?",
-        "a": "A conta é transparente: a Ecobraz se remunera com a destinação e a valorização do material coletado — por isso não cobra a coleta nem o acesso ao sistema. O contrato tem vigência de 36 meses, com pelo menos um descarte por trimestre e exclusividade do fluxo contratado. Módulos avançados do sistema e relatórios específicos são contratados à parte — as condições completas são apresentadas na demonstração."
+        "a": "A conta é transparente: a Ecobraz se remunera com a destinação e a valorização do material coletado — por isso não cobra a coleta nem o acesso ao sistema. O contrato tem vigência de 36 meses, com pelo menos um descarte por trimestre e exclusividade do fluxo contratado. Módulos avançados e relatórios específicos não têm tabela de prateleira de propósito: cada operação é diferente, e o preço é formado caso a caso, sobre o desenho da SUA operação — apresentado por escrito na demonstração."
       },
       {
         "q": "Minha empresa descarta só de vez em quando. Preciso do contrato?",
-        "a": "Não — também fazemos coleta avulsa para empresas, sem contrato e sem mensalidade: você descreve o lote, recebe a avaliação com as condições antes de agendar (muitos materiais com valor de reciclagem saem sem custo — confirmado na avaliação) e recebe o comprovante da destinação. O contrato contínuo é para quem descarta com recorrência e quer rotina, sistema e série histórica."
+        "a": "Não — para isso existe a coleta avulsa: sem contrato e sem mensalidade, com as condições por escrito antes de agendar e o comprovante da destinação no final. Veja a página da coleta avulsa para empresas. O contrato contínuo é para quem descarta com recorrência e quer rotina, sistema e série histórica."
       },
       {
         "q": "Por que um contrato de 36 meses?",
@@ -3833,10 +3839,10 @@
         "text": "Como a prova documental é construída, etapa a etapa."
       },
       {
-        "title": "Soluções corporativas",
-        "href": "/solucoes-corporativas/",
-        "icon": "box",
-        "text": "Todas as soluções organizadas por evento operacional."
+        "title": "Coleta avulsa (sem contrato)",
+        "href": "/coleta-avulsa-para-empresas/",
+        "icon": "truck",
+        "text": "Descarte eventual? Uma coleta com começo, meio e fim."
       }
     ],
     "final": {
@@ -4063,7 +4069,7 @@
     "faq": [
       {
         "q": "O sistema é gratuito mesmo?",
-        "a": "O acesso é incluso no contrato de descarte contínuo, sem custo de licença. Módulos avançados e relatórios específicos são contratados à parte — as condições são apresentadas na demonstração."
+        "a": "O acesso é incluso no contrato de descarte contínuo, sem custo de licença. Módulos avançados e relatórios específicos são precificados caso a caso, sobre o desenho da sua operação — não existe tabela de prateleira porque nenhuma operação é igual à outra. As condições são apresentadas por escrito na demonstração."
       },
       {
         "q": "Quem da minha empresa acessa?",
@@ -4592,6 +4598,12 @@
     ],
     "related": [
       {
+        "title": "Para condomínios",
+        "href": "/para-condominios/",
+        "icon": "building",
+        "text": "Síndico? Organize o dia do eletrônico com comprovante para a ata."
+      },
+      {
         "title": "Pontos de coleta",
         "href": "/pontos-de-coleta/",
         "icon": "box",
@@ -4602,18 +4614,538 @@
         "href": "/descarte-de-geladeira-velha/",
         "icon": "truck",
         "text": "Linha branca tem cuidados próprios — veja como funciona."
-      },
-      {
-        "title": "Como funciona",
-        "href": "/como-funciona/",
-        "icon": "file",
-        "text": "O caminho completo do seu aparelho depois da coleta."
       }
     ],
     "final": {
       "eyebrow": "1 minuto e pronto",
       "title": "Seu e-lixo resolvido ainda esta semana?",
       "text": "Conte o que você tem e onde está. Retorno em até 24h úteis — e o espaço da sua casa de volta."
+    }
+  },
+  {
+    "slug": "para-condominios",
+    "title": "Coleta de eletrônicos em condomínios, com comprovante para a ata",
+    "crumb": "Para condomínios",
+    "serviceType": "Coleta de resíduos eletrônicos em condomínios, com campanha para moradores, retirada na área comum e comprovante de destinação",
+    "custom_excerpt": "Para síndicos e administradoras: a Ecobraz organiza a coleta de eletrônicos na área comum, com campanha para os moradores, dia combinado e comprovante do que saiu — pronto para registrar em ata.",
+    "meta_title": "Coleta de eletrônicos em condomínios | Ecobraz",
+    "meta_description": "Síndico: organize a coleta de eletrônicos do condomínio com campanha para moradores, retirada na área comum e comprovante para a ata. Sem fidelidade obrigatória.",
+    "hub": {
+      "title": "Como funciona",
+      "href": "/como-funciona/"
+    },
+    "hero": {
+      "eyebrow": "Síndicos · Administradoras · Zeladoria",
+      "sub": "Os moradores acumulam eletrônico velho e cobram uma solução? A Ecobraz organiza a coleta na área comum — com campanha para os moradores, dia combinado com a zeladoria e o comprovante do que saiu, pronto para registrar em ata.",
+      "cta": "Organizar a coleta do condomínio",
+      "band": [
+        {
+          "title": "Sem custo para o condomínio",
+          "text": "na maioria dos casos — confirmado na avaliação"
+        },
+        {
+          "title": "Campanha com moradores",
+          "text": "modelo de aviso para elevador e grupo do prédio"
+        },
+        {
+          "title": "Comprovante para a ata",
+          "text": "a prova que a assembleia quer ver"
+        }
+      ]
+    },
+    "form": {
+      "title": "Conte sobre o condomínio",
+      "hint": "Retorno em até 24h úteis. Prefere falar com gente? Ligue (11) 4329-2001 ou chame no WhatsApp.",
+      "material": "",
+      "describeLabel": "Como é o condomínio?",
+      "describePlaceholder": "Ex.: 120 unidades, 2 torres, em Santana",
+      "button": "Organizar a coleta",
+      "micro": "O formato — data, ponto de coleta e campanha — é desenhado com o síndico na avaliação, antes de qualquer compromisso."
+    },
+    "recognize": {
+      "title": "Se você é síndico, isso vai soar familiar",
+      "items": [
+        "A assembleia cobrou uma solução para o e-lixo dos moradores",
+        "O depósito ou a garagem virou cemitério de TV, micro-ondas e computador",
+        "Morador deixa eletrônico na área comum e ninguém sabe o destino",
+        "Você não quer caçamba irregular respingando no CNPJ do condomínio",
+        "Quer uma ação ambiental visível — que valorize o prédio e renda uma boa ata"
+      ]
+    },
+    "painsTitle": "O e-lixo do prédio é um problema do prédio",
+    "painsSub": "Três motivos para o síndico organizar — antes que se organize sozinho, do jeito errado.",
+    "pains": [
+      {
+        "icon": "building",
+        "title": "O achados-e-perdidos vira lixão interno",
+        "text": "Sem um caminho oficial, o eletrônico do morador acaba na área comum, no depósito ou na calçada — e a reclamação chega para você.",
+        "consequence": "Custo real: espaço comum ocupado, atrito entre moradores e a zeladoria apagando incêndio."
+      },
+      {
+        "icon": "alert",
+        "title": "Descarte irregular respinga no condomínio",
+        "text": "Se o material do prédio aparecer em canal irregular, a responsabilidade pelo resíduo alcança quem o gerou — e o condomínio tem CNPJ.",
+        "consequence": "Custo real: dor de cabeça jurídica que uma coleta documentada evitaria por zero reais."
+      },
+      {
+        "icon": "chart",
+        "title": "Sem comprovante, a assembleia desconfia",
+        "text": "Síndico que contrata sem papel responde sozinho. Com o comprovante do que saiu, a prestação de contas se defende sozinha.",
+        "consequence": "Custo real: desgaste político seu — o ativo mais caro de um mandato."
+      }
+    ],
+    "contrast": {
+      "title": "Cada um se vira vs. coleta organizada",
+      "sub": "O mesmo prédio, duas gestões muito diferentes.",
+      "before": {
+        "title": "Como costuma ser",
+        "items": [
+          "Eletrônico acumulando em área comum",
+          "Zelador negocia com carroceiro ou caçamba",
+          "Nenhum comprovante do destino",
+          "Reclamação recorrente em assembleia",
+          "Risco respingando no condomínio"
+        ]
+      },
+      "after": {
+        "title": "Com a Ecobraz",
+        "items": [
+          "Campanha avisada no elevador e no grupo",
+          "Dia combinado com a zeladoria",
+          "Retirada na área comum, sem custo na maioria dos casos",
+          "Comprovante do que saiu — direto para a ata",
+          "Destinação documentada desde 2011"
+        ]
+      }
+    },
+    "gains": {
+      "title": "O que o síndico leva",
+      "sub": "Desenhado para quem responde à assembleia — não a uma auditoria corporativa.",
+      "items": [
+        {
+          "icon": "shield",
+          "title": "Sem custo na maioria dos casos",
+          "text": "Confirmado na avaliação de volume, materiais e acesso — e se houver custo, dizemos antes, com o valor."
+        },
+        {
+          "icon": "truck",
+          "title": "Logística com a zeladoria",
+          "text": "Ponto de coleta na área comum e horário combinado — sem bagunça no dia."
+        },
+        {
+          "icon": "file",
+          "title": "Comprovante para a ata",
+          "text": "O registro do que foi retirado — sua prestação de contas pronta."
+        },
+        {
+          "icon": "chart",
+          "title": "Campanha que engaja",
+          "text": "Modelo de aviso pronto; o 'dia do eletrônico' vira ação ambiental visível do condomínio."
+        }
+      ]
+    },
+    "scope": {
+      "title": "O que entra na coleta do condomínio",
+      "inTitle": "Entra",
+      "outTitle": "Não entra",
+      "in": [
+        "Eletrônicos e eletrodomésticos dos moradores (TVs, computadores, micro-ondas…)",
+        "Equipamentos da administração (interfones, CFTV, informática da portaria)",
+        "Campanha 'dia do eletrônico' com data marcada",
+        "Periodicidade combinada (ex.: semestral) — sem fidelidade obrigatória",
+        "Grandes volumes e geladeiras — avaliados no desenho"
+      ],
+      "out": [
+        "Móveis, entulho e resíduos de obra",
+        "Pilhas domésticas avulsas, lâmpadas e toner",
+        "Resíduos químicos ou contaminados",
+        "Retirada dentro das unidades — o ponto de coleta é a área comum, combinado com a zeladoria"
+      ],
+      "conditions": "O formato é definido com o síndico na avaliação: data, ponto de coleta, volume esperado e acesso. E se algum caso tiver custo, avisamos antes, com o valor.",
+      "outNote": "Para os itens que não entram, indicamos os canais oficiais de logística reversa."
+    },
+    "stepsTitle": "Do pedido à ata, em 5 passos",
+    "stepsSub": "Sem fidelidade obrigatória — compatível com mandato de 2 anos.",
+    "steps": [
+      {
+        "title": "Descreva o condomínio",
+        "text": "Unidades, torres, bairro e o que costuma acumular."
+      },
+      {
+        "title": "Desenho do formato",
+        "text": "Data, ponto de coleta e campanha, combinados com você e a zeladoria."
+      },
+      {
+        "title": "Aviso aos moradores",
+        "text": "Modelo de comunicado pronto para o elevador e o grupo do prédio."
+      },
+      {
+        "title": "Coleta na área comum",
+        "text": "Equipe no dia combinado, retirada registrada."
+      },
+      {
+        "title": "Comprovante entregue",
+        "text": "O registro do que saiu — pronto para a ata e a prestação de contas."
+      }
+    ],
+    "evidenceTitle": "O que você mostra na assembleia",
+    "evidence": [
+      {
+        "title": "Comprovante da retirada",
+        "text": "Relação do que saiu do condomínio — clientes citam 'o papel' nas avaliações."
+      },
+      {
+        "title": "★ 4,9 no Google",
+        "text": "354 avaliações públicas — qualquer morador confere no celular."
+      },
+      {
+        "title": "Desde 2011",
+        "text": "Associação com CNPJ ativo — não é atravessador de sucata."
+      },
+      {
+        "title": "Destinação documentada",
+        "text": "O material segue para triagem e destinação com registro."
+      },
+      {
+        "title": "Dados dos moradores",
+        "text": "Aparelhos com memória não são revendidos com dados — seguem para desmontagem e reciclagem."
+      },
+      {
+        "title": "Sem fidelidade obrigatória",
+        "text": "Periodicidade combinada — o próximo síndico não herda amarra nenhuma."
+      }
+    ],
+    "authority": "Atuação registrada em plataformas públicas de referência internacional. Cada alegação do site tem fonte, data e escopo declarados na página de evidências.",
+    "depoimentos": {
+      "titulo": "Quem já coletou com a Ecobraz, recomenda",
+      "nota": "4,9",
+      "total": "354",
+      "url": "https://share.google/DrfOh7JDdkShOvcQy",
+      "itens": [
+        {
+          "autor": "Marina Sanches",
+          "texto": "Já utilizei o serviço 2 vezes na empresa e o atendimento e comprometimento da Ecobraz foram nota 1.000! Recomendo para quem não quer ter dor de cabeça no descarte de eletrônicos."
+        },
+        {
+          "autor": "Sandra Barbosa",
+          "texto": "Acabaram de retirar. Todo processo perfeito com a promessa! Sem burocracia, gratuito, vieram em menos de 10 dias, atendimento do início ao fim muito bom! Parabéns! Por mais organizações e empresas assim!"
+        },
+        {
+          "autor": "michele marin",
+          "texto": "Fui bem atendida e prontamente consegui resolver sobre a minha questão. A empresa retirou os itens em poucos dias e eu fiquei contente em poder contribuir para o descarte correto e seguro. Recomendo!"
+        }
+      ]
+    },
+    "faqTitle": "O que síndicos perguntam",
+    "faq": [
+      {
+        "q": "Custa alguma coisa para o condomínio?",
+        "a": "Na maioria dos casos, não — a avaliação confirma, considerando volume, materiais e acesso. Se o seu caso tiver custo, dizemos antes, com o valor. Sem surpresa na prestação de contas."
+      },
+      {
+        "q": "Preciso assinar contrato de 36 meses?",
+        "a": "Não. Condomínio não precisa de fidelidade: dá para fazer uma campanha única ou combinar periodicidade (ex.: a cada 6 meses) — compatível com mandato de 2 anos. O contrato contínuo existe para quem quiser formalizar rotina, como opção."
+      },
+      {
+        "q": "Quem assina e o que levo para a assembleia?",
+        "a": "O síndico ou a administradora. Para a assembleia: o comprovante do que foi retirado, o CNPJ da Ecobraz (14.197.457/0001-42, desde 2011) e as avaliações públicas — material que sustenta a ata."
+      },
+      {
+        "q": "Como funciona a campanha com os moradores?",
+        "a": "Definida a data, você recebe um modelo de comunicado para o elevador e o grupo do prédio; os moradores levam os aparelhos ao ponto combinado na área comum até o dia da coleta."
+      },
+      {
+        "q": "E os dados nos computadores dos moradores?",
+        "a": "Aparelhos com memória não são revendidos com dados — seguem para desmontagem e reciclagem. Recomende aos moradores fazer backup quando possível; dúvidas específicas, a equipe orienta."
+      }
+    ],
+    "related": [
+      {
+        "title": "Coleta gratuita em casa",
+        "href": "/coleta-gratuita/",
+        "icon": "truck",
+        "text": "Para o morador que quer resolver individualmente."
+      },
+      {
+        "title": "Descarte para empresas",
+        "href": "/para-empresas/",
+        "icon": "building",
+        "text": "Para a administradora com carteira de condomínios comerciais."
+      },
+      {
+        "title": "Pontos de coleta",
+        "href": "/pontos-de-coleta/",
+        "icon": "box",
+        "text": "Onde entregar diretamente, se preferir."
+      }
+    ],
+    "final": {
+      "eyebrow": "Boa ata se constrói assim",
+      "title": "Organize o dia do eletrônico do seu condomínio",
+      "text": "Descreva o condomínio e receba o desenho da coleta — data, campanha e comprovante. Retorno em até 24h úteis."
+    }
+  },
+  {
+    "slug": "coleta-avulsa-para-empresas",
+    "title": "Coleta avulsa para empresas: sem contrato e sem mensalidade",
+    "crumb": "Coleta avulsa",
+    "serviceType": "Coleta pontual de resíduos eletrônicos corporativos, com avaliação prévia por escrito e comprovante de destinação",
+    "custom_excerpt": "Para a empresa que descarta de vez em quando: uma coleta com começo, meio e fim — condições por escrito antes de agendar, muitos materiais sem custo, e o comprovante da destinação no final. Sem contrato.",
+    "meta_title": "Coleta avulsa de eletrônicos para empresas | Ecobraz",
+    "meta_description": "Empresa com descarte eventual? Coleta avulsa sem contrato: condições por escrito antes, muitos materiais sem custo, comprovante da destinação no final.",
+    "hub": {
+      "title": "Soluções corporativas",
+      "href": "/solucoes-corporativas/"
+    },
+    "hero": {
+      "eyebrow": "PMEs · Descarte eventual · Sem fidelidade",
+      "sub": "Juntou equipamento parado no depósito e só quer resolver — sem assinar nada? A coleta avulsa é isso: você descreve o lote, recebe as condições por escrito antes de agendar (muitos materiais com valor de reciclagem saem sem custo) e fica com o comprovante da destinação.",
+      "cta": "Pedir avaliação do lote",
+      "band": [
+        {
+          "title": "Sem contrato",
+          "text": "uma coleta com começo, meio e fim"
+        },
+        {
+          "title": "Condições antes",
+          "text": "avaliação por escrito — sem surpresa"
+        },
+        {
+          "title": "Comprovante",
+          "text": "a prova da destinação fica com você"
+        }
+      ]
+    },
+    "form": {
+      "title": "Descreva o lote em 1 minuto",
+      "hint": "Retorno em até 24h úteis, com as condições por escrito.",
+      "material": "",
+      "describeLabel": "O que precisa sair?",
+      "describePlaceholder": "Ex.: 15 computadores, 3 impressoras e placas, em Osasco",
+      "button": "Pedir avaliação",
+      "micro": "A avaliação diz o que entra, o que não entra e se há algum custo — antes de qualquer agendamento."
+    },
+    "recognize": {
+      "title": "É a sua empresa se…",
+      "items": [
+        "O depósito acumulou anos de computador, impressora e placa",
+        "Não existe departamento de ESG — quem resolve é você",
+        "Contrato longo não faz sentido para quem descarta a cada 1 ou 2 anos",
+        "Você já vendeu para o ferro-velho e ficou com a pulga atrás da orelha",
+        "O contador, um cliente ou a certificação pediu comprovante do descarte"
+      ]
+    },
+    "painsTitle": "O ferro-velho é barato até o dia em que fica caro",
+    "painsSub": "O que o descarte informal deixa com a sua empresa.",
+    "pains": [
+      {
+        "icon": "alert",
+        "title": "A responsabilidade não sai com a sucata",
+        "text": "Pela Lei 12.305/2010, a responsabilidade do gerador é compartilhada: se o material da sua empresa aparecer em canal irregular, quem responde é o seu CNPJ — anos depois.",
+        "consequence": "Custo real: autuação e passivo jurídico, sem nenhum papel para se defender."
+      },
+      {
+        "icon": "building",
+        "title": "Depósito parado é dinheiro parado",
+        "text": "Metros quadrados guardando equipamento morto, inventário que não fecha e a decisão sempre adiada.",
+        "consequence": "Custo real: espaço, organização e tempo — para guardar o que não volta mais."
+      },
+      {
+        "icon": "file",
+        "title": "Sem comprovante, sem defesa",
+        "text": "Cada vez mais clientes, certificações e contadores pedem evidência do descarte correto — e nota de ferro-velho não é evidência.",
+        "consequence": "Custo real: uma exigência simples que trava um contrato maior."
+      }
+    ],
+    "contrast": {
+      "title": "Ferro-velho vs. coleta avulsa documentada",
+      "sub": "O mesmo lote, dois finais muito diferentes.",
+      "before": {
+        "title": "Ferro-velho / carroceiro",
+        "items": [
+          "Alguns reais pelo lote — e olhe lá",
+          "Nenhum comprovante do destino",
+          "Responsabilidade continua com o seu CNPJ",
+          "Dados nos HDs seguem com o aparelho",
+          "Cada descarte é uma incógnita"
+        ]
+      },
+      "after": {
+        "title": "Coleta avulsa Ecobraz",
+        "items": [
+          "Condições por escrito antes de agendar",
+          "Sem custo na maioria dos materiais com valor de reciclagem",
+          "Comprovante da destinação no final",
+          "Aparelhos com memória não são revendidos com dados",
+          "Sem contrato, sem mensalidade, sem fidelidade"
+        ]
+      }
+    },
+    "gains": {
+      "title": "O que a sua empresa leva",
+      "sub": "Uma coleta resolvida — e a porta aberta se um dia quiser rotina.",
+      "items": [
+        {
+          "icon": "shield",
+          "title": "Risco resolvido",
+          "text": "Destinação documentada em vez de incógnita — o CNPJ agradece."
+        },
+        {
+          "icon": "box",
+          "title": "Zero burocracia",
+          "text": "Descreveu, recebeu as condições, agendou, resolveu."
+        },
+        {
+          "icon": "file",
+          "title": "Comprovante no final",
+          "text": "O registro da destinação — MTR e CDF quando aplicáveis ao material."
+        },
+        {
+          "icon": "chart",
+          "title": "Sem amarra nenhuma",
+          "text": "Se o descarte virar rotina, o contrato contínuo existe — como opção, nunca obrigação."
+        }
+      ]
+    },
+    "scope": {
+      "title": "O que entra — e o que é bom saber antes",
+      "inTitle": "Entra",
+      "outTitle": "Bom saber",
+      "in": [
+        "Computadores, notebooks, monitores e periféricos",
+        "Impressoras (sem toner) e equipamentos de escritório",
+        "Placas, componentes e sucata eletrônica",
+        "Baterias e nobreaks — mediante avaliação",
+        "Máquinas e equipamentos — mediante avaliação"
+      ],
+      "out": [
+        "Não compramos lotes: a remuneração da Ecobraz vem da destinação e valorização do material — você recebe a coleta (sem custo na maioria dos casos) e a documentação",
+        "Pilhas domésticas avulsas, toner, lâmpadas e contaminados não entram",
+        "Volumes muito pequenos ou acesso difícil podem ter custo — sempre informado antes, com o valor",
+        "Equipamentos com dados: não são revendidos; tratamento formal com relatório é serviço à parte"
+      ],
+      "conditions": "A avaliação responde por escrito: o que entra, a logística, se há custo e qual documentação acompanha — antes de qualquer agendamento.",
+      "outNote": "Transparência primeiro: preferimos dizer 'este lote tem custo' antes, a surpreender depois."
+    },
+    "stepsTitle": "Como funciona, sem enrolação",
+    "stepsSub": "Da descrição ao comprovante.",
+    "steps": [
+      {
+        "title": "Descreva o lote",
+        "text": "O que é, quanto é, onde está — 1 minuto no formulário ou WhatsApp."
+      },
+      {
+        "title": "Condições por escrito",
+        "text": "Retorno em até 24h úteis: o que entra, custo (se houver) e documentação."
+      },
+      {
+        "title": "Agendamento",
+        "text": "Data combinada com a sua equipe."
+      },
+      {
+        "title": "Retirada registrada",
+        "text": "Coleta com registro do que saiu."
+      },
+      {
+        "title": "Comprovante",
+        "text": "A documentação da destinação — sua defesa e seu arquivo."
+      }
+    ],
+    "evidenceTitle": "Por que empresas como a sua confiam",
+    "evidence": [
+      {
+        "title": "★ 4,9 no Google",
+        "text": "354 avaliações públicas — incluindo empresas que descartam todo ano."
+      },
+      {
+        "title": "Comprovante de verdade",
+        "text": "MTR (Manifesto de Transporte de Resíduos) e CDF (Certificado de Destinação Final), quando aplicáveis ao material e ao serviço."
+      },
+      {
+        "title": "Desde 2011",
+        "text": "Associação com CNPJ ativo e operação documentada."
+      },
+      {
+        "title": "Condições antes, sempre",
+        "text": "Nenhum agendamento sem você saber o que entra e o que custa (quando custa)."
+      },
+      {
+        "title": "Dados protegidos",
+        "text": "Aparelhos com memória não são revendidos com dados."
+      },
+      {
+        "title": "Registro público internacional",
+        "text": "ONU, plataforma da UE e World Bank Group — registros com escopo declarado, na página de evidências."
+      }
+    ],
+    "authority": "Atuação registrada em plataformas públicas de referência internacional. Cada alegação do site tem fonte, data e escopo declarados na página de evidências.",
+    "depoimentos": {
+      "titulo": "Empresas que descartam de tempos em tempos",
+      "nota": "4,9",
+      "total": "354",
+      "url": "https://share.google/DrfOh7JDdkShOvcQy",
+      "itens": [
+        {
+          "autor": "Casa Dos Machos Ferramentas",
+          "texto": "Ao menos uma vez por ano preciso fazer descarte de eletrônicos e afins, sempre utilizei os serviços da Ecobraz, empresa extremamente profissional, os equipamentos descartados são devidamente documentados, são muito responsáveis no que fazem."
+        },
+        {
+          "autor": "PS Yamada",
+          "texto": "De tempos em tempos, temos equipamentos para fazer o descarte corretamente e já utilizei outras empresas, mas posso afirmar, a equipe da Ecobraz foi a melhor até hoje, é extremamente profissional, atendimento simpático e retirada eficaz. Parabéns a equipe e pelo trabalho."
+        },
+        {
+          "autor": "michele marin",
+          "texto": "Fui bem atendida e prontamente consegui resolver sobre a minha questão. A empresa retirou os itens em poucos dias e eu fiquei contente em poder contribuir para o descarte correto e seguro. Recomendo!"
+        }
+      ]
+    },
+    "faqTitle": "O que donos e gerentes perguntam",
+    "faq": [
+      {
+        "q": "Quanto custa?",
+        "a": "Muitos materiais com valor de reciclagem (informática, placas, cabos) saem sem custo — a avaliação confirma. Quando há custo (volume muito pequeno, acesso difícil, material sem valor de recuperação), dizemos antes, por escrito, com o valor. Você decide sabendo tudo."
+      },
+      {
+        "q": "Vocês pagam pelo meu lote?",
+        "a": "Não — não compramos sucata. A remuneração da Ecobraz vem da destinação e valorização do material; o que a sua empresa recebe é a coleta (sem custo na maioria dos casos) e a documentação da destinação. Se a sua prioridade for vender o lote, essa conta vale uma conversa: o comparativo está na página do contrato contínuo."
+      },
+      {
+        "q": "Emitem MTR e CDF?",
+        "a": "Quando aplicáveis ao material e ao serviço executado, sim — MTR é o Manifesto de Transporte de Resíduos e CDF é o Certificado de Destinação Final. A avaliação já diz qual documentação acompanha o seu lote."
+      },
+      {
+        "q": "Atendem meu porte?",
+        "a": "De uma dúzia de itens a caminhões — descreva o lote que a avaliação responde. Empresas menores são a maioria das coletas avulsas."
+      },
+      {
+        "q": "E se a gente passar a descartar sempre?",
+        "a": "Aí existe o contrato de descarte contínuo — coletas programadas, sistema de rastreabilidade incluso e documentação completa. Mas é opção, nunca pré-requisito: dá para começar (e ficar) no avulso."
+      }
+    ],
+    "related": [
+      {
+        "title": "Descarte para empresas (contrato)",
+        "href": "/para-empresas/",
+        "icon": "building",
+        "text": "Para quem descarta com recorrência: rotina, sistema e série histórica."
+      },
+      {
+        "title": "Documentação e rastreabilidade",
+        "href": "/documentacao-e-rastreabilidade/",
+        "icon": "file",
+        "text": "O que cada documento comprova."
+      },
+      {
+        "title": "Soluções corporativas",
+        "href": "/solucoes-corporativas/",
+        "icon": "box",
+        "text": "Todas as soluções por evento operacional."
+      }
+    ],
+    "final": {
+      "eyebrow": "Resolva esta semana",
+      "title": "Descreva o lote e receba as condições por escrito",
+      "text": "Sem contrato, sem mensalidade, sem surpresa — e com o comprovante no final. Retorno em até 24h úteis."
     }
   }
 ]
