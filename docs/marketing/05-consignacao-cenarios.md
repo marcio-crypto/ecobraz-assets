@@ -95,3 +95,16 @@ do seguro, já com toda a documentação inclusa."
 - [ ] Análise jurídica/fiscal do enquadramento (ONG × consignação; possível uso de
       veículo do grupo)
 - [ ] Decidir política de mídia em lotes premium (vender sem mídia vs. mídia nova)
+
+## Atualização 26/07/2026 — números reais fornecidos pelo Marcio
+
+- **Comissões reais**: Superbid 7% cobrada do vendedor (+5% do comprador ao
+  leiloeiro); Kwara 5% cobrada da Ecobraz (+5% do comprador). A premissa de 8%
+  usada nos cenários era conservadora e fica próxima da realidade Superbid.
+- **Benchmark real**: leilão Kwara K-2727 (encerrado 07/07/2026) — 146 de 200
+  lotes vendidos, R$ 63.030 brutos, média R$ 431,71/lote, mediana R$ 400/lote;
+  11 lotes de notebooks somaram R$ 5.500 (média/mediana R$ 500/lote).
+  Após 5% Kwara: R$ 59.878,50, antes de tributos e custos.
+- Pendente para recalibrar os cenários: custos E1 (triagem/item, sanitização/
+  disco, logística/coleta, R$/kg por fração) — sem número com fonte, as
+  premissas estimadas permanecem sinalizadas como estimativas.
