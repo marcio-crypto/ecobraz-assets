@@ -84,3 +84,38 @@ máxima; o que contradisser → prevalece a pessoa real.
 
 As 5 devolutivas completas (com citações textuais) estão na conversa da sessão de
 26/07/2026; os achados acionáveis estão integralmente refletidos nos §2 e §3.
+
+
+## Rodada 2 (26/07/2026) — amostra ampliada: 11 leitores, site pós-correções
+
+**Comparativo (mesmas 5 personas):** TI 6→7 · ESG 6→6,5 · PF 62 anos 7→7,5 ·
+Consultoria 7→7 (objeção nº 1 "70% resolvida") · Governo 6→7. Média 6,4 → 7,0.
+O que fez subir: exemplo real do leilão ("o número mais honesto da página" — CFO),
+receita declarada, 36 meses à vista, telefone na página PF, proteção de carteira
+pública, separação 13.019/14.133.
+
+**Novos perfis:** PF jovem 7,5 · CFO 7 (autoriza demo; quer minuta e faixa dos
+módulos antes de assinar) · Síndico 6 (SEM porta para condomínio) · Dono de PME 4
+(SEM porta para descarte avulso — "só existe casa grátis e corporação 36 meses") ·
+Multinacional 4,5 (itens eliminatórios: licenças, seguros, cadeia final, ISO) ·
+Auditora caça-greenwashing: "PARCIAL — sobreviveria à matéria após 3 correções";
+achado ALTO: "Destino certificado desde 2011" sem certificador (violava nossa
+própria régua).
+
+**Corrigido nesta rodada (no site):** "certificado"→"documentada" · disclaimers
+junto aos selos fora da página de evidências · "três padrões"→"nos formatos que
+auditorias, compradores europeus e bancos costumam solicitar, definidos no
+escopo" · K-2727 com leiloeiro nomeado (Kwara) · data de corte das evidências
+atualizada · FAQ coleta avulsa p/ empresas (PME) · FAQ condomínios/síndicos ·
+resposta de dados da PF com lastro ("aparelhos com memória não são revendidos
+com dados" — política confirmada pelo Marcio) · topbar sem jargão · CRBio-01
+efetivamente publicado (a rodada 2 flagrou a edição anterior falha).
+
+**Backlog que depende do Marcio (repetido por 5+ leitores):** bloco
+regulatório-securitário (licenças, seguros, cadeia downstream, certificações) —
+o item eliminatório do segmento enterprise; fotos reais; case nomeado.
+**Decisões novas para o Marcio:** (a) publicar faixa de preço dos módulos e/ou
+minuta-resumo do contrato? (CFO/TI: "não agendo reunião para descobrir preço");
+(b) manter o "+5 toneladas" na home? (multinacional: comunica micro-operação);
+(c) criar páginas dedicadas Condomínios e PME/avulso? (síndico e PME se
+encaixaram mal nas portas atuais).
