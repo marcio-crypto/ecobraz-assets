@@ -44,18 +44,52 @@ jobs:
           const page = await ctx.newPage();
           const out = { url_inicial: url, url_final: '', nome: '', nota: '', total_avaliacoes: '', avaliacoes: [], avisos: [] };
 
+          const aceitarConsentimento = async () => {
+            for (const label of ['Aceitar tudo', 'Accept all', 'Aceitar todos', 'I agree', 'Concordo']) {
+              const b = page.getByRole('button', { name: label });
+              if (await b.count()) { await b.first().click().catch(() => {}); await page.waitForTimeout(2500); return true; }
+            }
+            return false;
+          };
+          const log = (...a) => console.log('[etapa]', ...a);
+
           try {
             await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
             await page.waitForTimeout(4000);
+            await aceitarConsentimento();
+            log('após link compartilhado:', page.url(), '| título:', await page.title());
 
-            // Tela de consentimento (se aparecer)
-            for (const label of ['Aceitar tudo', 'Accept all', 'Aceitar todos']) {
-              const b = page.getByRole('button', { name: label });
-              if (await b.count()) { await b.first().click().catch(() => {}); await page.waitForTimeout(2500); break; }
+            // Se a página intermediária do share.google não levou ao Maps, segue o link para o Maps
+            if (!page.url().includes('/maps/place')) {
+              const aMaps = page.locator('a[href*="maps.google"], a[href*="google.com/maps"], a[href*="maps.app.goo.gl"]');
+              if (await aMaps.count()) {
+                const href = await aMaps.first().getAttribute('href');
+                log('seguindo link para o Maps:', href);
+                await page.goto(href, { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(() => {});
+                await page.waitForTimeout(4000);
+                await aceitarConsentimento();
+              }
             }
+
+            // Último recurso: busca direta pela ficha (nome + bairro confirmados por print do perfil)
+            if (!page.url().includes('/maps/place')) {
+              log('busca direta no Maps como alternativa');
+              await page.goto('https://www.google.com/maps/search/Ecobraz+Emigre+R.+Dona+Maria+Quedas+230+Sao+Paulo?hl=pt-BR', { waitUntil: 'domcontentloaded', timeout: 60000 });
+              await page.waitForTimeout(5000);
+              await aceitarConsentimento();
+              if (!page.url().includes('/maps/place')) {
+                const primeira = page.locator('a[href*="/maps/place/"]').first();
+                if (await primeira.count()) { await primeira.click().catch(() => {}); await page.waitForTimeout(4000); }
+              }
+            }
+            log('página de trabalho:', page.url(), '| título:', await page.title());
 
             out.url_final = page.url();
             out.nome = (await page.locator('h1').first().textContent().catch(() => '') || '').trim();
+            if (!out.nome) {
+              const corpo = (await page.locator('body').innerText().catch(() => '') || '').slice(0, 600);
+              out.avisos.push('h1 vazio; início do corpo da página: ' + corpo.replace(/\n+/g, ' | '));
+            }
 
             // Nota e total (cabeçalho do perfil)
             const head = await page.locator('div.F7nice').first().textContent().catch(() => '');
@@ -110,7 +144,10 @@ jobs:
 
           await browser.close();
           fs.writeFileSync('avaliacoes-google.json', JSON.stringify(out, null, 2));
-          console.log(JSON.stringify({ nome: out.nome, nota: out.nota, total_avaliacoes: out.total_avaliacoes, coletadas: out.avaliacoes.length, avisos: out.avisos }, null, 2));
+          // JSON completo nos logs (o ambiente de trabalho não consegue baixar artefatos)
+          console.log('===JSON-COMPLETO-INICIO===');
+          console.log(JSON.stringify(out));
+          console.log('===JSON-COMPLETO-FIM===');
 
           const md = [
             '## Perfil: ' + (out.nome || '(nome não capturado)'),
