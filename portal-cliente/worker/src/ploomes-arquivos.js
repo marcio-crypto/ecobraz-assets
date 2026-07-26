@@ -71,6 +71,14 @@ async function gravarMeta(env, m) {
     .bind(m.r2_key, m.fonte, m.ploomes_id != null ? Number(m.ploomes_id) : null, m.deal_id != null ? Number(m.deal_id) : null, m.contact_id != null ? Number(m.contact_id) : null, cortar(m.nome_arquivo, 250), cortar(m.content_type, 100), m.tamanho != null ? Number(m.tamanho) : null, cortar(m.criado_em, 30), nowISO()).run();
 }
 
+// Registra um anexo que foi VISTO mas não baixou (com o motivo), para diagnóstico.
+async function logFalha(env, id, dealId, contactId, motivo) {
+  try { await env.DB_PLOOMES.prepare('INSERT OR REPLACE INTO anexos_falhas (ploomes_id,deal_id,contact_id,motivo,quando) VALUES (?,?,?,?,?)').bind(Number(id), dealId != null ? Number(dealId) : null, contactId != null ? Number(contactId) : null, String(motivo == null ? '' : motivo).slice(0, 60), nowISO()).run(); } catch { /* silencioso */ }
+}
+async function limparFalha(env, id) {
+  try { await env.DB_PLOOMES.prepare('DELETE FROM anexos_falhas WHERE ploomes_id=?1').bind(Number(id)).run(); } catch { /* silencioso */ }
+}
+
 // ---------------------------------------------------------------------------
 // ANEXOS (Attachments) — enumerados por negócio (Deal), com $expand=Attachments.
 // Retomável pelo Id do negócio. Cada anexo: resolve .Url → baixa → R2 + D1.
@@ -247,11 +255,11 @@ export async function importarAnexosJanela(env, desdeId, janela) {
       const it = one.value && one.value[0];
       if (it) { url = it.Url; ct = ct || it.ContentType; fn = fn || it.FileName || it.Name; }
     }
-    if (!url) { falhas++; continue; }
+    if (!url) { falhas++; await logFalha(env, a.Id, a.DealId, a.ContactId, 'sem_url'); continue; }
     const dl = await baixarParaR2(env, key, url, ct);
-    if (!dl.ok) { falhas++; continue; }
+    if (!dl.ok) { falhas++; await logFalha(env, a.Id, a.DealId, a.ContactId, dl.erro || 'download_falhou'); continue; }
     await gravarMeta(env, { r2_key: key, fonte: 'anexo', ploomes_id: a.Id, deal_id: a.DealId || null, contact_id: a.ContactId || null, nome_arquivo: fn, content_type: dl.contentType, tamanho: dl.tamanho, criado_em: a.CreateDate || '' });
-    gravados++; if (dl.tamanho) bytes += dl.tamanho;
+    gravados++; if (dl.tamanho) bytes += dl.tamanho; await limparFalha(env, a.Id);
   }
   await gravarEstado(env, 'anexos_janela_cursor', Y);
   // truncado = ainda veio menos que a contagem da faixa (não deveria acontecer com o auto-ajuste).
@@ -450,12 +458,12 @@ async function rodar(which,btn){var c=CFG[which];PARAR[which]=false;btn.disabled
     st.textContent='Importando… +'+(j.gravados||0)+' neste lote'+extra;
     await new Promise(function(r){setTimeout(r,150);});}
   btn.disabled=false;}
-async function rodarJanela(btn){PARAR.jan=false;btn.disabled=true;var st=document.getElementById('janSt');st.textContent='Buscando por faixas de Id…';var trunc=0;
+async function rodarJanela(btn){PARAR.jan=false;btn.disabled=true;var st=document.getElementById('janSt');st.textContent='Buscando por faixas de Id…';var trunc=0,falh=0;
   while(!PARAR.jan){var j;try{var r=await fetch('/api/diretoria/arquivos-janela?desdeId='+CUR.jan,{method:'POST'});j=await r.json();}catch(e){st.textContent='Erro de conexão — clique de novo para retomar.';break;}
     if(!j.ok){st.textContent='Parou: '+(j.erro||'erro')+' — clique de novo para retomar.';break;}
-    FEITO.anexo+=(j.gravados||0);if(j.bytes)BYTES+=j.bytes;CUR.jan=j.proximoId;if(j.truncado)trunc++;setBar('anexo');setMB();
+    FEITO.anexo+=(j.gravados||0);if(j.bytes)BYTES+=j.bytes;falh+=(j.falhas||0);CUR.jan=j.proximoId;if(j.truncado)trunc++;setBar('anexo');setMB();
     var pct=Math.min(100,Math.round(CUR.jan/ID_MAX*100));
-    if(j.fim){st.textContent='✅ Varredura completa! '+FEITO.anexo.toLocaleString('pt-BR')+' anexos guardados.'+(trunc?(' ⚠ '+trunc+' faixa(s) cheia(s) — me avise.'):'');break;}
+    if(j.fim){st.textContent='✅ Varredura completa! '+FEITO.anexo.toLocaleString('pt-BR')+' anexos guardados.'+(falh?(' · '+falh.toLocaleString('pt-BR')+' não baixaram (registrados p/ análise)'):'')+(trunc?(' ⚠ '+trunc+' faixa(s) cheia(s)'):'');break;}
     st.textContent='Buscando… '+pct+'% da faixa de Ids · '+FEITO.anexo.toLocaleString('pt-BR')+' anexos'+(j.gravados?(' (+'+j.gravados+')'):'');
     await new Promise(function(r){setTimeout(r,90);});}
   btn.disabled=false;}
