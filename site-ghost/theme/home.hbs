@@ -41,6 +41,16 @@
 .hx-or-wa a{display:inline-flex;align-items:center;gap:7px;font-weight:700;color:#0E7A3C;text-decoration:none}
 .hx-micro{font-size:11.5px;color:var(--muted);margin-top:12px}
 @media (max-width:980px){.hx-hero-grid{grid-template-columns:1fr;gap:38px;padding:52px 0}.hx-hero h1{max-width:none}}
+.hx-tasks{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px}
+.hx-task{background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.22);border-radius:12px;padding:18px 18px 16px;text-decoration:none;color:#ECF3F1;display:flex;flex-direction:column;gap:6px;transition:border-color .15s,background .15s}
+.hx-task:hover{border-color:var(--green);background:rgba(146,196,48,.10)}
+.hx-task strong{color:#fff;font-size:15.5px;letter-spacing:-.01em;line-height:1.35}
+.hx-task span{font-size:12.5px;color:#A5BEBD;line-height:1.5}
+.hx-task em{font-style:normal;font-weight:800;font-size:13px;color:var(--green);margin-top:4px}
+@media (max-width:640px){.hx-tasks{grid-template-columns:1fr}}
+.hx-gstars{color:#F5B940}
+.hx-band-link{color:#A5BEBD;text-decoration:underline}
+.hx-band-link:hover{color:var(--green)}
 .hx-evi{background:#fff;border-bottom:1px solid var(--line)}
 .hx-evi .container{padding:56px 0 60px}
 .hx-evi-head{max-width:720px;margin:0 auto 34px;text-align:center}
@@ -144,18 +154,27 @@
 <section class="hx-hero">
   <div class="container hx-hero-grid">
     <div>
-      <span class="hx-label on-dark">Coleta corporativa · Ativos de TI · Rastreabilidade</span>
-      <h1>Descarte eletrônico corporativo com rastreabilidade e documentação</h1>
-      <p class="hx-sub">A Ecobraz organiza coleta, cadeia operacional, tratamento de mídias quando aplicável e evidências de destinação — para empresas que precisam responder a TI, jurídico, compliance, auditoria e compras.</p>
-      <div class="hx-hero-ctas">
-        <a class="button" href="{{@site.url}}/agendamento/" data-track="hero_solicitar_coleta">Solicitar coleta</a>
-        <a class="button hx-btn-outline-dark" href="#evidencias">Ver evidências públicas</a>
+      <span class="hx-label on-dark">Coleta · Rastreabilidade · Documentação ambiental</span>
+      <h1>Descarte de lixo eletrônico para sua casa e sua empresa</h1>
+      <p class="hx-sub">Da geladeira parada na garagem ao contrato corporativo com rastreabilidade: a Ecobraz coleta, destina e entrega a prova documentada — desde 2011.</p>
+      <div class="hx-tasks">
+        <a class="hx-task" href="{{@site.url}}/agendamento/?perfil=pessoa-fisica" data-track="hero_task_pf">
+          <strong>Quero descartar eletrônicos de casa</strong>
+          <span>Coleta residencial gratuita na Grande São Paulo — confirmada na avaliação do endereço e do material.</span>
+          <em>Agendar coleta →</em>
+        </a>
+        <a class="hx-task" href="{{@site.url}}/para-empresas/" data-track="hero_task_pj">
+          <strong>Sou empresa e preciso de destinação com prova</strong>
+          <span>Contrato contínuo, sistema de rastreabilidade incluso e documentação pronta para auditoria.</span>
+          <em>Conhecer o modelo →</em>
+        </a>
       </div>
       <div class="hx-hero-band">
+        <span><strong><span class="hx-gstars">★</span> 4,9 no Google</strong><a class="hx-band-link" href="https://share.google/DrfOh7JDdkShOvcQy" rel="noopener" data-track="hero_band_google">354 avaliações públicas</a></span>
         <span><strong>Desde 2011</strong>CNPJ ativo e atuação institucional</span>
         <span><strong>ECESP · Comissão Europeia</strong>programa publicado como boa prática</span>
         <span><strong>infoDev / World Bank Group</strong>citada em relatório de 2017</span>
-        <span><strong>ONU · código 708794</strong>perfil público de sociedade civil</span>
+        <span><strong>ONU · código 708794</strong><a class="hx-band-link" href="#evidencias">ver todas as evidências ↓</a></span>
       </div>
     </div>
 
@@ -251,6 +270,23 @@
     <p class="hx-evi-foot">Cada evidência comprova exatamente o que a fonte declara — nem mais, nem menos. <a class="hx-src" href="{{@site.url}}/evidencias/">Página completa de evidências →</a></p>
   </div>
 </div>
+
+<section class="hx-block" id="modelo" style="padding-bottom:0">
+  <div class="container">
+    <div class="hx-impact">
+      <div>
+        <span class="hx-label">O modelo Ecobraz para empresas</span>
+        <h2>Contrato contínuo, sistema de rastreabilidade e prova em três padrões</h2>
+        <p>Coletas programadas sem custo de coleta, sistema incluso com registro por QR e documentação pronta para auditoria — no padrão brasileiro, no europeu e no que os bancos costumam pedir.</p>
+        <p style="margin:14px 0 0"><a class="button" href="{{@site.url}}/para-empresas/" data-track="home_modelo_pj">Conhecer o modelo →</a></p>
+      </div>
+      <div class="hx-impact-side">
+        <a class="hx-ifact" style="text-decoration:none;display:block" href="{{@site.url}}/sistema-de-rastreabilidade/" data-track="home_modelo_sistema"><strong><span class="hx-num">Sistema incluso</span> registro por QR, central documental e painel</strong><span>veja como o sistema funciona →</span></a>
+        <a class="hx-ifact" style="text-decoration:none;display:block" href="{{@site.url}}/parceiros/" data-track="home_modelo_parceiros"><strong><span class="hx-num">Consultorias ESG</span> programa de parceiros credenciados</strong><span>venda com a execução da Ecobraz →</span></a>
+      </div>
+    </div>
+  </div>
+</section>
 
 <section class="hx-block" id="solucoes">
   <div class="container">
@@ -375,10 +411,10 @@
     <div class="hx-pf">
       <div>
         <span class="hx-label">Pessoa física</span>
-        <h3>Tem um equipamento parado em casa?</h3>
-        <p>Descreva o item e a região — a equipe avalia a coleta ou indica o ponto de entrega mais adequado.</p>
+        <h3>Tem um equipamento parado em casa? A coleta residencial é gratuita na Grande SP.</h3>
+        <p>Geladeira, TV, computador, micro-ondas: descreva o item e o endereço — a equipe confirma a coleta gratuita na avaliação ou indica o ponto de entrega mais próximo. <span class="hx-gstars">★</span> <strong>4,9 no Google</strong> em <a href="https://share.google/DrfOh7JDdkShOvcQy" rel="noopener" data-track="home_pf_google">354 avaliações públicas</a>.</p>
       </div>
-      <a class="button button-secondary-ink" href="{{@site.url}}/agendamento/?perfil=pessoa-fisica" style="background:transparent;border:1.5px solid var(--line);color:var(--ink)" data-track="home_pf">Verificar coleta residencial</a>
+      <a class="button" href="{{@site.url}}/agendamento/?perfil=pessoa-fisica" data-track="home_pf">Agendar coleta gratuita</a>
     </div>
   </div>
 </section>
@@ -387,7 +423,8 @@
   <div class="container">
     <div class="hx-head-split" style="justify-content:center;text-align:center"><div style="margin-inline:auto"><span class="hx-label">Perguntas frequentes</span><h2>O que os gestores perguntam antes de contratar</h2></div></div>
     <div class="hx-faq">
-      <details><summary>A coleta tem custo?</summary><p>Depende do material, volume, localidade e requisitos (acesso, documentação, tratamento de dados). Cada solicitação recebe uma avaliação com escopo e condições antes do agendamento — sem surpresas depois.</p></details>
+      <details><summary>A coleta tem custo?</summary><p>Para residências na Grande São Paulo, a coleta é gratuita — confirmada na avaliação do endereço e do material. Para empresas, o contrato de descarte contínuo não tem custo de coleta; solicitações avulsas recebem avaliação com escopo e condições antes do agendamento — sem surpresas depois.</p></details>
+      <details><summary>Minha empresa descarta com frequência. Existe um modelo de contrato?</summary><p>Sim — o contrato de descarte contínuo: coletas programadas sem custo de coleta, sistema de rastreabilidade incluso e documentação pronta para auditoria. Conheça o modelo completo na página <a href="{{@site.url}}/para-empresas/">para empresas</a>.</p></details>
       <details><summary>Quais documentos vocês entregam?</summary><p>Inventário, cadeia de custódia, MTR e CDF, conforme o escopo contratado e o serviço efetivamente executado. Informe na solicitação o que a sua auditoria exige.</p></details>
       <details><summary>Como funciona o tratamento de mídias com dados?</summary><p>Mídias e equipamentos com informação corporativa recebem escopo próprio de tratamento, com registros compatíveis com a execução e alinhados à LGPD.</p></details>
       <details><summary>Vocês coletam baterias?</summary><p>Sim — baterias de lítio, chumbo-ácido, estacionárias, tracionárias, automotivas, de empilhadeira, navais, ferroviárias e de veículos elétricos leves (bicicleta, patinete, moto), sempre mediante avaliação técnica. Apenas pilhas domésticas avulsas não são recebidas.</p></details>
@@ -420,7 +457,8 @@
   "@context": "https://schema.org",
   "@type": "FAQPage",
   "mainEntity": [
-    {"@type": "Question", "name": "A coleta da Ecobraz tem custo?", "acceptedAnswer": {"@type": "Answer", "text": "Depende do material, volume, localidade e requisitos como acesso, documentação e tratamento de dados. Cada solicitação recebe uma avaliação técnica com escopo e condições antes do agendamento."}},
+    {"@type": "Question", "name": "A coleta da Ecobraz tem custo?", "acceptedAnswer": {"@type": "Answer", "text": "Para residências na Grande São Paulo, a coleta é gratuita, confirmada na avaliação do endereço e do material. Para empresas, o contrato de descarte contínuo não tem custo de coleta; solicitações avulsas recebem avaliação técnica com escopo e condições antes do agendamento."}},
+    {"@type": "Question", "name": "Existe um modelo de contrato para empresas que descartam com frequência?", "acceptedAnswer": {"@type": "Answer", "text": "Sim, o contrato de descarte contínuo: coletas programadas sem custo de coleta, sistema de rastreabilidade incluso e documentação pronta para auditoria."}},
     {"@type": "Question", "name": "Quais documentos a Ecobraz entrega?", "acceptedAnswer": {"@type": "Answer", "text": "Inventário, cadeia de custódia, MTR e CDF, conforme o escopo contratado e o serviço efetivamente executado."}},
     {"@type": "Question", "name": "Como funciona o tratamento de mídias com dados?", "acceptedAnswer": {"@type": "Answer", "text": "Mídias e equipamentos com informação corporativa recebem escopo próprio de tratamento, com registros compatíveis com a execução e alinhados à LGPD."}},
     {"@type": "Question", "name": "A Ecobraz coleta baterias?", "acceptedAnswer": {"@type": "Answer", "text": "Sim. A Ecobraz coleta baterias de lítio, chumbo-ácido, estacionárias, tracionárias, automotivas, de empilhadeira, navais, ferroviárias e de veículos elétricos leves, mediante avaliação técnica. Apenas pilhas domésticas avulsas não são recebidas."}},
