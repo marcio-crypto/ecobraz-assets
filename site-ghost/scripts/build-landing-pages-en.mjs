@@ -41,7 +41,7 @@ const referenciaHtml = (p) => !p.referencia ? '' : `<hr><h2>Technical reference<
 
 function renderTemplate(p) {
   const slug = p.slug;
-  const formAction = '{{@site.url}}/agendamento/';
+  const formAction = '{{@site.url}}/request-a-collection/';
   const hiddenMaterial = p.form.material ? `<input type="hidden" name="material" value="${esc(p.form.material)}">` : '';
   const heroBand = p.hero.band.map((b) => `<span><strong>${esc(b.title)}</strong>${esc(b.text)}</span>`).join('\n        ');
   const pains = p.pains.map((c) => `<div class="hx-sol"><span class="hx-icon">${icons[c.icon] || icons.alert}</span><h3>${esc(c.title)}</h3><p>${esc(c.text)}</p>${c.consequence ? `<span class="hx-cost">${esc(c.consequence)}</span>` : ''}</div>`).join('\n        ');
@@ -72,7 +72,7 @@ function renderTemplate(p) {
       <h1>${esc(p.title)}</h1>
       <p class="hx-sub">${esc(p.hero.sub)}</p>
       <div class="hx-hero-ctas">
-        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=${slug}${p.form.material ? `&amp;material=${encodeURIComponent(p.form.material)}` : ''}" data-track="${slug}_hero_cta">${esc(p.hero.cta)}</a>
+        <a class="button" href="{{@site.url}}/request-a-collection/?perfil=empresa&amp;origem=${slug}${p.form.material ? `&amp;material=${encodeURIComponent(p.form.material)}` : ''}" data-track="${slug}_hero_cta">${esc(p.hero.cta)}</a>
         <a class="button hx-btn-outline-dark" href="#como-funciona" data-track="${slug}_hero_como">How it works</a>
       </div>
       <div class="hx-hero-band">
@@ -242,7 +242,7 @@ ${referenciaSection(p, slug)}<section class="hx-block" style="padding-top:0">
         <p>${esc(p.final.text)}</p>
       </div>
       <div class="hx-actions">
-        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=${slug}${p.form.material ? `&amp;material=${encodeURIComponent(p.form.material)}` : ''}" data-track="${slug}_final_cta">${esc(p.hero.cta)}</a>
+        <a class="button" href="{{@site.url}}/request-a-collection/?perfil=empresa&amp;origem=${slug}${p.form.material ? `&amp;material=${encodeURIComponent(p.form.material)}` : ''}" data-track="${slug}_final_cta">${esc(p.hero.cta)}</a>
         <a class="button hx-btn-wa" href="{{@custom.whatsapp_url}}" rel="noopener" data-track="${slug}_final_whatsapp">${wa} WhatsApp</a>
       </div>
     </div>
@@ -281,7 +281,7 @@ function renderHubTemplate(p) {
       <h1>${esc(p.title)}</h1>
       <p class="hx-sub">${esc(p.hero.sub)}</p>
       <div class="hx-hero-ctas">
-        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=${slug}" data-track="${slug}_hero_cta">${esc(p.hero.cta)}</a>
+        <a class="button" href="{{@site.url}}/request-a-collection/?perfil=empresa&amp;origem=${slug}" data-track="${slug}_hero_cta">${esc(p.hero.cta)}</a>
         <a class="button hx-btn-outline-dark" href="{{@custom.whatsapp_url}}" rel="noopener" data-track="${slug}_hero_whatsapp">Talk on WhatsApp</a>
       </div>
     </div>
@@ -312,7 +312,7 @@ ${referenciaSection(p, slug)}<section class="hx-block alt">
         <p>${esc(p.final.text)}</p>
       </div>
       <div class="hx-actions">
-        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=${slug}" data-track="${slug}_final_cta">${esc(p.hero.cta)}</a>
+        <a class="button" href="{{@site.url}}/request-a-collection/?perfil=empresa&amp;origem=${slug}" data-track="${slug}_final_cta">${esc(p.hero.cta)}</a>
         <a class="button hx-btn-wa" href="{{@custom.whatsapp_url}}" rel="noopener" data-track="${slug}_final_whatsapp">${wa} WhatsApp</a>
       </div>
     </div>

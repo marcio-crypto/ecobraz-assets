@@ -402,5 +402,13 @@
         "name": "#en"
       }
     ]
+  },
+  {
+    "slug": "request-a-collection",
+    "title": "Request a collection assessment",
+    "custom_excerpt": "Tell us the materials, volume and location — the Ecobraz team replies within 24 business hours with scope and conditions.",
+    "meta_title": "Request a collection | Ecobraz",
+    "meta_description": "Request an assessment for electronic waste collection and disposal in Brazil. Reply within 24 business hours with scope, conditions and documentation.",
+    "html": "<p>Use the form on this page to request a collection assessment. Share the materials, estimated volume and location — the team replies within 24 business hours with scope, conditions and applicable documentation. You can also <a href=\"/en/\">return to the English overview</a>."
   }
 ]
