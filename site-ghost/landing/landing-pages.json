@@ -3614,7 +3614,7 @@
     },
     "hero": {
       "eyebrow": "Contrato contínuo · Sistema incluso · Documentação para auditoria",
-      "sub": "Sua empresa gera descarte todo trimestre — e ainda paga para montar a prova depois? No modelo Ecobraz, o contrato organiza as coletas, o sistema registra cada etapa e a documentação sai pronta para auditoria — nos formatos que auditorias brasileiras, compradores europeus e bancos costumam solicitar, definidos no escopo.",
+      "sub": "Descarte para empresas é com a gente — do avulso sem contrato ao contrato contínuo com coletas programadas. Nos dois caminhos, a documentação sai pronta para auditoria. E o acesso ao sistema de rastreabilidade é um plus opcional: ativa quem quiser acompanhar.",
       "cta": "Agendar demonstração",
       "band": [
         {
@@ -3622,8 +3622,8 @@
           "text": "coletas programadas, sem custo de coleta"
         },
         {
-          "title": "Sistema incluso",
-          "text": "registro com QR, inventário e painel"
+          "title": "Sistema: plus opcional",
+          "text": "ativa quem quiser — o registro acontece sempre"
         },
         {
           "title": "Documentação completa",
@@ -3891,7 +3891,7 @@
     },
     "hero": {
       "eyebrow": "Plus opcional do contrato contínuo · Sem custo de licença",
-      "sub": "Cada coleta registrada no ato pelo agente. Cada lote com QR de verificação. Cada documento no mesmo lugar. E os números que o seu ESG precisa saindo do sistema — não de uma planilha montada às pressas na véspera do relatório.",
+      "sub": "Cada coleta registrada no ato pelo agente. Cada lote com QR de verificação. Cada documento no mesmo lugar. O acesso ao portal é opcional — o descarte funciona com ou sem ele; quem ativa é quem quer acompanhar em tempo real.",
       "cta": "Agendar demonstração",
       "band": [
         {
