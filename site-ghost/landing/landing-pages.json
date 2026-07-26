@@ -3701,8 +3701,8 @@
         },
         {
           "icon": "chart",
-          "title": "Indicadores com metodologia",
-          "text": "Números de carbono da operação de descarte, com metodologia e limites declarados."
+          "title": "Série histórica de dados",
+          "text": "Volumes e documentos por período, comparáveis ano a ano. Indicadores de carbono em desenvolvimento — só publicamos com metodologia declarada."
         },
         {
           "icon": "shield",
@@ -3779,8 +3779,8 @@
         "text": "Sanitização ou destruição de mídias registrada, conforme o escopo contratado."
       },
       {
-        "title": "Indicadores de carbono",
-        "text": "Números da operação de descarte com metodologia e limites declarados."
+        "title": "Série histórica",
+        "text": "Volumes e documentos por período, comparáveis — a base que o seu ESG usa."
       },
       {
         "title": "Dossiê para auditoria",
@@ -3800,7 +3800,7 @@
       },
       {
         "q": "Hoje eu vendo meus lotes. Não estou perdendo dinheiro ao trocar?",
-        "a": "É a conta que fazemos com você na demonstração, com os seus números: de um lado, o valor da venda avulsa; do outro, o custo de montar prova manualmente, o risco da responsabilidade compartilhada (Lei 12.305/2010) e o valor dos dados para o seu ESG. E um esclarecimento importante: a exclusividade vale para as categorias e unidades definidas em contrato — não para tudo que a sua empresa descarta."
+        "a": "É a conta que fazemos com você na demonstração, com os seus números. Um dado real para começar: no leilão K-2727 (encerrado em 07/07/2026), 146 lotes vendidos somaram R$ 63.030 brutos — mediana de R$ 400 por lote; após a comissão de 5% do leiloeiro, R$ 59.878, antes de tributos e do custo de montar a prova manualmente. Lotes variam em conteúdo e estado, então a conta final é feita com os seus dados — de um lado a venda avulsa, do outro o risco da responsabilidade compartilhada (Lei 12.305/2010) e o valor da evidência para o seu ESG. E um esclarecimento: a exclusividade vale para as categorias e unidades definidas em contrato — não para tudo que a sua empresa descarta."
       },
       {
         "q": "O sistema substitui a auditoria?",
@@ -3809,6 +3809,10 @@
       {
         "q": "Atendem operações fora de São Paulo?",
         "a": "Operações corporativas fora da Grande São Paulo são avaliadas caso a caso — multi-unidades entram no desenho do contrato com logística por praça."
+      },
+      {
+        "q": "Vocês já atendem organizações grandes?",
+        "a": "Sim — por exemplo, uma organização do setor de saúde é atendida sob contrato desde 2024, com termo aditivo renovado em 2026, além de casos corporativos documentados desde 2016. Referências são apresentadas na conversa comercial, com autorização de cada cliente — não publicamos nomes sem consentimento por escrito."
       }
     ],
     "related": [
@@ -3884,7 +3888,7 @@
         },
         {
           "title": "Painel e relatórios",
-          "text": "números prontos para o seu ESG, com metodologia"
+          "text": "volumes, documentos e série histórica para o seu ESG"
         }
       ]
     },
@@ -3948,7 +3952,7 @@
           "Registro no ato da coleta, na origem",
           "QR de verificação por lote",
           "Central única de documentos da operação",
-          "Indicadores com metodologia e limites declarados",
+          "Volumes e documentos por período, comparáveis",
           "Relatório por período, gerado do próprio sistema"
         ]
       }
@@ -3969,8 +3973,8 @@
         },
         {
           "icon": "chart",
-          "title": "Indicadores de carbono",
-          "text": "Números da operação de descarte com metodologia e limites declarados."
+          "title": "Indicadores em construção",
+          "text": "Volumes e série histórica por período já saem do sistema. Indicadores de carbono estão em desenvolvimento — nenhum número será publicado antes de metodologia, fontes e ano-base definidos e declarados."
         },
         {
           "icon": "building",
@@ -3988,7 +3992,7 @@
         "Registro de coletas na origem, pelo agente",
         "QR de verificação da cadeia de custódia",
         "Central de documentos e relatórios por período",
-        "Indicadores com metodologia declarada"
+        "Volumes e série histórica por período (indicadores de carbono em desenvolvimento, com metodologia a ser publicada antes de qualquer número)"
       ],
       "out": [
         "Não é auditoria independente — a documentação sai pronta para a auditoria de terceira parte que a sua empresa contratar",
@@ -4039,7 +4043,7 @@
       },
       {
         "title": "Série histórica",
-        "text": "Volumes e indicadores acumulando período após período — comparáveis."
+        "text": "Volumes por período acumulando, comparáveis ano a ano."
       },
       {
         "title": "Exportação",
@@ -4063,7 +4067,7 @@
       },
       {
         "q": "Consigo exportar os dados?",
-        "a": "Sim — relatórios por período saem do sistema para o seu ciclo de ESG, para auditoria ou para o banco, com a metodologia dos indicadores declarada."
+        "a": "Sim — relatórios por período saem do sistema para o seu ciclo de ESG, para auditoria ou para o banco: volumes, documentos e série histórica. Indicadores de carbono entram quando a metodologia estiver definida e publicada."
       },
       {
         "q": "Serve como auditoria?",
@@ -4348,9 +4352,9 @@
     "title": "Coleta gratuita de lixo eletrônico na sua casa",
     "crumb": "Coleta gratuita",
     "serviceType": "Coleta residencial gratuita de resíduos eletrônicos na Grande São Paulo, mediante avaliação de endereço e material",
-    "custom_excerpt": "A Ecobraz busca seus eletrônicos parados em casa, sem custo, na Grande São Paulo — com dia combinado e comprovante do que saiu. Gratuidade confirmada na avaliação.",
+    "custom_excerpt": "A Ecobraz busca seus eletrônicos parados em casa, sem custo, em São Paulo e região — com dia combinado e comprovante do que saiu. Gratuidade confirmada na avaliação.",
     "meta_title": "Coleta gratuita de lixo eletrônico | Ecobraz",
-    "meta_description": "TV velha, computador parado, geladeira que já era? A Ecobraz coleta na sua casa, sem custo, na Grande São Paulo — com comprovante. Agende em 1 minuto.",
+    "meta_description": "TV velha, computador parado, geladeira que já era? A Ecobraz coleta na sua casa, sem custo, em São Paulo e região — com comprovante. Agende em 1 minuto.",
     "hub": {
       "title": "Como funciona",
       "href": "/como-funciona/"
@@ -4362,7 +4366,7 @@
       "band": [
         {
           "title": "Grátis",
-          "text": "para residências na Grande São Paulo"
+          "text": "para residências em São Paulo e região — confirmado na avaliação"
         },
         {
           "title": "Dia combinado",
@@ -4483,7 +4487,7 @@
         "Móveis, entulho e itens não eletrônicos",
         "Resíduos químicos ou contaminados"
       ],
-      "conditions": "Antes de agendar, a equipe confirma com você: endereço, acesso (escada, elevador) e o que você tem para descartar. Em alguns casos, indicamos um ponto de entrega ou o envio pelos Correios.",
+      "conditions": "Antes de agendar, a equipe confirma com você: CEP, acesso (escada, elevador) e o que você tem para descartar. Em alguns casos, indicamos um ponto de entrega ou o envio pelos Correios — sempre confirmado antes.",
       "outNote": "Para os itens que não buscamos, indicamos os canais oficiais de logística reversa dos fabricantes.",
       "sub": "A gente fala tudo antes: o que buscamos, o que não buscamos — e confirma os detalhes com você antes de ir."
     },
@@ -4555,11 +4559,11 @@
     "faq": [
       {
         "q": "É grátis mesmo?",
-        "a": "Sim — para residências na Grande São Paulo: a capital e cidades vizinhas como Guarulhos, Osasco, Santo André, São Bernardo, São Caetano e Diadema. Na avaliação confirmamos o seu endereço e o material. E se algum caso não for gratuito, avisamos antes, com o valor — nada de surpresa na porta."
+        "a": "Sim — para residências em São Paulo e região, com confirmação na avaliação do CEP, do material, do volume e do acesso. E se o seu caso não puder ser gratuito, avisamos antes, com o valor — nada de surpresa na porta."
       },
       {
         "q": "Moro fora da Grande São Paulo. Tem jeito?",
-        "a": "Descreva o que você tem e a sua cidade: a equipe avalia e, em alguns casos, orienta o envio pelos Correios ou indica um ponto de entrega — clientes de outras regiões já fizeram assim."
+        "a": "Descreva o que você tem e a sua cidade: a equipe avalia e responde. Em alguns casos há a possibilidade de envio pelos Correios ou de um ponto de entrega — sempre com agendamento e confirmação da equipe antes, conforme o material e a embalagem."
       },
       {
         "q": "Vocês sobem no apartamento?",
