@@ -3728,7 +3728,7 @@
       "outTitle": "Não promete",
       "in": [
         "Contrato de descarte contínuo com coletas programadas",
-        "Acesso ao sistema de rastreabilidade incluso",
+        "Acesso ao sistema de rastreabilidade incluso — um plus opcional: ativa quem quiser (o registro da operação e a documentação acontecem de todo modo)",
         "Inventário por coleta, MTR e CDF quando aplicáveis",
         "Tratamento de dados (sanitização ou destruição) conforme escopo",
         "Atendimento multi-unidades, avaliado por praça"
@@ -3798,7 +3798,7 @@
     "faq": [
       {
         "q": "Quanto custa o contrato?",
-        "a": "A conta é transparente: a Ecobraz se remunera com a destinação e a valorização do material coletado — por isso não cobra a coleta nem o acesso ao sistema. O contrato tem vigência de 36 meses, com pelo menos um descarte por trimestre e exclusividade do fluxo contratado. Módulos avançados e relatórios específicos não têm tabela de prateleira de propósito: cada operação é diferente, e o preço é formado caso a caso, sobre o desenho da SUA operação — apresentado por escrito na demonstração."
+        "a": "A conta é transparente: a Ecobraz se remunera com a destinação e a valorização do material coletado — por isso não cobra a coleta nem o acesso ao sistema. O contrato tem vigência de 36 meses, com pelo menos um descarte por trimestre e exclusividade do fluxo contratado. Módulos avançados e relatórios específicos não têm tabela de prateleira de propósito: cada operação é diferente, e o preço é formado caso a caso, sobre o desenho da SUA operação — apresentado por escrito na demonstração. E um esclarecimento: o acesso ao sistema é um plus opcional — ativa quem quiser acompanhar pelo portal; o registro e a documentação da operação acontecem de qualquer forma."
       },
       {
         "q": "Minha empresa descarta só de vez em quando. Preciso do contrato?",
@@ -3890,7 +3890,7 @@
       "href": "/solucoes-corporativas/"
     },
     "hero": {
-      "eyebrow": "Incluso no contrato contínuo · Sem custo de licença",
+      "eyebrow": "Plus opcional do contrato contínuo · Sem custo de licença",
       "sub": "Cada coleta registrada no ato pelo agente. Cada lote com QR de verificação. Cada documento no mesmo lugar. E os números que o seu ESG precisa saindo do sistema — não de uma planilha montada às pressas na véspera do relatório.",
       "cta": "Agendar demonstração",
       "band": [
@@ -4073,6 +4073,10 @@
     "authority": "Atuação registrada em plataformas públicas de referência internacional. Cada alegação do site tem fonte, data e escopo declarados na página de evidências.",
     "faqTitle": "O que gestores de ESG e TI perguntam",
     "faq": [
+      {
+        "q": "Preciso usar o sistema para descartar com a Ecobraz?",
+        "a": "Não — o descarte funciona para todos, com ou sem o portal: o registro interno e a documentação acontecem de qualquer forma. O acesso ao sistema é um plus incluso para quem quiser acompanhar em tempo real — e faz mais sentido para operações grandes, que respondem a auditoria, diretoria e ESG."
+      },
       {
         "q": "O sistema é gratuito mesmo?",
         "a": "O acesso é incluso no contrato de descarte contínuo, sem custo de licença. Módulos avançados e relatórios específicos são precificados caso a caso, sobre o desenho da sua operação — não existe tabela de prateleira porque nenhuma operação é igual à outra. As condições são apresentadas por escrito na demonstração."

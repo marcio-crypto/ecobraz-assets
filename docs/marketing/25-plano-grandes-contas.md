@@ -52,6 +52,15 @@ Destravamentos, em ordem de custo × impacto:
    comprador de procurement "não quer demonstração, quer documentos".
 6. **Case nomeado**: autorização por escrito do CEJAM + depoimento.
 
+### Nota de modelo (correção do Marcio, 26/07)
+
+O descarte é para TODOS (avulso é o normal do mercado, não exceção). O acesso
+ao sistema é um **plus opcional** — o cliente pede se quiser — e faz sentido
+para empresas grandes. O registro interno da operação acontece sempre; o que o
+plus dá é o acompanhamento pelo portal. Consequência: o sistema é a ISCA DE
+UPGRADE da Cunha 0 e o diferencial do segmento grande — nunca uma pré-condição
+ou fricção na venda do descarte.
+
 ## 3. Cunha 0 — começar pela REALIDADE (a base atual)
 
 **Cunha 0 — a base real (a mais barata de todas).** Correção de rota do Marcio:
