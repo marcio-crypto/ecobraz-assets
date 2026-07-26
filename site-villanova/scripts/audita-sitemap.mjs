@@ -51,6 +51,7 @@ const comNoindex = [];
 const semCanonical = [];
 const semHreflang = [];
 const hreflangIncompleto = [];
+const semParPorDesenho = [];
 const langMismatch = [];
 const langCount = {};
 let checadas = 0;
@@ -72,7 +73,18 @@ async function worker() {
       if (!canon) semCanonical.push(u);
       const nAlt = (html.match(/<link[^>]+rel=["']alternate["'][^>]+hreflang=/gi) || []).length;
       if (!/hreflang=/.test(html)) semHreflang.push(u);
-      else if (nAlt < 2) hreflangIncompleto.push(`${u} (${nAlt} alternate)`);
+      else if (nAlt < 2) {
+        // Política: taxonomias (tag/autor) e páginas monolíngues DECLARADAS
+        // não têm par de idioma por desenho — contam à parte, não reprovam.
+        const MONOLINGUES = ['it'];
+        const categoria = cat(u);
+        const slugPuro = u.replace(/^https?:\/\/[^/]+\//, '').replace(/\/$/, '');
+        if (categoria === 'tag' || categoria === 'autor' || MONOLINGUES.includes(slugPuro)) {
+          semParPorDesenho.push(`${u} (${categoria === 'tag' || categoria === 'autor' ? categoria : 'monolíngue declarada'})`);
+        } else {
+          hreflangIncompleto.push(`${u} (${nAlt} alternate)`);
+        }
+      }
       // html lang vs self-hreflang: o <html lang> deve casar com o hreflang
       // que aponta para esta propria pagina (self). Descasamento = erro Ahrefs.
       const htmlLang = attr((html.match(/<html[^>]*\slang=["'][^"']*["'][^>]*>/i) || [])[0], 'lang');
