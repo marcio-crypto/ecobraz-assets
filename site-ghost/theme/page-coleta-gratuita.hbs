@@ -1,0 +1,214 @@
+{{!< default}}
+{{! Gerado por scripts/build-landing-pages.mjs a partir de landing/landing-pages.json — não edite à mão. }}
+{{#contentFor "head"}}
+<link rel="stylesheet" href="{{asset "css/landing.css"}}">
+{{/contentFor}}
+
+<section class="hx-hero">
+  <div class="container hx-crumbs"><a href="{{@site.url}}/">Início</a> › <a href="{{@site.url}}/como-funciona/">Como funciona</a> › Coleta gratuita</div>
+  <div class="container hx-hero-grid">
+    <div>
+      <span class="hx-label on-dark">Residências · Grande São Paulo · Sem custo</span>
+      <h1>Coleta gratuita de lixo eletrônico na sua casa</h1>
+      <p class="hx-sub">Aquela TV velha, o computador parado, a geladeira que já era: a Ecobraz busca na sua casa, sem custo, e dá o destino certo — com direito a comprovante. É só contar o que você tem e onde você está.</p>
+      <div class="hx-hero-ctas">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=coleta-gratuita" data-track="coleta-gratuita_hero_cta">Agendar coleta gratuita</a>
+        <a class="button hx-btn-outline-dark" href="#como-funciona" data-track="coleta-gratuita_hero_como">Como funciona</a>
+      </div>
+      <div class="hx-hero-band">
+        <span><strong>Grátis</strong>para residências na Grande São Paulo</span>
+        <span><strong>Dia combinado</strong>a equipe confirma tudo com você antes</span>
+        <span><strong>Comprovante</strong>você recebe o registro do que saiu</span>
+      </div>
+    </div>
+    <form class="hx-quote" id="avaliacao" method="get" action="{{@site.url}}/agendamento/">
+      <span class="hx-label">Avaliação técnica</span>
+      <h2>Peça sua coleta em 1 minuto</h2>
+      <p class="hx-hint">Retorno em até 24h úteis.</p>
+      <input type="hidden" name="perfil" value="empresa">
+      <input type="hidden" name="origem" value="coleta-gratuita">
+      
+      <div class="hx-field">
+        <label for="lp-desc">O que você quer descartar?</label>
+        <input id="lp-desc" name="descricao" placeholder="Ex.: 1 geladeira e 2 monitores">
+      </div>
+      <div class="hx-field">
+        <label for="lp-local">CEP ou cidade da retirada</label>
+        <input id="lp-local" name="local" placeholder="Ex.: 02175-010 ou São Paulo">
+      </div>
+      <button class="button" type="submit" data-track="coleta-gratuita_hero_form">Agendar coleta gratuita →</button>
+      <div class="hx-or-wa">ou <a href="{{@custom.whatsapp_url}}" rel="noopener" data-track="coleta-gratuita_hero_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> falar com a equipe no WhatsApp</a></div>
+      <p class="hx-micro">A gratuidade é confirmada na avaliação do endereço e do material — sem pegadinha.</p>
+    </form>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container hx-reco">
+    <div>
+      <span class="hx-label">Você se reconhece?</span>
+      <h2>Isso parece com a sua casa?</h2>
+      <p class="hx-reco-cta">Bastou um item da lista ser verdade aí dentro? Então esta página foi escrita para você — <a href="#avaliacao">descreva a situação em 1 minuto</a> e receba um retorno técnico, não um telemarketing.</p>
+    </div>
+    <ul class="hx-reco-list"><li>Tem eletrônico parado ocupando espaço há meses (ou anos)</li><li>Não sabe onde jogar — e sabe que no lixo comum não pode</li><li>Não quer pagar frete ou caçamba para se livrar das coisas</li><li>Tem medo do que pode acontecer com os dados do computador velho</li><li>Quer ter certeza de que vai para o destino certo, não para um lixão</li></ul>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">O que está em jogo</span><h2>Por que não pode ir para o lixo comum</h2></div>
+      <p>Três motivos para dar o destino certo — pelo planeta e por você.</p>
+    </div>
+    <div class="hx-sol-grid">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18h.01"/></svg></span><h3>Metais pesados no solo e na água</h3><p>Eletrônicos carregam chumbo, mercúrio e cádmio. No lixo comum, isso vaza para o solo e para a água que volta para a sua torneira.</p><span class="hx-cost">É por isso que a lei manda dar destino específico ao lixo eletrônico — ele não é lixo comum.</span></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><h3>Seus dados continuam no aparelho</h3><p>Computador, notebook e celular guardam fotos, senhas e documentos mesmo 'apagados'. Na calçada, isso vira risco de verdade.</p><span class="hx-cost">O destino certo inclui o cuidado com o que está dentro — pergunte à equipe na avaliação.</span></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="3" width="16" height="18"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2M10 21v-3h4v3"/></svg></span><h3>Espaço ocupado e problema adiado</h3><p>O armário, a garagem e o quartinho viram depósito de aparelho morto — e a decisão fica sempre para depois.</p><span class="hx-cost">Uma solicitação de 1 minuto resolve o que está aí parado há anos.</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">A virada</span><h2>Na calçada vs. com a Ecobraz</h2></div>
+      <p>O mesmo aparelho, dois destinos muito diferentes.</p>
+    </div>
+    <div class="hx-contrast">
+      <div class="hx-before"><h3>Deixar na calçada</h3><ul><li>Pode acabar em lixão ou desmonte irregular</li><li>Seus dados ficam à deriva</li><li>Contamina solo e água</li><li>Nenhum comprovante</li><li>Continua sendo problema seu</li></ul></div>
+      <div class="hx-after"><h3>Coleta da Ecobraz</h3><ul><li>Sem custo para residências na Grande SP</li><li>Dia combinado com você</li><li>Destino certificado desde 2011</li><li>Comprovante do que foi retirado</li><li>Aparelhos bons podem virar inclusão digital</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">O que você ganha</span><h2>O que você ganha (além do espaço)</h2></div>
+      <p>Simples assim — descrito pelo que acontece de verdade.</p>
+    </div>
+    <div class="hx-sol-grid g4">
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span><h3>Sem custo</h3><p>Coleta residencial gratuita na Grande SP, confirmada na avaliação.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M1 7h13v10H1zM14 10h4l4 4v3h-8z"/><circle cx="6" cy="19" r="1.6"/><circle cx="18" cy="19" r="1.6"/></svg></span><h3>Sem carregar peso</h3><p>A equipe retira no endereço, no dia combinado.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Comprovante</h3><p>Registro do que saiu da sua casa — preto no branco.</p></div>
+        <div class="hx-sol"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></span><h3>Impacto real</h3><p>Aparelhos reaproveitáveis podem virar inclusão digital pelo Projeto Reciclando.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Escopo claro</span><h2>O que a gente busca — e o que não busca</h2></div>
+      <p>Escopo declarado antes do agendamento reduz retrabalho e surpresa. Cada lote é avaliado tecnicamente.</p>
+    </div>
+    <div class="hx-scope">
+      <div class="hx-yes"><h3>Buscamos</h3><ul><li>Computadores, notebooks e monitores</li><li>TVs e aparelhos de som e vídeo</li><li>Geladeiras, máquinas de lavar e micro-ondas</li><li>Celulares, tablets e pequenos eletrônicos</li><li>Impressoras (sem toner) e cabos</li></ul><p>A coleta é confirmada na avaliação: endereço, acesso (escada, elevador), tipo e quantidade de material. Em alguns casos, a equipe pode indicar um ponto de entrega ou o envio pelos Correios.</p></div>
+      <div class="hx-not"><h3>Não buscamos</h3><ul><li>Pilhas domésticas avulsas (AA, AAA)</li><li>Lâmpadas</li><li>Toner e cartuchos</li><li>Móveis, entulho e itens não eletrônicos</li><li>Resíduos químicos ou contaminados</li></ul><p>Para os itens que não buscamos, indicamos os canais oficiais de logística reversa dos fabricantes.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt" id="como-funciona">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Processo</span><h2>Como funciona, em 3 passos</h2></div>
+      <p>Do pedido ao comprovante — sem burocracia.</p>
+    </div>
+    <div class="hx-steps">
+        <div class="hx-step"><h3>Conte o que você tem</h3><p>Preencha o pedido em 1 minuto: o que é, quanto é e onde está.</p></div>
+        <div class="hx-step"><h3>A equipe confirma</h3><p>Retorno em até 24h úteis com o dia e os detalhes da retirada.</p></div>
+        <div class="hx-step"><h3>Coleta na sua porta</h3><p>A equipe retira, você recebe o comprovante — e o espaço de volta.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Evidência da operação</span><h2>Por que confiar</h2></div>
+      <p>A documentação reflete o que foi efetivamente executado em cada lote — sem promessa genérica.</p>
+    </div>
+    <div class="hx-docs">
+        <div class="hx-doc"><h3>★ 4,9 no Google</h3><p>354 avaliações públicas — a maioria de gente que descartou de casa, como você.</p></div>
+        <div class="hx-doc"><h3>Desde 2011</h3><p>Associação da sociedade civil com CNPJ ativo e atuação registrada.</p></div>
+        <div class="hx-doc"><h3>Comprovante da retirada</h3><p>Registro do que saiu — clientes citam isso nas avaliações.</p></div>
+        <div class="hx-doc"><h3>Destino certificado</h3><p>O material segue para triagem e destinação documentada.</p></div>
+        <div class="hx-doc"><h3>Registro público internacional</h3><p>ONU, plataforma da UE e relatório do World Bank Group — na página de evidências.</p></div>
+        <div class="hx-doc"><h3>Inclusão digital</h3><p>Aparelhos reaproveitáveis podem ganhar nova vida pelo Projeto Reciclando.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-authority">
+      <div>
+        <span class="hx-label on-dark">Autoridade verificável</span>
+        <strong>Associação Auxílio à Reciclagem de Eletrônicos e Inclusão Digital — CNPJ 14.197.457/0001-42</strong>
+        <p>Atuação registrada em plataformas públicas de referência internacional. Cada alegação do site tem fonte, data e escopo declarados na página de evidências.</p>
+      </div>
+      <a href="{{@site.url}}/evidencias/" data-track="coleta-gratuita_evidencias">Ver evidências públicas →</a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Avaliações públicas</span><h2>Quem já pediu, conta como foi</h2></div>
+      <p><span style="color:#F5B940">★</span> <strong>4,9</strong> em <a class="hx-src" href="https://share.google/DrfOh7JDdkShOvcQy" rel="noopener" data-track="coleta-gratuita_avaliacoes_google">354 avaliações públicas no Google →</a></p>
+    </div>
+    <div class="hx-docs">
+        <div class="hx-doc"><p style="color:#F5B940;letter-spacing:2px;margin:0 0 8px">★★★★★</p><p style="font-size:14px;color:var(--ink);margin:0 0 10px">“Acabaram de retirar. Todo processo perfeito com a promessa! Sem burocracia, gratuito, vieram em menos de 10 dias, atendimento do início ao fim muito bom! Parabéns! Por mais organizações e empresas assim!”</p><h3 style="font-size:13px;color:var(--muted)">— Sandra Barbosa, no Google</h3></div>
+        <div class="hx-doc"><p style="color:#F5B940;letter-spacing:2px;margin:0 0 8px">★★★★★</p><p style="font-size:14px;color:var(--ink);margin:0 0 10px">“Entrei em contato com a Ecobraz e fui prontamente atendida! Fui até o correio e despachei 2 caixas com muitos equipamentos que eu juntava a anos , não tive custo algum! Eles foram muito atenciosos e gentis no atendimento! Eu super recomendo!”</p><h3 style="font-size:13px;color:var(--muted)">— Michelle Lopes, no Google</h3></div>
+        <div class="hx-doc"><p style="color:#F5B940;letter-spacing:2px;margin:0 0 8px">★★★★★</p><p style="font-size:14px;color:var(--ink);margin:0 0 10px">“No geral é uma ótima empresa. Atendimento é muito bom e rápido, sem contar que todo o processo ocorreu de forma tranquila e sem problemas. Recomendo para que esteja considerando entrar em contato para a doação de eletrônicos que não funcionam mais.”</p><h3 style="font-size:13px;color:var(--muted)">— Alexandre Viana, no Google</h3></div>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Perguntas frequentes</span><h2>Perguntas de quem vai descartar de casa</h2></div>
+    </div>
+    <div class="hx-faq">
+        <details><summary>É grátis mesmo?</summary><p>Para residências na Grande São Paulo, sim — a gratuidade é confirmada na avaliação do endereço e do material, antes de qualquer agendamento. Sem pegadinha e sem custo surpresa.</p></details>
+        <details><summary>Moro fora da Grande São Paulo. Tem jeito?</summary><p>Descreva o que você tem e a sua cidade: a equipe avalia e, em alguns casos, orienta o envio pelos Correios ou indica um ponto de entrega — clientes de outras regiões já fizeram assim.</p></details>
+        <details><summary>Vocês sobem no apartamento?</summary><p>O acesso (escada, elevador, distância até o veículo) faz parte da avaliação. Descreva a situação no pedido que a equipe confirma como será a retirada.</p></details>
+        <details><summary>E os meus dados no computador velho?</summary><p>Se puder, faça backup e restaure o aparelho antes. Na dúvida, diga no pedido que o equipamento tem dados — a equipe orienta o caminho na avaliação.</p></details>
+        <details><summary>Quando vocês vêm?</summary><p>Você recebe retorno em até 24h úteis e o dia da coleta é combinado com você na sequência, conforme a rota da sua região.</p></details>
+        <details><summary>Recebo algum comprovante?</summary><p>Sim — o registro do que foi retirado. É um dos pontos que os clientes mais citam nas avaliações públicas.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Soluções relacionadas</span><h2>Também pode fazer parte da sua operação</h2></div>
+    </div>
+    <div class="hx-sol-grid">
+        <a class="hx-sol" href="{{@site.url}}/pontos-de-coleta/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span><h3>Pontos de coleta</h3><p>Prefere levar? Veja onde entregar seus eletrônicos.</p><span class="hx-go">Ver solução →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/descarte-de-geladeira-velha/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M1 7h13v10H1zM14 10h4l4 4v3h-8z"/><circle cx="6" cy="19" r="1.6"/><circle cx="18" cy="19" r="1.6"/></svg></span><h3>Descarte de geladeira velha</h3><p>Linha branca tem cuidados próprios — veja como funciona.</p><span class="hx-go">Ver solução →</span></a>
+        <a class="hx-sol" href="{{@site.url}}/como-funciona/"><span class="hx-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span><h3>Como funciona</h3><p>O caminho completo do seu aparelho depois da coleta.</p><span class="hx-go">Ver solução →</span></a>
+    </div>
+  </div>
+</section>
+
+<section class="hx-block" style="padding-top:0">
+  <div class="container">
+    <div class="hx-final">
+      <div>
+        <span class="hx-label on-dark">1 minuto e pronto</span>
+        <h2>Seu e-lixo resolvido ainda esta semana?</h2>
+        <p>Conte o que você tem e onde está. Retorno em até 24h úteis — e o espaço da sua casa de volta.</p>
+      </div>
+      <div class="hx-actions">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=coleta-gratuita" data-track="coleta-gratuita_final_cta">Agendar coleta gratuita</a>
+        <a class="button hx-btn-wa" href="{{@custom.whatsapp_url}}" rel="noopener" data-track="coleta-gratuita_final_whatsapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.8 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .2 0 .8-.3 1.4Z"/></svg> WhatsApp</a>
+      </div>
+    </div>
+  </div>
+</section>
+
