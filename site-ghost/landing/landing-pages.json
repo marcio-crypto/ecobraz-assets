@@ -3608,7 +3608,7 @@
     },
     "hero": {
       "eyebrow": "Contrato contínuo · Sistema incluso · Documentação para auditoria",
-      "sub": "Sua empresa gera descarte todo trimestre — e ainda paga para montar a prova depois? No modelo Ecobraz, o contrato organiza as coletas, o sistema registra cada etapa e a documentação sai pronta para auditoria: no padrão brasileiro, no europeu e no que os bancos costumam pedir.",
+      "sub": "Sua empresa gera descarte todo trimestre — e ainda paga para montar a prova depois? No modelo Ecobraz, o contrato organiza as coletas, o sistema registra cada etapa e a documentação sai pronta para auditoria — nos formatos que auditorias brasileiras, compradores europeus e bancos costumam solicitar, definidos no escopo.",
       "cta": "Agendar demonstração",
       "band": [
         {
@@ -3620,8 +3620,8 @@
           "text": "registro com QR, inventário e painel"
         },
         {
-          "title": "Prova em três padrões",
-          "text": "brasileiro, europeu e bancário — pronta para auditoria"
+          "title": "Documentação completa",
+          "text": "nos formatos que auditoria, comprador e banco costumam solicitar"
         }
       ]
     },
@@ -3641,7 +3641,7 @@
         "Hoje o lote é vendido para um comprador — e a prova do que acontece depois é problema seu",
         "O time de ESG monta relatório caçando dados de descarte em planilha, a cada ciclo",
         "O depósito acumula equipamento parado porque ninguém quer decidir o destino",
-        "O banco ou o cliente europeu começou a pedir números de Escopo 3 da cadeia"
+        "O banco ou o cliente europeu começou a pedir evidências e dados da cadeia — e o descarte é parte disso"
       ]
     },
     "painsTitle": "Vender a sucata parece receita — até a conta chegar",
@@ -3684,7 +3684,7 @@
         "items": [
           "Coletas programadas, sem custo de coleta",
           "Cada coleta registrada no sistema, com QR",
-          "Documentação pronta para auditoria — padrão brasileiro, europeu e bancário",
+          "Documentação pronta para auditoria, nos formatos solicitados no escopo",
           "Inventário e indicadores no painel da diretoria",
           "Uma rotina só, trimestre após trimestre"
         ]
@@ -3696,8 +3696,8 @@
       "items": [
         {
           "icon": "file",
-          "title": "Documentação em três padrões",
-          "text": "Inventário, MTR e CDF quando aplicáveis — organizados no formato brasileiro, no europeu e no que bancos costumam pedir."
+          "title": "Documentação nos formatos certos",
+          "text": "Inventário, MTR (Manifesto de Transporte de Resíduos) e CDF (Certificado de Destinação Final) quando aplicáveis — organizados nos formatos que auditorias, compradores europeus e bancos costumam solicitar."
         },
         {
           "icon": "chart",
@@ -3795,12 +3795,16 @@
         "a": "A conta é transparente: a Ecobraz se remunera com a destinação e a valorização do material coletado — por isso não cobra a coleta nem o acesso ao sistema. O contrato tem vigência de 36 meses, com pelo menos um descarte por trimestre e exclusividade do fluxo contratado. Módulos avançados do sistema e relatórios específicos são contratados à parte — as condições completas são apresentadas na demonstração."
       },
       {
+        "q": "Minha empresa descarta só de vez em quando. Preciso do contrato?",
+        "a": "Não — também fazemos coleta avulsa para empresas, sem contrato e sem mensalidade: você descreve o lote, recebe a avaliação com as condições antes de agendar (muitos materiais com valor de reciclagem saem sem custo — confirmado na avaliação) e recebe o comprovante da destinação. O contrato contínuo é para quem descarta com recorrência e quer rotina, sistema e série histórica."
+      },
+      {
         "q": "Por que um contrato de 36 meses?",
         "a": "É o horizonte que torna o modelo sustentável dos dois lados: a Ecobraz planeja a logística e mantém a coleta sem custo; a sua empresa acumula série histórica de dados comparável ano a ano — o que auditoria e banco valorizam. As condições de saída ficam definidas em contrato."
       },
       {
         "q": "Hoje eu vendo meus lotes. Não estou perdendo dinheiro ao trocar?",
-        "a": "É a conta que fazemos com você na demonstração, com os seus números. Um dado real para começar: no leilão K-2727 (encerrado em 07/07/2026), 146 lotes vendidos somaram R$ 63.030 brutos — mediana de R$ 400 por lote; após a comissão de 5% do leiloeiro, R$ 59.878, antes de tributos e do custo de montar a prova manualmente. Lotes variam em conteúdo e estado, então a conta final é feita com os seus dados — de um lado a venda avulsa, do outro o risco da responsabilidade compartilhada (Lei 12.305/2010) e o valor da evidência para o seu ESG. E um esclarecimento: a exclusividade vale para as categorias e unidades definidas em contrato — não para tudo que a sua empresa descarta."
+        "a": "É a conta que fazemos com você na demonstração, com os seus números. Um dado real para começar: no leilão público K-2727 (leiloeiro Kwara, encerrado em 07/07/2026), 146 lotes vendidos somaram R$ 63.030 brutos — mediana de R$ 400 por lote; após a comissão de 5% do leiloeiro, R$ 59.878, antes de tributos e do custo de montar a prova manualmente. Lotes variam em conteúdo e estado, então a conta final é feita com os seus dados — de um lado a venda avulsa, do outro o risco da responsabilidade compartilhada (Lei 12.305/2010) e o valor da evidência para o seu ESG. E um esclarecimento: a exclusividade vale para as categorias e unidades definidas em contrato — não para tudo que a sua empresa descarta."
       },
       {
         "q": "O sistema substitui a auditoria?",
@@ -4403,7 +4407,7 @@
       {
         "icon": "alert",
         "title": "Metais pesados no solo e na água",
-        "text": "Eletrônicos carregam chumbo, mercúrio e cádmio. No lixo comum, isso vaza para o solo e para a água que volta para a sua torneira.",
+        "text": "Eletrônicos carregam chumbo, mercúrio e cádmio. No lixo comum, isso contamina o solo e a água.",
         "consequence": "É por isso que a lei manda dar destino específico ao lixo eletrônico — ele não é lixo comum."
       },
       {
@@ -4437,7 +4441,7 @@
         "items": [
           "Sem custo para residências na Grande SP",
           "Dia combinado com você",
-          "Destino certificado desde 2011",
+          "Destinação documentada desde 2011",
           "Comprovante do que foi retirado",
           "Aparelhos bons podem virar inclusão digital"
         ]
@@ -4511,7 +4515,7 @@
     "evidence": [
       {
         "title": "★ 4,9 no Google",
-        "text": "354 avaliações públicas — a maioria de gente que descartou de casa, como você."
+        "text": "354 avaliações públicas no Google — muitas de quem descartou de casa, como você."
       },
       {
         "title": "Desde 2011",
@@ -4522,12 +4526,12 @@
         "text": "Registro do que saiu — clientes citam isso nas avaliações."
       },
       {
-        "title": "Destino certificado",
+        "title": "Destinação documentada",
         "text": "O material segue para triagem e destinação documentada."
       },
       {
         "title": "Registro público internacional",
-        "text": "ONU, plataforma da UE e relatório do World Bank Group — na página de evidências."
+        "text": "ONU, plataforma da UE e relatório do World Bank Group — registros com escopo declarado (não são chancela), na página de evidências."
       },
       {
         "title": "Inclusão digital",
@@ -4571,7 +4575,7 @@
       },
       {
         "q": "E os meus dados no computador velho?",
-        "a": "Se puder, faça backup e restaure o aparelho antes. Na dúvida, diga no pedido que o equipamento tem dados — a equipe orienta o caminho na avaliação."
+        "a": "Primeiro, o mais importante: aparelhos com memória (computador, notebook, celular) não são revendidos com os seus dados — seguem para desmontagem e reciclagem. Se conseguir, faça backup e restaure antes; se o aparelho nem ligar, diga no pedido que a equipe orienta o caminho. Para quem precisa de tratamento formal de dados com relatório, existe o serviço específico — é só falar com a equipe."
       },
       {
         "q": "Quando vocês vêm?",
@@ -4580,6 +4584,10 @@
       {
         "q": "Recebo algum comprovante?",
         "a": "Sim — o registro do que foi retirado. É um dos pontos que os clientes mais citam nas avaliações públicas."
+      },
+      {
+        "q": "Moro em condomínio (ou sou síndico). Como funciona?",
+        "a": "Atendemos condomínios: a coleta pode ser combinada na área comum, com o comprovante do que saiu — bom para registrar em ata. Síndicos podem organizar uma campanha de coleta com os moradores; descreva o condomínio no pedido (número aproximado de unidades) que a equipe monta o formato na avaliação."
       }
     ],
     "related": [
