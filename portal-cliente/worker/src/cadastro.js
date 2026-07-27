@@ -151,7 +151,7 @@ export function paginaFormCliente(user, tipo, cli, leadId) {
   const e = (cli && cli.endereco) || {};
   const contatos = (cli && Array.isArray(cli.contatos) && cli.contatos.length) ? cli.contatos : [{}];
   const enderecoBloco = `<div class="sec">Endereço</div>
-    <div class="g3"><div><label>CEP</label><input id="cep" value="${esc(e.cep || '')}"></div><div style="grid-column:span 2"><label>Logradouro</label><input id="logradouro" value="${esc(e.logradouro || '')}"></div></div>
+    <div class="g3"><div><label>CEP</label><input id="cep" inputmode="numeric" placeholder="00000-000" value="${esc(e.cep || '')}" onblur="buscarCEP()"></div><div style="grid-column:span 2"><label>Logradouro</label><input id="logradouro" value="${esc(e.logradouro || '')}"></div></div>
     <div class="g3"><div><label>Número</label><input id="numero" value="${esc(e.numero || '')}"></div><div><label>Complemento</label><input id="complemento" value="${esc(e.complemento || '')}"></div><div><label>Bairro</label><input id="bairro" value="${esc(e.bairro || '')}"></div></div>
     <div class="g2"><div><label>Cidade</label><input id="cidade" value="${esc(e.cidade || '')}"></div><div><label>UF</label><input id="uf" maxlength="2" value="${esc(e.uf || '')}"></div></div>`;
 
@@ -171,7 +171,7 @@ export function paginaFormCliente(user, tipo, cli, leadId) {
     <label>Observação / instrução padrão de coleta</label><textarea id="obsColeta" rows="2">${esc(cli?.obsColeta || '')}</textarea>
   ` : `
     <div class="sec">Pessoa física</div>
-    <div class="g2"><div><label>Nome completo *</label><input id="nome" value="${esc(cli?.nome || '')}"></div><div><label>CPF</label><input id="cpf" inputmode="numeric" placeholder="000.000.000-00" value="${esc(cli?.cpf || '')}"></div></div>
+    <div class="g2"><div><label>Nome completo *</label><input id="nome" value="${esc(cli?.nome || '')}"></div><div><label>CPF</label><input id="cpf" inputmode="numeric" placeholder="000.000.000-00" value="${esc(cli?.cpf || '')}" onblur="validarCPF()"><div id="cpfMsg" style="font-size:11.5px;font-weight:700;margin-top:4px"></div></div></div>
     <div class="g2"><div><label>Telefone</label><input id="fone" value="${esc(cli?.fone || '')}"></div><div><label>E-mail</label><input id="email" value="${esc(cli?.email || '')}"></div></div>
     ${enderecoBloco}
     <label>Observação / instrução de coleta</label><textarea id="obsColeta" rows="2">${esc(cli?.obsColeta || '')}</textarea>
@@ -200,6 +200,11 @@ function addContato(){var w=document.getElementById('contatos');var d=document.c
 document.addEventListener('click',function(ev){if(ev.target&&ev.target.classList.contains('rm-contato')){var c=ev.target.closest('.contato');if(c)c.remove();}});
 function buscarCNPJ(){var n=(document.getElementById('cnpj').value||'').replace(/\\D/g,'');if(n.length!==14){msg('CNPJ deve ter 14 dígitos.');return;}msg('Buscando dados do CNPJ…');
   fetch('/api/cadastro/cnpj?n='+n).then(r=>r.json()).then(d=>{if(!d||!d.ok){msg('Não encontrei esse CNPJ — preencha manualmente.');return;}var s=function(id,v){if(v&&document.getElementById(id)&&!document.getElementById(id).value)document.getElementById(id).value=v;};s('razaoSocial',d.razaoSocial);s('nomeFantasia',d.nomeFantasia);s('cep',d.cep);s('logradouro',d.logradouro);s('numero',d.numero);s('complemento',d.complemento);s('bairro',d.bairro);s('cidade',d.cidade);s('uf',d.uf);msg('Dados preenchidos ✓ confira e complete.');}).catch(()=>msg('Sem conexão — preencha manualmente.'));}
+function buscarCEP(){var c=document.getElementById('cep');if(!c)return;var n=(c.value||'').replace(/\\D/g,'');if(n.length!==8)return;
+  fetch('https://viacep.com.br/ws/'+n+'/json/').then(function(r){return r.json();}).then(function(d){if(!d||d.erro)return;var s=function(id,v){var el=document.getElementById(id);if(el&&v)el.value=v;};s('logradouro',d.logradouro);s('bairro',d.bairro);s('cidade',d.localidade);s('uf',d.uf);var comp=document.getElementById('complemento');if(comp&&!comp.value&&d.complemento)comp.value=d.complemento;var num=document.getElementById('numero');if(num&&!num.value)num.focus();}).catch(function(){});}
+function cpfValido(v){var s=0,r,i;for(i=0;i<9;i++)s+=parseInt(v.charAt(i),10)*(10-i);r=(s*10)%11;if(r===10)r=0;if(r!==parseInt(v.charAt(9),10))return false;s=0;for(i=0;i<10;i++)s+=parseInt(v.charAt(i),10)*(11-i);r=(s*10)%11;if(r===10)r=0;return r===parseInt(v.charAt(10),10);}
+function validarCPF(){var el=document.getElementById('cpf'),m=document.getElementById('cpfMsg');if(!el||!m)return;var v=(el.value||'').replace(/\\D/g,'');if(!v){m.textContent='';return;}
+  if(v.length!==11||/^(\\d)\\1{10}$/.test(v)||!cpfValido(v)){m.textContent='⚠ CPF inválido — confira os números.';m.style.color='#B23A2E';}else{m.textContent='✓ CPF válido';m.style.color='#3f7a2e';}}
 function salvar(){var tipo=g('tipo');var rec={tipo:tipo,endereco:{cep:g('cep'),logradouro:g('logradouro'),numero:g('numero'),complemento:g('complemento'),bairro:g('bairro'),cidade:g('cidade'),uf:g('uf')},obsColeta:g('obsColeta')};
   var id=g('id');if(id)rec.id=id;
   if(tipo==='PJ'){rec.razaoSocial=g('razaoSocial');rec.nomeFantasia=g('nomeFantasia');rec.cnpj=g('cnpj');rec.ie=g('ie');rec.contrato=g('contrato');rec.pagamento=g('pagamento');
