@@ -1196,13 +1196,13 @@ async function solicitarLink(request, env) {
   }
 
   let cliente;
-  try { cliente = await buscarClienteAtivo(email, env); }
-  catch (error) { console.error('ploomes_lookup_falhou', safeError(error)); return generica; }
+  try { cliente = await buscarClienteBase(email, env); }
+  catch (error) { console.error('base_lookup_falhou', safeError(error)); return generica; }
 
-  // Só manda link se for cliente ativo e liberado. Senão, silêncio (anti-enum).
-  // Logs sem dados pessoais (só o motivo e o Id da empresa) para diagnóstico.
+  // Sistema aberto: manda link se o e-mail existir na nossa base. Se não achar,
+  // silêncio (anti-enumeração). Logs sem dados pessoais (só motivo e Id empresa).
   if (!cliente || !cliente.liberado) {
-    console.log('login_barrado', { achouContato: !!cliente, liberado: cliente?.liberado || false, empresaId: cliente?.empresaId || null, temDataFim: !!cliente?.dataFim });
+    console.log('login_barrado', { achouContato: !!cliente, empresaId: cliente?.empresaId || null });
     return generica;
   }
   console.log('login_liberado', { empresaId: cliente.empresaId });
@@ -1230,12 +1230,12 @@ async function entrarComToken(request, env, url) {
     await env.PORTAL_KV.delete(`nonce:${payload.n}`);
   }
 
-  // Reconfirma no Ploomes que o contrato segue ativo AGORA (não confia só no token).
+  // Reconfirma na NOSSA base que o cliente existe (não confia só no token).
   let cliente = null;
-  try { cliente = await buscarClienteAtivo(payload.em, env); }
+  try { cliente = await buscarClienteBase(payload.em, env); }
   catch (error) { console.error('reconfirma_falhou', safeError(error)); }
   if (!cliente || !cliente.liberado) {
-    return html(paginaMensagem('Acesso indisponível', 'Seu contrato pode ter expirado. Fale com a equipe da Ecobraz para renovar.', '/'), 403);
+    return html(paginaMensagem('Acesso indisponível', 'Não encontramos seu cadastro na nossa base. Fale com a equipe da Ecobraz.', '/'), 403);
   }
 
   const sessao = await criarToken({ cid: cliente.contactId, emp: cliente.empresaId, em: cliente.email, nome: cliente.nome, fim: cliente.dataFim || '', tipo: 'sessao' }, SESSAO_TTL_S, env);
@@ -1571,11 +1571,44 @@ function cookieFiscal(valor, maxAge) { return `${FISCAL_COOKIE}=${encodeURICompo
 // ---------------------------------------------------------------------------
 // Ploomes: portão de acesso (contrato) e leitura/escrita de OS
 // ---------------------------------------------------------------------------
-// Portão de acesso. O e-mail de login costuma ser de uma PESSOA vinculada à
-// empresa; o contrato ("Contrato Ativo?", campo Sim/Não 277451) fica no cadastro
-// da EMPRESA. Por isso NÃO decidimos por TypeId (a convenção varia): achamos o
-// contato pelo e-mail e procuramos o contrato no próprio registro E na empresa
-// vinculada (CompanyId / LastCompanyId), cobrindo os dois sentidos de login.
+// Login do cliente pela NOSSA base migrada (D1 `contatos`) — sem depender do
+// Ploomes. Decisão do Marcio (jul/2026): o sistema fica ABERTO a todos os
+// clientes; quem existe na base entra, sem exigir contrato ativo. A pessoa loga
+// pelo e-mail (indexado); a empresa vem pelo company_id, quando houver — mesma
+// lógica de antes (pessoa loga, empresa guarda o vínculo), agora 100% local.
+async function buscarClienteBase(email, env) {
+  const em = String(email || '').trim().toLowerCase();
+  if (!em || !env.DB_PLOOMES) return null;
+  let row = null;
+  try {
+    const r = await env.DB_PLOOMES.prepare(
+      `SELECT c.ploomes_id AS cid, c.nome AS nome_pessoa, c.documento AS doc_pessoa, c.company_id AS company_id,
+              e.ploomes_id AS emp_id, e.nome AS emp_nome, e.documento AS emp_doc
+         FROM contatos c
+         LEFT JOIN contatos e ON e.ploomes_id = c.company_id
+        WHERE c.email = ?1
+        ORDER BY (CASE WHEN c.company_id IS NOT NULL AND c.company_id <> 0 THEN 0 ELSE 1 END), c.ploomes_id DESC
+        LIMIT 1`
+    ).bind(em).all();
+    row = (r.results || [])[0] || null;
+  } catch (error) { console.error('base_lookup_falhou', safeError(error)); return null; }
+  if (!row) return null;
+  const temEmpresa = !!(row.company_id && Number(row.company_id) !== 0 && row.emp_id);
+  return {
+    contactId: row.cid,
+    empresaId: temEmpresa ? row.emp_id : row.cid,
+    nome: (temEmpresa ? (row.emp_nome || row.nome_pessoa) : row.nome_pessoa) || '',
+    email: em,
+    documento: (temEmpresa ? (row.emp_doc || row.doc_pessoa) : row.doc_pessoa) || '',
+    dataFim: null,
+    liberado: true, // sistema aberto a todos os clientes da base
+  };
+}
+
+// [LEGADO — não é mais chamado] Portão antigo que lia o Ploomes: achava o
+// contato pelo e-mail e conferia o campo "Contrato Ativo?" (277451) na pessoa e
+// na empresa vinculada. Mantido para referência/reversão; o login agora usa
+// buscarClienteBase (D1), pois estamos encerrando o Ploomes.
 async function buscarClienteAtivo(email, env) {
   requireEnv(env, ['PLOOMES_USER_KEY']);
   const base = env.PLOOMES_API_URL || 'https://public-api2.ploomes.com';
@@ -2271,7 +2304,7 @@ ${logo ? `<img src="${logo}" alt="Ecobraz Emigre" width="168" style="display:blo
 <div style="border-top:1px solid #DFE7E6;padding-top:18px;font-size:12px;color:#9fb0ac;line-height:1.6;"><strong style="color:#4F6469;">Ecobraz Emigre</strong> — Portal do Cliente<br>Destinação correta, conformidade e evidências para a sua empresa.</div>
 </td></tr>
 </table>
-<div style="max-width:560px;margin:14px auto 0;font-size:11px;color:#aebfbb;text-align:center;">Acesso exclusivo para clientes com contrato ativo.</div>
+<div style="max-width:560px;margin:14px auto 0;font-size:11px;color:#aebfbb;text-align:center;">Portal do Cliente da Ecobraz — acesso seguro por link.</div>
 </td></tr></table></body></html>`;
 }
 

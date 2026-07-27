@@ -140,7 +140,7 @@ export function paginaLogin() {
         <li>Acesso seguro por link — sem senha para decorar</li>
       </ul>
     </div>
-    <div class="auth-foot">Acesso exclusivo para clientes com contrato ativo com a Ecobraz.</div>
+    <div class="auth-foot">Acesso para clientes da Ecobraz — simples e seguro, por link.</div>
   </aside>
   <main class="auth-form">
     <div class="auth-card">
@@ -162,7 +162,7 @@ async function enviar(e){e.preventDefault();
   b.disabled=true;b.textContent='Enviando…';
   try{ await fetch('/api/auth/solicitar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:document.getElementById('email').value})}); }catch(_){}
   m.hidden=false;
-  m.innerHTML='Se o e-mail for de um cliente ativo, enviamos um <strong>link de acesso</strong>. Confira sua caixa de entrada (e o spam). O link vale por 15 minutos.';
+  m.innerHTML='Se o e-mail estiver cadastrado na Ecobraz, enviamos um <strong>link de acesso</strong>. Confira sua caixa de entrada (e o spam). O link vale por 15 minutos.';
   document.getElementById('f').style.display='none';
   return false;
 }
@@ -172,8 +172,6 @@ async function enviar(e){e.preventDefault();
 export function paginaPainel({ nome, email, dataFim }) {
   const primeiro = esc((nome || '').split(/\s+/)[0] || 'cliente');
   const empresa = esc(nome || 'Sua empresa');
-  const validadeBadge = dataFim ? ` · válido até <b>${esc(formatarData(dataFim))}</b>` : '';
-  const validadeHint = dataFim ? `válido até ${esc(formatarData(dataFim))}` : 'sem prazo definido';
   return `${head('Painel')}
 <header class="appbar">
   <div class="appbar-in">
@@ -192,12 +190,12 @@ export function paginaPainel({ nome, email, dataFim }) {
       <h1>Olá, ${primeiro}</h1>
       <p class="muted">${esc(email)}</p>
     </div>
-    <div class="badge-ok"><span class="dot"></span> Contrato ativo${validadeBadge}</div>
+    <div class="badge-ok"><span class="dot"></span> Cliente Ecobraz</div>
   </section>
 
   <section class="kpis">
     <div class="kpi"><span class="kpi-label">Ordens de serviço</span><strong class="kpi-num" id="kpiOs">—</strong><span class="kpi-hint">registradas no seu histórico</span></div>
-    <div class="kpi"><span class="kpi-label">Contrato</span><strong class="kpi-num ok">Ativo</strong><span class="kpi-hint">${validadeHint}</span></div>
+    <div class="kpi"><span class="kpi-label">Acesso</span><strong class="kpi-num ok">Liberado</strong><span class="kpi-hint">por link seguro</span></div>
     <div class="kpi kpi-soon"><span class="kpi-label">Documentos</span><strong class="kpi-num">Em breve</strong><span class="kpi-hint">NF · MTR · CDF</span></div>
     <div class="kpi kpi-soon"><span class="kpi-label">Pegada de carbono</span><strong class="kpi-num">Em breve</strong><span class="kpi-hint">cálculo e neutralização</span></div>
   </section>
