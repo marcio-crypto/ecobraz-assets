@@ -1207,7 +1207,7 @@ async function solicitarLink(request, env) {
   }
   console.log('login_liberado', { empresaId: cliente.empresaId });
 
-  const token = await criarToken({ cid: cliente.contactId, emp: cliente.empresaId, em: cliente.email, nome: cliente.nome, fim: cliente.dataFim || '', tipo: 'login' }, LINK_TTL_S, env);
+  const token = await criarToken({ cid: cliente.contactId, emp: cliente.empresaId, em: cliente.email, nome: cliente.nome, fim: cliente.dataFim || '', doc: cliente.documento || '', tipo: 'login' }, LINK_TTL_S, env);
   // Uso único: guarda o nonce no KV; ao usar, apaga.
   if (env.PORTAL_KV) await env.PORTAL_KV.put(`nonce:${token.nonce}`, '1', { expirationTtl: LINK_TTL_S });
 
@@ -1238,7 +1238,7 @@ async function entrarComToken(request, env, url) {
     return html(paginaMensagem('Acesso indisponível', 'Não encontramos seu cadastro na nossa base. Fale com a equipe da Ecobraz.', '/'), 403);
   }
 
-  const sessao = await criarToken({ cid: cliente.contactId, emp: cliente.empresaId, em: cliente.email, nome: cliente.nome, fim: cliente.dataFim || '', tipo: 'sessao' }, SESSAO_TTL_S, env);
+  const sessao = await criarToken({ cid: cliente.contactId, emp: cliente.empresaId, em: cliente.email, nome: cliente.nome, fim: cliente.dataFim || '', doc: cliente.documento || '', tipo: 'sessao' }, SESSAO_TTL_S, env);
   return new Response(null, {
     status: 302,
     headers: { Location: '/', 'Set-Cookie': cookieSessao(sessao.valor, SESSAO_TTL_S) },
@@ -1255,7 +1255,7 @@ async function lerSessao(request, env) {
   const valor = decodeURIComponent(cookie.slice(SESSAO_COOKIE.length + 1));
   const payload = await verificarToken(valor, env);
   if (!payload || payload.tipo !== 'sessao') return null;
-  return { contactId: payload.cid, empresaId: payload.emp || payload.cid, email: payload.em, nome: payload.nome, dataFim: payload.fim };
+  return { contactId: payload.cid, empresaId: payload.emp || payload.cid, email: payload.em, nome: payload.nome, dataFim: payload.fim, documento: payload.doc || '' };
 }
 
 function cookieSessao(valor, maxAge) {
@@ -1682,36 +1682,44 @@ function acharOtherProp(contact, fieldId) {
   return props.find((p) => Number(p.FieldId) === fieldId) || null;
 }
 
+// Histórico de OS do cliente pela NOSSA base (sem Ploomes): coletas novas (KV) +
+// negócios migrados (D1). Tudo casado pelo DOCUMENTO (CNPJ/CPF) do cliente logado.
+// Id com prefixo: 'k'+id = coleta nova (KV); 'd'+id = negócio migrado (D1).
 async function listarOS(sessao, env) {
-  const base = env.PLOOMES_API_URL || 'https://public-api2.ploomes.com';
-  const headers = { 'User-Key': env.PLOOMES_USER_KEY, Accept: 'application/json' };
-  // A OS é o Negócio; o status vem da ETAPA (mapeamento agnóstico ao funil). Os campos
-  // operacionais (nº da OS, peso, data de coleta) vêm das OtherProperties — descobertos
-  // na inspeção 2026-07-22 (ver os-utils.js).
-  const clienteId = Number(sessao.empresaId || sessao.contactId);
-  const url = `${base}/Deals?$filter=ContactId%20eq%20${clienteId}&$top=100&$orderby=CreateDate%20desc&$expand=OtherProperties,Stage`;
-  const r = await fetch(url, { headers });
-  if (!r.ok) { console.error('deals_erro', r.status); return json({ ok: false, error: 'ploomes_indisponivel' }, 502); }
-  const kNum = env.PLOOMES_FIELD_OS_NUMERO || CAMPOS_OS.numero;
-  const kPeso = env.PLOOMES_FIELD_OS_PESO || CAMPOS_OS.peso;
-  const kData = env.PLOOMES_FIELD_OS_DATA_COLETA || CAMPOS_OS.dataColeta;
-  const linhas = ((await r.json()).value || [])
-    .map((d) => {
-      const etapa = d.Stage?.Name || '';
-      return {
-        id: d.Id,
-        numeroOS: valorProp(d.OtherProperties, kNum),
-        titulo: d.Title || `Atendimento ${d.Id}`,
-        etapa,
-        status: statusDaEtapa(etapa),
-        peso: valorProp(d.OtherProperties, kPeso),
-        dataColeta: valorProp(d.OtherProperties, kData),
-        aberturaISO: d.CreateDate || null,
-        conclusaoISO: d.FinishDate || null,
-      };
-    })
-    .filter((o) => o.status !== 'Em negociação'); // só OS de verdade (da etapa "ordem de serviço" em diante)
-  return json({ ok: true, os: linhas });
+  const doc = String(sessao.documento || '').replace(/\D/g, '');
+  const ROT = { agendada: 'Agendada', em_transporte: 'Em transporte', na_unidade: 'Na unidade', concluida: 'Concluída', cancelada: 'Cancelada' };
+  const out = [];
+  // 1) Coletas da nossa base (KV) — as que a equipe cria no sistema novo.
+  try {
+    if (env.PORTAL_KV && doc) {
+      const idx = await listarColetasOS(env);
+      for (const c of idx) {
+        if (String(c.clienteDoc || '').replace(/\D/g, '') !== doc) continue;
+        if (c.status === 'cancelada') continue;
+        out.push({ id: 'k' + c.id, numeroOS: c.numero || '', titulo: 'Ordem de Coleta', status: ROT[c.status] || 'Em atendimento', dataColeta: c.dataAgendada || '', aberturaISO: c.criadoEm || null, peso: '' });
+      }
+    }
+  } catch (error) { console.error('listar_os_kv', safeError(error)); }
+  // 2) Histórico migrado do Ploomes (D1 negocios) — pelo documento OU pelo id do
+  //    contato/empresa da sessão (cobre quem não tem documento na base). status_id
+  //    1=aberto, 2=ganho/concluído; esconde 3=perdido.
+  const cid = Number(sessao.contactId) || 0, emp = Number(sessao.empresaId) || 0;
+  try {
+    if (env.DB_PLOOMES && (doc || cid || emp)) {
+      const r = await env.DB_PLOOMES.prepare(
+        `SELECT ploomes_id AS id, titulo, status_id, criado_em
+           FROM negocios
+          WHERE (contact_id = ?2 OR contact_id = ?3 OR (?1 <> '' AND contact_id IN (SELECT ploomes_id FROM contatos WHERE documento = ?1)))
+            AND status_id IN (1, 2)
+          ORDER BY criado_em DESC LIMIT 200`
+      ).bind(doc, cid, emp).all();
+      for (const d of (r.results || [])) {
+        out.push({ id: 'd' + d.id, numeroOS: '', titulo: d.titulo || ('Atendimento ' + d.id), status: d.status_id === 2 ? 'Concluído' : 'Em atendimento', dataColeta: '', aberturaISO: d.criado_em || null, peso: '' });
+      }
+    }
+  } catch (error) { console.error('listar_os_d1', safeError(error)); }
+  out.sort((a, b) => String(b.aberturaISO || '').localeCompare(String(a.aberturaISO || '')));
+  return json({ ok: true, os: out });
 }
 
 // Classifica um documento pelo NOME e diz se o CLIENTE pode ver — e se depende de liberação.
@@ -1750,98 +1758,62 @@ async function nomeModelo(templateId, base, headers) {
 
 // Lista os DOCUMENTOS de uma OS que o cliente PODE ver. Segurança: só a OS do próprio cliente
 // (confere ContactId) e aplica as regras de tipo/liberação acima.
+// Lista os documentos que o cliente pode ver PARA UM ATENDIMENTO da nossa base.
+// Só o histórico migrado ('d'+ploomes_id) tem documentos guardados no R2. As
+// coletas novas ('k') terão os documentos gerados numa etapa seguinte.
+// Segurança: o negócio precisa ser de um contato com o MESMO documento do cliente,
+// e o tipo do arquivo passa pela allowlist (nunca proposta/contrato/interno).
 async function listarDocsOS(url, sessao, env) {
-  const base = env.PLOOMES_API_URL || 'https://public-api2.ploomes.com';
-  const headers = { 'User-Key': env.PLOOMES_USER_KEY, Accept: 'application/json' };
-  const clienteId = Number(sessao.empresaId || sessao.contactId);
-  const dealId = Number(url.searchParams.get('dealId') || 0);
-  if (!dealId || !clienteId) return json({ ok: false, error: 'sem_id' }, 400);
+  const doc = String(sessao.documento || '').replace(/\D/g, '');
+  const cid = Number(sessao.contactId) || 0, emp = Number(sessao.empresaId) || 0;
+  const raw = String(url.searchParams.get('dealId') || '');
+  if (!raw) return json({ ok: false, error: 'sem_id' }, 400);
+  const tipo = raw[0], id = raw.slice(1);
   try {
-    // Confere que a OS é do cliente E pega etapa (liberação) + anexos (a NF) numa tacada só.
-    const own = await fetch(`${base}/Deals?$filter=Id%20eq%20${dealId}%20and%20ContactId%20eq%20${clienteId}&$top=1&$expand=Stage,Attachments`, { headers });
-    const deal = own.ok ? ((await own.json()).value || [])[0] : null;
-    if (!deal) return json({ ok: false, error: 'nao_encontrada' }, 404);
-    const liberado = certificadoLiberadoDaEtapa(deal.Stage?.Name);
-    const r = await fetch(`${base}/Documents?$filter=DealId%20eq%20${dealId}&$top=50&$select=Id,Name,DocumentNumber,FileName,Date`, { headers });
-    const brutos = r.ok ? ((await r.json()).value || []) : [];
-    const docs = [];
-    for (const d of brutos) {
-      const c = classificaDoc(d.Name);
-      if (!c.cliente) continue;                 // interno/desconhecido: nunca mostra
-      if (c.liberar && !liberado) continue;     // CDF/laudo só quando liberado
-      docs.push({ id: d.Id, fonte: 'document', nome: c.rotulo ? `${c.rotulo}${d.DocumentNumber ? ' nº ' + d.DocumentNumber : ''}` : (d.Name || `Documento ${d.Id}`) });
-    }
-    // O documento da OS fica na entidade Orders — mostra só o que é do cliente (classifica pelo
-    // NOME DO MODELO, p/ nunca vazar proposta comercial). DocumentUrl verificado (PDF 60 KB).
-    try {
-      const ro = await fetch(`${base}/Orders?$filter=DealId%20eq%20${dealId}&$top=20&$select=Id,OrderNumber,TemplateId,DocumentUrl`, { headers });
-      for (const o of (ro.ok ? ((await ro.json()).value || []) : [])) {
-        if (!o.DocumentUrl) continue;
-        const cO = classificaDoc(await nomeModelo(o.TemplateId, base, headers));
-        if (!cO.cliente || (cO.liberar && !liberado)) continue;
-        docs.push({ id: o.Id, fonte: 'order', nome: `${cO.rotulo || 'Ordem de Serviço'}${o.OrderNumber ? ' nº ' + o.OrderNumber : ''}` });
+    if (tipo === 'd' && env.DB_PLOOMES) {
+      const dealId = Number(id) || 0;
+      if (!dealId) return json({ ok: true, docs: [] });
+      const own = await env.DB_PLOOMES.prepare("SELECT 1 AS ok FROM negocios WHERE ploomes_id=?1 AND (contact_id=?3 OR contact_id=?4 OR (?2<>'' AND contact_id IN (SELECT ploomes_id FROM contatos WHERE documento=?2))) LIMIT 1").bind(dealId, doc, cid, emp).first();
+      if (!own) return json({ ok: false, error: 'sem_permissao' }, 403);
+      const r = await env.DB_PLOOMES.prepare("SELECT r2_key, nome_arquivo FROM arquivos_ploomes WHERE deal_id=?1 ORDER BY (fonte='documento') DESC LIMIT 100").bind(dealId).all();
+      const docs = [];
+      for (const a of (r.results || [])) {
+        const c = classificaDoc(a.nome_arquivo);
+        if (!c.cliente) continue; // interno/proposta/desconhecido: nunca mostra (histórico = já liberado)
+        docs.push({ id: a.r2_key, fonte: 'r2', nome: c.rotulo || a.nome_arquivo || 'Documento' });
       }
-    } catch (error) { console.error('orders_lista_erro', safeError(error)); }
-    // A NF fica nos ANEXOS — allowlist ESTRITO (só NF). Respeita ainda os flags do Ploomes
-    // (IsSensitiveData / Listable). Fotos de controle e termos NUNCA aparecem.
-    for (const a of (deal.Attachments || [])) {
-      if (a.IsSensitiveData || a.Listable === false) continue;
-      const cA = classificaAnexo(a.FileName || a.Name);
-      if (!cA.cliente) continue;
-      docs.push({ id: a.Id, fonte: 'anexo', nome: cA.rotulo });
+      return json({ ok: true, docs });
     }
-    return json({ ok: true, docs });
+    return json({ ok: true, docs: [] }); // coleta nova ('k'): documentos gerados vêm numa etapa seguinte
   } catch (error) { console.error('docs_erro', safeError(error)); return json({ ok: false, error: 'indisponivel' }, 502); }
 }
 
-// Baixa UM documento (o Worker busca o PDF e entrega ao cliente — a URL de storage nunca
-// é exposta). Segurança: confere que a OS do documento é do próprio cliente.
+// Baixa UM documento do NOSSO depósito (R2). A chave (docId) é o r2_key; o Worker
+// entrega o arquivo direto. Segurança: o arquivo tem que pertencer a um contato/negócio
+// com o MESMO documento do cliente logado, e o tipo passa pela allowlist.
 async function baixarDocOS(url, sessao, env) {
-  const base = env.PLOOMES_API_URL || 'https://public-api2.ploomes.com';
-  const headers = { 'User-Key': env.PLOOMES_USER_KEY, Accept: 'application/json' };
-  const clienteId = Number(sessao.empresaId || sessao.contactId);
-  const docId = Number(url.searchParams.get('docId') || 0);
-  const fonte = ['order', 'anexo'].includes(url.searchParams.get('fonte')) ? url.searchParams.get('fonte') : 'document';
-  if (!docId || !clienteId) return json({ ok: false, error: 'sem_id' }, 400);
+  const doc = String(sessao.documento || '').replace(/\D/g, '');
+  const cid = Number(sessao.contactId) || 0, emp = Number(sessao.empresaId) || 0;
+  const fonte = url.searchParams.get('fonte') || '';
+  const key = String(url.searchParams.get('docId') || '').replace(/[^a-zA-Z0-9/_.-]/g, '').slice(0, 200);
+  if (fonte !== 'r2' || !key) return json({ ok: false, error: 'sem_id' }, 400);
+  if (!env.R2_ARQUIVOS || !env.DB_PLOOMES) return json({ ok: false, error: 'indisponivel' }, 503);
   try {
-    // Resolve na fonte certa (Documents / Orders / Attachments) → {dealId, url, nome, tipo}.
-    let dealId, documentUrl, nomeClass, nomeArq, contentType = null, ehAnexo = false;
-    if (fonte === 'anexo') {
-      ehAnexo = true;
-      const r = await fetch(`${base}/Attachments(${docId})`, { headers });
-      const j = r.ok ? await r.json().catch(() => null) : null;
-      const a = j ? (j.value ? j.value[0] : j) : null;
-      if (!a || !a.Url) return json({ ok: false, error: 'nao_encontrado' }, 404);
-      // Allowlist estrito (só NF) + flags do Ploomes — senão nem baixa.
-      if (a.IsSensitiveData || a.Listable === false || !classificaAnexo(a.FileName || '').cliente) return json({ ok: false, error: 'sem_permissao' }, 403);
-      dealId = a.DealId; documentUrl = a.Url; nomeArq = a.FileName || `anexo-${docId}`; contentType = a.ContentType || null;
-    } else if (fonte === 'order') {
-      const r = await fetch(`${base}/Orders?$filter=Id%20eq%20${docId}&$top=1&$select=Id,OrderNumber,TemplateId,DealId,DocumentUrl`, { headers });
-      const o = r.ok ? ((await r.json()).value || [])[0] : null;
-      if (!o || !o.DocumentUrl) return json({ ok: false, error: 'nao_encontrado' }, 404);
-      dealId = o.DealId; documentUrl = o.DocumentUrl; nomeArq = `OS-${o.OrderNumber || docId}`; nomeClass = await nomeModelo(o.TemplateId, base, headers);
-    } else {
-      const r = await fetch(`${base}/Documents?$filter=Id%20eq%20${docId}&$top=1&$select=Id,Name,FileName,DealId,DocumentUrl`, { headers });
-      const d = r.ok ? ((await r.json()).value || [])[0] : null;
-      if (!d || !d.DocumentUrl) return json({ ok: false, error: 'nao_encontrado' }, 404);
-      dealId = d.DealId; documentUrl = d.DocumentUrl; nomeClass = d.Name; nomeArq = d.FileName || d.Name || `documento-${docId}`;
-    }
-    // Confere que a OS é do cliente (e a etapa, p/ liberação de CDF/laudo).
-    const own = await fetch(`${base}/Deals?$filter=Id%20eq%20${Number(dealId)}%20and%20ContactId%20eq%20${clienteId}&$top=1&$expand=Stage`, { headers });
-    const deal = own.ok ? ((await own.json()).value || [])[0] : null;
-    if (!deal) return json({ ok: false, error: 'sem_permissao' }, 403);
-    // Regras de tipo/liberação p/ Documents/Orders (o anexo já foi validado — allowlist NF — acima).
-    if (!ehAnexo) {
-      const c = classificaDoc(nomeClass);
-      if (!c.cliente) return json({ ok: false, error: 'sem_permissao' }, 403);
-      if (c.liberar && !certificadoLiberadoDaEtapa(deal.Stage?.Name)) return json({ ok: false, error: 'nao_liberado' }, 403);
-    }
-    const arq = await fetch(documentUrl);
-    if (!arq.ok || !arq.body) return json({ ok: false, error: 'indisponivel' }, 502);
-    const limpo = String(nomeArq).replace(/[^\w.\- ]+/g, '').slice(0, 80) || `documento-${docId}`;
+    const row = await env.DB_PLOOMES.prepare('SELECT nome_arquivo, content_type, contact_id, deal_id FROM arquivos_ploomes WHERE r2_key=?1 LIMIT 1').bind(key).first();
+    if (!row) return json({ ok: false, error: 'nao_encontrado' }, 404);
+    // Dono: o contact_id do arquivo (ou o contato do negócio do arquivo) tem que ser o
+    // contato/empresa da sessão OU ter o mesmo documento do cliente.
+    const dono = await env.DB_PLOOMES.prepare(
+      "SELECT 1 AS ok FROM (SELECT ?1 AS pid UNION SELECT contact_id FROM negocios WHERE ploomes_id=?2) t WHERE t.pid=?3 OR t.pid=?4 OR (?5<>'' AND t.pid IN (SELECT ploomes_id FROM contatos WHERE documento=?5)) LIMIT 1"
+    ).bind(Number(row.contact_id) || 0, Number(row.deal_id) || 0, cid, emp, doc).first();
+    if (!dono) return json({ ok: false, error: 'sem_permissao' }, 403);
+    if (!classificaDoc(row.nome_arquivo).cliente) return json({ ok: false, error: 'sem_permissao' }, 403);
+    const obj = await env.R2_ARQUIVOS.get(key);
+    if (!obj) return json({ ok: false, error: 'indisponivel' }, 404);
+    const limpo = String(row.nome_arquivo || 'documento').replace(/[^\w.\- ]+/g, '').slice(0, 80) || 'documento';
     const nome = /\.[a-z0-9]{2,4}$/i.test(limpo) ? limpo : `${limpo}.pdf`;
-    return new Response(arq.body, { status: 200, headers: {
-      'content-type': contentType || arq.headers.get('content-type') || 'application/pdf',
+    return new Response(obj.body, { status: 200, headers: {
+      'content-type': (obj.httpMetadata && obj.httpMetadata.contentType) || row.content_type || 'application/pdf',
       'content-disposition': `attachment; filename="${nome}"`,
       'cache-control': 'private, no-store',
     } });
@@ -1878,21 +1850,26 @@ async function abrirChamado(request, sessao, env) {
 // Lê o cadastro do Ploomes (Razão Social = Name, CNPJ = Register, e-mail). Telefone
 // e responsável vêm quando disponíveis; o cliente confirma/atualiza tudo no form.
 async function perfilCliente(sessao, env) {
-  const base = env.PLOOMES_API_URL || 'https://public-api2.ploomes.com';
-  const headers = { 'User-Key': env.PLOOMES_USER_KEY, Accept: 'application/json' };
-  const id = Number(sessao.empresaId || sessao.contactId);
-  let c = {};
+  const doc = String(sessao.documento || '').replace(/\D/g, '');
+  const p = { razaoSocial: sessao.nome || '', cnpj: sessao.documento || '', email: sessao.email || '', telefone: '', responsavel: sessao.nome || '' };
   try {
-    const r = await fetch(`${base}/Contacts?$filter=Id%20eq%20${id}&$top=1`, { headers });
-    if (r.ok) c = (await r.json()).value?.[0] || {};
+    if (env.DB_PLOOMES) {
+      const cid = Number(sessao.empresaId || sessao.contactId) || 0;
+      let row = cid ? await env.DB_PLOOMES.prepare('SELECT nome, nome_fantasia, documento, email, telefone FROM contatos WHERE ploomes_id=?1 LIMIT 1').bind(cid).first() : null;
+      // Se o cadastro da empresa não tem e-mail/telefone, pega de outro contato com o mesmo documento.
+      if (doc && (!row || (!row.email && !row.telefone))) {
+        const alt = await env.DB_PLOOMES.prepare("SELECT nome, nome_fantasia, documento, email, telefone FROM contatos WHERE documento=?1 AND (email<>'' OR telefone<>'') ORDER BY (email<>'') DESC LIMIT 1").bind(doc).first();
+        if (alt) { if (!row) { row = alt; } else { row.email = row.email || alt.email; row.telefone = row.telefone || alt.telefone; } }
+      }
+      if (row) {
+        p.razaoSocial = row.nome || row.nome_fantasia || p.razaoSocial;
+        p.cnpj = row.documento || p.cnpj;
+        p.email = row.email || p.email;
+        p.telefone = row.telefone || p.telefone;
+      }
+    }
   } catch (error) { console.error('perfil_erro', safeError(error)); }
-  return json({ ok: true, perfil: {
-    razaoSocial: c.Name || sessao.nome || '',
-    cnpj: c.Register || '',
-    email: c.Email || sessao.email || '',
-    telefone: c.Phones?.[0]?.PhoneNumber || '',
-    responsavel: sessao.nome || '',
-  } });
+  return json({ ok: true, perfil: p });
 }
 
 // Consulta de CEP para AUTOPREENCHER o endereço de coleta (evita erro de digitação).

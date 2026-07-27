@@ -269,7 +269,7 @@ async function carregar(){
       var meta=[]; meta.push(o.dataColeta?('Coleta em '+fmt(o.dataColeta)):('Aberta em '+fmt(o.aberturaISO)));
       if(o.peso && String(o.peso).toLowerCase().indexOf('não informado')<0 && String(o.peso).toLowerCase().indexOf('nao informado')<0) meta.push('Peso: '+escapeHtml(String(o.peso)));
       return '<div class="os"><div class="os-main"><div class="os-title">'+titulo+'</div><div class="os-meta">'+meta.join(' · ')+'</div>'
-        +'<button class="doclnk" type="button" onclick="verDocs('+o.id+',this)">📄 Documentos</button>'
+        +'<button class="doclnk" type="button" onclick="verDocs(&#39;'+o.id+'&#39;,this)">📄 Documentos</button>'
         +'<div class="docwrap" id="docs-'+o.id+'"></div>'
         +'</div><span class="tag '+tagCls(o.status)+'">'+escapeHtml(o.status)+'</span></div>';
     }).join('');
@@ -280,9 +280,9 @@ async function verDocs(id,btn){
   if(box.dataset.loaded){ box.style.display=(box.style.display==='none'||!box.style.display)?'flex':'none'; return; }
   btn.disabled=true; var txt=btn.textContent; btn.textContent='Carregando…';
   try{
-    var r=await fetch('/api/os/docs?dealId='+id); var d=await r.json();
+    var r=await fetch('/api/os/docs?dealId='+encodeURIComponent(id)); var d=await r.json();
     if(d.ok&&d.docs&&d.docs.length){
-      box.innerHTML=d.docs.map(function(x){return '<a class="docdl" href="/api/os/doc?docId='+x.id+'&fonte='+(x.fonte||'document')+'" target="_blank" rel="noopener">⬇ '+escapeHtml(x.nome)+'</a>';}).join('');
+      box.innerHTML=d.docs.map(function(x){return '<a class="docdl" href="/api/os/doc?docId='+encodeURIComponent(x.id)+'&fonte='+(x.fonte||'r2')+'" target="_blank" rel="noopener">⬇ '+escapeHtml(x.nome)+'</a>';}).join('');
     } else { box.innerHTML='<span class="muted" style="font-size:13px">Nenhum documento disponível ainda. Assim que a coleta for processada, os documentos aparecem aqui.</span>'; }
     box.dataset.loaded='1'; box.style.display='flex';
   }catch(_){ box.innerHTML='<span class="muted" style="font-size:13px">Não consegui carregar os documentos agora.</span>'; box.style.display='flex'; }

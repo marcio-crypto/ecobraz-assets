@@ -78,7 +78,7 @@ export async function criarColetaOS(env, dados, criadoPor) {
   if (env.PORTAL_KV) {
     await env.PORTAL_KV.put(`os:${id}`, JSON.stringify(rec));
     const idx = await listarColetasOS(env);
-    idx.unshift({ id, numero, status: 'agendada', clienteId: rec.clienteId || '', clienteNome: rec.clienteNome, cidade: cidadeDoEndereco(rec.endereco), dataAgendada: rec.dataAgendada, agenteNome: rec.agenteNome, agenteEmail: rec.agenteEmail, criadoEm: rec.criadoEm });
+    idx.unshift({ id, numero, status: 'agendada', clienteId: rec.clienteId || '', clienteDoc: rec.clienteDoc || '', clienteNome: rec.clienteNome, cidade: cidadeDoEndereco(rec.endereco), dataAgendada: rec.dataAgendada, agenteNome: rec.agenteNome, agenteEmail: rec.agenteEmail, criadoEm: rec.criadoEm });
     await env.PORTAL_KV.put('os:index', JSON.stringify(idx).slice(0, 900000));
   }
   return rec;
@@ -89,7 +89,7 @@ export async function atualizarStatusOS(env, id, status) {
   if (env.PORTAL_KV) {
     await env.PORTAL_KV.put(`os:${id}`, JSON.stringify(rec));
     const idx = await listarColetasOS(env); const i = idx.findIndex((x) => x.id === id);
-    if (i >= 0) { idx[i].status = status; await env.PORTAL_KV.put('os:index', JSON.stringify(idx).slice(0, 900000)); }
+    if (i >= 0) { idx[i].status = status; if (!idx[i].clienteDoc && rec.clienteDoc) idx[i].clienteDoc = rec.clienteDoc; await env.PORTAL_KV.put('os:index', JSON.stringify(idx).slice(0, 900000)); }
   }
   return rec;
 }
@@ -116,7 +116,7 @@ export async function atualizarColetaOS(env, id, dados) {
   if (env.PORTAL_KV) {
     await env.PORTAL_KV.put(`os:${id}`, JSON.stringify(rec));
     const idx = await listarColetasOS(env); const i = idx.findIndex((x) => x.id === id);
-    if (i >= 0) { idx[i].cidade = cidadeDoEndereco(rec.endereco); idx[i].dataAgendada = rec.dataAgendada; idx[i].agenteNome = rec.agenteNome; idx[i].agenteEmail = rec.agenteEmail; await env.PORTAL_KV.put('os:index', JSON.stringify(idx).slice(0, 900000)); }
+    if (i >= 0) { idx[i].cidade = cidadeDoEndereco(rec.endereco); idx[i].dataAgendada = rec.dataAgendada; idx[i].agenteNome = rec.agenteNome; idx[i].agenteEmail = rec.agenteEmail; if (!idx[i].clienteDoc && rec.clienteDoc) idx[i].clienteDoc = rec.clienteDoc; await env.PORTAL_KV.put('os:index', JSON.stringify(idx).slice(0, 900000)); }
   }
   return rec;
 }
