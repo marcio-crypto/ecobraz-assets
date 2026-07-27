@@ -49,7 +49,7 @@ import { diretorPermitido, nomeDiretor, reunirDados, paginaLoginDiretoria, pagin
 import { dadosPrevencao, paginaPrevencao, analisarColetaIA, salvarTabelaPrecos, pingIA } from './prevencao.js';
 import { sondarAnexosPloomes, paginaSondaAnexos } from './ploomes-docs.js';
 import { amostraContatosPloomes, paginaAmostraContatos, importarLoteContatos, estatisticasMigracao, buscarContatos, paginaMigrarPloomes, detalheContato, paginaContatoDetalhe } from './ploomes-migracao.js';
-import { importarLoteAnexos, importarLoteAnexosContatos, completarAnexos, importarAnexosJanela, reprocessarFalhas, importarLoteDocumentos, estatisticasArquivos, paginaMigrarArquivos, diagnosticoAnexos, paginaDiagAnexos } from './ploomes-arquivos.js';
+import { importarLoteAnexos, importarLoteAnexosContatos, completarAnexos, importarAnexosJanela, reprocessarFalhas, importarLoteDocumentos, recuperarDocumentos, estatisticasArquivos, paginaMigrarArquivos, diagnosticoAnexos, paginaDiagAnexos } from './ploomes-arquivos.js';
 import { fiscalPermitido, nomeFiscal, listarNotas, lerNota, importarLote, vincularNota, sugerirVinculoSync, paginaFiscalLogin, paginaFiscalHome, paginaFiscalResultado, paginaFiscalNota } from './fiscal.js';
 import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, paginaLeads, paginaLeadDetalhe, paginaInicio } from './cadastro.js';
 import { listarColetasOS, lerColetaOS, criarColetaOS, atualizarStatusOS, paginaColetasLista, paginaGerarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga } from './coletas.js';
@@ -405,6 +405,10 @@ export default {
       if (pathname === '/api/diretoria/arquivos-docs' && request.method === 'POST') {
         if (!diretoria) return json({ ok: false, erro: 'nao_autenticado' }, 401);
         return json(await importarLoteDocumentos(env, url.searchParams.get('desdeId'), url.searchParams.get('top')));
+      }
+      if (pathname === '/api/diretoria/documentos-recuperar' && request.method === 'POST') {
+        if (!diretoria) return json({ ok: false, erro: 'nao_autenticado' }, 401);
+        return json(await recuperarDocumentos(env, url.searchParams.get('desdeId')));
       }
       // Diagnóstico do Mercado Pago (só Diretoria) — descobre POR QUE o checkout falha,
       // sem NUNCA expor a chave (mostra só presença, tipo TEST/PROD e o erro real do MP).

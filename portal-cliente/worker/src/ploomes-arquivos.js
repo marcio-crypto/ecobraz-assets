@@ -327,6 +327,43 @@ export async function importarLoteDocumentos(env, desdeId, top) {
   return { ok: true, lidos: docs.length, gravados, falhas, bytes, ultimoId: maxId, fim: docs.length === 0 };
 }
 
+// RECUPERAÇÃO de documentos — à prova de furos. Re-varre a faixa inteira de Ids
+// (de 0 até o fim), pergunta ao D1 quais já estão guardados e baixa SÓ os que
+// faltam. É retomável e idempotente: o próprio banco é a fonte da verdade, então
+// rodar de novo sempre re-tenta o que ainda estiver faltando. Páginas pequenas
+// (100) para nunca estourar o limite de subrequisições do Worker.
+export async function recuperarDocumentos(env, desdeId) {
+  if (!env.PLOOMES_USER_KEY) return { ok: false, erro: 'Falta a chave do Ploomes no cofre.' };
+  if (!env.DB_PLOOMES) return { ok: false, erro: 'Banco D1 não vinculado (DB_PLOOMES).' };
+  if (!env.R2_ARQUIVOS) return { ok: false, erro: 'Depósito R2 ainda não ligado. Ative o R2 no painel da Cloudflare.' };
+  const N = 100;
+  const D = Math.max(Number(desdeId) || 0, 0);
+  const r = await reqJSON(env, `/Documents?$top=${N}&$orderby=Id&$filter=Id%20gt%20${D}&$select=Id,Name,FileName,ContactId,DealId,DocumentUrl,CreateDate`, 20000);
+  if (r.erro) return { ok: false, erro: r.erro, desdeId: D };
+  if (r.status !== 200) return { ok: false, erro: `HTTP ${r.status}`, desdeId: D };
+  const docs = r.value || [];
+  if (docs.length === 0) return { ok: true, lidos: 0, gravados: 0, gaps: 0, falhas: 0, bytes: 0, ultimoId: D, fim: true };
+  let maxId = D, menorId = docs[0].Id;
+  for (const d of docs) { if (d.Id > maxId) maxId = d.Id; if (d.Id < menorId) menorId = d.Id; }
+  const jaSet = new Set();
+  try {
+    const q = await env.DB_PLOOMES.prepare("SELECT ploomes_id FROM arquivos_ploomes WHERE fonte='documento' AND ploomes_id BETWEEN ?1 AND ?2").bind(menorId, maxId).all();
+    for (const row of (q.results || [])) jaSet.add(Number(row.ploomes_id));
+  } catch (e) { return { ok: false, erro: 'D1: ' + String((e && e.message) || e).slice(0, 100), desdeId: D }; }
+  let gravados = 0, gaps = 0, falhas = 0, bytes = 0;
+  for (const d of docs) {
+    if (jaSet.has(Number(d.Id))) continue;
+    gaps++;
+    const key = `documento/${d.Id}`;
+    if (!d.DocumentUrl) { falhas++; continue; }
+    const dl = await baixarParaR2(env, key, d.DocumentUrl, 'application/pdf');
+    if (!dl.ok) { falhas++; continue; }
+    await gravarMeta(env, { r2_key: key, fonte: 'documento', ploomes_id: d.Id, deal_id: d.DealId || null, contact_id: d.ContactId || null, nome_arquivo: d.FileName || d.Name || `documento-${d.Id}`, content_type: dl.contentType, tamanho: dl.tamanho, criado_em: d.CreateDate || '' });
+    gravados++; if (dl.tamanho) bytes += dl.tamanho;
+  }
+  return { ok: true, lidos: docs.length, gravados, gaps, falhas, bytes, ultimoId: maxId, fim: false };
+}
+
 // ---------------------------------------------------------------------------
 // Estatísticas: total no Ploomes + já importado no D1 (por fonte) + cursores.
 // ---------------------------------------------------------------------------
@@ -470,6 +507,11 @@ export function paginaMigrarArquivos(user, s) {
       <button class="btn btn-g" onclick="PARAR.doc=true">■ Parar</button>
     </div>
     <div id="docSt" style="font-size:12.5px;color:#4F6469;margin-top:10px"></div>
+    <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-g" onclick="rodarRecuperarDocs(this)" ${s.r2Ligado ? '' : 'disabled'}>⤓ Recuperar documentos que faltaram</button>
+      <span style="font-size:11.5px;color:#8fa39f">Re-confere a lista inteira e baixa só as propostas que ficaram para trás.</span>
+    </div>
+    <div id="recdocSt" style="font-size:12.5px;color:#4F6469;margin-top:8px"></div>
   </div>
 </div>
 <script>
@@ -512,6 +554,14 @@ async function rodarReprocessar(btn){PARAR.rep=false;btn.disabled=true;var st=do
     if(!j.gravados){st.textContent='Recuperados '+rec.toLocaleString('pt-BR')+'. Ainda restam '+Number(j.restam||0).toLocaleString('pt-BR')+' que não voltaram — clique de novo para tentar mais, ou me avise para eu analisar.';break;}
     st.textContent='Recuperando… '+rec.toLocaleString('pt-BR')+' recuperados · restam '+Number(j.restam||0).toLocaleString('pt-BR')+'.';
     await new Promise(function(r){setTimeout(r,120);});}
+  btn.disabled=false;}
+async function rodarRecuperarDocs(btn){PARAR.recdoc=false;btn.disabled=true;var st=document.getElementById('recdocSt');st.textContent='Re-conferindo a lista inteira de documentos…';CUR.recdoc=0;var rec=0,vist=0,falh=0;
+  while(!PARAR.recdoc){var j;try{var r=await fetch('/api/diretoria/documentos-recuperar?desdeId='+CUR.recdoc,{method:'POST'});j=await r.json();}catch(e){st.textContent='Erro de conexão — clique de novo para retomar.';break;}
+    if(!j.ok){st.textContent='Parou: '+(j.erro||'erro')+' — clique de novo para retomar.';break;}
+    FEITO.doc+=(j.gravados||0);rec+=(j.gravados||0);vist+=(j.lidos||0);falh+=(j.falhas||0);if(j.bytes)BYTES+=j.bytes;CUR.recdoc=j.ultimoId;setBar('doc');setMB();
+    if(j.fim){st.textContent='✅ Conferência completa! '+vist.toLocaleString('pt-BR')+' documentos revisados · '+rec.toLocaleString('pt-BR')+' recuperado(s)'+(falh?(' · '+falh.toLocaleString('pt-BR')+' não voltaram (clique de novo para tentar, ou me avise)'):'')+'.';break;}
+    st.textContent='Conferindo… '+vist.toLocaleString('pt-BR')+' revisados · '+rec.toLocaleString('pt-BR')+' recuperado(s)'+(falh?(' · '+falh+' não voltaram'):'')+'.';
+    await new Promise(function(r){setTimeout(r,80);});}
   btn.disabled=false;}
 async function rodarCompletar(btn){PARAR.compl=false;btn.disabled=true;var st=document.getElementById('completSt');st.textContent='Revisando cada coleta/cliente pelo filtro direto…';var off=0;
   while(!PARAR.compl){var j;try{var r=await fetch('/api/diretoria/arquivos-completar?offset='+off,{method:'POST'});j=await r.json();}catch(e){st.textContent='Erro de conexão — clique de novo para retomar.';break;}
