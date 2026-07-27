@@ -1,6 +1,11 @@
-// Worker ecobraz-coletas — recebe o formulário de /agendamento/, cria o lead no
-// Ploomes (CRM) e no E-goi (marketing, se houver consentimento) e envia ao lead
-// um e-mail transacional de confirmação ("recebemos sua solicitação").
+// Worker ecobraz-coletas — recebe o formulário de /agendamento/, registra o lead
+// no SISTEMA PRÓPRIO da Ecobraz (portal — caixa de entrada do escritório), no
+// E-goi (marketing, se houver consentimento) e envia ao lead um e-mail
+// transacional de confirmação ("recebemos sua solicitação").
+//
+// LEADS: cutover para o sistema próprio (2026-07) — não usa mais o Ploomes. A
+// função sendToPloomes fica preservada (não chamada) como rede de emergência,
+// caso seja preciso reverter rápido.
 //
 // SEGURANÇA/COMPATIBILIDADE:
 // - Segredos e variáveis vivem na Cloudflare; o deploy usa keep_vars=true e NÃO
@@ -18,7 +23,7 @@ export default {
     const cors = corsHeaders(origin, allowed);
     if (request.method === 'OPTIONS') return new Response(null, {status:204, headers:cors});
     const url = new URL(request.url);
-    if (url.pathname === '/health') return json({ok:true, service:'ecobraz-coletas', version:6}, 200, cors);
+    if (url.pathname === '/health') return json({ok:true, service:'ecobraz-coletas', version:7, destino:'portal'}, 200, cors);
     if (url.pathname !== '/api/coletas' || request.method !== 'POST') return json({ok:false, error:'not_found'}, 404, cors);
     if (!allowed.has(origin)) return json({ok:false, error:'origin_not_allowed'}, 403, cors);
     let input;
@@ -31,9 +36,11 @@ export default {
       if (!passed) return json({ok:false,error:'challenge_failed'},403,cors);
     }
     const lead = normalize(input, request);
-    let ploomes;
-    try { ploomes = await sendToPloomes(lead, env); }
-    catch (error) { console.error('ploomes_failure', safeError(error)); return json({ok:false,error:'crm_unavailable'},502,cors); }
+    // CUTOVER: o lead é registrado no sistema PRÓPRIO da Ecobraz (portal), não no Ploomes.
+    // Falha aqui é VISÍVEL (502) — o cliente reenvia; nunca perdemos um lead em silêncio.
+    let saved;
+    try { saved = await sendToPortal(lead, env); }
+    catch (error) { console.error('portal_failure', safeError(error)); return json({ok:false,error:'crm_unavailable'},502,cors); }
     let egoi = {ok:false, skipped:true, existing:false};
     if (lead.marketing_consent) {
       try { egoi = await sendToEgoi(lead, env); }
@@ -44,7 +51,7 @@ export default {
     let confirmation = {ok:false, skipped:true};
     try { confirmation = await sendConfirmationEmail(lead, env); }
     catch (error) { console.error('confirmation_email_failure', safeError(error)); confirmation = {ok:false, skipped:false, detail:safeError(error).message}; }
-    return json({ok:true, request_id:crypto.randomUUID(), crm:{ok:true,contact_id:ploomes.contactId,deal_id:ploomes.dealId}, marketing:{ok:Boolean(egoi.ok),skipped:Boolean(egoi.skipped)}, confirmation:{ok:Boolean(confirmation.ok),skipped:Boolean(confirmation.skipped),detail:confirmation.detail||''}},201,cors);
+    return json({ok:true, request_id:crypto.randomUUID(), crm:{ok:true, saved_id:saved.id}, marketing:{ok:Boolean(egoi.ok),skipped:Boolean(egoi.skipped)}, confirmation:{ok:Boolean(confirmation.ok),skipped:Boolean(confirmation.skipped),detail:confirmation.detail||''}},201,cors);
   }
 };
 
@@ -64,6 +71,25 @@ function normalize(v, request) {
   const clean=(x,max=500)=>String(x||'').trim().slice(0,max);
   return {profile:clean(v.profile),name:clean(v.name,200),company:clean(v.company,200),email:clean(v.email,320).toLowerCase(),phone:clean(v.phone,50),material_category:clean(v.material_category,200),volume:clean(v.volume,100),material_description:clean(v.material_description,4000),postal_code:clean(v.postal_code,20),city:clean(v.city,150),state:clean(v.state,20),documentation:clean(v.documentation,250),urgency:clean(v.urgency,100),page_url:clean(v.page_url,1000),source:'website',utm_source:clean(v.utm_source,200),utm_medium:clean(v.utm_medium,200),utm_campaign:clean(v.utm_campaign,200),utm_content:clean(v.utm_content,200),utm_term:clean(v.utm_term,200),marketing_consent:v.marketing_consent==='yes',submitted_at:new Date().toISOString(),country:request.cf?.country || ''};
 }
+// Registra o lead na caixa de entrada do escritório, no sistema próprio (portal).
+// Servidor-a-servidor, autenticado pelo segredo compartilhado LEAD_INGEST_SECRET
+// (o MESMO valor precisa estar no worker do portal). O corpo já sai com os nomes
+// de campo que o /api/lead espera (name, email, company, profile, material_category…).
+async function sendToPortal(lead, env) {
+  requireEnv(env, ['LEAD_INGEST_SECRET']);
+  const target = env.PORTAL_LEAD_URL || 'https://sistema.ecobraz.org/api/lead';
+  const r = await fetch(target, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-lead-secret': env.LEAD_INGEST_SECRET },
+    body: JSON.stringify(lead),
+  });
+  const body = await r.text();
+  if (!r.ok) throw new Error(`portal_${r.status}_${body.slice(0, 180)}`);
+  let data; try { data = JSON.parse(body); } catch { data = {}; }
+  if (!data.ok) throw new Error(`portal_rejected_${data.error || 'desconhecido'}`);
+  return { id: data.id };
+}
+// PRESERVADA (não é chamada no fluxo atual) — rede de emergência p/ reverter ao Ploomes.
 async function sendToPloomes(lead, env) {
   requireEnv(env,['PLOOMES_USER_KEY','PLOOMES_PIPELINE_ID']);
   const base=env.PLOOMES_API_URL || 'https://public-api2.ploomes.com';
