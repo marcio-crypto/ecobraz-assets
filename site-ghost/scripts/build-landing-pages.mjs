@@ -42,6 +42,29 @@ const referenciaHtml = (p) => !p.referencia ? '' : `<hr><h2>Referência técnica
 // Bloco de depoimentos (avaliações públicas do Google) — campo opcional
 // `depoimentos: {nota, total, url, itens: [{autor, texto}]}` na landing.
 // Citações verbatim da base verificada em docs/marketing/dados/.
+// Seção visual de telas do Portal Ecobraz — campo opcional
+// `telas: {title, sub, itens: [{img, alt, eyebrow, title, text, points[]}]}`.
+// Imagens em theme/assets/images/, linhas alternadas, texto mínimo.
+const telasSection = (p, slug) => !p.telas ? '' : `<section class="hx-block">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Veja por dentro</span><h2>${esc(p.telas.title)}</h2></div>
+      <p>${esc(p.telas.sub)}</p>
+    </div>
+    ${p.telas.itens.map((t, n) => `<div class="hx-tela${n % 2 ? ' flip' : ''}">
+      <div class="hx-tela-txt">
+        <span class="hx-label">${esc(t.eyebrow)}</span>
+        <h3>${esc(t.title)}</h3>
+        <p>${esc(t.text)}</p>
+        ${t.points && t.points.length ? `<ul class="hx-tela-pts">${t.points.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
+      </div>
+      <figure class="hx-tela-img"><img src="{{asset "images/${t.img}"}}" alt="${esc(t.alt)}" loading="${n === 0 ? 'eager' : 'lazy'}"></figure>
+    </div>`).join('\n    ')}
+    <p class="hx-micro" style="margin-top:18px">Telas e dados ilustrativos, apenas para demonstração.</p>
+  </div>
+</section>
+
+`;
 const depoimentosSection = (p, slug) => !p.depoimentos ? '' : `<section class="hx-block">
   <div class="container">
     <div class="hx-head-split">
@@ -62,7 +85,7 @@ function renderTemplate(p) {
   const formAction = '{{@site.url}}/agendamento/';
   const hiddenMaterial = p.form.material ? `<input type="hidden" name="material" value="${esc(p.form.material)}">` : '';
   const heroBand = p.hero.band.map((b) => `<span><strong>${esc(b.title)}</strong>${esc(b.text)}</span>`).join('\n        ');
-  const pains = p.pains.map((c) => `<div class="hx-sol"><span class="hx-icon">${icons[c.icon] || icons.alert}</span><h3>${esc(c.title)}</h3><p>${esc(c.text)}</p>${c.consequence ? `<span class="hx-cost">${esc(c.consequence)}</span>` : ''}</div>`).join('\n        ');
+  const pains = (p.pains || []).map((c) => `<div class="hx-sol"><span class="hx-icon">${icons[c.icon] || icons.alert}</span><h3>${esc(c.title)}</h3><p>${esc(c.text)}</p>${c.consequence ? `<span class="hx-cost">${esc(c.consequence)}</span>` : ''}</div>`).join('\n        ');
   const recognize = p.recognize ? p.recognize.items.map((i) => `<li>${esc(i)}</li>`).join('') : '';
   const contrastBefore = p.contrast ? p.contrast.before.items.map((i) => `<li>${esc(i)}</li>`).join('') : '';
   const contrastAfter = p.contrast ? p.contrast.after.items.map((i) => `<li>${esc(i)}</li>`).join('') : '';
@@ -118,7 +141,7 @@ function renderTemplate(p) {
   </div>
 </section>
 
-${p.recognize ? `<section class="hx-block">
+${telasSection(p, slug)}${p.recognize ? `<section class="hx-block">
   <div class="container hx-reco">
     <div>
       <span class="hx-label">Você se reconhece?</span>
@@ -129,7 +152,7 @@ ${p.recognize ? `<section class="hx-block">
   </div>
 </section>
 
-` : ''}<section class="hx-block${p.recognize ? ' alt' : ''}">
+` : ''}${p.pains ? `<section class="hx-block${p.recognize ? ' alt' : ''}">
   <div class="container">
     <div class="hx-head-split">
       <div><span class="hx-label">O que está em jogo</span><h2>${esc(p.painsTitle)}</h2></div>
@@ -141,7 +164,7 @@ ${p.recognize ? `<section class="hx-block">
   </div>
 </section>
 
-${p.contrast ? `<section class="hx-block">
+` : ''}${p.contrast ? `<section class="hx-block">
   <div class="container">
     <div class="hx-head-split">
       <div><span class="hx-label">A virada</span><h2>${esc(p.contrast.title)}</h2></div>
@@ -411,8 +434,8 @@ function renderSyncEntry(p) {
   // mantém os links internos auditáveis e um resumo legível no editor.
   const html = [
     `<p>${esc(p.hero.sub)}</p>`,
-    `<h2>${esc(p.painsTitle)}</h2>`,
-    `<p>${esc(p.painsSub)}</p>`,
+    p.painsTitle ? `<h2>${esc(p.painsTitle)}</h2>` : '',
+    p.painsSub ? `<p>${esc(p.painsSub)}</p>` : '',
     `<h2>Escopo</h2><p>${esc(p.scope.conditions)}</p>`,
     `<p>Solução do hub <a href="${p.hub.href}">${esc(p.hub.title)}</a>. Relacionadas: ${p.related.map((r) => `<a href="${r.href}">${esc(r.title)}</a>`).join(', ')}. Comprovação: <a href="/documentacao-e-rastreabilidade/">documentação e rastreabilidade</a> e <a href="/evidencias/">evidências públicas</a>.</p>`,
     `<p><a href="/agendamento/?perfil=empresa&amp;origem=${p.slug}">Solicitar avaliação técnica</a>.</p>`
