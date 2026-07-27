@@ -414,7 +414,12 @@ async function calc(e){e.preventDefault();
 
 // Página do formulário GHG (Nível 2). Por ora PÚBLICA para teste; na versão final
 // ela abre só depois do pagamento confirmado.
-export function paginaCalculoDetalhado() {
+export function paginaCalculoDetalhado(nivelId) {
+  const nv = nivelCarbono(nivelId);
+  const teste = !nv;
+  const mostra1 = teste || nv.id !== 'simples';   // Escopo 1 (combustíveis) + Escopo 3 (viagens/deslocamento)
+  const cadeia = teste || nv.id === 'completo' || nv.id === 'contratado';
+  const titulo = nv ? `Inventário de carbono — nível ${nv.nome}` : 'Cálculo detalhado da sua pegada';
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
@@ -451,30 +456,32 @@ h1{font-size:clamp(23px,3vw,30px);color:var(--teal);letter-spacing:-.02em;margin
 @media(max-width:520px){.scopes{grid-template-columns:1fr}.row input{width:120px}}
 </style></head><body>
 <div class="wrap">
-  <div class="top"><img src="/assets/logo.png" alt="Ecobraz Emigre"><span class="tag">Cálculo detalhado · GHG Protocol</span></div>
-  <h1>Cálculo detalhado da sua pegada</h1>
-  <p class="sub">Informe os consumos do último ano. Quanto mais campos preencher, mais preciso fica o resultado.</p>
-  <div class="note">🔒 Página de teste. Na versão final, ela abre automaticamente após o pagamento confirmado.</div>
+  <div class="top"><img src="/assets/logo.png" alt="Ecobraz Emigre"><span class="tag">Inventário de carbono · GHG Protocol</span></div>
+  <h1>${titulo}</h1>
+  <p class="sub">Informe os consumos do último ano. A calculadora faz o resto, no padrão GHG Protocol.</p>
+  ${teste ? `<div class="note">🔒 Página de teste. Na versão final, ela abre após o pagamento confirmado.</div>
   <div class="card" id="paycard">
     <div class="grp">🧪 Teste de pagamento (R$ 1 · Pix real)</div>
     <p class="sub" style="margin:0 0 12px">Gera a cobrança no Mercado Pago e paga R$ 1 via Pix — é o teste do fluxo de pagamento de verdade.</p>
     <div id="paystatus"></div>
     <button class="btn" id="paybtn" type="button" onclick="pagar()">Pagar R$ 1 com Pix (teste)</button>
-  </div>
+  </div>` : ''}
   <form id="f" onsubmit="return calc(event)">
     <div class="card">
       <div class="grp">Escopo 2 — Energia</div>
       <div class="row"><label>Energia elétrica<span class="u">kWh/ano</span></label><input id="eletricidade_kwh" inputmode="numeric" placeholder="0"></div>
-      <div class="grp">Escopo 1 — Combustíveis (frota, geradores)</div>
+      ${mostra1 ? `<div class="grp">Escopo 1 — Combustíveis (frota, geradores)</div>
       <div class="row"><label>Diesel<span class="u">L/ano</span></label><input id="diesel_litro" inputmode="numeric" placeholder="0"></div>
       <div class="row"><label>Gasolina<span class="u">L/ano</span></label><input id="gasolina_litro" inputmode="numeric" placeholder="0"></div>
       <div class="row"><label>Etanol<span class="u">L/ano</span></label><input id="etanol_litro" inputmode="numeric" placeholder="0"></div>
       <div class="row"><label>GNV<span class="u">m³/ano</span></label><input id="gnv_m3" inputmode="numeric" placeholder="0"></div>
       <div class="row"><label>GLP (gás)<span class="u">kg/ano</span></label><input id="glp_kg" inputmode="numeric" placeholder="0"></div>
-      <div class="grp">Escopo 3 — Outros (opcional)</div>
+      <div class="grp">Escopo 3 — Transporte e funcionários</div>
       <div class="row"><label>Viagens aéreas<span class="u">km/ano</span></label><input id="viagem_aerea_km" inputmode="numeric" placeholder="0"></div>
-      <div class="row"><label>Deslocamento de funcionários<span class="u">km/ano</span></label><input id="deslocamento_km" inputmode="numeric" placeholder="0"></div>
-      <button class="btn" id="b" type="submit">Calcular pegada detalhada</button>
+      <div class="row"><label>Deslocamento de funcionários<span class="u">km/ano</span></label><input id="deslocamento_km" inputmode="numeric" placeholder="0"></div>` : ''}
+      ${cadeia ? `<div class="grp">Escopo 3 — Cadeia de fornecedores</div>
+      <div class="note" style="margin:0 0 4px">A <b>cadeia de fornecedores</b> é consolidada com apoio da <b>Villanova ESG</b>, a partir dos dados dos seus principais fornecedores — a equipe entra em contato para levantar isso com você.</div>` : ''}
+      <button class="btn" id="b" type="submit">Calcular</button>
     </div>
   </form>
   <div class="card res" id="res">
@@ -490,7 +497,7 @@ h1{font-size:clamp(23px,3vw,30px);color:var(--teal);letter-spacing:-.02em;margin
 </div>
 <script>
 function nf(n){return (Math.round(n*100)/100).toLocaleString('pt-BR');}
-function val(id){return document.getElementById(id).value.replace(/\\./g,'').replace(',', '.');}
+function val(id){var el=document.getElementById(id);return el?el.value.replace(/\\./g,'').replace(',', '.'):'';}
 async function calc(e){e.preventDefault();
   var b=document.getElementById('b');b.disabled=true;b.textContent='Calculando…';
   var campos=['eletricidade_kwh','diesel_litro','gasolina_litro','etanol_litro','gnv_m3','glp_kg','viagem_aerea_km','deslocamento_km'];

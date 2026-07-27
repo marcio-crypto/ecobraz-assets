@@ -156,7 +156,7 @@ export default {
         return json(resultado, resultado.ok ? 200 : 400);
       }
       // Cálculo detalhado — Nível 2 (formulário GHG). Página de teste (será liberada após pagamento).
-      if (pathname === '/calculo-detalhado' && request.method === 'GET') return html(paginaCalculoDetalhado());
+      if (pathname === '/calculo-detalhado' && request.method === 'GET') return html(paginaCalculoDetalhado(url.searchParams.get('nivel') || ''));
       if (pathname === '/api/carbono/detalhado' && request.method === 'POST') {
         const corpo = await request.json().catch(() => ({}));
         return json({ ok: true, resultado: calculoDetalhadoGHG(corpo) });
