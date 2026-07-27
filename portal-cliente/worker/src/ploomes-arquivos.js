@@ -78,6 +78,14 @@ async function logFalha(env, id, dealId, contactId, motivo) {
 async function limparFalha(env, id) {
   try { await env.DB_PLOOMES.prepare('DELETE FROM anexos_falhas WHERE ploomes_id=?1').bind(Number(id)).run(); } catch { /* silencioso */ }
 }
+// Idem para DOCUMENTOS (tabela documentos_falhas) — guarda o motivo real
+// (sem_url = registro sem PDF; ou o erro/estado do download) para diagnóstico.
+async function logFalhaDoc(env, id, dealId, contactId, motivo) {
+  try { await env.DB_PLOOMES.prepare('INSERT OR REPLACE INTO documentos_falhas (ploomes_id,deal_id,contact_id,motivo,quando) VALUES (?,?,?,?,?)').bind(Number(id), dealId != null ? Number(dealId) : null, contactId != null ? Number(contactId) : null, String(motivo == null ? '' : motivo).slice(0, 60), nowISO()).run(); } catch { /* silencioso */ }
+}
+async function limparFalhaDoc(env, id) {
+  try { await env.DB_PLOOMES.prepare('DELETE FROM documentos_falhas WHERE ploomes_id=?1').bind(Number(id)).run(); } catch { /* silencioso */ }
+}
 
 // ---------------------------------------------------------------------------
 // ANEXOS (Attachments) — enumerados por negócio (Deal), com $expand=Attachments.
@@ -350,18 +358,33 @@ export async function recuperarDocumentos(env, desdeId) {
     const q = await env.DB_PLOOMES.prepare("SELECT ploomes_id FROM arquivos_ploomes WHERE fonte='documento' AND ploomes_id BETWEEN ?1 AND ?2").bind(menorId, maxId).all();
     for (const row of (q.results || [])) jaSet.add(Number(row.ploomes_id));
   } catch (e) { return { ok: false, erro: 'D1: ' + String((e && e.message) || e).slice(0, 100), desdeId: D }; }
-  let gravados = 0, gaps = 0, falhas = 0, bytes = 0;
+  let gravados = 0, gaps = 0, falhas = 0, semUrl = 0, bytes = 0;
   for (const d of docs) {
     if (jaSet.has(Number(d.Id))) continue;
     gaps++;
     const key = `documento/${d.Id}`;
-    if (!d.DocumentUrl) { falhas++; continue; }
-    const dl = await baixarParaR2(env, key, d.DocumentUrl, 'application/pdf');
-    if (!dl.ok) { falhas++; continue; }
-    await gravarMeta(env, { r2_key: key, fonte: 'documento', ploomes_id: d.Id, deal_id: d.DealId || null, contact_id: d.ContactId || null, nome_arquivo: d.FileName || d.Name || `documento-${d.Id}`, content_type: dl.contentType, tamanho: dl.tamanho, criado_em: d.CreateDate || '' });
+    let url = d.DocumentUrl, fn = d.FileName || d.Name, dealId = d.DealId, contactId = d.ContactId, criado = d.CreateDate;
+    // Como nos anexos: a lista às vezes NÃO traz um link válido. Busca o item
+    // individual para pegar uma DocumentUrl fresca.
+    if (!url) {
+      const one = await reqJSON(env, `/Documents(${d.Id})`, 12000);
+      const it = one.value && one.value[0];
+      if (it) { url = it.DocumentUrl; fn = fn || it.FileName || it.Name; dealId = dealId || it.DealId; contactId = contactId || it.ContactId; criado = criado || it.CreateDate; }
+    }
+    if (!url) { falhas++; semUrl++; await logFalhaDoc(env, d.Id, dealId, contactId, 'sem_url'); continue; }
+    let dl = await baixarParaR2(env, key, url, 'application/pdf');
+    // Se o download falhou, tenta UMA vez com link fresco do item individual.
+    if (!dl.ok) {
+      const one = await reqJSON(env, `/Documents(${d.Id})`, 12000);
+      const it = one.value && one.value[0];
+      if (it && it.DocumentUrl && it.DocumentUrl !== url) dl = await baixarParaR2(env, key, it.DocumentUrl, 'application/pdf');
+    }
+    if (!dl.ok) { falhas++; await logFalhaDoc(env, d.Id, dealId, contactId, dl.erro || 'download_falhou'); continue; }
+    await gravarMeta(env, { r2_key: key, fonte: 'documento', ploomes_id: d.Id, deal_id: dealId || null, contact_id: contactId || null, nome_arquivo: fn || `documento-${d.Id}`, content_type: dl.contentType, tamanho: dl.tamanho, criado_em: criado || '' });
+    await limparFalhaDoc(env, d.Id);
     gravados++; if (dl.tamanho) bytes += dl.tamanho;
   }
-  return { ok: true, lidos: docs.length, gravados, gaps, falhas, bytes, ultimoId: maxId, fim: false };
+  return { ok: true, lidos: docs.length, gravados, gaps, falhas, semUrl, bytes, ultimoId: maxId, fim: false };
 }
 
 // ---------------------------------------------------------------------------
@@ -555,12 +578,13 @@ async function rodarReprocessar(btn){PARAR.rep=false;btn.disabled=true;var st=do
     st.textContent='Recuperando… '+rec.toLocaleString('pt-BR')+' recuperados · restam '+Number(j.restam||0).toLocaleString('pt-BR')+'.';
     await new Promise(function(r){setTimeout(r,120);});}
   btn.disabled=false;}
-async function rodarRecuperarDocs(btn){PARAR.recdoc=false;btn.disabled=true;var st=document.getElementById('recdocSt');st.textContent='Re-conferindo a lista inteira de documentos…';CUR.recdoc=0;var rec=0,vist=0,falh=0;
+async function rodarRecuperarDocs(btn){PARAR.recdoc=false;btn.disabled=true;var st=document.getElementById('recdocSt');st.textContent='Re-conferindo a lista inteira de documentos…';CUR.recdoc=0;var rec=0,vist=0,falh=0,semu=0;
   while(!PARAR.recdoc){var j;try{var r=await fetch('/api/diretoria/documentos-recuperar?desdeId='+CUR.recdoc,{method:'POST'});j=await r.json();}catch(e){st.textContent='Erro de conexão — clique de novo para retomar.';break;}
     if(!j.ok){st.textContent='Parou: '+(j.erro||'erro')+' — clique de novo para retomar.';break;}
-    FEITO.doc+=(j.gravados||0);rec+=(j.gravados||0);vist+=(j.lidos||0);falh+=(j.falhas||0);if(j.bytes)BYTES+=j.bytes;CUR.recdoc=j.ultimoId;setBar('doc');setMB();
-    if(j.fim){st.textContent='✅ Conferência completa! '+vist.toLocaleString('pt-BR')+' documentos revisados · '+rec.toLocaleString('pt-BR')+' recuperado(s)'+(falh?(' · '+falh.toLocaleString('pt-BR')+' não voltaram (clique de novo para tentar, ou me avise)'):'')+'.';break;}
-    st.textContent='Conferindo… '+vist.toLocaleString('pt-BR')+' revisados · '+rec.toLocaleString('pt-BR')+' recuperado(s)'+(falh?(' · '+falh+' não voltaram'):'')+'.';
+    FEITO.doc+=(j.gravados||0);rec+=(j.gravados||0);vist+=(j.lidos||0);falh+=(j.falhas||0);semu+=(j.semUrl||0);if(j.bytes)BYTES+=j.bytes;CUR.recdoc=j.ultimoId;setBar('doc');setMB();
+    var quebra=falh?(' · '+falh.toLocaleString('pt-BR')+' não voltaram'+(semu?(' ('+semu.toLocaleString('pt-BR')+' sem PDF anexado)'):'')):'';
+    if(j.fim){st.textContent='✅ Conferência completa! '+vist.toLocaleString('pt-BR')+' revisados · '+rec.toLocaleString('pt-BR')+' recuperado(s)'+quebra+'. Registrei os motivos — pode me avisar que eu analiso.';break;}
+    st.textContent='Conferindo… '+vist.toLocaleString('pt-BR')+' revisados · '+rec.toLocaleString('pt-BR')+' recuperado(s)'+quebra+'.';
     await new Promise(function(r){setTimeout(r,80);});}
   btn.disabled=false;}
 async function rodarCompletar(btn){PARAR.compl=false;btn.disabled=true;var st=document.getElementById('completSt');st.textContent='Revisando cada coleta/cliente pelo filtro direto…';var off=0;
