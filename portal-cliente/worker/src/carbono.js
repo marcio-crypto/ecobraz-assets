@@ -278,8 +278,8 @@ function render(){
     var p=n.precos[fx];
     var preco=(p==null)?'<span class="sob">Sob proposta</span>':('<span class="pv">'+brl(p)+'</span><span class="pu">/ano</span>');
     var cta;
-    if(!n.self){ cta='<a class="btn dark" href="/carbono/contato?nivel='+n.id+'&faixa='+fx+'">Falar com a Villanova</a>'; }
-    else if(p==null){ cta='<a class="btn ghost" href="/carbono/contato?nivel='+n.id+'&faixa='+fx+'">Pedir proposta</a>'; }
+    if(p==null){ cta='<a class="btn ghost" href="/carbono/contato?nivel='+n.id+'&faixa='+fx+'">Pedir proposta</a>'; }
+    else if(!n.self){ cta='<a class="btn dark" href="/carbono/assinar?nivel='+n.id+'&faixa='+fx+'">Contratar</a>'; }
     else { cta='<a class="btn" href="/carbono/assinar?nivel='+n.id+'&faixa='+fx+'">Assinar</a>'; }
     return '<div class="tier'+(n.self?'':' contr')+'"><div class="tn">'+n.nome+'</div><div class="te">'+n.escopos+'</div><div class="ti">'+n.inclui+'</div><div class="tp">'+preco+'</div>'+cta+'</div>';
   }).join('');
@@ -328,6 +328,43 @@ async function enviar(e){e.preventDefault();var b=document.getElementById('b');b
   document.getElementById('card').innerHTML='<div style="text-align:center;padding:20px 0"><div style="font-size:42px">✅</div><div style="font-size:17px;font-weight:800;color:#00333B;margin-top:8px">Recebido!</div><p class="sub" style="margin-top:8px">Nossa equipe vai entrar em contato em breve.</p></div>';
   return false;
 }
+</script></body></html>`;
+}
+
+// Pós-pagamento: confirma (polling) e libera o preenchimento dos dados.
+export function paginaCarbonoObrigado(pedidoId) {
+  const pid = String(pedidoId || '').replace(/[^a-zA-Z0-9_-]/g, '');
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Pagamento — Ecobraz</title><link rel="icon" href="/assets/logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>:root{--green:#92C430;--teal:#00333B;--ink:#10262B;--muted:#4F6469;--line:#DFE7E6;--soft:#F7F9F8}
+*{box-sizing:border-box}body{margin:0;font-family:Montserrat,"Segoe UI",Arial,sans-serif;color:var(--ink);background:var(--soft);line-height:1.6}
+.wrap{max-width:560px;margin:0 auto;padding:48px 20px 60px}.top{display:flex;align-items:center;gap:14px;margin-bottom:22px}.top img{width:150px}
+.tag{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#74A21F;border-left:1px solid var(--line);padding-left:14px}
+h2{font-size:22px;margin:6px 0 8px}.sub{color:var(--muted);margin:0}
+.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:28px 24px;text-align:center}
+.btn{display:inline-block;margin-top:16px;text-decoration:none;padding:0 22px;min-height:50px;line-height:50px;border-radius:10px;background:var(--green);color:var(--ink);font-weight:800;font-size:15px}
+</style></head><body>
+<div class="wrap">
+  <div class="top"><img src="/assets/logo.png" alt="Ecobraz Emigre"><span class="tag">Pegada de carbono</span></div>
+  <div class="card" id="card"><p class="sub" id="msg">⏳ Confirmando seu pagamento…</p></div>
+</div>
+<script>
+var PID=${JSON.stringify(pid)},tent=0;
+function fdata(iso){try{return new Date(iso).toLocaleDateString('pt-BR');}catch(e){return '';}}
+function checa(){
+  fetch('/api/carbono/pedido?id='+encodeURIComponent(PID)).then(function(r){return r.json();}).then(function(d){
+    var card=document.getElementById('card');
+    if(d.status==='pago'){
+      var val=d.validade?(' Válido até <b>'+fdata(d.validade)+'</b>.'):'';
+      if(d.nivel==='contratado'){ card.innerHTML='<div style="font-size:44px">✅</div><h2>Contratação confirmada!</h2><p class="sub">A <b>Villanova ESG</b> vai entrar em contato para coletar os dados e montar o seu inventário de carbono.'+val+'</p>'; }
+      else { card.innerHTML='<div style="font-size:44px">✅</div><h2>Pagamento confirmado!</h2><p class="sub">Agora é só preencher os dados da sua empresa que a calculadora monta o inventário.'+val+'</p><a class="btn" href="/calculo-detalhado?nivel='+encodeURIComponent(d.nivel||'')+'&pedido='+encodeURIComponent(PID)+'">Preencher meus dados &rarr;</a>'; }
+      return;
+    }
+    if(tent++<40){ var m=document.getElementById('msg'); if(m)m.textContent='⏳ Confirmando seu pagamento… (pode levar até 1 minuto)'; setTimeout(checa,3000); }
+    else { document.getElementById('card').innerHTML='<p class="sub">Ainda não confirmou. Se você já pagou, recarregue esta página em instantes.</p>'; }
+  }).catch(function(){ if(tent++<40) setTimeout(checa,3000); });
+}
+checa();
 </script></body></html>`;
 }
 
@@ -502,6 +539,7 @@ async function calc(e){e.preventDefault();
   var b=document.getElementById('b');b.disabled=true;b.textContent='Calculando…';
   var campos=['eletricidade_kwh','diesel_litro','gasolina_litro','etanol_litro','gnv_m3','glp_kg','viagem_aerea_km','deslocamento_km'];
   var body={}; campos.forEach(function(c){ body[c]=val(c); });
+  body.pedido=new URLSearchParams(location.search).get('pedido')||'';
   try{
     var r=await fetch('/api/carbono/detalhado',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
     var d=await r.json();

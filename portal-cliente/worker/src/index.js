@@ -33,7 +33,7 @@ const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8', 'cache
 
 import { paginaLogin, paginaPainel, paginaMensagem } from './paginas.js';
 import { LOGO_ESCURO_B64, LOGO_CLARO_B64 } from './logos.js';
-import { paginaCalculadora, estimativaCarbono, paginaCalculoDetalhado, calculoDetalhadoGHG, paginaLojaCarbono, paginaCarbonoContato, nivelCarbono, faixaValida, precoNivel } from './carbono.js';
+import { paginaCalculadora, estimativaCarbono, paginaCalculoDetalhado, calculoDetalhadoGHG, paginaLojaCarbono, paginaCarbonoContato, paginaCarbonoObrigado, nivelCarbono, faixaValida, precoNivel } from './carbono.js';
 import { criarPreferencia, consultarPagamento } from './mercadopago.js';
 import { acharPacote, precoPacote, paginaLojaAdote, paginaObrigadoAdote, paginaDiagnostico, lerCredito, salvarCredito, novoCredito, aplicarCompra, aplicarRecarga, precisaRecarga, listarPatrocinadores } from './adote.js';
 import { statusDaEtapa, valorProp, CAMPOS_OS } from './os-utils.js';
@@ -139,27 +139,51 @@ export default {
       if (pathname === '/carbono/assinar' && request.method === 'GET') {
         const nv = nivelCarbono(url.searchParams.get('nivel') || '');
         const fx = faixaValida(url.searchParams.get('faixa') || '');
-        if (!nv || !fx || !nv.self) return new Response(null, { status: 302, headers: { Location: '/carbono/planos', 'cache-control': 'no-store' } });
+        if (!nv || !fx) return new Response(null, { status: 302, headers: { Location: '/carbono/planos', 'cache-control': 'no-store' } });
         const preco = precoNivel(nv.id, fx);
         if (!preco || preco.sobConsulta) return new Response(null, { status: 302, headers: { Location: `/carbono/contato?nivel=${encodeURIComponent(nv.id)}&faixa=${encodeURIComponent(fx)}`, 'cache-control': 'no-store' } });
         const pedidoId = novoId();
         const baseUrl = env.PORTAL_BASE_URL || url.origin;
-        if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${pedidoId}`, JSON.stringify({ status: 'pendente', tipo: 'carbono', nivel: nv.id, faixa: fx, valor: preco.valor, criadoEm: nowS() }), { expirationTtl: 7 * 86400 });
+        if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${pedidoId}`, JSON.stringify({ produto: 'carbono', status: 'pendente', nivel: nv.id, faixa: fx, valor: preco.valor, criadoEm: nowS() }), { expirationTtl: 7 * 86400 });
         try {
-          const pref = await criarPreferencia({ valor: preco.valor, descricao: `Inventário de carbono — nível ${nv.nome} (anual)`, externalReference: pedidoId, baseUrl, backPath: '/carbono/obrigado' }, env);
+          const pref = await criarPreferencia({ valor: preco.valor, descricao: `Inventário de carbono — nível ${nv.nome} (anual)`, externalReference: pedidoId, baseUrl, backPath: `/carbono/obrigado?pedido=${pedidoId}` }, env);
           return new Response(null, { status: 302, headers: { Location: pref.initPoint, 'cache-control': 'no-store' } });
         } catch (error) { console.error('carbono_assinar_falhou', safeError(error)); return html(paginaMensagem('Pagamento indisponível', 'Não consegui gerar a cobrança agora. Tente de novo em instantes.', '/carbono/planos'), 502); }
       }
-      if (pathname === '/carbono/obrigado' && request.method === 'GET') return html(paginaMensagem('Pagamento recebido!', 'Obrigado! Assim que o pagamento confirmar, liberamos o preenchimento dos seus dados para o inventário. Você recebe o acesso por e-mail.', '/carbono/planos'));
+      if (pathname === '/carbono/obrigado' && request.method === 'GET') return html(paginaCarbonoObrigado(url.searchParams.get('pedido') || ''));
       if (pathname === '/api/carbono/estimativa' && request.method === 'GET') {
         const resultado = await estimativaCarbono(url.searchParams.get('cnpj') || '', env);
         return json(resultado, resultado.ok ? 200 : 400);
       }
       // Cálculo detalhado — Nível 2 (formulário GHG). Página de teste (será liberada após pagamento).
-      if (pathname === '/calculo-detalhado' && request.method === 'GET') return html(paginaCalculoDetalhado(url.searchParams.get('nivel') || ''));
+      if (pathname === '/calculo-detalhado' && request.method === 'GET') {
+        const nvId = url.searchParams.get('nivel') || '';
+        if (nvId) { // Nível real: o formulário abre só com um pedido PAGO desse nível.
+          const pid = (url.searchParams.get('pedido') || '').replace(/[^a-zA-Z0-9_-]/g, '');
+          let ped = null;
+          if (env.PORTAL_KV && pid) { const raw = await env.PORTAL_KV.get(`pedido:${pid}`); ped = raw ? JSON.parse(raw) : null; }
+          if (!ped || ped.produto !== 'carbono' || ped.status !== 'pago' || ped.nivel !== nvId) {
+            return html(paginaMensagem('Formulário bloqueado', 'O formulário do inventário abre depois do pagamento confirmado. Escolha o seu plano para começar.', '/carbono/planos'), 402);
+          }
+        }
+        return html(paginaCalculoDetalhado(nvId));
+      }
       if (pathname === '/api/carbono/detalhado' && request.method === 'POST') {
         const corpo = await request.json().catch(() => ({}));
-        return json({ ok: true, resultado: calculoDetalhadoGHG(corpo) });
+        const resultado = calculoDetalhadoGHG(corpo);
+        // Guarda o inventário no pedido pago (pra não perder e depois gerar o relatório assinado).
+        try {
+          const pid = String((corpo && corpo.pedido) || '').replace(/[^a-zA-Z0-9_-]/g, '');
+          if (pid && env.PORTAL_KV) {
+            const raw = await env.PORTAL_KV.get(`pedido:${pid}`);
+            const ped = raw ? JSON.parse(raw) : null;
+            if (ped && ped.produto === 'carbono' && ped.status === 'pago') {
+              ped.inventario = { inputs: corpo, resultado, em: nowS() };
+              await env.PORTAL_KV.put(`pedido:${pid}`, JSON.stringify(ped), { expirationTtl: 400 * 86400 });
+            }
+          }
+        } catch (error) { console.error('carbono_salvar_inv_falhou', safeError(error)); }
+        return json({ ok: true, resultado });
       }
       // Pagamento (Mercado Pago) — cria a cobrança e devolve o link de pagamento.
       // Por ora valor de TESTE (R$1). Depois: precoNivel2 por porte.
@@ -244,6 +268,17 @@ export default {
                     console.log('adote_credito', { cliente: ped.clienteId, saldo: cred.saldoKg, evento: ped.evento || 'compra' });
                   }
                 } catch (error) { console.error('adote_credito_falhou', safeError(error)); }
+              } else if (ped.produto === 'carbono') {
+                // Inventário de carbono pago: marca validade anual e, se Contratado, abre
+                // tarefa pra Villanova coletar os dados e executar (com o e-mail do pagador).
+                try {
+                  ped.validade = new Date(Date.now() + 365 * 86400 * 1000).toISOString();
+                  if (pg.payerEmail) ped.email = pg.payerEmail;
+                  await env.PORTAL_KV.put(chave, JSON.stringify(ped), { expirationTtl: 400 * 86400 });
+                  if (ped.nivel === 'contratado') {
+                    await ingestLead(env, { email: pg.payerEmail || '', company: '', material_category: 'Carbono — Contratado (PAGO)', material_description: `Cliente CONTRATOU e PAGOU o inventário nível Contratado. A Villanova coleta os dados e faz o inventário.\nFaturamento: ${ped.faixa}\nValor: R$ ${ped.valor}\nPedido: ${pg.externalReference}\nE-mail do pagador: ${pg.payerEmail || '(não informado)'}`, source: 'carbono-contratado-pago' });
+                  }
+                } catch (error) { console.error('carbono_pago_falhou', safeError(error)); }
               } else {
                 try { await enviarEmailNF(ped, pg, env); } catch (error) { console.error('nf_email_falhou', safeError(error)); }
               }
@@ -258,7 +293,7 @@ export default {
         if (!env.PORTAL_KV || !id) return json({ ok: false, status: 'desconhecido' }, 400);
         const raw = await env.PORTAL_KV.get(`pedido:${id}`);
         const ped = raw ? JSON.parse(raw) : null;
-        return json({ ok: true, status: ped?.status || 'desconhecido' });
+        return json({ ok: true, status: ped?.status || 'desconhecido', nivel: ped?.nivel || '', validade: ped?.validade || '' });
       }
 
       // Equipe & Acessos: SOMA os usuários cadastrados às listas de acesso por papel

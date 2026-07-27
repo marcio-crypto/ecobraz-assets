@@ -47,6 +47,6 @@ export async function consultarPagamento(paymentId, env) {
   if (!r.ok) return null;
   try {
     const d = await r.json();
-    return { id: d.id, status: d.status, externalReference: d.external_reference, valor: d.transaction_amount };
+    return { id: d.id, status: d.status, externalReference: d.external_reference, valor: d.transaction_amount, payerEmail: (d.payer && d.payer.email) || '' };
   } catch { return null; }
 }
