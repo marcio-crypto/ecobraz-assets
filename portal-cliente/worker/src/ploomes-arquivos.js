@@ -366,12 +366,15 @@ export async function recuperarDocumentos(env, desdeId) {
     let url = d.DocumentUrl, fn = d.FileName || d.Name, dealId = d.DealId, contactId = d.ContactId, criado = d.CreateDate;
     // Como nos anexos: a lista às vezes NÃO traz um link válido. Busca o item
     // individual para pegar uma DocumentUrl fresca.
+    let itemLido = true;
     if (!url) {
       const one = await reqJSON(env, `/Documents(${d.Id})`, 12000);
       const it = one.value && one.value[0];
       if (it) { url = it.DocumentUrl; fn = fn || it.FileName || it.Name; dealId = dealId || it.DealId; contactId = contactId || it.ContactId; criado = criado || it.CreateDate; }
+      else itemLido = false; // não conseguimos nem LER o registro — não é 'sem PDF', é falha de leitura
     }
-    if (!url) { falhas++; semUrl++; await logFalhaDoc(env, d.Id, dealId, contactId, 'sem_url'); continue; }
+    if (!itemLido) { falhas++; await logFalhaDoc(env, d.Id, dealId, contactId, 'item_ilegivel'); continue; }
+    if (!url) { falhas++; semUrl++; await logFalhaDoc(env, d.Id, dealId, contactId, 'sem_pdf'); continue; }
     let dl = await baixarParaR2(env, key, url, 'application/pdf');
     // Se o download falhou, tenta UMA vez com link fresco do item individual.
     if (!dl.ok) {
@@ -582,7 +585,8 @@ async function rodarRecuperarDocs(btn){PARAR.recdoc=false;btn.disabled=true;var 
   while(!PARAR.recdoc){var j;try{var r=await fetch('/api/diretoria/documentos-recuperar?desdeId='+CUR.recdoc,{method:'POST'});j=await r.json();}catch(e){st.textContent='Erro de conexão — clique de novo para retomar.';break;}
     if(!j.ok){st.textContent='Parou: '+(j.erro||'erro')+' — clique de novo para retomar.';break;}
     FEITO.doc+=(j.gravados||0);rec+=(j.gravados||0);vist+=(j.lidos||0);falh+=(j.falhas||0);semu+=(j.semUrl||0);if(j.bytes)BYTES+=j.bytes;CUR.recdoc=j.ultimoId;setBar('doc');setMB();
-    var quebra=falh?(' · '+falh.toLocaleString('pt-BR')+' não voltaram'+(semu?(' ('+semu.toLocaleString('pt-BR')+' sem PDF anexado)'):'')):'';
+    var retentar=falh-semu;
+    var quebra=falh?(' · '+falh.toLocaleString('pt-BR')+' não voltaram ('+(semu?semu.toLocaleString('pt-BR')+' sem PDF':'')+(semu&&retentar>0?' · ':'')+(retentar>0?retentar.toLocaleString('pt-BR')+' a re-tentar':'')+')'):'';
     if(j.fim){st.textContent='✅ Conferência completa! '+vist.toLocaleString('pt-BR')+' revisados · '+rec.toLocaleString('pt-BR')+' recuperado(s)'+quebra+'. Registrei os motivos — pode me avisar que eu analiso.';break;}
     st.textContent='Conferindo… '+vist.toLocaleString('pt-BR')+' revisados · '+rec.toLocaleString('pt-BR')+' recuperado(s)'+quebra+'.';
     await new Promise(function(r){setTimeout(r,80);});}
