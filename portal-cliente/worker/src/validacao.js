@@ -72,55 +72,34 @@ export async function validarCDF(request, env, url) {
   const c = (url.searchParams.get('c') || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 24);
   const esperado = n ? await codigoCDF(n, env) : '';
   const assinaturaOk = !!(n && c && esperado && c === esperado);
-  let info = null;
-  if (assinaturaOk) { try { info = await buscarCertificado(n, env); } catch { info = null; } }
-  const status = !assinaturaOk ? 400 : (info ? 200 : 404);
+  // Ploomes ENCERRADO: a AUTENTICIDADE do CDF é garantida pela ASSINATURA (HMAC),
+  // conferida localmente acima — ela não pode ser forjada. Os detalhes extras (empresa,
+  // data) vinham do Ploomes e ficam de fora; a validade não depende deles.
+  const info = assinaturaOk ? await buscarCertificado(n, env) : null;
+  const status = assinaturaOk ? 200 : 400;
   return new Response(paginaValidacao({ assinaturaOk, info, n }), { status, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } });
 }
 
+// Detalhes extras do certificado. Após o encerramento do Ploomes não há mais fonte
+// ao vivo — retorna null (a autenticidade já vem da assinatura). Mantida como ponto
+// único caso, no futuro, os detalhes venham da nossa base migrada.
 async function buscarCertificado(numero, env) {
-  const base = env.PLOOMES_API_URL || 'https://public-api2.ploomes.com';
-  const headers = { 'User-Key': env.PLOOMES_USER_KEY, Accept: 'application/json' };
-  const modeloCDF = Number(env.CDF_TEMPLATE_ID || 224095);
-  const n = String(numero).replace(/\D/g, '');
-  if (!n) return null;
-  const sel = "&$top=20&$select=Id,Name,DocumentNumber,DealId,Date,TemplateId";
-  const ehCDF = (d) => Number(d.TemplateId) === modeloCDF || /certificad|cdf|destina/i.test(d.Name || '');
-  const numNoNome = (d) => (String(d.Name || '').match(/(\d+)/) || [])[1] || '';
-  const consulta = async (filtro) => {
-    const r = await fetch(`${base}/Documents?$filter=${encodeURIComponent(filtro)}${sel}`, { headers });
-    if (!r.ok) return [];
-    return (await r.json()).value || [];
-  };
-  // O número no QR vem do TÍTULO do CDF ("16974 - Certificado") = número da OS que aparece no papel.
-  // 1) acha pelo número no início do nome; 2) cai pro DocumentNumber interno do Ploomes.
-  let doc = (await consulta(`startswith(Name,'${n} ')`)).find((d) => ehCDF(d) && numNoNome(d) === n);
-  if (!doc) doc = (await consulta(`DocumentNumber eq ${Number(n)}`)).find(ehCDF);
-  if (!doc) return null;
-  let empresa = '';
-  if (doc.DealId) {
-    const rd = await fetch(`${base}/Deals?$filter=Id%20eq%20${doc.DealId}&$top=1&$select=Id,Title&$expand=Contact($select=Id,Name)`, { headers });
-    if (rd.ok) { const dl = ((await rd.json()).value || [])[0]; empresa = dl?.Contact?.Name || dl?.Title || ''; }
-  }
-  // Mostra o número que a pessoa vê no papel (o da OS, do título), não o DocumentNumber interno.
-  return { numero: numNoNome(doc) || doc.DocumentNumber || n, empresa, data: doc.Date || '' };
+  return null;
 }
 
 function paginaValidacao({ assinaturaOk, info, n }) {
-  const ok = assinaturaOk && info;
+  const ok = !!assinaturaOk;
   const cor = ok ? '#1E7A3D' : '#B23A2E';
   const selo = ok ? '✓' : '✕';
-  const titulo = ok ? 'Documento autêntico' : (assinaturaOk ? 'Certificado não encontrado' : 'Código inválido');
+  const titulo = ok ? 'Documento autêntico' : 'Código inválido';
   const sub = ok
-    ? 'Este Certificado de Destinação Final consta como <strong>legítimo</strong> nos registros da Ecobraz.'
-    : (assinaturaOk
-      ? 'A assinatura confere, mas não encontramos um certificado com esse número. Verifique o documento.'
-      : 'Não foi possível validar este código. Escaneie o QR diretamente do certificado original.');
+    ? 'Este Certificado de Destinação Final é <strong>legítimo</strong> — a assinatura digital da Ecobraz confere.'
+    : 'Não foi possível validar este código. Escaneie o QR diretamente do certificado original.';
   const linhas = ok ? `
       <table role="presentation" style="width:100%;border-collapse:collapse;margin-top:22px;">
-        <tr><td style="padding:10px 0;border-top:1px solid #E4EBE9;color:#6B7B78;font-size:13px;">Certificado de Destinação Final nº</td><td style="padding:10px 0;border-top:1px solid #E4EBE9;text-align:right;font-weight:800;color:#10262B;">${esc(info.numero)}</td></tr>
-      ${info.empresa ? `<tr><td style="padding:10px 0;border-top:1px solid #E4EBE9;color:#6B7B78;font-size:13px;">Emitido para</td><td style="padding:10px 0;border-top:1px solid #E4EBE9;text-align:right;font-weight:700;color:#10262B;">${esc(info.empresa)}</td></tr>` : ''}
-      ${fmtData(info.data) ? `<tr><td style="padding:10px 0;border-top:1px solid #E4EBE9;color:#6B7B78;font-size:13px;">Data</td><td style="padding:10px 0;border-top:1px solid #E4EBE9;text-align:right;font-weight:700;color:#10262B;">${esc(fmtData(info.data))}</td></tr>` : ''}
+        <tr><td style="padding:10px 0;border-top:1px solid #E4EBE9;color:#6B7B78;font-size:13px;">Certificado de Destinação Final nº</td><td style="padding:10px 0;border-top:1px solid #E4EBE9;text-align:right;font-weight:800;color:#10262B;">${esc((info && info.numero) || n)}</td></tr>
+      ${info && info.empresa ? `<tr><td style="padding:10px 0;border-top:1px solid #E4EBE9;color:#6B7B78;font-size:13px;">Emitido para</td><td style="padding:10px 0;border-top:1px solid #E4EBE9;text-align:right;font-weight:700;color:#10262B;">${esc(info.empresa)}</td></tr>` : ''}
+      ${info && fmtData(info.data) ? `<tr><td style="padding:10px 0;border-top:1px solid #E4EBE9;color:#6B7B78;font-size:13px;">Data</td><td style="padding:10px 0;border-top:1px solid #E4EBE9;text-align:right;font-weight:700;color:#10262B;">${esc(fmtData(info.data))}</td></tr>` : ''}
       </table>` : '';
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Validação de Certificado — Ecobraz</title></head>
 <body style="margin:0;background:#F2F6F4;font-family:Montserrat,'Segoe UI',Arial,Helvetica,sans-serif;color:#10262B;-webkit-font-smoothing:antialiased;">
@@ -135,7 +114,7 @@ function paginaValidacao({ assinaturaOk, info, n }) {
     <h1 style="margin:0 0 10px;text-align:center;font-size:22px;letter-spacing:-.02em;color:${cor};">${esc(titulo)}</h1>
     <p style="margin:0;text-align:center;font-size:14.5px;line-height:1.6;color:#4F6469;">${sub}</p>
     ${linhas}
-    <p style="margin:26px 0 0;text-align:center;font-size:11.5px;color:#9fb0ac;line-height:1.6;">Conferido em tempo real contra os registros da Ecobraz.<br>Em caso de dúvida, fale com <strong style="color:#4F6469;">acesso@ecobraz.org.br</strong>.</p>
+    <p style="margin:26px 0 0;text-align:center;font-size:11.5px;color:#9fb0ac;line-height:1.6;">Autenticidade conferida pela assinatura digital da Ecobraz.<br>Em caso de dúvida, fale com <strong style="color:#4F6469;">acesso@ecobraz.org.br</strong>.</p>
   </div>
 </div>
 </body></html>`;

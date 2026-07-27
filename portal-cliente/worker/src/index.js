@@ -725,7 +725,20 @@ export default {
         if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
         let b; try { b = await request.json(); } catch { b = null; }
         if (!b || !b.id || !b.status) return json({ ok: false, error: 'dados' }, 400);
-        await atualizarStatusOS(env, b.id, b.status);
+        const os = await atualizarStatusOS(env, b.id, b.status);
+        // Aviso "coleta realizada" ao cliente na conclusão — do SISTEMA NOVO (sem Ploomes).
+        // Best-effort, de-dup por KV, nunca bloqueia a mudança de status.
+        try {
+          if (os && b.status === 'concluida') {
+            const chave = `notif:coleta:${os.id}:coleta_realizada`;
+            const jaAvisou = env.PORTAL_KV ? await env.PORTAL_KV.get(chave) : null;
+            if (!jaAvisou) {
+              const cli = os.clienteId ? await lerCliente(env, os.clienteId) : null;
+              const emailCli = cli && (cli.email || (Array.isArray(cli.contatos) && cli.contatos[0] && cli.contatos[0].email) || '');
+              if (emailCli && env.RESEND_API_KEY) { await enviarEmailStatus(emailCli, os.clienteNome, 'coleta_realizada', env); if (env.PORTAL_KV) await env.PORTAL_KV.put(chave, '1', { expirationTtl: 60 * 60 * 24 * 90 }); }
+            }
+          }
+        } catch (error) { console.error('coleta_status_email_falhou', safeError(error)); }
         return json({ ok: true });
       }
 
@@ -2187,18 +2200,13 @@ function extrairDealId(p) {
   for (const c of cands) { const n = Number(c); if (Number.isInteger(n) && n > 0) return n; }
   return null;
 }
+// Ploomes ENCERRADO: os avisos ao cliente agora saem do SISTEMA NOVO (e-mail de
+// "coleta agendada" ao criar e "coleta realizada" ao concluir a coleta). Este
+// endpoint é mantido só para não dar erro caso um webhook antigo do Ploomes ainda
+// chegue durante a transição — ele NÃO lê mais o Ploomes.
 async function webhookPloomes(request, env) {
-  if (!env.PLOOMES_WEBHOOK_SECRET) return json({ ok: false, error: 'nao_configurado' }, 503);
-  const token = new URL(request.url).searchParams.get('t') || request.headers.get('x-webhook-token') || '';
-  if (token !== env.PLOOMES_WEBHOOK_SECRET) return json({ ok: false, error: 'nao_autorizado' }, 401);
-  let payload = null;
-  try { payload = await request.json(); } catch { payload = null; }
-  // Guarda o último payload cru (pra ajustar o formato após o 1º disparo real).
-  try { if (env.PORTAL_KV) await env.PORTAL_KV.put('webhook:ultimo', JSON.stringify(payload).slice(0, 4000), { expirationTtl: 60 * 60 * 24 * 7 }); } catch { /* ignore */ }
-  const dealId = extrairDealId(payload);
-  if (!dealId) { console.error('webhook_sem_deal'); return json({ ok: true, ignorado: 'sem_deal' }); }
-  try { await processarMudancaOS(dealId, env); } catch (error) { console.error('webhook_erro', safeError(error)); }
-  return json({ ok: true });
+  console.log('webhook_ploomes_ignorado', 'ploomes_encerrado');
+  return json({ ok: true, ignorado: 'ploomes_encerrado' });
 }
 async function webhookUltimo(request, env) { // depuração: ver o último payload e o resultado do processamento
   const token = new URL(request.url).searchParams.get('t') || '';
