@@ -36,6 +36,16 @@ export async function lerCliente(env, id) {
   const raw = await env.PORTAL_KV.get(`cli:${String(id).replace(/[^a-zA-Z0-9_]/g, '')}`);
   return raw ? JSON.parse(raw) : null;
 }
+// E-mails (minúsculos) de um cliente — a empresa e cada contato (PJ) ou a pessoa
+// (PF). Usado no índice de login (climail) para o cliente entrar pelo próprio e-mail.
+export function emailsDoCliente(cli) {
+  if (!cli) return [];
+  const out = [];
+  const add = (e) => { const x = String(e || '').trim().toLowerCase(); if (x && x.includes('@') && !out.includes(x)) out.push(x); };
+  add(cli.email);
+  if (cli.tipo === 'PJ') (cli.contatos || []).forEach((c) => add(c && c.email));
+  return out;
+}
 export async function salvarCliente(env, rec) {
   rec.atualizadoEm = agora();
   if (!rec.id) { rec.id = (rec.tipo === 'PJ' ? 'emp_' : 'pf_') + (crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '').slice(0, 10) : Math.random().toString(36).slice(2, 12)); rec.criadoEm = rec.atualizadoEm; }
@@ -51,6 +61,8 @@ export async function salvarCliente(env, rec) {
     const i = idx.findIndex((x) => x.id === rec.id);
     if (i >= 0) idx[i] = resumo; else idx.unshift(resumo);
     await env.PORTAL_KV.put('cli:index', JSON.stringify(idx).slice(0, 900000));
+    // Índice de login: e-mail → id do cliente (pro cliente novo entrar no portal).
+    try { for (const em of emailsDoCliente(rec)) await env.PORTAL_KV.put(`climail:${em}`, rec.id); } catch { /* não bloqueia o cadastro */ }
   }
   return rec;
 }

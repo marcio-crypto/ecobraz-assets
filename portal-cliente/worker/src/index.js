@@ -51,7 +51,7 @@ import { sondarAnexosPloomes, paginaSondaAnexos } from './ploomes-docs.js';
 import { amostraContatosPloomes, paginaAmostraContatos, importarLoteContatos, estatisticasMigracao, buscarContatos, paginaMigrarPloomes, detalheContato, paginaContatoDetalhe, importarLoteNegocios, estatisticasNegocios, paginaMigrarNegocios } from './ploomes-migracao.js';
 import { importarLoteAnexos, importarLoteAnexosContatos, completarAnexos, importarAnexosJanela, reprocessarFalhas, importarLoteDocumentos, recuperarDocumentos, estatisticasArquivos, paginaMigrarArquivos, diagnosticoAnexos, paginaDiagAnexos } from './ploomes-arquivos.js';
 import { fiscalPermitido, nomeFiscal, listarNotas, lerNota, importarLote, vincularNota, sugerirVinculoSync, paginaFiscalLogin, paginaFiscalHome, paginaFiscalResultado, paginaFiscalNota } from './fiscal.js';
-import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, clienteDeLead, arquivosDoCliente, paginaLeads, paginaLeadDetalhe, paginaInicio } from './cadastro.js';
+import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, emailsDoCliente, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, clienteDeLead, arquivosDoCliente, paginaLeads, paginaLeadDetalhe, paginaInicio } from './cadastro.js';
 import { listarColetasOS, lerColetaOS, criarColetaOS, atualizarStatusOS, atualizarColetaOS, registrarAnexoColeta, removerAnexoColeta, paginaColetasLista, paginaGerarColeta, paginaEditarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga } from './coletas.js';
 import { listarVeiculos, lerVeiculo, salvarVeiculo, paginaFrota, paginaVeiculoForm, lerJornadaAtiva, abrirJornada, fecharJornada, registrarAbastecimento, tagColetaComVeiculo, servirFotoJornada, bannerJornada, paginaAbrirDia, paginaFecharDia, paginaAbastecer, placaDaColeta } from './frota.js';
 import { carregarEquipeNoEnv, listarUsuarios, lerUsuario, salvarUsuario, importarUsuarios, paginaEquipe, paginaUsuarioForm, paginaEquipeImportar } from './equipe.js';
@@ -1578,31 +1578,50 @@ function cookieFiscal(valor, maxAge) { return `${FISCAL_COOKIE}=${encodeURICompo
 // lógica de antes (pessoa loga, empresa guarda o vínculo), agora 100% local.
 async function buscarClienteBase(email, env) {
   const em = String(email || '').trim().toLowerCase();
-  if (!em || !env.DB_PLOOMES) return null;
-  let row = null;
-  try {
-    const r = await env.DB_PLOOMES.prepare(
-      `SELECT c.ploomes_id AS cid, c.nome AS nome_pessoa, c.documento AS doc_pessoa, c.company_id AS company_id,
-              e.ploomes_id AS emp_id, e.nome AS emp_nome, e.documento AS emp_doc
-         FROM contatos c
-         LEFT JOIN contatos e ON e.ploomes_id = c.company_id
-        WHERE c.email = ?1
-        ORDER BY (CASE WHEN c.company_id IS NOT NULL AND c.company_id <> 0 THEN 0 ELSE 1 END), c.ploomes_id DESC
-        LIMIT 1`
-    ).bind(em).all();
-    row = (r.results || [])[0] || null;
-  } catch (error) { console.error('base_lookup_falhou', safeError(error)); return null; }
-  if (!row) return null;
-  const temEmpresa = !!(row.company_id && Number(row.company_id) !== 0 && row.emp_id);
-  return {
-    contactId: row.cid,
-    empresaId: temEmpresa ? row.emp_id : row.cid,
-    nome: (temEmpresa ? (row.emp_nome || row.nome_pessoa) : row.nome_pessoa) || '',
-    email: em,
-    documento: (temEmpresa ? (row.emp_doc || row.doc_pessoa) : row.doc_pessoa) || '',
-    dataFim: null,
-    liberado: true, // sistema aberto a todos os clientes da base
-  };
+  if (!em) return null;
+  // 1) Base migrada do Ploomes (D1) — tem ploomes_id (histórico completo).
+  if (env.DB_PLOOMES) {
+    try {
+      const r = await env.DB_PLOOMES.prepare(
+        `SELECT c.ploomes_id AS cid, c.nome AS nome_pessoa, c.documento AS doc_pessoa, c.company_id AS company_id,
+                e.ploomes_id AS emp_id, e.nome AS emp_nome, e.documento AS emp_doc
+           FROM contatos c
+           LEFT JOIN contatos e ON e.ploomes_id = c.company_id
+          WHERE c.email = ?1
+          ORDER BY (CASE WHEN c.company_id IS NOT NULL AND c.company_id <> 0 THEN 0 ELSE 1 END), c.ploomes_id DESC
+          LIMIT 1`
+      ).bind(em).all();
+      const row = (r.results || [])[0] || null;
+      if (row) {
+        const temEmpresa = !!(row.company_id && Number(row.company_id) !== 0 && row.emp_id);
+        return {
+          contactId: row.cid,
+          empresaId: temEmpresa ? row.emp_id : row.cid,
+          nome: (temEmpresa ? (row.emp_nome || row.nome_pessoa) : row.nome_pessoa) || '',
+          email: em,
+          documento: (temEmpresa ? (row.emp_doc || row.doc_pessoa) : row.doc_pessoa) || '',
+          dataFim: null,
+          liberado: true, // sistema aberto a todos os clientes da base
+        };
+      }
+    } catch (error) { console.error('base_lookup_falhou', safeError(error)); }
+  }
+  // 2) Clientes NOVOS cadastrados pela equipe (KV) — via índice climail:<email>.
+  //    Confere que o e-mail é mesmo daquele cliente (evita índice defasado).
+  if (env.PORTAL_KV) {
+    try {
+      const cliId = await env.PORTAL_KV.get(`climail:${em}`);
+      if (cliId) {
+        const cli = await lerCliente(env, cliId);
+        if (cli && emailsDoCliente(cli).includes(em)) {
+          const nome = cli.tipo === 'PJ' ? (cli.razaoSocial || cli.nomeFantasia || '') : (cli.nome || '');
+          const documento = String((cli.tipo === 'PJ' ? cli.cnpj : cli.cpf) || '').replace(/\D/g, '');
+          return { contactId: 0, empresaId: 0, nome, email: em, documento, dataFim: null, liberado: true };
+        }
+      }
+    } catch (error) { console.error('base_kv_lookup', safeError(error)); }
+  }
+  return null;
 }
 
 // [LEGADO — não é mais chamado] Portão antigo que lia o Ploomes: achava o
