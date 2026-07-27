@@ -71,7 +71,7 @@ export async function criarColetaOS(env, dados, criadoPor) {
   if (env.PORTAL_KV) {
     await env.PORTAL_KV.put(`os:${id}`, JSON.stringify(rec));
     const idx = await listarColetasOS(env);
-    idx.unshift({ id, numero, status: 'agendada', clienteNome: rec.clienteNome, cidade: cidadeDoEndereco(rec.endereco), dataAgendada: rec.dataAgendada, agenteNome: rec.agenteNome, agenteEmail: rec.agenteEmail, criadoEm: rec.criadoEm });
+    idx.unshift({ id, numero, status: 'agendada', clienteId: rec.clienteId || '', clienteNome: rec.clienteNome, cidade: cidadeDoEndereco(rec.endereco), dataAgendada: rec.dataAgendada, agenteNome: rec.agenteNome, agenteEmail: rec.agenteEmail, criadoEm: rec.criadoEm });
     await env.PORTAL_KV.put('os:index', JSON.stringify(idx).slice(0, 900000));
   }
   return rec;
@@ -155,8 +155,9 @@ function topo(sub) {
 }
 const pill = (status) => `<span style="flex:none;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;color:${STATUS_COR[status] || '#7c8a87;background:#EEF1F0'}">${esc((STATUS[status] || status).toUpperCase())}</span>`;
 
-export function paginaColetasLista(user, coletas, q) {
+export function paginaColetasLista(user, coletas, q, cliCtx) {
   q = q || '';
+  const filtroCli = cliCtx && cliCtx.nome ? cliCtx : null;
   const abertas = coletas.filter((c) => c.status !== 'concluida' && c.status !== 'cancelada').length;
   const linhas = coletas.length ? coletas.map((c) => `<a href="/coletas/os?id=${esc(c.id)}" style="display:flex;justify-content:space-between;align-items:center;gap:12px;text-decoration:none;background:#fff;border:1px solid #E4EBE9;border-radius:12px;padding:13px 15px;margin-bottom:9px">
       <div style="min-width:0"><div style="font-size:14px;font-weight:800;color:#10262B">${esc(c.numero)} <span style="font-weight:600;color:#7c8a87">· ${esc(c.clienteNome || '')}</span></div>
@@ -165,9 +166,10 @@ export function paginaColetasLista(user, coletas, q) {
     </a>`).join('') : `<div class="card" style="text-align:center;color:#8fa39f;font-size:13.5px">${q ? 'Nenhuma coleta encontrada para essa busca.' : 'Nenhuma coleta ainda.<br>Abra uma coleta a partir de um cliente no Cadastro.'}</div>`;
   return `${head('Coletas')}<body>${topo('coletas')}
 <div class="wrap">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin:0 0 12px"><h1 style="font-size:20px;margin:0">Ordens de Coleta</h1><span style="font-size:11px;background:#FFF4DE;color:#8A6A16;font-weight:800;padding:3px 9px;border-radius:20px">${abertas} em aberto</span></div>
-  <form method="get" action="/coletas" style="margin:0 0 12px"><input name="q" value="${esc(q)}" placeholder="🔎 Buscar por número (ex.: OS-2026-0001) ou cliente… e aperte Enter" autocomplete="off" style="width:100%;border:1px solid #DDE1E6;border-radius:10px;padding:11px 12px;font-size:14px;font-family:inherit"></form>
-  <a href="/cadastro" class="btn btn-g" style="margin-bottom:14px">Abrir coleta a partir de um cliente →</a>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin:0 0 12px"><h1 style="font-size:20px;margin:0">${filtroCli ? 'Coletas do cliente' : 'Ordens de Coleta'}</h1><span style="font-size:11px;background:#FFF4DE;color:#8A6A16;font-weight:800;padding:3px 9px;border-radius:20px">${abertas} em aberto</span></div>
+  ${filtroCli ? `<div style="background:#EAF2E6;border:1px solid #cfe6b8;border-radius:10px;padding:10px 13px;margin-bottom:12px;font-size:12.5px;color:#28413f;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><span>Mostrando as coletas de <b>${esc(filtroCli.nome)}</b></span><a href="/coletas" style="color:#0B5B66;font-weight:800;text-decoration:none;white-space:nowrap">ver todas as coletas →</a></div>
+  <a href="/coletas/nova?cliente=${esc(filtroCli.id)}" class="btn btn-p" style="margin-bottom:14px">＋ Nova coleta para este cliente</a>` : `<form method="get" action="/coletas" style="margin:0 0 12px"><input name="q" value="${esc(q)}" placeholder="🔎 Buscar por número (ex.: OS-2026-0001) ou cliente… e aperte Enter" autocomplete="off" style="width:100%;border:1px solid #DDE1E6;border-radius:10px;padding:11px 12px;font-size:14px;font-family:inherit"></form>
+  <a href="/cadastro" class="btn btn-g" style="margin-bottom:14px">Abrir coleta a partir de um cliente →</a>`}
   <div>${linhas}</div>
 </div></body></html>`;
 }

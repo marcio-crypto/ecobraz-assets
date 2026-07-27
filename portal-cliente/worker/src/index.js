@@ -582,11 +582,17 @@ export default {
         if (!escritorio) return html(paginaLoginEscritorio(googleConfigurado(env)));
         const q = (url.searchParams.get('q') || '').trim();
         const ql = q.toLowerCase();
+        const cliId = (url.searchParams.get('cliente') || '').trim();
         let coletas = await listarColetasOS(env);
-        // Busca cobre tudo (inclusive canceladas); sem busca, canceladas somem da lista.
-        if (ql) coletas = coletas.filter((c) => `${c.numero || ''} ${c.clienteNome || ''}`.toLowerCase().includes(ql));
-        else coletas = coletas.filter((c) => c.status !== 'cancelada');
-        return html(paginaColetasLista(escritorio, coletas, q));
+        let cliCtx = null;
+        if (cliId) {
+          const cli = await lerCliente(env, cliId);
+          const nome = cli ? (cli.tipo === 'PJ' ? (cli.razaoSocial || cli.nomeFantasia || '') : (cli.nome || '')) : '';
+          coletas = coletas.filter((c) => c.clienteId === cliId || (nome && c.clienteNome === nome));
+          cliCtx = { id: cliId, nome: nome || 'cliente' };
+        } else if (ql) coletas = coletas.filter((c) => `${c.numero || ''} ${c.clienteNome || ''}`.toLowerCase().includes(ql)); // busca cobre canceladas
+        else coletas = coletas.filter((c) => c.status !== 'cancelada'); // sem busca, canceladas somem
+        return html(paginaColetasLista(escritorio, coletas, q, cliCtx));
       }
       if (pathname === '/coletas/nova' && request.method === 'GET') {
         if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });

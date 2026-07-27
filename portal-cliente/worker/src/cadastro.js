@@ -279,7 +279,7 @@ export function paginaClienteDetalhe(user, cli, arquivos) {
     ${arqRows}
   </div>
   <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap"><a href="/coletas/nova?cliente=${esc(cli.id)}" class="btn btn-p">＋ Gerar coleta</a>
-    <a href="/coletas" class="btn btn-g">Ver todas as coletas</a></div>
+    <a href="/coletas?cliente=${esc(cli.id)}" class="btn btn-g">Ver coletas deste cliente</a></div>
 </div>
 </body></html>`;
 }
