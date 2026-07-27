@@ -1,0 +1,24 @@
+name: Ferramenta — checar URL ao vivo
+
+on:
+  workflow_dispatch:
+    inputs:
+      urls:
+        description: 'URLs para checar (separadas por espaço)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  checar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Status, redirecionamento e título de cada URL
+        run: |
+          for u in ${{ inputs.urls }}; do
+            echo "=== $u ==="
+            curl -sS -o /tmp/body -w "HTTP %{http_code} | efetiva: %{url_effective} | %{time_total}s\n" -L --max-time 20 "$u" || echo "FALHA de conexão"
+            grep -o '<title>[^<]*</title>' /tmp/body | head -1 || true
+          done
