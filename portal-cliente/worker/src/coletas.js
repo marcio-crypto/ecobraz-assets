@@ -496,6 +496,9 @@ export function paginaComprovanteOS(os, seloUrl) {
   const passos = ['Coleta', 'MTR', 'Pesagem', 'Triagem', 'Processamento', 'Destinação', 'CDF'];
   const stepper = passos.map((p, i) => `<span style="display:inline-flex;align-items:center"><span style="background:${i === 0 ? '#92C430' : '#E7EDEA'};color:${i === 0 ? '#10262B' : '#7c8a87'};font-size:10.5px;font-weight:800;padding:5px 11px;border-radius:20px">${p}</span>${i < passos.length - 1 ? '<span style="color:#c2cdc9;margin:0 3px;font-weight:800">›</span>' : ''}</span>`).join('');
   const f = (l, v, span) => `<div style="${span ? 'grid-column:1/-1;' : ''}"><div style="font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#93a6a2">${esc(l)}</div><div style="font-size:13px;color:#10262B;font-weight:600;margin-top:3px;line-height:1.5">${esc(v || '—')}</div></div>`;
+  const fotos = (Array.isArray(os.anexos) ? os.anexos : []).filter((a) => /image/.test(a.content_type || ''));
+  const fotosHTML = fotos.length ? `<div style="margin-top:22px"><div style="display:flex;align-items:center;gap:9px;margin:0 0 12px"><span style="width:4px;height:16px;background:#92C430;border-radius:2px"></span><span style="font-size:12px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:#00333B">Registro fotográfico</span></div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px">${fotos.map((a) => `<img src="/coletas/anexo?key=${encodeURIComponent(a.key)}" alt="${esc(a.nome || 'foto')}" style="width:160px;height:120px;object-fit:cover;border:1px solid #E4EBE9;border-radius:8px;background:#fff">`).join('')}</div></div>` : '';
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${esc(os.numero)} — Ecobraz</title>
 <style>@page{size:A4;margin:11mm}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}@media print{.noprint{display:none!important}html,body{background:#fff!important;margin:0!important}.doc-wrap{max-width:100%!important;margin:0!important;padding:0!important}.doc-card{border:none!important;border-radius:0!important;box-shadow:none!important}table,tr,img{page-break-inside:avoid}}</style></head>
 <body style="margin:0;background:#EDF1EF;font-family:Montserrat,'Segoe UI',Arial,Helvetica,sans-serif;color:#10262B">
@@ -535,6 +538,7 @@ export function paginaComprovanteOS(os, seloUrl) {
         <div style="font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:#3f6b1e">🤝 Coleta patrocinada · Adote um Bairro</div>
         <div style="font-size:13px;color:#28413f;margin-top:6px;line-height:1.55">Esta coleta é <b>financiada por ${esc(os.patrocinadorNome)}</b>. Ao receber este documento, o cliente <b>autoriza o compartilhamento das informações desta coleta</b> (materiais, peso e comprovantes de destinação) com o patrocinador, para fins de comprovação e relatório socioambiental — nos termos da LGPD (Lei 13.709/2018).</div>
       </div>` : ''}
+      ${fotosHTML}
       <div style="display:flex;gap:18px;align-items:center;margin-top:22px;background:#F7FAF9;border:1px solid #E4EBE9;border-radius:12px;padding:16px 18px">
         <img src="${esc(seloUrl)}" alt="QR" style="width:100px;height:100px;flex:none;border:1px solid #E4EBE9;border-radius:8px;background:#fff">
         <div><div style="font-size:13px;font-weight:800;color:#00333B">Rastreabilidade &amp; autenticidade</div>
