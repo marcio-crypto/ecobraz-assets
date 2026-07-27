@@ -48,7 +48,7 @@ import { engenheiroPermitido, nomeEngenheiro, filaValidacao, operacoesValidadas,
 import { diretorPermitido, nomeDiretor, reunirDados, paginaLoginDiretoria, paginaPainelDiretoria } from './diretoria.js';
 import { dadosPrevencao, paginaPrevencao, analisarColetaIA, salvarTabelaPrecos, pingIA } from './prevencao.js';
 import { sondarAnexosPloomes, paginaSondaAnexos } from './ploomes-docs.js';
-import { amostraContatosPloomes, paginaAmostraContatos, importarLoteContatos, estatisticasMigracao, buscarContatos, paginaMigrarPloomes, detalheContato, paginaContatoDetalhe } from './ploomes-migracao.js';
+import { amostraContatosPloomes, paginaAmostraContatos, importarLoteContatos, estatisticasMigracao, buscarContatos, paginaMigrarPloomes, detalheContato, paginaContatoDetalhe, importarLoteNegocios, estatisticasNegocios, paginaMigrarNegocios } from './ploomes-migracao.js';
 import { importarLoteAnexos, importarLoteAnexosContatos, completarAnexos, importarAnexosJanela, reprocessarFalhas, importarLoteDocumentos, recuperarDocumentos, estatisticasArquivos, paginaMigrarArquivos, diagnosticoAnexos, paginaDiagAnexos } from './ploomes-arquivos.js';
 import { fiscalPermitido, nomeFiscal, listarNotas, lerNota, importarLote, vincularNota, sugerirVinculoSync, paginaFiscalLogin, paginaFiscalHome, paginaFiscalResultado, paginaFiscalNota } from './fiscal.js';
 import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, clienteDeLead, paginaLeads, paginaLeadDetalhe, paginaInicio } from './cadastro.js';
@@ -372,6 +372,15 @@ export default {
       if (pathname === '/diretoria/contato' && request.method === 'GET') {
         if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
         return html(paginaContatoDetalhe(diretoria, await detalheContato(env, url.searchParams.get('id'))));
+      }
+      // Migração Ploomes — Fase 3: negócios/OS → banco próprio (com registro completo).
+      if (pathname === '/diretoria/migrar-negocios' && request.method === 'GET') {
+        if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
+        return html(paginaMigrarNegocios(diretoria, await estatisticasNegocios(env)));
+      }
+      if (pathname === '/api/diretoria/negocios-importar' && request.method === 'POST') {
+        if (!diretoria) return json({ ok: false, erro: 'nao_autenticado' }, 401);
+        return json(await importarLoteNegocios(env, url.searchParams.get('desdeId'), url.searchParams.get('top')));
       }
       // Migração Ploomes — Fase 2: arquivos (anexos + documentos) → R2. Painel + lotes.
       if (pathname === '/diretoria/migrar-arquivos' && request.method === 'GET') {

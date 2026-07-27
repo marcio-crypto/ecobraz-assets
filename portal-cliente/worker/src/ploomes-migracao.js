@@ -157,6 +157,108 @@ export async function buscarContatos(env, q, limit) {
 }
 
 // ---------------------------------------------------------------------------
+// FASE 3: NEGÓCIOS / OS (Deals) — importador em lote (D1), retomável por Id.
+// À PROVA DE PERDA: guarda o registro COMPLETO em dados_json (nada se perde),
+// além das colunas estruturadas para busca e ligação com o contato (contact_id).
+// Sem esta fase, encerrar o Ploomes perderia o histórico dos negócios.
+// ---------------------------------------------------------------------------
+export function mapearNegocio(d) {
+  if (!d || d.Id == null) return null;
+  const num = (v) => (v == null || v === '' ? null : Number(v));
+  return {
+    ploomesId: d.Id,
+    titulo: d.Title || d.Name || '',
+    contactId: num(d.ContactId),
+    personId: num(d.PersonId),
+    pipelineId: num(d.PipelineId),
+    stageId: num(d.StageId),
+    statusId: num(d.StatusId),
+    amount: (d.Amount == null || d.Amount === '' ? null : Number(d.Amount)),
+    ownerId: num(d.OwnerId),
+    criadoEm: d.CreateDate || '',
+    atualizadoEm: d.LastUpdateDate || d.LastInteractionRecordDate || '',
+  };
+}
+
+export async function importarLoteNegocios(env, desdeId, top) {
+  if (!env.PLOOMES_USER_KEY) return { ok: false, erro: 'Falta a chave do Ploomes no cofre.' };
+  if (!env.DB_PLOOMES) return { ok: false, erro: 'Banco D1 não vinculado (DB_PLOOMES).' };
+  const N = Math.min(Math.max(Number(top) || 50, 1), 100);
+  const D = Math.max(Number(desdeId) || 0, 0);
+  const r = await req(env, `/Deals?$top=${N}&$orderby=Id&$filter=Id%20gt%20${D}&$expand=OtherProperties`, 25000);
+  if (r.erro) return { ok: false, erro: r.erro, desdeId: D };
+  if (r.status !== 200) return { ok: false, erro: `HTTP ${r.status}`, desdeId: D };
+  const deals = r.value || [];
+  const nowISO = (() => { try { return new Date().toISOString(); } catch { return ''; } })();
+  const stmt = env.DB_PLOOMES.prepare('INSERT OR REPLACE INTO negocios (ploomes_id,titulo,contact_id,person_id,pipeline_id,stage_id,status_id,amount,owner_id,criado_em,atualizado_em,dados_json,importado_em) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)');
+  const cortar = (s, n) => String(s == null ? '' : s).slice(0, n);
+  let maxId = D; const batch = [];
+  for (const d of deals) {
+    const m = mapearNegocio(d); if (!m) continue;
+    if (m.ploomesId > maxId) maxId = m.ploomesId;
+    let js = ''; try { js = JSON.stringify(d).slice(0, 95000); } catch { js = ''; }
+    batch.push(stmt.bind(m.ploomesId, cortar(m.titulo, 300), m.contactId, m.personId, m.pipelineId, m.stageId, m.statusId, m.amount, m.ownerId, cortar(m.criadoEm, 30), cortar(m.atualizadoEm, 30), js, nowISO));
+  }
+  if (batch.length) { try { await env.DB_PLOOMES.batch(batch); } catch (e) { return { ok: false, erro: 'D1: ' + String((e && e.message) || e).slice(0, 120), desdeId: D }; } }
+  return { ok: true, lidos: deals.length, gravados: batch.length, ultimoId: maxId, fim: deals.length === 0 };
+}
+
+export async function estatisticasNegocios(env) {
+  const cnt = await req(env, '/Deals?$top=0&$count=true', 8000);
+  const total = cnt.count != null ? cnt.count : null;
+  let importado = 0, maxId = 0, comContato = 0;
+  if (env.DB_PLOOMES) {
+    try {
+      const a = await env.DB_PLOOMES.prepare('SELECT COUNT(*) AS n, COALESCE(MAX(ploomes_id),0) AS mx, SUM(CASE WHEN contact_id IS NOT NULL THEN 1 ELSE 0 END) AS cc FROM negocios').first();
+      importado = (a && a.n) || 0; maxId = (a && a.mx) || 0; comContato = (a && a.cc) || 0;
+    } catch { /* tabela ausente */ }
+  }
+  return { total, importado, maxId, comContato };
+}
+
+// Painel da Fase 3 — importar os negócios/OS.
+export function paginaMigrarNegocios(user, s) {
+  const total = Number(s.total || 0), imp = Number(s.importado || 0), maxId = Number(s.maxId || 0), cc = Number(s.comContato || 0);
+  const pct = total ? Math.min(100, Math.round((imp / total) * 100)) : 0;
+  const totTxt = total ? total.toLocaleString('pt-BR') : '—';
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Migração Ploomes — Negócios/OS</title>
+<style>*{box-sizing:border-box}body{margin:0;font-family:Montserrat,'Segoe UI',Arial,sans-serif;background:#F2F6F4;color:#10262B}
+.wrap{max-width:820px;margin:0 auto;padding:20px 18px 56px}.card{background:#fff;border:1px solid #E4EBE9;border-radius:14px;padding:18px;margin-bottom:14px}
+.btn{border:none;border-radius:11px;padding:12px 18px;font-size:14px;font-weight:800;cursor:pointer}
+.btn-p{background:#92C430;color:#10262B}.btn-g{background:#fff;color:#00333B;border:1.5px solid #cfe0dd}
+.bar{height:16px;background:#EEF3F1;border-radius:10px;overflow:hidden}.bar>div{height:100%;background:#3f8f3a;width:${pct}%;transition:width .3s}
+.pill{font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;background:#E7EFF0;color:#0B5B66}</style></head>
+<body><div class="wrap">
+  <a href="/diretoria" style="color:#00333B;font-size:12px;font-weight:800;text-decoration:none">← Diretoria</a>
+  <h1 style="font-size:20px;margin:12px 0 4px">Migração do Ploomes — Negócios / OS</h1>
+  <p style="font-size:13px;color:#4F6469;margin:0 0 14px">Traz os <b>negócios (ordens de serviço/coletas)</b> do Ploomes para o banco próprio. Guarda o <b>registro completo</b> de cada um (nada se perde) e a ligação com o cliente. É idempotente — pode rodar de novo sem duplicar. Mantenha esta aba aberta.</p>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px"><span><b id="feitosN">${imp.toLocaleString('pt-BR')}</b> importados <span class="pill">${cc.toLocaleString('pt-BR')} com cliente</span></span><span style="color:#7c8a87">de <b>${totTxt}</b> no Ploomes</span></div>
+    <div class="bar"><div id="bar"></div></div>
+    <div id="pctxt" style="font-size:12px;color:#7c8a87;margin-top:6px">${pct}%</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
+      <button class="btn btn-p" id="go" onclick="rodar(this)">▶ Importar tudo</button>
+      <button class="btn btn-g" id="parar" onclick="parar=true" disabled>■ Parar</button>
+    </div>
+    <div id="st" style="font-size:12.5px;color:#4F6469;margin-top:10px"></div>
+  </div>
+</div>
+<script>
+var TOTAL=${total}, TOP=50, parar=false, desdeId=${maxId}, feitos=${imp};
+function setBar(){var p=TOTAL?Math.min(100,Math.round(feitos/TOTAL*100)):0;document.getElementById('bar').style.width=p+'%';document.getElementById('pctxt').textContent=(TOTAL?p+'% · ':'')+feitos.toLocaleString('pt-BR')+(TOTAL?' / '+TOTAL.toLocaleString('pt-BR'):' importados');document.getElementById('feitosN').textContent=feitos.toLocaleString('pt-BR');}
+async function umLote(){var r=await fetch('/api/diretoria/negocios-importar?desdeId='+desdeId+'&top='+TOP,{method:'POST'});return r.json();}
+async function rodar(btn){parar=false;btn.disabled=true;document.getElementById('parar').disabled=false;var st=document.getElementById('st');st.textContent='Importando negócios…';
+  while(!parar){var j;try{j=await umLote();}catch(e){st.textContent='Erro de conexão. Clique em Importar tudo de novo para retomar.';break;}
+    if(!j.ok){st.textContent='Parou: '+(j.erro||'erro')+' — clique de novo para retomar.';break;}
+    feitos+=j.gravados;desdeId=j.ultimoId;setBar();
+    if(j.fim){st.textContent='✅ Importação concluída! '+feitos.toLocaleString('pt-BR')+' negócios/OS na base própria.';break;}
+    st.textContent='Importando… +'+j.gravados+' neste lote (lidos '+j.lidos+').';
+    await new Promise(function(r){setTimeout(r,120);});}
+  btn.disabled=false;document.getElementById('parar').disabled=true;}
+</script></body></html>`;
+}
+
+// ---------------------------------------------------------------------------
 // Painel de controle da migração (Diretoria)
 // ---------------------------------------------------------------------------
 export function paginaMigrarPloomes(user, s) {

@@ -101,8 +101,13 @@ export function paginaPainelDiretoria(diretor, d) {
     <span style="font-size:12px;font-weight:800;color:#0B7A66">Abrir →</span>
   </a>
 
-  <a href="/diretoria/migrar-arquivos" style="display:flex;justify-content:space-between;align-items:center;gap:12px;text-decoration:none;background:#fff;border:1px solid #E4EBE9;border-radius:14px;padding:14px 16px;margin-bottom:16px;color:#10262B">
+  <a href="/diretoria/migrar-arquivos" style="display:flex;justify-content:space-between;align-items:center;gap:12px;text-decoration:none;background:#fff;border:1px solid #E4EBE9;border-radius:14px;padding:14px 16px;margin-bottom:12px;color:#10262B">
     <div><div style="font-size:14px;font-weight:800">📎 Arquivos do Ploomes</div><div style="font-size:12px;color:#6b7c79;margin-top:2px">Traz NF, certificados, MTR e propostas do Ploomes para o depósito próprio (R2), amarrados à coleta.</div></div>
+    <span style="font-size:12px;font-weight:800;color:#0B7A66">Abrir →</span>
+  </a>
+
+  <a href="/diretoria/migrar-negocios" style="display:flex;justify-content:space-between;align-items:center;gap:12px;text-decoration:none;background:#fff;border:1px solid #E4EBE9;border-radius:14px;padding:14px 16px;margin-bottom:16px;color:#10262B">
+    <div><div style="font-size:14px;font-weight:800">📋 Negócios / OS do Ploomes</div><div style="font-size:12px;color:#6b7c79;margin-top:2px">Traz os negócios (ordens de serviço/coletas) do Ploomes para o banco próprio, com o registro completo e a ligação ao cliente. Essencial antes de desligar o Ploomes.</div></div>
     <span style="font-size:12px;font-weight:800;color:#0B7A66">Abrir →</span>
   </a>
 
