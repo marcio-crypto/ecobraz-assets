@@ -1817,7 +1817,20 @@ async function listarDocsOS(url, sessao, env) {
       }
       return json({ ok: true, docs });
     }
-    return json({ ok: true, docs: [] }); // coleta nova ('k'): documentos gerados vêm numa etapa seguinte
+    if (tipo === 'k' && env.PORTAL_KV) {
+      const os = await lerColetaOS(env, id);
+      if (!os) return json({ ok: true, docs: [] });
+      const osDoc = String(os.clienteDoc || '').replace(/\D/g, '');
+      if (!doc || osDoc !== doc) return json({ ok: true, docs: [] }); // não é do cliente: silêncio
+      // Regra da Débora: cliente só vê os documentos a partir de "em transporte".
+      if (!['em_transporte', 'na_unidade', 'concluida'].includes(os.status)) return json({ ok: true, docs: [] });
+      return json({ ok: true, docs: [
+        { id: os.id, fonte: 'os-comprovante', nome: 'Ordem de Coleta' },
+        { id: os.id, fonte: 'os-carta', nome: 'Carta de Descarte' },
+        { id: os.id, fonte: 'os-manifesto', nome: 'Manifesto de Transporte (MTR)' },
+      ] });
+    }
+    return json({ ok: true, docs: [] });
   } catch (error) { console.error('docs_erro', safeError(error)); return json({ ok: false, error: 'indisponivel' }, 502); }
 }
 
@@ -1828,6 +1841,18 @@ async function baixarDocOS(url, sessao, env) {
   const doc = String(sessao.documento || '').replace(/\D/g, '');
   const cid = Number(sessao.contactId) || 0, emp = Number(sessao.empresaId) || 0;
   const fonte = url.searchParams.get('fonte') || '';
+  // Documentos GERADOS de uma coleta nova (HTML pro cliente ver/imprimir).
+  // Só o dono (mesmo documento) e só a partir de "em transporte" (regra da Débora).
+  if (['os-comprovante', 'os-carta', 'os-manifesto'].includes(fonte)) {
+    const coletaId = String(url.searchParams.get('docId') || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40);
+    const os = coletaId ? await lerColetaOS(env, coletaId) : null;
+    if (!os) return json({ ok: false, error: 'nao_encontrado' }, 404);
+    if (!doc || String(os.clienteDoc || '').replace(/\D/g, '') !== doc) return json({ ok: false, error: 'sem_permissao' }, 403);
+    if (!['em_transporte', 'na_unidade', 'concluida'].includes(os.status)) return json({ ok: false, error: 'nao_liberado' }, 403);
+    const selo = `/qr-os?id=${encodeURIComponent(os.id)}`;
+    if (fonte !== 'os-comprovante' && !os.veiculoPlaca) { try { os.veiculoPlaca = await placaDaColeta(env, os); } catch { /* ok */ } }
+    return html(fonte === 'os-comprovante' ? paginaComprovanteOS(os, selo) : (fonte === 'os-carta' ? paginaCartaDescarte(os, selo) : paginaManifestoCarga(os, selo)));
+  }
   const key = String(url.searchParams.get('docId') || '').replace(/[^a-zA-Z0-9/_.-]/g, '').slice(0, 200);
   if (fonte !== 'r2' || !key) return json({ ok: false, error: 'sem_id' }, 400);
   if (!env.R2_ARQUIVOS || !env.DB_PLOOMES) return json({ ok: false, error: 'indisponivel' }, 503);
