@@ -33,7 +33,7 @@ const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8', 'cache
 
 import { paginaLogin, paginaPainel, paginaMensagem } from './paginas.js';
 import { LOGO_ESCURO_B64, LOGO_CLARO_B64 } from './logos.js';
-import { paginaCalculadora, estimativaCarbono, paginaCalculoDetalhado, calculoDetalhadoGHG } from './carbono.js';
+import { paginaCalculadora, estimativaCarbono, paginaCalculoDetalhado, calculoDetalhadoGHG, paginaLojaCarbono, paginaCarbonoContato, nivelCarbono, faixaValida, precoNivel } from './carbono.js';
 import { criarPreferencia, consultarPagamento } from './mercadopago.js';
 import { acharPacote, precoPacote, paginaLojaAdote, paginaObrigadoAdote, paginaDiagnostico, lerCredito, salvarCredito, novoCredito, aplicarCompra, aplicarRecarga, precisaRecarga, listarPatrocinadores } from './adote.js';
 import { statusDaEtapa, valorProp, CAMPOS_OS } from './os-utils.js';
@@ -120,6 +120,37 @@ export default {
 
       // Calculadora de pegada de carbono — Nível 1 (estimativa grátis por CNPJ). Público.
       if (pathname === '/calculadora' && request.method === 'GET') return html(paginaCalculadora());
+      // Loja de carbono — 4 níveis × faixa de faturamento (anual). Preços aprovados (a refinar c/ Villanova).
+      if (pathname === '/carbono/planos' && request.method === 'GET') return html(paginaLojaCarbono(url.searchParams.get('faixa') || ''));
+      if (pathname === '/carbono/contato' && request.method === 'GET') return html(paginaCarbonoContato(nivelCarbono(url.searchParams.get('nivel') || ''), url.searchParams.get('faixa') || ''));
+      if (pathname === '/api/carbono/contato' && request.method === 'POST') {
+        let b; try { b = await request.json(); } catch { b = {}; }
+        const nv = nivelCarbono((b && b.nivel) || '');
+        try {
+          await ingestLead(env, {
+            name: String((b && b.nome) || ''), company: String((b && b.empresa) || ''), email: String((b && b.email) || ''), phone: String((b && b.fone) || ''),
+            material_category: `Carbono — ${nv ? nv.nome : 'plano'}`,
+            material_description: `Pedido de proposta de inventário de carbono (site).\nNível: ${nv ? nv.nome : '?'}\nFaturamento: ${(b && b.faixa) || '?'}\nMensagem: ${String((b && b.msg) || '').slice(0, 1000)}`,
+            source: 'carbono-proposta',
+          });
+        } catch (error) { console.error('carbono_contato_falhou', safeError(error)); }
+        return json({ ok: true });
+      }
+      if (pathname === '/carbono/assinar' && request.method === 'GET') {
+        const nv = nivelCarbono(url.searchParams.get('nivel') || '');
+        const fx = faixaValida(url.searchParams.get('faixa') || '');
+        if (!nv || !fx || !nv.self) return new Response(null, { status: 302, headers: { Location: '/carbono/planos', 'cache-control': 'no-store' } });
+        const preco = precoNivel(nv.id, fx);
+        if (!preco || preco.sobConsulta) return new Response(null, { status: 302, headers: { Location: `/carbono/contato?nivel=${encodeURIComponent(nv.id)}&faixa=${encodeURIComponent(fx)}`, 'cache-control': 'no-store' } });
+        const pedidoId = novoId();
+        const baseUrl = env.PORTAL_BASE_URL || url.origin;
+        if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${pedidoId}`, JSON.stringify({ status: 'pendente', tipo: 'carbono', nivel: nv.id, faixa: fx, valor: preco.valor, criadoEm: nowS() }), { expirationTtl: 7 * 86400 });
+        try {
+          const pref = await criarPreferencia({ valor: preco.valor, descricao: `Inventário de carbono — nível ${nv.nome} (anual)`, externalReference: pedidoId, baseUrl, backPath: '/carbono/obrigado' }, env);
+          return new Response(null, { status: 302, headers: { Location: pref.initPoint, 'cache-control': 'no-store' } });
+        } catch (error) { console.error('carbono_assinar_falhou', safeError(error)); return html(paginaMensagem('Pagamento indisponível', 'Não consegui gerar a cobrança agora. Tente de novo em instantes.', '/carbono/planos'), 502); }
+      }
+      if (pathname === '/carbono/obrigado' && request.method === 'GET') return html(paginaMensagem('Pagamento recebido!', 'Obrigado! Assim que o pagamento confirmar, liberamos o preenchimento dos seus dados para o inventário. Você recebe o acesso por e-mail.', '/carbono/planos'));
       if (pathname === '/api/carbono/estimativa' && request.method === 'GET') {
         const resultado = await estimativaCarbono(url.searchParams.get('cnpj') || '', env);
         return json(resultado, resultado.ok ? 200 : 400);

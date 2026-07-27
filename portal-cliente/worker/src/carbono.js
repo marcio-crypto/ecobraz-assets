@@ -197,6 +197,140 @@ export function precoNivel2(porteTexto, capitalSocial) {
   return { valor: 690, rotulo: 'Média' }; // "Demais"/médio (grande sem capital alto cai aqui por ora)
 }
 
+// ---------------------------------------------------------------------------
+// LOJA DE CARBONO — 4 níveis × faixa de faturamento, cobrança ANUAL.
+// Estrutura e preços aprovados pelo Marcio (jul/2026) como PONTO DE PARTIDA de
+// mercado — a refinar com a Villanova/Karina (que sabe o custo real de entrega).
+// ---------------------------------------------------------------------------
+export const FAIXAS_FATURAMENTO = [
+  { id: 'p', rotulo: 'até R$ 5 milhões/ano', max: 5000000 },
+  { id: 'm', rotulo: 'R$ 5 mi a R$ 50 mi/ano', max: 50000000 },
+  { id: 'g', rotulo: 'R$ 50 mi a R$ 300 mi/ano', max: 300000000 },
+  { id: 'xg', rotulo: 'acima de R$ 300 milhões/ano', max: Infinity },
+];
+export const NIVEIS_CARBONO = [
+  { id: 'simples', nome: 'Simples', escopos: 'Escopo 2', inclui: 'Consumo de energia elétrica.', self: true, precos: { p: 590, m: 1490, g: 2990, xg: null } },
+  { id: 'intermediario', nome: 'Intermediário', escopos: 'Escopos 1 e 2 + deslocamento', inclui: 'Energia + combustíveis (frota) + deslocamento dos funcionários.', self: true, precos: { p: 1490, m: 3900, g: 7900, xg: null } },
+  { id: 'completo', nome: 'Completo', escopos: 'Escopos 1, 2 e 3', inclui: 'Energia + combustíveis + funcionários + cadeia de fornecedores.', self: true, precos: { p: 3900, m: 9900, g: 19900, xg: null } },
+  { id: 'contratado', nome: 'Contratado', escopos: 'Completo, feito pela Villanova', inclui: 'A Villanova ESG coleta os dados e faz todo o inventário para você.', self: false, precos: { p: 9900, m: 24900, g: 49900, xg: null } },
+];
+export function nivelCarbono(id) { return NIVEIS_CARBONO.find((n) => n.id === id) || null; }
+export function faixaValida(id) { return FAIXAS_FATURAMENTO.some((f) => f.id === id) ? id : ''; }
+// Preço de um nível numa faixa. { valor:Number } ou { sobConsulta:true } (faixa >300mi).
+export function precoNivel(nivelId, faixaId) {
+  const nv = nivelCarbono(nivelId); if (!nv) return null;
+  const v = nv.precos[faixaId];
+  return (v == null) ? { valor: null, sobConsulta: true } : { valor: v, sobConsulta: false };
+}
+export function faixaPorFaturamento(faturamento) {
+  const f = Number(faturamento) || 0;
+  return (FAIXAS_FATURAMENTO.find((x) => f <= x.max) || FAIXAS_FATURAMENTO[FAIXAS_FATURAMENTO.length - 1]).id;
+}
+
+// Loja: mostra os 4 níveis com o preço da faixa escolhida. O cliente troca a faixa
+// e os preços atualizam na hora. Cobrança anual. noindex por enquanto.
+export function paginaLojaCarbono(faixaIni) {
+  const faixaSel = faixaValida(faixaIni) || 'p';
+  const optFaixas = FAIXAS_FATURAMENTO.map((f) => `<option value="${f.id}"${f.id === faixaSel ? ' selected' : ''}>${f.rotulo}</option>`).join('');
+  const niveisJson = JSON.stringify(NIVEIS_CARBONO);
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
+<title>Planos de pegada de carbono — Ecobraz</title><link rel="icon" href="/assets/logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--green:#92C430;--green-d:#74A21F;--teal:#00333B;--ink:#10262B;--muted:#4F6469;--line:#DFE7E6;--soft:#F7F9F8}
+*{box-sizing:border-box}body{margin:0;font-family:Montserrat,"Segoe UI",Arial,sans-serif;color:var(--ink);background:var(--soft);line-height:1.6}
+.wrap{max-width:920px;margin:0 auto;padding:40px 20px 60px}
+.top{display:flex;align-items:center;gap:14px;margin-bottom:22px}.top img{width:150px;height:auto}
+.tag{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--green-d);border-left:1px solid var(--line);padding-left:14px}
+h1{font-size:clamp(23px,3vw,31px);color:var(--teal);letter-spacing:-.02em;margin:0 0 8px}
+.sub{color:var(--muted);margin:0 0 22px}
+.fatbox{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:20px;display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px}
+.fatbox label{font-size:13.5px;font-weight:700}
+select{padding:11px 12px;border:1px solid #CBD7D2;border-radius:10px;font:inherit;font-size:15px;background:#fff}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.tier{background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px;display:flex;flex-direction:column;box-shadow:0 8px 26px rgba(0,51,59,.06)}
+.tier.contr{border-color:#cde5a6;background:#FBFDF9}
+.tn{font-size:18px;font-weight:800;color:var(--teal)}
+.te{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--green-d);margin:4px 0 10px}
+.ti{font-size:13px;color:var(--muted);flex:1;margin-bottom:14px}
+.tp{margin-bottom:14px}.pv{font-size:26px;font-weight:800;color:var(--ink)}.pu{font-size:12px;color:var(--muted);font-weight:700;margin-left:3px}.sob{font-size:16px;font-weight:800;color:var(--teal)}
+.btn{display:block;text-align:center;text-decoration:none;min-height:46px;line-height:46px;border-radius:10px;background:var(--green);color:var(--ink);font-weight:800;font-size:14.5px}
+.btn:hover{background:#A2D53E}.btn.dark{background:var(--teal);color:#fff}.btn.ghost{background:#fff;border:1px solid var(--line);color:var(--teal)}
+.disc{font-size:12.5px;color:var(--muted);background:#FBFDF9;border:1px dashed var(--line);border-radius:12px;padding:13px 15px;margin-top:20px}
+.foot{color:var(--muted);font-size:12px;text-align:center;margin-top:26px}
+</style></head><body>
+<div class="wrap">
+  <div class="top"><img src="/assets/logo.png" alt="Ecobraz Emigre"><span class="tag">Pegada de carbono · Planos</span></div>
+  <h1>Inventário de carbono da sua empresa</h1>
+  <p class="sub">Escolha o nível de análise. Você preenche os dados e a calculadora faz o resto, no padrão <b>GHG Protocol</b>. Cobrança <b>anual</b>.</p>
+  <div class="fatbox"><label for="fat">Faturamento anual da empresa:</label><select id="fat" onchange="render()">${optFaixas}</select></div>
+  <div class="cards" id="cards"></div>
+  <div class="disc">Os preços são um <b>ponto de partida de mercado</b> e podem ser ajustados. O padrão de cálculo (GHG Protocol) e os fatores de emissão são revisados pela <b>Villanova ESG</b> antes de virar relatório oficial.</div>
+  <div class="foot">Ecobraz Emigre — destinação correta, conformidade e evidências.</div>
+</div>
+<script>
+var NIVEIS=${niveisJson};
+function brl(v){return 'R$ '+Number(v).toLocaleString('pt-BR');}
+function render(){
+  var fx=document.getElementById('fat').value;
+  document.getElementById('cards').innerHTML=NIVEIS.map(function(n){
+    var p=n.precos[fx];
+    var preco=(p==null)?'<span class="sob">Sob proposta</span>':('<span class="pv">'+brl(p)+'</span><span class="pu">/ano</span>');
+    var cta;
+    if(!n.self){ cta='<a class="btn dark" href="/carbono/contato?nivel='+n.id+'&faixa='+fx+'">Falar com a Villanova</a>'; }
+    else if(p==null){ cta='<a class="btn ghost" href="/carbono/contato?nivel='+n.id+'&faixa='+fx+'">Pedir proposta</a>'; }
+    else { cta='<a class="btn" href="/carbono/assinar?nivel='+n.id+'&faixa='+fx+'">Assinar</a>'; }
+    return '<div class="tier'+(n.self?'':' contr')+'"><div class="tn">'+n.nome+'</div><div class="te">'+n.escopos+'</div><div class="ti">'+n.inclui+'</div><div class="tp">'+preco+'</div>'+cta+'</div>';
+  }).join('');
+}
+render();
+</script></body></html>`;
+}
+
+// Contato/proposta (nível Contratado ou faixa "sob proposta") — vira um lead.
+export function paginaCarbonoContato(nivel, faixa) {
+  const nomeNivel = nivel ? ('Plano ' + nivel.nome) : 'Inventário de carbono';
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Falar sobre carbono — Ecobraz</title><link rel="icon" href="/assets/logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--green:#92C430;--green-d:#74A21F;--teal:#00333B;--ink:#10262B;--muted:#4F6469;--line:#DFE7E6;--soft:#F7F9F8}
+*{box-sizing:border-box}body{margin:0;font-family:Montserrat,"Segoe UI",Arial,sans-serif;color:var(--ink);background:var(--soft);line-height:1.6}
+.wrap{max-width:560px;margin:0 auto;padding:40px 20px 60px}.top{display:flex;align-items:center;gap:14px;margin-bottom:22px}.top img{width:150px}
+.tag{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--green-d);border-left:1px solid var(--line);padding-left:14px}
+h1{font-size:26px;color:var(--teal);margin:0 0 8px}.sub{color:var(--muted);margin:0 0 22px}
+.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:24px}
+label{display:block;font-size:13px;font-weight:700;margin:12px 0 6px}input,textarea{width:100%;padding:13px;border:1px solid #CBD7D2;border-radius:10px;font:inherit;font-size:15px}
+.btn{margin-top:16px;width:100%;min-height:50px;border:0;border-radius:10px;background:var(--green);color:var(--ink);font:inherit;font-weight:800;font-size:15px;cursor:pointer}
+.foot{color:var(--muted);font-size:12px;text-align:center;margin-top:22px}
+</style></head><body>
+<div class="wrap">
+  <div class="top"><img src="/assets/logo.png" alt="Ecobraz Emigre"><span class="tag">Pegada de carbono</span></div>
+  <h1>${nomeNivel}</h1>
+  <p class="sub">Deixe seus dados que a equipe da Ecobraz e da Villanova ESG entra em contato para tocar o seu inventário de carbono.</p>
+  <div class="card" id="card">
+    <form id="f" onsubmit="return enviar(event)">
+      <input type="hidden" id="nivel" value="${nivel ? nivel.id : ''}"><input type="hidden" id="faixa" value="${faixaValida(faixa) || ''}">
+      <label>Empresa</label><input id="empresa" required>
+      <label>Seu nome</label><input id="nome" required>
+      <label>E-mail</label><input id="email" type="email" required>
+      <label>Telefone / WhatsApp</label><input id="fone">
+      <label>Mensagem (opcional)</label><textarea id="msg" rows="3"></textarea>
+      <button class="btn" id="b" type="submit">Enviar</button>
+    </form>
+  </div>
+  <div class="foot">Ecobraz Emigre — destinação correta, conformidade e evidências.</div>
+</div>
+<script>
+async function enviar(e){e.preventDefault();var b=document.getElementById('b');b.disabled=true;b.textContent='Enviando…';
+  var g=function(id){var el=document.getElementById(id);return el?el.value.trim():'';};
+  try{await fetch('/api/carbono/contato',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({nivel:g('nivel'),faixa:g('faixa'),empresa:g('empresa'),nome:g('nome'),email:g('email'),fone:g('fone'),msg:g('msg')})});}catch(_){}
+  document.getElementById('card').innerHTML='<div style="text-align:center;padding:20px 0"><div style="font-size:42px">✅</div><div style="font-size:17px;font-weight:800;color:#00333B;margin-top:8px">Recebido!</div><p class="sub" style="margin-top:8px">Nossa equipe vai entrar em contato em breve.</p></div>';
+  return false;
+}
+</script></body></html>`;
+}
+
 // Página pública (Nível 1). Enxuta e com a marca Ecobraz Emigre. noindex por enquanto.
 export function paginaCalculadora() {
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
@@ -249,7 +383,7 @@ input:focus{outline:3px solid rgba(146,196,48,.22);border-color:var(--green)}
       <div class="res-meta" id="meta"></div>
       <div class="big"><span class="n" id="faixa"></span><span class="u">toneladas de CO₂e por ano (estimado)</span></div>
       <div class="disc" id="disc"></div>
-      <div class="cta"><b>Quer o número real?</b><span class="soon">em breve</span><br>O cálculo detalhado no padrão GHG Protocol, a partir dos seus dados, é o próximo passo.</div>
+      <div class="cta"><b>Quer o número real?</b><br>O inventário no padrão GHG Protocol, a partir dos seus dados reais. <a href="/carbono/planos" style="display:inline-block;margin-top:8px;font-weight:800;color:var(--green-d);text-decoration:none">Ver os planos →</a></div>
     </div>
   </div>
   <div class="foot">Ecobraz Emigre — destinação correta, conformidade e evidências.</div>
