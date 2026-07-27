@@ -67,6 +67,124 @@ export async function salvarCliente(env, rec) {
   return rec;
 }
 
+// Backfill do índice de login: percorre os clientes já cadastrados e (re)grava
+// climail:<email> → id, em lotes. Resumível por offset no cli:index — pode rodar
+// várias vezes com segurança (idempotente).
+export async function reindexarEmailsClientes(env, desde, limite) {
+  if (!env.PORTAL_KV) return { ok: false, error: 'KV indisponível', fim: true };
+  const idx = await listarClientes(env);
+  const total = idx.length;
+  const ini = Math.max(0, Number(desde) || 0);
+  const fim = Math.min(total, ini + Math.max(1, Number(limite) || 200));
+  let emails = 0, clientes = 0;
+  for (let i = ini; i < fim; i++) {
+    const cli = await lerCliente(env, idx[i] && idx[i].id);
+    if (!cli) continue;
+    clientes++;
+    for (const em of emailsDoCliente(cli)) { try { await env.PORTAL_KV.put(`climail:${em}`, cli.id); emails++; } catch { /* segue */ } }
+  }
+  return { ok: true, total, proximo: fim, fim: fim >= total, clientes, emails };
+}
+
+// Busca dados de um CEP (BrasilAPI v2→v1). Só o necessário. null se falhar.
+async function buscarCEPDados(cep) {
+  let n = String(cep || '').replace(/\D/g, '');
+  // CEPs migrados podem ter perdido o zero à esquerda (ex.: 4119002 = 04119-002).
+  if (n.length === 7) n = '0' + n; else if (n.length === 6) n = '00' + n;
+  if (n.length !== 8) return null;
+  const ua = { 'user-agent': 'EcobrazPortal/1.0', accept: 'application/json' };
+  for (const u of [`https://brasilapi.com.br/api/cep/v2/${n}`, `https://brasilapi.com.br/api/cep/v1/${n}`]) {
+    try {
+      const r = await fetch(u, { headers: ua, signal: AbortSignal.timeout(8000) });
+      if (r.status === 404) return null;
+      if (!r.ok) continue;
+      const d = await r.json();
+      return { cep: `${n.slice(0, 5)}-${n.slice(5)}`, logradouro: d.street || '', bairro: d.neighborhood || '', cidade: d.city || '', uf: d.state || '' };
+    } catch { /* tenta a próxima */ }
+  }
+  return null;
+}
+
+// Backfill de endereços: acha os contatos migrados cujo endereço veio só como CEP
+// e preenche rua/bairro/cidade/UF pela consulta de CEP. Lotes pequenos (o CEP é
+// consulta externa), resumível por ploomes_id. Idempotente (o que já foi preenchido
+// deixa de ser selecionado).
+export async function backfillEnderecos(env, desde, limite) {
+  if (!env.DB_PLOOMES) return { ok: false, error: 'D1 indisponível', fim: true };
+  const D = Math.max(0, Number(desde) || 0);
+  const L = Math.max(1, Math.min(40, Number(limite) || 20));
+  let rows = [];
+  try {
+    const r = await env.DB_PLOOMES.prepare(
+      "SELECT ploomes_id, endereco FROM contatos WHERE ploomes_id > ?1 AND endereco <> '' AND endereco NOT GLOB '*[A-Za-z]*' AND LENGTH(REPLACE(REPLACE(endereco,'-',''),' ','')) BETWEEN 7 AND 8 ORDER BY ploomes_id LIMIT ?2"
+    ).bind(D, L).all();
+    rows = r.results || [];
+  } catch (e) { return { ok: false, error: 'D1: ' + String((e && e.message) || e).slice(0, 100), fim: true }; }
+  let atualizados = 0, ultimo = D;
+  for (const row of rows) {
+    ultimo = row.ploomes_id;
+    const dados = await buscarCEPDados(row.endereco);
+    if (!dados || !dados.cidade) continue;
+    const enderecoFull = [dados.logradouro, dados.bairro, `${dados.cidade}/${dados.uf}`, dados.cep].filter(Boolean).join(' · ');
+    try { await env.DB_PLOOMES.prepare('UPDATE contatos SET endereco=?1, cidade=?2, uf=?3 WHERE ploomes_id=?4').bind(enderecoFull, dados.cidade, dados.uf, row.ploomes_id).run(); atualizados++; } catch { /* segue */ }
+  }
+  return { ok: true, lote: rows.length, atualizados, proximo: ultimo, fim: rows.length < L };
+}
+
+// Página de Manutenção do escritório — ferramentas de "uma passada só" (backfills).
+export function paginaManutencao(user) {
+  return `${head('Manutenção')}<body>${topo(user, 'cadastro')}
+<div class="wrap">
+  <a href="/cadastro" style="font-size:13px;font-weight:800;text-decoration:none;color:#4F6469">← Cadastro</a>
+  <h1 style="font-size:20px;margin:10px 0 2px">Manutenção</h1>
+  <p style="font-size:12.5px;color:#8fa39f;margin:0 0 16px">Ferramentas de uma passada só. Pode fechar e voltar depois — elas continuam de onde pararam.</p>
+  <div class="card">
+    <div style="font-size:15px;font-weight:800;color:#10262B">🔑 Ativar login dos clientes já cadastrados</div>
+    <p style="font-size:13px;color:#4F6469;line-height:1.5;margin:8px 0 12px">Faz com que <b>todo cliente já cadastrado</b> que tenha e-mail consiga entrar no portal (os novos já entram sozinhos). Roda em lotes; é seguro rodar mais de uma vez.</p>
+    <button class="btn btn-p" id="bEmail" onclick="rodarEmails()">Ativar login de todos</button>
+    <div id="mEmail" style="font-size:13px;color:#4F6469;margin-top:10px"></div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <div style="font-size:15px;font-weight:800;color:#10262B">📍 Puxar endereço completo (pelo CEP)</div>
+    <p style="font-size:13px;color:#4F6469;line-height:1.5;margin:8px 0 12px">Preenche automaticamente rua, bairro, cidade e UF dos clientes migrados que vieram <b>só com o CEP</b>. Vai em lotes pequenos (consulta o CEP um a um) — <b>deixe a aba aberta</b> até terminar. Pode fechar e continuar depois.</p>
+    <button class="btn btn-p" id="bEnd" onclick="rodarEnderecos()">Puxar endereços</button>
+    <div id="mEnd" style="font-size:13px;color:#4F6469;margin-top:10px"></div>
+  </div>
+</div>
+<script>
+async function rodarEmails(){
+  var b=document.getElementById('bEmail'), m=document.getElementById('mEmail');
+  b.disabled=true; var desde=0, emails=0, total=0;
+  m.textContent='Iniciando…';
+  try{
+    while(true){
+      var r=await fetch('/api/cadastro/reindexar-emails',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({desde:desde})});
+      var d=await r.json();
+      if(!d.ok){ m.textContent='Erro: '+(d.error||'falhou'); b.disabled=false; return; }
+      emails+=d.emails||0; total=d.total||total; desde=d.proximo||desde;
+      m.innerHTML='Processados <b>'+Math.min(desde,total)+'/'+total+'</b> clientes · '+emails+' e-mail(s) ativados…';
+      if(d.fim){ m.innerHTML='✅ Pronto! <b>'+total+'</b> clientes verificados, <b>'+emails+'</b> e-mail(s) de login ativados.'; b.disabled=false; return; }
+    }
+  }catch(_){ m.textContent='Sem conexão. Tente de novo — continua de onde parou.'; b.disabled=false; }
+}
+async function rodarEnderecos(){
+  var b=document.getElementById('bEnd'), m=document.getElementById('mEnd');
+  b.disabled=true; var desde=0, atualizados=0, lotes=0;
+  m.textContent='Iniciando… (pode demorar; deixe a aba aberta)';
+  try{
+    while(true){
+      var r=await fetch('/api/cadastro/backfill-enderecos',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({desde:desde})});
+      var d=await r.json();
+      if(!d.ok){ m.textContent='Erro: '+(d.error||'falhou'); b.disabled=false; return; }
+      atualizados+=d.atualizados||0; lotes++; desde=d.proximo||desde;
+      m.innerHTML='Lote '+lotes+' · <b>'+atualizados+'</b> endereço(s) preenchido(s)…';
+      if(d.fim){ m.innerHTML='✅ Pronto! <b>'+atualizados+'</b> endereço(s) completados a partir do CEP.'; b.disabled=false; return; }
+    }
+  }catch(_){ m.textContent='Parou (conexão). Clique de novo — continua de onde parou.'; b.disabled=false; }
+}
+</script></body></html>`;
+}
+
 // Busca dados públicos do CNPJ para pré-preencher o cadastro (menos digitação).
 // Robusto: tenta a BrasilAPI e, se falhar/estiver fora, cai para a publica.cnpj.ws.
 export async function consultarCNPJ(cnpj) {
@@ -162,9 +280,10 @@ export function paginaCadastroHome(user, clientes, q = '', totalFiltrado = null,
   </div>` : '';
   return `${head('Cadastro')}<body>${topo(user, 'cadastro')}
 <div class="wrap">
-  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
     <a href="/cadastro/novo?tipo=PJ" class="btn btn-d">＋ Nova empresa</a>
     <a href="/cadastro/novo?tipo=PF" class="btn btn-g">＋ Nova pessoa física</a>
+    <a href="/cadastro/manutencao" style="margin-left:auto;font-size:12.5px;font-weight:700;color:#7c8a87;text-decoration:none">⚙ Manutenção</a>
   </div>
   <form method="get" action="/cadastro" style="margin:0 0 10px">${tipo ? `<input type="hidden" name="tipo" value="${tipo}">` : ''}<input name="q" value="${esc(q)}" placeholder="🔎 Buscar por nome ou documento e apertar Enter…" autocomplete="off"></form>
   <div style="display:flex;gap:8px;margin-bottom:12px">${chip('Todos', '')}${chip('Empresas', 'PJ')}${chip('Pessoas', 'PF')}</div>
