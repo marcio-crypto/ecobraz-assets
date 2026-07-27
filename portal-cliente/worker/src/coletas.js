@@ -95,6 +95,23 @@ export async function salvarColetaOSDireto(env, os) {
   await env.PORTAL_KV.put(`os:${os.id}`, JSON.stringify(os));
   return os;
 }
+// Edita os campos de uma coleta existente (mantém número, status e histórico).
+export async function atualizarColetaOS(env, id, dados) {
+  const rec = await lerColetaOS(env, id); if (!rec) return null;
+  const d = dados || {};
+  const setStr = (campo, max) => { if (d[campo] != null) rec[campo] = String(d[campo]).slice(0, max); };
+  setStr('endereco', 400); setStr('dataAgendada', 10); setStr('janela', 40); setStr('contato', 200);
+  setStr('material', 500); setStr('quantidade', 100); setStr('acondicionamento', 120); setStr('obs', 600);
+  if (d.itensTexto != null) rec.itens = parseItensColeta(d.itensTexto);
+  if (d.agenteEmail != null) { rec.agenteEmail = String(d.agenteEmail || '').trim().toLowerCase(); rec.agenteNome = d.agenteNome || ''; }
+  rec.atualizadoEm = agora();
+  if (env.PORTAL_KV) {
+    await env.PORTAL_KV.put(`os:${id}`, JSON.stringify(rec));
+    const idx = await listarColetasOS(env); const i = idx.findIndex((x) => x.id === id);
+    if (i >= 0) { idx[i].cidade = cidadeDoEndereco(rec.endereco); idx[i].dataAgendada = rec.dataAgendada; idx[i].agenteNome = rec.agenteNome; idx[i].agenteEmail = rec.agenteEmail; await env.PORTAL_KV.put('os:index', JSON.stringify(idx).slice(0, 900000)); }
+  }
+  return rec;
+}
 function cidadeDoEndereco(e) { const m = String(e || '').match(/·\s*([^·]+?)\/[A-Z]{2}/); return m ? m[1].trim() : ''; }
 
 // --- Páginas (escritório) ---
@@ -120,16 +137,18 @@ function topo(sub) {
 }
 const pill = (status) => `<span style="flex:none;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;color:${STATUS_COR[status] || '#7c8a87;background:#EEF1F0'}">${esc((STATUS[status] || status).toUpperCase())}</span>`;
 
-export function paginaColetasLista(user, coletas) {
+export function paginaColetasLista(user, coletas, q) {
+  q = q || '';
   const abertas = coletas.filter((c) => c.status !== 'concluida' && c.status !== 'cancelada').length;
   const linhas = coletas.length ? coletas.map((c) => `<a href="/coletas/os?id=${esc(c.id)}" style="display:flex;justify-content:space-between;align-items:center;gap:12px;text-decoration:none;background:#fff;border:1px solid #E4EBE9;border-radius:12px;padding:13px 15px;margin-bottom:9px">
       <div style="min-width:0"><div style="font-size:14px;font-weight:800;color:#10262B">${esc(c.numero)} <span style="font-weight:600;color:#7c8a87">· ${esc(c.clienteNome || '')}</span></div>
       <div style="font-size:12px;color:#7c8a87;margin-top:3px">${c.dataAgendada ? '📅 ' + esc(dataBR(c.dataAgendada)) : 'sem data'}${c.agenteNome ? ' · 🚚 ' + esc(c.agenteNome) : ''}${c.cidade ? ' · ' + esc(c.cidade) : ''}</div></div>
       ${pill(c.status)}
-    </a>`).join('') : `<div class="card" style="text-align:center;color:#8fa39f;font-size:13.5px">Nenhuma coleta ainda.<br>Abra uma coleta a partir de um cliente no Cadastro.</div>`;
+    </a>`).join('') : `<div class="card" style="text-align:center;color:#8fa39f;font-size:13.5px">${q ? 'Nenhuma coleta encontrada para essa busca.' : 'Nenhuma coleta ainda.<br>Abra uma coleta a partir de um cliente no Cadastro.'}</div>`;
   return `${head('Coletas')}<body>${topo('coletas')}
 <div class="wrap">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin:0 0 14px"><h1 style="font-size:20px;margin:0">Ordens de Coleta</h1><span style="font-size:11px;background:#FFF4DE;color:#8A6A16;font-weight:800;padding:3px 9px;border-radius:20px">${abertas} em aberto</span></div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin:0 0 12px"><h1 style="font-size:20px;margin:0">Ordens de Coleta</h1><span style="font-size:11px;background:#FFF4DE;color:#8A6A16;font-weight:800;padding:3px 9px;border-radius:20px">${abertas} em aberto</span></div>
+  <form method="get" action="/coletas" style="margin:0 0 12px"><input name="q" value="${esc(q)}" placeholder="🔎 Buscar por número (ex.: OS-2026-0001) ou cliente… e aperte Enter" autocomplete="off" style="width:100%;border:1px solid #DDE1E6;border-radius:10px;padding:11px 12px;font-size:14px;font-family:inherit"></form>
   <a href="/cadastro" class="btn btn-g" style="margin-bottom:14px">Abrir coleta a partir de um cliente →</a>
   <div>${linhas}</div>
 </div></body></html>`;
@@ -141,6 +160,8 @@ export function paginaGerarColeta(user, cliente, agentes, patrocinadores) {
   const nome = cliente.tipo === 'PJ' ? (cliente.razaoSocial || cliente.nomeFantasia || '') : (cliente.nome || '');
   const contatoPadrao = cliente.tipo === 'PJ' ? ((cliente.contatos || [])[0] || {}) : { nome: cliente.nome, fone: cliente.fone, email: cliente.email };
   const contatoStr = [contatoPadrao.nome, contatoPadrao.fone].filter(Boolean).join(' · ');
+  const contatosCli = (cliente.tipo === 'PJ' ? (cliente.contatos || []) : [{ nome: cliente.nome, fone: cliente.fone, email: cliente.email }]).filter((c) => c && (c.nome || c.fone || c.email));
+  const optContatos = contatosCli.length ? ['<option value="">— escolher um contato do cliente —</option>'].concat(contatosCli.map((c) => `<option value="${esc([c.nome, c.fone].filter(Boolean).join(' · '))}">${esc(c.nome || '(sem nome)')}${c.cargo ? ' — ' + esc(c.cargo) : ''}</option>`)).join('') : '';
   const optAgentes = ['<option value="">— escolher motorista —</option>'].concat((agentes || []).map((a) => `<option value="${esc(a.email)}|${esc(a.nome)}">${esc(a.nome)}</option>`)).join('');
   const patros = patrocinadores || [];
   const optPatro = ['<option value="">— escolher empresa —</option>'].concat(patros.map((p) => `<option value="${esc(p.clienteId)}|${esc(p.nome)}">${esc(p.nome)} — ${(Number(p.saldoKg) / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} t disponíveis</option>`)).join('');
@@ -153,7 +174,7 @@ export function paginaGerarColeta(user, cliente, agentes, patrocinadores) {
     <div class="sec">Local &amp; agendamento</div>
     <label>Endereço da coleta</label><textarea id="endereco" rows="2">${esc(endPadrao)}</textarea>
     <div class="g2"><div><label>Data</label><input id="data" type="date"></div><div><label>Janela (opcional)</label><input id="janela" placeholder="ex.: 09h–12h"></div></div>
-    <label>Contato no local</label><input id="contato" value="${esc(contatoStr)}">
+    <label>Contato no local</label>${optContatos ? `<select id="contatoSel" onchange="if(this.value)document.getElementById('contato').value=this.value" style="margin-bottom:8px">${optContatos}</select>` : ''}<input id="contato" value="${esc(contatoStr)}">
     <div class="sec">Material &amp; motorista</div>
     <label>Material declarado</label><textarea id="material" rows="2" placeholder="ex.: CPUs, monitores, cabos e placas (REEE)"></textarea>
     <label>Equipamentos item a item <span style="color:#9aa7a4;font-weight:400">(um por linha — ex.: Monitor LCD ; 5)</span></label><textarea id="itens" rows="4" placeholder="Monitor LCD ; 5&#10;CPU Dell ; 12&#10;No-break ; 3"></textarea>
@@ -200,6 +221,7 @@ export function paginaColetaOSDetalhe(user, os, seloUrl) {
     <div>${pill(os.status)}<h1 style="font-size:22px;margin:8px 0 0">${esc(os.numero)}</h1>
     <div style="font-size:13px;color:#7c8a87;margin-top:2px">${esc(os.clienteNome || '')}</div></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;flex:none;justify-content:flex-end">
+      <a href="/coletas/editar?id=${esc(os.id)}" class="btn btn-g" style="padding:9px 12px;font-size:12.5px">✏️ Editar</a>
       <a href="/coletas/os/carta?id=${esc(os.id)}" class="btn btn-g" style="padding:9px 12px;font-size:12.5px">📄 Carta de Descarte</a>
       <a href="/coletas/os/manifesto?id=${esc(os.id)}" class="btn btn-g" style="padding:9px 12px;font-size:12.5px">📄 Manifesto de Carga</a>
       <a href="/coletas/os/cdf?id=${esc(os.id)}" class="btn btn-g" style="padding:9px 12px;font-size:12.5px">🏅 Certificado (CDF)</a>
@@ -210,7 +232,7 @@ export function paginaColetaOSDetalhe(user, os, seloUrl) {
     <table role="presentation" style="width:100%;border-collapse:collapse;font-size:13.5px">
       ${linha('Cliente', os.clienteNome)}${linha('Documento', os.clienteDoc)}
       ${linha('Endereço da coleta', os.endereco)}
-      ${linha('Data / janela', [dataBR(os.dataAgendada), os.janela].filter(Boolean).join(' · '))}
+      ${linha('Data da coleta', [dataBR(os.dataAgendada), os.janela].filter(Boolean).join(' · '))}
       ${linha('Contato no local', os.contato)}
       ${linha('Motorista', os.agenteNome)}
       ${linha('Material', os.material)}${(os.itens && os.itens.length) ? linha('Equipamentos', os.itens.map((i) => `${i.nome} (${i.qtd})`).join(' · ')) : ''}${linha('Quantidade', os.quantidade)}${linha('Acondicionamento', os.acondicionamento)}
@@ -229,8 +251,49 @@ export function paginaColetaOSDetalhe(user, os, seloUrl) {
     <div id="m" style="font-size:12.5px;color:#4F6469;margin-top:10px"></div>
   </div>
 </div>
-<script>function setStatus(s){document.getElementById('m').textContent='Salvando…';fetch('/api/coletas/status',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:'${esc(os.id)}',status:s})}).then(r=>r.json()).then(j=>{if(j.ok){location.reload();}else{document.getElementById('m').textContent='Falha.';}}).catch(()=>document.getElementById('m').textContent='Sem conexão.');}</script>
+<script>function setStatus(s){if(s==='cancelada'&&!confirm('Cancelar esta coleta? Ela sai da lista principal, mas fica guardada no histórico (dá pra reativar depois).'))return;document.getElementById('m').textContent='Salvando…';fetch('/api/coletas/status',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:'${esc(os.id)}',status:s})}).then(r=>r.json()).then(j=>{if(j.ok){location.reload();}else{document.getElementById('m').textContent='Falha.';}}).catch(()=>document.getElementById('m').textContent='Sem conexão.');}</script>
 </body></html>`;
+}
+
+// Editar uma coleta existente (mesmos campos da criação; número e status ficam).
+export function paginaEditarColeta(user, os, contatos, agentes) {
+  const optAgentes = ['<option value="">— escolher motorista —</option>'].concat((agentes || []).map((a) => `<option value="${esc(a.email)}|${esc(a.nome)}" ${a.email === os.agenteEmail ? 'selected' : ''}>${esc(a.nome)}</option>`)).join('');
+  const cts = (contatos || []).filter((c) => c && (c.nome || c.fone || c.email));
+  const optContatos = cts.length ? ['<option value="">— escolher um contato do cliente —</option>'].concat(cts.map((c) => `<option value="${esc([c.nome, c.fone].filter(Boolean).join(' · '))}">${esc(c.nome || '(sem nome)')}${c.cargo ? ' — ' + esc(c.cargo) : ''}</option>`)).join('') : '';
+  const itensTxt = (os.itens || []).map((i) => `${i.nome} ; ${i.qtd}`).join('\n');
+  return `${head('Editar coleta')}<body>${topo('coletas')}
+<div class="wrap">
+  <a href="/coletas/os?id=${esc(os.id)}" style="font-size:13px;font-weight:800;text-decoration:none;color:#4F6469">← Voltar para a coleta</a>
+  <h1 style="font-size:20px;margin:10px 0 2px">Editar coleta</h1>
+  <p style="font-size:12.5px;color:#8fa39f;margin:0 0 14px">${esc(os.numero)} · ${esc(os.clienteNome || '')}</p>
+  <div class="card">
+    <div class="sec">Local &amp; agendamento</div>
+    <label>Endereço da coleta</label><textarea id="endereco" rows="2">${esc(os.endereco || '')}</textarea>
+    <div class="g2"><div><label>Data</label><input id="data" type="date" value="${esc(os.dataAgendada || '')}"></div><div><label>Janela (opcional)</label><input id="janela" value="${esc(os.janela || '')}" placeholder="ex.: 09h–12h"></div></div>
+    <label>Contato no local</label>
+    ${optContatos ? `<select id="contatoSel" onchange="if(this.value)document.getElementById('contato').value=this.value" style="margin-bottom:8px">${optContatos}</select>` : ''}
+    <input id="contato" value="${esc(os.contato || '')}" placeholder="nome · telefone">
+    <div class="sec">Material &amp; motorista</div>
+    <label>Material declarado</label><textarea id="material" rows="2">${esc(os.material || '')}</textarea>
+    <label>Equipamentos item a item <span style="color:#9aa7a4;font-weight:400">(um por linha — ex.: Monitor LCD ; 5)</span></label><textarea id="itens" rows="4">${esc(itensTxt)}</textarea>
+    <div class="g2"><div><label>Quantidade estimada</label><input id="quantidade" value="${esc(os.quantidade || '')}"></div><div><label>Acondicionamento</label><input id="acondicionamento" value="${esc(os.acondicionamento || '')}"></div></div>
+    <label>Motorista</label><select id="agente">${optAgentes}</select>
+    <label>Observações / instruções de acesso</label><textarea id="obs" rows="2">${esc(os.obs || '')}</textarea>
+    <div style="display:flex;gap:10px;align-items:center;margin-top:22px">
+      <button class="btn btn-p" onclick="salvar()">Salvar alterações</button>
+      <a href="/coletas/os?id=${esc(os.id)}" class="btn btn-g" style="text-decoration:none">Cancelar</a>
+      <span id="m" style="font-size:13px;color:#4F6469"></span>
+    </div>
+  </div>
+</div>
+<script>
+function g(id){var el=document.getElementById(id);return el?el.value.trim():'';}
+function salvar(){var ag=g('agente').split('|');
+  var rec={id:'${esc(os.id)}',endereco:g('endereco'),dataAgendada:g('data'),janela:g('janela'),contato:g('contato'),material:g('material'),quantidade:g('quantidade'),acondicionamento:g('acondicionamento'),obs:g('obs'),itensTexto:g('itens'),agenteEmail:ag[0]||'',agenteNome:ag[1]||''};
+  if(!rec.endereco){document.getElementById('m').textContent='Informe o endereço da coleta.';return;}
+  document.getElementById('m').textContent='Salvando…';
+  fetch('/api/coletas/editar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(rec)}).then(function(r){return r.json();}).then(function(j){if(j.ok){location.href='/coletas/os?id=${esc(os.id)}';}else{document.getElementById('m').textContent=j.error||'Erro ao salvar.';}}).catch(function(){document.getElementById('m').textContent='Sem conexão.';});}
+</script></body></html>`;
 }
 
 // ---------------------------------------------------------------------------
@@ -419,7 +482,7 @@ export function paginaComprovanteOS(os, seloUrl) {
       </div>
       <div style="display:flex;align-items:center;gap:9px;margin:22px 0 12px"><span style="width:4px;height:16px;background:#92C430;border-radius:2px"></span><span style="font-size:12px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:#00333B">Coleta</span></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:13px 26px">
-        ${f('Data / janela', [dataBR(os.dataAgendada), os.janela].filter(Boolean).join(' · '))}${f('Quantidade estimada', os.quantidade)}
+        ${f('Data da coleta', [dataBR(os.dataAgendada), os.janela].filter(Boolean).join(' · '))}${f('Quantidade estimada', os.quantidade)}
         ${f('Material declarado', os.material, true)}
         ${f('Acondicionamento', os.acondicionamento)}${f('Situação', STATUS[os.status] || os.status)}
         ${os.obs ? f('Observações', os.obs, true) : ''}

@@ -52,7 +52,7 @@ import { amostraContatosPloomes, paginaAmostraContatos, importarLoteContatos, es
 import { importarLoteAnexos, importarLoteAnexosContatos, completarAnexos, importarAnexosJanela, reprocessarFalhas, importarLoteDocumentos, recuperarDocumentos, estatisticasArquivos, paginaMigrarArquivos, diagnosticoAnexos, paginaDiagAnexos } from './ploomes-arquivos.js';
 import { fiscalPermitido, nomeFiscal, listarNotas, lerNota, importarLote, vincularNota, sugerirVinculoSync, paginaFiscalLogin, paginaFiscalHome, paginaFiscalResultado, paginaFiscalNota } from './fiscal.js';
 import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, clienteDeLead, paginaLeads, paginaLeadDetalhe, paginaInicio } from './cadastro.js';
-import { listarColetasOS, lerColetaOS, criarColetaOS, atualizarStatusOS, paginaColetasLista, paginaGerarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga } from './coletas.js';
+import { listarColetasOS, lerColetaOS, criarColetaOS, atualizarStatusOS, atualizarColetaOS, paginaColetasLista, paginaGerarColeta, paginaEditarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga } from './coletas.js';
 import { listarVeiculos, lerVeiculo, salvarVeiculo, paginaFrota, paginaVeiculoForm, lerJornadaAtiva, abrirJornada, fecharJornada, registrarAbastecimento, tagColetaComVeiculo, servirFotoJornada, bannerJornada, paginaAbrirDia, paginaFecharDia, paginaAbastecer, placaDaColeta } from './frota.js';
 import { carregarEquipeNoEnv, listarUsuarios, lerUsuario, salvarUsuario, importarUsuarios, paginaEquipe, paginaUsuarioForm, paginaEquipeImportar } from './equipe.js';
 import { agentesDe } from './agente.js';
@@ -556,7 +556,13 @@ export default {
       // Ordens de Coleta (escritório/comercial) — geração própria a partir do cliente.
       if (pathname === '/coletas' && request.method === 'GET') {
         if (!escritorio) return html(paginaLoginEscritorio(googleConfigurado(env)));
-        return html(paginaColetasLista(escritorio, await listarColetasOS(env)));
+        const q = (url.searchParams.get('q') || '').trim();
+        const ql = q.toLowerCase();
+        let coletas = await listarColetasOS(env);
+        // Busca cobre tudo (inclusive canceladas); sem busca, canceladas somem da lista.
+        if (ql) coletas = coletas.filter((c) => `${c.numero || ''} ${c.clienteNome || ''}`.toLowerCase().includes(ql));
+        else coletas = coletas.filter((c) => c.status !== 'cancelada');
+        return html(paginaColetasLista(escritorio, coletas, q));
       }
       if (pathname === '/coletas/nova' && request.method === 'GET') {
         if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
@@ -571,6 +577,23 @@ export default {
         const os = await lerColetaOS(env, url.searchParams.get('id') || '');
         if (!os) return html(paginaMensagem('Coleta não encontrada', 'Volte e tente de novo.'), 404);
         return html(paginaColetaOSDetalhe(escritorio, os));
+      }
+      if (pathname === '/coletas/editar' && request.method === 'GET') {
+        if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
+        const os = await lerColetaOS(env, url.searchParams.get('id') || '');
+        if (!os) return html(paginaMensagem('Coleta não encontrada', 'Volte e tente de novo.'), 404);
+        let contatos = [];
+        try { const cli = os.clienteId ? await lerCliente(env, os.clienteId) : null; if (cli) contatos = cli.tipo === 'PJ' ? (cli.contatos || []) : [{ nome: cli.nome, fone: cli.fone, email: cli.email }]; } catch { /* sem contatos do cliente, tudo bem */ }
+        const agentes = [...agentesDe(env).entries()].map(([email, nome]) => ({ email, nome }));
+        return html(paginaEditarColeta(escritorio, os, contatos, agentes));
+      }
+      if (pathname === '/api/coletas/editar' && request.method === 'POST') {
+        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = null; }
+        if (!b || !b.id) return json({ ok: false, error: 'dados' }, 400);
+        const r = await atualizarColetaOS(env, b.id, b);
+        if (!r) return json({ ok: false, error: 'nao_encontrada' }, 404);
+        return json({ ok: true, id: r.id });
       }
       if (pathname === '/coletas/os/comprovante' && request.method === 'GET') {
         if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
