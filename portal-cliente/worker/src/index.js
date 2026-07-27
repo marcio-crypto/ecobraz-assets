@@ -490,10 +490,17 @@ export default {
         if (!escritorio) return html(paginaLoginEscritorio(googleConfigurado(env)));
         const q = (url.searchParams.get('q') || '').trim();
         const ql = q.toLowerCase();
+        const tipo = (url.searchParams.get('tipo') || '').toUpperCase();
+        const PORPAG = 50;
         const todos = await listarClientes(env);
-        const filtrados = ql ? todos.filter((c) => `${c.nome || ''} ${c.doc || ''}`.toLowerCase().includes(ql)) : todos;
+        let filtrados = todos;
+        if (tipo === 'PJ' || tipo === 'PF') filtrados = filtrados.filter((c) => c.tipo === tipo);
+        if (ql) filtrados = filtrados.filter((c) => `${c.nome || ''} ${c.doc || ''}`.toLowerCase().includes(ql));
         const ordenados = [...filtrados].sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || ''), 'pt'));
-        return html(paginaCadastroHome(escritorio, ordenados.slice(0, 60), q, filtrados.length, todos.length));
+        const totalPags = Math.max(1, Math.ceil(ordenados.length / PORPAG));
+        const pag = Math.min(Math.max(1, Number(url.searchParams.get('p') || 1) || 1), totalPags);
+        const fatia = ordenados.slice((pag - 1) * PORPAG, pag * PORPAG);
+        return html(paginaCadastroHome(escritorio, fatia, q, ordenados.length, todos.length, { tipo: (tipo === 'PJ' || tipo === 'PF') ? tipo : '', pag, totalPags }));
       }
       if (pathname === '/cadastro/novo' && request.method === 'GET') {
         if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
@@ -1150,12 +1157,12 @@ async function solicitarLink(request, env) {
 async function entrarComToken(request, env, url) {
   const valor = url.searchParams.get('token') || '';
   const payload = await verificarToken(valor, env);
-  if (!payload || payload.tipo !== 'login') return html(paginaMensagem('Link inválido ou expirado', 'Peça um novo link de acesso na tela inicial.'), 400);
+  if (!payload || payload.tipo !== 'login') return html(paginaMensagem('Link inválido ou expirado', 'Peça um novo link de acesso na tela inicial.', '/'), 400);
 
   // Uso único: consome o nonce.
   if (env.PORTAL_KV) {
     const existe = await env.PORTAL_KV.get(`nonce:${payload.n}`);
-    if (!existe) return html(paginaMensagem('Este link já foi usado', 'Por segurança, cada link vale uma vez. Peça um novo na tela inicial.'), 400);
+    if (!existe) return html(paginaMensagem('Este link já foi usado', 'Por segurança, cada link vale uma vez. Peça um novo na tela inicial.', '/'), 400);
     await env.PORTAL_KV.delete(`nonce:${payload.n}`);
   }
 
@@ -1164,7 +1171,7 @@ async function entrarComToken(request, env, url) {
   try { cliente = await buscarClienteAtivo(payload.em, env); }
   catch (error) { console.error('reconfirma_falhou', safeError(error)); }
   if (!cliente || !cliente.liberado) {
-    return html(paginaMensagem('Acesso indisponível', 'Seu contrato pode ter expirado. Fale com a equipe da Ecobraz para renovar.'), 403);
+    return html(paginaMensagem('Acesso indisponível', 'Seu contrato pode ter expirado. Fale com a equipe da Ecobraz para renovar.', '/'), 403);
   }
 
   const sessao = await criarToken({ cid: cliente.contactId, emp: cliente.empresaId, em: cliente.email, nome: cliente.nome, fim: cliente.dataFim || '', tipo: 'sessao' }, SESSAO_TTL_S, env);

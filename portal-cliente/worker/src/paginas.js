@@ -359,14 +359,15 @@ preencherPerfil();
 </script></body></html>`;
 }
 
-export function paginaMensagem(titulo, texto) {
+export function paginaMensagem(titulo, texto, voltarUrl) {
+  const alvo = voltarUrl || '/inicio';
   return `${head(titulo)}
 <div class="auth-form" style="min-height:100vh;flex-direction:column;gap:22px">
   <img src="/assets/logo.png" alt="Ecobraz Emigre" style="width:170px">
   <div class="panel" style="max-width:440px;text-align:center">
     <h2 style="color:var(--teal);font-size:22px">${esc(titulo)}</h2>
     <p class="muted" style="margin:10px 0 20px">${esc(texto)}</p>
-    <a class="btn" href="/">Voltar ao início</a>
+    <a class="btn" href="${esc(alvo)}">Voltar ao início</a>
   </div>
 </div></body></html>`;
 }

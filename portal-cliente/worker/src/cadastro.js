@@ -113,25 +113,34 @@ b.onclick=async()=>{b.disabled=true;m.textContent='Enviando…';try{const r=awai
 e.addEventListener('keydown',ev=>{if(ev.key==='Enter')b.click();});</script></body></html>`;
 }
 
-export function paginaCadastroHome(user, clientes, q = '', totalFiltrado = null, totalGeral = null) {
+export function paginaCadastroHome(user, clientes, q = '', totalFiltrado = null, totalGeral = null, opts = {}) {
   const tf = totalFiltrado == null ? clientes.length : totalFiltrado;
-  const tg = totalGeral == null ? clientes.length : totalGeral;
+  const tipo = opts.tipo === 'PJ' || opts.tipo === 'PF' ? opts.tipo : '';
+  const pag = Math.max(1, Number(opts.pag || 1));
+  const totalPags = Math.max(1, Number(opts.totalPags || 1));
+  const base = (params) => { const kv = []; if (q) kv.push('q=' + encodeURIComponent(q)); const t = params && 'tipo' in params ? params.tipo : tipo; if (t) kv.push('tipo=' + t); if (params && params.p) kv.push('p=' + params.p); return '/cadastro' + (kv.length ? '?' + kv.join('&') : ''); };
   const linhas = clientes.length ? clientes.map((c) => `<a href="/cadastro/cliente?id=${esc(c.id)}" style="display:flex;justify-content:space-between;align-items:center;gap:12px;text-decoration:none;background:#fff;border:1px solid #E4EBE9;border-radius:12px;padding:13px 15px;margin-bottom:9px">
       <div style="min-width:0"><div style="font-size:14px;font-weight:800;color:#10262B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(c.nome || '(sem nome)')}</div>
       <div style="font-size:12px;color:#7c8a87;margin-top:3px">${esc(c.doc || '')}${c.cidade ? ' · ' + esc(c.cidade) : ''}</div></div>
       <span style="flex:none;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;${c.tipo === 'PJ' ? 'background:#E3F0F3;color:#0B5B66' : 'background:#EAF2E6;color:#3f7a2e'}">${c.tipo === 'PJ' ? 'EMPRESA' : 'PESSOA FÍSICA'}</span>
-    </a>`).join('') : `<div class="card" style="text-align:center;color:#8fa39f;font-size:13.5px">${q ? 'Nenhum cliente encontrado para essa busca.' : 'Nenhum cliente cadastrado ainda.<br>Comece criando uma empresa ou pessoa física acima.'}</div>`;
-  const maisInfo = tf > clientes.length ? `<div style="font-size:11.5px;color:#8fa39f;text-align:center;margin-top:10px">Mostrando ${clientes.length} de ${tf} — refine a busca para ver os demais.</div>` : '';
+    </a>`).join('') : `<div class="card" style="text-align:center;color:#8fa39f;font-size:13.5px">${q ? 'Nenhum cliente encontrado para essa busca.' : (tipo ? 'Nenhum cliente desse tipo.' : 'Nenhum cliente cadastrado ainda.<br>Comece criando uma empresa ou pessoa física acima.')}</div>`;
+  const chip = (lbl, tp) => `<a href="${base({ tipo: tp, p: 0 })}" style="text-decoration:none;font-size:12px;font-weight:800;padding:6px 13px;border-radius:20px;border:1.5px solid ${tipo === tp ? '#00333B' : '#cfe0dd'};background:${tipo === tp ? '#00333B' : '#fff'};color:${tipo === tp ? '#fff' : '#00333B'}">${lbl}</a>`;
+  const pager = totalPags > 1 ? `<div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;gap:10px">
+    ${pag > 1 ? `<a href="${base({ p: pag - 1 })}" class="btn btn-g" style="padding:9px 14px;text-decoration:none">← Anterior</a>` : '<span></span>'}
+    <span style="font-size:12px;color:#7c8a87">Página <b>${pag}</b> de <b>${totalPags}</b></span>
+    ${pag < totalPags ? `<a href="${base({ p: pag + 1 })}" class="btn btn-g" style="padding:9px 14px;text-decoration:none">Próxima →</a>` : '<span></span>'}
+  </div>` : '';
   return `${head('Cadastro')}<body>${topo(user, 'cadastro')}
 <div class="wrap">
   <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
     <a href="/cadastro/novo?tipo=PJ" class="btn btn-d">＋ Nova empresa</a>
     <a href="/cadastro/novo?tipo=PF" class="btn btn-g">＋ Nova pessoa física</a>
   </div>
-  <form method="get" action="/cadastro" style="margin:0 0 14px"><input name="q" value="${esc(q)}" placeholder="🔎 Buscar por nome ou documento e apertar Enter…" autocomplete="off"></form>
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-size:13px;font-weight:800">${q ? 'Resultados' : 'Clientes'}</div><span style="font-size:11px;background:#E3F0F3;color:#0B5B66;font-weight:800;padding:3px 9px;border-radius:20px">${q ? tf : tg}</span></div>
+  <form method="get" action="/cadastro" style="margin:0 0 10px">${tipo ? `<input type="hidden" name="tipo" value="${tipo}">` : ''}<input name="q" value="${esc(q)}" placeholder="🔎 Buscar por nome ou documento e apertar Enter…" autocomplete="off"></form>
+  <div style="display:flex;gap:8px;margin-bottom:12px">${chip('Todos', '')}${chip('Empresas', 'PJ')}${chip('Pessoas', 'PF')}</div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-size:13px;font-weight:800">${q ? 'Resultados' : (tipo === 'PJ' ? 'Empresas' : tipo === 'PF' ? 'Pessoas físicas' : 'Clientes')}</div><span style="font-size:11px;background:#E3F0F3;color:#0B5B66;font-weight:800;padding:3px 9px;border-radius:20px">${tf.toLocaleString('pt-BR')}</span></div>
   <div id="lista">${linhas}</div>
-  ${maisInfo}
+  ${pager}
 </div>
 </body></html>`;
 }
