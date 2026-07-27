@@ -458,7 +458,8 @@ async function calc(e){e.preventDefault();
 
 // Página do formulário GHG (Nível 2). Por ora PÚBLICA para teste; na versão final
 // ela abre só depois do pagamento confirmado.
-export function paginaCalculoDetalhado(nivelId) {
+export function paginaCalculoDetalhado(nivelId, preCnpj) {
+  const cnpjPre = String(preCnpj || '').replace(/[^0-9]/g, '');
   const nv = nivelCarbono(nivelId);
   const teste = !nv;
   const mostra1 = teste || nv.id !== 'simples';   // Escopo 1 (combustíveis) + Escopo 3 (viagens/deslocamento)
@@ -512,6 +513,8 @@ h1{font-size:clamp(23px,3vw,30px);color:var(--teal);letter-spacing:-.02em;margin
   </div>` : ''}
   <form id="f" onsubmit="return calc(event)">
     <div class="card">
+      <div class="grp">Sua empresa</div>
+      <div class="row"><label>CNPJ<span class="u">vincula ao painel da empresa</span></label><input id="cnpj_empresa" inputmode="numeric" maxlength="18" placeholder="00.000.000/0000-00" style="width:210px;text-align:left" value="${cnpjPre}"></div>
       <div class="grp">Escopo 2 — Energia</div>
       <div class="row"><label>Energia elétrica<span class="u">kWh/ano</span></label><input id="eletricidade_kwh" inputmode="numeric" placeholder="0"></div>
       ${mostra1 ? `<div class="grp">Escopo 1 — Combustíveis (frota, geradores)</div>
@@ -547,6 +550,7 @@ async function calc(e){e.preventDefault();
   var campos=['eletricidade_kwh','diesel_litro','gasolina_litro','etanol_litro','gnv_m3','glp_kg','viagem_aerea_km','deslocamento_km'];
   var body={}; campos.forEach(function(c){ body[c]=val(c); });
   body.pedido=new URLSearchParams(location.search).get('pedido')||'';
+  var ce=document.getElementById('cnpj_empresa'); body.cnpj=ce?ce.value:'';
   try{
     var r=await fetch('/api/carbono/detalhado',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
     var d=await r.json();

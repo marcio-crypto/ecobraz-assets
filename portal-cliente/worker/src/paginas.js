@@ -58,6 +58,13 @@ textarea{resize:vertical}
 .kpi{background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:var(--shadow-sm)}
 .kpi-label{font-size:11.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
 .kpi-num{display:block;font-size:34px;font-weight:800;color:var(--teal);margin:10px 0 2px;letter-spacing:-.03em;line-height:1}
+.svc-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.svc{display:flex;flex-direction:column;gap:4px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow-sm);transition:.16s}
+.svc:hover{border-color:var(--green);transform:translateY(-1px);box-shadow:0 10px 26px rgba(0,51,59,.10)}
+.svc-ic{font-size:24px}
+.svc-t{font-size:15.5px;font-weight:800;color:var(--teal)}
+.svc-d{font-size:12.5px;color:var(--muted);line-height:1.5}
+@media(max-width:640px){.svc-grid{grid-template-columns:1fr}}
 .kpi-num.ok{color:var(--green-d)}
 .kpi-hint{font-size:12px;color:var(--muted)}
 .kpi-soon{background:var(--soft);border-style:dashed}
@@ -197,7 +204,18 @@ export function paginaPainel({ nome, email, dataFim }) {
     <div class="kpi"><span class="kpi-label">Ordens de serviço</span><strong class="kpi-num" id="kpiOs">—</strong><span class="kpi-hint">registradas no seu histórico</span></div>
     <div class="kpi"><span class="kpi-label">Acesso</span><strong class="kpi-num ok">Liberado</strong><span class="kpi-hint">por link seguro</span></div>
     <div class="kpi kpi-soon"><span class="kpi-label">Documentos</span><strong class="kpi-num">Em breve</strong><span class="kpi-hint">NF · MTR · CDF</span></div>
-    <div class="kpi kpi-soon"><span class="kpi-label">Pegada de carbono</span><strong class="kpi-num">Em breve</strong><span class="kpi-hint">cálculo e neutralização</span></div>
+    <div class="kpi"><span class="kpi-label">Pegada de carbono</span><a class="kpi-num ok" href="/painel-carbono" style="font-size:20px;text-decoration:none">Ver painel →</a><span class="kpi-hint">termômetro de neutralidade</span></div>
+  </section>
+
+  <section class="panel" style="margin-bottom:16px">
+    <h2>Seus serviços</h2>
+    <p class="muted" style="margin:6px 0 16px">Tudo no seu perfil: acompanhe o impacto, patrocine coletas e gere os relatórios — a compra fica amarrada ao CNPJ da sua empresa.</p>
+    <div class="svc-grid">
+      <a class="svc" href="/painel-carbono"><span class="svc-ic">🌡️</span><span class="svc-t">Painel de Carbono</span><span class="svc-d">Seu termômetro: pegada × compensações, com lastro real.</span></a>
+      <a class="svc" href="/adote"><span class="svc-ic">🌱</span><span class="svc-t">Adote um Bairro</span><span class="svc-d">Patrocine coletas nos bairros e baixe o seu termômetro. Comprou, acabou? Compra mais — se quiser.</span></a>
+      <a class="svc" href="/carbono/planos"><span class="svc-ic">🧮</span><span class="svc-t">Inventário de carbono</span><span class="svc-d">Meça a pegada da empresa no padrão GHG Protocol.</span></a>
+      <a class="svc" href="/esg/planos"><span class="svc-ic">📄</span><span class="svc-t">Relatórios de ESG</span><span class="svc-d">Padrão BR, UE ou Financeiro — a prova para banco, cliente e auditoria.</span></a>
+    </div>
   </section>
 
   <section class="panel">

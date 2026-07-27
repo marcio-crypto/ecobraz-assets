@@ -167,7 +167,8 @@ export default {
             return html(paginaMensagem('Formulário bloqueado', 'O formulário do inventário abre depois do pagamento confirmado. Escolha o seu plano para começar.', '/carbono/planos'), 402);
           }
         }
-        return html(paginaCalculoDetalhado(nvId));
+        const sInv = await lerSessao(request, env).catch(() => null);
+        return html(paginaCalculoDetalhado(nvId, sInv ? sInv.documento : ''));
       }
       if (pathname === '/api/carbono/detalhado' && request.method === 'POST') {
         const corpo = await request.json().catch(() => ({}));
@@ -179,11 +180,15 @@ export default {
             const raw = await env.PORTAL_KV.get(`pedido:${pid}`);
             const ped = raw ? JSON.parse(raw) : null;
             if (ped && ped.produto === 'carbono' && ped.status === 'pago') {
+              const docInv = String((corpo && corpo.cnpj) || ped.doc || '').replace(/\D/g, '');
               ped.inventario = { inputs: corpo, resultado, em: nowS() };
+              if (docInv) ped.doc = docInv;
               await env.PORTAL_KV.put(`pedido:${pid}`, JSON.stringify(ped), { expirationTtl: 400 * 86400 });
-              // Ponteiro por e-mail → o termômetro do cliente logado acha a pegada (número B).
+              const ponteiro = JSON.stringify({ totalTCO2e: resultado.totalTCO2e, em: nowS(), pedidoId: pid, faixa: ped.faixa || '' });
+              // Vincula ao CNPJ da empresa (vale para TODOS os usuários dela) — e por e-mail como reserva.
+              if (docInv) { try { await env.PORTAL_KV.put(`carbono-inv-doc:${docInv}`, ponteiro, { expirationTtl: 400 * 86400 }); } catch { /* ok */ } }
               const em = String(ped.email || '').trim().toLowerCase();
-              if (em) { try { await env.PORTAL_KV.put(`carbono-inv:${em}`, JSON.stringify({ totalTCO2e: resultado.totalTCO2e, em: nowS(), pedidoId: pid, faixa: ped.faixa || '' }), { expirationTtl: 400 * 86400 }); } catch { /* ok */ } }
+              if (em) { try { await env.PORTAL_KV.put(`carbono-inv:${em}`, ponteiro, { expirationTtl: 400 * 86400 }); } catch { /* ok */ } }
             }
           }
         } catch (error) { console.error('carbono_salvar_inv_falhou', safeError(error)); }
@@ -205,7 +210,12 @@ export default {
         }
       }
       // Loja "Adote um Bairro" (pública): patrocínio de coletas por módulo × faturamento.
-      if (pathname === '/adote' && request.method === 'GET') return html(paginaLojaAdote(url.searchParams.get('faixa') || ''));
+      // Se o cliente estiver logado, pré-preenche os dados dele (compra pelo perfil).
+      if (pathname === '/adote' && request.method === 'GET') {
+        const s = await lerSessao(request, env).catch(() => null);
+        const pre = s ? { razao: s.nome || '', cnpj: s.documento || '', email: s.email || '' } : null;
+        return html(paginaLojaAdote(url.searchParams.get('faixa') || '', pre));
+      }
       if (pathname === '/diagnostico' && request.method === 'GET') return html(paginaDiagnostico());
       if (pathname === '/adote/obrigado' && request.method === 'GET') {
         const ref = url.searchParams.get('pedido');
@@ -241,7 +251,7 @@ export default {
         const baseUrl = env.PORTAL_BASE_URL || url.origin;
         if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${ref}`, JSON.stringify({ produto: 'adote', status: 'pendente', clienteId: cliente.id, clienteNome: razaoSocial, doc: cnpj, pacoteId: pac.id, faixa, tipo: 'avulso', valor, kg: pac.kg, coletas: pac.coletas, email, criadoEm: nowS() }), { expirationTtl: 7 * 86400 });
         try {
-          const pref = await criarPreferencia({ valor, descricao: `Adote um Bairro — módulo ${pac.ton}t (${pac.coletas} coletas · anual)`, externalReference: ref, baseUrl, backPath: '/adote/obrigado' }, env);
+          const pref = await criarPreferencia({ valor, descricao: `Adote um Bairro — módulo ${pac.ton}t (${pac.coletas} coletas patrocinadas)`, externalReference: ref, baseUrl, backPath: '/adote/obrigado' }, env);
           return json({ ok: true, pedido: ref, init_point: pref.initPoint });
         } catch (e) { console.error('adote_mp_falhou', safeError(e)); return json({ ok: false, erro: 'Não foi possível gerar o pagamento agora.' }, 502); }
       }
@@ -1317,10 +1327,15 @@ export default {
         // Termômetro de neutralidade: patrocínio (Adote, número C) + inventário (número B) + fator.
         let extra = { adote: null, inventario: null, compensacao: fatorCompensacaoAdote(env) };
         try {
-          const cred = await lerCreditoPorDoc(env, sessao.documento || '');
+          const doc = String(sessao.documento || '').replace(/\D/g, '');
+          const cred = await lerCreditoPorDoc(env, doc); // Adote (compensação C) já amarra pelo CNPJ
           if (cred) extra.adote = resumoPatrocinio(cred);
-          const em = String(sessao.email || '').trim().toLowerCase();
-          if (em && env.PORTAL_KV) { const raw = await env.PORTAL_KV.get(`carbono-inv:${em}`); if (raw) extra.inventario = JSON.parse(raw); }
+          if (env.PORTAL_KV) {
+            // Inventário (B): amarra pelo CNPJ (vale p/ todos os usuários da empresa); e-mail é só reserva.
+            let raw = doc ? await env.PORTAL_KV.get(`carbono-inv-doc:${doc}`) : null;
+            if (!raw) { const em = String(sessao.email || '').trim().toLowerCase(); if (em) raw = await env.PORTAL_KV.get(`carbono-inv:${em}`); }
+            if (raw) extra.inventario = JSON.parse(raw);
+          }
         } catch (e) { console.error('termometro_extra_falhou', safeError(e)); }
         return html(paginaPainelCarbono(sessao, dadosCli, await lerValidacao(env), extra));
       }

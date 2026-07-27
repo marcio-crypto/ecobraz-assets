@@ -231,7 +231,8 @@ function topoLoja() {
   return `<div class="top"><div class="wr"><span style="color:#fff;font-size:17px;font-weight:800">ecobraz</span><span style="color:#92C430;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase">Adote um Bairro</span></div></div>`;
 }
 
-export function paginaLojaAdote(faixaIni) {
+export function paginaLojaAdote(faixaIni, pre) {
+  const p = pre || {};
   const faixaSel = faixaValida(faixaIni) || 'p';
   const optFaixas = FAIXAS_FATURAMENTO.map((f) => `<option value="${f.id}"${f.id === faixaSel ? ' selected' : ''}>${esc(f.rotulo)}</option>`).join('');
   const modulosJson = JSON.stringify(MODULOS_ADOTE.map((m) => ({ id: m.id, ton: m.ton, coletas: m.coletas, precos: m.precos })));
@@ -264,7 +265,7 @@ export function paginaLojaAdote(faixaIni) {
     <div class="ben"><div class="ic">🌱</div><div><div class="t">Impacto ESG de verdade</div><div class="d">Cada tonelada financia a coleta correta em bairros e comunidades. Sua marca ligada a algo que admiram.</div></div></div>
     <div class="ben"><div class="ic">♻️</div><div><div class="t">Rastreabilidade que se sustenta</div><div class="d">Do caminhão ao destino final, cada quilo é pesado, fotografado e registrado — a trilha que segura em pé numa auditoria.</div></div></div>
     <div class="ben"><div class="ic">💳</div><div><div class="t">Crédito pré-pago, sem surpresa</div><div class="d">Compra o peso que precisa e usa quando quiser. Sem mensalidade escondida, sem contrato amarrado.</div></div></div>
-    <div class="ben"><div class="ic">🔁</div><div><div class="t">Recorrente com 10% off</div><div class="d">Quando o crédito está acabando, a gente te envia a renovação por e-mail — você confirma num toque. 10% de desconto e nunca fica sem coleta.</div></div></div>
+    <div class="ben"><div class="ic">🔁</div><div><div class="t">Crédito que vai baixando</div><div class="d">Você compra o pacote e ele vai sendo consumido a cada coleta patrocinada. Quando o crédito acabar, você decide se compra mais — sem cobrança automática, sem amarração.</div></div></div>
   </div>
 </div>
 
@@ -318,7 +319,7 @@ export function paginaLojaAdote(faixaIni) {
 
 <div class="sec" id="planos" style="padding-top:10px">
   <h2>Escolha o seu módulo</h2>
-  <div class="sub">Cada módulo patrocina um número de coletas na casa das pessoas (~25 kg cada). Quanto maior o módulo, menor o custo por coleta. O preço acompanha o porte da sua empresa. Contratação anual.</div>
+  <div class="sub">Cada módulo patrocina um número de coletas na casa das pessoas (~25 kg cada). Quanto maior o módulo, menor o custo por coleta. O preço acompanha o porte da sua empresa. Você compra o pacote, ele vai baixando a cada coleta, e quando acabar você compra mais — se quiser.</div>
   <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;background:#fff;border:1px solid #E4EBE9;border-radius:14px;padding:14px 16px;margin-bottom:16px">
     <label style="margin:0;font-size:13.5px;font-weight:800;color:#28413f">Faturamento anual da empresa:</label>
     <select id="fat" onchange="render()" style="padding:11px 12px;border:1px solid #CBD7D2;border-radius:10px;font:inherit;font-size:15px;background:#fff">${optFaixas}</select>
@@ -328,10 +329,10 @@ export function paginaLojaAdote(faixaIni) {
 
   <div class="card" style="margin-top:16px">
     <div style="font-size:15px;font-weight:800;margin-bottom:4px">Seus dados</div>
-    <div style="font-size:12px;color:#7c8a87;margin-bottom:6px">Para emitirmos a cobrança e organizar o patrocínio das coletas.</div>
-    <label>Razão social / Nome da empresa</label><input id="f_razao" maxlength="120" autocomplete="organization">
-    <label>CNPJ</label><input id="f_cnpj" inputmode="numeric" maxlength="18" placeholder="00.000.000/0000-00">
-    <div style="display:flex;gap:12px"><div style="flex:1"><label>E-mail</label><input id="f_email" type="email" autocomplete="email"></div><div style="flex:1"><label>Telefone</label><input id="f_tel" inputmode="tel" autocomplete="tel"></div></div>
+    <div style="font-size:12px;color:#7c8a87;margin-bottom:6px">${p.cnpj ? 'Você está logado — já preenchemos os dados da sua empresa. É só escolher o módulo e contratar.' : 'Para emitirmos a cobrança e organizar o patrocínio das coletas.'}</div>
+    <label>Razão social / Nome da empresa</label><input id="f_razao" maxlength="120" autocomplete="organization" value="${esc(p.razao || '')}">
+    <label>CNPJ</label><input id="f_cnpj" inputmode="numeric" maxlength="18" placeholder="00.000.000/0000-00" value="${esc(p.cnpj || '')}">
+    <div style="display:flex;gap:12px"><div style="flex:1"><label>E-mail</label><input id="f_email" type="email" autocomplete="email" value="${esc(p.email || '')}"></div><div style="flex:1"><label>Telefone</label><input id="f_tel" inputmode="tel" autocomplete="tel"></div></div>
     <label>Cidade / UF <span style="color:#9aa7a4;font-weight:400">(opcional)</span></label><input id="f_cidade" maxlength="80" placeholder="São Paulo / SP">
     <button class="btn" id="btnc" style="margin-top:16px" onclick="contratar(this)">Contratar e pagar</button>
     <div id="msg" style="font-size:13px;color:#4F6469;margin-top:12px;text-align:center"></div>
@@ -363,7 +364,7 @@ export function paginaLojaAdote(faixaIni) {
     <details><summary>E se eu não usar todas as coletas do módulo?</summary><p>O crédito fica guardado no seu saldo, sem prazo de validade — as coletas patrocinadas vão sendo descontadas uma a uma, conforme acontecem, com total transparência no sistema.</p></details>
     <details><summary>Por que o preço muda conforme o faturamento?</summary><p>O módulo é o mesmo para todos; o preço acompanha o porte da empresa para ser justo. Empresas acima de R$ 300 milhões/ano recebem uma proposta sob medida.</p></details>
     <details><summary>Como comprovo que foi destinado corretamente?</summary><p>Você recebe o Certificado de Destinação Final (CDF) e a trilha de rastreabilidade de cada coleta, com assinatura do Responsável Técnico — válidos para auditoria e órgãos ambientais.</p></details>
-    <details><summary>Preciso assinar contrato longo?</summary><p>Não. A contratação é anual e você renova quando quiser — sem multa, sem fidelidade.</p></details>
+    <details><summary>Preciso assinar contrato ou mensalidade?</summary><p>Não. Você compra o pacote uma vez; ele vai sendo consumido a cada coleta patrocinada. Quando o crédito acabar, você decide se compra mais — sem cobrança automática, sem fidelidade.</p></details>
   </div>
 </div>
 <script>
@@ -375,7 +376,7 @@ function render(){
   var fx=faixa();
   document.getElementById('cards').innerHTML=MODS.map(function(m){
     var p=m.precos[fx];
-    var preco=(p==null)?'<div class="pr" style="font-size:19px">Sob proposta</div>':('<div class="pr">'+brl(p)+'<span style="font-size:12px;color:#7c8a87;font-weight:700"> /ano</span></div>');
+    var preco=(p==null)?'<div class="pr" style="font-size:19px">Sob proposta</div>':('<div class="pr">'+brl(p)+'<span style="font-size:12px;color:#7c8a87;font-weight:700"> · pacote</span></div>');
     var un=(p==null)?'<div class="un">a equipe monta uma proposta sob medida</div>':('<div class="un">'+fmtBRL(p/m.coletas)+' por coleta · '+fmtBRL(p/m.ton)+' por tonelada</div>');
     return '<div class="pac'+(SEL===m.id?' sel':'')+'" data-id="'+m.id+'" onclick="selPac(\\''+m.id+'\\')">'
       +'<div class="ton">'+m.ton+(m.ton===1?' tonelada':' toneladas')+'</div>'
