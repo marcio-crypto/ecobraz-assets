@@ -35,10 +35,11 @@ import { paginaLogin, paginaPainel, paginaMensagem } from './paginas.js';
 import { LOGO_ESCURO_B64, LOGO_CLARO_B64 } from './logos.js';
 import { paginaCalculadora, estimativaCarbono, paginaCalculoDetalhado, calculoDetalhadoGHG, paginaLojaCarbono, paginaCarbonoContato, paginaCarbonoObrigado, nivelCarbono, faixaValida, precoNivel } from './carbono.js';
 import { criarPreferencia, consultarPagamento } from './mercadopago.js';
-import { acharPacote, precoPacote, paginaLojaAdote, paginaObrigadoAdote, paginaDiagnostico, lerCredito, salvarCredito, novoCredito, aplicarCompra, aplicarRecarga, precisaRecarga, listarPatrocinadores } from './adote.js';
+import { acharPacote, precoPacote, acharModuloAdote, precoModuloAdote, paginaLojaAdote, paginaObrigadoAdote, paginaDiagnostico, lerCredito, salvarCredito, novoCredito, aplicarCompra, aplicarRecarga, precisaRecarga, listarPatrocinadores, resumoPatrocinio, lerCreditoPorDoc } from './adote.js';
+import { paginaLojaESG, paginaESGContato, paginaESGObrigado, relatorioESG, precoRelatorioESG } from './esg.js';
 import { statusDaEtapa, valorProp, CAMPOS_OS } from './os-utils.js';
 import { qrCDF, validarCDF } from './validacao.js';
-import { paginaMetodologia } from './carbono-metodologia.js';
+import { paginaMetodologia, fatorCompensacaoAdote } from './carbono-metodologia.js';
 import { lerValidacao, registrarValidacao, paginaAreaValidacao, qrMetodologia, validarMetodologiaPublico } from './validacao-metodologia.js';
 import { paginaPainelCarbono } from './carbono-painel.js';
 import { clientesComOperacoes, carbonoDoCliente, paginaCarbonoAnalista, paginaCarbonoAuditor } from './carbono-motor.js';
@@ -180,6 +181,9 @@ export default {
             if (ped && ped.produto === 'carbono' && ped.status === 'pago') {
               ped.inventario = { inputs: corpo, resultado, em: nowS() };
               await env.PORTAL_KV.put(`pedido:${pid}`, JSON.stringify(ped), { expirationTtl: 400 * 86400 });
+              // Ponteiro por e-mail → o termômetro do cliente logado acha a pegada (número B).
+              const em = String(ped.email || '').trim().toLowerCase();
+              if (em) { try { await env.PORTAL_KV.put(`carbono-inv:${em}`, JSON.stringify({ totalTCO2e: resultado.totalTCO2e, em: nowS(), pedidoId: pid, faixa: ped.faixa || '' }), { expirationTtl: 400 * 86400 }); } catch { /* ok */ } }
             }
           }
         } catch (error) { console.error('carbono_salvar_inv_falhou', safeError(error)); }
@@ -200,8 +204,8 @@ export default {
           return json({ ok: false, error: 'nao_foi_possivel_cobrar', detalhe: String(error?.message || '').slice(0, 220) }, 502);
         }
       }
-      // Loja "Adote um Bairro" (pública): coleta pré-paga por tonelada.
-      if (pathname === '/adote' && request.method === 'GET') return html(paginaLojaAdote());
+      // Loja "Adote um Bairro" (pública): patrocínio de coletas por módulo × faturamento.
+      if (pathname === '/adote' && request.method === 'GET') return html(paginaLojaAdote(url.searchParams.get('faixa') || ''));
       if (pathname === '/diagnostico' && request.method === 'GET') return html(paginaDiagnostico());
       if (pathname === '/adote/obrigado' && request.method === 'GET') {
         const ref = url.searchParams.get('pedido');
@@ -211,13 +215,20 @@ export default {
       }
       if (pathname === '/api/adote/contratar' && request.method === 'POST') {
         const b = await request.json().catch(() => ({}));
-        const pac = acharPacote(b && b.pacoteId);
-        const tipo = b && b.tipo === 'recorrente' ? 'recorrente' : 'avulso';
-        if (!pac) return json({ ok: false, erro: 'Escolha um pacote válido.' }, 400);
+        const pac = acharModuloAdote(b && b.moduloId);
+        const faixa = faixaValida(String((b && b.faixa) || ''));
+        if (!pac) return json({ ok: false, erro: 'Escolha um módulo válido.' }, 400);
+        if (!faixa) return json({ ok: false, erro: 'Informe o faturamento da empresa.' }, 400);
         const razaoSocial = String(b.razaoSocial || '').trim();
         const cnpj = String(b.cnpj || '').replace(/\D/g, '');
         const email = String(b.email || '').trim().toLowerCase();
         if (!razaoSocial || cnpj.length !== 14 || !/^\S+@\S+\.\S+$/.test(email)) return json({ ok: false, erro: 'Preencha razão social, CNPJ (14 dígitos) e e-mail válido.' }, 400);
+        const preco = precoModuloAdote(pac.id, faixa);
+        // Faixa "sob proposta" (> R$ 300 mi): não cobra — abre um lead para a proposta sob medida.
+        if (!preco || preco.sobConsulta) {
+          try { await ingestLead(env, { name: '', company: razaoSocial, email, phone: String(b.telefone || '').trim(), material_category: `Adote um Bairro — proposta (${pac.ton}t)`, material_description: `Pedido de proposta sob medida — Adote um Bairro.\nMódulo: ${pac.ton}t (${pac.coletas} coletas)\nFaturamento: acima de R$ 300 mi/ano\nCNPJ: ${cnpj}\nCidade: ${String(b.cidade || '').trim()}`, source: 'adote-proposta' }); } catch (e) { console.error('adote_proposta_falhou', safeError(e)); }
+          return json({ ok: false, proposta: true });
+        }
         let cliente = null;
         try {
           const clientes = await listarClientes(env);
@@ -225,14 +236,25 @@ export default {
           if (resumo) cliente = await lerCliente(env, resumo.id);
           if (!cliente) cliente = await salvarCliente(env, { tipo: 'PJ', razaoSocial, cnpj, email, telefone: String(b.telefone || '').trim(), endereco: { cidade: String(b.cidade || '').trim() }, origem: 'adote' });
         } catch (e) { console.error('adote_cliente_falhou', safeError(e)); return json({ ok: false, erro: 'Falha ao registrar o cliente.' }, 500); }
-        const valor = precoPacote(pac, tipo);
+        const valor = preco.valor;
         const ref = novoId();
         const baseUrl = env.PORTAL_BASE_URL || url.origin;
-        if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${ref}`, JSON.stringify({ produto: 'adote', status: 'pendente', clienteId: cliente.id, clienteNome: razaoSocial, pacoteId: pac.id, tipo, valor, kg: pac.kg, email, criadoEm: nowS() }), { expirationTtl: 7 * 86400 });
+        if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${ref}`, JSON.stringify({ produto: 'adote', status: 'pendente', clienteId: cliente.id, clienteNome: razaoSocial, doc: cnpj, pacoteId: pac.id, faixa, tipo: 'avulso', valor, kg: pac.kg, coletas: pac.coletas, email, criadoEm: nowS() }), { expirationTtl: 7 * 86400 });
         try {
-          const pref = await criarPreferencia({ valor, descricao: `Adote um Bairro — ${pac.ton}t (${tipo === 'recorrente' ? 'recorrente' : 'avulso'})`, externalReference: ref, baseUrl, backPath: '/adote/obrigado' }, env);
+          const pref = await criarPreferencia({ valor, descricao: `Adote um Bairro — módulo ${pac.ton}t (${pac.coletas} coletas · anual)`, externalReference: ref, baseUrl, backPath: '/adote/obrigado' }, env);
           return json({ ok: true, pedido: ref, init_point: pref.initPoint });
         } catch (e) { console.error('adote_mp_falhou', safeError(e)); return json({ ok: false, erro: 'Não foi possível gerar o pagamento agora.' }, 502); }
+      }
+      // Pedido de proposta do Adote (faixa > R$ 300 mi ou botão "Pedir proposta").
+      if (pathname === '/api/adote/proposta' && request.method === 'POST') {
+        const b = await request.json().catch(() => ({}));
+        const pac = acharModuloAdote(b && b.moduloId);
+        try {
+          await ingestLead(env, { name: '', company: String(b.razaoSocial || '').trim(), email: String(b.email || '').trim().toLowerCase(), phone: String(b.telefone || '').trim(),
+            material_category: `Adote um Bairro — proposta${pac ? ` (${pac.ton}t)` : ''}`,
+            material_description: `Pedido de proposta — Adote um Bairro.\nMódulo: ${pac ? pac.ton + 't (' + pac.coletas + ' coletas)' : '?'}\nFaturamento: ${String(b.faixa || '?')}\nCNPJ: ${String(b.cnpj || '').replace(/\D/g, '')}\nCidade: ${String(b.cidade || '').trim()}`, source: 'adote-proposta' });
+        } catch (e) { console.error('adote_proposta_falhou', safeError(e)); }
+        return json({ ok: true });
       }
       // Webhook do Mercado Pago: confirma o pagamento consultando a API (fonte da verdade).
       if (pathname === '/api/mp/webhook') {
@@ -257,12 +279,13 @@ export default {
                 try {
                   const pac = acharPacote(ped.pacoteId);
                   if (pac) {
-                    let cred = (await lerCredito(env, ped.clienteId)) || novoCredito(ped.clienteId, ped.clienteNome);
+                    let cred = (await lerCredito(env, ped.clienteId)) || novoCredito(ped.clienteId, ped.clienteNome, ped.doc);
+                    if (!cred.doc && ped.doc) cred.doc = String(ped.doc).replace(/\D/g, ''); // garante o índice por CNPJ (termômetro)
                     if (ped.evento === 'recarga') {
                       cred = aplicarRecarga(cred, pac, ped.valor, pg.externalReference, nowS());
                       if (cred.recargaPendente && cred.recargaPendente.ref === pg.externalReference) cred.recargaPendente = null;
                     } else {
-                      cred = aplicarCompra(cred, pac, ped.tipo, ped.valor, pg.externalReference, nowS());
+                      cred = aplicarCompra(cred, pac, ped.tipo, ped.valor, pg.externalReference, nowS(), ped.faixa);
                     }
                     await salvarCredito(env, cred);
                     console.log('adote_credito', { cliente: ped.clienteId, saldo: cred.saldoKg, evento: ped.evento || 'compra' });
@@ -279,6 +302,15 @@ export default {
                     await ingestLead(env, { email: pg.payerEmail || '', company: '', material_category: 'Carbono — Contratado (PAGO)', material_description: `Cliente CONTRATOU e PAGOU o inventário nível Contratado. A Villanova coleta os dados e faz o inventário.\nFaturamento: ${ped.faixa}\nValor: R$ ${ped.valor}\nPedido: ${pg.externalReference}\nE-mail do pagador: ${pg.payerEmail || '(não informado)'}`, source: 'carbono-contratado-pago' });
                   }
                 } catch (error) { console.error('carbono_pago_falhou', safeError(error)); }
+              } else if (ped.produto === 'esg') {
+                // Relatório de ESG pago: valida por 1 ano e abre tarefa para a Villanova produzir.
+                try {
+                  ped.validade = new Date(Date.now() + 365 * 86400 * 1000).toISOString();
+                  if (pg.payerEmail) ped.email = pg.payerEmail;
+                  await env.PORTAL_KV.put(chave, JSON.stringify(ped), { expirationTtl: 400 * 86400 });
+                  const rel = relatorioESG(ped.relatorio || '');
+                  await ingestLead(env, { email: pg.payerEmail || ped.email || '', company: ped.clienteNome || '', material_category: `ESG — ${rel ? rel.nome : 'relatório'} (PAGO)`, material_description: `Cliente CONTRATOU e PAGOU um relatório de ESG. A Villanova ESG produz a partir dos dados do sistema.\nRelatório: ${rel ? rel.nome : ped.relatorio}\nFaturamento: ${ped.faixa}\nValor: R$ ${ped.valor}\nPedido: ${pg.externalReference}\nE-mail do pagador: ${pg.payerEmail || '(não informado)'}`, source: 'esg-pago' });
+                } catch (error) { console.error('esg_pago_falhou', safeError(error)); }
               } else {
                 try { await enviarEmailNF(ped, pg, env); } catch (error) { console.error('nf_email_falhou', safeError(error)); }
               }
@@ -294,6 +326,45 @@ export default {
         const raw = await env.PORTAL_KV.get(`pedido:${id}`);
         const ped = raw ? JSON.parse(raw) : null;
         return json({ ok: true, status: ped?.status || 'desconhecido', nivel: ped?.nivel || '', validade: ped?.validade || '' });
+      }
+
+      // Relatórios de ESG — loja (3 modelos + combo × faturamento, anual). Produzidos pela Villanova.
+      if (pathname === '/esg/planos' && request.method === 'GET') return html(paginaLojaESG(url.searchParams.get('faixa') || ''));
+      if (pathname === '/esg/contato' && request.method === 'GET') return html(paginaESGContato(relatorioESG(url.searchParams.get('rel') || ''), url.searchParams.get('faixa') || ''));
+      if (pathname === '/api/esg/contato' && request.method === 'POST') {
+        let b; try { b = await request.json(); } catch { b = {}; }
+        const rel = relatorioESG((b && b.rel) || '');
+        try {
+          await ingestLead(env, {
+            name: String((b && b.nome) || ''), company: String((b && b.empresa) || ''), email: String((b && b.email) || ''), phone: String((b && b.fone) || ''),
+            material_category: `ESG — ${rel ? rel.nome : 'relatório'} (proposta)`,
+            material_description: `Pedido de proposta de relatório de ESG (site).\nRelatório: ${rel ? rel.nome : '?'}\nFaturamento: ${(b && b.faixa) || '?'}\nMensagem: ${String((b && b.msg) || '').slice(0, 1000)}`,
+            source: 'esg-proposta',
+          });
+        } catch (error) { console.error('esg_contato_falhou', safeError(error)); }
+        return json({ ok: true });
+      }
+      if (pathname === '/esg/assinar' && request.method === 'GET') {
+        const rel = relatorioESG(url.searchParams.get('rel') || '');
+        const fx = faixaValida(url.searchParams.get('faixa') || '');
+        if (!rel || !fx) return new Response(null, { status: 302, headers: { Location: '/esg/planos', 'cache-control': 'no-store' } });
+        const preco = precoRelatorioESG(rel.id, fx);
+        if (!preco || preco.sobConsulta) return new Response(null, { status: 302, headers: { Location: `/esg/contato?rel=${encodeURIComponent(rel.id)}&faixa=${encodeURIComponent(fx)}`, 'cache-control': 'no-store' } });
+        const pedidoId = novoId();
+        const baseUrl = env.PORTAL_BASE_URL || url.origin;
+        if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${pedidoId}`, JSON.stringify({ produto: 'esg', status: 'pendente', relatorio: rel.id, faixa: fx, valor: preco.valor, criadoEm: nowS() }), { expirationTtl: 7 * 86400 });
+        try {
+          const pref = await criarPreferencia({ valor: preco.valor, descricao: `Relatório de ESG — ${rel.nome} (anual)`, externalReference: pedidoId, baseUrl, backPath: `/esg/obrigado?pedido=${pedidoId}` }, env);
+          return new Response(null, { status: 302, headers: { Location: pref.initPoint, 'cache-control': 'no-store' } });
+        } catch (error) { console.error('esg_assinar_falhou', safeError(error)); return html(paginaMensagem('Pagamento indisponível', 'Não consegui gerar a cobrança agora. Tente de novo em instantes.', '/esg/planos'), 502); }
+      }
+      if (pathname === '/esg/obrigado' && request.method === 'GET') return html(paginaESGObrigado(url.searchParams.get('pedido') || ''));
+      if (pathname === '/api/esg/pedido' && request.method === 'GET') {
+        const id = url.searchParams.get('id') || '';
+        if (!env.PORTAL_KV || !id) return json({ ok: false, status: 'desconhecido' }, 400);
+        const raw = await env.PORTAL_KV.get(`pedido:${id}`);
+        const ped = raw ? JSON.parse(raw) : null;
+        return json({ ok: true, status: ped?.status || 'desconhecido', relatorio: ped?.relatorio || '', validade: ped?.validade || '' });
       }
 
       // Equipe & Acessos: SOMA os usuários cadastrados às listas de acesso por papel
@@ -1243,7 +1314,15 @@ export default {
       if (pathname === '/painel-carbono' && request.method === 'GET') {
         if (!sessao) return new Response(null, { status: 302, headers: { Location: '/', 'cache-control': 'no-store' } });
         const dadosCli = await carbonoDoCliente(env, sessao.nome || '');
-        return html(paginaPainelCarbono(sessao, dadosCli, await lerValidacao(env)));
+        // Termômetro de neutralidade: patrocínio (Adote, número C) + inventário (número B) + fator.
+        let extra = { adote: null, inventario: null, compensacao: fatorCompensacaoAdote(env) };
+        try {
+          const cred = await lerCreditoPorDoc(env, sessao.documento || '');
+          if (cred) extra.adote = resumoPatrocinio(cred);
+          const em = String(sessao.email || '').trim().toLowerCase();
+          if (em && env.PORTAL_KV) { const raw = await env.PORTAL_KV.get(`carbono-inv:${em}`); if (raw) extra.inventario = JSON.parse(raw); }
+        } catch (e) { console.error('termometro_extra_falhou', safeError(e)); }
+        return html(paginaPainelCarbono(sessao, dadosCli, await lerValidacao(env), extra));
       }
       // Carbono — tela do ANALISTA (a cozinha): peso REAL por material × fator da metodologia.
       // Interno (engenharia/diretoria). Todo tCO₂e fica "pendente" até a Villanova validar os fatores.
@@ -2227,10 +2306,10 @@ async function verificarRecargaAdote(env, clienteId, baseUrl) {
   if (!pac) return;
   const cliente = await lerCliente(env, clienteId);
   const email = (cliente && cliente.email) || '';
-  const valor = precoPacote(pac, 'recorrente');
+  const valor = precoPacote(pac, cred.faixa);
   const ref = novoId();
   const base = String(baseUrl || '').replace(/\/+$/, '');
-  await env.PORTAL_KV.put(`pedido:${ref}`, JSON.stringify({ produto: 'adote', evento: 'recarga', status: 'pendente', clienteId, clienteNome: cred.clienteNome, pacoteId: pac.id, tipo: 'recorrente', valor, kg: pac.kg, email, criadoEm: nowS() }), { expirationTtl: 14 * 86400 });
+  await env.PORTAL_KV.put(`pedido:${ref}`, JSON.stringify({ produto: 'adote', evento: 'recarga', status: 'pendente', clienteId, clienteNome: cred.clienteNome, doc: cred.doc || '', pacoteId: pac.id, faixa: cred.faixa || '', tipo: 'recorrente', valor, kg: pac.kg, email, criadoEm: nowS() }), { expirationTtl: 14 * 86400 });
   const pref = await criarPreferencia({ valor, descricao: `Adote um Bairro — renovação ${pac.ton}t (recorrente)`, externalReference: ref, baseUrl: base, backPath: '/adote/obrigado' }, env);
   cred.recargaPendente = { ref, em: nowS() };
   await salvarCredito(env, cred);

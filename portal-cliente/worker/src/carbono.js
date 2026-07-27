@@ -267,6 +267,13 @@ select{padding:11px 12px;border:1px solid #CBD7D2;border-radius:10px;font:inheri
   <div class="fatbox"><label for="fat">Faturamento anual da empresa:</label><select id="fat" onchange="render()">${optFaixas}</select></div>
   <div class="cards" id="cards"></div>
   <div class="disc">Os preços são um <b>ponto de partida de mercado</b> e podem ser ajustados. O padrão de cálculo (GHG Protocol) e os fatores de emissão são revisados pela <b>Villanova ESG</b> antes de virar relatório oficial.</div>
+  <div style="background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px 20px;margin-top:22px">
+    <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--green-d);text-align:center">Depois de medir, complete o ciclo</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px" class="cross">
+      <a href="/adote" style="text-decoration:none;color:inherit;border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:block"><div style="font-size:20px">🌱</div><div style="font-size:14px;font-weight:800;color:var(--teal);margin:6px 0 3px">Compense — Adote um Bairro</div><div style="font-size:12.5px;color:var(--muted);line-height:1.5">Patrocine coletas e baixe o seu termômetro com lastro real.</div></a>
+      <a href="/esg/planos" style="text-decoration:none;color:inherit;border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:block"><div style="font-size:20px">📄</div><div style="font-size:14px;font-weight:800;color:var(--teal);margin:6px 0 3px">Comprove — Relatório de ESG</div><div style="font-size:12.5px;color:var(--muted);line-height:1.5">BR, UE ou Financeiro (para crédito mais barato).</div></a>
+    </div>
+  </div>
   <div class="foot">Ecobraz Emigre — destinação correta, conformidade e evidências.</div>
 </div>
 <script>

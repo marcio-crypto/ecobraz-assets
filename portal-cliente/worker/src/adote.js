@@ -1,42 +1,72 @@
-// Adote um Bairro — loja de coleta PRÉ-PAGA por tonelada (pública).
+// Adote um Bairro — PATROCÍNIO de coletas de eletrônico em bairros/comunidades (público).
 //
-// Modelo comercial (definido pela diretoria em 2026-07-24):
-//  - 3 pacotes fixos: 1 t, 5 t, 10 t. Compra AVULSA ou RECORRENTE (recorrente = −10%).
-//  - O cliente compra PESO (toneladas) e fica com CRÉDITO em kg.
-//  - A cada coleta CONCLUÍDA, desconta do crédito o PESO DA DOCA (número auditável).
-//  - RECORRENTE: quando o saldo chega a ≤ 20 kg, recarrega o MESMO pacote
-//    (ao chegar em ~20kg, o sistema gera a cobrança e ENVIA O LINK de renovação por e-mail;
-//     o cliente confirma num toque — sem guardar cartão).
+// Modelo comercial (aprovado pela diretoria em jul/2026):
+//  - A empresa PATROCINA coletas de pessoa física ("adota um bairro"). Cada coleta
+//    patrocinada rende, em média, ~25 kg de eletrônico tirado da casa das pessoas —
+//    o peso REAL é o da doca (número auditável).
+//  - Vendido em MÓDULOS por tonelada: 1 t, 3 t, 5 t, 10 t. Compra ANUAL.
+//  - O preço varia pela FAIXA DE FATURAMENTO da empresa (mesma régua do carbono).
+//  - A empresa fica com CRÉDITO em kg; a cada coleta patrocinada concluída, desconta
+//    do crédito o PESO DA DOCA. Isso alimenta o "termômetro de neutralidade" dela.
+//  - Renovação é MANUAL (a empresa recompra o módulo quando quiser) — igual ao carbono.
 //
 // SEGURANÇA: a chave do Mercado Pago vive só na Cloudflare (Secret). O cartão é
 // tokenizado pelo próprio Mercado Pago — o sistema NUNCA vê o número do cartão.
 //
-// Guardado no KV: credito:{clienteId} (saldo + histórico) e pedido:{ref} (cada compra).
+// Guardado no KV: credito:{clienteId} (saldo + histórico), credito-doc:{cnpj} → clienteId
+// (para o termômetro achar o crédito pelo login) e pedido:{ref} (cada compra).
+
+import { FAIXAS_FATURAMENTO, faixaValida, faixaPorFaturamento } from './carbono.js';
 
 export const LIMIAR_RECARGA_KG = 20;
 
-// Preços: avulso e recorrente (−10%). kg = toneladas × 1000.
-export const PACOTES = [
-  { id: 't1', ton: 1, kg: 1000, avulso: 3500, recorrente: 3150 },
-  { id: 't5', ton: 5, kg: 5000, avulso: 16000, recorrente: 14400 },
-  { id: 't10', ton: 10, kg: 10000, avulso: 30000, recorrente: 27000 },
+// Cada coleta de PESSOA FÍSICA patrocinada rende, em média, ~25 kg de eletrônico.
+// Custo de referência da Ecobraz por coleta patrocinada: R$ 55 (usado só internamente).
+export const COLETA_KG_MEDIO = 25;
+export const CUSTO_COLETA = 55;
+
+// Módulos (1/3/5/10 t) × faixa de faturamento. Cobrança ANUAL. Preços aprovados
+// pela diretoria (jul/2026). Faixa xg (> R$ 300 mi/ano) = proposta sob medida.
+// kg = coletas × 25 = toneladas × 1000. coletas = quantas coletas PF o módulo patrocina.
+export const MODULOS_ADOTE = [
+  { id: 't1', ton: 1, kg: 1000, coletas: 40, precos: { p: 3900, m: 4500, g: 5200, xg: null } },
+  { id: 't3', ton: 3, kg: 3000, coletas: 120, precos: { p: 10900, m: 12500, g: 14500, xg: null } },
+  { id: 't5', ton: 5, kg: 5000, coletas: 200, precos: { p: 16900, m: 19500, g: 22900, xg: null } },
+  { id: 't10', ton: 10, kg: 10000, coletas: 400, precos: { p: 31900, m: 36900, g: 42900, xg: null } },
 ];
-export const acharPacote = (id) => PACOTES.find((p) => p.id === id) || null;
-export const precoPacote = (pac, tipo) => (tipo === 'recorrente' ? pac.recorrente : pac.avulso);
+// Compat (o resto do sistema chama "pacote"): PACOTES/acharPacote apontam para os módulos.
+export const PACOTES = MODULOS_ADOTE;
+export const acharPacote = (id) => MODULOS_ADOTE.find((p) => p.id === id) || null;
+export const acharModuloAdote = acharPacote;
+
+// Preço de um módulo numa faixa. { valor:Number, sobConsulta:false } ou { valor:null, sobConsulta:true }.
+export function precoModuloAdote(moduloId, faixaId) {
+  const m = acharPacote(moduloId); if (!m) return null;
+  const v = m.precos[faixaValida(faixaId) || faixaId];
+  return (v == null) ? { valor: null, sobConsulta: true } : { valor: v, sobConsulta: false };
+}
+// Compat: devolve o número do preço na faixa (0 se sob proposta / inválido).
+export function precoPacote(pac, faixaId) {
+  if (!pac || !pac.precos) return 0;
+  return Number(pac.precos[faixaValida(faixaId) || 'p']) || 0;
+}
+export { FAIXAS_FATURAMENTO, faixaValida, faixaPorFaturamento };
 const agora = () => { try { return new Date().toISOString(); } catch { return ''; } };
 
 // --- Motor de crédito (funções PURAS; fáceis de testar) --------------------
-export function novoCredito(clienteId, nome) {
-  return { clienteId: String(clienteId), clienteNome: nome || '', saldoKg: 0, tipo: null, pacoteId: null, valorUltimo: 0, cardId: null, status: 'ativo', criadoEm: agora(), atualizadoEm: agora(), historico: [] };
+export function novoCredito(clienteId, nome, doc) {
+  return { clienteId: String(clienteId), clienteNome: nome || '', doc: String(doc || '').replace(/\D/g, ''), saldoKg: 0, compradoKg: 0, coletasFeitas: 0, tipo: null, pacoteId: null, faixa: '', valorUltimo: 0, cardId: null, status: 'ativo', criadoEm: agora(), atualizadoEm: agora(), historico: [] };
 }
 
-// Registra uma COMPRA aprovada (primeira ou upgrade): soma kg e define tipo/pacote.
-export function aplicarCompra(cred, pac, tipo, valor, ref, quando) {
+// Registra uma COMPRA aprovada (primeira ou upgrade): soma kg e define tipo/pacote/faixa.
+export function aplicarCompra(cred, pac, tipo, valor, ref, quando, faixa) {
   const c = { ...cred, historico: [...(cred.historico || [])] };
   c.saldoKg = Math.round((Number(c.saldoKg) || 0) + pac.kg);
+  c.compradoKg = Math.round((Number(c.compradoKg) || 0) + pac.kg);
   c.tipo = tipo === 'recorrente' ? 'recorrente' : 'avulso';
   c.pacoteId = pac.id;
-  c.valorUltimo = Number(valor) || precoPacote(pac, tipo);
+  if (faixa) c.faixa = faixaValida(faixa) || c.faixa;
+  c.valorUltimo = Number(valor) || precoPacote(pac, faixa || c.faixa);
   c.atualizadoEm = quando || agora();
   c.historico.push({ evento: 'compra', pacote: pac.id, tipo: c.tipo, kg: pac.kg, valor: c.valorUltimo, ref: ref || '', quando: c.atualizadoEm });
   return c;
@@ -46,20 +76,35 @@ export function aplicarCompra(cred, pac, tipo, valor, ref, quando) {
 export function aplicarRecarga(cred, pac, valor, ref, quando) {
   const c = { ...cred, historico: [...(cred.historico || [])] };
   c.saldoKg = Math.round((Number(c.saldoKg) || 0) + pac.kg);
-  c.valorUltimo = Number(valor) || pac.recorrente;
+  c.compradoKg = Math.round((Number(c.compradoKg) || 0) + pac.kg);
+  c.valorUltimo = Number(valor) || precoPacote(pac, c.faixa) || 0;
   c.atualizadoEm = quando || agora();
   c.historico.push({ evento: 'recarga', pacote: pac.id, kg: pac.kg, valor: c.valorUltimo, ref: ref || '', quando: c.atualizadoEm });
   return c;
 }
 
-// Debita o peso (kg) de UMA coleta concluída. Não impede saldo negativo (a recarga cobre).
+// Debita o peso (kg) de UMA coleta patrocinada concluída. Conta a coleta (para o
+// termômetro). Não impede saldo negativo (a recompra cobre).
 export function debitar(cred, kg, ref, quando) {
   const c = { ...cred, historico: [...(cred.historico || [])] };
   const q = Math.max(0, Math.round(Number(kg) || 0));
   c.saldoKg = Math.round((Number(c.saldoKg) || 0) - q);
+  c.coletasFeitas = (Number(c.coletasFeitas) || 0) + 1;
   c.atualizadoEm = quando || agora();
   c.historico.push({ evento: 'consumo', kg: -q, saldo: c.saldoKg, ref: ref || '', quando: c.atualizadoEm });
   return c;
+}
+
+// Resumo de patrocínio de UMA empresa — alimenta o termômetro de neutralidade.
+// Números FÍSICOS e reais (coletas patrocinadas concluídas, kg tirados dos bairros).
+export function resumoPatrocinio(cred) {
+  if (!cred) return { temCredito: false, coletasFeitas: 0, kgPatrocinado: 0, saldoKg: 0, compradoKg: 0 };
+  const hist = cred.historico || [];
+  const consumos = hist.filter((h) => h.evento === 'consumo');
+  const kgPatrocinado = consumos.reduce((a, h) => a + Math.abs(Number(h.kg) || 0), 0);
+  const coletasFeitas = Number(cred.coletasFeitas) || consumos.length;
+  const compradoKg = Number(cred.compradoKg) || hist.filter((h) => h.evento === 'compra' || h.evento === 'recarga').reduce((a, h) => a + (Number(h.kg) || 0), 0);
+  return { temCredito: true, coletasFeitas, kgPatrocinado, saldoKg: Number(cred.saldoKg) || 0, compradoKg };
 }
 
 // Precisa recarregar? (só recorrente, saldo no limiar ou abaixo)
@@ -78,7 +123,19 @@ export async function salvarCredito(env, cred) {
   // mantém o histórico enxuto (últimos 200 lançamentos)
   if (cred.historico && cred.historico.length > 200) cred.historico = cred.historico.slice(-200);
   await env.PORTAL_KV.put(`credito:${cred.clienteId}`, JSON.stringify(cred));
+  // índice por documento → o termômetro do cliente logado acha o crédito pelo CNPJ.
+  const doc = String(cred.doc || '').replace(/\D/g, '');
+  if (doc) { try { await env.PORTAL_KV.put(`credito-doc:${doc}`, String(cred.clienteId)); } catch { /* ok */ } }
   return cred;
+}
+
+// Acha o crédito de uma empresa pelo CNPJ (para o termômetro do cliente logado).
+export async function lerCreditoPorDoc(env, doc) {
+  const d = String(doc || '').replace(/\D/g, '');
+  if (!env.PORTAL_KV || !d) return null;
+  const clienteId = await env.PORTAL_KV.get(`credito-doc:${d}`);
+  if (clienteId) return lerCredito(env, clienteId);
+  return null;
 }
 
 // Empresas com crédito disponível — alimenta o seletor de "patrocínio" na coleta.
@@ -174,18 +231,16 @@ function topoLoja() {
   return `<div class="top"><div class="wr"><span style="color:#fff;font-size:17px;font-weight:800">ecobraz</span><span style="color:#92C430;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase">Adote um Bairro</span></div></div>`;
 }
 
-export function paginaLojaAdote() {
-  const cards = PACOTES.map((p) => `<div class="pac" data-id="${p.id}" data-ton="${p.ton}" data-avulso="${p.avulso}" data-recorrente="${p.recorrente}" onclick="selPac('${p.id}')">
-      <div class="ton">${p.ton} ${p.ton === 1 ? 'tonelada' : 'toneladas'}</div>
-      <div class="pr" id="pr_${p.id}">${moedaBR(p.avulso)}</div>
-      <div class="un" id="un_${p.id}">${moedaBR(p.avulso / p.ton)} por tonelada</div>
-    </div>`).join('');
+export function paginaLojaAdote(faixaIni) {
+  const faixaSel = faixaValida(faixaIni) || 'p';
+  const optFaixas = FAIXAS_FATURAMENTO.map((f) => `<option value="${f.id}"${f.id === faixaSel ? ' selected' : ''}>${esc(f.rotulo)}</option>`).join('');
+  const modulosJson = JSON.stringify(MODULOS_ADOTE.map((m) => ({ id: m.id, ton: m.ton, coletas: m.coletas, precos: m.precos })));
   return `${headLoja('Adote um Bairro — Ecobraz')}<body>${topoLoja()}
 <div class="hero"><div class="in">
-  <div class="eyebrow">Adote um Bairro · Descarte de eletrônicos</div>
-  <div class="h1">O eletrônico parado no seu estoque é um risco jurídico — e um vazamento de dados esperando acontecer.</div>
-  <p class="lead">A Ecobraz recolhe, destina corretamente e te entrega o Certificado de Destinação Final. Você compra por tonelada, usa quando precisar — e ainda transforma o descarte da sua empresa em impacto social real.</p>
-  <a href="#planos" class="cta">Ver planos e contratar →</a>
+  <div class="eyebrow">Adote um Bairro · Patrocínio de coletas</div>
+  <div class="h1">Sua empresa financia a coleta de eletrônico na casa das pessoas — e leva a prova para o ESG.</div>
+  <p class="lead">Você adota um bairro: patrocina as coletas de lixo eletrônico que quase ninguém faz (a “última milha”), recebe a documentação auditável de tudo — e cada coleta patrocinada <b>baixa o seu termômetro de emissões</b>. Impacto social real, com lastro, no nome da sua marca.</p>
+  <a href="#planos" class="cta">Ver módulos e contratar →</a>
   <a href="/diagnostico" style="display:inline-block;margin-left:14px;color:#fff;font-size:14px;font-weight:700;text-decoration:underline;text-underline-offset:3px">Ainda em dúvida? Faça o diagnóstico de 1 min →</a>
   <div style="font-size:12px;color:#9FC6C1;margin-top:16px">Destinação licenciada · Certificado com Responsável Técnico (CREA) · Rastreabilidade total</div>
 </div></div>
@@ -216,9 +271,9 @@ export function paginaLojaAdote() {
 <div class="sec" style="padding-top:6px">
   <h2>Como funciona</h2>
   <div class="steps">
-    <div class="step"><div class="n">1</div><div class="t">Escolha e contrate</div><div class="d">Selecione o pacote (1, 5 ou 10 toneladas), avulso ou recorrente, e pague com segurança.</div></div>
-    <div class="step"><div class="n">2</div><div class="t">A gente coleta</div><div class="d">Agendamos e recolhemos o material na sua empresa. Você acompanha tudo pelo sistema.</div></div>
-    <div class="step"><div class="n">3</div><div class="t">Receba o certificado</div><div class="d">Triagem, destinação correta e o Certificado de Destinação Final assinado — prontos para a auditoria.</div></div>
+    <div class="step"><div class="n">1</div><div class="t">Escolha e contrate</div><div class="d">Selecione o módulo (1, 3, 5 ou 10 toneladas) conforme o porte da empresa e pague com segurança.</div></div>
+    <div class="step"><div class="n">2</div><div class="t">A gente coleta nos bairros</div><div class="d">A Ecobraz recolhe o eletrônico na casa das pessoas. Cada coleta é pesada, fotografada e rastreada — e desconta do seu saldo.</div></div>
+    <div class="step"><div class="n">3</div><div class="t">Prova + termômetro</div><div class="d">Você recebe a documentação auditável, e cada coleta baixa o seu termômetro de carbono — pronto para o relatório de ESG.</div></div>
   </div>
 </div>
 
@@ -227,6 +282,18 @@ export function paginaLojaAdote() {
     <div class="eyebrow" style="color:#9CE06B">Por que “Adote um Bairro”</div>
     <h2 style="color:#fff;margin-top:10px">Você financia a coleta que faltava — e fica com a prova</h2>
     <p style="font-size:15px;line-height:1.7;color:#CFE9C7;max-width:660px;margin:8px auto 0">Recolher o eletrônico na casa de uma pessoa custa caro: é a “última milha” que quase ninguém faz — e por isso esse lixo acaba no lixão ou no desmanche informal. No Adote um Bairro, a sua empresa <b>financia essa coleta</b>. Em troca, você recebe a <b>documentação auditável</b> de tudo que foi recolhido e realiza uma ação concreta: tira o lixo eletrônico da casa das pessoas e fecha o ciclo do jeito certo. É a sua marca ligada a um impacto que dá para provar — e que ninguém mais no mercado oferece.</p>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-top:22px">
+      <div style="flex:1 1 240px;max-width:300px;background:rgba(255,255,255,.06);border:1px solid rgba(146,196,48,.35);border-radius:14px;padding:16px 18px;text-align:left">
+        <div style="font-size:22px">🌡️</div>
+        <div style="font-size:14.5px;font-weight:800;color:#fff;margin:6px 0 4px">Baixa o seu termômetro</div>
+        <div style="font-size:12.5px;color:#CFE9C7;line-height:1.55">Cada coleta patrocinada é pesada na doca e entra como <b>compensação</b> no seu Painel de Carbono — puxando a sua pegada em direção à neutralidade, com lastro real (não estimativa).</div>
+      </div>
+      <div style="flex:1 1 240px;max-width:300px;background:rgba(255,255,255,.06);border:1px solid rgba(146,196,48,.35);border-radius:14px;padding:16px 18px;text-align:left">
+        <div style="font-size:22px">📊</div>
+        <div style="font-size:14.5px;font-weight:800;color:#fff;margin:6px 0 4px">Vira linha no relatório ESG</div>
+        <div style="font-size:12.5px;color:#CFE9C7;line-height:1.55">O patrocínio entra como ação social e ambiental <b>documentada</b> no seu relatório de ESG — a prova que investidor, banco e auditoria pedem.</div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -250,69 +317,99 @@ export function paginaLojaAdote() {
 </div>
 
 <div class="sec" id="planos" style="padding-top:10px">
-  <h2>Escolha seu plano</h2>
-  <div class="sub">Quanto mais toneladas, menor o preço por tonelada. Na recorrência, ainda 10% de desconto.</div>
-  <div class="seg" role="tablist">
-    <button id="seg_avulso" class="on" onclick="setTipo('avulso')">Avulso</button>
-    <button id="seg_recorrente" onclick="setTipo('recorrente')">Recorrente −10%</button>
+  <h2>Escolha o seu módulo</h2>
+  <div class="sub">Cada módulo patrocina um número de coletas na casa das pessoas (~25 kg cada). Quanto maior o módulo, menor o custo por coleta. O preço acompanha o porte da sua empresa. Contratação anual.</div>
+  <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;background:#fff;border:1px solid #E4EBE9;border-radius:14px;padding:14px 16px;margin-bottom:16px">
+    <label style="margin:0;font-size:13.5px;font-weight:800;color:#28413f">Faturamento anual da empresa:</label>
+    <select id="fat" onchange="render()" style="padding:11px 12px;border:1px solid #CBD7D2;border-radius:10px;font:inherit;font-size:15px;background:#fff">${optFaixas}</select>
   </div>
-  <div id="notaTipo" style="font-size:12.5px;color:#4F6469;margin-bottom:8px"></div>
 
-  <div class="cards">${cards}</div>
+  <div class="cards" id="cards"></div>
 
   <div class="card" style="margin-top:16px">
     <div style="font-size:15px;font-weight:800;margin-bottom:4px">Seus dados</div>
-    <div style="font-size:12px;color:#7c8a87;margin-bottom:6px">Para emitirmos a cobrança e agendar as coletas.</div>
+    <div style="font-size:12px;color:#7c8a87;margin-bottom:6px">Para emitirmos a cobrança e organizar o patrocínio das coletas.</div>
     <label>Razão social / Nome da empresa</label><input id="f_razao" maxlength="120" autocomplete="organization">
     <label>CNPJ</label><input id="f_cnpj" inputmode="numeric" maxlength="18" placeholder="00.000.000/0000-00">
     <div style="display:flex;gap:12px"><div style="flex:1"><label>E-mail</label><input id="f_email" type="email" autocomplete="email"></div><div style="flex:1"><label>Telefone</label><input id="f_tel" inputmode="tel" autocomplete="tel"></div></div>
     <label>Cidade / UF <span style="color:#9aa7a4;font-weight:400">(opcional)</span></label><input id="f_cidade" maxlength="80" placeholder="São Paulo / SP">
-    <button class="btn" style="margin-top:16px" onclick="contratar(this)">Contratar e pagar</button>
+    <button class="btn" id="btnc" style="margin-top:16px" onclick="contratar(this)">Contratar e pagar</button>
     <div id="msg" style="font-size:13px;color:#4F6469;margin-top:12px;text-align:center"></div>
   </div>
   <div style="margin-top:16px;text-align:center">
-    <span class="badge">🛡️ Destinação licenciada</span><span class="badge">📄 Certificado com RT (CREA)</span><span class="badge">📍 Rastreabilidade auditável</span><span class="badge">🔒 Pagamento seguro (Mercado Pago)</span>
+    <span class="badge">🛡️ Destinação licenciada</span><span class="badge">📄 Certificado com RT (CREA)</span><span class="badge">🌡️ Baixa o seu termômetro</span><span class="badge">🔒 Pagamento seguro (Mercado Pago)</span>
   </div>
   <div style="font-size:11px;color:#9aa7a4;text-align:center;margin-top:12px">Pagamento seguro via Mercado Pago. Ao contratar, você concorda com os termos de coleta e destinação da Ecobraz.</div>
+</div>
+
+<div class="sec" style="padding-top:0">
+  <div style="background:#fff;border:1px solid #E4EBE9;border-radius:16px;padding:20px 22px">
+    <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#3f6b1e;text-align:center">Complete o ciclo do carbono</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px" class="funil">
+      <a href="/carbono/planos" style="text-decoration:none;color:inherit;border:1px solid #E4EBE9;border-radius:12px;padding:14px 16px;display:block">
+        <div style="font-size:20px">🧮</div><div style="font-size:14px;font-weight:800;color:#00333B;margin:6px 0 3px">1. Meça a pegada</div><div style="font-size:12.5px;color:#5c6f6b;line-height:1.5">Faça o inventário de carbono da sua empresa (GHG Protocol).</div></a>
+      <div style="border:1px solid #cde5a6;background:#F7FBF2;border-radius:12px;padding:14px 16px">
+        <div style="font-size:20px">🌱</div><div style="font-size:14px;font-weight:800;color:#00333B;margin:6px 0 3px">2. Compense (você está aqui)</div><div style="font-size:12.5px;color:#5c6f6b;line-height:1.5">Patrocine coletas e baixe o seu termômetro com lastro real.</div></div>
+      <a href="/esg/planos" style="text-decoration:none;color:inherit;border:1px solid #E4EBE9;border-radius:12px;padding:14px 16px;display:block">
+        <div style="font-size:20px">📄</div><div style="font-size:14px;font-weight:800;color:#00333B;margin:6px 0 3px">3. Comprove</div><div style="font-size:12.5px;color:#5c6f6b;line-height:1.5">Gere o relatório de ESG que investidor, banco e auditoria pedem.</div></a>
+    </div>
+  </div>
 </div>
 
 <div class="sec" style="padding-top:6px">
   <h2>Perguntas frequentes</h2>
   <div class="faq">
-    <details><summary>E se eu não usar todo o crédito?</summary><p>No avulso, o crédito fica guardado sem prazo de validade — você usa quando precisar, coleta a coleta.</p></details>
+    <details><summary>Como o patrocínio baixa o meu termômetro de emissões?</summary><p>Cada coleta patrocinada é pesada na doca (peso real, auditável) e entra como <b>compensação</b> no seu Painel de Carbono. O número em toneladas de CO₂e só aparece como valor final depois que a <b>Villanova ESG</b> homologa o fator de conversão — até lá mostramos o dado físico real (coletas e quilos), sem inventar número. Compensação é reportada à parte do inventário, sem dupla contagem.</p></details>
+    <details><summary>E se eu não usar todas as coletas do módulo?</summary><p>O crédito fica guardado no seu saldo, sem prazo de validade — as coletas patrocinadas vão sendo descontadas uma a uma, conforme acontecem, com total transparência no sistema.</p></details>
+    <details><summary>Por que o preço muda conforme o faturamento?</summary><p>O módulo é o mesmo para todos; o preço acompanha o porte da empresa para ser justo. Empresas acima de R$ 300 milhões/ano recebem uma proposta sob medida.</p></details>
     <details><summary>Como comprovo que foi destinado corretamente?</summary><p>Você recebe o Certificado de Destinação Final (CDF) e a trilha de rastreabilidade de cada coleta, com assinatura do Responsável Técnico — válidos para auditoria e órgãos ambientais.</p></details>
-    <details><summary>Preciso assinar contrato longo?</summary><p>Não. O avulso é compra única. O recorrente você ativa e cancela quando quiser — sem multa, sem fidelidade.</p></details>
-    <details><summary>Como funciona o desconto do crédito?</summary><p>Cada coleta é pesada na recepção da Ecobraz e esse peso é descontado do seu saldo. Você acompanha o saldo pelo sistema, com total transparência.</p></details>
-    <details><summary>E a segurança dos meus dados?</summary><p>Equipamentos com informação sensível passam por destruição/descaracterização certificada, com comprovação documentada. Seu HD velho não vira sucata revendida com seus arquivos dentro.</p></details>
+    <details><summary>Preciso assinar contrato longo?</summary><p>Não. A contratação é anual e você renova quando quiser — sem multa, sem fidelidade.</p></details>
   </div>
 </div>
 <script>
-var TIPO='avulso', PAC=null;
+var MODS=${modulosJson}, SEL=null;
+function brl(v){return 'R$ '+Number(v).toLocaleString('pt-BR');}
 function fmtBRL(n){return 'R$ '+Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
-function setTipo(t){TIPO=t;
-  document.getElementById('seg_avulso').className=(t==='avulso'?'on':'');
-  document.getElementById('seg_recorrente').className=(t==='recorrente'?'on':'');
-  document.getElementById('notaTipo').innerHTML = t==='recorrente' ? 'Na recorrência você tem <b>10% de desconto</b>. Quando o crédito está acabando, a gente te envia a renovação por e-mail — você confirma num toque.' : 'Compra única. Quando o crédito acabar, é só comprar de novo.';
-  document.querySelectorAll('.pac').forEach(function(el){
-    var v=Number(el.getAttribute('data-'+t)), ton=Number(el.getAttribute('data-ton'));
-    var id=el.getAttribute('data-id');
-    document.getElementById('pr_'+id).textContent=fmtBRL(v);
-    document.getElementById('un_'+id).textContent=fmtBRL(v/ton)+' por tonelada';
-  });
+function faixa(){return document.getElementById('fat').value;}
+function render(){
+  var fx=faixa();
+  document.getElementById('cards').innerHTML=MODS.map(function(m){
+    var p=m.precos[fx];
+    var preco=(p==null)?'<div class="pr" style="font-size:19px">Sob proposta</div>':('<div class="pr">'+brl(p)+'<span style="font-size:12px;color:#7c8a87;font-weight:700"> /ano</span></div>');
+    var un=(p==null)?'<div class="un">a equipe monta uma proposta sob medida</div>':('<div class="un">'+fmtBRL(p/m.coletas)+' por coleta · '+fmtBRL(p/m.ton)+' por tonelada</div>');
+    return '<div class="pac'+(SEL===m.id?' sel':'')+'" data-id="'+m.id+'" onclick="selPac(\\''+m.id+'\\')">'
+      +'<div class="ton">'+m.ton+(m.ton===1?' tonelada':' toneladas')+'</div>'
+      +'<div style="font-size:12.5px;color:#3f6b1e;font-weight:800;margin-top:4px">patrocina ~'+m.coletas+' coletas</div>'
+      +preco+un+'</div>';
+  }).join('');
+  atualizaBotao();
 }
-function selPac(id){PAC=id;document.querySelectorAll('.pac').forEach(function(el){el.className='pac'+(el.getAttribute('data-id')===id?' sel':'');});}
+function selPac(id){SEL=id;render();}
+function sob(){var m=MODS.find(function(x){return x.id===SEL;});return !!(m&&m.precos[faixa()]==null);}
+function atualizaBotao(){var b=document.getElementById('btnc');if(!b)return;
+  var fx=faixa(), todaSob=MODS.every(function(m){return m.precos[fx]==null;});
+  b.textContent=((SEL&&sob())||todaSob)?'Pedir proposta':'Contratar e pagar';}
+function v(id){var el=document.getElementById(id);return el?el.value.trim():'';}
 function contratar(btn){var m=document.getElementById('msg');
-  if(!PAC){m.textContent='Escolha um pacote acima.';return;}
-  var body={pacoteId:PAC,tipo:TIPO,razaoSocial:v('f_razao'),cnpj:v('f_cnpj'),email:v('f_email'),telefone:v('f_tel'),cidade:v('f_cidade')};
+  if(!SEL){m.style.color='#8a4b45';m.textContent='Escolha um módulo acima.';return;}
+  var body={moduloId:SEL,faixa:faixa(),razaoSocial:v('f_razao'),cnpj:v('f_cnpj'),email:v('f_email'),telefone:v('f_tel'),cidade:v('f_cidade')};
   if(!body.razaoSocial||!body.cnpj||!body.email){m.style.color='#8a4b45';m.textContent='Preencha razão social, CNPJ e e-mail.';return;}
-  btn.disabled=true;m.style.color='#4F6469';m.textContent='Gerando pagamento…';
+  btn.disabled=true;m.style.color='#4F6469';
+  if(sob()){
+    m.textContent='Enviando o seu pedido de proposta…';
+    fetch('/api/adote/proposta',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}).then(function(r){return r.json();}).then(function(){
+      m.style.color='#1E7A3D';m.textContent='✅ Recebido! Nossa equipe vai preparar a sua proposta e entrar em contato.';btn.disabled=false;
+    }).catch(function(){btn.disabled=false;m.style.color='#8a4b45';m.textContent='Sem conexão. Tente de novo.';});
+    return;
+  }
+  m.textContent='Gerando pagamento…';
   fetch('/api/adote/contratar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}).then(function(r){return r.json();}).then(function(j){
     if(j&&j.ok&&j.init_point){m.textContent='Redirecionando para o pagamento…';window.location=j.init_point;}
+    else if(j&&j.proposta){m.style.color='#1E7A3D';m.textContent='✅ Recebido! Nossa equipe vai preparar a sua proposta e entrar em contato.';btn.disabled=false;}
     else{btn.disabled=false;m.style.color='#8a4b45';m.textContent=(j&&j.erro)||'Não foi possível gerar o pagamento.';}
   }).catch(function(){btn.disabled=false;m.style.color='#8a4b45';m.textContent='Sem conexão. Tente de novo.';});
 }
-function v(id){var el=document.getElementById(id);return el?el.value.trim():'';}
-setTipo('avulso');
+render();
 </script>
 </body></html>`;
 }

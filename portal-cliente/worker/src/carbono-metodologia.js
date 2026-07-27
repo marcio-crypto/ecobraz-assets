@@ -49,13 +49,37 @@ export const METODOLOGIA = {
     { id: 'eletricidade', material: 'Eletricidade da planta (BR)', valor: null, unidade: 'tCO₂e/MWh', fonte: 'MCTI/SIRENE (fator do ano)', versaoFonte: '2025', status: 'fonte_oficial', nota: 'Fator oficial publicado; atualizar por ano' },
     { id: 'transporte', material: 'Transporte da coleta (km × modal)', valor: null, unidade: 'kgCO₂e/t·km', fonte: 'GHG Protocol / Defra', versaoFonte: '', status: 'proposto', nota: '' },
   ],
+
+  // Fator de COMPENSAÇÃO do "Adote um Bairro" (o número C). Quanto de CO₂e cada
+  // coleta PF patrocinada (~25 kg de REEE) compensa. PLUGÁVEL: valor:null até a
+  // Villanova/Karina validar (ou via var de ambiente ADOTE_KGCO2E_POR_COLETA, com a
+  // MESMA trava de validação). C é reportado À PARTE de A (evitado) e B (inventário)
+  // — NUNCA somado. É o que alimenta o "termômetro de neutralidade" do cliente.
+  compensacaoAdote: { valor: null, unidade: 'kgCO₂e/coleta', coletaKgMedio: 25, fonte: 'Villanova ESG (a validar) — base WARM/WEEE por ~25 kg de REEE', versaoFonte: '', status: 'proposto', nota: 'Karina valida o fator; até lá o termômetro mostra só o dado físico (coletas e quilos).' },
 };
+
+// Lê o fator de compensação do Adote (número C), pronto para o termômetro.
+// REGRA DE OURO: só devolve número quando a metodologia estiver 'validado' E o fator
+// 'validado'. O valor pode vir da metodologia OU da var de ambiente (plugue sem deploy),
+// mas a trava de validação é a mesma — nada acende antes da assinatura da Villanova.
+export function fatorCompensacaoAdote(env, metodologia) {
+  const M = metodologia || METODOLOGIA;
+  const base = (M && M.compensacaoAdote) || null;
+  const validado = !!(M && M.status === 'validado' && base && base.status === 'validado');
+  let valor = null;
+  if (validado) {
+    const ov = env && env.ADOTE_KGCO2E_POR_COLETA;
+    const envVal = (ov != null && ov !== '') ? Number(ov) : null;
+    valor = (envVal != null && !Number.isNaN(envVal)) ? envVal : (base.valor != null ? Number(base.valor) : null);
+  }
+  return { valorKgPorColeta: valor, pendente: valor == null, unidade: base ? base.unidade : 'kgCO₂e/coleta', coletaKgMedio: (base && base.coletaKgMedio) || 25, fonte: base ? base.fonte : '', validado };
+}
 
 // "Impressão digital" do CONTEÚDO validável (normas, números, fronteira, fatores, versão) — NÃO inclui
 // metadados mutáveis (status/validadoPor). Se alguém mudar a receita depois de validada, o hash muda e o
 // selo deixa de bater → a página pública avisa "conteúdo alterado após a validação".
 export async function hashConteudo() {
-  const conteudo = { versao: METODOLOGIA.versao, normas: METODOLOGIA.normas, numeros: METODOLOGIA.numeros, fronteira: METODOLOGIA.fronteira, fatores: METODOLOGIA.fatores };
+  const conteudo = { versao: METODOLOGIA.versao, normas: METODOLOGIA.normas, numeros: METODOLOGIA.numeros, fronteira: METODOLOGIA.fronteira, fatores: METODOLOGIA.fatores, compensacaoAdote: METODOLOGIA.compensacaoAdote };
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(conteudo)));
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
 }
@@ -130,6 +154,18 @@ export function paginaMetodologia(env, validacao) {
       </tr></thead>
       <tbody>${linhas}</tbody>
     </table></div>
+  </div>
+
+  <h2 style="font-size:16px;color:#00333B;margin:30px 0 12px;">Compensação — Adote um Bairro <span style="font-size:12.5px;color:#8fa39f;font-weight:600;">(número C — reportado à parte)</span></h2>
+  <div style="background:#fff;border:1px solid #E4EBE9;border-radius:14px;padding:18px 20px;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:center;">
+    <div style="min-width:240px;flex:1;">
+      <div style="font-size:13.5px;color:#10262B;font-weight:700;">Fator de compensação por coleta patrocinada</div>
+      <div style="font-size:12.5px;color:#5B6570;margin-top:4px;line-height:1.55;">${esc(m.compensacaoAdote.fonte)}. Coleta média de <b>${esc(String(m.compensacaoAdote.coletaKgMedio))} kg</b>. ${esc(m.compensacaoAdote.nota)}</div>
+    </div>
+    <div style="text-align:right;">
+      <div style="font-size:20px;font-weight:800;color:#10262B;">${m.compensacaoAdote.valor == null ? '<span style="color:#9aa7a4;">—</span>' : esc(m.compensacaoAdote.valor)} <span style="font-size:12px;color:#8fa39f;font-weight:700;">${esc(m.compensacaoAdote.unidade)}</span></div>
+      <div style="margin-top:6px;">${badge(m.compensacaoAdote.status)}</div>
+    </div>
   </div>
 
   <h2 style="font-size:16px;color:#00333B;margin:30px 0 12px;">Normas e referências</h2>
