@@ -18,6 +18,11 @@ function origemPortal(env, url) { return String(env.PORTAL_BASE_URL || env.PORTA
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const agora = () => { try { return new Date().toISOString(); } catch { return ''; } };
 const anoAtual = () => { try { return new Date().getFullYear(); } catch { return 2026; } };
+
+// Tipos de certificado/laudo que o cliente pode solicitar na Ordem de Coleta
+// (pedido da Débora). Lista fechada — o que a Ecobraz emite hoje.
+const CERTIFICADOS_OS = ['Laudo fotográfico', 'Laudo de Sanitização', 'Certificado de Destinação', 'Certificado Detalhado'];
+const normalizarCertificados = (v) => (Array.isArray(v) ? CERTIFICADOS_OS.filter((c) => v.includes(c)) : []);
 const dataBR = (iso) => { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : ''; };
 const STATUS = { agendada: 'Agendada', em_transporte: 'Em transporte', na_unidade: 'Na unidade', concluida: 'Concluída', cancelada: 'Cancelada' };
 const STATUS_COR = { agendada: '#8A6A16;background:#FFF4DE', em_transporte: '#0B5B66;background:#E3F0F3', na_unidade: '#6B3FA0;background:#EFE7FA', concluida: '#1E5B31;background:#E4F3E6', cancelada: '#8a4b45;background:#FBE9E7' };
@@ -67,6 +72,7 @@ export async function criarColetaOS(env, dados, criadoPor) {
     itens: Array.isArray(d.itens) ? d.itens.slice(0, 80).map((it) => ({ nome: String(it.nome || '').slice(0, 140), qtd: String(it.qtd || '1').slice(0, 12) })).filter((it) => it.nome) : parseItensColeta(d.itensTexto),
     acondicionamento: String(d.acondicionamento || '').slice(0, 120), obs: String(d.obs || '').slice(0, 600),
     contato: String(d.contato || '').slice(0, 200),
+    certificados: normalizarCertificados(d.certificados),
     criadoEm: agora(), criadoPor: criadoPor || '',
   };
   if (env.PORTAL_KV) {
@@ -104,6 +110,7 @@ export async function atualizarColetaOS(env, id, dados) {
   setStr('endereco', 400); setStr('dataAgendada', 10); setStr('janela', 40); setStr('contato', 200);
   setStr('material', 500); setStr('quantidade', 100); setStr('acondicionamento', 120); setStr('obs', 600); setStr('veiculoPlaca', 12);
   if (d.itensTexto != null) rec.itens = parseItensColeta(d.itensTexto);
+  if (d.certificados != null) rec.certificados = normalizarCertificados(d.certificados);
   if (d.agenteEmail != null) { rec.agenteEmail = String(d.agenteEmail || '').trim().toLowerCase(); rec.agenteNome = d.agenteNome || ''; }
   rec.atualizadoEm = agora();
   if (env.PORTAL_KV) {
@@ -206,6 +213,9 @@ export function paginaGerarColeta(user, cliente, agentes, patrocinadores, veicul
     <div><label>Acondicionamento</label><input id="acondicionamento" placeholder="ex.: paletizado / caixas"></div></div>
     <div class="g2"><div><label>Motorista</label><select id="agente">${optAgentes}</select></div><div><label>Veículo</label><select id="veiculo">${optVeiculos}</select></div></div>
     <label>Observações / instruções de acesso</label><textarea id="obs" rows="2">${esc(cliente.obsColeta || '')}</textarea>
+    <div class="sec">Certificados solicitados pelo cliente</div>
+    <div style="font-size:11px;color:#9aa7a4;margin:-4px 0 8px">Marque o que o cliente precisa. Fica registrado na Ordem de Coleta e orienta a emissão dos documentos.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px 16px">${CERTIFICADOS_OS.map((c) => `<label style="display:flex;align-items:center;gap:8px;font-size:13.5px;cursor:pointer"><input type="checkbox" class="cert" value="${esc(c)}" style="width:17px;height:17px;flex:none"> ${esc(c)}</label>`).join('')}</div>
     <div class="sec">Patrocínio · Adote um Bairro</div>
     ${patros.length ? `<label style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:13.5px;cursor:pointer"><input type="checkbox" id="patroOn" onchange="togglePatro()" style="width:18px;height:18px"> Esta coleta é patrocinada por uma empresa</label>
     <div id="patroBox" style="display:none;margin-top:10px">
@@ -222,10 +232,11 @@ export function paginaGerarColeta(user, cliente, agentes, patrocinadores, veicul
 function g(id){var el=document.getElementById(id);return el?el.value.trim():'';}
 function togglePatro(){var on=document.getElementById('patroOn').checked;document.getElementById('patroBox').style.display=on?'block':'none';}
 function gerar(){var ag=g('agente').split('|');
+  var certs=[].slice.call(document.querySelectorAll('.cert:checked')).map(function(c){return c.value;});
   var rec={clienteId:'${esc(cliente.id)}',clienteNome:${JSON.stringify(nome)},clienteDoc:${JSON.stringify(cliente.tipo === 'PJ' ? (cliente.cnpj || '') : (cliente.cpf || ''))},
     endereco:g('endereco'),dataAgendada:g('data'),janela:g('janela'),contato:g('contato'),
     material:g('material'),quantidade:g('quantidade'),acondicionamento:g('acondicionamento'),obs:g('obs'),
-    itensTexto:g('itens'),veiculoPlaca:g('veiculo'),
+    itensTexto:g('itens'),veiculoPlaca:g('veiculo'),certificados:certs,
     agenteEmail:ag[0]||'',agenteNome:ag[1]||''};
   var pOn=document.getElementById('patroOn');
   if(pOn&&pOn.checked){var pp=g('patro').split('|');if(!pp[0]){document.getElementById('m').textContent='Escolha a empresa patrocinadora ou desmarque o patrocínio.';return;}rec.patrocinadorId=pp[0];rec.patrocinadorNome=pp[1]||'';}
@@ -265,6 +276,7 @@ export function paginaColetaOSDetalhe(user, os, seloUrl) {
       ${linha('Motorista', os.agenteNome)}
       ${linha('Material', os.material)}${(os.itens && os.itens.length) ? linha('Equipamentos', os.itens.map((i) => `${i.nome} (${i.qtd})`).join(' · ')) : ''}${linha('Quantidade', os.quantidade)}${linha('Acondicionamento', os.acondicionamento)}
       ${linha('Observações', os.obs)}
+      ${linha('Certificados solicitados', (os.certificados || []).join(' · '))}
       ${linha('Aberta em', dataBR(os.criadoEm))}
     </table>
     ${os.patrocinadorNome ? `<div style="margin-top:14px;background:#F1F8EC;border:1px solid #cfe6b8;border-radius:12px;padding:14px">
@@ -319,6 +331,9 @@ export function paginaEditarColeta(user, os, contatos, agentes, veiculos) {
     <div class="g2"><div><label>Quantidade estimada</label><input id="quantidade" value="${esc(os.quantidade || '')}"></div><div><label>Acondicionamento</label><input id="acondicionamento" value="${esc(os.acondicionamento || '')}"></div></div>
     <div class="g2"><div><label>Motorista</label><select id="agente">${optAgentes}</select></div><div><label>Veículo</label><select id="veiculo">${optVeiculos}</select></div></div>
     <label>Observações / instruções de acesso</label><textarea id="obs" rows="2">${esc(os.obs || '')}</textarea>
+    <div class="sec">Certificados solicitados pelo cliente</div>
+    <div style="font-size:11px;color:#9aa7a4;margin:-4px 0 8px">Marque o que o cliente precisa. Fica registrado na Ordem de Coleta.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px 16px">${CERTIFICADOS_OS.map((c) => `<label style="display:flex;align-items:center;gap:8px;font-size:13.5px;cursor:pointer"><input type="checkbox" class="cert" value="${esc(c)}"${(os.certificados || []).includes(c) ? ' checked' : ''} style="width:17px;height:17px;flex:none"> ${esc(c)}</label>`).join('')}</div>
     <div style="display:flex;gap:10px;align-items:center;margin-top:22px">
       <button class="btn btn-p" onclick="salvar()">Salvar alterações</button>
       <a href="/coletas/os?id=${esc(os.id)}" class="btn btn-g" style="text-decoration:none">Cancelar</a>
@@ -329,7 +344,8 @@ export function paginaEditarColeta(user, os, contatos, agentes, veiculos) {
 <script>
 function g(id){var el=document.getElementById(id);return el?el.value.trim():'';}
 function salvar(){var ag=g('agente').split('|');
-  var rec={id:'${esc(os.id)}',endereco:g('endereco'),dataAgendada:g('data'),janela:g('janela'),contato:g('contato'),material:g('material'),quantidade:g('quantidade'),acondicionamento:g('acondicionamento'),obs:g('obs'),itensTexto:g('itens'),veiculoPlaca:g('veiculo'),agenteEmail:ag[0]||'',agenteNome:ag[1]||''};
+  var certs=[].slice.call(document.querySelectorAll('.cert:checked')).map(function(c){return c.value;});
+  var rec={id:'${esc(os.id)}',endereco:g('endereco'),dataAgendada:g('data'),janela:g('janela'),contato:g('contato'),material:g('material'),quantidade:g('quantidade'),acondicionamento:g('acondicionamento'),obs:g('obs'),itensTexto:g('itens'),veiculoPlaca:g('veiculo'),certificados:certs,agenteEmail:ag[0]||'',agenteNome:ag[1]||''};
   if(!rec.endereco){document.getElementById('m').textContent='Informe o endereço da coleta.';return;}
   document.getElementById('m').textContent='Salvando…';
   fetch('/api/coletas/editar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(rec)}).then(function(r){return r.json();}).then(function(j){if(j.ok){location.href='/coletas/os?id=${esc(os.id)}';}else{document.getElementById('m').textContent=j.error||'Erro ao salvar.';}}).catch(function(){document.getElementById('m').textContent='Sem conexão.';});}
@@ -541,6 +557,7 @@ export function paginaComprovanteOS(os, seloUrl) {
         ${f('Material declarado', os.material, true)}
         ${f('Acondicionamento', os.acondicionamento)}${f('Situação', STATUS[os.status] || os.status)}
         ${os.obs ? f('Observações', os.obs, true) : ''}
+        ${(os.certificados && os.certificados.length) ? f('Certificados solicitados', os.certificados.join(' · '), true) : ''}
       </div>
       ${os.patrocinadorNome ? `<div style="margin-top:22px;background:#F1F8EC;border:1px solid #cfe6b8;border-radius:12px;padding:16px 18px">
         <div style="font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:#3f6b1e">🤝 Coleta patrocinada · Adote um Bairro</div>
