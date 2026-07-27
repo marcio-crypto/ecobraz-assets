@@ -75,6 +75,9 @@ input.txt,textarea.txt,select.txt{width:100%;border:1px solid #DDE1E6;border-rad
 .pill{font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px}
 @media(max-width:560px){.kpis{grid-template-columns:repeat(2,1fr)}.fotos{grid-template-columns:repeat(2,1fr)}}`;
 const head = (t) => `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${esc(t)} — Ecobraz</title><style>${CSS}</style></head><body>`;
+// Nome do arquivo ao "Salvar como PDF" (o navegador usa o <title>): leva o nome
+// do CLIENTE, não "Ecobraz" — pedido da Débora, para achar fácil nos Downloads.
+const tituloDoc = (cliente, rotulo, num) => [String(cliente || '').replace(/\s+/g, ' ').trim(), rotulo, num].filter(Boolean).join(' - ');
 
 export function paginaLoginEng(googleOn) {
   return `${head('Engenharia Ambiental')}
@@ -353,7 +356,7 @@ export function paginaCDF(op, validacao, destinos, seloUrl) {
           ${seloUrl ? `<div style="text-align:center"><img src="${esc(seloUrl)}" alt="QR" style="width:92px;height:92px;border:1px solid #E4EBE9;border-radius:8px;background:#fff"><div style="font-size:8.5px;color:#9aa7a4;margin-top:3px;text-transform:uppercase;letter-spacing:.05em">Verificar autenticidade</div></div>` : ''}
         </div>`
       : `<div style="background:#FFF4DE;border:1px solid #f0e0b8;border-radius:12px;padding:14px 16px;font-size:12.5px;color:#8A6A16"><b>Certificado pendente.</b> Este CDF só é emitido após a <b>validação técnica</b> da operação pela Engenharia Ambiental (RT). Aguarde a validação para gerar a versão final.</div>`}`;
-  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${esc(numCDF)} — Ecobraz</title>
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${esc(tituloDoc(op.cliente, 'CDF', numCDF))}</title>
 <style>@page{size:A4;margin:11mm}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}@media print{.noprint{display:none!important}html,body{background:#fff!important;margin:0!important}.doc-wrap{max-width:100%!important;margin:0!important;padding:0!important}.doc-card{border:none!important;border-radius:0!important;box-shadow:none!important}table,tr,img{page-break-inside:avoid}}</style></head>
 <body style="margin:0;background:#EDF1EF;font-family:Montserrat,'Segoe UI',Arial,Helvetica,sans-serif;color:#10262B">
 <div class="doc-wrap" style="max-width:820px;margin:0 auto;padding:18px">
@@ -390,7 +393,7 @@ export function paginaRelatorio(op, validacao, destinos, seloUrl) {
     return imgs ? `<div style="margin-bottom:8px"><div style="font-size:10px;font-weight:800;color:#00333B;margin-bottom:4px">${esc(FASES[fase].rotulo)}</div><div style="display:flex;flex-wrap:wrap;gap:6px">${imgs}</div></div>` : '';
   }).join('');
   const S = (v) => String(v).replace('.', ',');
-  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Relatório de Conformidade — OS ${esc(op.numero)}</title>
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${esc(tituloDoc(op.cliente, 'Relatório de Conformidade', 'OS ' + op.numero))}</title>
 <style>
   *{box-sizing:border-box}body{margin:0;background:#EEF1F0;font-family:Arial,Helvetica,sans-serif;color:#1f2933}
   .bar{position:sticky;top:0;background:#00333B;padding:10px 16px;display:flex;justify-content:space-between;align-items:center}

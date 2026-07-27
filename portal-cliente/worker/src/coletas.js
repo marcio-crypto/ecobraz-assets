@@ -387,8 +387,16 @@ const assinaturasDoc = (os, papeis) => `<div style="display:flex;gap:20px;margin
     <div style="font-size:8.5px;color:#9aa7a4;margin-top:2px;text-transform:uppercase;letter-spacing:.05em">Verificar autenticidade</div>
   </div>`).join('')}</div>`;
 
+// Nome sugerido do arquivo ao "Salvar como PDF": o navegador usa o <title> da
+// página. A Débora precisa que o arquivo saia com o nome do CLIENTE (e não
+// "Ecobraz") para localizar fácil na pasta de Downloads. Formato: Cliente - Documento - Nº.
+function tituloDoc(os, rotulo) {
+  const cli = String(os.clienteNome || '').replace(/\s+/g, ' ').trim();
+  return [cli, rotulo, os.numero].filter(Boolean).join(' - ');
+}
+
 function docHTML(titulo, os, seloUrl, corpo) {
-  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${esc(titulo)} — ${esc(os.numero)}</title>
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${esc(tituloDoc(os, titulo))}</title>
 <style>@page{size:A4;margin:11mm}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}@media print{.noprint{display:none!important}html,body{background:#fff!important;margin:0!important}.doc-wrap{max-width:100%!important;margin:0!important;padding:0!important}.doc-card{border:none!important;border-radius:0!important;box-shadow:none!important}table,tr,img{page-break-inside:avoid}}</style></head>
 <body style="margin:0;background:#EDF1EF;font-family:Montserrat,'Segoe UI',Arial,Helvetica,sans-serif;color:#10262B">
 <div class="doc-wrap" style="max-width:820px;margin:0 auto;padding:18px">
@@ -499,7 +507,7 @@ export function paginaComprovanteOS(os, seloUrl) {
   const fotos = (Array.isArray(os.anexos) ? os.anexos : []).filter((a) => /image/.test(a.content_type || ''));
   const fotosHTML = fotos.length ? `<div style="margin-top:22px"><div style="display:flex;align-items:center;gap:9px;margin:0 0 12px"><span style="width:4px;height:16px;background:#92C430;border-radius:2px"></span><span style="font-size:12px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:#00333B">Registro fotográfico</span></div>
       <div style="display:flex;flex-wrap:wrap;gap:10px">${fotos.map((a) => `<img src="/coletas/anexo?key=${encodeURIComponent(a.key)}" alt="${esc(a.nome || 'foto')}" style="width:160px;height:120px;object-fit:cover;border:1px solid #E4EBE9;border-radius:8px;background:#fff">`).join('')}</div></div>` : '';
-  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${esc(os.numero)} — Ecobraz</title>
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${esc(tituloDoc(os, 'Ordem de Coleta'))}</title>
 <style>@page{size:A4;margin:11mm}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}@media print{.noprint{display:none!important}html,body{background:#fff!important;margin:0!important}.doc-wrap{max-width:100%!important;margin:0!important;padding:0!important}.doc-card{border:none!important;border-radius:0!important;box-shadow:none!important}table,tr,img{page-break-inside:avoid}}</style></head>
 <body style="margin:0;background:#EDF1EF;font-family:Montserrat,'Segoe UI',Arial,Helvetica,sans-serif;color:#10262B">
 <div class="doc-wrap" style="max-width:820px;margin:0 auto;padding:18px">
