@@ -145,7 +145,7 @@ function contatoRowHTML(c) {
   </div>`;
 }
 
-export function paginaFormCliente(user, tipo, cli) {
+export function paginaFormCliente(user, tipo, cli, leadId) {
   const editando = !!(cli && cli.id);
   tipo = (cli && cli.tipo) || (tipo === 'PF' ? 'PF' : 'PJ');
   const e = (cli && cli.endereco) || {};
@@ -191,6 +191,7 @@ export function paginaFormCliente(user, tipo, cli) {
   </div>
 </div>
 <script>
+var LEAD_ORIGEM=${JSON.stringify(leadId || '')};
 function msg(t){document.getElementById('m').textContent=t;}
 function g(id){const el=document.getElementById(id);return el?el.value.trim():'';}
 function addContato(){var w=document.getElementById('contatos');var d=document.createElement('div');d.className='contato';d.style.cssText='border:1px solid #EEF1F0;border-radius:10px;padding:12px;margin-bottom:10px;background:#FBFDFC';
@@ -205,6 +206,7 @@ function salvar(){var tipo=g('tipo');var rec={tipo:tipo,endereco:{cep:g('cep'),l
     rec.contatos=Array.prototype.map.call(document.querySelectorAll('.contato'),function(c){return{nome:c.querySelector('.c-nome').value.trim(),cargo:c.querySelector('.c-cargo').value.trim(),fone:c.querySelector('.c-fone').value.trim(),email:c.querySelector('.c-email').value.trim()};}).filter(function(x){return x.nome||x.fone||x.email;});
     if(!rec.razaoSocial){msg('Informe a razão social.');return;}}
   else{rec.nome=g('nome');rec.cpf=g('cpf');rec.fone=g('fone');rec.email=g('email');if(!rec.nome){msg('Informe o nome.');return;}}
+  if(LEAD_ORIGEM)rec.leadOrigem=LEAD_ORIGEM;
   msg('Salvando…');
   fetch('/api/cadastro/salvar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(rec)}).then(r=>r.json()).then(j=>{if(j.ok){location.href='/cadastro/cliente?id='+j.id;}else{msg(j.error||'Erro ao salvar.');}}).catch(()=>msg('Sem conexão. Tente de novo.'));}
 </script>
@@ -307,6 +309,24 @@ export function paginaLeads(user, leads) {
 </body></html>`;
 }
 
+// Transforma um lead do site num pré-preenchimento de cliente (sem id → é NOVO).
+// Empresa → PJ (com o contato do lead embutido); pessoa física → PF.
+export function clienteDeLead(lead) {
+  if (!lead) return null;
+  const tipo = lead.perfil === 'pessoa_fisica' ? 'PF' : (lead.perfil === 'empresa' ? 'PJ' : (lead.empresa ? 'PJ' : 'PF'));
+  const endereco = { cep: lead.cep || '', logradouro: '', numero: '', complemento: '', bairro: '', cidade: lead.cidade || '', uf: lead.uf || '' };
+  const obs = [lead.material ? `Material: ${lead.material}` : '', lead.volume ? `Volume: ${lead.volume}` : '', lead.descricao || '']
+    .filter(Boolean).join(' — ').slice(0, 600);
+  if (tipo === 'PJ') {
+    return {
+      tipo: 'PJ', razaoSocial: lead.empresa || lead.nome || '', nomeFantasia: '', endereco,
+      contatos: [{ nome: lead.nome || '', cargo: '', fone: lead.fone || '', email: lead.email || '' }],
+      obsColeta: obs,
+    };
+  }
+  return { tipo: 'PF', nome: lead.nome || '', fone: lead.fone || '', email: lead.email || '', endereco, obsColeta: obs };
+}
+
 export function paginaLeadDetalhe(user, lead) {
   const linha = (l, v) => v ? `<tr><td style="padding:8px 0;border-top:1px solid #EEF1F0;color:#6B7B78;width:38%">${esc(l)}</td><td style="padding:8px 0;border-top:1px solid #EEF1F0;font-weight:600">${esc(v)}</td></tr>` : '';
   const utm = lead.utm && (lead.utm.source || lead.utm.campaign) ? [lead.utm.source, lead.utm.medium, lead.utm.campaign, lead.utm.content, lead.utm.term].filter(Boolean).join(' · ') : '';
@@ -335,10 +355,11 @@ export function paginaLeadDetalhe(user, lead) {
     </table>
   </div>
   <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
-    <button class="btn btn-p" id="btrat" ${lead.status === 'tratado' ? 'disabled style="opacity:.5"' : ''}>${lead.status === 'tratado' ? '✓ Tratado' : 'Marcar como tratado'}</button>
+    <a class="btn btn-p" href="/cadastro/novo?tipo=${lead.perfil === 'pessoa_fisica' ? 'PF' : 'PJ'}&lead=${esc(lead.id)}">➜ Converter em cliente</a>
+    <button class="btn btn-g" id="btrat" ${lead.status === 'tratado' ? 'disabled style="opacity:.5"' : ''}>${lead.status === 'tratado' ? '✓ Tratado' : 'Marcar como tratado'}</button>
     <span id="m" style="font-size:13px;color:#4F6469;align-self:center"></span>
   </div>
-  <div style="font-size:11px;color:#9aa7a4;margin-top:10px">Converter o lead em cliente + gerar a coleta entra no próximo passo.</div>
+  <div style="font-size:11px;color:#9aa7a4;margin-top:10px">Ao converter, o cadastro já vem preenchido com os dados do lead — e o lead é marcado como tratado automaticamente. Depois é só <b>Gerar coleta</b> na ficha do cliente.</div>
 </div>
 <script>const bt=document.getElementById('btrat');if(bt&&!bt.disabled)bt.onclick=async()=>{bt.disabled=true;document.getElementById('m').textContent='Salvando…';try{const r=await fetch('/api/leads/tratar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:'${esc(lead.id)}'})});if(r.ok){location.reload();}else{document.getElementById('m').textContent='Falha. Tente de novo.';bt.disabled=false;}}catch{document.getElementById('m').textContent='Sem conexão.';bt.disabled=false;}};</script>
 </body></html>`;

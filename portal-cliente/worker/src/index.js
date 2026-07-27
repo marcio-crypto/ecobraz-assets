@@ -51,7 +51,7 @@ import { sondarAnexosPloomes, paginaSondaAnexos } from './ploomes-docs.js';
 import { amostraContatosPloomes, paginaAmostraContatos, importarLoteContatos, estatisticasMigracao, buscarContatos, paginaMigrarPloomes, detalheContato, paginaContatoDetalhe } from './ploomes-migracao.js';
 import { importarLoteAnexos, importarLoteAnexosContatos, completarAnexos, importarAnexosJanela, reprocessarFalhas, importarLoteDocumentos, recuperarDocumentos, estatisticasArquivos, paginaMigrarArquivos, diagnosticoAnexos, paginaDiagAnexos } from './ploomes-arquivos.js';
 import { fiscalPermitido, nomeFiscal, listarNotas, lerNota, importarLote, vincularNota, sugerirVinculoSync, paginaFiscalLogin, paginaFiscalHome, paginaFiscalResultado, paginaFiscalNota } from './fiscal.js';
-import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, paginaLeads, paginaLeadDetalhe, paginaInicio } from './cadastro.js';
+import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, clienteDeLead, paginaLeads, paginaLeadDetalhe, paginaInicio } from './cadastro.js';
 import { listarColetasOS, lerColetaOS, criarColetaOS, atualizarStatusOS, paginaColetasLista, paginaGerarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga } from './coletas.js';
 import { listarVeiculos, lerVeiculo, salvarVeiculo, paginaFrota, paginaVeiculoForm, lerJornadaAtiva, abrirJornada, fecharJornada, registrarAbastecimento, tagColetaComVeiculo, servirFotoJornada, bannerJornada, paginaAbrirDia, paginaFecharDia, paginaAbastecer, placaDaColeta } from './frota.js';
 import { carregarEquipeNoEnv, listarUsuarios, lerUsuario, salvarUsuario, importarUsuarios, paginaEquipe, paginaUsuarioForm, paginaEquipeImportar } from './equipe.js';
@@ -488,7 +488,10 @@ export default {
       }
       if (pathname === '/cadastro/novo' && request.method === 'GET') {
         if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
-        return html(paginaFormCliente(escritorio, url.searchParams.get('tipo') || 'PJ', null));
+        const leadId = (url.searchParams.get('lead') || '').trim();
+        let preLead = null, prefill = null;
+        if (leadId) { preLead = await lerLead(env, leadId); if (preLead) prefill = clienteDeLead(preLead); }
+        return html(paginaFormCliente(escritorio, (prefill && prefill.tipo) || url.searchParams.get('tipo') || 'PJ', prefill, preLead ? leadId : ''));
       }
       if (pathname === '/cadastro/editar' && request.method === 'GET') {
         if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
@@ -509,7 +512,10 @@ export default {
         if (b.tipo === 'PJ' && !String(b.razaoSocial || '').trim()) return json({ ok: false, error: 'Informe a razão social.' }, 400);
         if (b.tipo === 'PF' && !String(b.nome || '').trim()) return json({ ok: false, error: 'Informe o nome.' }, 400);
         let existente = null; if (b.id) existente = await lerCliente(env, b.id);
+        const leadOrigem = String(b.leadOrigem || '').trim(); if ('leadOrigem' in b) delete b.leadOrigem;
         const salvo = await salvarCliente(env, existente ? { ...existente, ...b } : b);
+        // Veio de um lead do site? Marca o lead como tratado e guarda o vínculo (best-effort).
+        if (leadOrigem) { try { const l = await lerLead(env, leadOrigem); if (l && l.status !== 'tratado') { l.status = 'tratado'; l.clienteId = salvo.id; await salvarLead(env, l); } } catch { /* não bloqueia o cadastro */ } }
         return json({ ok: true, id: salvo.id });
       }
       if (pathname === '/api/cadastro/cnpj' && request.method === 'GET') {
