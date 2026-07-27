@@ -62,6 +62,7 @@ export async function criarColetaOS(env, dados, criadoPor) {
     endereco: String(d.endereco || '').slice(0, 400),
     dataAgendada: String(d.dataAgendada || '').slice(0, 10), janela: String(d.janela || '').slice(0, 40),
     agenteEmail: String(d.agenteEmail || '').trim().toLowerCase(), agenteNome: d.agenteNome || '',
+    veiculoPlaca: String(d.veiculoPlaca || '').slice(0, 12),
     material: String(d.material || '').slice(0, 500), quantidade: String(d.quantidade || '').slice(0, 100),
     itens: Array.isArray(d.itens) ? d.itens.slice(0, 80).map((it) => ({ nome: String(it.nome || '').slice(0, 140), qtd: String(it.qtd || '1').slice(0, 12) })).filter((it) => it.nome) : parseItensColeta(d.itensTexto),
     acondicionamento: String(d.acondicionamento || '').slice(0, 120), obs: String(d.obs || '').slice(0, 600),
@@ -101,7 +102,7 @@ export async function atualizarColetaOS(env, id, dados) {
   const d = dados || {};
   const setStr = (campo, max) => { if (d[campo] != null) rec[campo] = String(d[campo]).slice(0, max); };
   setStr('endereco', 400); setStr('dataAgendada', 10); setStr('janela', 40); setStr('contato', 200);
-  setStr('material', 500); setStr('quantidade', 100); setStr('acondicionamento', 120); setStr('obs', 600);
+  setStr('material', 500); setStr('quantidade', 100); setStr('acondicionamento', 120); setStr('obs', 600); setStr('veiculoPlaca', 12);
   if (d.itensTexto != null) rec.itens = parseItensColeta(d.itensTexto);
   if (d.agenteEmail != null) { rec.agenteEmail = String(d.agenteEmail || '').trim().toLowerCase(); rec.agenteNome = d.agenteNome || ''; }
   rec.atualizadoEm = agora();
@@ -174,7 +175,7 @@ export function paginaColetasLista(user, coletas, q, cliCtx) {
 </div></body></html>`;
 }
 
-export function paginaGerarColeta(user, cliente, agentes, patrocinadores) {
+export function paginaGerarColeta(user, cliente, agentes, patrocinadores, veiculos) {
   const e = cliente.endereco || {};
   const endPadrao = [[e.logradouro, e.numero].filter(Boolean).join(', '), e.complemento, e.bairro, [e.cidade, e.uf].filter(Boolean).join('/'), e.cep].filter(Boolean).join(' · ');
   const nome = cliente.tipo === 'PJ' ? (cliente.razaoSocial || cliente.nomeFantasia || '') : (cliente.nome || '');
@@ -183,6 +184,8 @@ export function paginaGerarColeta(user, cliente, agentes, patrocinadores) {
   const contatosCli = (cliente.tipo === 'PJ' ? (cliente.contatos || []) : [{ nome: cliente.nome, fone: cliente.fone, email: cliente.email }]).filter((c) => c && (c.nome || c.fone || c.email));
   const optContatos = contatosCli.length ? ['<option value="">— escolher um contato do cliente —</option>'].concat(contatosCli.map((c) => `<option value="${esc([c.nome, c.fone].filter(Boolean).join(' · '))}">${esc(c.nome || '(sem nome)')}${c.cargo ? ' — ' + esc(c.cargo) : ''}</option>`)).join('') : '';
   const optAgentes = ['<option value="">— escolher motorista —</option>'].concat((agentes || []).map((a) => `<option value="${esc(a.email)}|${esc(a.nome)}">${esc(a.nome)}</option>`)).join('');
+  const veics = (veiculos || []).filter((v) => v && v.placa && v.ativo !== false);
+  const optVeiculos = ['<option value="">— escolher veículo —</option>'].concat(veics.map((v) => `<option value="${esc(v.placa)}">${esc(v.placa)}${v.apelido ? ' — ' + esc(v.apelido) : ''}</option>`)).join('');
   const patros = patrocinadores || [];
   const optPatro = ['<option value="">— escolher empresa —</option>'].concat(patros.map((p) => `<option value="${esc(p.clienteId)}|${esc(p.nome)}">${esc(p.nome)} — ${(Number(p.saldoKg) / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} t disponíveis</option>`)).join('');
   return `${head('Nova coleta')}<body>${topo('coletas')}
@@ -201,7 +204,7 @@ export function paginaGerarColeta(user, cliente, agentes, patrocinadores) {
     <div style="font-size:11px;color:#9aa7a4;margin:-4px 0 4px">Aparece item a item na Carta de Descarte e no Manifesto. Se deixar em branco, usa o material declarado.</div>
     <div class="g2"><div><label>Quantidade estimada</label><input id="quantidade" placeholder="ex.: ~500 kg (3 pallets)"></div>
     <div><label>Acondicionamento</label><input id="acondicionamento" placeholder="ex.: paletizado / caixas"></div></div>
-    <label>Motorista</label><select id="agente">${optAgentes}</select>
+    <div class="g2"><div><label>Motorista</label><select id="agente">${optAgentes}</select></div><div><label>Veículo</label><select id="veiculo">${optVeiculos}</select></div></div>
     <label>Observações / instruções de acesso</label><textarea id="obs" rows="2">${esc(cliente.obsColeta || '')}</textarea>
     <div class="sec">Patrocínio · Adote um Bairro</div>
     ${patros.length ? `<label style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:13.5px;cursor:pointer"><input type="checkbox" id="patroOn" onchange="togglePatro()" style="width:18px;height:18px"> Esta coleta é patrocinada por uma empresa</label>
@@ -222,7 +225,7 @@ function gerar(){var ag=g('agente').split('|');
   var rec={clienteId:'${esc(cliente.id)}',clienteNome:${JSON.stringify(nome)},clienteDoc:${JSON.stringify(cliente.tipo === 'PJ' ? (cliente.cnpj || '') : (cliente.cpf || ''))},
     endereco:g('endereco'),dataAgendada:g('data'),janela:g('janela'),contato:g('contato'),
     material:g('material'),quantidade:g('quantidade'),acondicionamento:g('acondicionamento'),obs:g('obs'),
-    itensTexto:g('itens'),
+    itensTexto:g('itens'),veiculoPlaca:g('veiculo'),
     agenteEmail:ag[0]||'',agenteNome:ag[1]||''};
   var pOn=document.getElementById('patroOn');
   if(pOn&&pOn.checked){var pp=g('patro').split('|');if(!pp[0]){document.getElementById('m').textContent='Escolha a empresa patrocinadora ou desmarque o patrocínio.';return;}rec.patrocinadorId=pp[0];rec.patrocinadorNome=pp[1]||'';}
@@ -291,8 +294,10 @@ function removerAnexo(k){if(!confirm('Remover este anexo?'))return;fetch('/api/c
 }
 
 // Editar uma coleta existente (mesmos campos da criação; número e status ficam).
-export function paginaEditarColeta(user, os, contatos, agentes) {
+export function paginaEditarColeta(user, os, contatos, agentes, veiculos) {
   const optAgentes = ['<option value="">— escolher motorista —</option>'].concat((agentes || []).map((a) => `<option value="${esc(a.email)}|${esc(a.nome)}" ${a.email === os.agenteEmail ? 'selected' : ''}>${esc(a.nome)}</option>`)).join('');
+  const veics = (veiculos || []).filter((v) => v && v.placa && v.ativo !== false);
+  const optVeiculos = ['<option value="">— escolher veículo —</option>'].concat(veics.map((v) => `<option value="${esc(v.placa)}" ${v.placa === os.veiculoPlaca ? 'selected' : ''}>${esc(v.placa)}${v.apelido ? ' — ' + esc(v.apelido) : ''}</option>`)).join('');
   const cts = (contatos || []).filter((c) => c && (c.nome || c.fone || c.email));
   const optContatos = cts.length ? ['<option value="">— escolher um contato do cliente —</option>'].concat(cts.map((c) => `<option value="${esc([c.nome, c.fone].filter(Boolean).join(' · '))}">${esc(c.nome || '(sem nome)')}${c.cargo ? ' — ' + esc(c.cargo) : ''}</option>`)).join('') : '';
   const itensTxt = (os.itens || []).map((i) => `${i.nome} ; ${i.qtd}`).join('\n');
@@ -312,7 +317,7 @@ export function paginaEditarColeta(user, os, contatos, agentes) {
     <label>Material declarado</label><textarea id="material" rows="2">${esc(os.material || '')}</textarea>
     <label>Equipamentos item a item <span style="color:#9aa7a4;font-weight:400">(um por linha — ex.: Monitor LCD ; 5)</span></label><textarea id="itens" rows="4">${esc(itensTxt)}</textarea>
     <div class="g2"><div><label>Quantidade estimada</label><input id="quantidade" value="${esc(os.quantidade || '')}"></div><div><label>Acondicionamento</label><input id="acondicionamento" value="${esc(os.acondicionamento || '')}"></div></div>
-    <label>Motorista</label><select id="agente">${optAgentes}</select>
+    <div class="g2"><div><label>Motorista</label><select id="agente">${optAgentes}</select></div><div><label>Veículo</label><select id="veiculo">${optVeiculos}</select></div></div>
     <label>Observações / instruções de acesso</label><textarea id="obs" rows="2">${esc(os.obs || '')}</textarea>
     <div style="display:flex;gap:10px;align-items:center;margin-top:22px">
       <button class="btn btn-p" onclick="salvar()">Salvar alterações</button>
@@ -324,7 +329,7 @@ export function paginaEditarColeta(user, os, contatos, agentes) {
 <script>
 function g(id){var el=document.getElementById(id);return el?el.value.trim():'';}
 function salvar(){var ag=g('agente').split('|');
-  var rec={id:'${esc(os.id)}',endereco:g('endereco'),dataAgendada:g('data'),janela:g('janela'),contato:g('contato'),material:g('material'),quantidade:g('quantidade'),acondicionamento:g('acondicionamento'),obs:g('obs'),itensTexto:g('itens'),agenteEmail:ag[0]||'',agenteNome:ag[1]||''};
+  var rec={id:'${esc(os.id)}',endereco:g('endereco'),dataAgendada:g('data'),janela:g('janela'),contato:g('contato'),material:g('material'),quantidade:g('quantidade'),acondicionamento:g('acondicionamento'),obs:g('obs'),itensTexto:g('itens'),veiculoPlaca:g('veiculo'),agenteEmail:ag[0]||'',agenteNome:ag[1]||''};
   if(!rec.endereco){document.getElementById('m').textContent='Informe o endereço da coleta.';return;}
   document.getElementById('m').textContent='Salvando…';
   fetch('/api/coletas/editar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(rec)}).then(function(r){return r.json();}).then(function(j){if(j.ok){location.href='/coletas/os?id=${esc(os.id)}';}else{document.getElementById('m').textContent=j.error||'Erro ao salvar.';}}).catch(function(){document.getElementById('m').textContent='Sem conexão.';});}
@@ -411,9 +416,13 @@ function docHTML(titulo, os, seloUrl, corpo) {
 </div></body></html>`;
 }
 
+// Aviso: antes de "Em transporte", o documento é rascunho e NÃO deve ser
+// liberado ao cliente (regra definida com o Marcio/Débora).
+const avisoRascunho = (os) => (!os.status || os.status === 'agendada') ? `<div style="background:#FFF4DE;border:1px solid #f0dca6;border-radius:10px;padding:11px 14px;margin-bottom:10px;font-size:12px;color:#7a5a12;line-height:1.5"><b>⚠ Rascunho — não liberar ao cliente.</b> Este documento só deve ser entregue ao cliente quando a coleta estiver <b>“Em transporte”</b>.</div>` : '';
+
 export function paginaCartaDescarte(os, seloUrl) {
   const veic = `Placa: ${esc(os.veiculoPlaca || '________________')}   ·   Motorista: ${esc(os.agenteNome || '________________')}`;
-  const corpo = `${blocoGerador(os)}
+  const corpo = `${avisoRascunho(os)}${blocoGerador(os)}
     <div style="margin-top:16px;font-size:12.5px;color:#28413f;line-height:1.55"><b>Recebido por:</b> ${esc(EMPRESA.razao)}, inscrita no CNPJ ${esc(EMPRESA.cnpj)}, LO ${esc(EMPRESA.lo)}, com sede na Rua Dona Maria Quedas, 230.</div>
     <div style="margin-top:10px;font-size:12.5px;color:#28413f"><b>Dados do veículo:</b> ${veic}</div>
     ${eyebrowDoc('Declaração')}
@@ -426,7 +435,7 @@ export function paginaCartaDescarte(os, seloUrl) {
 
 export function paginaManifestoCarga(os, seloUrl) {
   const parte = (rot) => `<div style="flex:1;min-width:230px"><div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#93a6a2;margin-bottom:4px">${esc(rot)}</div><div style="font-size:12px;color:#28413f;line-height:1.5"><b>${esc(EMPRESA.razao)}</b><br>CNPJ ${esc(EMPRESA.cnpj)} · ${esc(EMPRESA.fone)}<br>${esc(EMPRESA.endereco)}</div></div>`;
-  const corpo = `${blocoGerador(os)}
+  const corpo = `${avisoRascunho(os)}${blocoGerador(os)}
     ${eyebrowDoc('Descrição do material')}${tabelaItens(os)}
     ${eyebrowDoc('Transporte')}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px 26px">${campoDoc('Veículo (placa)', os.veiculoPlaca)}${campoDoc('Motorista', os.agenteNome)}</div>

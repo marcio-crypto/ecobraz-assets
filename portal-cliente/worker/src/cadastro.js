@@ -55,20 +55,38 @@ export async function salvarCliente(env, rec) {
   return rec;
 }
 
-// Busca dados públicos do CNPJ (BrasilAPI) para pré-preencher o cadastro (menos digitação).
+// Busca dados públicos do CNPJ para pré-preencher o cadastro (menos digitação).
+// Robusto: tenta a BrasilAPI e, se falhar/estiver fora, cai para a publica.cnpj.ws.
 export async function consultarCNPJ(cnpj) {
   const n = digits(cnpj); if (n.length !== 14) return null;
+  // Fonte 1 — BrasilAPI
   try {
-    const r = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${n}`, { headers: { accept: 'application/json' } });
-    if (!r.ok) return null;
-    const d = await r.json();
-    return {
-      razaoSocial: d.razao_social || '', nomeFantasia: d.nome_fantasia || '',
-      cep: d.cep ? String(d.cep) : '', logradouro: d.logradouro || '', numero: d.numero ? String(d.numero) : '',
-      complemento: d.complemento || '', bairro: d.bairro || '', cidade: d.municipio || '', uf: d.uf || '',
-      email: d.email || '', fone: d.ddd_telefone_1 || '',
-    };
-  } catch { return null; }
+    const r = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${n}`, { headers: { accept: 'application/json' }, signal: AbortSignal.timeout(9000) });
+    if (r.ok) {
+      const d = await r.json();
+      if (d && (d.razao_social || d.cep || d.municipio)) return {
+        razaoSocial: d.razao_social || '', nomeFantasia: d.nome_fantasia || '',
+        cep: d.cep ? String(d.cep) : '', logradouro: d.logradouro || '', numero: d.numero ? String(d.numero) : '',
+        complemento: d.complemento || '', bairro: d.bairro || '', cidade: d.municipio || '', uf: d.uf || '',
+        email: d.email || '', fone: d.ddd_telefone_1 || '',
+      };
+    }
+  } catch { /* cai para a fonte 2 */ }
+  // Fonte 2 — publica.cnpj.ws (formato diferente)
+  try {
+    const r = await fetch(`https://publica.cnpj.ws/cnpj/${n}`, { headers: { accept: 'application/json' }, signal: AbortSignal.timeout(9000) });
+    if (r.ok) {
+      const d = await r.json();
+      const est = d && d.estabelecimento;
+      if (est) return {
+        razaoSocial: d.razao_social || '', nomeFantasia: est.nome_fantasia || '',
+        cep: est.cep ? String(est.cep) : '', logradouro: [est.tipo_logradouro, est.logradouro].filter(Boolean).join(' ').trim(), numero: est.numero ? String(est.numero) : '',
+        complemento: est.complemento || '', bairro: est.bairro || '', cidade: (est.cidade && est.cidade.nome) || '', uf: (est.estado && est.estado.sigla) || '',
+        email: est.email || '', fone: [est.ddd1, est.telefone1].filter(Boolean).join(' ').trim(),
+      };
+    }
+  } catch { /* ambas falharam */ }
+  return null;
 }
 
 // --- Páginas ---

@@ -600,7 +600,8 @@ export default {
         if (!cli) return html(paginaMensagem('Cliente não encontrado', 'Volte e tente de novo.'), 404);
         const agentes = [...agentesDe(env).entries()].map(([email, nome]) => ({ email, nome }));
         let patrocinadores = []; try { patrocinadores = await listarPatrocinadores(env); } catch { /* ok */ }
-        return html(paginaGerarColeta(escritorio, cli, agentes, patrocinadores));
+        let veiculos = []; try { veiculos = await listarVeiculos(env); } catch { /* ok */ }
+        return html(paginaGerarColeta(escritorio, cli, agentes, patrocinadores, veiculos));
       }
       if (pathname === '/coletas/os' && request.method === 'GET') {
         if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
@@ -615,7 +616,8 @@ export default {
         let contatos = [];
         try { const cli = os.clienteId ? await lerCliente(env, os.clienteId) : null; if (cli) contatos = cli.tipo === 'PJ' ? (cli.contatos || []) : [{ nome: cli.nome, fone: cli.fone, email: cli.email }]; } catch { /* sem contatos do cliente, tudo bem */ }
         const agentes = [...agentesDe(env).entries()].map(([email, nome]) => ({ email, nome }));
-        return html(paginaEditarColeta(escritorio, os, contatos, agentes));
+        let veiculos = []; try { veiculos = await listarVeiculos(env); } catch { /* ok */ }
+        return html(paginaEditarColeta(escritorio, os, contatos, agentes, veiculos));
       }
       if (pathname === '/api/coletas/editar' && request.method === 'POST') {
         if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
@@ -674,14 +676,14 @@ export default {
         if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
         const os = await lerColetaOS(env, url.searchParams.get('id') || '');
         if (!os) return html(paginaMensagem('Coleta não encontrada', 'Volte e tente de novo.'), 404);
-        try { os.veiculoPlaca = await placaDaColeta(env, os); } catch { /* ok */ }
+        if (!os.veiculoPlaca) { try { os.veiculoPlaca = await placaDaColeta(env, os); } catch { /* ok */ } }
         return html(paginaCartaDescarte(os, `/qr-os?id=${encodeURIComponent(os.id)}`));
       }
       if (pathname === '/coletas/os/manifesto' && request.method === 'GET') {
         if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
         const os = await lerColetaOS(env, url.searchParams.get('id') || '');
         if (!os) return html(paginaMensagem('Coleta não encontrada', 'Volte e tente de novo.'), 404);
-        try { os.veiculoPlaca = await placaDaColeta(env, os); } catch { /* ok */ }
+        if (!os.veiculoPlaca) { try { os.veiculoPlaca = await placaDaColeta(env, os); } catch { /* ok */ } }
         return html(paginaManifestoCarga(os, `/qr-os?id=${encodeURIComponent(os.id)}`));
       }
       if (pathname === '/coletas/os/cdf' && request.method === 'GET') {
