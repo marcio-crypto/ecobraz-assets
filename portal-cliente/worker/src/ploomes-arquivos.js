@@ -366,14 +366,14 @@ export async function recuperarDocumentos(env, desdeId) {
     let url = d.DocumentUrl, fn = d.FileName || d.Name, dealId = d.DealId, contactId = d.ContactId, criado = d.CreateDate;
     // Como nos anexos: a lista às vezes NÃO traz um link válido. Busca o item
     // individual para pegar uma DocumentUrl fresca.
-    let itemLido = true;
+    let itemLido = true, motivoItem = '';
     if (!url) {
-      const one = await reqJSON(env, `/Documents(${d.Id})`, 12000);
+      const one = await reqJSON(env, `/Documents(${d.Id})`, 15000);
       const it = one.value && one.value[0];
       if (it) { url = it.DocumentUrl; fn = fn || it.FileName || it.Name; dealId = dealId || it.DealId; contactId = contactId || it.ContactId; criado = criado || it.CreateDate; }
-      else itemLido = false; // não conseguimos nem LER o registro — não é 'sem PDF', é falha de leitura
+      else { itemLido = false; motivoItem = one.erro ? one.erro : ('HTTP ' + one.status + (one.corpo ? (' ' + one.corpo) : '')); } // não conseguimos LER o registro — captura o motivo real
     }
-    if (!itemLido) { falhas++; await logFalhaDoc(env, d.Id, dealId, contactId, 'item_ilegivel'); continue; }
+    if (!itemLido) { falhas++; await logFalhaDoc(env, d.Id, dealId, contactId, ('item:' + motivoItem)); continue; }
     if (!url) { falhas++; semUrl++; await logFalhaDoc(env, d.Id, dealId, contactId, 'sem_pdf'); continue; }
     let dl = await baixarParaR2(env, key, url, 'application/pdf');
     // Se o download falhou, tenta UMA vez com link fresco do item individual.
