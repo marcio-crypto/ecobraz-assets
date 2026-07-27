@@ -114,6 +114,24 @@ export async function atualizarColetaOS(env, id, dados) {
 }
 function cidadeDoEndereco(e) { const m = String(e || '').match(/·\s*([^·]+?)\/[A-Z]{2}/); return m ? m[1].trim() : ''; }
 
+// Anexos da coleta (fotos/arquivos enviados pela equipe) — guardados no R2 e
+// referenciados em os.anexos. O upload em si (R2.put) é feito na rota.
+export async function registrarAnexoColeta(env, id, meta) {
+  const rec = await lerColetaOS(env, id); if (!rec) return null;
+  if (!Array.isArray(rec.anexos)) rec.anexos = [];
+  rec.anexos.push({ key: meta.key, nome: String(meta.nome || 'arquivo').slice(0, 140), content_type: String(meta.content_type || '').slice(0, 100), tamanho: Number(meta.tamanho || 0), quando: agora() });
+  rec.atualizadoEm = agora();
+  if (env.PORTAL_KV) await env.PORTAL_KV.put(`os:${id}`, JSON.stringify(rec));
+  return rec;
+}
+export async function removerAnexoColeta(env, id, key) {
+  const rec = await lerColetaOS(env, id); if (!rec || !Array.isArray(rec.anexos)) return null;
+  rec.anexos = rec.anexos.filter((a) => a.key !== key);
+  rec.atualizadoEm = agora();
+  if (env.PORTAL_KV) await env.PORTAL_KV.put(`os:${id}`, JSON.stringify(rec));
+  return rec;
+}
+
 // --- Páginas (escritório) ---
 function head(t) {
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${esc(t)} — Ecobraz</title>
@@ -214,6 +232,11 @@ function gerar(){var ag=g('agente').split('|');
 
 export function paginaColetaOSDetalhe(user, os, seloUrl) {
   const linha = (l, v) => v ? `<tr><td style="padding:8px 0;border-top:1px solid #EEF1F0;color:#6B7B78;width:38%">${esc(l)}</td><td style="padding:8px 0;border-top:1px solid #EEF1F0;font-weight:600">${esc(v)}</td></tr>` : '';
+  const anexosArr = Array.isArray(os.anexos) ? os.anexos : [];
+  const anexosHTML = anexosArr.length ? anexosArr.map((a) => `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid #EEF1F0;border-radius:10px;padding:9px 12px;margin-bottom:7px;background:#FBFDFC">
+      <a href="/coletas/anexo?key=${encodeURIComponent(a.key)}" target="_blank" rel="noopener" style="text-decoration:none;color:#10262B;font-weight:600;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">${/image/.test(a.content_type || '') ? '🖼️' : '📄'} ${esc(a.nome || 'arquivo')} ↗</a>
+      <button onclick="removerAnexo('${esc(a.key)}')" style="flex:none;background:none;border:none;color:#B23A2E;font-size:11.5px;font-weight:700;cursor:pointer">remover</button>
+    </div>`).join('') : '<div style="font-size:12.5px;color:#8fa39f">Nenhum anexo ainda.</div>';
   return `${head(os.numero)}<body>${topo('coletas')}
 <div class="wrap">
   <a href="/coletas" style="font-size:13px;font-weight:800;text-decoration:none;color:#4F6469">← Todas as coletas</a>
@@ -244,6 +267,14 @@ export function paginaColetaOSDetalhe(user, os, seloUrl) {
       <div style="font-size:13.5px;color:#28413f;margin-top:6px">Esta coleta é <b>financiada por ${esc(os.patrocinadorNome)}</b>.</div>
       <div style="font-size:12px;color:#4F6469;margin-top:8px;line-height:1.55">Ao realizar a coleta, o cliente <b>autoriza o compartilhamento das informações desta coleta</b> (materiais, peso e comprovantes de destinação) com o patrocinador <b>${esc(os.patrocinadorNome)}</b>, para fins de comprovação e relatório socioambiental, nos termos da LGPD (Lei 13.709/2018).</div>
     </div>` : ''}
+    <div class="sec">📎 Anexos da coleta</div>
+    <div style="font-size:11.5px;color:#9aa7a4;margin:-2px 0 8px">Fotos do material/local e arquivos (PDF) desta coleta — guardados no depósito próprio.</div>
+    <div id="anexosLista">${anexosHTML}</div>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap">
+      <input type="file" id="arqFile" accept="image/*,application/pdf,.pdf" style="font-size:12.5px;max-width:230px">
+      <button class="btn btn-g" style="padding:8px 12px;font-size:12.5px" onclick="enviarAnexo()">⬆ Anexar</button>
+      <span id="anexoMsg" style="font-size:12px;color:#4F6469"></span>
+    </div>
     <div class="sec">Situação</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       ${Object.keys(STATUS).map((s) => `<button class="btn ${s === os.status ? 'btn-d' : 'btn-g'}" style="padding:8px 12px;font-size:12.5px" onclick="setStatus('${s}')" ${s === os.status ? 'disabled' : ''}>${esc(STATUS[s])}</button>`).join('')}
@@ -251,7 +282,9 @@ export function paginaColetaOSDetalhe(user, os, seloUrl) {
     <div id="m" style="font-size:12.5px;color:#4F6469;margin-top:10px"></div>
   </div>
 </div>
-<script>function setStatus(s){if(s==='cancelada'&&!confirm('Cancelar esta coleta? Ela sai da lista principal, mas fica guardada no histórico (dá pra reativar depois).'))return;document.getElementById('m').textContent='Salvando…';fetch('/api/coletas/status',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:'${esc(os.id)}',status:s})}).then(r=>r.json()).then(j=>{if(j.ok){location.reload();}else{document.getElementById('m').textContent='Falha.';}}).catch(()=>document.getElementById('m').textContent='Sem conexão.');}</script>
+<script>function setStatus(s){if(s==='cancelada'&&!confirm('Cancelar esta coleta? Ela sai da lista principal, mas fica guardada no histórico (dá pra reativar depois).'))return;document.getElementById('m').textContent='Salvando…';fetch('/api/coletas/status',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:'${esc(os.id)}',status:s})}).then(r=>r.json()).then(j=>{if(j.ok){location.reload();}else{document.getElementById('m').textContent='Falha.';}}).catch(()=>document.getElementById('m').textContent='Sem conexão.');}
+function enviarAnexo(){var f=document.getElementById('arqFile'),msg=document.getElementById('anexoMsg');if(!f.files||!f.files[0]){msg.textContent='Escolha um arquivo.';return;}if(f.files[0].size>15728640){msg.textContent='Arquivo muito grande (máx. 15 MB).';return;}var fd=new FormData();fd.append('arquivo',f.files[0]);msg.textContent='Enviando…';fetch('/api/coletas/anexo?id=${esc(os.id)}',{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(j){if(j.ok){location.reload();}else{msg.textContent=j.error||'Falha ao enviar.';}}).catch(function(){msg.textContent='Sem conexão.';});}
+function removerAnexo(k){if(!confirm('Remover este anexo?'))return;fetch('/api/coletas/anexo-remover',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:'${esc(os.id)}',key:k})}).then(function(r){return r.json();}).then(function(j){if(j.ok)location.reload();}).catch(function(){});}</script>
 </body></html>`;
 }
 

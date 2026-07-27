@@ -52,7 +52,7 @@ import { amostraContatosPloomes, paginaAmostraContatos, importarLoteContatos, es
 import { importarLoteAnexos, importarLoteAnexosContatos, completarAnexos, importarAnexosJanela, reprocessarFalhas, importarLoteDocumentos, recuperarDocumentos, estatisticasArquivos, paginaMigrarArquivos, diagnosticoAnexos, paginaDiagAnexos } from './ploomes-arquivos.js';
 import { fiscalPermitido, nomeFiscal, listarNotas, lerNota, importarLote, vincularNota, sugerirVinculoSync, paginaFiscalLogin, paginaFiscalHome, paginaFiscalResultado, paginaFiscalNota } from './fiscal.js';
 import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, clienteDeLead, arquivosDoCliente, paginaLeads, paginaLeadDetalhe, paginaInicio } from './cadastro.js';
-import { listarColetasOS, lerColetaOS, criarColetaOS, atualizarStatusOS, atualizarColetaOS, paginaColetasLista, paginaGerarColeta, paginaEditarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga } from './coletas.js';
+import { listarColetasOS, lerColetaOS, criarColetaOS, atualizarStatusOS, atualizarColetaOS, registrarAnexoColeta, removerAnexoColeta, paginaColetasLista, paginaGerarColeta, paginaEditarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga } from './coletas.js';
 import { listarVeiculos, lerVeiculo, salvarVeiculo, paginaFrota, paginaVeiculoForm, lerJornadaAtiva, abrirJornada, fecharJornada, registrarAbastecimento, tagColetaComVeiculo, servirFotoJornada, bannerJornada, paginaAbrirDia, paginaFecharDia, paginaAbastecer, placaDaColeta } from './frota.js';
 import { carregarEquipeNoEnv, listarUsuarios, lerUsuario, salvarUsuario, importarUsuarios, paginaEquipe, paginaUsuarioForm, paginaEquipeImportar } from './equipe.js';
 import { agentesDe } from './agente.js';
@@ -618,6 +618,45 @@ export default {
         const r = await atualizarColetaOS(env, b.id, b);
         if (!r) return json({ ok: false, error: 'nao_encontrada' }, 404);
         return json({ ok: true, id: r.id });
+      }
+      // Anexar foto/arquivo a uma coleta (upload para o R2 + registro em os.anexos).
+      if (pathname === '/api/coletas/anexo' && request.method === 'POST') {
+        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        if (!env.R2_ARQUIVOS) return json({ ok: false, error: 'Depósito R2 indisponível.' }, 503);
+        const id = (url.searchParams.get('id') || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40);
+        const os = await lerColetaOS(env, id);
+        if (!os) return json({ ok: false, error: 'nao_encontrada' }, 404);
+        let form; try { form = await request.formData(); } catch { form = null; }
+        const file = form && form.get('arquivo');
+        if (!file || typeof file === 'string') return json({ ok: false, error: 'sem_arquivo' }, 400);
+        if (file.size > 15 * 1024 * 1024) return json({ ok: false, error: 'Arquivo muito grande (máx. 15 MB).' }, 400);
+        const rand = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
+        const key = `coleta-anexo/${id}/${rand}`;
+        const ct = file.type || 'application/octet-stream';
+        try { await env.R2_ARQUIVOS.put(key, file.stream(), { httpMetadata: { contentType: ct } }); }
+        catch (e) { return json({ ok: false, error: 'Falha ao guardar: ' + String((e && e.message) || e).slice(0, 80) }, 502); }
+        const meta = { key, nome: String(file.name || 'arquivo').slice(0, 140), content_type: ct, tamanho: file.size || 0 };
+        await registrarAnexoColeta(env, id, meta);
+        return json({ ok: true, anexo: meta });
+      }
+      if (pathname === '/api/coletas/anexo-remover' && request.method === 'POST') {
+        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = null; }
+        if (!b || !b.id || !b.key) return json({ ok: false, error: 'dados' }, 400);
+        try { if (env.R2_ARQUIVOS && String(b.key).startsWith('coleta-anexo/')) await env.R2_ARQUIVOS.delete(String(b.key)); } catch { /* segue */ }
+        await removerAnexoColeta(env, b.id, b.key);
+        return json({ ok: true });
+      }
+      // Serve um anexo de coleta do R2 (gated por escritório; só chaves coleta-anexo/).
+      if (pathname === '/coletas/anexo' && request.method === 'GET') {
+        if (!escritorio) return new Response('nao_autenticado', { status: 401 });
+        if (!env.R2_ARQUIVOS) return new Response('indisponível', { status: 503 });
+        const key = (url.searchParams.get('key') || '').replace(/[^a-zA-Z0-9/_.-]/g, '').slice(0, 120);
+        if (!key.startsWith('coleta-anexo/')) return new Response('chave inválida', { status: 400 });
+        const obj = await env.R2_ARQUIVOS.get(key);
+        if (!obj) return new Response('não encontrado', { status: 404 });
+        const ct = (obj.httpMetadata && obj.httpMetadata.contentType) || 'application/octet-stream';
+        return new Response(obj.body, { headers: { 'content-type': ct, 'cache-control': 'private, max-age=300', 'content-disposition': 'inline' } });
       }
       if (pathname === '/coletas/os/comprovante' && request.method === 'GET') {
         if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
