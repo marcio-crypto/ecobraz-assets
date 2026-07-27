@@ -1820,35 +1820,25 @@ async function baixarDocOS(url, sessao, env) {
   } catch (error) { console.error('baixar_doc_erro', safeError(error)); return json({ ok: false, error: 'indisponivel' }, 502); }
 }
 
+// Chamado do cliente → vira um LEAD na nossa base (a Débora vê em /leads). Sem Ploomes.
 async function abrirChamado(request, sessao, env) {
   let input;
   try { input = await request.json(); } catch { return json({ ok: false, error: 'json_invalido' }, 400); }
   const assunto = String(input?.assunto || '').trim().slice(0, 200);
   const descricao = String(input?.descricao || '').trim().slice(0, 4000);
   if (!assunto) return json({ ok: false, error: 'assunto_obrigatorio' }, 422);
-
-  const base = env.PLOOMES_API_URL || 'https://public-api2.ploomes.com';
-  const headers = { 'content-type': 'application/json', 'User-Key': env.PLOOMES_USER_KEY };
-  const deal = {
-    Title: `[Portal] ${assunto}`,
-    ContactId: Number(sessao.empresaId || sessao.contactId),
-    Note: `Chamado aberto pelo cliente no Portal.\nEmpresa: ${sessao.nome}\nE-mail: ${sessao.email}\n\n${descricao}`,
-  };
-  if (env.PORTAL_OS_PIPELINE_ID) deal.PipelineId = Number(env.PORTAL_OS_PIPELINE_ID); // TODO(Marcio): funil de "coletas/OS/solicitações"
-  if (env.PORTAL_OS_STAGE_ID) deal.StageId = Number(env.PORTAL_OS_STAGE_ID);
-  if (env.PORTAL_OS_OWNER_ID) deal.OwnerId = Number(env.PORTAL_OS_OWNER_ID);
-
-  const r = await fetch(`${base}/Deals`, { method: 'POST', headers, body: JSON.stringify(deal) });
-  const body = await r.text();
-  if (!r.ok) { console.error('criar_chamado_erro', r.status, body.slice(0, 160)); return json({ ok: false, error: 'nao_foi_possivel_abrir' }, 502); }
-  let dealId = null;
-  try { dealId = JSON.parse(body).value?.[0]?.Id ?? null; } catch {}
-  return json({ ok: true, chamado_id: dealId, message: 'Chamado aberto! Nossa equipe já recebeu.' }, 201);
+  const r = await ingestLead(env, {
+    name: sessao.nome || '', company: sessao.nome || '', email: sessao.email || '',
+    material_category: 'Chamado / Suporte (portal)',
+    material_description: `Chamado aberto pelo cliente no Portal.\nAssunto: ${assunto}\n\n${descricao}`,
+    source: 'portal-chamado',
+  });
+  if (!r || !r.ok) { console.error('criar_chamado_erro', r && r.error); return json({ ok: false, error: 'nao_foi_possivel_abrir' }, 502); }
+  return json({ ok: true, chamado_id: r.id, message: 'Chamado aberto! Nossa equipe já recebeu.' }, 201);
 }
 
 // Perfil do cliente para PRÉ-PREENCHER o formulário de solicitação de coleta.
-// Lê o cadastro do Ploomes (Razão Social = Name, CNPJ = Register, e-mail). Telefone
-// e responsável vêm quando disponíveis; o cliente confirma/atualiza tudo no form.
+// Lê o cadastro da NOSSA base (D1 contatos) — sem Ploomes. O cliente confirma no form.
 async function perfilCliente(sessao, env) {
   const doc = String(sessao.documento || '').replace(/\D/g, '');
   const p = { razaoSocial: sessao.nome || '', cnpj: sessao.documento || '', email: sessao.email || '', telefone: '', responsavel: sessao.nome || '' };
@@ -1897,8 +1887,9 @@ async function consultaCep(request, env) {
   return json({ ok: false, error: 'indisponivel' }, 502);
 }
 
-// Solicitação de coleta (Abrir OS): cria o Negócio no Ploomes com os dados da coleta.
-// O endereço de coleta é obrigatório (muda a cada coleta). Fotos entram num passo seguinte.
+// Solicitação de coleta: vira um LEAD na nossa base (a Débora vê em /leads e
+// converte em cliente/coleta). Sem Ploomes. As fotos enviadas vão para o R2 e
+// ficam referenciadas no lead. O endereço de coleta é obrigatório.
 async function solicitarOS(request, sessao, env) {
   let input;
   try { input = await request.json(); } catch { return json({ ok: false, error: 'json_invalido' }, 400); }
@@ -1908,59 +1899,43 @@ async function solicitarOS(request, sessao, env) {
   const razaoSocial = g('razaoSocial', 200), cnpj = g('cnpj', 20), telefone = g('telefone', 30);
   const email = g('email', 120), responsavel = g('responsavel', 120), equipamentos = g('equipamentos', 4000);
   const cep = g('cep', 12), logradouro = g('logradouro', 200), numero = g('numero', 20);
-  const bairro = g('bairro', 120), cidade = g('cidade', 120), complemento = g('complemento', 160);
-  const base = env.PLOOMES_API_URL || 'https://public-api2.ploomes.com';
-  const headers = { 'content-type': 'application/json', 'User-Key': env.PLOOMES_USER_KEY };
-  const nota = `Solicitação de coleta pelo Portal do Cliente.\n\n` +
-    `Razão Social: ${razaoSocial}\nCNPJ: ${cnpj}\n` +
-    `Endereço de coleta: ${endereco}\n` +
-    (cep ? `  (CEP ${cep} | Rua ${logradouro} | Nº ${numero} | Bairro ${bairro} | Cidade/UF ${cidade}${complemento ? ' | Compl. ' + complemento : ''})\n` : '') +
-    `Telefone: ${telefone}\nE-mail: ${email}\nResponsável: ${responsavel}\n\n` +
-    `Equipamentos:\n${equipamentos || '(não informado)'}`;
-  const deal = {
-    Title: `[Portal] ${(razaoSocial || sessao.nome || 'Cliente').slice(0, 80)} — solicitação de coleta`,
-    ContactId: Number(sessao.empresaId || sessao.contactId),
-    Note: nota,
-    // Grava o endereço no CAMPO do Ploomes que os documentos leem (deal_F4BF490C..., verificado
-    // 2026-07-22 numa OS real), pra CDF/documentos saírem preenchidos certos — não só na nota.
-    OtherProperties: [{ FieldKey: env.PLOOMES_FIELD_OS_ENDERECO || 'deal_F4BF490C-707A-434A-BB3A-E187CBFD8638', StringValue: endereco.slice(0, 300) }],
-  };
-  // A solicitação já entra como OS DE VERDADE: funil [PJ] VENDAS, etapa "📄 Ordem de Serviço"
-  // (IDs verificados em 2026-07-22). Assim o cliente vê "Em atendimento" na hora e a Débora
-  // recebe na coluna de OS. O Nº da OS e os documentos são gerados MAIS À FRENTE no fluxo
-  // interno (pesagem/finalização) — como já acontece com as 49 OS reais que estão nessa etapa.
-  // O prefixo "[Portal]" marca as que vieram do site (a Débora consegue filtrar/validar).
-  // IDs sobrescrevíveis por variável, caso o funil mude.
-  deal.PipelineId = Number(env.PORTAL_OS_PIPELINE_ID || 44259);
-  deal.StageId = Number(env.PORTAL_OS_STAGE_ID || 199543);
-  if (env.PORTAL_OS_OWNER_ID) deal.OwnerId = Number(env.PORTAL_OS_OWNER_ID);
-  const r = await fetch(`${base}/Deals`, { method: 'POST', headers, body: JSON.stringify(deal) });
-  const body = await r.text();
-  if (!r.ok) { console.error('solicitar_os_erro', r.status, body.slice(0, 160)); return json({ ok: false, error: 'nao_foi_possivel' }, 502); }
-  let dealId = null;
-  try { dealId = JSON.parse(body).value?.[0]?.Id ?? null; } catch {}
-
-  // Anexa as fotos enviadas (até 4) ao negócio no Ploomes.
-  // Formato VERIFICADO por sonda em 2026-07-22: multipart, campo "file", em
-  // Deals({id})/UploadFile → HTTP 200. Cada foto já vem reduzida (JPEG) do navegador.
+  const bairro = g('bairro', 120), cidade = g('cidade', 120), complemento = g('complemento', 160), uf = g('uf', 2);
+  const descricao = [
+    'Solicitação de coleta pelo Portal do Cliente.',
+    cnpj ? `CNPJ/CPF: ${cnpj}` : '',
+    `Endereço de coleta: ${endereco}`,
+    (cep || logradouro) ? `  (CEP ${cep} · ${logradouro}${numero ? ', ' + numero : ''}${complemento ? ' · ' + complemento : ''} · ${bairro} · ${cidade}${uf ? '/' + uf : ''})` : '',
+    responsavel ? `Responsável: ${responsavel}` : '',
+    `Equipamentos:\n${equipamentos || '(não informado)'}`,
+  ].filter(Boolean).join('\n');
+  const r = await ingestLead(env, {
+    name: responsavel || sessao.nome || '', company: razaoSocial || sessao.nome || '',
+    email: email || sessao.email || '', phone: telefone,
+    material_category: 'Solicitação de coleta (portal)', material_description: descricao,
+    postal_code: cep, city: cidade, state: uf, profile: cnpj ? 'empresa' : 'pessoa_fisica',
+    source: 'portal-coleta',
+  });
+  if (!r || !r.ok) { console.error('solicitar_os_erro', r && r.error); return json({ ok: false, error: 'nao_foi_possivel' }, 502); }
+  // Fotos → R2 (referenciadas no lead). Cada foto já vem reduzida (JPEG) do navegador.
   const fotos = Array.isArray(input.fotos) ? input.fotos.slice(0, 4) : [];
   let fotosOk = 0;
-  for (let i = 0; dealId && i < fotos.length; i++) {
-    try {
-      const m = /^data:(image\/[\w.+-]+);base64,(.+)$/i.exec(String(fotos[i]?.dataUrl || ''));
-      if (!m) continue;
-      const bytes = Uint8Array.from(atob(m[2]), (c) => c.charCodeAt(0));
-      const limpo = String(fotos[i]?.nome || '').replace(/[^\w.\- ]+/g, '').slice(0, 60);
-      const nome = /\.(jpe?g|png|webp|gif)$/i.test(limpo) ? limpo : `${limpo || 'foto-' + (i + 1)}.jpg`;
-      const form = new FormData();
-      form.append('file', new Blob([bytes], { type: m[1] }), nome);
-      const up = await fetch(`${base}/Deals(${dealId})/UploadFile`, { method: 'POST', headers: { 'User-Key': env.PLOOMES_USER_KEY }, body: form });
-      if (up.ok) fotosOk++;
-      else console.error('foto_upload_http', up.status, (await up.text().catch(() => '')).slice(0, 140));
-    } catch (error) { console.error('foto_upload', safeError(error)); }
+  if (fotos.length && env.R2_ARQUIVOS) {
+    const refs = [];
+    for (let i = 0; i < fotos.length; i++) {
+      try {
+        const m = /^data:(image\/[\w.+-]+);base64,(.+)$/i.exec(String(fotos[i]?.dataUrl || ''));
+        if (!m) continue;
+        const bytes = Uint8Array.from(atob(m[2]), (c) => c.charCodeAt(0));
+        const rand = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
+        const key = `coleta-anexo/lead/${r.id}-${rand}.jpg`;
+        await env.R2_ARQUIVOS.put(key, bytes, { httpMetadata: { contentType: m[1] } });
+        refs.push({ key, nome: String(fotos[i]?.nome || `foto-${i + 1}`).slice(0, 80) });
+        fotosOk++;
+      } catch (error) { console.error('foto_lead', safeError(error)); }
+    }
+    if (refs.length) { try { const lead = await lerLead(env, r.id); if (lead) { lead.fotos = refs; await salvarLead(env, lead); } } catch (error) { console.error('foto_ref', safeError(error)); } }
   }
-
-  return json({ ok: true, pedido_id: dealId, fotos: fotosOk, message: 'Pronto! Sua ordem de serviço foi aberta e já está em atendimento. Acompanhe o andamento aqui no painel.' }, 201);
+  return json({ ok: true, pedido_id: r.id, fotos: fotosOk, message: 'Pronto! Sua solicitação de coleta foi enviada. Nossa equipe vai entrar em contato para agendar.' }, 201);
 }
 
 function rotuloStatus(statusId) {

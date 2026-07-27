@@ -415,6 +415,7 @@ export function paginaLeadDetalhe(user, lead) {
       ${linha('Recebido em', dataBR(lead.criadoEm))}
     </table>
   </div>
+  ${(Array.isArray(lead.fotos) && lead.fotos.length) ? `<div class="card" style="margin-top:12px"><div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#7c8a87;margin-bottom:10px">📷 Fotos enviadas pelo cliente</div><div style="display:flex;flex-wrap:wrap;gap:10px">${lead.fotos.map((f) => `<a href="/coletas/anexo?key=${encodeURIComponent(f.key)}" target="_blank" rel="noopener"><img src="/coletas/anexo?key=${encodeURIComponent(f.key)}" alt="${esc(f.nome || 'foto')}" style="width:130px;height:100px;object-fit:cover;border:1px solid #E4EBE9;border-radius:8px;background:#fff"></a>`).join('')}</div></div>` : ''}
   <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
     <a class="btn btn-p" href="/cadastro/novo?tipo=${lead.perfil === 'pessoa_fisica' ? 'PF' : 'PJ'}&lead=${esc(lead.id)}">➜ Converter em cliente</a>
     <button class="btn btn-g" id="btrat" ${lead.status === 'tratado' ? 'disabled style="opacity:.5"' : ''}>${lead.status === 'tratado' ? '✓ Tratado' : 'Marcar como tratado'}</button>
