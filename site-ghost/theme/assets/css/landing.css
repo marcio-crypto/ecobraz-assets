@@ -111,3 +111,21 @@ a.hx-sol:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
 .hx-wa-float span{display:none}
 .hx-wa-float{padding:14px}
 }
+
+/* Telas do Portal Ecobraz (seção hx-tela — gerada por build-landing-pages.mjs) */
+.hx-tela{display:grid;grid-template-columns:.72fr 1.28fr;gap:44px;align-items:center;padding:34px 0;border-bottom:1px solid var(--line)}
+.hx-tela:last-of-type{border-bottom:0}
+.hx-tela.flip .hx-tela-txt{order:2}
+.hx-tela.flip .hx-tela-img{order:1}
+.hx-tela-txt h3{font-size:clamp(20px,2.3vw,26px);letter-spacing:-.02em;font-weight:800;margin:10px 0 8px}
+.hx-tela-txt p{color:var(--muted);font-size:15px;margin:0}
+.hx-tela-pts{list-style:none;margin:14px 0 0;padding:0}
+.hx-tela-pts li{position:relative;padding:5px 0 5px 26px;font-size:14px;font-weight:600}
+.hx-tela-pts li::before{content:"✓";position:absolute;left:0;top:4px;color:var(--green-dark,#3d8a41);font-weight:800}
+.hx-tela-img{margin:0}
+.hx-tela-img img{width:100%;height:auto;display:block;border-radius:14px;box-shadow:0 18px 48px rgba(10,40,30,.16)}
+@media (max-width: 860px){
+  .hx-tela{grid-template-columns:1fr;gap:18px;padding:26px 0}
+  .hx-tela.flip .hx-tela-txt{order:1}
+  .hx-tela.flip .hx-tela-img{order:2}
+}

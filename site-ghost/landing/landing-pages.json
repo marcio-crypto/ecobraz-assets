@@ -3891,7 +3891,7 @@
   },
   "hero": {
    "eyebrow": "Grátis para todo cliente Ecobraz · Sem licença, sem mensalidade",
-   "sub": "Vendemos coleta e destinação de eletrônicos com qualidade, rastreabilidade e conformidade — e quem descarta com a Ecobraz ganha junto o Portal Ecobraz: pede a coleta em 1 minuto, acompanha etapa por etapa com foto e GPS, guarda todos os documentos e baixa o certificado verificável por QR. Você não precisa comprar sistema nenhum. O descarte já vem com tudo.",
+   "sub": "A Ecobraz coleta, documenta e destina os seus eletrônicos — e você ganha junto, grátis, o Portal Ecobraz: coleta em 1 minuto, acompanhamento em tempo real e todos os documentos na palma da mão. Ninguém no mercado entrega isso junto.",
    "cta": "Agendar coleta",
    "band": [
     {
@@ -3917,87 +3917,31 @@
    "button": "Solicitar coleta",
    "micro": "Sem compromisso — a equipe avalia local, materiais e volume e retorna com o desenho da coleta."
   },
-  "recognize": {
-   "title": "Isso muda o seu dia a dia se…",
-   "items": [
-    "Tem eletrônico parado no estoque virando risco jurídico e de dados",
-    "“Cadê o certificado?” vira caça ao tesouro em e-mails de dois anos atrás",
-    "Cada área guarda a própria planilha — e nenhuma bate com a outra",
-    "Banco, cliente ou investidor cobra ESG e não existe resposta pronta",
-    "Você teme que um HD velho vire sucata revendida com os seus dados dentro"
-   ]
-  },
-  "painsTitle": "Descarte sem prova é risco disfarçado de solução",
-  "painsSub": "A maioria das empresas chama alguém, o material some — e torce para nunca precisar provar nada.",
-  "pains": [
-   {
-    "icon": "alert",
-    "title": "O material some, a responsabilidade fica",
-    "text": "Descarte com sucateiro, sem papel e sem prova, não encerra a responsabilidade do gerador — ela continua no seu CNPJ, esperando uma fiscalização.",
-    "consequence": "Custo real: passivo ambiental e de dados no seu nome, sem defesa documental."
-   },
-   {
-    "icon": "file",
-    "title": "Documento espalhado não protege",
-    "text": "Certificado perdido em e-mail, planilha que não bate com a nota, cadeia de custódia impossível de remontar: na auditoria, prova espalhada vale pouco.",
-    "consequence": "Custo real: horas de retrabalho a cada ciclo e ressalvas evitáveis no relatório."
-   },
-   {
-    "icon": "chart",
-    "title": "ESG cobrado, resposta improvisada",
-    "text": "Banco, matriz e cliente grande perguntam pelo descarte — e a resposta improvisada custa reputação, homologação e até crédito.",
-    "consequence": "Custo real: porta fechada em homologação e condições piores de financiamento."
-   }
-  ],
   "contrast": {
-   "title": "Sem a Ecobraz × com a Ecobraz",
-   "sub": "O mesmo descarte, dois finais muito diferentes.",
+   "title": "O barato do descarte informal cobra caro depois",
+   "sub": "A prova é o que fica. Compare.",
    "before": {
-    "title": "Sem a Ecobraz",
+    "title": "Descarte comum / sucateiro",
     "items": [
-     "Eletrônico parado no estoque — risco jurídico e de dados",
-     "Descarte sem papel, sem prova, sem cadeia de custódia",
-     "“Cadê o certificado?” vira caça ao tesouro",
-     "Cada área corre atrás de um pedaço; ninguém vê o todo",
-     "ESG cobrado por banco e investidor, sem resposta pronta"
+     "Controle: não existe",
+     "Coleta por telefone e e-mail",
+     "Documentos: raramente",
+     "Certificado sem garantia",
+     "Destruição de dados sem comprovação",
+     "Carbono e relatórios de ESG: não"
     ]
    },
    "after": {
     "title": "Com a Ecobraz",
     "items": [
-     "Um clique abre a coleta — e você acompanha em tempo real",
-     "Certificado de Destinação Final assinado, no seu CNPJ",
-     "Todos os documentos organizados, verificáveis por QR",
-     "Cada área trabalha no mesmo portal, com a mesma verdade",
-     "Relatórios que destravam reputação — e crédito"
+     "Portal completo, no seu perfil",
+     "Coleta self-service, em tempo real",
+     "Documentos organizados e verificáveis por QR",
+     "CDF sempre — com validação técnica e antifraude",
+     "Destruição comprovada (LGPD)",
+     "Carbono e relatórios com lastro real"
     ]
    }
-  },
-  "gains": {
-   "title": "O que você recebe junto com a coleta",
-   "sub": "Nove serviços num só acesso, amarrados ao seu CNPJ — um alimenta o outro: a coleta vira documento, o documento vira certificado, o material vira indicador.",
-   "items": [
-    {
-     "icon": "box",
-     "title": "Coleta em 1 minuto",
-     "text": "Solicitação pré-preenchida com os dados da sua empresa: digite o CEP, descreva os equipamentos, anexe fotos do celular e envie. Sem cotação demorada a cada descarte."
-    },
-    {
-     "icon": "chart",
-     "title": "Acompanhamento em tempo real",
-     "text": "Cada etapa com data, hora e evidência — foto e GPS no momento da coleta. Você sabe exatamente onde o seu material está, sem ligar para ninguém."
-    },
-    {
-     "icon": "file",
-     "title": "Documentos organizados por coleta",
-     "text": "Nota Fiscal, MTR, Carta de Doação e CDF guardados por ordem de serviço, amarrados ao CNPJ. Quando a auditoria pedir, baixa em segundos."
-    },
-    {
-     "icon": "shield",
-     "title": "Certificado à prova de fraude",
-     "text": "CDF assinado por responsável técnico e com selo verificável por QR: quem recebe confere a autenticidade na hora. Papel bonito qualquer um faz — prova que resiste, não."
-    }
-   ]
   },
   "stepsTitle": "Como funciona",
   "stepsSub": "Você contrata uma coleta. Recebe uma operação inteira, documentada de ponta a ponta.",
@@ -4032,7 +3976,8 @@
     "Números de carbono sem lastro: enquanto um fator não é homologado por validação independente, ele aparece como “pendente” — estimativa é estimativa",
     "Substituição das obrigações legais próprias do gerador ou de consultoria jurídica",
     "Promessa de coleta em qualquer endereço: atendemos São Paulo e região, sujeito à avaliação"
-   ]
+   ],
+   "conditions": "Periodicidade, unidades atendidas e documentação são definidas na avaliação técnica — antes de qualquer compromisso."
   },
   "evidenceTitle": "Os documentos que você recebe",
   "evidence": [
@@ -4053,32 +3998,6 @@
     "text": "Indicadores e relatórios produzidos do que de fato aconteceu nas suas coletas — não de estimativa no ar."
    }
   ],
-  "why": {
-   "title": "Por que ninguém entrega isso junto",
-   "sub": "A Ecobraz é uma associação sem fins lucrativos que opera desde 2011 — e construiu o que fornecedor de coleta comum não tem.",
-   "items": [
-    {
-     "icon": "shield",
-     "title": "Você não precisa de mil sistemas",
-     "text": "Quem descarta com a Ecobraz recebe tudo pronto num lugar só: coleta, prova, documentos e relatórios — com metodologia estruturada com a Villanova ESG e portas abertas para validação de terceira parte."
-    },
-    {
-     "icon": "box",
-     "title": "Grátis de verdade",
-     "text": "O portal acompanha a coleta porque a Ecobraz se remunera pela destinação e valorização do material — não pela venda de software nem pela retirada."
-    },
-    {
-     "icon": "chart",
-     "title": "Feito para a empresa inteira",
-     "text": "Quem opera usa o celular na doca; a TI comprova a destruição de dados; compras pede em 1 clique; o gerente vê tudo; o CFO recebe o relatório. Cada um resolve a sua dor."
-    },
-    {
-     "icon": "file",
-     "title": "Honestidade nos números",
-     "text": "Estimativa aparece como estimativa, fator não homologado fica “pendente”. Nada de número inventado — é o padrão que sustenta o seu relatório numa auditoria de verdade."
-    }
-   ]
-  },
   "authority": "Associação sem fins lucrativos, em operação desde 2011, com nota 4,9 em mais de 350 avaliações públicas no Google. Destinação documentada, metodologia publicada e evidências abertas para verificação.",
   "depoimentos": {
    "titulo": "Quem já descarta com a Ecobraz",
@@ -4104,31 +4023,23 @@
   "faq": [
    {
     "q": "O portal é grátis mesmo? Onde está a pegadinha?",
-    "a": "Não há pegadinha: o acesso é liberado para clientes que descartam com a Ecobraz, com as funções padrão sem custo de licença. O modelo é transparente — a Ecobraz se remunera pela destinação e valorização do material coletado, não pela venda de software. Serviços específicos (como relatórios sob medida e o programa Adote um Bairro) têm condições próprias, definidas no contato."
+    "a": "Não há pegadinha: quem descarta com a Ecobraz tem acesso, com as funções padrão sem custo de licença. A Ecobraz se remunera pela destinação e valorização do material — não pela venda de software. Serviços específicos (relatórios sob medida, Adote um Bairro) têm condições próprias, definidas no contato."
    },
    {
     "q": "Preciso usar o portal para descartar com vocês?",
-    "a": "Não. O descarte funciona com ou sem o portal — quem prefere resolver tudo pelo WhatsApp continua sendo atendido do mesmo jeito. O portal existe para quem quer ver: acompanhamento, documentos e histórico na palma da mão."
+    "a": "Não. O descarte funciona com ou sem — quem prefere o WhatsApp segue atendido do mesmo jeito. O portal é para quem quer ver tudo."
    },
    {
     "q": "Como sei que o material teve o destino correto?",
-    "a": "Cada etapa é registrada com data, hora, foto e GPS; a pesagem e a triagem entram no sistema na chegada; e o Certificado de Destinação Final só é liberado depois da conferência da engenharia ambiental — assinado por responsável técnico e verificável por QR por qualquer pessoa."
-   },
-   {
-    "q": "E os dados que estão nos equipamentos?",
-    "a": "A destruição de dados é tratada como serviço próprio, com comprovação — cada equipamento rastreado. O seu passivo de dados vira certificado, não risco. Veja o serviço de destruição física de dados e mídias para o desenho completo."
+    "a": "Cada etapa registrada com data, hora, foto e GPS; pesagem e triagem no sistema; e o CDF só é liberado após a conferência da engenharia ambiental — verificável por QR por qualquer pessoa."
    },
    {
     "q": "Vocês medem carbono? Posso usar no meu relatório?",
-    "a": "O portal traz uma calculadora de estimativa (ordem de grandeza, apresentada como faixa) e um painel com lastro nas suas coletas reais, com metodologia estruturada com a Villanova ESG. A regra é honestidade: enquanto um fator não é homologado por validação independente, ele aparece como “pendente” — nunca publicamos número de falsa precisão."
-   },
-   {
-    "q": "Que relatórios a minha empresa consegue tirar?",
-    "a": "Relatórios produzidos a partir dos dados reais do seu histórico — nos formatos que auditorias brasileiras, compradores europeus e bancos costumam solicitar, definidos no escopo de cada caso."
+    "a": "O portal traz estimativa gratuita (apresentada como faixa) e painel com lastro nas suas coletas reais. Regra de honestidade: fator não homologado por validação independente aparece como “pendente” — nunca publicamos número de falsa precisão."
    },
    {
     "q": "Atendem a minha cidade? Quanto custa a coleta?",
-    "a": "Atendemos São Paulo e região, sujeito à avaliação de local, volume e materiais. Condições são definidas caso a caso, sobre o desenho da sua operação — solicite a avaliação e a equipe retorna em até 24h úteis."
+    "a": "Atendemos São Paulo e região, sujeito à avaliação de local, volume e materiais. Condições caso a caso, sobre o desenho da sua operação — a equipe retorna em até 24h úteis."
    }
   ],
   "related": [
@@ -4156,6 +4067,106 @@
    "eyebrow": "Comece pelo descarte",
    "title": "Descartou com a Ecobraz, o controle vem junto.",
    "text": "Agende a primeira coleta — a equipe retorna em até 24h úteis e o acesso ao Portal Ecobraz é liberado para a sua empresa, sem custo de licença."
+  },
+  "telas": {
+   "title": "O poder de controlar todo o seu descarte — na palma da mão",
+   "sub": "Isso é o que você recebe junto com a coleta. De graça, no seu perfil, amarrado ao seu CNPJ.",
+   "itens": [
+    {
+     "img": "portal-tela-painel.png",
+     "alt": "Painel do Portal Ecobraz com ordens de serviço, documentos e serviços da empresa",
+     "eyebrow": "1 · Painel de comando",
+     "title": "Tudo da sua empresa, num só lugar",
+     "text": "Do chão de fábrica à diretoria — vários usuários, cada um no seu papel.",
+     "points": [
+      "Histórico e documentos no seu perfil",
+      "Acesso por link seguro, sem senha para decorar"
+     ]
+    },
+    {
+     "img": "portal-tela-solicitar.png",
+     "alt": "Tela de solicitação de coleta com dados pré-preenchidos",
+     "eyebrow": "2 · Coleta em 1 minuto",
+     "title": "Pedir coleta ficou fácil como pedir um carro por app",
+     "text": "Já vem preenchido com os dados da sua empresa — você só confere.",
+     "points": [
+      "Digite o CEP e o endereço se completa",
+      "Anexe fotos direto do celular",
+      "Enviou, a Ecobraz recebe na hora"
+     ]
+    },
+    {
+     "img": "portal-tela-acompanhar.png",
+     "alt": "Linha do tempo de uma ordem de serviço, da solicitação ao certificado",
+     "eyebrow": "3 · Tempo real",
+     "title": "Você vê a sua coleta andar — etapa por etapa",
+     "text": "Sem ligar para ninguém. Nada de “te aviso quando estiver pronto”.",
+     "points": [
+      "Foto e GPS no momento da coleta",
+      "Pesagem e triagem registradas",
+      "Histórico guardado para sempre"
+     ]
+    },
+    {
+     "img": "portal-tela-documentos.png",
+     "alt": "Central de documentos com Nota Fiscal, MTR, Carta de Doação e CDF",
+     "eyebrow": "4 · Documentos",
+     "title": "Toda a papelada da auditoria, organizada",
+     "text": "NF, MTR, Carta de Doação e CDF — por coleta, no seu CNPJ.",
+     "points": [
+      "Baixe em PDF em segundos",
+      "Verificáveis por QR",
+      "Acabou a caça ao certificado"
+     ]
+    },
+    {
+     "img": "portal-tela-cdf.png",
+     "alt": "Certificado de Destinação Final com selo de validação",
+     "eyebrow": "5 · Certificado",
+     "title": "O documento que vale ouro — à prova de fraude",
+     "text": "O CDF só existe depois que a engenharia ambiental valida a operação.",
+     "points": [
+      "Assinado por responsável técnico",
+      "Selo verificável por QR",
+      "A sua prova numa auditoria de terceira parte"
+     ]
+    },
+    {
+     "img": "portal-tela-calculadora.png",
+     "alt": "Calculadora de estimativa de pegada de carbono a partir do CNPJ",
+     "eyebrow": "6 · Carbono — comece de graça",
+     "title": "Digite o CNPJ e veja uma primeira estimativa",
+     "text": "Uma ordem de grandeza da pegada da sua empresa, em segundos.",
+     "points": [
+      "Grátis, sem contratar nada",
+      "Honestidade: faixa, nunca falsa precisão"
+     ]
+    },
+    {
+     "img": "portal-tela-carbono.png",
+     "alt": "Painel de carbono com termômetro de neutralidade e composição por material",
+     "eyebrow": "7 · Painel de carbono",
+     "title": "O impacto vira número — com lastro em cada coleta",
+     "text": "Os números vêm do peso e do material das suas coletas reais — não de estimativa no ar.",
+     "points": [
+      "Termômetro de neutralidade",
+      "Fator não homologado fica “pendente”",
+      "Metodologia estruturada com a Villanova ESG"
+     ]
+    },
+    {
+     "img": "portal-tela-auditoria.png",
+     "alt": "Dossiê de auditoria com conta de emissões e cadeia de custódia",
+     "eyebrow": "8 · Auditoria",
+     "title": "Pronto para auditoria de terceira parte",
+     "text": "A conta e a cadeia de custódia por trás de cada número — a honestidade embutida.",
+     "points": [
+      "Dossiê por operação: foto + GPS + pesagem",
+      "Sem dupla contagem, sem greenwashing",
+      "O auditor confere cada número"
+     ]
+    }
+   ]
   }
  },
  {
