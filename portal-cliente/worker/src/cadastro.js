@@ -227,10 +227,32 @@ function salvar(){var tipo=g('tipo');var rec={tipo:tipo,endereco:{cep:g('cep'),l
 </body></html>`;
 }
 
-export function paginaClienteDetalhe(user, cli) {
+// Arquivos migrados do Ploomes ligados a este cliente — casados pelo CNPJ/CPF
+// (cliente → contato migrado com o mesmo documento → arquivos no R2).
+export async function arquivosDoCliente(env, cli) {
+  if (!env.DB_PLOOMES || !cli) return [];
+  const doc = digits(cli.tipo === 'PJ' ? cli.cnpj : cli.cpf);
+  if (doc.length < 11) return [];
+  try {
+    const r = await env.DB_PLOOMES.prepare(
+      "SELECT r2_key, nome_arquivo, content_type, tamanho, fonte, criado_em FROM arquivos_ploomes WHERE contact_id IN (SELECT ploomes_id FROM contatos WHERE documento = ?1) ORDER BY (fonte='documento') DESC, criado_em DESC LIMIT 300"
+    ).bind(doc).all();
+    return r.results || [];
+  } catch { return []; }
+}
+
+export function paginaClienteDetalhe(user, cli, arquivos) {
   const e = cli.endereco || {};
   const endereco = [[e.logradouro, e.numero].filter(Boolean).join(', '), e.complemento, e.bairro, [e.cidade, e.uf].filter(Boolean).join('/'), e.cep].filter(Boolean).join(' · ');
   const linha = (l, v) => v ? `<tr><td style="padding:8px 0;border-top:1px solid #EEF1F0;color:#6B7B78;width:38%">${esc(l)}</td><td style="padding:8px 0;border-top:1px solid #EEF1F0;font-weight:600">${esc(v)}</td></tr>` : '';
+  const fmtTam = (n) => { n = Number(n || 0); if (!n) return ''; return n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; };
+  const iconArq = (ct, nome) => { const s = (String(ct || '') + ' ' + String(nome || '')).toLowerCase(); if (/pdf/.test(s)) return '📕'; if (/image|jpg|jpeg|png|gif|webp/.test(s)) return '🖼️'; if (/zip|rar/.test(s)) return '🗜️'; if (/xml/.test(s)) return '📑'; if (/sheet|excel|xls|csv/.test(s)) return '📊'; if (/word|\bdoc/.test(s)) return '📘'; return '📄'; };
+  const arqs = arquivos || [];
+  const semDoc = cli.tipo === 'PJ' ? !digits(cli.cnpj) : !digits(cli.cpf);
+  const arqRows = arqs.length ? arqs.map((a) => `<a href="/cadastro/arquivo?key=${encodeURIComponent(a.r2_key)}&nome=${encodeURIComponent(a.nome_arquivo || '')}" target="_blank" rel="noopener" style="display:flex;justify-content:space-between;align-items:center;gap:10px;text-decoration:none;border:1px solid #EEF1F0;border-radius:10px;padding:10px 12px;margin-bottom:7px;background:#FBFDFC">
+      <div style="min-width:0;display:flex;align-items:center;gap:9px"><span style="font-size:18px;flex:none">${iconArq(a.content_type, a.nome_arquivo)}</span><span style="font-size:12.5px;color:#10262B;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(a.nome_arquivo || a.r2_key)}</span></div>
+      <span style="flex:none;font-size:11px;color:#8fa39f">${a.fonte === 'documento' ? 'proposta' : 'anexo'}${fmtTam(a.tamanho) ? ' · ' + fmtTam(a.tamanho) : ''} ↗</span>
+    </a>`).join('') : `<div style="font-size:12.5px;color:#8fa39f">Nenhum documento migrado encontrado para este cliente.${semDoc ? ' Cadastre o ' + (cli.tipo === 'PJ' ? 'CNPJ' : 'CPF') + ' para localizar os arquivos.' : ''}</div>`;
   const contatos = (cli.contatos || []).filter((c) => c.nome || c.fone || c.email).map((c) => `<div style="border:1px solid #EEF1F0;border-radius:10px;padding:11px 13px;margin-bottom:8px"><div style="font-weight:800;font-size:13.5px">${esc(c.nome || '')}${c.cargo ? ` <span style="font-weight:600;color:#7c8a87">· ${esc(c.cargo)}</span>` : ''}</div><div style="font-size:12.5px;color:#4F6469;margin-top:3px">${[c.fone, c.email].filter(Boolean).map(esc).join(' · ')}</div></div>`).join('') || '<div style="font-size:12.5px;color:#8fa39f">Sem contatos cadastrados.</div>';
   return `${head(cli.tipo === 'PJ' ? (cli.razaoSocial || 'Empresa') : (cli.nome || 'Pessoa física'))}<body>${topo(user, 'cadastro')}
 <div class="wrap">
@@ -250,6 +272,11 @@ export function paginaClienteDetalhe(user, cli) {
       ${linha('Cadastrado em', dataBR(cli.criadoEm))}
     </table>
     ${cli.tipo === 'PJ' ? `<div class="sec">Contatos</div>${contatos}` : ''}
+  </div>
+  <div class="card" style="margin-top:14px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><div class="sec" style="margin-top:0">📎 Documentos &amp; anexos</div>${arqs.length ? `<span style="font-size:11px;color:#8fa39f">${arqs.length} arquivo(s)</span>` : ''}</div>
+    <div style="font-size:11.5px;color:#9aa7a4;margin:-2px 0 10px">Notas, certificados, MTR e propostas migrados do Ploomes — ligados a este cliente pelo CNPJ/CPF.</div>
+    ${arqRows}
   </div>
   <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap"><a href="/coletas/nova?cliente=${esc(cli.id)}" class="btn btn-p">＋ Gerar coleta</a>
     <a href="/coletas" class="btn btn-g">Ver todas as coletas</a></div>

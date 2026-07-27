@@ -51,7 +51,7 @@ import { sondarAnexosPloomes, paginaSondaAnexos } from './ploomes-docs.js';
 import { amostraContatosPloomes, paginaAmostraContatos, importarLoteContatos, estatisticasMigracao, buscarContatos, paginaMigrarPloomes, detalheContato, paginaContatoDetalhe, importarLoteNegocios, estatisticasNegocios, paginaMigrarNegocios } from './ploomes-migracao.js';
 import { importarLoteAnexos, importarLoteAnexosContatos, completarAnexos, importarAnexosJanela, reprocessarFalhas, importarLoteDocumentos, recuperarDocumentos, estatisticasArquivos, paginaMigrarArquivos, diagnosticoAnexos, paginaDiagAnexos } from './ploomes-arquivos.js';
 import { fiscalPermitido, nomeFiscal, listarNotas, lerNota, importarLote, vincularNota, sugerirVinculoSync, paginaFiscalLogin, paginaFiscalHome, paginaFiscalResultado, paginaFiscalNota } from './fiscal.js';
-import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, clienteDeLead, paginaLeads, paginaLeadDetalhe, paginaInicio } from './cadastro.js';
+import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, clienteDeLead, arquivosDoCliente, paginaLeads, paginaLeadDetalhe, paginaInicio } from './cadastro.js';
 import { listarColetasOS, lerColetaOS, criarColetaOS, atualizarStatusOS, atualizarColetaOS, paginaColetasLista, paginaGerarColeta, paginaEditarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga } from './coletas.js';
 import { listarVeiculos, lerVeiculo, salvarVeiculo, paginaFrota, paginaVeiculoForm, lerJornadaAtiva, abrirJornada, fecharJornada, registrarAbastecimento, tagColetaComVeiculo, servirFotoJornada, bannerJornada, paginaAbrirDia, paginaFecharDia, paginaAbastecer, placaDaColeta } from './frota.js';
 import { carregarEquipeNoEnv, listarUsuarios, lerUsuario, salvarUsuario, importarUsuarios, paginaEquipe, paginaUsuarioForm, paginaEquipeImportar } from './equipe.js';
@@ -519,7 +519,24 @@ export default {
         if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
         const cli = await lerCliente(env, url.searchParams.get('id') || '');
         if (!cli) return html(paginaMensagem('Cliente não encontrado', 'Volte e tente de novo.'), 404);
-        return html(paginaClienteDetalhe(escritorio, cli));
+        let arquivos = []; try { arquivos = await arquivosDoCliente(env, cli); } catch { /* sem arquivos, tudo bem */ }
+        return html(paginaClienteDetalhe(escritorio, cli, arquivos));
+      }
+      // Serve um arquivo migrado do Ploomes (R2) para a equipe do escritório.
+      // Valida a chave contra o banco (só serve o que está catalogado).
+      if (pathname === '/cadastro/arquivo' && request.method === 'GET') {
+        if (!escritorio) return new Response('nao_autenticado', { status: 401 });
+        if (!env.R2_ARQUIVOS || !env.DB_PLOOMES) return new Response('indisponível', { status: 503 });
+        const key = (url.searchParams.get('key') || '').replace(/[^a-zA-Z0-9/_.-]/g, '').slice(0, 200);
+        if (!key) return new Response('faltou a chave', { status: 400 });
+        let existe = null; try { existe = await env.DB_PLOOMES.prepare('SELECT content_type, nome_arquivo FROM arquivos_ploomes WHERE r2_key=?1 LIMIT 1').bind(key).first(); } catch { /* ok */ }
+        if (!existe) return new Response('arquivo não catalogado', { status: 404 });
+        const obj = await env.R2_ARQUIVOS.get(key);
+        if (!obj) return new Response('arquivo não encontrado no depósito', { status: 404 });
+        const ct = (obj.httpMetadata && obj.httpMetadata.contentType) || existe.content_type || 'application/octet-stream';
+        const nome = String(url.searchParams.get('nome') || existe.nome_arquivo || 'arquivo').replace(/[^a-zA-Z0-9._ ()\-]/g, '').slice(0, 120) || 'arquivo';
+        const dispor = url.searchParams.get('dl') === '1' ? 'attachment' : 'inline';
+        return new Response(obj.body, { headers: { 'content-type': ct, 'cache-control': 'private, max-age=300', 'content-disposition': `${dispor}; filename="${nome}"` } });
       }
       if (pathname === '/api/cadastro/salvar' && request.method === 'POST') {
         if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
