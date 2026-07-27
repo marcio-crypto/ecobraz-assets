@@ -168,6 +168,7 @@ function contatoRowHTML(c) {
   return `<div class="contato" style="border:1px solid #EEF1F0;border-radius:10px;padding:12px;margin-bottom:10px;background:#FBFDFC">
     <div class="g2"><div><label>Nome do contato</label><input class="c-nome" value="${esc(c.nome || '')}"></div><div><label>Cargo</label><input class="c-cargo" value="${esc(c.cargo || '')}"></div></div>
     <div class="g2"><div><label>Telefone</label><input class="c-fone" value="${esc(c.fone || '')}"></div><div><label>E-mail</label><input class="c-email" value="${esc(c.email || '')}"></div></div>
+    <div class="g2"><div><label>Status</label><input class="c-status" value="${esc(c.status || '')}" placeholder="ex.: Ativo"></div><div></div></div>
     <button type="button" class="rm-contato" style="margin-top:8px;background:none;border:none;color:#B23A2E;font-size:12px;font-weight:700;cursor:pointer">remover contato</button>
   </div>`;
 }
@@ -193,8 +194,8 @@ export function paginaFormCliente(user, tipo, cli, leadId) {
     <div id="contatos">${contatos.map(contatoRowHTML).join('')}</div>
     <button type="button" class="btn btn-g" onclick="addContato()" style="padding:9px 14px;font-size:13px">＋ Adicionar contato</button>
     <div class="sec">Comercial (opcional)</div>
-    <div class="g2"><div><label>Nº de contrato</label><input id="contrato" value="${esc(cli?.contrato || '')}"></div>
-    <div><label>Condição de pagamento</label><select id="pagamento">${['', 'À vista', 'Faturado 15 dias', 'Faturado 30 dias', 'Boleto', 'Outro'].map((o) => `<option ${cli?.pagamento === o ? 'selected' : ''}>${o}</option>`).join('')}</select></div></div>
+    <div class="g2"><div><label>Status da empresa</label><input id="statusEmpresa" value="${esc(cli?.status || '')}" placeholder="ex.: Ativo"></div><div><label>Nº de contrato</label><input id="contrato" value="${esc(cli?.contrato || '')}"></div></div>
+    <div class="g2"><div><label>Condição de pagamento</label><select id="pagamento">${['', 'À vista', 'Faturado 15 dias', 'Faturado 30 dias', 'Boleto', 'Outro'].map((o) => `<option ${cli?.pagamento === o ? 'selected' : ''}>${o}</option>`).join('')}</select></div><div></div></div>
     <label>Observação / instrução padrão de coleta</label><textarea id="obsColeta" rows="2">${esc(cli?.obsColeta || '')}</textarea>
   ` : `
     <div class="sec">Pessoa física</div>
@@ -222,7 +223,7 @@ var LEAD_ORIGEM=${JSON.stringify(leadId || '')};
 function msg(t){document.getElementById('m').textContent=t;}
 function g(id){const el=document.getElementById(id);return el?el.value.trim():'';}
 function addContato(){var w=document.getElementById('contatos');var d=document.createElement('div');d.className='contato';d.style.cssText='border:1px solid #EEF1F0;border-radius:10px;padding:12px;margin-bottom:10px;background:#FBFDFC';
-  d.innerHTML='<div class="g2"><div><label>Nome do contato</label><input class="c-nome"></div><div><label>Cargo</label><input class="c-cargo"></div></div><div class="g2"><div><label>Telefone</label><input class="c-fone"></div><div><label>E-mail</label><input class="c-email"></div></div><button type="button" class="rm-contato" style="margin-top:8px;background:none;border:none;color:#B23A2E;font-size:12px;font-weight:700;cursor:pointer">remover contato</button>';
+  d.innerHTML='<div class="g2"><div><label>Nome do contato</label><input class="c-nome"></div><div><label>Cargo</label><input class="c-cargo"></div></div><div class="g2"><div><label>Telefone</label><input class="c-fone"></div><div><label>E-mail</label><input class="c-email"></div></div><div class="g2"><div><label>Status</label><input class="c-status" placeholder="ex.: Ativo"></div><div></div></div><button type="button" class="rm-contato" style="margin-top:8px;background:none;border:none;color:#B23A2E;font-size:12px;font-weight:700;cursor:pointer">remover contato</button>';
   w.appendChild(d);}
 document.addEventListener('click',function(ev){if(ev.target&&ev.target.classList.contains('rm-contato')){var c=ev.target.closest('.contato');if(c)c.remove();}});
 function buscarCNPJ(){var n=(document.getElementById('cnpj').value||'').replace(/\\D/g,'');if(n.length!==14){msg('CNPJ deve ter 14 dígitos.');return;}msg('Buscando dados do CNPJ…');
@@ -234,8 +235,8 @@ function validarCPF(){var el=document.getElementById('cpf'),m=document.getElemen
   if(v.length!==11||/^(\\d)\\1{10}$/.test(v)||!cpfValido(v)){m.textContent='⚠ CPF inválido — confira os números.';m.style.color='#B23A2E';}else{m.textContent='✓ CPF válido';m.style.color='#3f7a2e';}}
 function salvar(){var tipo=g('tipo');var rec={tipo:tipo,endereco:{cep:g('cep'),logradouro:g('logradouro'),numero:g('numero'),complemento:g('complemento'),bairro:g('bairro'),cidade:g('cidade'),uf:g('uf')},obsColeta:g('obsColeta')};
   var id=g('id');if(id)rec.id=id;
-  if(tipo==='PJ'){rec.razaoSocial=g('razaoSocial');rec.nomeFantasia=g('nomeFantasia');rec.cnpj=g('cnpj');rec.ie=g('ie');rec.contrato=g('contrato');rec.pagamento=g('pagamento');
-    rec.contatos=Array.prototype.map.call(document.querySelectorAll('.contato'),function(c){return{nome:c.querySelector('.c-nome').value.trim(),cargo:c.querySelector('.c-cargo').value.trim(),fone:c.querySelector('.c-fone').value.trim(),email:c.querySelector('.c-email').value.trim()};}).filter(function(x){return x.nome||x.fone||x.email;});
+  if(tipo==='PJ'){rec.razaoSocial=g('razaoSocial');rec.nomeFantasia=g('nomeFantasia');rec.cnpj=g('cnpj');rec.ie=g('ie');rec.contrato=g('contrato');rec.pagamento=g('pagamento');rec.status=g('statusEmpresa');
+    rec.contatos=Array.prototype.map.call(document.querySelectorAll('.contato'),function(c){var st=c.querySelector('.c-status');return{nome:c.querySelector('.c-nome').value.trim(),cargo:c.querySelector('.c-cargo').value.trim(),fone:c.querySelector('.c-fone').value.trim(),email:c.querySelector('.c-email').value.trim(),status:st?st.value.trim():''};}).filter(function(x){return x.nome||x.fone||x.email;});
     if(!rec.razaoSocial){msg('Informe a razão social.');return;}}
   else{rec.nome=g('nome');rec.cpf=g('cpf');rec.fone=g('fone');rec.email=g('email');if(!rec.nome){msg('Informe o nome.');return;}}
   if(LEAD_ORIGEM)rec.leadOrigem=LEAD_ORIGEM;
@@ -271,7 +272,7 @@ export function paginaClienteDetalhe(user, cli, arquivos) {
       <div style="min-width:0;display:flex;align-items:center;gap:9px"><span style="font-size:18px;flex:none">${iconArq(a.content_type, a.nome_arquivo)}</span><span style="font-size:12.5px;color:#10262B;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(a.nome_arquivo || a.r2_key)}</span></div>
       <span style="flex:none;font-size:11px;color:#8fa39f">${a.fonte === 'documento' ? 'proposta' : 'anexo'}${fmtTam(a.tamanho) ? ' · ' + fmtTam(a.tamanho) : ''} ↗</span>
     </a>`).join('') : `<div style="font-size:12.5px;color:#8fa39f">Nenhum documento migrado encontrado para este cliente.${semDoc ? ' Cadastre o ' + (cli.tipo === 'PJ' ? 'CNPJ' : 'CPF') + ' para localizar os arquivos.' : ''}</div>`;
-  const contatos = (cli.contatos || []).filter((c) => c.nome || c.fone || c.email).map((c) => `<div style="border:1px solid #EEF1F0;border-radius:10px;padding:11px 13px;margin-bottom:8px"><div style="font-weight:800;font-size:13.5px">${esc(c.nome || '')}${c.cargo ? ` <span style="font-weight:600;color:#7c8a87">· ${esc(c.cargo)}</span>` : ''}</div><div style="font-size:12.5px;color:#4F6469;margin-top:3px">${[c.fone, c.email].filter(Boolean).map(esc).join(' · ')}</div></div>`).join('') || '<div style="font-size:12.5px;color:#8fa39f">Sem contatos cadastrados.</div>';
+  const contatos = (cli.contatos || []).filter((c) => c.nome || c.fone || c.email).map((c) => `<div style="border:1px solid #EEF1F0;border-radius:10px;padding:11px 13px;margin-bottom:8px"><div style="font-weight:800;font-size:13.5px">${esc(c.nome || '')}${c.cargo ? ` <span style="font-weight:600;color:#7c8a87">· ${esc(c.cargo)}</span>` : ''}${c.status ? ` <span style="display:inline-block;font-size:10.5px;font-weight:700;color:#0B6B3A;background:#E7F4EC;border-radius:999px;padding:1px 8px;vertical-align:middle">${esc(c.status)}</span>` : ''}</div><div style="font-size:12.5px;color:#4F6469;margin-top:3px">${[c.fone, c.email].filter(Boolean).map(esc).join(' · ')}</div></div>`).join('') || '<div style="font-size:12.5px;color:#8fa39f">Sem contatos cadastrados.</div>';
   return `${head(cli.tipo === 'PJ' ? (cli.razaoSocial || 'Empresa') : (cli.nome || 'Pessoa física'))}<body>${topo(user, 'cadastro')}
 <div class="wrap">
   <a href="/cadastro" style="font-size:13px;font-weight:800;text-decoration:none;color:#4F6469">← Todos os clientes</a>
@@ -285,6 +286,7 @@ export function paginaClienteDetalhe(user, cli, arquivos) {
     <table role="presentation" style="width:100%;border-collapse:collapse;font-size:13.5px">
       ${cli.tipo === 'PJ' ? linha('CNPJ', fmtCNPJ(cli.cnpj)) + linha('Inscrição estadual', cli.ie) : linha('CPF', fmtCPF(cli.cpf)) + linha('Telefone', cli.fone) + linha('E-mail', cli.email)}
       ${linha('Endereço', endereco)}
+      ${linha('Status', cli.status)}
       ${cli.tipo === 'PJ' ? linha('Nº de contrato', cli.contrato) + linha('Pagamento', cli.pagamento) : ''}
       ${linha('Observação de coleta', cli.obsColeta)}
       ${linha('Cadastrado em', dataBR(cli.criadoEm))}
