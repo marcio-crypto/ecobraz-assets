@@ -166,7 +166,7 @@ export async function listarColetasComStatus(env, agenteEmail) {
 
 // QR público do comprovante (aponta para /validar-coleta com o selo assinado).
 export async function qrColeta(request, env, url) {
-  const id = (url.searchParams.get('id') || '').replace(/[^0-9]/g, '').slice(0, 12);
+  const id = (url.searchParams.get('id') || '').replace(/[^a-zA-Z0-9_]/g, '').slice(0, 40);
   if (!id) return new Response('faltou id', { status: 400 });
   const code = await seloColeta(id, env);
   const alvo = `${origemPortal(env, url)}/validar-coleta?id=${id}&c=${code}`;
@@ -178,7 +178,7 @@ export async function qrColeta(request, env, url) {
 
 // Página pública de validação do comprovante (qualquer pessoa que leia o QR).
 export async function validarColetaPublico(request, env, url) {
-  const id = (url.searchParams.get('id') || '').replace(/[^0-9]/g, '').slice(0, 12);
+  const id = (url.searchParams.get('id') || '').replace(/[^a-zA-Z0-9_]/g, '').slice(0, 40);
   const c = (url.searchParams.get('c') || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 24);
   const esperado = id ? await seloColeta(id, env) : '';
   const assinaturaOk = !!(id && c && esperado && c === esperado);
@@ -242,7 +242,7 @@ export function paginaColetaDetalhe(agente, coleta, estado) {
   ${btnFoto}
   ${enc ? `
   <div class="btn done">✓ Coleta encerrada — ${hhmm(enc.em)}</div>
-  <a href="/agente/coleta/comprovante?id=${Number(coleta.id)}" class="btn dark" style="text-decoration:none;">📄 Ver comprovante (QR)</a>
+  <a href="/agente/coleta/comprovante?id=${esc(coleta.id)}" class="btn dark" style="text-decoration:none;">📄 Ver comprovante (QR)</a>
   ` : `
   <button class="btn ${chk ? 'dark' : 'muted'}" id="benc" ${chk ? '' : 'disabled'}>🏭 Encerrar na Ecobraz</button>
   ${chk ? '' : `<div style="text-align:center;font-size:10.5px;color:#9aa7a4;margin:-4px 0 12px;">faça o check-in no local antes de encerrar</div>`}
@@ -263,7 +263,7 @@ export function paginaColetaDetalhe(agente, coleta, estado) {
   <div id="net" style="text-align:center;font-size:10.5px;font-weight:700;margin-top:8px;"></div>
 </div>
 <script>
-  const ID=${Number(coleta.id)}, msg=document.getElementById('msg'), net=document.getElementById('net');
+  const ID=${JSON.stringify(String(coleta.id))}, msg=document.getElementById('msg'), net=document.getElementById('net');
   function rede(){ net.textContent = navigator.onLine ? '🟢 Online' : '🟡 Sem sinal — tente de novo quando voltar'; net.style.color = navigator.onLine ? '#1E7A3D' : '#8A6A16'; }
   rede(); addEventListener('online',rede); addEventListener('offline',rede);
   const bchk=document.getElementById('bchk');
@@ -318,7 +318,7 @@ export function paginaComprovante(agente, coleta, estado, seloUrl) {
 <body style="margin:0;background:#F2F6F4;font-family:Montserrat,'Segoe UI',Arial,Helvetica,sans-serif;color:#10262B;">
 <div style="max-width:560px;margin:0 auto;padding:18px;">
   <div class="noprint" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-    <a href="/agente/coleta?id=${Number(coleta.id)}" style="color:#4F6469;font-size:13px;font-weight:800;text-decoration:none;">← Voltar</a>
+    <a href="/agente/coleta?id=${esc(coleta.id)}" style="color:#4F6469;font-size:13px;font-weight:800;text-decoration:none;">← Voltar</a>
     <button onclick="window.print()" style="background:#00333B;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:800;">🖨️ Imprimir / Salvar PDF</button>
   </div>
   <div style="background:#fff;border:1px solid #E4EBE9;border-radius:16px;padding:26px 24px;">

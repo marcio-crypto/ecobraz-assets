@@ -59,6 +59,25 @@ import { agentesDe } from './agente.js';
 import { servirIcone, servirManifest, servirServiceWorker } from './pwa.js';
 import { googleConfigurado, iniciarGoogle, callbackGoogle, botaoGoogle } from './google-auth.js';
 
+// Acessos garantidos no código: o dono (todos os papéis) e a auditora da Villanova
+// (validador). E-mails não são segredo — isto garante que nunca fiquem de fora, seja
+// qual for o cadastro/env. Injetado nas listas de papel a cada requisição.
+const ACESSOS_FIXOS = [
+  { email: 'marcio@ecobraz.org.br', listas: ['ESCRITORIO_EMAILS', 'AGENTE_EMAILS', 'OPERACAO_EMAILS', 'ENG_EMAILS', 'DIRETORIA_EMAILS', 'FISCAL_EMAILS', 'VALIDADOR_EMAILS'] },
+  { email: 'contact@villanovaesg.com', listas: ['VALIDADOR_EMAILS'] },
+];
+function garantirAcessosFixos(env) {
+  const e = { ...env };
+  for (const { email, listas } of ACESSOS_FIXOS) {
+    for (const k of listas) {
+      const atual = String(e[k] || '');
+      const jaTem = atual.split(/[,;]+/).some((par) => (par.split('|')[0] || '').trim().toLowerCase() === email);
+      if (!jaTem) e[k] = atual ? `${atual},${email}` : email;
+    }
+  }
+  return e;
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -215,6 +234,7 @@ export default {
       // (aditivo e defensivo — se falhar, mantém o env original). A partir daqui, as
       // funções *Permitido honram tanto o env quanto o cadastro no sistema.
       try { env = await carregarEquipeNoEnv(env); } catch { /* mantém env original */ }
+      env = garantirAcessosFixos(env);
 
       if (pathname === '/' && request.method === 'GET') return await telaInicial(request, env);
       if (pathname === '/entrar' && request.method === 'GET') return await entrarComToken(request, env, url);
@@ -971,6 +991,18 @@ export default {
         if (!osId) return html(paginaMensagem('Lote inválido', 'Volte e escolha de novo.'), 400);
         const op = await iniciarOperacao(env, osId, operacao);
         if (!op) return html(paginaMensagem('Não consegui abrir a operação', 'Tente de novo em instantes.'), 502);
+        // Aviso "coleta realizada" ao cliente quando a coleta é recebida na doca (caminho
+        // automático). Mesma chave de-dup do caminho manual — nunca manda 2x.
+        try {
+          const chave = `notif:coleta:${osId}:coleta_realizada`;
+          const jaAvisou = env.PORTAL_KV ? await env.PORTAL_KV.get(chave) : null;
+          if (!jaAvisou) {
+            const os = await lerColetaOS(env, osId);
+            const cli = os && os.clienteId ? await lerCliente(env, os.clienteId) : null;
+            const emailCli = cli && (cli.email || (Array.isArray(cli.contatos) && cli.contatos[0] && cli.contatos[0].email) || '');
+            if (emailCli && env.RESEND_API_KEY) { await enviarEmailStatus(emailCli, (os && os.clienteNome) || '', 'coleta_realizada', env); if (env.PORTAL_KV) await env.PORTAL_KV.put(chave, '1', { expirationTtl: 60 * 60 * 24 * 90 }); }
+          }
+        } catch (error) { console.error('coleta_realizada_doca_email_falhou', safeError(error)); }
         return new Response(null, { status: 302, headers: { Location: `/operacao/lote?id=${encodeURIComponent(osId)}`, 'cache-control': 'no-store' } });
       }
       if (pathname === '/api/operacao/tipo' && request.method === 'POST') {
@@ -1083,6 +1115,21 @@ export default {
         const osId = form ? String(form.get('osId') || '') : '';
         if (!osId) return html(paginaMensagem('Operação inválida', 'Volte para a fila.'), 400);
         await registrarValidacaoOp(env, osId, eng, { rt: form.get('rt'), registro: form.get('registro'), comentario: form.get('comentario'), decisao: form.get('decisao') });
+        // Aviso "certificado liberado" ao cliente quando a validação é APROVADA (sistema novo, sem Ploomes).
+        // Best-effort, de-dup por KV; nunca bloqueia a validação. osId é o id da coleta (os:{id}).
+        try {
+          const val = await lerValidacaoOp(env, osId);
+          if (val && val.decisao === 'validada') {
+            const chave = `notif:coleta:${osId}:certificado_liberado`;
+            const jaAvisou = env.PORTAL_KV ? await env.PORTAL_KV.get(chave) : null;
+            if (!jaAvisou) {
+              const os = await lerColetaOS(env, osId);
+              const cli = os && os.clienteId ? await lerCliente(env, os.clienteId) : null;
+              const emailCli = cli && (cli.email || (Array.isArray(cli.contatos) && cli.contatos[0] && cli.contatos[0].email) || '');
+              if (emailCli && env.RESEND_API_KEY) { await enviarEmailStatus(emailCli, (os && os.clienteNome) || '', 'certificado_liberado', env); if (env.PORTAL_KV) await env.PORTAL_KV.put(chave, '1', { expirationTtl: 60 * 60 * 24 * 90 }); }
+            }
+          }
+        } catch (error) { console.error('cert_liberado_email_falhou', safeError(error)); }
         return new Response(null, { status: 302, headers: { Location: `/eng/lote?id=${encodeURIComponent(osId)}`, 'cache-control': 'no-store' } });
       }
       if (pathname === '/eng/destinos' && request.method === 'GET') {
@@ -1733,7 +1780,7 @@ function acharOtherProp(contact, fieldId) {
 // Id com prefixo: 'k'+id = coleta nova (KV); 'd'+id = negócio migrado (D1).
 async function listarOS(sessao, env) {
   const doc = String(sessao.documento || '').replace(/\D/g, '');
-  const ROT = { agendada: 'Agendada', em_transporte: 'Em transporte', na_unidade: 'Na unidade', concluida: 'Concluída', cancelada: 'Cancelada' };
+  const ROT = { agendada: 'Agendada', em_transporte: 'Em transporte', na_unidade: 'Na unidade', concluida: 'Coleta realizada', cancelada: 'Cancelada' };
   const out = [];
   // 1) Coletas da nossa base (KV) — as que a equipe cria no sistema novo.
   try {
@@ -1837,11 +1884,18 @@ async function listarDocsOS(url, sessao, env) {
       if (!doc || osDoc !== doc) return json({ ok: true, docs: [] }); // não é do cliente: silêncio
       // Regra da Débora: cliente só vê os documentos a partir de "em transporte".
       if (!['em_transporte', 'na_unidade', 'concluida'].includes(os.status)) return json({ ok: true, docs: [] });
-      return json({ ok: true, docs: [
+      const docs = [
         { id: os.id, fonte: 'os-comprovante', nome: 'Ordem de Coleta' },
         { id: os.id, fonte: 'os-carta', nome: 'Carta de Descarte' },
         { id: os.id, fonte: 'os-manifesto', nome: 'Manifesto de Transporte (MTR)' },
-      ] });
+      ];
+      // CDF: só quando a Engenharia VALIDOU a operação (op concluída + decisão "validada").
+      try {
+        const op = await lerOperacao(env, os.id);
+        const val = op ? await lerValidacaoOp(env, os.id) : null;
+        if (op && op.etapa === 'concluida' && val && val.decisao === 'validada') docs.push({ id: os.id, fonte: 'os-cdf', nome: 'Certificado de Destinação Final (CDF)' });
+      } catch { /* CDF fica de fora se não der pra checar */ }
+      return json({ ok: true, docs });
     }
     return json({ ok: true, docs: [] });
   } catch (error) { console.error('docs_erro', safeError(error)); return json({ ok: false, error: 'indisponivel' }, 502); }
@@ -1856,12 +1910,18 @@ async function baixarDocOS(url, sessao, env) {
   const fonte = url.searchParams.get('fonte') || '';
   // Documentos GERADOS de uma coleta nova (HTML pro cliente ver/imprimir).
   // Só o dono (mesmo documento) e só a partir de "em transporte" (regra da Débora).
-  if (['os-comprovante', 'os-carta', 'os-manifesto'].includes(fonte)) {
+  if (['os-comprovante', 'os-carta', 'os-manifesto', 'os-cdf'].includes(fonte)) {
     const coletaId = String(url.searchParams.get('docId') || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40);
     const os = coletaId ? await lerColetaOS(env, coletaId) : null;
     if (!os) return json({ ok: false, error: 'nao_encontrado' }, 404);
     if (!doc || String(os.clienteDoc || '').replace(/\D/g, '') !== doc) return json({ ok: false, error: 'sem_permissao' }, 403);
     if (!['em_transporte', 'na_unidade', 'concluida'].includes(os.status)) return json({ ok: false, error: 'nao_liberado' }, 403);
+    if (fonte === 'os-cdf') {
+      const op = await lerOperacao(env, os.id);
+      const val = op ? await lerValidacaoOp(env, os.id) : null;
+      if (!op || op.etapa !== 'concluida' || !val || val.decisao !== 'validada') return json({ ok: false, error: 'nao_liberado' }, 403);
+      return html(paginaCDF(op, val, await listarDestinos(env), `/qr-operacao?id=${encodeURIComponent(os.id)}`));
+    }
     const selo = `/qr-os?id=${encodeURIComponent(os.id)}`;
     if (fonte !== 'os-comprovante' && !os.veiculoPlaca) { try { os.veiculoPlaca = await placaDaColeta(env, os); } catch { /* ok */ } }
     return html(fonte === 'os-comprovante' ? paginaComprovanteOS(os, selo) : (fonte === 'os-carta' ? paginaCartaDescarte(os, selo) : paginaManifestoCarga(os, selo)));
