@@ -41,11 +41,11 @@ import { statusDaEtapa, valorProp, CAMPOS_OS } from './os-utils.js';
 import { qrCDF, validarCDF } from './validacao.js';
 import { paginaMetodologia, fatorCompensacaoAdote } from './carbono-metodologia.js';
 import { registrarUso, resumoUso, contarPorPeriodo, reunirPendencias } from './uso.js';
-import { sondaRotaExata, paginaSondaRotaExata, paginaRastreio, posicaoDoVeiculo, rastreioDisponivel } from './rotaexata.js';
+import { sondaRotaExata, paginaSondaRotaExata, paginaRastreio, posicaoDoVeiculo, posicoesFrota, capturarTelemetria, paginaFrotaAoVivo, rastreioDisponivel } from './rotaexata.js';
 import { lerValidacao, registrarValidacao, paginaAreaValidacao, qrMetodologia, validarMetodologiaPublico } from './validacao-metodologia.js';
 import { paginaPainelCarbono } from './carbono-painel.js';
 import { clientesComOperacoes, carbonoDoCliente, paginaCarbonoAnalista, paginaCarbonoAuditor } from './carbono-motor.js';
-import { agentePermitido, nomeAgente, listarColetasComStatus, paginaLoginAgente, paginaAppAgente, detalheColeta, lerEstadoColeta, registrarCheckin, registrarFoto, servirFotoColeta, paginaColetaDetalhe, registrarEncerramento, registrarReagendamento, qrColeta, validarColetaPublico, paginaComprovante } from './agente.js';
+import { agentePermitido, nomeAgente, listarColetasComStatus, paginaLoginAgente, paginaAppAgente, detalheColeta, lerEstadoColeta, registrarCheckin, registrarACaminho, registrarFoto, servirFotoColeta, paginaColetaDetalhe, registrarEncerramento, registrarReagendamento, qrColeta, validarColetaPublico, paginaComprovante } from './agente.js';
 import { operadorPermitido, nomeOperador, listarOperacoes, listarColetasRecebiveis, iniciarOperacao, lerOperacao, definirTipoOperacao, registrarPesoEntrada, registrarFotoOperacao, servirFotoOperacao, paginaLoginOperacao, paginaAppOperacao, paginaReceberLote, paginaLoteDetalhe, adicionarMaterial, removerMaterial, concluirTriagem, paginaTriagem, paginaProcessamento, concluirProcessamento, paginaSaida, registrarSaida, concluirSaida } from './operacional.js';
 import { engenheiroPermitido, nomeEngenheiro, filaValidacao, operacoesValidadas, lerValidacaoOp, registrarValidacaoOp, paginaLoginEng, paginaFilaEng, paginaDossie, qrOperacao, validarOperacaoPublico, listarDestinos, lerDestino, salvarDestino, paginaDestinos, paginaDestinoForm, paginaRelatorio, paginaCDF } from './engenharia.js';
 import { diretorPermitido, nomeDiretor, reunirDados, paginaLoginDiretoria, paginaPainelDiretoria } from './diretoria.js';
@@ -55,7 +55,7 @@ import { amostraContatosPloomes, paginaAmostraContatos, importarLoteContatos, es
 import { importarLoteAnexos, importarLoteAnexosContatos, completarAnexos, importarAnexosJanela, reprocessarFalhas, importarLoteDocumentos, recuperarDocumentos, estatisticasArquivos, paginaMigrarArquivos, diagnosticoAnexos, paginaDiagAnexos } from './ploomes-arquivos.js';
 import { fiscalPermitido, nomeFiscal, listarNotas, lerNota, importarLote, vincularNota, sugerirVinculoSync, paginaFiscalLogin, paginaFiscalHome, paginaFiscalResultado, paginaFiscalNota } from './fiscal.js';
 import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, emailsDoCliente, reindexarEmailsClientes, backfillEnderecos, paginaManutencao, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, clienteDeLead, arquivosDoCliente, paginaLeads, paginaLeadDetalhe, paginaInicio, listarClientesD1, contagensClientesD1, lerClienteD1, negociosDoCliente, espelharClienteD1, sincronizarKVparaD1, lerNegocioDetalheD1, paginaOSDetalhe } from './cadastro.js';
-import { listarColetasOS, lerColetaOS, criarColetaOS, atualizarStatusOS, atualizarColetaOS, registrarAnexoColeta, removerAnexoColeta, paginaColetasLista, paginaGerarColeta, paginaEditarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga } from './coletas.js';
+import { listarColetasOS, lerColetaOS, criarColetaOS, atualizarStatusOS, atualizarColetaOS, anexarTelemetriaOS, registrarAnexoColeta, removerAnexoColeta, paginaColetasLista, paginaGerarColeta, paginaEditarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga } from './coletas.js';
 import { listarVeiculos, lerVeiculo, salvarVeiculo, paginaFrota, paginaVeiculoForm, lerJornadaAtiva, abrirJornada, fecharJornada, registrarAbastecimento, tagColetaComVeiculo, servirFotoJornada, bannerJornada, paginaAbrirDia, paginaFecharDia, paginaAbastecer, placaDaColeta } from './frota.js';
 import { carregarEquipeNoEnv, listarUsuarios, lerUsuario, salvarUsuario, importarUsuarios, paginaEquipe, paginaUsuarioForm, paginaEquipeImportar } from './equipe.js';
 import { agentesDe } from './agente.js';
@@ -521,6 +521,7 @@ export default {
           uso,
           pend: reunirPendencias({ leads: leadsIdx, coletas: coletasValidas, aguardandoValidacao: dados.aguardando }),
         };
+        try { extras.frota = await montarFrotaAoVivo(env); } catch { extras.frota = null; }
         return html(paginaPainelDiretoria(diretoria, dados, extras));
       }
       // RotaExata — sonda de configuração (só Diretoria): lê a documentação da API e
@@ -532,6 +533,16 @@ export default {
       if (pathname === '/api/diretoria/rotaexata-sonda' && request.method === 'POST') {
         if (!diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);
         return json(await sondaRotaExata(env));
+      }
+      // Frota ao vivo (comercial e diretoria): onde está cada caminhão, qual coleta
+      // atende agora, a próxima da fila e as concluídas de hoje.
+      if (pathname === '/frota/aovivo' && request.method === 'GET') {
+        if (!escritorio && !diretoria) return html(paginaLoginEscritorio(googleConfigurado(env)));
+        return html(paginaFrotaAoVivo(escritorio || diretoria));
+      }
+      if (pathname === '/api/frota/aovivo' && request.method === 'GET') {
+        if (!escritorio && !diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        return json(await montarFrotaAoVivo(env));
       }
       // Prevenção de perdas (só Diretoria): reconciliação por peso + IA nas fotos + valor.
       if (pathname === '/diretoria/prevencao' && request.method === 'GET') {
@@ -1148,12 +1159,36 @@ export default {
         if (!agente) return json({ ok: false, error: 'nao_autenticado' }, 401);
         return await servirFotoColeta(env, url.searchParams.get('id') || '');
       }
+      // "Estou indo": marca em transporte, registra telemetria e avisa o cliente por
+      // e-mail (1x por coleta) que ele pode acompanhar o caminhão ao vivo pelo portal.
+      if (pathname === '/api/agente/acaminho' && request.method === 'POST') {
+        if (!agente) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = null; }
+        if (!b || !b.id) return json({ ok: false, error: 'dados' }, 400);
+        await registrarACaminho(env, b.id, agente);
+        try { await tagColetaComVeiculo(env, agente.email, b.id); } catch { /* jornada opcional */ }
+        try { const c0 = await lerColetaOS(env, b.id); if (c0 && c0.veiculoPlaca) { const t = await capturarTelemetria(env, c0.veiculoPlaca, 'a_caminho'); if (t) await anexarTelemetriaOS(env, b.id, t); } } catch { /* telemetria é best-effort */ }
+        try {
+          const col = await lerColetaOS(env, b.id);
+          if (col) {
+            const chave = `notif:coleta:${col.id}:a_caminho`;
+            const ja = env.PORTAL_KV ? await env.PORTAL_KV.get(chave) : null;
+            if (!ja) {
+              const cli = col.clienteId ? await lerCliente(env, col.clienteId) : null;
+              const emailCli = cli && (cli.email || (Array.isArray(cli.contatos) && cli.contatos[0] && cli.contatos[0].email) || '');
+              if (emailCli && env.RESEND_API_KEY) { await enviarEmailStatus(emailCli, col.clienteNome, 'a_caminho', env); if (env.PORTAL_KV) await env.PORTAL_KV.put(chave, '1', { expirationTtl: 60 * 60 * 24 * 90 }); }
+            }
+          }
+        } catch (error) { console.error('acaminho_email_falhou', safeError(error)); }
+        return json({ ok: true });
+      }
       if (pathname === '/api/agente/checkin' && request.method === 'POST') {
         if (!agente) return json({ ok: false, error: 'nao_autenticado' }, 401);
         let b; try { b = await request.json(); } catch { b = null; }
         if (!b || !b.id || b.lat == null || b.lon == null) return json({ ok: false, error: 'dados' }, 400);
         await registrarCheckin(env, b.id, agente, { lat: b.lat, lon: b.lon, acc: b.acc });
         try { await tagColetaComVeiculo(env, agente.email, b.id); } catch { /* jornada opcional no vínculo */ }
+        try { const c0 = await lerColetaOS(env, b.id); if (c0 && c0.veiculoPlaca) { const t = await capturarTelemetria(env, c0.veiculoPlaca, 'checkin'); if (t) await anexarTelemetriaOS(env, b.id, t); } } catch { /* telemetria é best-effort */ }
         return json({ ok: true });
       }
       if (pathname === '/api/agente/foto' && request.method === 'POST') {
@@ -1169,6 +1204,7 @@ export default {
         if (!b || !b.id) return json({ ok: false, error: 'dados' }, 400);
         let det = null; try { det = await detalheColeta(env, b.id); } catch { det = null; }
         await registrarEncerramento(env, b.id, agente, { volumes: b.volumes, obs: b.obs, numero: det && det.numero, cliente: det && det.cliente, endereco: det && det.endereco });
+        try { const c0 = await lerColetaOS(env, b.id); if (c0 && c0.veiculoPlaca) { const t = await capturarTelemetria(env, c0.veiculoPlaca, 'encerramento'); if (t) await anexarTelemetriaOS(env, b.id, t); } } catch { /* telemetria é best-effort */ }
         return json({ ok: true });
       }
       if (pathname === '/api/agente/reagendar' && request.method === 'POST') {
@@ -2424,6 +2460,45 @@ async function enviarViaResend(cliente, link, env) {
   if (!r.ok) { const b = await r.text().catch(() => ''); throw new Error(`resend_${r.status}:${b.slice(0, 160)}`); }
 }
 
+// Frota ao vivo: junta os veículos cadastrados, as coletas relevantes (em transporte,
+// agendadas até hoje e concluídas na semana) e as posições do RotaExata (quando o
+// mapeamento estiver ativo). Carrega o registro COMPLETO só das coletas de interesse
+// (o índice não guarda a placa) — no máximo 40 leituras, barato.
+async function montarFrotaAoVivo(env) {
+  const [veics, idx, posRes] = await Promise.all([
+    listarVeiculos(env).catch(() => []),
+    listarColetasOS(env).catch(() => []),
+    posicoesFrota(env),
+  ]);
+  const normP = (p) => String(p || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const hojeBR = new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10);
+  const d7 = new Date(Date.now() - 3 * 3600e3 - 7 * 86400e3).toISOString().slice(0, 10);
+  const interesse = idx.filter((c) => c && (c.status === 'em_transporte'
+    || (c.status === 'agendada' && (!c.dataAgendada || c.dataAgendada <= hojeBR))
+    || (c.status === 'concluida' && String(c.criadoEm || '').slice(0, 10) >= d7))).slice(0, 40);
+  const cheias = [];
+  for (const c of interesse) { try { const full = await lerColetaOS(env, c.id); if (full) cheias.push(full); } catch { /* segue */ } }
+  cheias.sort((a, b) => String(a.dataAgendada || '9999').localeCompare(String(b.dataAgendada || '9999')));
+  const porPlaca = new Map();
+  for (const v of (veics || []).filter((x) => x && x.placa && x.ativo !== false)) {
+    porPlaca.set(normP(v.placa), { placa: v.placa, apelido: v.apelido || v.modelo || '', motorista: '', coletaAtual: null, proxima: null, concluidasHoje: 0, pos: null });
+  }
+  for (const full of cheias) {
+    const k = normP(full.veiculoPlaca);
+    if (!k) continue;
+    if (!porPlaca.has(k)) porPlaca.set(k, { placa: full.veiculoPlaca, apelido: '', motorista: '', coletaAtual: null, proxima: null, concluidasHoje: 0, pos: null });
+    const reg = porPlaca.get(k);
+    if (full.agenteNome && !reg.motorista) reg.motorista = full.agenteNome;
+    if (full.status === 'em_transporte' && !reg.coletaAtual) reg.coletaAtual = { numero: full.numero || '', cliente: full.clienteNome || '' };
+    else if (full.status === 'agendada' && !reg.proxima) reg.proxima = { numero: full.numero || '', cliente: full.clienteNome || '' };
+    if (full.status === 'concluida' && String(full.atualizadoEm || '').slice(0, 10) === hojeBR) reg.concluidasHoje++;
+  }
+  const posPor = new Map();
+  for (const v of (posRes.veiculos || [])) posPor.set(normP(v.placa), v);
+  for (const [k, reg] of porPlaca) { const p = posPor.get(k); if (p) reg.pos = { lat: p.lat, lng: p.lng, velocidade: p.velocidade ?? null, em: p.em || null }; }
+  return { ok: true, posOk: !!posRes.ok, motivo: posRes.motivo || '', frota: [...porPlaca.values()] };
+}
+
 // Adote um Bairro — renovação por LINK: quando o crédito recorrente fica ≤20kg, gera a
 // cobrança e envia o link por e-mail. Idempotente: não reenvia enquanto houver pedido de
 // recarga pendente. Best-effort: se o Mercado Pago não estiver configurado, apenas registra.
@@ -2514,6 +2589,7 @@ async function enviarEmailNF(pedido, pagamento, env) {
 // ---------------------------------------------------------------------------
 const MSGS_STATUS = {
   coleta_agendada: { assunto: 'Sua coleta foi agendada — Ecobraz', titulo: 'Coleta agendada', corpo: 'Recebemos sua solicitação e sua coleta já está <strong>agendada</strong>. Você acompanha cada passo por aqui, no seu portal.' },
+  a_caminho: { assunto: 'Seu coletor está a caminho! Acompanhe ao vivo — Ecobraz', titulo: 'Coletor a caminho 🚚', corpo: 'O agente de coleta da Ecobraz está <strong>a caminho</strong> da sua coleta. Entre no seu portal e toque em <strong>“Acompanhar o caminhão”</strong> para ver a chegada em tempo real.' },
   coleta_realizada: { assunto: 'Coleta realizada — Ecobraz', titulo: 'Coleta realizada', corpo: 'Sua coleta foi <strong>realizada com sucesso</strong>. Em breve os documentos ficam disponíveis para você no portal.' },
   certificado_liberado: { assunto: 'Seu certificado está disponível — Ecobraz', titulo: 'Certificado liberado', corpo: 'Seu <strong>Certificado de Destinação Final</strong> já está disponível para baixar no seu portal.' },
 };

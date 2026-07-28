@@ -98,6 +98,15 @@ export function paginaPainelDiretoria(diretor, d, x) {
   const os = x.os || { dia: 0, semana: 0, mes: 0, serie: [] };
   const uso = x.uso || { clientes: { hoje: 0, semana: 0, mes: 0, top5: [] }, equipe: { hoje: 0, semana: 0, mes: 0, pessoas: [] } };
   const pend = Array.isArray(x.pend) ? x.pend : [];
+  const frota = x.frota || null;
+  const frotaRows = frota && Array.isArray(frota.frota) && frota.frota.length ? frota.frota.map((v) => `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;border:1px solid #E4EBE9;border-radius:12px;padding:11px 14px;margin-bottom:8px;flex-wrap:wrap">
+      <div style="min-width:0"><div style="font-size:13.5px;font-weight:800">🚛 ${esc(v.placa || '—')}${v.apelido ? ` <span style="font-weight:600;color:#7c8a87">· ${esc(v.apelido)}</span>` : ''}${v.motorista ? ` <span style="font-weight:700;color:#0B5B66">· ${esc(v.motorista)}</span>` : ''}</div>
+        <div style="font-size:12px;color:#4F6469;margin-top:3px">Indo para: ${v.coletaAtual ? `<b>${esc(v.coletaAtual.numero || '')}</b> · ${esc(v.coletaAtual.cliente || '')}` : '<span style="color:#8fa39f">nenhuma coleta em andamento</span>'}</div>
+        ${v.proxima ? `<div style="font-size:12px;color:#4F6469;margin-top:2px">Próxima: ${esc(v.proxima.numero || '')} · ${esc(v.proxima.cliente || '')}</div>` : ''}</div>
+      <div style="flex:none;text-align:right"><div style="font-size:12px;color:#28413f">Concluídas hoje: <b>${v.concluidasHoje || 0}</b></div>
+        ${v.pos ? `<a href="https://www.openstreetmap.org/?mlat=${encodeURIComponent(v.pos.lat)}&mlon=${encodeURIComponent(v.pos.lng)}#map=15/${encodeURIComponent(v.pos.lat)}/${encodeURIComponent(v.pos.lng)}" target="_blank" rel="noopener" style="font-size:11.5px;color:#0B5B66;font-weight:800;text-decoration:none">🗺️ localização ao vivo ↗</a>` : '<span style="font-size:11px;color:#9aa7a4">posição: em ativação</span>'}</div>
+    </div>`).join('') : '<div style="font-size:12.5px;color:#8fa39f">Nenhum veículo cadastrado na Frota.</div>';
+  const frotaAviso = frota && !frota.posOk ? '<div style="font-size:11px;color:#8A6A16;background:#FFFBEB;border:1px solid #F0DCA6;border-radius:8px;padding:8px 11px;margin-bottom:10px">🛰️ Posições ao vivo em ativação (RotaExata). As coletas por veículo já são reais.</div>' : '';
   const totalPend = pend.reduce((a, p) => a + (Number(p.qtd) || 0), 0);
   const pendRows = pend.length ? pend.map((p) => `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;border:1px solid #F0E6D2;background:#FFFBEF;border-radius:12px;padding:11px 14px;margin-bottom:8px">
       <div style="min-width:0"><div style="font-size:13px;font-weight:800;color:#10262B">${esc(p.rotulo)}</div>
@@ -163,6 +172,12 @@ export function paginaPainelDiretoria(diretor, d, x) {
   <div style="background:#fff;border:1px solid #E4EBE9;border-radius:16px;padding:18px;margin-top:12px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div style="font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#7c8a87">⏳ Pendências e responsáveis</div>${totalPend ? `<span style="font-size:11px;background:#FFF4DE;color:#8A6A16;font-weight:800;padding:3px 10px;border-radius:20px">${totalPend} em aberto</span>` : ''}</div>
     ${pendRows}
+  </div>
+
+  <div style="background:#fff;border:1px solid #E4EBE9;border-radius:16px;padding:18px;margin-top:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#7c8a87">🚚 Frota — carros de coleta</div><a href="/frota/aovivo" style="font-size:11.5px;font-weight:800;color:#0B7A66;text-decoration:none">acompanhar ao vivo →</a></div>
+    ${frotaAviso}
+    ${frotaRows}
   </div>
 
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:12px">

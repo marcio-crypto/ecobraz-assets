@@ -263,15 +263,39 @@ async function fimSonda(env, out) {
   return out;
 }
 
-// --- POSIÇÕES (usada pelo portal do cliente) --------------------------------
-// Fica travada até o mapeamento ser confirmado pela sonda (ROTAEXATA_PRONTO=true).
-// Quando confirmar, aqui entra a chamada real: autentica, busca as posições e
-// devolve normalizado por placa.
-export async function posicaoDoVeiculo(env, placa) {
-  if (!rotaexataConfigurado(env)) return { ok: false, motivo: 'nao_configurado' };
-  if (!ROTAEXATA_PRONTO) return { ok: false, motivo: 'mapeamento_pendente' };
+// --- POSIÇÕES ---------------------------------------------------------------
+// Travadas até o mapeamento ser confirmado pela sonda (ROTAEXATA_PRONTO=true).
+// Quando confirmar, aqui entra a chamada real: autentica e devolve as posições
+// normalizadas: [{placa, lat, lng, velocidade, em}].
+const normPlaca = (p) => String(p || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+// Frota inteira (todas as placas) — alimenta o painel do comercial e da diretoria.
+export async function posicoesFrota(env) {
+  if (!rotaexataConfigurado(env)) return { ok: false, motivo: 'nao_configurado', veiculos: [] };
+  if (!ROTAEXATA_PRONTO) return { ok: false, motivo: 'mapeamento_pendente', veiculos: [] };
   // (mapeamento real entra aqui após a sonda)
-  return { ok: false, motivo: 'mapeamento_pendente', placa: corte(placa, 8) };
+  return { ok: false, motivo: 'mapeamento_pendente', veiculos: [] };
+}
+
+// Um veículo específico (por placa) — alimenta o rastreio do cliente.
+export async function posicaoDoVeiculo(env, placa) {
+  const fr = await posicoesFrota(env);
+  if (!fr.ok) return { ok: false, motivo: fr.motivo };
+  const alvo = normPlaca(placa);
+  const v = (fr.veiculos || []).find((x) => normPlaca(x.placa) === alvo);
+  if (!v) return { ok: false, motivo: 'sem_posicao' };
+  return { ok: true, placa: corte(v.placa, 8), lat: v.lat, lng: v.lng, velocidade: v.velocidade ?? null, atualizadoEm: v.em || null };
+}
+
+// Fotografa a posição do veículo num EVENTO da coleta (a caminho, check-in,
+// encerramento…) para virar PROVA de rastreabilidade anexada à OS. Nunca lança;
+// devolve null se a posição não estiver disponível (aí simplesmente não anexa).
+export async function capturarTelemetria(env, placa, evento) {
+  try {
+    const p = await posicaoDoVeiculo(env, placa);
+    if (!p || !p.ok) return null;
+    return { evento: corte(evento, 40), placa: corte(placa, 8), lat: p.lat, lng: p.lng, velocidade: p.velocidade ?? null, em: new Date().toISOString(), fonte: 'rotaexata' };
+  } catch { return null; }
 }
 
 // --- Telas ------------------------------------------------------------------
@@ -329,6 +353,55 @@ async function rodar(){
   }catch(e){st.textContent='Falhou a chamada. Tente de novo.';}
   b.disabled=false;
 }
+</script></body></html>`;
+}
+
+// Página do COMERCIAL/ESCRITÓRIO: frota ao vivo — onde está cada caminhão, qual
+// coleta ele atende agora e qual é a próxima. Atualiza sozinha a cada 20 s.
+export function paginaFrotaAoVivo(user) {
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Frota ao vivo — Ecobraz</title>
+<style>*{box-sizing:border-box}body{margin:0;font-family:Montserrat,'Segoe UI',Arial,sans-serif;background:#F2F6F4;color:#10262B}
+.wrap{max-width:900px;margin:0 auto;padding:18px 16px 48px}
+.card{background:#fff;border:1px solid #E4EBE9;border-radius:14px;padding:16px 18px;margin-bottom:10px}
+.pill{font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px}
+iframe{width:100%;height:300px;border:1px solid #E4EBE9;border-radius:10px;margin-top:10px}
+.aviso{background:#FFFBEB;border:1px solid #F0DCA6;border-radius:12px;padding:12px 15px;font-size:12.5px;color:#7a5f13;line-height:1.5;margin-bottom:12px}</style></head>
+<body>
+<div style="background:#00333B;padding:14px 18px"><div style="max-width:900px;margin:0 auto;display:flex;justify-content:space-between;align-items:center">
+  <a href="/inicio" style="text-decoration:none"><span style="color:#fff;font-size:16px;font-weight:800">ecobraz</span><span style="color:#92C430;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin-left:8px">frota ao vivo</span></a>
+  <span id="hora" style="color:#9FC6C1;font-size:11px;font-weight:700"></span>
+</div></div>
+<div class="wrap">
+  <h1 style="font-size:20px;margin:4px 0 2px">🛰️ Frota ao vivo</h1>
+  <p style="font-size:12.5px;color:#4F6469;margin:0 0 12px">Onde está cada caminhão, qual coleta ele atende agora e a próxima da fila. Atualiza sozinho a cada 20 segundos.</p>
+  <div id="lista"><div class="card" style="color:#8fa39f;font-size:13px">⏳ Carregando a frota…</div></div>
+</div>
+<script>
+function escapeHtml(s){var d=document.createElement('div');d.textContent=s==null?'':String(s);return d.innerHTML;}
+function mapa(el, la, lo){ if(!el) return; var dl=0.008, bbox=(lo-dl)+','+(la-dl)+','+(lo+dl)+','+(la+dl);
+  el.innerHTML='<iframe loading="lazy" src="https://www.openstreetmap.org/export/embed.html?bbox='+encodeURIComponent(bbox)+'&layer=mapnik&marker='+encodeURIComponent(la+','+lo)+'"></iframe>'; }
+function pinta(d){
+  var alvo=document.getElementById('lista');
+  document.getElementById('hora').textContent='atualizado '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  var aviso = d && !d.posOk ? '<div class="aviso">🛰️ <b>Posições ao vivo em ativação</b> (integração RotaExata em conclusão). As colunas de coleta atual/próxima já são reais.</div>' : '';
+  if(!d || !Array.isArray(d.frota) || !d.frota.length){ alvo.innerHTML=aviso+'<div class="card" style="color:#8fa39f;font-size:13px">Nenhum veículo cadastrado na Frota ainda.</div>'; return; }
+  alvo.innerHTML = aviso + d.frota.map(function(v,i){
+    var pos = v.pos ? ('🟢 <b>'+(v.pos.velocidade!=null?Math.round(v.pos.velocidade)+' km/h':'parado/andando')+'</b>') : '<span style="color:#8fa39f">sem sinal ao vivo</span>';
+    var atual = v.coletaAtual ? ('<b>'+escapeHtml(v.coletaAtual.numero||'')+'</b> · '+escapeHtml(v.coletaAtual.cliente||'')) : '<span style="color:#8fa39f">nenhuma em andamento</span>';
+    var prox = v.proxima ? (escapeHtml(v.proxima.numero||'')+' · '+escapeHtml(v.proxima.cliente||'')) : '—';
+    return '<div class="card">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">'
+      +'<div><span style="font-size:15px;font-weight:800">🚛 '+escapeHtml(v.placa||'—')+'</span>'+(v.apelido?' <span style="font-size:12px;color:#7c8a87">· '+escapeHtml(v.apelido)+'</span>':'')+(v.motorista?' <span style="font-size:12px;color:#0B5B66;font-weight:700">· '+escapeHtml(v.motorista)+'</span>':'')+'</div>'
+      +'<div style="font-size:12px">'+pos+'</div></div>'
+      +'<div style="font-size:12.5px;color:#28413f;margin-top:8px">Atendendo agora: '+atual+'</div>'
+      +'<div style="font-size:12.5px;color:#28413f;margin-top:3px">Próxima da fila: '+prox+'</div>'
+      +'<div style="font-size:12px;color:#7c8a87;margin-top:3px">Concluídas hoje: <b>'+(v.concluidasHoje||0)+'</b></div>'
+      +(v.pos?('<button style="margin-top:8px;border:1px solid #cfe0dd;background:#fff;border-radius:8px;padding:7px 11px;font-size:12px;font-weight:700;color:#00333B;cursor:pointer" onclick="var m=document.getElementById(\\'m'+i+'\\'); if(m.dataset.on){m.innerHTML=\\'\\';m.dataset.on=\\'\\';this.textContent=\\'🗺️ Ver no mapa\\';}else{mapa(m,'+v.pos.lat+','+v.pos.lng+');m.dataset.on=\\'1\\';this.textContent=\\'✕ Fechar mapa\\';}">🗺️ Ver no mapa</button><div id="m'+i+'"></div>'):'')
+      +'</div>';
+  }).join('');
+}
+function busca(){ fetch('/api/frota/aovivo').then(function(r){return r.json();}).then(pinta).catch(function(){}); }
+busca(); setInterval(busca, 20000);
 </script></body></html>`;
 }
 

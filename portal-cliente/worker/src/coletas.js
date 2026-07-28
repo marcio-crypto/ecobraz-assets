@@ -93,6 +93,20 @@ export async function atualizarStatusOS(env, id, status) {
   }
   return rec;
 }
+// Anexa um registro de TELEMETRIA (posição do rastreador no momento de um evento)
+// à coleta — vira prova de rastreabilidade incontestável no dossiê. Best-effort.
+export async function anexarTelemetriaOS(env, id, registro) {
+  if (!registro) return null;
+  const rec = await lerColetaOS(env, id);
+  if (!rec) return null;
+  rec.telemetria = Array.isArray(rec.telemetria) ? rec.telemetria : [];
+  rec.telemetria.push(registro);
+  if (rec.telemetria.length > 60) rec.telemetria = rec.telemetria.slice(-60);
+  rec.atualizadoEm = agora();
+  if (env.PORTAL_KV) await env.PORTAL_KV.put(`os:${rec.id}`, JSON.stringify(rec));
+  return rec;
+}
+
 // Persiste um registro de OS já existente sem mexer no status (ex.: anexar as
 // notas fiscais vinculadas em os.notas). O índice não guarda notas, então basta
 // regravar o registro completo.
@@ -287,6 +301,12 @@ export function paginaColetaOSDetalhe(user, os, seloUrl) {
       <div style="font-size:13.5px;color:#28413f;margin-top:6px">Esta coleta é <b>financiada por ${esc(os.patrocinadorNome)}</b>.</div>
       <div style="font-size:12px;color:#4F6469;margin-top:8px;line-height:1.55">Ao realizar a coleta, o cliente <b>autoriza o compartilhamento das informações desta coleta</b> (materiais, peso e comprovantes de destinação) com o patrocinador <b>${esc(os.patrocinadorNome)}</b>, para fins de comprovação e relatório socioambiental, nos termos da LGPD (Lei 13.709/2018).</div>
     </div>` : ''}
+    ${Array.isArray(os.telemetria) && os.telemetria.length ? `<div class="sec">🛰️ Telemetria do veículo (RotaExata) — prova de rastreabilidade</div>
+    <div style="font-size:11.5px;color:#9aa7a4;margin:-2px 0 8px">Posição do rastreador do caminhão registrada automaticamente em cada evento da coleta — dado independente e incontestável.</div>
+    ${os.telemetria.map((t) => `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid #EEF1F0;border-radius:10px;padding:9px 12px;margin-bottom:6px;background:#FBFDFC">
+      <div style="min-width:0;font-size:12.5px"><b>${esc({ a_caminho: '🚗 A caminho', checkin: '📍 Chegou no cliente', encerramento: '🏭 Encerrou na Ecobraz' }[t.evento] || t.evento)}</b><span style="color:#7c8a87"> · ${esc(String(t.em || '').slice(11, 16))} · ${esc(dataBR(t.em))}${t.velocidade != null ? ` · ${Math.round(Number(t.velocidade) || 0)} km/h` : ''} · ${esc(t.placa || '')}</span></div>
+      <a href="https://www.openstreetmap.org/?mlat=${encodeURIComponent(t.lat)}&mlon=${encodeURIComponent(t.lng)}#map=16/${encodeURIComponent(t.lat)}/${encodeURIComponent(t.lng)}" target="_blank" rel="noopener" style="flex:none;font-size:11.5px;color:#0B5B66;font-weight:700;text-decoration:none">🗺️ ver ponto ↗</a>
+    </div>`).join('')}` : ''}
     <div class="sec">📎 Anexos da coleta</div>
     <div style="font-size:11.5px;color:#9aa7a4;margin:-2px 0 8px">Fotos do material/local e arquivos (PDF) desta coleta — guardados no depósito próprio.</div>
     <div id="anexosLista">${anexosHTML}</div>

@@ -118,6 +118,15 @@ export async function detalheColeta(env, id) {
 }
 export async function lerEstadoColeta(env, id) { if (!env.PORTAL_KV) return {}; const raw = await env.PORTAL_KV.get(`coleta:${id}`); return raw ? JSON.parse(raw) : {}; }
 async function salvarEstadoColeta(env, id, e) { if (env.PORTAL_KV) await env.PORTAL_KV.put(`coleta:${id}`, JSON.stringify(e).slice(0, 4000), { expirationTtl: 60 * 60 * 24 * 120 }); }
+// "Estou indo": marca a coleta como em transporte e registra o momento — o cliente é
+// avisado por e-mail (feito no index) e passa a acompanhar o caminhão ao vivo.
+export async function registrarACaminho(env, id, agente) {
+  const e = await lerEstadoColeta(env, id);
+  const jaAvisado = !!e.acaminho;
+  if (!jaAvisado) { e.acaminho = { em: agora(), agente: agente.email }; await salvarEstadoColeta(env, id, e); }
+  try { await atualizarStatusOS(env, id, 'em_transporte'); } catch { /* ok */ }
+  return { estado: e, jaAvisado };
+}
 export async function registrarCheckin(env, id, agente, geo) { const e = await lerEstadoColeta(env, id); e.checkin = { lat: Number(geo.lat), lon: Number(geo.lon), acc: Math.round(Number(geo.acc) || 0), em: agora(), agente: agente.email }; await salvarEstadoColeta(env, id, e); try { await atualizarStatusOS(env, id, 'em_transporte'); } catch { /* ok */ } return e; }
 export async function registrarFoto(env, id, agente, b64) { const e = await lerEstadoColeta(env, id); if (env.PORTAL_KV) await env.PORTAL_KV.put(`coletafoto:${id}`, String(b64).slice(0, 3000000), { expirationTtl: 60 * 60 * 24 * 120 }); e.foto = { em: agora(), agente: agente.email }; await salvarEstadoColeta(env, id, e); return e; }
 export async function servirFotoColeta(env, id) {
@@ -219,7 +228,10 @@ export function paginaColetaDetalhe(agente, coleta, estado) {
   const enc = estado && estado.encerramento;
   const rea = estado && estado.reagendar;
   const mapa = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(coleta.endereco || coleta.cliente)}`;
-  const linhaChk = chk ? `<div style="font-size:12.5px;color:#1E5B31;font-weight:700;">✓ Check-in no local — ${hhmm(chk.em)}</div><div style="font-size:10.5px;color:#8fa39f;margin-top:2px;">GPS registrado · precisão ${chk.acc} m</div>` : `<div style="font-size:12.5px;color:#8fa39f;">Aguardando check-in…</div>`;
+  const acam = estado && estado.acaminho;
+  const linhaAcam = acam ? `<div style="font-size:12.5px;color:#1E5B31;font-weight:700;">✓ A caminho — cliente avisado às ${hhmm(acam.em)}</div>` : '';
+  const linhaChk = chk ? `<div style="font-size:12.5px;color:#1E5B31;font-weight:700;${acam ? 'margin-top:6px;' : ''}">✓ Check-in no local — ${hhmm(chk.em)}</div><div style="font-size:10.5px;color:#8fa39f;margin-top:2px;">GPS registrado · precisão ${chk.acc} m</div>` : `<div style="font-size:12.5px;color:#8fa39f;${acam ? 'margin-top:6px;' : ''}">Aguardando check-in…</div>`;
+  const btnAcam = enc ? '' : (acam ? `<button class="btn done" disabled>✓ Cliente avisado (${hhmm(acam.em)})</button>` : `<button class="btn primary" id="bacam" style="background:#0B5B66;color:#fff;">🚗 Estou indo — avisar o cliente</button>`);
   const linhaFoto = foto ? `<div style="font-size:12.5px;color:#1E5B31;font-weight:700;margin-top:8px;">✓ Foto da carga — ${hhmm(foto.em)}</div><img src="/agente/coleta/foto?id=${coleta.id}" style="width:100%;border-radius:10px;margin-top:8px;border:1px solid #E4EBE9;">` : '';
   const btnChk = chk ? `<button class="btn done" disabled>✓ Cheguei ao local (${hhmm(chk.em)})</button>` : `<button class="btn primary" id="bchk">📍 Cheguei ao local (check-in)</button>`;
   const btnFoto = `<label class="btn ${chk ? 'primary' : 'muted'}" style="${chk ? '' : 'pointer-events:none;'}">${foto ? '📷 Trocar foto da carga' : '📷 Tirar foto da carga'}<input type="file" accept="image/*" capture="environment" id="fp" style="display:none;"></label>`;
@@ -236,8 +248,9 @@ export function paginaColetaDetalhe(agente, coleta, estado) {
   <a href="${esc(mapa)}" target="_blank" rel="noopener" class="btn ghost" style="margin-bottom:14px;">📍 Abrir no mapa</a>
   <div style="background:#fff;border:1px solid #E4EBE9;border-radius:14px;padding:14px 16px;margin-bottom:14px;">
     <div style="font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#7c8a87;margin-bottom:8px;">Linha do tempo</div>
-    ${linhaChk}${linhaFoto}
+    ${linhaAcam}${linhaChk}${linhaFoto}
   </div>
+  ${btnAcam}
   ${btnChk}
   ${btnFoto}
   ${enc ? `
@@ -266,6 +279,12 @@ export function paginaColetaDetalhe(agente, coleta, estado) {
   const ID=${JSON.stringify(String(coleta.id))}, msg=document.getElementById('msg'), net=document.getElementById('net');
   function rede(){ net.textContent = navigator.onLine ? '🟢 Online' : '🟡 Sem sinal — tente de novo quando voltar'; net.style.color = navigator.onLine ? '#1E7A3D' : '#8A6A16'; }
   rede(); addEventListener('online',rede); addEventListener('offline',rede);
+  const bacam=document.getElementById('bacam');
+  if(bacam) bacam.onclick=async()=>{
+    bacam.disabled=true; msg.textContent='Avisando o cliente…';
+    try{ const r=await fetch('/api/agente/acaminho',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:ID})}); if(r.ok){location.reload();} else {msg.textContent='Falha ao avisar. Tente de novo.'; bacam.disabled=false;} }
+    catch{ msg.textContent='Sem conexão. Tente de novo com sinal.'; bacam.disabled=false; }
+  };
   const bchk=document.getElementById('bchk');
   if(bchk) bchk.onclick=()=>{
     if(!navigator.geolocation){ msg.textContent='Este aparelho não tem GPS disponível.'; return; }
