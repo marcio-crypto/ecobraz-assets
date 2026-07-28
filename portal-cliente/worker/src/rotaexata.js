@@ -6,14 +6,17 @@
 // (nomes de campos), jamais valores de credencial.
 //
 // FASES (honestidade sobre o que está pronto):
-//  1) SONDA (esta fase): o Worker (que tem internet) lê a documentação oficial da API
-//     (SwaggerHub RotaExataSoftware/RotaExata) e testa a autenticação/endpoints com as
-//     credenciais do cofre, mostrando a ESTRUTURA da resposta na tela da Diretoria.
-//  2) MAPEAMENTO: com o print da sonda, o mapeamento (posição por placa) é fixado no
-//     código e ROTAEXATA_PRONTO vira true — aí o botão "Acompanhar o caminhão" acende
-//     no portal do cliente. Antes disso, nada aparece para o cliente (sem promessa vazia).
+//  1) SONDA (concluída — resultado salvo no D1, tabela diagnosticos): o Worker lê a
+//     documentação oficial da API (SwaggerHub RotaExataSoftware/RotaExata) e testa a
+//     autenticação/endpoints com as credenciais do cofre, só status/estrutura.
+//  2) MAPEAMENTO (FEITO em 2026-07-28): posição por placa fixada no bloco POSIÇÕES
+//     abaixo; ROTAEXATA_PRONTO=true acende o rastreio no portal. A primeira leitura
+//     real de cada dia salva uma amostra ESTRUTURAL no D1 para auditoria contínua.
 
-export const ROTAEXATA_PRONTO = false; // vira true quando o mapeamento for confirmado pela sonda
+// Mapeamento CONFIRMADO pela sonda (2026-07-28, diagnóstico salvo no D1):
+//   POST /login {email, password} → {token}  ·  chave CRUA no header Authorization
+//   GET /adesoes → rastreadores/veículos  ·  GET /ultima-posicao/{id} → posição
+export const ROTAEXATA_PRONTO = true;
 
 export function rotaexataConfigurado(env) {
   return !!(env && env.ROTAEXATA_USER && env.ROTAEXATA_SENHA);
@@ -185,17 +188,20 @@ export async function sondaRotaExata(env) {
   // não ter nome óbvio), priorizando as com cara de veículo/posição; assim que um
   // auth responder 200, trava nele. Depois tenta as rotas com {id} usando um id
   // descoberto nas listas. Para quando achar latitude/longitude.
-  const kw = /(veicul|vehicle|posi|position|localiza|rastre|last|atual|frota|fleet|mapa|monitor|equipamento|dispositivo|tracker|placa)/i;
+  const kw = /(veicul|vehicle|posi|position|localiza|rastre|last|atual|frota|fleet|mapa|monitor|equipamento|dispositivo|tracker|placa|ades)/i;
   let getsSem = [], getsCom = [];
   if (specRaw) {
     for (const [p, met] of Object.entries(specRaw.paths || {})) {
       if (!met || !met.get) continue;
+      // NUNCA sondar /logout: derruba o token na hora e transforma o resto em 401
+      // (aprendido na v3 — foi exatamente o que aconteceu).
+      if (/logout|sair|deslogar/i.test(p)) continue;
       if (p.includes('{')) { if (kw.test(p)) getsCom.push(p); }
       else getsSem.push(p);
     }
     getsSem.sort((a, b) => (kw.test(b) ? 1 : 0) - (kw.test(a) ? 1 : 0));
   }
-  if (!getsSem.length) getsSem = ['/veiculos', '/posicoes', '/veiculos/posicoes'];
+  if (!getsSem.length) getsSem = ['/adesoes', '/veiculos', '/posicoes'];
 
   const auths = [];
   if (token && headerChave) auths.push({ nome: `chave crua no ${headerChave}`, header: { [headerChave]: token } });
@@ -206,9 +212,9 @@ export async function sondaRotaExata(env) {
   const basePos = (baseOk || bases[0] || 'https://api.rotaexata.com.br').replace(/\/+$/, '');
   const ehPosicao = (est) => { const s = JSON.stringify(est || {}); return /lat/i.test(s) && /(lng|lon)/i.test(s); };
   const extraiId = (corpo) => {
-    const item = Array.isArray(corpo) ? corpo[0] : (corpo && ((corpo.data && corpo.data[0]) || (corpo.items && corpo.items[0]) || (corpo.veiculos && corpo.veiculos[0])));
+    const item = Array.isArray(corpo) ? corpo[0] : (corpo && ((corpo.data && corpo.data[0]) || (corpo.items && corpo.items[0]) || (corpo.veiculos && corpo.veiculos[0]) || (corpo.adesoes && corpo.adesoes[0]) || (corpo.results && corpo.results[0])));
     if (!item || typeof item !== 'object') return null;
-    return item.id ?? item._id ?? item.veiculoId ?? item.deviceId ?? item.codigo ?? null;
+    return (item.veiculo && typeof item.veiculo === 'object' ? item.veiculo.id : null) ?? item.veiculoId ?? item.id ?? item._id ?? item.deviceId ?? item.codigo ?? null;
   };
 
   let authOk = null, idAchado = null;
@@ -263,18 +269,139 @@ async function fimSonda(env, out) {
   return out;
 }
 
-// --- POSIÇÕES ---------------------------------------------------------------
-// Travadas até o mapeamento ser confirmado pela sonda (ROTAEXATA_PRONTO=true).
-// Quando confirmar, aqui entra a chamada real: autentica e devolve as posições
-// normalizadas: [{placa, lat, lng, velocidade, em}].
+// --- POSIÇÕES (mapeamento REAL, confirmado pela sonda) -----------------------
+// Fluxo: POST /login {email, password} → token · GET /adesoes (lista de
+// rastreadores/veículos) · GET /ultima-posicao/{id} por veículo. A chave vai CRUA
+// no header Authorization (esquema apiKey do spec — provado ao vivo pela sonda).
+// REGRA APRENDIDA NA SONDA: nunca chamar /logout — derruba o token na hora.
+// Os nomes de campo da lista/posição podem variar; a extração abaixo cobre as
+// variações comuns e a primeira leitura do dia salva uma amostra ESTRUTURAL no D1
+// (só nomes/tipos de campos — nunca coordenadas, placas ou credenciais).
+const BASE_REAL = 'https://api.rotaexata.com.br';
 const normPlaca = (p) => String(p || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+const num = (v) => { if (v == null || v === '') return null; const n = Number(String(v).replace(',', '.')); return Number.isFinite(n) ? n : null; };
+
+// Token com cache (~40 min) no KV; leitura que tomar 401 força um login novo.
+async function tokenRotaExata(env, forcar = false) {
+  if (!forcar && env.PORTAL_KV) { try { const t = await env.PORTAL_KV.get('rotaexata:tok'); if (t) return t; } catch { /* segue */ } }
+  const r = await req(`${BASE_REAL}/login`, { method: 'POST', headers: { 'content-type': 'application/json', accept: 'application/json' }, body: JSON.stringify({ email: env.ROTAEXATA_USER, password: env.ROTAEXATA_SENHA }) }, 8000);
+  const c = (r.status >= 200 && r.status < 300 && r.corpo) || {};
+  const t = c.token || c.accessToken || (c.data && c.data.token) || '';
+  if (!t) return '';
+  if (env.PORTAL_KV) { try { await env.PORTAL_KV.put('rotaexata:tok', String(t), { expirationTtl: 2400 }); } catch { /* segue */ } }
+  return String(t);
+}
+const getAut = (tok, caminho) => req(`${BASE_REAL}${caminho}`, { headers: { authorization: tok, accept: 'application/json' } }, 6500);
+
+// A lista pode vir na raiz ou embrulhada (data/adesoes/items/…).
+function comoLista(corpo) {
+  if (Array.isArray(corpo)) return corpo;
+  if (corpo && typeof corpo === 'object') {
+    for (const k of ['data', 'adesoes', 'items', 'results', 'lista', 'registros', 'rows', 'docs']) if (Array.isArray(corpo[k])) return corpo[k];
+    if (corpo.data && typeof corpo.data === 'object') { for (const k of ['adesoes', 'items', 'results', 'lista']) if (Array.isArray(corpo.data[k])) return corpo.data[k]; }
+  }
+  return [];
+}
+// Ids candidatos para /ultima-posicao/{id}: primeiro o do VEÍCULO, depois o da adesão.
+function idsCandidatos(a) {
+  const out = []; const poe = (v) => { if ((typeof v === 'number' || (typeof v === 'string' && v !== '')) && !out.includes(v)) out.push(v); };
+  if (a && typeof a === 'object') {
+    for (const k of ['veiculoId', 'idVeiculo', 'veiculo_id', 'vehicleId']) poe(a[k]);
+    for (const k of ['veiculo', 'vehicle']) { const v = a[k]; if (v && typeof v === 'object') { poe(v.id); poe(v._id); poe(v.codigo); } }
+    for (const k of ['id', '_id', 'adesaoId', 'idAdesao', 'codigo']) poe(a[k]);
+  }
+  return out.slice(0, 2);
+}
+// Busca um campo de texto (ex.: placa) direto ou aninhado (veiculo.placa etc.).
+function acharTexto(x, chaves, prof = 0) {
+  if (!x || typeof x !== 'object' || Array.isArray(x) || prof > 2) return '';
+  for (const k of chaves) { const v = x[k]; if (v != null && typeof v !== 'object' && String(v).trim()) return String(v).trim(); }
+  for (const k of ['veiculo', 'vehicle', 'carro', 'equipamento', 'rastreador', 'device', 'dados', 'data']) {
+    const v = x[k]; if (v && typeof v === 'object') { const r = acharTexto(v, chaves, prof + 1); if (r) return r; }
+  }
+  return '';
+}
+const extrairPlaca = (a) => acharTexto(a, ['placa', 'plate', 'licensePlate', 'license_plate', 'Placa']);
+const extrairApelido = (a) => corte(acharTexto(a, ['apelido', 'nome', 'descricao', 'identificacao', 'label', 'name', 'modelo']), 40);
+const adesaoInativa = (a) => !!(a && (a.ativo === false || a.ativa === false || a.ativado === false || /cancelad|inativ|suspens|bloquead/i.test(String(a.status || a.situacao || ''))));
+
+// Acha o par latitude/longitude em qualquer nível razoável da resposta.
+// Aceita vírgula decimal e ignora (0,0) — rastreador sem sinal de GPS.
+function extrairPosicao(x, prof = 0) {
+  if (x == null || prof > 3) return null;
+  if (Array.isArray(x)) { for (const it of x.slice(0, 3)) { const p = extrairPosicao(it, prof + 1); if (p) return p; } return null; }
+  if (typeof x !== 'object') return null;
+  const lat = num(x.lat ?? x.latitude ?? x.Latitude ?? x.Lat);
+  const lng = num(x.lng ?? x.lon ?? x.long ?? x.longitude ?? x.Longitude ?? x.Lng);
+  if (lat != null && lng != null && (lat !== 0 || lng !== 0) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) {
+    const em = x.dataHora ?? x.data_hora ?? x.dataPosicao ?? x.dataHoraServidor ?? x.serverTime ?? x.data ?? x.date ?? x.timestamp ?? x.horario ?? null;
+    return { lat, lng, velocidade: num(x.velocidade ?? x.speed ?? x.vel ?? x.velocity), em: em != null ? String(em) : null };
+  }
+  for (const k of Object.keys(x).slice(0, 30)) { const v = x[k]; if (v && typeof v === 'object') { const p = extrairPosicao(v, prof + 1); if (p) return p; } }
+  return null;
+}
+
+// Amostra ESTRUTURAL no D1 (diagnosticos) — 1×/dia quando dá certo, no máx. 1×/hora
+// quando falha. Só nomes de campos e contagens; nunca coordenadas nem credenciais.
+async function amostraDiaria(env, amostra, falha = false) {
+  try {
+    if (!env.DB_PLOOMES) return;
+    const dia = new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10);
+    const marca = `rotaexata:amostra:${falha ? 'erro' : 'ok'}:${dia}`;
+    if (env.PORTAL_KV) {
+      if (await env.PORTAL_KV.get(marca)) return;
+      await env.PORTAL_KV.put(marca, '1', { expirationTtl: falha ? 3600 : 172800 });
+    }
+    await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS diagnosticos (id INTEGER PRIMARY KEY AUTOINCREMENT, tipo TEXT, criado_em TEXT, dados TEXT)').run();
+    await env.DB_PLOOMES.prepare('INSERT INTO diagnosticos (tipo, criado_em, dados) VALUES (?1, ?2, ?3)')
+      .bind('rotaexata-posicoes', new Date().toISOString(), JSON.stringify(amostra).slice(0, 60000)).run();
+  } catch { /* diagnóstico é best-effort */ }
+}
 
 // Frota inteira (todas as placas) — alimenta o painel do comercial e da diretoria.
 export async function posicoesFrota(env) {
   if (!rotaexataConfigurado(env)) return { ok: false, motivo: 'nao_configurado', veiculos: [] };
   if (!ROTAEXATA_PRONTO) return { ok: false, motivo: 'mapeamento_pendente', veiculos: [] };
-  // (mapeamento real entra aqui após a sonda)
-  return { ok: false, motivo: 'mapeamento_pendente', veiculos: [] };
+
+  // Cache curto: várias telas abertas ao mesmo tempo não martelam a API.
+  if (env.PORTAL_KV) { try { const c = await env.PORTAL_KV.get('rotaexata:pos', 'json'); if (c && c.t && (Date.now() - c.t) < 15000 && Array.isArray(c.veiculos)) return { ok: true, veiculos: c.veiculos }; } catch { /* segue */ } }
+
+  let tok = await tokenRotaExata(env);
+  if (!tok) return { ok: false, motivo: 'login_falhou', veiculos: [] };
+  let rAd = await getAut(tok, '/adesoes');
+  if (rAd.status === 401 || rAd.status === 403) {
+    tok = await tokenRotaExata(env, true);
+    if (!tok) return { ok: false, motivo: 'login_falhou', veiculos: [] };
+    rAd = await getAut(tok, '/adesoes');
+  }
+  if (!(rAd.status >= 200 && rAd.status < 300) || rAd.corpo == null) {
+    await amostraDiaria(env, { passo: 'adesoes_falhou', status: rAd.status || 0, detalhe: rAd.erro || corte(rAd.texto, 120) }, true);
+    return { ok: false, motivo: 'sem_resposta', veiculos: [] };
+  }
+
+  const lista = comoLista(rAd.corpo).filter((a) => !adesaoInativa(a)).slice(0, 15);
+  let estPos = null; // estrutura da 1ª resposta de posição (para a amostra)
+  const veiculos = (await Promise.all(lista.map(async (a) => {
+    const placa = extrairPlaca(a);
+    for (const id of idsCandidatos(a)) {
+      const rp = await getAut(tok, `/ultima-posicao/${encodeURIComponent(String(id))}`);
+      if (!(rp.status >= 200 && rp.status < 300) || rp.corpo == null) continue;
+      if (!estPos) estPos = estrutura(rp.corpo);
+      const pos = extrairPosicao(rp.corpo);
+      if (pos) return { placa: placa || `ID ${id}`, apelido: extrairApelido(a), lat: pos.lat, lng: pos.lng, velocidade: pos.velocidade, em: pos.em };
+    }
+    return null;
+  }))).filter(Boolean);
+
+  await amostraDiaria(env, {
+    adesoes: { status: rAd.status, itensNaLista: comoLista(rAd.corpo).length, ativos: lista.length, estrutura: estrutura(rAd.corpo) },
+    ultimaPosicao: { estrutura: estPos },
+    posicoesExtraidas: veiculos.length,
+  }, veiculos.length === 0);
+
+  if (!veiculos.length) return { ok: false, motivo: 'sem_posicao', veiculos: [] };
+  if (env.PORTAL_KV) { try { await env.PORTAL_KV.put('rotaexata:pos', JSON.stringify({ t: Date.now(), veiculos }), { expirationTtl: 60 }); } catch { /* segue */ } }
+  return { ok: true, veiculos };
 }
 
 // Um veículo específico (por placa) — alimenta o rastreio do cliente.
@@ -383,7 +510,14 @@ function mapa(el, la, lo){ if(!el) return; var dl=0.008, bbox=(lo-dl)+','+(la-dl
 function pinta(d){
   var alvo=document.getElementById('lista');
   document.getElementById('hora').textContent='atualizado '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  var aviso = d && !d.posOk ? '<div class="aviso">🛰️ <b>Posições ao vivo em ativação</b> (integração RotaExata em conclusão). As colunas de coleta atual/próxima já são reais.</div>' : '';
+  var aviso='';
+  if(d && !d.posOk){
+    var mm={login_falhou:'🛰️ <b>Sem comunicação com o RotaExata agora</b> (autenticação não passou). Tentamos de novo automaticamente — as colunas de coleta atual/próxima seguem reais.',
+            sem_resposta:'🛰️ <b>Sem resposta do RotaExata agora</b>. Tentamos de novo automaticamente — as colunas de coleta atual/próxima seguem reais.',
+            sem_posicao:'🛰️ <b>Rastreadores sem sinal neste momento</b>. Assim que um veículo transmitir, a posição aparece aqui sozinha.',
+            nao_configurado:'🛰️ <b>Posições ao vivo em ativação</b> (credenciais do RotaExata ainda não configuradas no cofre). As colunas de coleta atual/próxima já são reais.'};
+    aviso='<div class="aviso">'+(mm[d.motivo]||'🛰️ <b>Posições ao vivo em ativação</b> (integração RotaExata em conclusão). As colunas de coleta atual/próxima já são reais.')+'</div>';
+  }
   if(!d || !Array.isArray(d.frota) || !d.frota.length){ alvo.innerHTML=aviso+'<div class="card" style="color:#8fa39f;font-size:13px">Nenhum veículo cadastrado na Frota ainda.</div>'; return; }
   alvo.innerHTML = aviso + d.frota.map(function(v,i){
     var pos = v.pos ? ('🟢 <b>'+(v.pos.velocidade!=null?Math.round(v.pos.velocidade)+' km/h':'parado/andando')+'</b>') : '<span style="color:#8fa39f">sem sinal ao vivo</span>';
@@ -435,6 +569,8 @@ function pinta(d){
            nao_configurado:'O rastreio em tempo real está em ativação — em breve você acompanha o caminhão por aqui.',
            fora_de_transporte:'Esta coleta não está em transporte agora.',
            sem_veiculo:'O veículo desta coleta ainda não foi designado.',
+           login_falhou:'Sem comunicação com o rastreador agora — tentando de novo em instantes…',
+           sem_resposta:'Sem comunicação com o rastreador agora — tentando de novo em instantes…',
            sem_posicao:'Sem sinal do rastreador neste momento — tentando de novo em instantes…'};
     st.textContent='ℹ️ '+(m[d&&d.motivo]||'Posição indisponível no momento. Tentando de novo…');
     return;
