@@ -52,7 +52,7 @@ import { sondarAnexosPloomes, paginaSondaAnexos } from './ploomes-docs.js';
 import { amostraContatosPloomes, paginaAmostraContatos, importarLoteContatos, estatisticasMigracao, buscarContatos, paginaMigrarPloomes, detalheContato, paginaContatoDetalhe, importarLoteNegocios, estatisticasNegocios, paginaMigrarNegocios } from './ploomes-migracao.js';
 import { importarLoteAnexos, importarLoteAnexosContatos, completarAnexos, importarAnexosJanela, reprocessarFalhas, importarLoteDocumentos, recuperarDocumentos, estatisticasArquivos, paginaMigrarArquivos, diagnosticoAnexos, paginaDiagAnexos } from './ploomes-arquivos.js';
 import { fiscalPermitido, nomeFiscal, listarNotas, lerNota, importarLote, vincularNota, sugerirVinculoSync, paginaFiscalLogin, paginaFiscalHome, paginaFiscalResultado, paginaFiscalNota } from './fiscal.js';
-import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, emailsDoCliente, reindexarEmailsClientes, backfillEnderecos, paginaManutencao, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, clienteDeLead, arquivosDoCliente, paginaLeads, paginaLeadDetalhe, paginaInicio } from './cadastro.js';
+import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, emailsDoCliente, reindexarEmailsClientes, backfillEnderecos, paginaManutencao, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, clienteDeLead, arquivosDoCliente, paginaLeads, paginaLeadDetalhe, paginaInicio, listarClientesD1, contagensClientesD1, lerClienteD1, negociosDoCliente, espelharClienteD1, sincronizarKVparaD1 } from './cadastro.js';
 import { listarColetasOS, lerColetaOS, criarColetaOS, atualizarStatusOS, atualizarColetaOS, registrarAnexoColeta, removerAnexoColeta, paginaColetasLista, paginaGerarColeta, paginaEditarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga } from './coletas.js';
 import { listarVeiculos, lerVeiculo, salvarVeiculo, paginaFrota, paginaVeiculoForm, lerJornadaAtiva, abrirJornada, fecharJornada, registrarAbastecimento, tagColetaComVeiculo, servirFotoJornada, bannerJornada, paginaAbrirDia, paginaFecharDia, paginaAbastecer, placaDaColeta } from './frota.js';
 import { carregarEquipeNoEnv, listarUsuarios, lerUsuario, salvarUsuario, importarUsuarios, paginaEquipe, paginaUsuarioForm, paginaEquipeImportar } from './equipe.js';
@@ -656,18 +656,14 @@ export default {
       if (pathname === '/cadastro' && request.method === 'GET') {
         if (!escritorio) return html(paginaLoginEscritorio(googleConfigurado(env)));
         const q = (url.searchParams.get('q') || '').trim();
-        const ql = q.toLowerCase();
         const tipo = (url.searchParams.get('tipo') || '').toUpperCase();
-        const PORPAG = 50;
-        const todos = await listarClientes(env);
-        let filtrados = todos;
-        if (tipo === 'PJ' || tipo === 'PF') filtrados = filtrados.filter((c) => c.tipo === tipo);
-        if (ql) filtrados = filtrados.filter((c) => `${c.nome || ''} ${c.doc || ''}`.toLowerCase().includes(ql));
-        const ordenados = [...filtrados].sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || ''), 'pt'));
-        const totalPags = Math.max(1, Math.ceil(ordenados.length / PORPAG));
-        const pag = Math.min(Math.max(1, Number(url.searchParams.get('p') || 1) || 1), totalPags);
-        const fatia = ordenados.slice((pag - 1) * PORPAG, pag * PORPAG);
-        return html(paginaCadastroHome(escritorio, fatia, q, ordenados.length, todos.length, { tipo: (tipo === 'PJ' || tipo === 'PF') ? tipo : '', pag, totalPags }));
+        const tp = (tipo === 'PJ' || tipo === 'PF') ? tipo : '';
+        const pagReq = Number(url.searchParams.get('p') || 1) || 1;
+        // Lê a BASE COMPLETA (D1) — 26.967 contatos migrados, não mais o índice KV limitado.
+        const lista = await listarClientesD1(env, { tipo: tp, q, pag: pagReq, porPag: 50 });
+        const cont = await contagensClientesD1(env);
+        const totalGeral = tp === 'PJ' ? cont.pj : tp === 'PF' ? cont.pf : cont.todos;
+        return html(paginaCadastroHome(escritorio, lista.rows, q, lista.total, totalGeral, { tipo: tp, pag: lista.pag, totalPags: lista.totalPags }));
       }
       if (pathname === '/cadastro/manutencao' && request.method === 'GET') {
         if (!escritorio) return html(paginaLoginEscritorio(googleConfigurado(env)));
@@ -683,6 +679,11 @@ export default {
         let b; try { b = await request.json(); } catch { b = {}; }
         return json(await backfillEnderecos(env, b && b.desde, 20));
       }
+      if (pathname === '/api/cadastro/sync-d1' && request.method === 'POST') {
+        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = {}; }
+        return json(await sincronizarKVparaD1(env, b && b.desde, 100));
+      }
       if (pathname === '/cadastro/novo' && request.method === 'GET') {
         if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
         const leadId = (url.searchParams.get('lead') || '').trim();
@@ -692,16 +693,18 @@ export default {
       }
       if (pathname === '/cadastro/editar' && request.method === 'GET') {
         if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
-        const cli = await lerCliente(env, url.searchParams.get('id') || '');
+        // Contato migrado (id 'p...'): materializa em KV para poder editar.
+        const cli = await materializarClienteKV(env, url.searchParams.get('id') || '');
         if (!cli) return html(paginaMensagem('Cliente não encontrado', 'Volte e tente de novo.'), 404);
         return html(paginaFormCliente(escritorio, cli.tipo, cli));
       }
       if (pathname === '/cadastro/cliente' && request.method === 'GET') {
         if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
-        const cli = await lerCliente(env, url.searchParams.get('id') || '');
+        const cli = await carregarClientePorId(env, url.searchParams.get('id') || '');
         if (!cli) return html(paginaMensagem('Cliente não encontrado', 'Volte e tente de novo.'), 404);
         let arquivos = []; try { arquivos = await arquivosDoCliente(env, cli); } catch { /* sem arquivos, tudo bem */ }
-        return html(paginaClienteDetalhe(escritorio, cli, arquivos));
+        let negocios = []; try { negocios = await negociosDoCliente(env, cli); } catch { /* sem histórico, tudo bem */ }
+        return html(paginaClienteDetalhe(escritorio, cli, arquivos, negocios));
       }
       // Serve um arquivo migrado do Ploomes (R2) para a equipe do escritório.
       // Valida a chave contra o banco (só serve o que está catalogado).
@@ -731,6 +734,32 @@ export default {
         // Veio de um lead do site? Marca o lead como tratado e guarda o vínculo (best-effort).
         if (leadOrigem) { try { const l = await lerLead(env, leadOrigem); if (l && l.status !== 'tratado') { l.status = 'tratado'; l.clienteId = salvo.id; await salvarLead(env, l); } } catch { /* não bloqueia o cadastro */ } }
         return json({ ok: true, id: salvo.id });
+      }
+      // Anexar um novo documento a um cliente (upload → R2 + catálogo D1, casado pelo CNPJ/CPF).
+      if (pathname === '/api/cadastro/anexo' && request.method === 'POST') {
+        if (!escritorio) return json({ ok: false, erro: 'nao_autenticado' }, 401);
+        if (!env.R2_ARQUIVOS || !env.DB_PLOOMES) return json({ ok: false, erro: 'Armazenamento indisponível.' }, 503);
+        let form; try { form = await request.formData(); } catch { return json({ ok: false, erro: 'Envio inválido.' }, 400); }
+        const file = form.get('file');
+        if (!file || typeof file === 'string') return json({ ok: false, erro: 'Selecione um arquivo.' }, 400);
+        const cli = await carregarClientePorId(env, String(form.get('cliente') || '').trim());
+        if (!cli) return json({ ok: false, erro: 'Cliente não encontrado.' }, 404);
+        const doc = String(cli.tipo === 'PJ' ? cli.cnpj : cli.cpf || '').replace(/\D/g, '');
+        if (doc.length < 11) return json({ ok: false, erro: 'Cadastre o CNPJ/CPF do cliente antes de anexar.' }, 400);
+        const nome = (String(file.name || 'arquivo').replace(/[^\w .()\-]+/g, '_').slice(0, 120)) || 'arquivo';
+        const tam = Number(file.size) || 0;
+        if (tam > 15 * 1024 * 1024) return json({ ok: false, erro: 'Arquivo muito grande (máx. 15 MB).' }, 400);
+        let pid = Number(cli.ploomesId) || 0;
+        try { if (!pid) pid = await espelharClienteD1(env, cli); } catch { /* segue mesmo sem pid */ }
+        const key = (`upload/${doc}/${novoId()}_${nome}`).replace(/[^a-zA-Z0-9/_.\-]/g, '_').slice(0, 200);
+        const ct = file.type || 'application/octet-stream';
+        try {
+          const buf = await file.arrayBuffer();
+          await env.R2_ARQUIVOS.put(key, buf, { httpMetadata: { contentType: ct } });
+          await env.DB_PLOOMES.prepare('INSERT INTO arquivos_ploomes (r2_key,fonte,ploomes_id,deal_id,contact_id,nome_arquivo,content_type,tamanho,criado_em,importado_em) VALUES (?1,?2,?3,NULL,?4,?5,?6,?7,?8,?8)')
+            .bind(key, 'upload', pid || null, pid || null, nome, ct, tam, nowS()).run();
+          return json({ ok: true, nome });
+        } catch (error) { console.error('anexo_upload_falhou', safeError(error)); return json({ ok: false, erro: 'Falha ao anexar. Tente de novo.' }, 500); }
       }
       if (pathname === '/api/cadastro/cnpj' && request.method === 'GET') {
         if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
@@ -765,19 +794,21 @@ export default {
         const ql = q.toLowerCase();
         const cliId = (url.searchParams.get('cliente') || '').trim();
         let coletas = await listarColetasOS(env);
-        let cliCtx = null;
+        let cliCtx = null, negociosCli = [];
         if (cliId) {
-          const cli = await lerCliente(env, cliId);
+          const cli = await carregarClientePorId(env, cliId);
           const nome = cli ? (cli.tipo === 'PJ' ? (cli.razaoSocial || cli.nomeFantasia || '') : (cli.nome || '')) : '';
           coletas = coletas.filter((c) => c.clienteId === cliId || (nome && c.clienteNome === nome));
           cliCtx = { id: cliId, nome: nome || 'cliente' };
+          try { negociosCli = await negociosDoCliente(env, cli); } catch { /* sem histórico, tudo bem */ }
         } else if (ql) coletas = coletas.filter((c) => `${c.numero || ''} ${c.clienteNome || ''}`.toLowerCase().includes(ql)); // busca cobre canceladas
         else coletas = coletas.filter((c) => c.status !== 'cancelada'); // sem busca, canceladas somem
-        return html(paginaColetasLista(escritorio, coletas, q, cliCtx));
+        return html(paginaColetasLista(escritorio, coletas, q, cliCtx, negociosCli));
       }
       if (pathname === '/coletas/nova' && request.method === 'GET') {
         if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
-        const cli = await lerCliente(env, url.searchParams.get('cliente') || '');
+        // Contato migrado (id 'p...'): materializa em KV para poder gerar a coleta.
+        const cli = await materializarClienteKV(env, url.searchParams.get('cliente') || '');
         if (!cli) return html(paginaMensagem('Cliente não encontrado', 'Volte e tente de novo.'), 404);
         const agentes = [...agentesDe(env).entries()].map(([email, nome]) => ({ email, nome }));
         let patrocinadores = []; try { patrocinadores = await listarPatrocinadores(env); } catch { /* ok */ }
@@ -1973,6 +2004,31 @@ async function listarOS(sessao, env) {
   } catch (error) { console.error('listar_os_d1', safeError(error)); }
   out.sort((a, b) => String(b.aberturaISO || '').localeCompare(String(a.aberturaISO || '')));
   return json({ ok: true, os: out });
+}
+
+// Resolve um cliente pelo id da lista de Cadastro: 'p'+ploomes = base D1 (migrado);
+// emp_/pf_ = registro KV (novo/editado). Devolve o objeto "cli".
+async function carregarClientePorId(env, id) {
+  const s = String(id || '');
+  if (/^p\d+$/.test(s)) return await lerClienteD1(env, s.slice(1));
+  return await lerCliente(env, s);
+}
+// Materializa um contato D1 como registro KV (necessário para editar / gerar coleta).
+// Reaproveita um KV existente com o mesmo documento; senão cria um novo (que já espelha
+// de volta no D1). Se o id já for KV, apenas lê. Devolve o cli KV (ou null).
+async function materializarClienteKV(env, id) {
+  const s = String(id || '');
+  if (!/^p\d+$/.test(s)) return await lerCliente(env, s);
+  const d1 = await lerClienteD1(env, s.slice(1));
+  if (!d1) return null;
+  const doc = String(d1.tipo === 'PJ' ? d1.cnpj : d1.cpf || '').replace(/\D/g, '');
+  if (doc) {
+    try { const idx = await listarClientes(env); const hit = idx.find((c) => String(c.doc || '').replace(/\D/g, '') === doc); if (hit) { const kv = await lerCliente(env, hit.id); if (kv) return kv; } } catch { /* segue e cria */ }
+  }
+  const novo = { tipo: d1.tipo, endereco: d1.endereco || {}, ploomesId: d1.ploomesId };
+  if (d1.tipo === 'PJ') { novo.razaoSocial = d1.razaoSocial || ''; novo.nomeFantasia = d1.nomeFantasia || ''; novo.cnpj = d1.cnpj || ''; novo.email = d1.email || ''; novo.contatos = []; }
+  else { novo.nome = d1.nome || ''; novo.cpf = d1.cpf || ''; novo.fone = d1.fone || ''; novo.email = d1.email || ''; }
+  return await salvarCliente(env, novo);
 }
 
 // Classifica um documento pelo NOME e diz se o CLIENTE pode ver — e se depende de liberação.

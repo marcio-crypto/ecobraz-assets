@@ -9,6 +9,8 @@ import { botaoGoogle } from './google-auth.js';
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const agora = () => { try { return new Date().toISOString(); } catch { return ''; } };
 const digits = (s) => String(s || '').replace(/\D/g, '');
+// Limpa nomes migrados sujos (espaços à esquerda, quebras de linha no fim).
+const limpar = (s) => String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
 const dataBR = (iso) => { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : ''; };
 const fmtCNPJ = (v) => { const d = digits(v); return d.length === 14 ? d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5') : (v || ''); };
 const fmtCPF = (v) => { const d = digits(v); return d.length === 11 ? d.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4') : (v || ''); };
@@ -35,6 +37,123 @@ export async function lerCliente(env, id) {
   if (!env.PORTAL_KV || !id) return null;
   const raw = await env.PORTAL_KV.get(`cli:${String(id).replace(/[^a-zA-Z0-9_]/g, '')}`);
   return raw ? JSON.parse(raw) : null;
+}
+
+// ---------------------------------------------------------------------------
+// BASE COMPLETA (D1) — a fonte de verdade dos clientes migrados do Ploomes.
+// A lista de Cadastro lê daqui (não mais só do índice KV, que era limitado).
+// PJ = empresas; PF = pessoas físicas que SÃO clientes (sem company_id — quem é só
+// contato de uma empresa aparece dentro da empresa, não solto na lista).
+// ---------------------------------------------------------------------------
+function condTipoD1(tipo) {
+  if (tipo === 'PJ') return "tipo='PJ'";
+  if (tipo === 'PF') return "tipo='PF' AND COALESCE(company_id,0)=0";
+  return "(tipo='PJ' OR (tipo='PF' AND COALESCE(company_id,0)=0))";
+}
+export async function listarClientesD1(env, { tipo = '', q = '', pag = 1, porPag = 50 } = {}) {
+  if (!env.DB_PLOOMES) return { rows: [], total: 0, totalPags: 1, pag: 1 };
+  let where = condTipoD1(tipo);
+  const params = [];
+  const termo = String(q || '').trim();
+  if (termo) {
+    params.push('%' + termo + '%'); const pLike = params.length;
+    let s = `nome LIKE ?${pLike} OR nome_fantasia LIKE ?${pLike}`;
+    const dig = digits(termo);
+    if (dig.length >= 3) { params.push('%' + dig + '%'); s += ` OR REPLACE(REPLACE(REPLACE(REPLACE(documento,'.',''),'-',''),'/',''),' ','') LIKE ?${params.length}`; }
+    where += ` AND (${s})`;
+  }
+  let total = 0;
+  try { const c = await env.DB_PLOOMES.prepare(`SELECT COUNT(*) AS n FROM contatos WHERE ${where}`).bind(...params).first(); total = Number(c && c.n) || 0; } catch (e) { return { rows: [], total: 0, totalPags: 1, pag: 1, erro: String(e && e.message || e).slice(0, 120) }; }
+  const totalPags = Math.max(1, Math.ceil(total / porPag));
+  const p = Math.min(Math.max(1, Number(pag) || 1), totalPags);
+  const off = (p - 1) * porPag;
+  let results = [];
+  try { const r = await env.DB_PLOOMES.prepare(`SELECT ploomes_id, tipo, nome, nome_fantasia, documento, cidade, uf FROM contatos WHERE ${where} ORDER BY TRIM(nome) COLLATE NOCASE LIMIT ${Number(porPag)} OFFSET ${Number(off)}`).bind(...params).all(); results = r.results || []; } catch { results = []; }
+  const rows = results.map((c) => ({
+    id: 'p' + c.ploomes_id, tipo: c.tipo,
+    nome: limpar(c.tipo === 'PJ' ? (c.nome || c.nome_fantasia) : c.nome) || '(sem nome)',
+    doc: c.tipo === 'PJ' ? fmtCNPJ(c.documento) : fmtCPF(c.documento),
+    cidade: [limpar(c.cidade), limpar(c.uf)].filter(Boolean).join('/'),
+  }));
+  return { rows, total, totalPags, pag: p };
+}
+// Contagens por tipo (para os chips Empresas/Pessoas), direto do banco.
+export async function contagensClientesD1(env) {
+  if (!env.DB_PLOOMES) return { pj: 0, pf: 0, todos: 0 };
+  try {
+    const pj = await env.DB_PLOOMES.prepare(`SELECT COUNT(*) AS n FROM contatos WHERE ${condTipoD1('PJ')}`).first();
+    const pf = await env.DB_PLOOMES.prepare(`SELECT COUNT(*) AS n FROM contatos WHERE ${condTipoD1('PF')}`).first();
+    const npj = Number(pj && pj.n) || 0, npf = Number(pf && pf.n) || 0;
+    return { pj: npj, pf: npf, todos: npj + npf };
+  } catch { return { pj: 0, pf: 0, todos: 0 }; }
+}
+// Endereço migrado (coluna TEXT — pode ser JSON ou string simples).
+function parseEnderecoD1(txt, cidade, uf) {
+  const base = { cep: '', logradouro: '', numero: '', complemento: '', bairro: '', cidade: cidade || '', uf: uf || '' };
+  const t = String(txt || '').trim();
+  if (!t) return base;
+  if (t[0] === '{') { try { const o = JSON.parse(t); return { ...base, ...o, cidade: o.cidade || base.cidade, uf: o.uf || base.uf }; } catch { /* string simples */ } }
+  return { ...base, logradouro: t };
+}
+// Lê um contato do D1 e devolve no formato "cli" (para a ficha e o formulário).
+export async function lerClienteD1(env, ploomesId) {
+  if (!env.DB_PLOOMES) return null;
+  const pid = Number(digits(ploomesId));
+  if (!pid) return null;
+  let c = null;
+  try { c = await env.DB_PLOOMES.prepare('SELECT ploomes_id,tipo,nome,nome_fantasia,documento,email,telefone,cidade,uf,endereco,company_id,criado_em FROM contatos WHERE ploomes_id=?1').bind(pid).first(); } catch { c = null; }
+  if (!c) return null;
+  const endereco = parseEnderecoD1(c.endereco, c.cidade, c.uf);
+  const base = { id: 'p' + c.ploomes_id, ploomesId: c.ploomes_id, _fonte: 'd1', tipo: c.tipo === 'PJ' ? 'PJ' : 'PF', endereco, criadoEm: c.criado_em || '', companyId: c.company_id || null };
+  if (c.tipo === 'PJ') return { ...base, razaoSocial: limpar(c.nome), nomeFantasia: limpar(c.nome_fantasia), cnpj: digits(c.documento), email: limpar(c.email), contatos: [] };
+  return { ...base, nome: limpar(c.nome), cpf: digits(c.documento), fone: limpar(c.telefone), email: limpar(c.email) };
+}
+// Ordens de coleta ANTIGAS (negócios migrados) de um cliente — pelo id do contato
+// (ploomes) e/ou pelo documento. status_id 1=aberto, 2=concluído, 3=perdido.
+export async function negociosDoCliente(env, cli) {
+  if (!env.DB_PLOOMES || !cli) return [];
+  const doc = digits(cli.tipo === 'PJ' ? cli.cnpj : cli.cpf);
+  const pid = Number(cli.ploomesId) || 0;
+  if (!doc && !pid) return [];
+  try {
+    const r = await env.DB_PLOOMES.prepare(
+      `SELECT ploomes_id AS id, titulo, status_id, amount, criado_em
+         FROM negocios
+        WHERE (?2>0 AND contact_id=?2) OR (?1<>'' AND contact_id IN (SELECT ploomes_id FROM contatos WHERE documento=?1))
+        ORDER BY criado_em DESC LIMIT 200`
+    ).bind(doc, pid).all();
+    return (r.results || []).map((d) => ({
+      id: d.id, titulo: limpar(d.titulo) || ('Atendimento ' + d.id),
+      status: d.status_id === 2 ? 'Concluída' : (d.status_id === 3 ? 'Perdida' : 'Em atendimento'),
+      cor: d.status_id === 2 ? '#1E7A3D' : (d.status_id === 3 ? '#a06a62' : '#8A6A16'),
+      data: d.criado_em || '', valor: Number(d.amount) || 0,
+    }));
+  } catch { return []; }
+}
+// Espelha um cliente salvo (KV) na base D1, casando por DOCUMENTO (upsert). Assim a
+// lista de Cadastro (que lê do D1) já mostra clientes novos/editados. Best-effort.
+export async function espelharClienteD1(env, rec) {
+  if (!env.DB_PLOOMES || !rec) return null;
+  const tipo = rec.tipo === 'PJ' ? 'PJ' : 'PF';
+  const doc = digits(tipo === 'PJ' ? rec.cnpj : rec.cpf);
+  const nome = tipo === 'PJ' ? (rec.razaoSocial || rec.nomeFantasia || '') : (rec.nome || '');
+  const fantasia = tipo === 'PJ' ? (rec.nomeFantasia || '') : '';
+  const e = rec.endereco || {};
+  const endStr = JSON.stringify({ cep: e.cep || '', logradouro: e.logradouro || '', numero: e.numero || '', complemento: e.complemento || '', bairro: e.bairro || '', cidade: e.cidade || '', uf: e.uf || '' });
+  const email = tipo === 'PJ' ? ((rec.contatos && rec.contatos[0] && rec.contatos[0].email) || rec.email || '') : (rec.email || '');
+  const fone = tipo === 'PJ' ? ((rec.contatos && rec.contatos[0] && rec.contatos[0].fone) || '') : (rec.fone || '');
+  let pid = Number(rec.ploomesId) || 0;
+  if (!pid && doc) { const ex = await env.DB_PLOOMES.prepare('SELECT ploomes_id FROM contatos WHERE documento=?1 LIMIT 1').bind(doc).first(); if (ex) pid = Number(ex.ploomes_id); }
+  if (pid) {
+    await env.DB_PLOOMES.prepare('UPDATE contatos SET tipo=?2,nome=?3,nome_fantasia=?4,documento=?5,email=?6,telefone=?7,cidade=?8,uf=?9,endereco=?10 WHERE ploomes_id=?1')
+      .bind(pid, tipo, nome, fantasia, doc, email, fone, e.cidade || '', e.uf || '', endStr).run();
+    return pid;
+  }
+  const mx = await env.DB_PLOOMES.prepare('SELECT COALESCE(MAX(ploomes_id),0) AS mx FROM contatos').first();
+  pid = Math.max(900000000, Number(mx && mx.mx) || 0) + 1;
+  await env.DB_PLOOMES.prepare('INSERT INTO contatos (ploomes_id,tipo,nome,nome_fantasia,documento,email,telefone,cidade,uf,endereco,company_id,criado_em,importado_em) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,NULL,?11,?11)')
+    .bind(pid, tipo, nome, fantasia, doc, email, fone, e.cidade || '', e.uf || '', endStr, agora()).run();
+  return pid;
 }
 // E-mails (minúsculos) de um cliente — a empresa e cada contato (PJ) ou a pessoa
 // (PF). Usado no índice de login (climail) para o cliente entrar pelo próprio e-mail.
@@ -64,6 +183,8 @@ export async function salvarCliente(env, rec) {
     // Índice de login: e-mail → id do cliente (pro cliente novo entrar no portal).
     try { for (const em of emailsDoCliente(rec)) await env.PORTAL_KV.put(`climail:${em}`, rec.id); } catch { /* não bloqueia o cadastro */ }
   }
+  // Espelha na base D1 (a lista de Cadastro lê de lá) — casa por documento. Best-effort.
+  try { const pid = await espelharClienteD1(env, rec); if (pid && rec.ploomesId !== pid && env.PORTAL_KV) { rec.ploomesId = pid; await env.PORTAL_KV.put(`cli:${rec.id}`, JSON.stringify(rec)); } } catch { /* não bloqueia o cadastro */ }
   return rec;
 }
 
@@ -84,6 +205,24 @@ export async function reindexarEmailsClientes(env, desde, limite) {
     for (const em of emailsDoCliente(cli)) { try { await env.PORTAL_KV.put(`climail:${em}`, cli.id); emails++; } catch { /* segue */ } }
   }
   return { ok: true, total, proximo: fim, fim: fim >= total, clientes, emails };
+}
+
+// Sincroniza os clientes do índice KV para a base D1 (espelha por documento). Garante
+// que clientes criados/editados ANTES desta mudança (adote, cadastros novos) apareçam na
+// lista de Cadastro (que agora lê do D1). Batched, resumível por offset, idempotente.
+export async function sincronizarKVparaD1(env, desde, limite) {
+  if (!env.PORTAL_KV || !env.DB_PLOOMES) return { ok: false, error: 'KV/D1 indisponível', fim: true };
+  const idx = await listarClientes(env);
+  const total = idx.length;
+  const ini = Math.max(0, Number(desde) || 0);
+  const fim = Math.min(total, ini + Math.max(1, Number(limite) || 100));
+  let sincronizados = 0, erros = 0;
+  for (let i = ini; i < fim; i++) {
+    const cli = await lerCliente(env, idx[i] && idx[i].id);
+    if (!cli) continue;
+    try { const pid = await espelharClienteD1(env, cli); if (pid && cli.ploomesId !== pid) { cli.ploomesId = pid; await env.PORTAL_KV.put(`cli:${cli.id}`, JSON.stringify(cli)); } sincronizados++; } catch { erros++; }
+  }
+  return { ok: true, total, proximo: fim, fim: fim >= total, sincronizados, erros };
 }
 
 // Busca dados de um CEP (BrasilAPI v2→v1). Só o necessário. null se falhar.
@@ -150,6 +289,12 @@ export function paginaManutencao(user) {
     <button class="btn btn-p" id="bEnd" onclick="rodarEnderecos()">Puxar endereços</button>
     <div id="mEnd" style="font-size:13px;color:#4F6469;margin-top:10px"></div>
   </div>
+  <div class="card" style="margin-top:14px">
+    <div style="font-size:15px;font-weight:800;color:#10262B">🔄 Sincronizar clientes recentes com a base</div>
+    <p style="font-size:13px;color:#4F6469;line-height:1.5;margin:8px 0 12px">A lista de clientes agora mostra <b>a base completa</b> (todos os migrados). Esta ferramenta cobre só os clientes criados/editados <b>recentemente</b> (adote, cadastros novos), para garantir que também apareçam. Roda em lotes, seguro repetir.</p>
+    <button class="btn btn-p" id="bSync" onclick="rodarSync()">Sincronizar agora</button>
+    <div id="mSync" style="font-size:13px;color:#4F6469;margin-top:10px"></div>
+  </div>
 </div>
 <script>
 async function rodarEmails(){
@@ -181,6 +326,21 @@ async function rodarEnderecos(){
       if(d.fim){ m.innerHTML='✅ Pronto! <b>'+atualizados+'</b> endereço(s) completados a partir do CEP.'; b.disabled=false; return; }
     }
   }catch(_){ m.textContent='Parou (conexão). Clique de novo — continua de onde parou.'; b.disabled=false; }
+}
+async function rodarSync(){
+  var b=document.getElementById('bSync'), m=document.getElementById('mSync');
+  b.disabled=true; var desde=0, sinc=0, total=0;
+  m.textContent='Iniciando…';
+  try{
+    while(true){
+      var r=await fetch('/api/cadastro/sync-d1',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({desde:desde})});
+      var d=await r.json();
+      if(!d.ok){ m.textContent='Erro: '+(d.error||'falhou'); b.disabled=false; return; }
+      sinc+=d.sincronizados||0; total=d.total||total; desde=d.proximo||desde;
+      m.innerHTML='Sincronizados <b>'+Math.min(desde,total)+'/'+total+'</b>…';
+      if(d.fim){ m.innerHTML='✅ Pronto! <b>'+total+'</b> clientes sincronizados com a base.'; b.disabled=false; return; }
+    }
+  }catch(_){ m.textContent='Sem conexão. Clique de novo — continua de onde parou.'; b.disabled=false; }
 }
 </script></body></html>`;
 }
@@ -391,7 +551,18 @@ export async function arquivosDoCliente(env, cli) {
   } catch { return []; }
 }
 
-export function paginaClienteDetalhe(user, cli, arquivos) {
+export function paginaClienteDetalhe(user, cli, arquivos, negocios) {
+  const negs = negocios || [];
+  const temDoc = cli.tipo === 'PJ' ? !!digits(cli.cnpj) : !!digits(cli.cpf);
+  const negRows = negs.length ? negs.map((n) => `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid #EEF1F0;border-radius:10px;padding:10px 12px;margin-bottom:7px;background:#FBFDFC">
+      <div style="min-width:0"><div style="font-size:12.5px;font-weight:700;color:#10262B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(n.titulo)}</div><div style="font-size:11px;color:#8fa39f">${esc(dataBR(n.data))}</div></div>
+      <span style="flex:none;font-size:10.5px;font-weight:800;color:${n.cor || '#8A6A16'}">${esc(n.status)}</span>
+    </div>`).join('') : '<div style="font-size:12.5px;color:#8fa39f">Nenhuma ordem de coleta anterior encontrada para este cliente.</div>';
+  const uploadUI = temDoc ? `<div style="border-top:1px dashed #E4EBE9;margin-top:12px;padding-top:12px">
+      <input type="file" id="arqFile" style="display:none" onchange="subirAnexo()">
+      <button type="button" class="btn btn-g" style="padding:9px 14px;font-size:13px" onclick="document.getElementById('arqFile').click()">＋ Adicionar anexo</button>
+      <span id="arqMsg" style="font-size:12px;color:#4F6469;margin-left:10px"></span>
+    </div>` : `<div style="font-size:12px;color:#a06a62;margin-top:10px">Cadastre o ${cli.tipo === 'PJ' ? 'CNPJ' : 'CPF'} para poder anexar documentos a este cliente.</div>`;
   const e = cli.endereco || {};
   const endereco = [[e.logradouro, e.numero].filter(Boolean).join(', '), e.complemento, e.bairro, [e.cidade, e.uf].filter(Boolean).join('/'), e.cep].filter(Boolean).join(' · ');
   const linha = (l, v) => v ? `<tr><td style="padding:8px 0;border-top:1px solid #EEF1F0;color:#6B7B78;width:38%">${esc(l)}</td><td style="padding:8px 0;border-top:1px solid #EEF1F0;font-weight:600">${esc(v)}</td></tr>` : '';
@@ -425,13 +596,29 @@ export function paginaClienteDetalhe(user, cli, arquivos) {
     ${cli.tipo === 'PJ' ? `<div class="sec">Contatos</div>${contatos}` : ''}
   </div>
   <div class="card" style="margin-top:14px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><div class="sec" style="margin-top:0">📋 Ordens de coleta — histórico</div>${negs.length ? `<span style="font-size:11px;color:#8fa39f">${negs.length}</span>` : ''}</div>
+    <div style="font-size:11.5px;color:#9aa7a4;margin:-2px 0 10px">Coletas e atendimentos anteriores deste cliente, migrados do Ploomes.</div>
+    ${negRows}
+  </div>
+  <div class="card" style="margin-top:14px">
     <div style="display:flex;justify-content:space-between;align-items:baseline"><div class="sec" style="margin-top:0">📎 Documentos &amp; anexos</div>${arqs.length ? `<span style="font-size:11px;color:#8fa39f">${arqs.length} arquivo(s)</span>` : ''}</div>
-    <div style="font-size:11.5px;color:#9aa7a4;margin:-2px 0 10px">Notas, certificados, MTR e propostas migrados do Ploomes — ligados a este cliente pelo CNPJ/CPF.</div>
+    <div style="font-size:11.5px;color:#9aa7a4;margin:-2px 0 10px">Notas, certificados, MTR e propostas migrados do Ploomes + os que você anexar aqui — ligados a este cliente pelo CNPJ/CPF.</div>
     ${arqRows}
+    ${uploadUI}
   </div>
   <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap"><a href="/coletas/nova?cliente=${esc(cli.id)}" class="btn btn-p">＋ Gerar coleta</a>
     <a href="/coletas?cliente=${esc(cli.id)}" class="btn btn-g">Ver coletas deste cliente</a></div>
 </div>
+<script>
+function subirAnexo(){var f=document.getElementById('arqFile'),m=document.getElementById('arqMsg');if(!f||!f.files||!f.files[0])return;var file=f.files[0];
+  if(file.size>15728640){m.style.color='#a06a62';m.textContent='Arquivo muito grande (máx. 15 MB).';return;}
+  m.style.color='#4F6469';m.textContent='Enviando '+file.name+'…';
+  var fd=new FormData();fd.append('file',file);fd.append('cliente',${JSON.stringify(cli.id)});
+  fetch('/api/cadastro/anexo',{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(j){
+    if(j&&j.ok){m.style.color='#1E7A3D';m.textContent='✓ Anexado! Atualizando…';setTimeout(function(){location.reload();},700);}
+    else{m.style.color='#a06a62';m.textContent=(j&&j.erro)||'Não consegui anexar.';}
+  }).catch(function(){m.style.color='#a06a62';m.textContent='Sem conexão. Tente de novo.';});}
+</script>
 </body></html>`;
 }
 

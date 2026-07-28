@@ -163,9 +163,11 @@ function topo(sub) {
 }
 const pill = (status) => `<span style="flex:none;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;color:${STATUS_COR[status] || '#7c8a87;background:#EEF1F0'}">${esc((STATUS[status] || status).toUpperCase())}</span>`;
 
-export function paginaColetasLista(user, coletas, q, cliCtx) {
+export function paginaColetasLista(user, coletas, q, cliCtx, negocios) {
   q = q || '';
   const filtroCli = cliCtx && cliCtx.nome ? cliCtx : null;
+  const negs = (filtroCli && Array.isArray(negocios)) ? negocios : [];
+  const histBlock = negs.length ? `<div style="margin-top:20px"><div style="font-size:12px;font-weight:800;color:#7c8a87;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Histórico anterior — migrado do Ploomes · ${negs.length}</div>${negs.map((n) => `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid #E4EBE9;border-radius:12px;padding:12px 15px;margin-bottom:8px;background:#FBFDFC"><div style="min-width:0"><div style="font-size:13px;font-weight:700;color:#10262B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(n.titulo)}</div><div style="font-size:11.5px;color:#8fa39f">${esc(dataBR(n.data))}</div></div><span style="flex:none;font-size:10px;font-weight:800;color:${n.cor || '#8A6A16'}">${esc(String(n.status || '').toUpperCase())}</span></div>`).join('')}</div>` : '';
   const abertas = coletas.filter((c) => c.status !== 'concluida' && c.status !== 'cancelada').length;
   const linhas = coletas.length ? coletas.map((c) => `<a href="/coletas/os?id=${esc(c.id)}" style="display:flex;justify-content:space-between;align-items:center;gap:12px;text-decoration:none;background:#fff;border:1px solid #E4EBE9;border-radius:12px;padding:13px 15px;margin-bottom:9px">
       <div style="min-width:0"><div style="font-size:14px;font-weight:800;color:#10262B">${esc(c.numero)} <span style="font-weight:600;color:#7c8a87">· ${esc(c.clienteNome || '')}</span></div>
@@ -179,6 +181,7 @@ export function paginaColetasLista(user, coletas, q, cliCtx) {
   <a href="/coletas/nova?cliente=${esc(filtroCli.id)}" class="btn btn-p" style="margin-bottom:14px">＋ Nova coleta para este cliente</a>` : `<form method="get" action="/coletas" style="margin:0 0 12px"><input name="q" value="${esc(q)}" placeholder="🔎 Buscar por número (ex.: OS-2026-0001) ou cliente… e aperte Enter" autocomplete="off" style="width:100%;border:1px solid #DDE1E6;border-radius:10px;padding:11px 12px;font-size:14px;font-family:inherit"></form>
   <a href="/cadastro" class="btn btn-g" style="margin-bottom:14px">Abrir coleta a partir de um cliente →</a>`}
   <div>${linhas}</div>
+  ${histBlock}
 </div></body></html>`;
 }
 
