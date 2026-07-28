@@ -310,6 +310,32 @@ export async function salvarCliente(env, rec) {
   return rec;
 }
 
+// CURA de contatos (bug relatado pela Débora em 2026-07-28): registros KV
+// "materializados" ANTES de o sistema aprender a puxar as pessoas vinculadas do
+// Ploomes ficaram sem contatos — e o formulário de edição, vazio, regravava a
+// lista vazia por cima ("os contatos somem"). Aqui: se o KV de uma empresa está
+// sem contatos e o migrado tem pessoas vinculadas, preenche e regrava (1×).
+// Respeita remoção INTENCIONAL: quem salvar a lista vazia de propósito ganha a
+// marca semContatosIntencional e a cura não desfaz.
+export async function curarContatosKV(env, kv) {
+  try {
+    if (!kv || kv.tipo !== 'PJ' || (Array.isArray(kv.contatos) && kv.contatos.length) || kv.semContatosIntencional) return kv;
+    let pid = Number(kv.ploomesId) || 0;
+    if (!pid && env.DB_PLOOMES) {
+      const doc = digits(kv.cnpj);
+      if (doc) { const ex = await env.DB_PLOOMES.prepare("SELECT ploomes_id FROM contatos WHERE documento=?1 AND tipo='PJ' LIMIT 1").bind(doc).first(); if (ex) pid = Number(ex.ploomes_id); }
+    }
+    if (!pid) return kv;
+    const d1 = await lerClienteD1(env, pid);
+    if (d1 && Array.isArray(d1.contatos) && d1.contatos.length) {
+      kv.contatos = d1.contatos;
+      if (!kv.ploomesId) kv.ploomesId = pid;
+      await salvarCliente(env, kv);
+    }
+  } catch { /* cura é best-effort — nunca derruba a tela */ }
+  return kv;
+}
+
 // Backfill do índice de login: percorre os clientes já cadastrados e (re)grava
 // climail:<email> → id, em lotes. Resumível por offset no cli:index — pode rodar
 // várias vezes com segurança (idempotente).

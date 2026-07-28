@@ -54,7 +54,7 @@ import { sondarAnexosPloomes, paginaSondaAnexos } from './ploomes-docs.js';
 import { amostraContatosPloomes, paginaAmostraContatos, importarLoteContatos, estatisticasMigracao, buscarContatos, paginaMigrarPloomes, detalheContato, paginaContatoDetalhe, importarLoteNegocios, estatisticasNegocios, paginaMigrarNegocios } from './ploomes-migracao.js';
 import { importarLoteAnexos, importarLoteAnexosContatos, completarAnexos, importarAnexosJanela, reprocessarFalhas, importarLoteDocumentos, recuperarDocumentos, estatisticasArquivos, paginaMigrarArquivos, diagnosticoAnexos, paginaDiagAnexos } from './ploomes-arquivos.js';
 import { fiscalPermitido, nomeFiscal, listarNotas, lerNota, importarLote, vincularNota, sugerirVinculoSync, paginaFiscalLogin, paginaFiscalHome, paginaFiscalResultado, paginaFiscalNota } from './fiscal.js';
-import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, emailsDoCliente, reindexarEmailsClientes, backfillEnderecos, paginaManutencao, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, clienteDeLead, arquivosDoCliente, paginaLeads, paginaLeadDetalhe, paginaInicio, listarClientesD1, contagensClientesD1, lerClienteD1, negociosDoCliente, espelharClienteD1, sincronizarKVparaD1, lerNegocioDetalheD1, paginaOSDetalhe } from './cadastro.js';
+import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, emailsDoCliente, reindexarEmailsClientes, backfillEnderecos, paginaManutencao, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, clienteDeLead, arquivosDoCliente, paginaLeads, paginaLeadDetalhe, paginaInicio, listarClientesD1, contagensClientesD1, lerClienteD1, negociosDoCliente, espelharClienteD1, sincronizarKVparaD1, lerNegocioDetalheD1, paginaOSDetalhe, curarContatosKV } from './cadastro.js';
 import { listarColetasOS, lerColetaOS, criarColetaOS, atualizarStatusOS, atualizarColetaOS, anexarTelemetriaOS, registrarAnexoColeta, removerAnexoColeta, paginaColetasLista, paginaGerarColeta, paginaEditarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga } from './coletas.js';
 import { listarVeiculos, lerVeiculo, salvarVeiculo, paginaFrota, paginaVeiculoForm, lerJornadaAtiva, abrirJornada, fecharJornada, registrarAbastecimento, tagColetaComVeiculo, servirFotoJornada, bannerJornada, paginaAbrirDia, paginaFecharDia, paginaAbastecer, placaDaColeta } from './frota.js';
 import { carregarEquipeNoEnv, listarUsuarios, lerUsuario, salvarUsuario, importarUsuarios, paginaEquipe, paginaUsuarioForm, paginaEquipeImportar } from './equipe.js';
@@ -793,6 +793,9 @@ export default {
         if (!b || (b.tipo !== 'PJ' && b.tipo !== 'PF')) return json({ ok: false, error: 'dados' }, 400);
         if (b.tipo === 'PJ' && !String(b.razaoSocial || '').trim()) return json({ ok: false, error: 'Informe a razão social.' }, 400);
         if (b.tipo === 'PF' && !String(b.nome || '').trim()) return json({ ok: false, error: 'Informe o nome.' }, 400);
+        // Lista de contatos salva VAZIA de propósito? Marca a intenção — a cura
+        // automática (curarContatosKV) respeita e não repõe os contatos migrados.
+        if (Array.isArray(b.contatos)) b.semContatosIntencional = b.contatos.length === 0;
         let existente = null; if (b.id) existente = await lerCliente(env, b.id);
         const leadOrigem = String(b.leadOrigem || '').trim(); if ('leadOrigem' in b) delete b.leadOrigem;
         const salvo = await salvarCliente(env, existente ? { ...existente, ...b } : b);
@@ -891,7 +894,7 @@ export default {
         const os = await lerColetaOS(env, url.searchParams.get('id') || '');
         if (!os) return html(paginaMensagem('Coleta não encontrada', 'Volte e tente de novo.'), 404);
         let contatos = [];
-        try { const cli = os.clienteId ? await lerCliente(env, os.clienteId) : null; if (cli) contatos = cli.tipo === 'PJ' ? (cli.contatos || []) : [{ nome: cli.nome, fone: cli.fone, email: cli.email }]; } catch { /* sem contatos do cliente, tudo bem */ }
+        try { const cli = os.clienteId ? await curarContatosKV(env, await lerCliente(env, os.clienteId)) : null; if (cli) contatos = cli.tipo === 'PJ' ? (cli.contatos || []) : [{ nome: cli.nome, fone: cli.fone, email: cli.email }]; } catch { /* sem contatos do cliente, tudo bem */ }
         const agentes = [...agentesDe(env).entries()].map(([email, nome]) => ({ email, nome }));
         let veiculos = []; try { veiculos = await listarVeiculos(env); } catch { /* ok */ }
         return html(paginaEditarColeta(escritorio, os, contatos, agentes, veiculos));
@@ -2125,7 +2128,7 @@ async function listarOS(sessao, env) {
 async function carregarClientePorId(env, id) {
   const s = String(id || '');
   if (/^p\d+$/.test(s)) return await lerClienteD1(env, s.slice(1));
-  return await lerCliente(env, s);
+  return await curarContatosKV(env, await lerCliente(env, s));
 }
 // Materializa um contato D1 como registro KV (necessário para editar / gerar coleta).
 // Reaproveita um KV existente com o mesmo documento; senão cria um novo (que já espelha
@@ -2137,7 +2140,7 @@ async function materializarClienteKV(env, id) {
   if (!d1) return null;
   const doc = String(d1.tipo === 'PJ' ? d1.cnpj : d1.cpf || '').replace(/\D/g, '');
   if (doc) {
-    try { const idx = await listarClientes(env); const hit = idx.find((c) => String(c.doc || '').replace(/\D/g, '') === doc); if (hit) { const kv = await lerCliente(env, hit.id); if (kv) return kv; } } catch { /* segue e cria */ }
+    try { const idx = await listarClientes(env); const hit = idx.find((c) => String(c.doc || '').replace(/\D/g, '') === doc); if (hit) { const kv = await lerCliente(env, hit.id); if (kv) return await curarContatosKV(env, kv); } } catch { /* segue e cria */ }
   }
   const endBase = { ...(d1.endereco || {}) };
   if (d1.enderecoTexto && !(endBase.logradouro || endBase.cep)) endBase.logradouro = d1.enderecoTexto;
