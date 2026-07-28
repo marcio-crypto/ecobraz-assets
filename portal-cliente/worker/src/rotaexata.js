@@ -29,11 +29,11 @@ const BASES_RESERVA = ['https://api.rotaexata.com.br', 'https://app.rotaexata.co
 const corte = (s, n) => String(s == null ? '' : s).slice(0, n);
 function tipoDe(v) { if (v == null) return 'vazio'; if (Array.isArray(v)) return `lista[${v.length}]`; return typeof v; }
 // Estrutura SEM valores: nomes de campos + tipo (e 1 nível de um item de lista).
-function estrutura(x, prof = 0) {
-  if (Array.isArray(x)) return x.length ? { _lista: x.length, item: prof < 2 ? estrutura(x[0], prof + 1) : '(…)' } : { _lista: 0 };
+function estrutura(x, prof = 0, max = 2) {
+  if (Array.isArray(x)) return x.length ? { _lista: x.length, item: prof < max ? estrutura(x[0], prof + 1, max) : '(…)' } : { _lista: 0 };
   if (x && typeof x === 'object') {
     const o = {};
-    for (const k of Object.keys(x).slice(0, 40)) o[k] = (prof < 2 && x[k] && typeof x[k] === 'object') ? estrutura(x[k], prof + 1) : tipoDe(x[k]);
+    for (const k of Object.keys(x).slice(0, 40)) o[k] = (prof < max && x[k] && typeof x[k] === 'object') ? estrutura(x[k], prof + 1, max) : tipoDe(x[k]);
     return o;
   }
   return tipoDe(x);
@@ -217,6 +217,9 @@ export async function sondaRotaExata(env) {
     return (item.veiculo && typeof item.veiculo === 'object' ? item.veiculo.id : null) ?? item.veiculoId ?? item.id ?? item._id ?? item.deviceId ?? item.codigo ?? null;
   };
 
+  const fimDica = ROTAEXATA_PRONTO
+    ? ' O rastreio já está LIGADO — esta sonda fica como auditoria contínua.'
+    : ' Resultado salvo — só me avise que rodou, que eu fixo o mapeamento e ligo o rastreio.';
   let authOk = null, idAchado = null;
   for (const a of auths) {
     let acertou = false;
@@ -228,7 +231,7 @@ export async function sondaRotaExata(env) {
         out.tentativas.push(ent);
         acertou = true; authOk = a;
         const id = extraiId(r.corpo); if (id != null && idAchado == null) idAchado = id;
-        if (ehPosicao(ent.estrutura)) { out.dica = 'ACHOU POSIÇÕES! (latitude/longitude na estrutura acima). Resultado salvo — só me avise que rodou, que eu fixo o mapeamento e ligo o rastreio.'; return fimSonda(env, out); }
+        if (ehPosicao(ent.estrutura)) { out.dica = 'ACHOU POSIÇÕES! (latitude/longitude na estrutura acima).' + fimDica; return fimSonda(env, out); }
       } else {
         ent.detalhe = r.erro || corte(r.texto, 80);
         out.tentativas.push(ent);
@@ -244,7 +247,7 @@ export async function sondaRotaExata(env) {
       if (r.status >= 200 && r.status < 300 && r.corpo != null) {
         ent.estrutura = estrutura(r.corpo);
         out.tentativas.push(ent);
-        if (ehPosicao(ent.estrutura)) { out.dica = 'ACHOU POSIÇÕES (rota com id)! Resultado salvo — só me avise que rodou, que eu fixo o mapeamento e ligo o rastreio.'; return fimSonda(env, out); }
+        if (ehPosicao(ent.estrutura)) { out.dica = 'ACHOU POSIÇÕES (rota com id)!' + fimDica; return fimSonda(env, out); }
       } else { ent.detalhe = r.erro || corte(r.texto, 80); out.tentativas.push(ent); }
     }
   }
@@ -321,8 +324,10 @@ function acharTexto(x, chaves, prof = 0) {
   }
   return '';
 }
-const extrairPlaca = (a) => acharTexto(a, ['placa', 'plate', 'licensePlate', 'license_plate', 'Placa']);
-const extrairApelido = (a) => corte(acharTexto(a, ['apelido', 'nome', 'descricao', 'identificacao', 'label', 'name', 'modelo']), 40);
+// 'vei_placa' e 'vei_descricao' são os nomes REAIS do RotaExata (amostra de
+// 2026-07-28 no D1, diagnosticos id=2: data[].vei_placa / data[].vei_descricao).
+const extrairPlaca = (a) => acharTexto(a, ['placa', 'vei_placa', 'plate', 'licensePlate', 'license_plate', 'Placa']);
+const extrairApelido = (a) => corte(acharTexto(a, ['apelido', 'vei_descricao', 'nome', 'descricao', 'identificacao', 'label', 'name', 'modelo']), 40);
 const adesaoInativa = (a) => !!(a && (a.ativo === false || a.ativa === false || a.ativado === false || /cancelad|inativ|suspens|bloquead/i.test(String(a.status || a.situacao || ''))));
 
 // Acha o par latitude/longitude em qualquer nível razoável da resposta.
@@ -347,7 +352,7 @@ async function amostraDiaria(env, amostra, falha = false) {
   try {
     if (!env.DB_PLOOMES) return;
     const dia = new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10);
-    const marca = `rotaexata:amostra:${falha ? 'erro' : 'ok'}:${dia}`;
+    const marca = `rotaexata:amostra:v2:${falha ? 'erro' : 'ok'}:${dia}`;
     if (env.PORTAL_KV) {
       if (await env.PORTAL_KV.get(marca)) return;
       await env.PORTAL_KV.put(marca, '1', { expirationTtl: falha ? 3600 : 172800 });
@@ -386,7 +391,7 @@ export async function posicoesFrota(env) {
     for (const id of idsCandidatos(a)) {
       const rp = await getAut(tok, `/ultima-posicao/${encodeURIComponent(String(id))}`);
       if (!(rp.status >= 200 && rp.status < 300) || rp.corpo == null) continue;
-      if (!estPos) estPos = estrutura(rp.corpo);
+      if (!estPos) estPos = estrutura(rp.corpo, 0, 4); // mais fundo: mostra os campos dentro de data[0].posicao
       const pos = extrairPosicao(rp.corpo);
       if (pos) return { placa: placa || `ID ${id}`, apelido: extrairApelido(a), lat: pos.lat, lng: pos.lng, velocidade: pos.velocidade, em: pos.em };
     }
@@ -397,6 +402,7 @@ export async function posicoesFrota(env) {
     adesoes: { status: rAd.status, itensNaLista: comoLista(rAd.corpo).length, ativos: lista.length, estrutura: estrutura(rAd.corpo) },
     ultimaPosicao: { estrutura: estPos },
     posicoesExtraidas: veiculos.length,
+    comPlacaReal: veiculos.filter((v) => !/^ID /.test(v.placa)).length, // quantas vieram com placa de verdade (sem expor a placa)
   }, veiculos.length === 0);
 
   if (!veiculos.length) return { ok: false, motivo: 'sem_posicao', veiculos: [] };
@@ -525,7 +531,7 @@ function pinta(d){
     var prox = v.proxima ? (escapeHtml(v.proxima.numero||'')+' · '+escapeHtml(v.proxima.cliente||'')) : '—';
     return '<div class="card">'
       +'<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">'
-      +'<div><span style="font-size:15px;font-weight:800">🚛 '+escapeHtml(v.placa||'—')+'</span>'+(v.apelido?' <span style="font-size:12px;color:#7c8a87">· '+escapeHtml(v.apelido)+'</span>':'')+(v.motorista?' <span style="font-size:12px;color:#0B5B66;font-weight:700">· '+escapeHtml(v.motorista)+'</span>':'')+'</div>'
+      +'<div><span style="font-size:15px;font-weight:800">🚛 '+escapeHtml(v.placa||'—')+'</span>'+(v.apelido?' <span style="font-size:12px;color:#7c8a87">· '+escapeHtml(v.apelido)+'</span>':'')+(v.motorista?' <span style="font-size:12px;color:#0B5B66;font-weight:700">· '+escapeHtml(v.motorista)+'</span>':'')+(v.foraCadastro?' <span style="font-size:10.5px;color:#8a6a16;background:#FFF6DC;border:1px solid #eadfb0;border-radius:14px;padding:2px 8px;font-weight:800">rastreador fora do cadastro da Frota</span>':'')+'</div>'
       +'<div style="font-size:12px">'+pos+'</div></div>'
       +'<div style="font-size:12.5px;color:#28413f;margin-top:8px">Atendendo agora: '+atual+'</div>'
       +'<div style="font-size:12.5px;color:#28413f;margin-top:3px">Próxima da fila: '+prox+'</div>'

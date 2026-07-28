@@ -2496,6 +2496,13 @@ async function montarFrotaAoVivo(env) {
   const posPor = new Map();
   for (const v of (posRes.veiculos || [])) posPor.set(normP(v.placa), v);
   for (const [k, reg] of porPlaca) { const p = posPor.get(k); if (p) reg.pos = { lat: p.lat, lng: p.lng, velocidade: p.velocidade ?? null, em: p.em || null }; }
+  // Rastreadores com posição cuja placa NÃO casou com nenhuma do cadastro da Frota:
+  // entram no fim da lista com etiqueta, para a divergência APARECER (em vez de a
+  // posição sumir em silêncio) — aí é só acertar a placa no Cadastro da Frota.
+  for (const [k, p] of posPor) {
+    if (porPlaca.has(k)) continue;
+    porPlaca.set(k, { placa: p.placa, apelido: p.apelido || '', motorista: '', coletaAtual: null, proxima: null, concluidasHoje: 0, foraCadastro: true, pos: { lat: p.lat, lng: p.lng, velocidade: p.velocidade ?? null, em: p.em || null } });
+  }
   return { ok: true, posOk: !!posRes.ok, motivo: posRes.motivo || '', frota: [...porPlaca.values()] };
 }
 
