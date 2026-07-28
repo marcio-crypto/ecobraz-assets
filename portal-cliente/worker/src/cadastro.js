@@ -162,6 +162,85 @@ export async function negociosDoCliente(env, cli) {
     return negs;
   } catch { return []; }
 }
+
+// Ficha COMPLETA de uma OS migrada (negócio/venda do Ploomes): dados da venda a partir
+// do registro completo (dados_json) + os documentos dela. É o que abre quando a equipe
+// clica numa OS do histórico.
+export async function lerNegocioDetalheD1(env, dealId) {
+  if (!env.DB_PLOOMES) return null;
+  const id = Number(digits(dealId));
+  if (!id) return null;
+  let n = null;
+  try { n = await env.DB_PLOOMES.prepare('SELECT ploomes_id, titulo, contact_id, status_id, amount, criado_em, dados_json FROM negocios WHERE ploomes_id=?1').bind(id).first(); } catch { n = null; }
+  if (!n) return null;
+  let d = {}; try { d = JSON.parse(n.dados_json || '{}') || {}; } catch { d = {}; }
+  // Campos personalizados da venda — mostra o que é legível por humano (opções tipo
+  // "Certificado Detalhado", textos, datas, responsável), sem depender de FieldId fixo.
+  const campos = [];
+  for (const op of (Array.isArray(d.OtherProperties) ? d.OtherProperties : [])) {
+    if (!op) continue;
+    if (op.ObjectValueName) campos.push({ rotulo: 'Opção marcada', valor: limpar(op.ObjectValueName) });
+    else if (op.UserValueName) campos.push({ rotulo: 'Responsável', valor: limpar(op.UserValueName) });
+    else if (op.StringValue || op.BigStringValue) campos.push({ rotulo: 'Informação', valor: limpar(op.StringValue || op.BigStringValue).slice(0, 300) });
+    else if (op.DateTimeValue) campos.push({ rotulo: 'Data (campo do Ploomes)', valor: dataBR(op.DateTimeValue) });
+  }
+  let arquivos = [];
+  try { const ar = await env.DB_PLOOMES.prepare('SELECT r2_key, nome_arquivo, content_type, tamanho FROM arquivos_ploomes WHERE deal_id=?1 ORDER BY nome_arquivo').bind(id).all(); arquivos = ar.results || []; } catch { arquivos = []; }
+  let cli = null;
+  try { cli = await env.DB_PLOOMES.prepare('SELECT ploomes_id, nome, documento, tipo FROM contatos WHERE ploomes_id=?1').bind(Number(n.contact_id) || 0).first(); } catch { cli = null; }
+  return {
+    id: n.ploomes_id,
+    titulo: limpar(n.titulo) || ('Atendimento ' + n.ploomes_id),
+    status: n.status_id === 2 ? 'Concluída' : (n.status_id === 3 ? 'Perdida' : 'Em atendimento'),
+    cor: n.status_id === 2 ? '#1E7A3D' : (n.status_id === 3 ? '#a06a62' : '#8A6A16'),
+    inicio: d.StartDate || n.criado_em || '', fim: d.FinishDate || '',
+    valor: Number(n.amount) || 0,
+    pessoa: limpar(d.PersonName || ''),
+    clienteNome: limpar((cli && cli.nome) || d.ContactName || ''),
+    clienteDoc: (cli && cli.documento) || '',
+    clienteIdLista: cli ? 'p' + cli.ploomes_id : '',
+    campos, arquivos,
+  };
+}
+
+export function paginaOSDetalhe(user, os) {
+  const fmtTamO = (n) => { n = Number(n || 0); return n ? (n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB') : ''; };
+  const linhaT = (l, v) => v ? `<tr><td style="padding:9px 0;border-top:1px solid #EEF1F0;color:#6B7B78;width:36%">${esc(l)}</td><td style="padding:9px 0;border-top:1px solid #EEF1F0;font-weight:600">${esc(v)}</td></tr>` : '';
+  const camposRows = (os.campos || []).map((c) => linhaT(c.rotulo, c.valor)).join('');
+  const docs = (os.arquivos || []);
+  const docRows = docs.length ? docs.map((a) => `<a href="/cadastro/arquivo?key=${encodeURIComponent(a.r2_key)}&nome=${encodeURIComponent(a.nome_arquivo || '')}" target="_blank" rel="noopener" style="display:flex;justify-content:space-between;align-items:center;gap:10px;text-decoration:none;border:1px solid #EEF1F0;border-radius:10px;padding:10px 12px;margin-bottom:7px;background:#FBFDFC">
+      <span style="min-width:0;font-size:12.5px;color:#10262B;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">📄 ${esc(a.nome_arquivo || a.r2_key)}</span>
+      <span style="flex:none;font-size:11px;color:#0B5B66;font-weight:700">${fmtTamO(a.tamanho) ? fmtTamO(a.tamanho) + ' · ' : ''}abrir ↗</span>
+    </a>`).join('') : '<div style="font-size:12.5px;color:#8fa39f">Sem documentos vinculados a esta OS.</div>';
+  return `${head('OS ' + os.id)}<body>${topo(user, 'cadastro')}
+<style>@media print{.no-print{display:none!important}body{background:#fff!important}}</style>
+<div class="wrap">
+  <div class="no-print" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+    ${os.clienteIdLista ? `<a href="/cadastro/cliente?id=${esc(os.clienteIdLista)}" style="font-size:13px;font-weight:800;text-decoration:none;color:#4F6469">← Ficha do cliente</a>` : `<a href="/cadastro" style="font-size:13px;font-weight:800;text-decoration:none;color:#4F6469">← Cadastro</a>`}
+    <button class="btn btn-g" style="padding:9px 14px;font-size:13px" onclick="window.print()">🖨️ Imprimir / salvar em PDF</button>
+  </div>
+  <div style="margin:14px 0 4px"><span style="font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;background:#E7EFF0;color:#0B5B66">ORDEM DE SERVIÇO · MIGRADA DO PLOOMES</span></div>
+  <h1 style="font-size:21px;margin:6px 0 2px">${esc(os.titulo)}</h1>
+  <div style="font-size:12.5px;color:#7c8a87;margin-bottom:14px">OS nº ${esc(String(os.id))} · <span style="font-weight:800;color:${os.cor}">${esc(os.status)}</span></div>
+  <div class="card">
+    <div class="sec" style="margin-top:0">Dados da venda</div>
+    <table role="presentation" style="width:100%;border-collapse:collapse;font-size:13.5px">
+      ${linhaT('Cliente', os.clienteNome)}
+      ${linhaT('Documento', os.clienteDoc ? (String(os.clienteDoc).length === 14 ? fmtCNPJ(os.clienteDoc) : fmtCPF(os.clienteDoc)) : '')}
+      ${linhaT('Pessoa de contato', os.pessoa)}
+      ${linhaT('Início', dataBR(os.inicio))}
+      ${linhaT('Conclusão', dataBR(os.fim))}
+      ${os.valor > 0 ? linhaT('Valor', 'R$ ' + os.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })) : ''}
+      ${camposRows}
+    </table>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><div class="sec" style="margin-top:0">📎 Documentos desta OS</div>${docs.length ? `<span style="font-size:11px;color:#8fa39f">${docs.length} arquivo(s)</span>` : ''}</div>
+    ${docRows}
+  </div>
+</div>
+</body></html>`;
+}
 // Espelha um cliente salvo (KV) na base D1, casando por DOCUMENTO (upsert). Assim a
 // lista de Cadastro (que lê do D1) já mostra clientes novos/editados. Best-effort.
 export async function espelharClienteD1(env, rec) {
@@ -586,11 +665,12 @@ export async function arquivosDoCliente(env, cli) {
 export function paginaClienteDetalhe(user, cli, arquivos, negocios) {
   const negs = negocios || [];
   const temDoc = cli.tipo === 'PJ' ? !!digits(cli.cnpj) : !!digits(cli.cpf);
-  const fmtTam2 = (n) => { n = Number(n || 0); return n ? (n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB') : ''; };
   const negRows = negs.length ? negs.map((n) => {
     const docs = n.arquivos || [];
-    const docLinks = docs.length ? docs.map((a) => `<a href="/cadastro/arquivo?key=${encodeURIComponent(a.r2_key)}&nome=${encodeURIComponent(a.nome_arquivo || '')}" target="_blank" rel="noopener" style="display:flex;justify-content:space-between;align-items:center;gap:8px;text-decoration:none;border:1px solid #EEF1F0;border-radius:8px;padding:8px 10px;margin:6px 0 0;background:#fff"><span style="min-width:0;font-size:12px;color:#10262B;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">📄 ${esc(a.nome_arquivo || a.r2_key)}</span><span style="flex:none;font-size:10.5px;color:#0B5B66;font-weight:700">${fmtTam2(a.tamanho) ? fmtTam2(a.tamanho) + ' · ' : ''}abrir ↗</span></a>`).join('') : '<div style="font-size:11.5px;color:#8fa39f;padding:6px 0 2px">Sem documentos vinculados a esta OS.</div>';
-    return `<details style="border:1px solid #EEF1F0;border-radius:10px;padding:2px 12px;margin-bottom:7px;background:#FBFDFC"><summary style="cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0"><span style="min-width:0"><span style="font-size:12.5px;font-weight:700;color:#10262B">${esc(n.titulo)}</span><span style="display:block;font-size:11px;color:#8fa39f">${esc(dataBR(n.data))}${docs.length ? ` · ${docs.length} documento(s) — toque para abrir` : ''}</span></span><span style="flex:none;font-size:10.5px;font-weight:800;color:${n.cor || '#8A6A16'}">${esc(n.status)}</span></summary><div style="padding:0 0 10px">${docLinks}</div></details>`;
+    return `<a href="/cadastro/os-ploomes?id=${esc(String(n.id))}" style="display:flex;justify-content:space-between;align-items:center;gap:10px;text-decoration:none;border:1px solid #EEF1F0;border-radius:10px;padding:10px 12px;margin-bottom:7px;background:#FBFDFC">
+      <span style="min-width:0"><span style="font-size:12.5px;font-weight:700;color:#10262B">${esc(n.titulo)}</span><span style="display:block;font-size:11px;color:#8fa39f">${esc(dataBR(n.data))}${docs.length ? ` · ${docs.length} documento(s)` : ''}</span></span>
+      <span style="flex:none;text-align:right"><span style="display:block;font-size:10.5px;font-weight:800;color:${n.cor || '#8A6A16'}">${esc(n.status)}</span><span style="font-size:10.5px;color:#0B5B66;font-weight:700">abrir OS ↗</span></span>
+    </a>`;
   }).join('') : '<div style="font-size:12.5px;color:#8fa39f">Nenhuma ordem de coleta anterior encontrada para este cliente.</div>';
   const uploadUI = temDoc ? `<div style="border-top:1px dashed #E4EBE9;margin-top:12px;padding-top:12px">
       <input type="file" id="arqFile" style="display:none" onchange="subirAnexo()">

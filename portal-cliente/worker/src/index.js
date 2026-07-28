@@ -52,7 +52,7 @@ import { sondarAnexosPloomes, paginaSondaAnexos } from './ploomes-docs.js';
 import { amostraContatosPloomes, paginaAmostraContatos, importarLoteContatos, estatisticasMigracao, buscarContatos, paginaMigrarPloomes, detalheContato, paginaContatoDetalhe, importarLoteNegocios, estatisticasNegocios, paginaMigrarNegocios } from './ploomes-migracao.js';
 import { importarLoteAnexos, importarLoteAnexosContatos, completarAnexos, importarAnexosJanela, reprocessarFalhas, importarLoteDocumentos, recuperarDocumentos, estatisticasArquivos, paginaMigrarArquivos, diagnosticoAnexos, paginaDiagAnexos } from './ploomes-arquivos.js';
 import { fiscalPermitido, nomeFiscal, listarNotas, lerNota, importarLote, vincularNota, sugerirVinculoSync, paginaFiscalLogin, paginaFiscalHome, paginaFiscalResultado, paginaFiscalNota } from './fiscal.js';
-import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, emailsDoCliente, reindexarEmailsClientes, backfillEnderecos, paginaManutencao, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, clienteDeLead, arquivosDoCliente, paginaLeads, paginaLeadDetalhe, paginaInicio, listarClientesD1, contagensClientesD1, lerClienteD1, negociosDoCliente, espelharClienteD1, sincronizarKVparaD1 } from './cadastro.js';
+import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, emailsDoCliente, reindexarEmailsClientes, backfillEnderecos, paginaManutencao, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, clienteDeLead, arquivosDoCliente, paginaLeads, paginaLeadDetalhe, paginaInicio, listarClientesD1, contagensClientesD1, lerClienteD1, negociosDoCliente, espelharClienteD1, sincronizarKVparaD1, lerNegocioDetalheD1, paginaOSDetalhe } from './cadastro.js';
 import { listarColetasOS, lerColetaOS, criarColetaOS, atualizarStatusOS, atualizarColetaOS, registrarAnexoColeta, removerAnexoColeta, paginaColetasLista, paginaGerarColeta, paginaEditarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga } from './coletas.js';
 import { listarVeiculos, lerVeiculo, salvarVeiculo, paginaFrota, paginaVeiculoForm, lerJornadaAtiva, abrirJornada, fecharJornada, registrarAbastecimento, tagColetaComVeiculo, servirFotoJornada, bannerJornada, paginaAbrirDia, paginaFecharDia, paginaAbastecer, placaDaColeta } from './frota.js';
 import { carregarEquipeNoEnv, listarUsuarios, lerUsuario, salvarUsuario, importarUsuarios, paginaEquipe, paginaUsuarioForm, paginaEquipeImportar } from './equipe.js';
@@ -705,6 +705,13 @@ export default {
         let arquivos = []; try { arquivos = await arquivosDoCliente(env, cli); } catch { /* sem arquivos, tudo bem */ }
         let negocios = []; try { negocios = await negociosDoCliente(env, cli); } catch { /* sem histórico, tudo bem */ }
         return html(paginaClienteDetalhe(escritorio, cli, arquivos, negocios));
+      }
+      // Ficha de uma OS migrada (negócio/venda do Ploomes): dados da venda + documentos dela.
+      if (pathname === '/cadastro/os-ploomes' && request.method === 'GET') {
+        if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
+        const os = await lerNegocioDetalheD1(env, url.searchParams.get('id') || '');
+        if (!os) return html(paginaMensagem('OS não encontrada', 'Volte e tente de novo.'), 404);
+        return html(paginaOSDetalhe(escritorio, os));
       }
       // Serve um arquivo migrado do Ploomes (R2) para a equipe do escritório.
       // Valida a chave contra o banco (só serve o que está catalogado).
