@@ -286,7 +286,9 @@ async function carregar(){
       var titulo=o.numeroOS?('Ordem de serviço '+escapeHtml(String(o.numeroOS))):'Ordem de serviço';
       var meta=[]; meta.push(o.dataColeta?('Coleta em '+fmt(o.dataColeta)):('Aberta em '+fmt(o.aberturaISO)));
       if(o.peso && String(o.peso).toLowerCase().indexOf('não informado')<0 && String(o.peso).toLowerCase().indexOf('nao informado')<0) meta.push('Peso: '+escapeHtml(String(o.peso)));
+      var rastreio=o.rastreavel?'<a class="doclnk" style="text-decoration:none;background:#92C430;color:#10262B;border-color:#92C430" href="/rastreio?os='+encodeURIComponent(o.id)+'">🚚 Acompanhar o caminhão</a> ':'';
       return '<div class="os"><div class="os-main"><div class="os-title">'+titulo+'</div><div class="os-meta">'+meta.join(' · ')+'</div>'
+        +rastreio
         +'<button class="doclnk" type="button" onclick="verDocs(&#39;'+o.id+'&#39;,this)">📄 Documentos</button>'
         +'<div class="docwrap" id="docs-'+o.id+'"></div>'
         +'</div><span class="tag '+tagCls(o.status)+'">'+escapeHtml(o.status)+'</span></div>';

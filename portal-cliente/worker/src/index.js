@@ -41,6 +41,7 @@ import { statusDaEtapa, valorProp, CAMPOS_OS } from './os-utils.js';
 import { qrCDF, validarCDF } from './validacao.js';
 import { paginaMetodologia, fatorCompensacaoAdote } from './carbono-metodologia.js';
 import { registrarUso, resumoUso, contarPorPeriodo, reunirPendencias } from './uso.js';
+import { sondaRotaExata, paginaSondaRotaExata, paginaRastreio, posicaoDoVeiculo, rastreioDisponivel } from './rotaexata.js';
 import { lerValidacao, registrarValidacao, paginaAreaValidacao, qrMetodologia, validarMetodologiaPublico } from './validacao-metodologia.js';
 import { paginaPainelCarbono } from './carbono-painel.js';
 import { clientesComOperacoes, carbonoDoCliente, paginaCarbonoAnalista, paginaCarbonoAuditor } from './carbono-motor.js';
@@ -521,6 +522,16 @@ export default {
           pend: reunirPendencias({ leads: leadsIdx, coletas: coletasValidas, aguardandoValidacao: dados.aguardando }),
         };
         return html(paginaPainelDiretoria(diretoria, dados, extras));
+      }
+      // RotaExata — sonda de configuração (só Diretoria): lê a documentação da API e
+      // testa o login com as credenciais do cofre. Mostra só status/estrutura.
+      if (pathname === '/diretoria/rotaexata' && request.method === 'GET') {
+        if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
+        return html(paginaSondaRotaExata(diretoria, env));
+      }
+      if (pathname === '/api/diretoria/rotaexata-sonda' && request.method === 'POST') {
+        if (!diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        return json(await sondaRotaExata(env));
       }
       // Prevenção de perdas (só Diretoria): reconciliação por peso + IA nas fotos + valor.
       if (pathname === '/diretoria/prevencao' && request.method === 'GET') {
@@ -1416,6 +1427,30 @@ export default {
         const dados = clienteNome ? await carbonoDoCliente(env, clienteNome) : null;
         return html(paginaCarbonoAuditor(user, clientes, dados, await lerValidacao(env)));
       }
+      // Rastreio do caminhão (cliente): página + posição ao vivo. Só a OS do próprio
+      // cliente, só em transporte. Sem RotaExata mapeado, responde com honestidade.
+      if (pathname === '/rastreio' && request.method === 'GET') {
+        if (!sessao) return new Response(null, { status: 302, headers: { Location: '/', 'cache-control': 'no-store' } });
+        const oid = (url.searchParams.get('os') || '').replace(/^k/, '').replace(/[^a-zA-Z0-9_]/g, '');
+        const col = await lerColetaOS(env, oid);
+        const docSess = String(sessao.documento || '').replace(/\D/g, '');
+        if (!col || !docSess || String(col.clienteDoc || '').replace(/\D/g, '') !== docSess) {
+          return html(paginaMensagem('Coleta não encontrada', 'Volte ao painel e tente de novo.', '/painel'), 404);
+        }
+        return html(paginaRastreio('k' + col.id, col.numero || ''));
+      }
+      if (pathname === '/api/os/rastreio' && request.method === 'GET') {
+        if (!sessao) return json({ ok: false, motivo: 'nao_autenticado' }, 401);
+        const oid = (url.searchParams.get('id') || '').replace(/^k/, '').replace(/[^a-zA-Z0-9_]/g, '');
+        const col = await lerColetaOS(env, oid);
+        const docSess = String(sessao.documento || '').replace(/\D/g, '');
+        if (!col || !docSess || String(col.clienteDoc || '').replace(/\D/g, '') !== docSess) return json({ ok: false, motivo: 'nao_encontrada' }, 404);
+        if (col.status !== 'em_transporte') return json({ ok: false, motivo: 'fora_de_transporte' });
+        let placa = col.veiculoPlaca || '';
+        if (!placa) { try { placa = await placaDaColeta(env, col); } catch { /* segue */ } }
+        if (!placa) return json({ ok: false, motivo: 'sem_veiculo' });
+        return json(await posicaoDoVeiculo(env, placa));
+      }
       if (pathname === '/api/os' && request.method === 'GET') {
         if (!sessao) return json({ ok: false, error: 'nao_autenticado' }, 401);
         return await listarOS(sessao, env);
@@ -2006,7 +2041,7 @@ async function listarOS(sessao, env) {
       for (const c of idx) {
         if (String(c.clienteDoc || '').replace(/\D/g, '') !== doc) continue;
         if (c.status === 'cancelada') continue;
-        out.push({ id: 'k' + c.id, numeroOS: c.numero || '', titulo: 'Ordem de Coleta', status: ROT[c.status] || 'Em atendimento', dataColeta: c.dataAgendada || '', aberturaISO: c.criadoEm || null, peso: '' });
+        out.push({ id: 'k' + c.id, numeroOS: c.numero || '', titulo: 'Ordem de Coleta', status: ROT[c.status] || 'Em atendimento', dataColeta: c.dataAgendada || '', aberturaISO: c.criadoEm || null, peso: '', rastreavel: rastreioDisponivel(env) && c.status === 'em_transporte' });
       }
     }
   } catch (error) { console.error('listar_os_kv', safeError(error)); }

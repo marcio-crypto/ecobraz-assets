@@ -200,6 +200,7 @@ export function paginaPainelDiretoria(diretor, d, x) {
       <a href="/diretoria/migrar-ploomes" style="text-decoration:none;font-size:12.5px;font-weight:800;color:#00333B;border:1px solid #cfe0dd;border-radius:10px;padding:9px 13px;background:#F7FAF9">👥 Base de contatos</a>
       <a href="/diretoria/migrar-arquivos" style="text-decoration:none;font-size:12.5px;font-weight:800;color:#00333B;border:1px solid #cfe0dd;border-radius:10px;padding:9px 13px;background:#F7FAF9">📎 Arquivos do Ploomes</a>
       <a href="/diretoria/migrar-negocios" style="text-decoration:none;font-size:12.5px;font-weight:800;color:#00333B;border:1px solid #cfe0dd;border-radius:10px;padding:9px 13px;background:#F7FAF9">📋 Negócios / OS do Ploomes</a>
+      <a href="/diretoria/rotaexata" style="text-decoration:none;font-size:12.5px;font-weight:800;color:#00333B;border:1px solid #cfe0dd;border-radius:10px;padding:9px 13px;background:#F7FAF9">🛰️ RotaExata (rastreamento)</a>
     </div>
   </div>
 
