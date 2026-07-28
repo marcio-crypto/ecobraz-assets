@@ -36,17 +36,57 @@ function estrutura(x, prof = 0) {
   return tipoDe(x);
 }
 
-async function req(url, opts = {}, timeoutMs = 9000) {
+async function req(url, opts = {}, timeoutMs = 8000) {
   try {
     const r = await fetch(url, { ...opts, signal: AbortSignal.timeout(timeoutMs) });
     const ct = r.headers.get('content-type') || '';
+    const setCookie = r.headers.get('set-cookie') || '';
     let corpo = null, texto = '';
     if (/json/i.test(ct)) { try { corpo = await r.json(); } catch { corpo = null; } }
     else { texto = corte(await r.text().catch(() => ''), 300); }
-    return { status: r.status, ct, corpo, texto };
+    return { status: r.status, ct, corpo, texto, setCookie };
   } catch (e) {
     return { status: 0, erro: (e && e.name === 'TimeoutError') ? 'tempo esgotado' : corte((e && e.message) || 'falha', 120) };
   }
+}
+
+// Resolve $ref do OpenAPI (ex.: #/components/schemas/X) e devolve os CAMPOS de um
+// schema (nomes + tipos), para a sonda mostrar o formato exato sem valores.
+function deref(spec, node, prof = 0) {
+  if (!node || prof > 5) return node;
+  if (node.$ref) {
+    const partes = String(node.$ref).replace(/^#\//, '').split('/');
+    let x = spec; for (const p of partes) x = x && x[p];
+    return deref(spec, x, prof + 1);
+  }
+  return node;
+}
+function esquemaCampos(spec, schema, prof = 0) {
+  const s = deref(spec, schema, prof);
+  if (!s || prof > 3) return null;
+  if (s.type === 'array' || s.items) return { _lista: esquemaCampos(spec, s.items, prof + 1) };
+  if (s.properties) {
+    const o = {};
+    for (const [k, v] of Object.entries(s.properties).slice(0, 35)) {
+      const d = deref(spec, v, prof + 1) || {};
+      o[k] = (d.properties || d.items) ? esquemaCampos(spec, d, prof + 1) : (d.type || 'campo');
+    }
+    if (Array.isArray(s.required) && s.required.length) o._obrigatorios = s.required.join(', ');
+    return o;
+  }
+  return s.type || null;
+}
+// Campos (corpo esperado + resposta) de uma operação do spec.
+function detalheOperacao(spec, def) {
+  if (!def) return null;
+  const rb = def.requestBody && def.requestBody.content && (def.requestBody.content['application/json'] || Object.values(def.requestBody.content)[0]);
+  const ok = def.responses && (def.responses['200'] || def.responses['201'] || def.responses.default);
+  const rc = ok && ok.content && (ok.content['application/json'] || Object.values(ok.content)[0]);
+  return {
+    corpoEsperado: rb ? esquemaCampos(spec, rb.schema) : null,
+    respostaEsperada: rc ? esquemaCampos(spec, rc.schema) : null,
+    parametros: (def.parameters || []).map((p) => { const d = deref(spec, p) || {}; return `${d.name || '?'} (${d.in || '?'}${d.required ? ', obrigatório' : ''})`; }).slice(0, 12),
+  };
 }
 
 // --- SONDA (Diretoria) ------------------------------------------------------
@@ -55,27 +95,40 @@ async function req(url, opts = {}, timeoutMs = 9000) {
 export async function sondaRotaExata(env) {
   const out = { configurado: rotaexataConfigurado(env), pronto: ROTAEXATA_PRONTO, spec: null, tentativas: [], dica: '' };
 
-  // 1) Documentação oficial (SwaggerHub) — pública, sem credencial.
-  const candidatosSpec = [`${SPEC_URL}/0.0.6`, SPEC_URL];
-  for (const u of candidatosSpec) {
+  // 1) Documentação oficial (SwaggerHub) — pública, sem credencial. Extrai também o
+  // FORMATO EXATO do /login (campos do corpo e da resposta) e o header da chave.
+  let specRaw = null;
+  for (const u of [`${SPEC_URL}/0.0.6`, SPEC_URL]) {
     const r = await req(u, { headers: { accept: 'application/json' } });
-    if (r.status === 200 && r.corpo) {
-      const spec = r.corpo;
-      const servers = (spec.servers || []).map((s) => s && s.url).filter(Boolean);
-      const host = spec.host ? [`https://${spec.host}${spec.basePath || ''}`] : [];
-      const seg = spec.components && spec.components.securitySchemes ? spec.components.securitySchemes : (spec.securityDefinitions || {});
-      const seguranca = Object.entries(seg).map(([k, v]) => ({ nome: k, tipo: v && v.type, esquema: v && (v.scheme || v.in || '') }));
-      const paths = [];
-      for (const [p, metodos] of Object.entries(spec.paths || {})) {
-        for (const [m, def] of Object.entries(metodos || {})) {
-          if (!/^(get|post|put|delete|patch)$/i.test(m)) continue;
-          paths.push({ metodo: m.toUpperCase(), path: p, resumo: corte((def && (def.summary || def.description)) || '', 90) });
-        }
-      }
-      out.spec = { origem: u, titulo: corte(spec.info && spec.info.title, 80), versao: corte(spec.info && spec.info.version, 20), servidores: [...servers, ...host], seguranca, totalRotas: paths.length, rotas: paths.slice(0, 40) };
-      break;
-    }
+    if (r.status === 200 && r.corpo && r.corpo.paths) { specRaw = r.corpo; out.specOrigem = u; break; }
     out.tentativas.push({ passo: 'documentação', url: u, status: r.status || 0, detalhe: r.erro || corte(r.texto, 120) });
+  }
+  let headerChave = '', rotasLogin = [], rotasPos = [];
+  if (specRaw) {
+    const servers = (specRaw.servers || []).map((s) => s && s.url).filter(Boolean);
+    const seg = (specRaw.components && specRaw.components.securitySchemes) || specRaw.securityDefinitions || {};
+    const seguranca = Object.entries(seg).map(([k, v]) => ({ nome: k, tipo: v && v.type, header: (v && v.name) || '', em: (v && (v.in || v.scheme)) || '' }));
+    headerChave = (seguranca.find((s) => s.tipo === 'apiKey' && s.header) || {}).header || '';
+    const paths = [];
+    for (const [p, metodos] of Object.entries(specRaw.paths || {})) {
+      for (const [m, def] of Object.entries(metodos || {})) {
+        if (!/^(get|post|put|delete|patch)$/i.test(m)) continue;
+        paths.push({ metodo: m.toUpperCase(), path: p, resumo: corte((def && (def.summary || def.description)) || '', 90) });
+        if (m === 'post' && /login|auth|token|sessao|session/i.test(p)) rotasLogin.push(p);
+        if (m === 'get' && !p.includes('{') && /(veicul|vehicle|posi|position|localiza|rastre|last|atual|frota|fleet|mapa)/i.test(p)) rotasPos.push(p);
+      }
+    }
+    // Formato exato do login e das rotas de posição (o mapa do tesouro).
+    const loginDef = rotasLogin.length && specRaw.paths[rotasLogin[0]] ? specRaw.paths[rotasLogin[0]].post : null;
+    const detLogin = detalheOperacao(specRaw, loginDef);
+    const detPos = {};
+    for (const rp of rotasPos.slice(0, 6)) { try { detPos[rp] = detalheOperacao(specRaw, specRaw.paths[rp].get); } catch { /* segue */ } }
+    out.spec = {
+      titulo: corte(specRaw.info && specRaw.info.title, 80), versao: corte(specRaw.info && specRaw.info.version, 20),
+      servidores: servers, seguranca, headerDaChave: headerChave || '(não informado no spec)',
+      loginFormato: detLogin, rotasDePosicao: detPos,
+      totalRotas: paths.length, rotas: paths.slice(0, 80),
+    };
   }
 
   if (!out.configurado) {
@@ -83,57 +136,73 @@ export async function sondaRotaExata(env) {
     return out;
   }
 
-  // 2) Bases candidatas: as da documentação + reservas conhecidas.
-  const bases = [...new Set([...(out.spec ? out.spec.servidores : []), ...BASES_RESERVA])].filter(Boolean).slice(0, 4);
   const user = env.ROTAEXATA_USER, senha = env.ROTAEXATA_SENHA;
-  const basic = 'Basic ' + btoa(`${user}:${senha}`);
+  const bases = [...new Set([...(out.spec ? out.spec.servidores : []), ...BASES_RESERVA])].filter(Boolean).slice(0, 3);
+  if (!rotasLogin.length) rotasLogin = ['/login', '/auth/login', '/api/login'];
 
-  // Rotas de login sugeridas pela documentação (ou padrões comuns).
-  const rotasLogin = [];
-  if (out.spec) for (const r of out.spec.rotas) if (r.metodo === 'POST' && /(login|auth|token|sessao|session)/i.test(r.path)) rotasLogin.push(r.path);
-  if (!rotasLogin.length) rotasLogin.push('/login', '/auth/login', '/api/login', '/token');
-  const corposLogin = [
-    { login: user, senha }, { email: user, senha }, { username: user, password: senha }, { user, password: senha }, { usuario: user, senha },
-  ];
+  // 2) LOGIN — primeiro com os campos EXATOS que a documentação pede; depois variações.
+  const corposLogin = [];
+  const fmt = out.spec && out.spec.loginFormato && out.spec.loginFormato.corpoEsperado;
+  if (fmt && typeof fmt === 'object') {
+    const corpo = {}; let casou = 0;
+    for (const k of Object.keys(fmt)) {
+      if (k.startsWith('_')) continue;
+      if (/senha|pass/i.test(k)) { corpo[k] = senha; casou++; }
+      else if (/mail|user|login|usuario/i.test(k)) { corpo[k] = user; casou++; }
+    }
+    if (casou >= 2) corposLogin.push(corpo);
+  }
+  corposLogin.push({ email: user, senha }, { login: user, senha }, { email: user, password: senha }, { username: user, password: senha }, { usuario: user, senha });
 
-  let token = '', tokenDe = '';
+  let token = '', cookie = '', baseOk = '';
   fora:
   for (const base of bases) {
-    for (const rota of rotasLogin.slice(0, 4)) {
-      for (const corpo of corposLogin) {
-        const r = await req(base.replace(/\/+$/, '') + rota, { method: 'POST', headers: { 'content-type': 'application/json', accept: 'application/json' }, body: JSON.stringify(corpo) }, 8000);
-        const chavesCorpo = Object.keys(corpo).join('+');
-        if (r.status >= 200 && r.status < 300 && r.corpo) {
-          const t = r.corpo.token || r.corpo.access_token || r.corpo.accessToken || r.corpo.jwt || (r.corpo.data && (r.corpo.data.token || r.corpo.data.access_token)) || '';
-          out.tentativas.push({ passo: 'login', url: base + rota, corpo: chavesCorpo, status: r.status, estrutura: estrutura(r.corpo), achouToken: !!t });
-          if (t) { token = String(t); tokenDe = base; break fora; }
-        } else if (r.status && r.status !== 404) {
-          out.tentativas.push({ passo: 'login', url: base + rota, corpo: chavesCorpo, status: r.status, detalhe: r.erro || corte(r.texto, 100) });
+    for (const rota of rotasLogin.slice(0, 3)) {
+      for (const corpo of corposLogin.slice(0, 6)) {
+        const r = await req(base.replace(/\/+$/, '') + rota, { method: 'POST', headers: { 'content-type': 'application/json', accept: 'application/json' }, body: JSON.stringify(corpo) }, 7000);
+        const info = { passo: 'login', url: base + rota, campos: Object.keys(corpo).join('+'), status: r.status };
+        if (r.status >= 200 && r.status < 300) {
+          const c = r.corpo || {};
+          const t = c.token || c.access_token || c.accessToken || c.jwt || c.key || c.apiKey || c.api_key || c.chave ||
+            (c.data && (c.data.token || c.data.access_token || c.data.key)) || (typeof r.corpo === 'string' && r.corpo.length < 600 ? r.corpo : '');
+          if (r.setCookie) { cookie = r.setCookie.split(',').map((x) => x.split(';')[0].trim()).filter(Boolean).join('; '); }
+          info.estrutura = r.corpo ? estrutura(r.corpo) : '(sem corpo JSON)';
+          info.achouToken = !!t; info.recebeuCookie = !!cookie;
+          if (cookie) info.cookies = cookie.split('; ').map((x) => x.split('=')[0]); // só NOMES
+          out.tentativas.push(info);
+          if (t) token = String(t);
+          if (t || cookie) { baseOk = base; break fora; }
+        } else if (r.status === 0 || r.status !== 404) {
+          info.detalhe = r.erro || corte(r.texto, 100) || (r.corpo ? JSON.stringify(estrutura(r.corpo)) : '');
+          out.tentativas.push(info);
         }
       }
     }
   }
 
-  // 3) Leitura de posições/veículos — Bearer (se achou token) e Basic.
-  const rotasPos = [];
-  if (out.spec) for (const r of out.spec.rotas) if (r.metodo === 'GET' && /(veicul|vehicle|posi|position|localiza|rastre|last|atual)/i.test(r.path)) rotasPos.push(r.path);
-  if (!rotasPos.length) rotasPos.push('/veiculos', '/v1/veiculos', '/posicoes', '/veiculos/posicoes');
+  // 3) POSIÇÕES — com o header da chave que a documentação indicou + variações.
+  if (!rotasPos.length) rotasPos = ['/veiculos', '/posicoes', '/veiculos/posicoes'];
   const auths = [];
-  if (token) auths.push({ nome: 'Bearer (token do login)', header: { authorization: `Bearer ${token}` }, base: tokenDe });
-  auths.push({ nome: 'Basic (login:senha)', header: { authorization: basic }, base: '' });
+  if (token && headerChave) auths.push({ nome: `header da doc (${headerChave})`, header: { [headerChave]: token } });
+  if (token) auths.push({ nome: 'Bearer', header: { authorization: `Bearer ${token}` } }, { nome: 'token cru no Authorization', header: { authorization: token } });
+  if (cookie) auths.push({ nome: 'cookie de sessão', header: { cookie } });
+  if (headerChave) auths.push({ nome: `login:senha no header da doc`, header: { [headerChave]: `${user}:${senha}` } });
+  auths.push({ nome: 'Basic (login:senha)', header: { authorization: 'Basic ' + btoa(`${user}:${senha}`) } });
 
-  for (const a of auths) {
-    const basesTeste = a.base ? [a.base] : bases;
-    for (const base of basesTeste) {
-      for (const rota of rotasPos.slice(0, 4)) {
-        const r = await req(base.replace(/\/+$/, '') + rota, { headers: { ...a.header, accept: 'application/json' } }, 8000);
-        if (r.status === 0) { out.tentativas.push({ passo: 'posições', auth: a.nome, url: base + rota, status: 0, detalhe: r.erro }); continue; }
-        out.tentativas.push({ passo: 'posições', auth: a.nome, url: base + rota, status: r.status, estrutura: r.corpo ? estrutura(r.corpo) : undefined, detalhe: r.corpo ? undefined : corte(r.texto, 100) });
-        if (r.status >= 200 && r.status < 300 && r.corpo) { out.dica = 'ACHOU! Me mande o print desta tela que eu fixo o mapeamento e ligo o rastreio para o cliente.'; return out; }
+  const basesPos = baseOk ? [baseOk] : bases.slice(0, 2);
+  for (const a of auths.slice(0, 5)) {
+    for (const base of basesPos) {
+      for (const rota of rotasPos.slice(0, 5)) {
+        const r = await req(base.replace(/\/+$/, '') + rota, { headers: { ...a.header, accept: 'application/json' } }, 7000);
+        out.tentativas.push({ passo: 'posições', auth: a.nome, url: base + rota, status: r.status, estrutura: (r.status >= 200 && r.status < 300 && r.corpo) ? estrutura(r.corpo) : undefined, detalhe: (r.status >= 200 && r.status < 300) ? undefined : (r.erro || corte(r.texto, 90)) });
+        if (r.status >= 200 && r.status < 300 && r.corpo) { out.dica = 'ACHOU! Login e leitura funcionaram. Me mande o print desta tela que eu fixo o mapeamento e ligo o rastreio para o cliente.'; return out; }
       }
     }
   }
-  if (!out.dica) out.dica = 'Nenhuma rota respondeu 200 ainda. Me mande o print desta tela — com os códigos acima eu ajusto a próxima tentativa.';
+  out.tentativas = out.tentativas.slice(0, 40);
+  out.dica = (token || cookie)
+    ? 'O LOGIN FUNCIONOU (veja a estrutura acima), mas a leitura de posições ainda não respondeu 200. Me mande o print — o formato da resposta do login me diz o próximo passo.'
+    : 'O login ainda não passou. Me mande o print — o campo "loginFormato" acima mostra o que a API espera e eu ajusto.';
   return out;
 }
 
