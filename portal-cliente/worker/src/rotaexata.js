@@ -339,8 +339,14 @@ function extrairPosicao(x, prof = 0) {
   const lat = num(x.lat ?? x.latitude ?? x.Latitude ?? x.Lat);
   const lng = num(x.lng ?? x.lon ?? x.long ?? x.longitude ?? x.Longitude ?? x.Lng);
   if (lat != null && lng != null && (lat !== 0 || lng !== 0) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) {
-    const em = x.dataHora ?? x.data_hora ?? x.dataPosicao ?? x.dataHoraServidor ?? x.serverTime ?? x.data ?? x.date ?? x.timestamp ?? x.horario ?? null;
-    return { lat, lng, velocidade: num(x.velocidade ?? x.speed ?? x.vel ?? x.velocity), em: em != null ? String(em) : null };
+    // 'dt_posicao' é o nome real no RotaExata (amostra v2 no D1); epoch numérico
+    // (s ou ms) vira ISO — senão new Date('17537…') dá "Invalid Date" na tela.
+    let em = x.dataHora ?? x.dt_posicao ?? x.data_hora ?? x.dataPosicao ?? x.dataHoraServidor ?? x.serverTime ?? x.data ?? x.date ?? x.dt_padrao ?? x.timestamp ?? x.horario ?? null;
+    if (em != null) {
+      const s = String(em);
+      try { em = /^\d{10,13}$/.test(s) ? new Date(Number(s) * (s.length === 10 ? 1000 : 1)).toISOString() : s; } catch { em = s; }
+    }
+    return { lat, lng, velocidade: num(x.velocidade ?? x.speed ?? x.vel ?? x.velocity), em };
   }
   for (const k of Object.keys(x).slice(0, 30)) { const v = x[k]; if (v && typeof v === 'object') { const p = extrairPosicao(v, prof + 1); if (p) return p; } }
   return null;
@@ -524,7 +530,8 @@ function pinta(d){
             nao_configurado:'🛰️ <b>Posições ao vivo em ativação</b> (credenciais do RotaExata ainda não configuradas no cofre). As colunas de coleta atual/próxima já são reais.'};
     aviso='<div class="aviso">'+(mm[d.motivo]||'🛰️ <b>Posições ao vivo em ativação</b> (integração RotaExata em conclusão). As colunas de coleta atual/próxima já são reais.')+'</div>';
   }
-  if(!d || !Array.isArray(d.frota) || !d.frota.length){ alvo.innerHTML=aviso+'<div class="card" style="color:#8fa39f;font-size:13px">Nenhum veículo cadastrado na Frota ainda.</div>'; return; }
+  var rodape = (d && d.ocultos) ? '<div style="font-size:11.5px;color:#8fa39f;margin-top:6px">🙈 '+d.ocultos+' rastreador(es) fora de uso oculto(s). <button style="border:none;background:none;color:#0B5B66;font-weight:700;cursor:pointer;font-size:11.5px;text-decoration:underline;padding:0" onclick="reexibir()">Reexibir</button></div>' : '';
+  if(!d || !Array.isArray(d.frota) || !d.frota.length){ alvo.innerHTML=aviso+'<div class="card" style="color:#8fa39f;font-size:13px">Nenhum veículo cadastrado na Frota ainda.</div>'+rodape; return; }
   alvo.innerHTML = aviso + d.frota.map(function(v,i){
     var pos = v.pos ? ('🟢 <b>'+(v.pos.velocidade!=null?Math.round(v.pos.velocidade)+' km/h':'parado/andando')+'</b>') : '<span style="color:#8fa39f">sem sinal ao vivo</span>';
     var atual = v.coletaAtual ? ('<b>'+escapeHtml(v.coletaAtual.numero||'')+'</b> · '+escapeHtml(v.coletaAtual.cliente||'')) : '<span style="color:#8fa39f">nenhuma em andamento</span>';
@@ -536,9 +543,18 @@ function pinta(d){
       +'<div style="font-size:12.5px;color:#28413f;margin-top:8px">Atendendo agora: '+atual+'</div>'
       +'<div style="font-size:12.5px;color:#28413f;margin-top:3px">Próxima da fila: '+prox+'</div>'
       +'<div style="font-size:12px;color:#7c8a87;margin-top:3px">Concluídas hoje: <b>'+(v.concluidasHoje||0)+'</b></div>'
-      +(v.pos?('<button style="margin-top:8px;border:1px solid #cfe0dd;background:#fff;border-radius:8px;padding:7px 11px;font-size:12px;font-weight:700;color:#00333B;cursor:pointer" onclick="var m=document.getElementById(\\'m'+i+'\\'); if(m.dataset.on){m.innerHTML=\\'\\';m.dataset.on=\\'\\';this.textContent=\\'🗺️ Ver no mapa\\';}else{mapa(m,'+v.pos.lat+','+v.pos.lng+');m.dataset.on=\\'1\\';this.textContent=\\'✕ Fechar mapa\\';}">🗺️ Ver no mapa</button><div id="m'+i+'"></div>'):'')
+      +(v.pos?('<button style="margin-top:8px;border:1px solid #cfe0dd;background:#fff;border-radius:8px;padding:7px 11px;font-size:12px;font-weight:700;color:#00333B;cursor:pointer" onclick="var m=document.getElementById(\\'m'+i+'\\'); if(m.dataset.on){m.innerHTML=\\'\\';m.dataset.on=\\'\\';this.textContent=\\'🗺️ Ver no mapa\\';}else{mapa(m,'+v.pos.lat+','+v.pos.lng+');m.dataset.on=\\'1\\';this.textContent=\\'✕ Fechar mapa\\';}">🗺️ Ver no mapa</button>'):'')
+      +(v.foraCadastro?('<button style="margin-top:8px;margin-left:6px;border:1px solid #eadfb0;background:#FFF6DC;border-radius:8px;padding:7px 11px;font-size:12px;font-weight:700;color:#8a6a16;cursor:pointer" data-p="'+escapeHtml(v.placa||'')+'" onclick="ocultar(this.dataset.p)">🙈 Não usamos mais — tirar da tela</button>'):'')
+      +(v.pos?('<div id="m'+i+'"></div>'):'')
       +'</div>';
-  }).join('');
+  }).join('') + rodape;
+}
+function ocultar(p){
+  if(!confirm('Tirar o rastreador '+p+' da tela? (Dá para reexibir depois, pelo link no rodapé da lista.)')) return;
+  fetch('/api/frota/ocultar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({placa:p})}).then(function(){busca();}).catch(function(){});
+}
+function reexibir(){
+  fetch('/api/frota/ocultar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({reexibir:true})}).then(function(){busca();}).catch(function(){});
 }
 function busca(){ fetch('/api/frota/aovivo').then(function(r){return r.json();}).then(pinta).catch(function(){}); }
 busca(); setInterval(busca, 20000);

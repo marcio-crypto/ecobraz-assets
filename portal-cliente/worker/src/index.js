@@ -544,6 +544,23 @@ export default {
         if (!escritorio && !diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);
         return json(await montarFrotaAoVivo(env));
       }
+      // Rastreador "fora do cadastro" que não é mais usado: oculta da tela (reversível).
+      // {placa} adiciona à lista de ocultos; {reexibir:true} limpa a lista inteira.
+      if (pathname === '/api/frota/ocultar' && request.method === 'POST') {
+        if (!escritorio && !diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        if (!env.PORTAL_KV) return json({ ok: false, error: 'sem_kv' }, 500);
+        const b = await request.json().catch(() => ({}));
+        let lista = [];
+        try { lista = JSON.parse((await env.PORTAL_KV.get('frota:ocultarRastreador')) || '[]'); } catch { lista = []; }
+        if (b.reexibir) lista = [];
+        else {
+          const p = String(b.placa || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+          if (!p) return json({ ok: false, error: 'placa_vazia' }, 400);
+          if (!lista.includes(p)) lista.push(p);
+        }
+        await env.PORTAL_KV.put('frota:ocultarRastreador', JSON.stringify(lista.slice(0, 50)));
+        return json({ ok: true, ocultos: lista.length });
+      }
       // Prevenção de perdas (só Diretoria): reconciliação por peso + IA nas fotos + valor.
       if (pathname === '/diretoria/prevencao' && request.method === 'GET') {
         if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
@@ -2499,11 +2516,17 @@ async function montarFrotaAoVivo(env) {
   // Rastreadores com posição cuja placa NÃO casou com nenhuma do cadastro da Frota:
   // entram no fim da lista com etiqueta, para a divergência APARECER (em vez de a
   // posição sumir em silêncio) — aí é só acertar a placa no Cadastro da Frota.
+  // Exceção: placas marcadas como "não usamos mais" (KV frota:ocultarRastreador)
+  // ficam de fora da tela; o rodapé mostra o total e permite reexibir.
+  let ocultas = [];
+  try { if (env.PORTAL_KV) ocultas = JSON.parse((await env.PORTAL_KV.get('frota:ocultarRastreador')) || '[]'); } catch { ocultas = []; }
+  let ocultos = 0;
   for (const [k, p] of posPor) {
     if (porPlaca.has(k)) continue;
+    if (ocultas.includes(k)) { ocultos++; continue; }
     porPlaca.set(k, { placa: p.placa, apelido: p.apelido || '', motorista: '', coletaAtual: null, proxima: null, concluidasHoje: 0, foraCadastro: true, pos: { lat: p.lat, lng: p.lng, velocidade: p.velocidade ?? null, em: p.em || null } });
   }
-  return { ok: true, posOk: !!posRes.ok, motivo: posRes.motivo || '', frota: [...porPlaca.values()] };
+  return { ok: true, posOk: !!posRes.ok, motivo: posRes.motivo || '', ocultos, frota: [...porPlaca.values()] };
 }
 
 // Adote um Bairro — renovação por LINK: quando o crédito recorrente fica ≤20kg, gera a
