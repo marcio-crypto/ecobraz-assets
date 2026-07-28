@@ -62,13 +62,14 @@ export async function listarClientesD1(env, { tipo = '', q = '', pag = 1, porPag
     if (dig.length >= 3) { params.push('%' + dig + '%'); s += ` OR REPLACE(REPLACE(REPLACE(REPLACE(documento,'.',''),'-',''),'/',''),' ','') LIKE ?${params.length}`; }
     where += ` AND (${s})`;
   }
+  const prep = (sql) => { const st = env.DB_PLOOMES.prepare(sql); return params.length ? st.bind(...params) : st; };
   let total = 0;
-  try { const c = await env.DB_PLOOMES.prepare(`SELECT COUNT(*) AS n FROM contatos WHERE ${where}`).bind(...params).first(); total = Number(c && c.n) || 0; } catch (e) { return { rows: [], total: 0, totalPags: 1, pag: 1, erro: String(e && e.message || e).slice(0, 120) }; }
+  try { const c = await prep(`SELECT COUNT(*) AS n FROM contatos WHERE ${where}`).first(); total = Number(c && c.n) || 0; } catch (e) { return { rows: [], total: 0, totalPags: 1, pag: 1, erro: String(e && e.message || e).slice(0, 120) }; }
   const totalPags = Math.max(1, Math.ceil(total / porPag));
   const p = Math.min(Math.max(1, Number(pag) || 1), totalPags);
   const off = (p - 1) * porPag;
   let results = [];
-  try { const r = await env.DB_PLOOMES.prepare(`SELECT ploomes_id, tipo, nome, nome_fantasia, documento, cidade, uf FROM contatos WHERE ${where} ORDER BY TRIM(nome) COLLATE NOCASE LIMIT ${Number(porPag)} OFFSET ${Number(off)}`).bind(...params).all(); results = r.results || []; } catch { results = []; }
+  try { const r = await prep(`SELECT ploomes_id, tipo, nome, nome_fantasia, documento, cidade, uf FROM contatos WHERE ${where} ORDER BY TRIM(nome) COLLATE NOCASE LIMIT ${Number(porPag)} OFFSET ${Number(off)}`).all(); results = r.results || []; } catch { results = []; }
   const rows = results.map((c) => ({
     id: 'p' + c.ploomes_id, tipo: c.tipo,
     nome: limpar(c.tipo === 'PJ' ? (c.nome || c.nome_fantasia) : c.nome) || '(sem nome)',
