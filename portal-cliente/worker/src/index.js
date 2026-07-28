@@ -40,6 +40,7 @@ import { paginaLojaESG, paginaESGContato, paginaESGObrigado, relatorioESG, preco
 import { statusDaEtapa, valorProp, CAMPOS_OS } from './os-utils.js';
 import { qrCDF, validarCDF } from './validacao.js';
 import { paginaMetodologia, fatorCompensacaoAdote } from './carbono-metodologia.js';
+import { registrarUso, resumoUso, contarPorPeriodo, reunirPendencias } from './uso.js';
 import { lerValidacao, registrarValidacao, paginaAreaValidacao, qrMetodologia, validarMetodologiaPublico } from './validacao-metodologia.js';
 import { paginaPainelCarbono } from './carbono-painel.js';
 import { clientesComOperacoes, carbonoDoCliente, paginaCarbonoAnalista, paginaCarbonoAuditor } from './carbono-motor.js';
@@ -498,10 +499,28 @@ export default {
       const escritorio = await lerSessaoEscritorio(request, env);
       const fiscal = await lerSessaoFiscal(request, env);
 
+      // Medição de uso (presença por dia) — alimenta o Painel da Diretoria. Só em GET de
+      // página (não /api), best-effort: a medição nunca atrasa nem derruba a resposta.
+      if (request.method === 'GET' && !pathname.startsWith('/api/') && env.PORTAL_KV) {
+        try {
+          if (sessao && sessao.documento) await registrarUso(env, { tipo: 'cliente', doc: sessao.documento, nome: sessao.nome });
+          const membro = escritorio || agente || operacao || eng || diretoria || fiscal || validador;
+          if (membro && membro.email) await registrarUso(env, { tipo: 'equipe', email: membro.email, nome: membro.nome, papel: membro.role });
+        } catch { /* nunca bloqueia */ }
+      }
+
       // Painel da Diretoria (visão macro). Exige sessão de diretoria.
       if (pathname === '/diretoria' && request.method === 'GET') {
         if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
-        return html(paginaPainelDiretoria(diretoria, await reunirDados(env)));
+        const [dados, leadsIdx, coletasIdx, uso] = await Promise.all([reunirDados(env), listarLeads(env), listarColetasOS(env), resumoUso(env)]);
+        const coletasValidas = coletasIdx.filter((c) => c.status !== 'cancelada');
+        const extras = {
+          leads: contarPorPeriodo(leadsIdx, 'criadoEm'),
+          os: contarPorPeriodo(coletasValidas, 'criadoEm'),
+          uso,
+          pend: reunirPendencias({ leads: leadsIdx, coletas: coletasValidas, aguardandoValidacao: dados.aguardando }),
+        };
+        return html(paginaPainelDiretoria(diretoria, dados, extras));
       }
       // Prevenção de perdas (só Diretoria): reconciliação por peso + IA nas fotos + valor.
       if (pathname === '/diretoria/prevencao' && request.method === 'GET') {

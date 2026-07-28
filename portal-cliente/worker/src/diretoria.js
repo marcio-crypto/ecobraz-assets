@@ -69,7 +69,42 @@ b.onclick=async()=>{b.disabled=true;m.textContent='Enviando…';try{const r=awai
 e.addEventListener('keydown',ev=>{if(ev.key==='Enter')b.click();});</script></body></html>`;
 }
 
-export function paginaPainelDiretoria(diretor, d) {
+// Trio de números hoje / 7 dias / 30 dias.
+const trio = (t, hoje, semana, mes, corHoje) => `<div style="background:#fff;border:1px solid #E4EBE9;border-radius:16px;padding:16px 18px">
+  <div style="font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#7c8a87;margin-bottom:10px">${esc(t)}</div>
+  <div style="display:flex;gap:14px;text-align:center">
+    <div style="flex:1"><div style="font-size:26px;font-weight:800;color:${corHoje || TEAL};line-height:1">${esc(String(hoje))}</div><div style="font-size:10px;color:#8fa39f;font-weight:700;margin-top:4px">HOJE</div></div>
+    <div style="flex:1;border-left:1px solid #EEF1F0"><div style="font-size:26px;font-weight:800;color:${TEAL};line-height:1">${esc(String(semana))}</div><div style="font-size:10px;color:#8fa39f;font-weight:700;margin-top:4px">7 DIAS</div></div>
+    <div style="flex:1;border-left:1px solid #EEF1F0"><div style="font-size:26px;font-weight:800;color:${TEAL};line-height:1">${esc(String(mes))}</div><div style="font-size:10px;color:#8fa39f;font-weight:700;margin-top:4px">30 DIAS</div></div>
+  </div>`;
+// Mini gráfico de barras dos últimos 14 dias.
+const spark = (serie) => {
+  const s = Array.isArray(serie) ? serie : [];
+  const mx = Math.max(1, ...s.map((x) => x.n));
+  return `<div style="display:flex;align-items:flex-end;gap:3px;height:36px;margin-top:12px">${s.map((x) => `<div title="${esc(x.d)}: ${x.n}" style="flex:1;background:${x.n ? '#7FB03C' : '#E9EFEC'};height:${x.n ? Math.max(12, Math.round((x.n / mx) * 100)) : 8}%;border-radius:3px"></div>`).join('')}</div><div style="font-size:9.5px;color:#9aa7a4;margin-top:5px;text-align:right">últimos 14 dias</div></div>`;
+};
+// Lista com barra proporcional (top 5 clientes / equipe).
+const barraLista = (itens, unidade) => {
+  const l = Array.isArray(itens) ? itens : [];
+  if (!l.length) return '<div style="font-size:12.5px;color:#8fa39f">Ainda sem registros — a medição começa a contar a partir de agora.</div>';
+  const mx = Math.max(1, ...l.map((x) => x.dias));
+  return l.map((x) => `<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;margin-bottom:4px"><span style="min-width:0;color:#28413f;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(x.nome)}${x.papel ? ` <span style="font-weight:600;color:#8fa39f">· ${esc(x.papel)}</span>` : ''}${x.ativoHoje ? ' <span style="font-size:9px;font-weight:800;color:#1E7A3D;background:#E4F3E6;border-radius:999px;padding:1px 7px;vertical-align:middle">ativo hoje</span>' : ''}</span><b style="flex:none">${x.dias} ${esc(unidade)}</b></div>
+    <div style="background:#EEF3F1;border-radius:5px;height:9px;overflow:hidden"><div style="width:${Math.round((x.dias / mx) * 100)}%;height:100%;background:#7FB03C;border-radius:5px"></div></div></div>`).join('');
+};
+
+export function paginaPainelDiretoria(diretor, d, x) {
+  x = x || {};
+  const leads = x.leads || { dia: 0, semana: 0, mes: 0, serie: [] };
+  const os = x.os || { dia: 0, semana: 0, mes: 0, serie: [] };
+  const uso = x.uso || { clientes: { hoje: 0, semana: 0, mes: 0, top5: [] }, equipe: { hoje: 0, semana: 0, mes: 0, pessoas: [] } };
+  const pend = Array.isArray(x.pend) ? x.pend : [];
+  const totalPend = pend.reduce((a, p) => a + (Number(p.qtd) || 0), 0);
+  const pendRows = pend.length ? pend.map((p) => `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;border:1px solid #F0E6D2;background:#FFFBEF;border-radius:12px;padding:11px 14px;margin-bottom:8px">
+      <div style="min-width:0"><div style="font-size:13px;font-weight:800;color:#10262B">${esc(p.rotulo)}</div>
+      <div style="font-size:11.5px;color:#8A6A16;margin-top:2px">Responsável: <b>${esc(p.quem)}</b>${p.maisAntigaDias != null ? ` · mais antiga: ${p.maisAntigaDias === 0 ? 'hoje' : p.maisAntigaDias + ' dia(s)'}` : ''}${(p.hoje || p.semana || p.mes || p.antigas) ? ` · hoje ${p.hoje} / 7d ${p.hoje + p.semana} / 30d ${p.hoje + p.semana + p.mes}${p.antigas ? ` / +antigas ${p.antigas}` : ''}` : ''}</div></div>
+      <span style="flex:none;font-size:18px;font-weight:800;color:#8A6A16">${p.qtd}</span>
+    </div>`).join('') : '<div style="font-size:13px;color:#1E7A3D;font-weight:700">✓ Nenhuma pendência aberta. Tudo em dia.</div>';
+
   const maxEt = Math.max(1, ...ETAPAS.map(([k]) => d.et[k] || 0));
   const barras = ETAPAS.map(([k, rot]) => {
     const n = d.et[k] || 0; const w = Math.round((n / maxEt) * 100);
@@ -96,22 +131,41 @@ export function paginaPainelDiretoria(diretor, d) {
     <span style="font-size:12px;font-weight:800;color:#92C430">Abrir →</span>
   </a>
 
-  <a href="/diretoria/migrar-ploomes" style="display:flex;justify-content:space-between;align-items:center;gap:12px;text-decoration:none;background:#fff;border:1px solid #E4EBE9;border-radius:14px;padding:14px 16px;margin-bottom:12px;color:#10262B">
-    <div><div style="font-size:14px;font-weight:800">👥 Base de contatos</div><div style="font-size:12px;color:#6b7c79;margin-top:2px">Empresas e pessoas migradas do Ploomes. Busque e navegue entre empresa ↔ contatos ligados.</div></div>
-    <span style="font-size:12px;font-weight:800;color:#0B7A66">Abrir →</span>
-  </a>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" class="g2">
+    ${trio('📥 Leads que chegam', leads.dia, leads.semana, leads.mes, leads.dia ? '#0B7A66' : TEAL)}${spark(leads.serie)}
+    ${trio('📋 OS geradas', os.dia, os.semana, os.mes, os.dia ? '#0B7A66' : TEAL)}${spark(os.serie)}
+  </div>
 
-  <a href="/diretoria/migrar-arquivos" style="display:flex;justify-content:space-between;align-items:center;gap:12px;text-decoration:none;background:#fff;border:1px solid #E4EBE9;border-radius:14px;padding:14px 16px;margin-bottom:12px;color:#10262B">
-    <div><div style="font-size:14px;font-weight:800">📎 Arquivos do Ploomes</div><div style="font-size:12px;color:#6b7c79;margin-top:2px">Traz NF, certificados, MTR e propostas do Ploomes para o depósito próprio (R2), amarrados à coleta.</div></div>
-    <span style="font-size:12px;font-weight:800;color:#0B7A66">Abrir →</span>
-  </a>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px" class="g2">
+    <div style="background:#fff;border:1px solid #E4EBE9;border-radius:16px;padding:18px">
+      <div style="font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#7c8a87;margin-bottom:10px">🏢 Uso do sistema — clientes</div>
+      <div style="display:flex;gap:14px;text-align:center;margin-bottom:14px">
+        <div style="flex:1"><div style="font-size:24px;font-weight:800;color:${TEAL};line-height:1">${uso.clientes.hoje}</div><div style="font-size:10px;color:#8fa39f;font-weight:700;margin-top:4px">HOJE</div></div>
+        <div style="flex:1;border-left:1px solid #EEF1F0"><div style="font-size:24px;font-weight:800;color:${TEAL};line-height:1">${uso.clientes.semana}</div><div style="font-size:10px;color:#8fa39f;font-weight:700;margin-top:4px">7 DIAS</div></div>
+        <div style="flex:1;border-left:1px solid #EEF1F0"><div style="font-size:24px;font-weight:800;color:${TEAL};line-height:1">${uso.clientes.mes}</div><div style="font-size:10px;color:#8fa39f;font-weight:700;margin-top:4px">30 DIAS</div></div>
+      </div>
+      <div style="font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#7c8a87;margin-bottom:10px;border-top:1px solid #EEF1F0;padding-top:12px">Top 5 — clientes que mais usam (dias ativos em 30d)</div>
+      ${barraLista(uso.clientes.top5, 'dia(s)')}
+    </div>
+    <div style="background:#fff;border:1px solid #E4EBE9;border-radius:16px;padding:18px">
+      <div style="font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#7c8a87;margin-bottom:10px">👷 Uso do sistema — funcionários</div>
+      <div style="display:flex;gap:14px;text-align:center;margin-bottom:14px">
+        <div style="flex:1"><div style="font-size:24px;font-weight:800;color:${TEAL};line-height:1">${uso.equipe.hoje}</div><div style="font-size:10px;color:#8fa39f;font-weight:700;margin-top:4px">HOJE</div></div>
+        <div style="flex:1;border-left:1px solid #EEF1F0"><div style="font-size:24px;font-weight:800;color:${TEAL};line-height:1">${uso.equipe.semana}</div><div style="font-size:10px;color:#8fa39f;font-weight:700;margin-top:4px">7 DIAS</div></div>
+        <div style="flex:1;border-left:1px solid #EEF1F0"><div style="font-size:24px;font-weight:800;color:${TEAL};line-height:1">${uso.equipe.mes}</div><div style="font-size:10px;color:#8fa39f;font-weight:700;margin-top:4px">30 DIAS</div></div>
+      </div>
+      <div style="font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#7c8a87;margin-bottom:10px;border-top:1px solid #EEF1F0;padding-top:12px">Pessoa a pessoa (dias ativos em 30d)</div>
+      ${barraLista(uso.equipe.pessoas, 'dia(s)')}
+    </div>
+  </div>
+  <div style="font-size:10.5px;color:#9aa7a4;margin-top:8px">A medição de acessos passa a contar a partir de 28/07/2026 — não existe registro retroativo. "7 dias" e "30 dias" são janelas móveis. Leads e OS usam o histórico real do sistema.</div>
 
-  <a href="/diretoria/migrar-negocios" style="display:flex;justify-content:space-between;align-items:center;gap:12px;text-decoration:none;background:#fff;border:1px solid #E4EBE9;border-radius:14px;padding:14px 16px;margin-bottom:16px;color:#10262B">
-    <div><div style="font-size:14px;font-weight:800">📋 Negócios / OS do Ploomes</div><div style="font-size:12px;color:#6b7c79;margin-top:2px">Traz os negócios (ordens de serviço/coletas) do Ploomes para o banco próprio, com o registro completo e a ligação ao cliente. Essencial antes de desligar o Ploomes.</div></div>
-    <span style="font-size:12px;font-weight:800;color:#0B7A66">Abrir →</span>
-  </a>
+  <div style="background:#fff;border:1px solid #E4EBE9;border-radius:16px;padding:18px;margin-top:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div style="font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#7c8a87">⏳ Pendências e responsáveis</div>${totalPend ? `<span style="font-size:11px;background:#FFF4DE;color:#8A6A16;font-weight:800;padding:3px 10px;border-radius:20px">${totalPend} em aberto</span>` : ''}</div>
+    ${pendRows}
+  </div>
 
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:12px">
     ${tile(d.total, 'Operações', 'no total registrado')}
     ${tile(d.toneladas.toString().replace('.', ',') + ' t', 'Processado', 'peso de entrada')}
     ${tile(d.aguardando, 'A validar', 'na fila da Engenharia', d.aguardando ? '#8A6A16' : TEAL)}
@@ -140,7 +194,16 @@ export function paginaPainelDiretoria(diretor, d) {
     <div style="font-size:13px;line-height:1.9">${alertasHtml}</div>
   </div>
 
-  <div style="font-size:10.5px;color:#9aa7a4;text-align:center;margin-top:16px">Painel v1 — dados do módulo operacional. Volume de coletas (Ploomes), qualidade por pessoa e pegada de carbono entram nas próximas fatias.</div>
+  <div style="background:#fff;border:1px solid #E4EBE9;border-radius:16px;padding:16px 18px;margin-top:14px">
+    <div style="font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#7c8a87;margin-bottom:10px">Ferramentas — base migrada do Ploomes</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <a href="/diretoria/migrar-ploomes" style="text-decoration:none;font-size:12.5px;font-weight:800;color:#00333B;border:1px solid #cfe0dd;border-radius:10px;padding:9px 13px;background:#F7FAF9">👥 Base de contatos</a>
+      <a href="/diretoria/migrar-arquivos" style="text-decoration:none;font-size:12.5px;font-weight:800;color:#00333B;border:1px solid #cfe0dd;border-radius:10px;padding:9px 13px;background:#F7FAF9">📎 Arquivos do Ploomes</a>
+      <a href="/diretoria/migrar-negocios" style="text-decoration:none;font-size:12.5px;font-weight:800;color:#00333B;border:1px solid #cfe0dd;border-radius:10px;padding:9px 13px;background:#F7FAF9">📋 Negócios / OS do Ploomes</a>
+    </div>
+  </div>
+
+  <div style="font-size:10.5px;color:#9aa7a4;text-align:center;margin-top:16px">Painel da Diretoria — leads e OS vêm do histórico real do sistema; acessos são medidos a partir de 28/07/2026.</div>
 </div>
 <style>@media(max-width:680px){body [style*="grid-template-columns:repeat(4"]{grid-template-columns:repeat(2,1fr)!important}.g2{grid-template-columns:1fr!important}}</style>
 </body></html>`;
