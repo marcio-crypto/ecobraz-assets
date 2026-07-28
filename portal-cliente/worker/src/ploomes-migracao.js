@@ -109,18 +109,21 @@ export async function importarLoteContatos(env, desdeId, top) {
   if (!env.DB_PLOOMES) return { ok: false, erro: 'Banco D1 não vinculado (DB_PLOOMES).' };
   const N = Math.min(Math.max(Number(top) || 100, 1), 200);
   const D = Math.max(Number(desdeId) || 0, 0);
-  const r = await req(env, `/Contacts?$top=${N}&$orderby=Id&$filter=Id%20gt%20${D}&$expand=City`, 20000);
+  // Expande Phones (telefone), City (cidade/uf) e OtherProperties (campos do Ploomes,
+  // como endereço de coleta/responsável). Guarda o registro COMPLETO em dados_json.
+  const r = await req(env, `/Contacts?$top=${N}&$orderby=Id&$filter=Id%20gt%20${D}&$expand=Phones,City,OtherProperties`, 20000);
   if (r.erro) return { ok: false, erro: r.erro, desdeId: D };
   if (r.status !== 200) return { ok: false, erro: `HTTP ${r.status}`, desdeId: D };
   const contatos = r.value || [];
   const nowISO = (() => { try { return new Date().toISOString(); } catch { return ''; } })();
-  const stmt = env.DB_PLOOMES.prepare('INSERT OR REPLACE INTO contatos (ploomes_id,tipo,nome,nome_fantasia,documento,email,telefone,cidade,uf,endereco,cnae_codigo,cnae_nome,company_id,criado_em,importado_em) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+  const stmt = env.DB_PLOOMES.prepare('INSERT OR REPLACE INTO contatos (ploomes_id,tipo,nome,nome_fantasia,documento,email,telefone,cidade,uf,endereco,cnae_codigo,cnae_nome,company_id,criado_em,importado_em,dados_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
   const cortar = (s, n) => String(s == null ? '' : s).slice(0, n);
   let maxId = D; const batch = [];
   for (const c of contatos) {
     const m = mapearContato(c); if (!m) continue;
     if (m.ploomesId > maxId) maxId = m.ploomesId;
-    batch.push(stmt.bind(m.ploomesId, m.tipo, cortar(m.nome, 200), cortar(m.nomeFantasia, 200), cortar(m.documento, 20), cortar(m.email, 160), cortar(m.telefone, 40), cortar(m.cidade, 90), cortar(m.uf, 6), cortar(m.endereco, 300), cortar(m.cnaeCodigo, 20), cortar(m.cnaeNome, 160), m.companyId != null ? Number(m.companyId) : null, cortar(m.criadoEm, 30), nowISO));
+    let dj = ''; try { dj = JSON.stringify(c); } catch { dj = ''; }
+    batch.push(stmt.bind(m.ploomesId, m.tipo, cortar(m.nome, 200), cortar(m.nomeFantasia, 200), cortar(m.documento, 20), cortar(m.email, 160), cortar(m.telefone, 40), cortar(m.cidade, 90), cortar(m.uf, 6), cortar(m.endereco, 300), cortar(m.cnaeCodigo, 20), cortar(m.cnaeNome, 160), m.companyId != null ? Number(m.companyId) : null, cortar(m.criadoEm, 30), nowISO, cortar(dj, 24000)));
   }
   if (batch.length) { try { await env.DB_PLOOMES.batch(batch); } catch (e) { return { ok: false, erro: 'D1: ' + String((e && e.message) || e).slice(0, 120), desdeId: D }; } }
   return { ok: true, lidos: contatos.length, gravados: batch.length, ultimoId: maxId, fim: contatos.length < N };
@@ -283,8 +286,9 @@ table{width:100%;border-collapse:collapse;font-size:12.5px}td{padding:7px 8px;bo
     <div class="bar"><div id="bar"></div></div>
     <div id="pctxt" style="font-size:12px;color:#7c8a87;margin-top:6px">${pct}%</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
-      <button class="btn btn-p" id="go" onclick="rodar(this)">▶ Importar tudo</button>
-      <button class="btn btn-g" id="amostra" onclick="amostra(this)">Importar só uma amostra (100)</button>
+      <button class="btn btn-p" id="go" onclick="rodar(this)">▶ Importar novos</button>
+      <button class="btn btn-p" id="rezero" onclick="rodarZero()" style="background:#00333B;color:#fff">🔄 Re-baixar tudo (atualiza telefone/endereço)</button>
+      <button class="btn btn-g" id="amostra" onclick="amostra(this)">Amostra (100)</button>
       <button class="btn btn-g" id="parar" onclick="parar=true" disabled>■ Parar</button>
     </div>
     <div id="st" style="font-size:12.5px;color:#4F6469;margin-top:10px"></div>
@@ -299,6 +303,7 @@ table{width:100%;border-collapse:collapse;font-size:12.5px}td{padding:7px 8px;bo
 var TOTAL=${total}, TOP=100, parar=false, desdeId=${maxId}, feitos=${imp};
 function setBar(){var p=TOTAL?Math.min(100,Math.round(feitos/TOTAL*100)):0;document.getElementById('bar').style.width=p+'%';document.getElementById('pctxt').textContent=p+'% · '+feitos.toLocaleString('pt-BR')+' / '+TOTAL.toLocaleString('pt-BR');}
 async function umLote(){var r=await fetch('/api/diretoria/ploomes-importar?desdeId='+desdeId+'&top='+TOP,{method:'POST'});return r.json();}
+async function rodarZero(){ if(!confirm('Re-baixar TODOS os contatos do Ploomes para atualizar telefone e endereço? Pode levar alguns minutos — deixe a aba aberta.'))return; desdeId=0; feitos=0; setBar(); return rodar(document.getElementById('go')); }
 async function rodar(btn){parar=false;btn.disabled=true;document.getElementById('amostra').disabled=true;document.getElementById('parar').disabled=false;var st=document.getElementById('st');st.textContent='Importando…';
   while(!parar){var j;try{j=await umLote();}catch(e){st.textContent='Erro de conexão. Clique em Importar tudo de novo para retomar.';break;}
     if(!j.ok){st.textContent='Parou: '+(j.erro||'erro')+' — clique de novo para retomar.';break;}

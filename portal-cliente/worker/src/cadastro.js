@@ -123,12 +123,22 @@ export async function negociosDoCliente(env, cli) {
         WHERE (?2>0 AND contact_id=?2) OR (?1<>'' AND contact_id IN (SELECT ploomes_id FROM contatos WHERE documento=?1))
         ORDER BY criado_em DESC LIMIT 200`
     ).bind(doc, pid).all();
-    return (r.results || []).map((d) => ({
+    const negs = (r.results || []).map((d) => ({
       id: d.id, titulo: limpar(d.titulo) || ('Atendimento ' + d.id),
       status: d.status_id === 2 ? 'Concluída' : (d.status_id === 3 ? 'Perdida' : 'Em atendimento'),
       cor: d.status_id === 2 ? '#1E7A3D' : (d.status_id === 3 ? '#a06a62' : '#8A6A16'),
-      data: d.criado_em || '', valor: Number(d.amount) || 0,
+      data: d.criado_em || '', valor: Number(d.amount) || 0, arquivos: [],
     }));
+    // Anexa os documentos de cada OS (arquivos migrados ligados pelo deal_id) — para abrir/baixar.
+    const ids = negs.map((n) => Number(n.id)).filter(Boolean);
+    if (ids.length) {
+      const ph = ids.map((_, i) => '?' + (i + 1)).join(',');
+      const ar = await env.DB_PLOOMES.prepare(`SELECT deal_id, r2_key, nome_arquivo, content_type, tamanho FROM arquivos_ploomes WHERE deal_id IN (${ph}) ORDER BY nome_arquivo`).bind(...ids).all();
+      const byDeal = new Map();
+      for (const a of (ar.results || [])) { const k = Number(a.deal_id); if (!byDeal.has(k)) byDeal.set(k, []); byDeal.get(k).push(a); }
+      for (const n of negs) n.arquivos = byDeal.get(Number(n.id)) || [];
+    }
+    return negs;
   } catch { return []; }
 }
 // Espelha um cliente salvo (KV) na base D1, casando por DOCUMENTO (upsert). Assim a
@@ -555,10 +565,12 @@ export async function arquivosDoCliente(env, cli) {
 export function paginaClienteDetalhe(user, cli, arquivos, negocios) {
   const negs = negocios || [];
   const temDoc = cli.tipo === 'PJ' ? !!digits(cli.cnpj) : !!digits(cli.cpf);
-  const negRows = negs.length ? negs.map((n) => `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid #EEF1F0;border-radius:10px;padding:10px 12px;margin-bottom:7px;background:#FBFDFC">
-      <div style="min-width:0"><div style="font-size:12.5px;font-weight:700;color:#10262B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(n.titulo)}</div><div style="font-size:11px;color:#8fa39f">${esc(dataBR(n.data))}</div></div>
-      <span style="flex:none;font-size:10.5px;font-weight:800;color:${n.cor || '#8A6A16'}">${esc(n.status)}</span>
-    </div>`).join('') : '<div style="font-size:12.5px;color:#8fa39f">Nenhuma ordem de coleta anterior encontrada para este cliente.</div>';
+  const fmtTam2 = (n) => { n = Number(n || 0); return n ? (n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB') : ''; };
+  const negRows = negs.length ? negs.map((n) => {
+    const docs = n.arquivos || [];
+    const docLinks = docs.length ? docs.map((a) => `<a href="/cadastro/arquivo?key=${encodeURIComponent(a.r2_key)}&nome=${encodeURIComponent(a.nome_arquivo || '')}" target="_blank" rel="noopener" style="display:flex;justify-content:space-between;align-items:center;gap:8px;text-decoration:none;border:1px solid #EEF1F0;border-radius:8px;padding:8px 10px;margin:6px 0 0;background:#fff"><span style="min-width:0;font-size:12px;color:#10262B;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">📄 ${esc(a.nome_arquivo || a.r2_key)}</span><span style="flex:none;font-size:10.5px;color:#0B5B66;font-weight:700">${fmtTam2(a.tamanho) ? fmtTam2(a.tamanho) + ' · ' : ''}abrir ↗</span></a>`).join('') : '<div style="font-size:11.5px;color:#8fa39f;padding:6px 0 2px">Sem documentos vinculados a esta OS.</div>';
+    return `<details style="border:1px solid #EEF1F0;border-radius:10px;padding:2px 12px;margin-bottom:7px;background:#FBFDFC"><summary style="cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0"><span style="min-width:0"><span style="font-size:12.5px;font-weight:700;color:#10262B">${esc(n.titulo)}</span><span style="display:block;font-size:11px;color:#8fa39f">${esc(dataBR(n.data))}${docs.length ? ` · ${docs.length} documento(s) — toque para abrir` : ''}</span></span><span style="flex:none;font-size:10.5px;font-weight:800;color:${n.cor || '#8A6A16'}">${esc(n.status)}</span></summary><div style="padding:0 0 10px">${docLinks}</div></details>`;
+  }).join('') : '<div style="font-size:12.5px;color:#8fa39f">Nenhuma ordem de coleta anterior encontrada para este cliente.</div>';
   const uploadUI = temDoc ? `<div style="border-top:1px dashed #E4EBE9;margin-top:12px;padding-top:12px">
       <input type="file" id="arqFile" style="display:none" onchange="subirAnexo()">
       <button type="button" class="btn btn-g" style="padding:9px 14px;font-size:13px" onclick="document.getElementById('arqFile').click()">＋ Adicionar anexo</button>
