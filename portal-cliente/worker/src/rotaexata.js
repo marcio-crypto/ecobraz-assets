@@ -133,7 +133,7 @@ export async function sondaRotaExata(env) {
 
   if (!out.configurado) {
     out.dica = 'Cadastre os Secrets ROTAEXATA_USER e ROTAEXATA_SENHA na Cloudflare para a sonda testar o login.';
-    return out;
+    return fimSonda(env, out);
   }
 
   const user = env.ROTAEXATA_USER, senha = env.ROTAEXATA_SENHA;
@@ -180,29 +180,86 @@ export async function sondaRotaExata(env) {
     }
   }
 
-  // 3) POSIÇÕES — com o header da chave que a documentação indicou + variações.
-  if (!rotasPos.length) rotasPos = ['/veiculos', '/posicoes', '/veiculos/posicoes'];
+  // 3) LEITURA — o header da doc leva a chave CRUA (apiKey em 'Authorization').
+  // Varre TODAS as rotas GET sem parâmetro (qualquer nome — a rota de veículos pode
+  // não ter nome óbvio), priorizando as com cara de veículo/posição; assim que um
+  // auth responder 200, trava nele. Depois tenta as rotas com {id} usando um id
+  // descoberto nas listas. Para quando achar latitude/longitude.
+  const kw = /(veicul|vehicle|posi|position|localiza|rastre|last|atual|frota|fleet|mapa|monitor|equipamento|dispositivo|tracker|placa)/i;
+  let getsSem = [], getsCom = [];
+  if (specRaw) {
+    for (const [p, met] of Object.entries(specRaw.paths || {})) {
+      if (!met || !met.get) continue;
+      if (p.includes('{')) { if (kw.test(p)) getsCom.push(p); }
+      else getsSem.push(p);
+    }
+    getsSem.sort((a, b) => (kw.test(b) ? 1 : 0) - (kw.test(a) ? 1 : 0));
+  }
+  if (!getsSem.length) getsSem = ['/veiculos', '/posicoes', '/veiculos/posicoes'];
+
   const auths = [];
-  if (token && headerChave) auths.push({ nome: `header da doc (${headerChave})`, header: { [headerChave]: token } });
-  if (token) auths.push({ nome: 'Bearer', header: { authorization: `Bearer ${token}` } }, { nome: 'token cru no Authorization', header: { authorization: token } });
+  if (token && headerChave) auths.push({ nome: `chave crua no ${headerChave}`, header: { [headerChave]: token } });
+  if (token) auths.push({ nome: 'Bearer', header: { authorization: `Bearer ${token}` } });
   if (cookie) auths.push({ nome: 'cookie de sessão', header: { cookie } });
-  if (headerChave) auths.push({ nome: `login:senha no header da doc`, header: { [headerChave]: `${user}:${senha}` } });
   auths.push({ nome: 'Basic (login:senha)', header: { authorization: 'Basic ' + btoa(`${user}:${senha}`) } });
 
-  const basesPos = baseOk ? [baseOk] : bases.slice(0, 2);
-  for (const a of auths.slice(0, 5)) {
-    for (const base of basesPos) {
-      for (const rota of rotasPos.slice(0, 5)) {
-        const r = await req(base.replace(/\/+$/, '') + rota, { headers: { ...a.header, accept: 'application/json' } }, 7000);
-        out.tentativas.push({ passo: 'posições', auth: a.nome, url: base + rota, status: r.status, estrutura: (r.status >= 200 && r.status < 300 && r.corpo) ? estrutura(r.corpo) : undefined, detalhe: (r.status >= 200 && r.status < 300) ? undefined : (r.erro || corte(r.texto, 90)) });
-        if (r.status >= 200 && r.status < 300 && r.corpo) { out.dica = 'ACHOU! Login e leitura funcionaram. Me mande o print desta tela que eu fixo o mapeamento e ligo o rastreio para o cliente.'; return out; }
+  const basePos = (baseOk || bases[0] || 'https://api.rotaexata.com.br').replace(/\/+$/, '');
+  const ehPosicao = (est) => { const s = JSON.stringify(est || {}); return /lat/i.test(s) && /(lng|lon)/i.test(s); };
+  const extraiId = (corpo) => {
+    const item = Array.isArray(corpo) ? corpo[0] : (corpo && ((corpo.data && corpo.data[0]) || (corpo.items && corpo.items[0]) || (corpo.veiculos && corpo.veiculos[0])));
+    if (!item || typeof item !== 'object') return null;
+    return item.id ?? item._id ?? item.veiculoId ?? item.deviceId ?? item.codigo ?? null;
+  };
+
+  let authOk = null, idAchado = null;
+  for (const a of auths) {
+    let acertou = false;
+    for (const rota of getsSem.slice(0, 12)) {
+      const r = await req(basePos + rota, { headers: { ...a.header, accept: 'application/json' } }, 7000);
+      const ent = { passo: 'leitura', auth: a.nome, url: basePos + rota, status: r.status };
+      if (r.status >= 200 && r.status < 300 && r.corpo != null) {
+        ent.estrutura = estrutura(r.corpo);
+        out.tentativas.push(ent);
+        acertou = true; authOk = a;
+        const id = extraiId(r.corpo); if (id != null && idAchado == null) idAchado = id;
+        if (ehPosicao(ent.estrutura)) { out.dica = 'ACHOU POSIÇÕES! (latitude/longitude na estrutura acima). Resultado salvo — só me avise que rodou, que eu fixo o mapeamento e ligo o rastreio.'; return fimSonda(env, out); }
+      } else {
+        ent.detalhe = r.erro || corte(r.texto, 80);
+        out.tentativas.push(ent);
       }
     }
+    if (acertou) break; // trava no auth que funcionou e não desperdiça tentativas
   }
-  out.tentativas = out.tentativas.slice(0, 40);
+  if (authOk && idAchado != null && getsCom.length) {
+    for (const rota of getsCom.slice(0, 6)) {
+      const caminho = rota.replace(/\{[^}]+\}/g, encodeURIComponent(String(idAchado)));
+      const r = await req(basePos + caminho, { headers: { ...authOk.header, accept: 'application/json' } }, 7000);
+      const ent = { passo: 'leitura com id', auth: authOk.nome, url: basePos + caminho, status: r.status };
+      if (r.status >= 200 && r.status < 300 && r.corpo != null) {
+        ent.estrutura = estrutura(r.corpo);
+        out.tentativas.push(ent);
+        if (ehPosicao(ent.estrutura)) { out.dica = 'ACHOU POSIÇÕES (rota com id)! Resultado salvo — só me avise que rodou, que eu fixo o mapeamento e ligo o rastreio.'; return fimSonda(env, out); }
+      } else { ent.detalhe = r.erro || corte(r.texto, 80); out.tentativas.push(ent); }
+    }
+  }
+  out.tentativas = out.tentativas.slice(0, 60);
   out.dica = (token || cookie)
-    ? 'O LOGIN FUNCIONOU (veja a estrutura acima), mas a leitura de posições ainda não respondeu 200. Me mande o print — o formato da resposta do login me diz o próximo passo.'
-    : 'O login ainda não passou. Me mande o print — o campo "loginFormato" acima mostra o que a API espera e eu ajusto.';
+    ? 'Login OK; as leituras acima mostram o que cada rota respondeu. Resultado salvo no banco — só me avise que rodou, que eu analiso daqui.'
+    : 'O login ainda não passou. Resultado salvo no banco — só me avise que rodou, que eu analiso daqui.';
+  return fimSonda(env, out);
+}
+
+// Salva o resultado da sonda no D1 (sem credencial nenhuma — só status/estrutura),
+// para análise direta sem depender de print. Best-effort.
+async function fimSonda(env, out) {
+  try {
+    if (env.DB_PLOOMES) {
+      await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS diagnosticos (id INTEGER PRIMARY KEY AUTOINCREMENT, tipo TEXT, criado_em TEXT, dados TEXT)').run();
+      await env.DB_PLOOMES.prepare('INSERT INTO diagnosticos (tipo, criado_em, dados) VALUES (?1, ?2, ?3)')
+        .bind('rotaexata', new Date().toISOString(), JSON.stringify(out).slice(0, 180000)).run();
+      out.salvoNoBanco = true;
+    }
+  } catch { /* segue sem salvar */ }
   return out;
 }
 
@@ -258,7 +315,7 @@ code{background:#EEF3F1;border-radius:6px;padding:1px 7px;font-size:12px}</style
     <span id="st" style="font-size:13px;color:#4F6469;margin-left:10px"></span>
     <pre id="res" style="display:none;margin-top:14px"></pre>
   </div>
-  <div style="font-size:11.5px;color:#8fa39f">Depois de rodar, me mande o <b>print do resultado</b> — com ele eu fixo o mapeamento e ligo o botão “Acompanhar o caminhão” no portal do cliente.</div>
+  <div style="font-size:11.5px;color:#8fa39f">Depois de rodar, o resultado fica <b>salvo no banco automaticamente</b> — é só me avisar “rodei” que eu analiso daqui e ligo o botão “Acompanhar o caminhão” no portal do cliente. (Print não é mais necessário.)</div>
 </div>
 <script>
 async function rodar(){
