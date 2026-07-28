@@ -1,0 +1,24 @@
+name: Ferramenta — subir mídia ao Ghost
+
+on:
+  workflow_dispatch:
+    inputs:
+      pasta:
+        description: 'Pasta com os arquivos a enviar'
+        required: false
+        type: string
+        default: 'site-ghost/midia'
+
+permissions:
+  contents: read
+
+jobs:
+  subir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enviar arquivos e imprimir URLs
+        env:
+          GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
+          GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
+        run: node site-ghost/scripts/sobe-midia.mjs ${{ inputs.pasta }}/*
