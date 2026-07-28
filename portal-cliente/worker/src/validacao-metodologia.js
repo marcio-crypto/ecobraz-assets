@@ -27,10 +27,28 @@ async function seloCodigo(versao, hash, env) {
 function origemPortal(env, url) { return String(env.PORTAL_URL || `${url.origin}/`).replace(/\/+$/, ''); }
 
 // ---- Registro de validação (KV) ----
+// Espelho de AUDITORIA no D1: cópia imutável do registro de validação. O KV é a
+// fonte operacional; o banco guarda a trilha permanente (consultável em SQL,
+// sem TTL). Grava 1× por hash — nas leituras seguintes o marcador pula tudo.
+async function espelharValidacaoD1(env, rec) {
+  try {
+    if (!env.DB_PLOOMES || !rec || !rec.hash) return;
+    if (env.PORTAL_KV) {
+      const marca = `carbono:validacao:espelho:${rec.hash}`;
+      if (await env.PORTAL_KV.get(marca)) return;
+      await env.PORTAL_KV.put(marca, '1', { expirationTtl: 60 * 60 * 24 * 365 });
+    }
+    await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS diagnosticos (id INTEGER PRIMARY KEY AUTOINCREMENT, tipo TEXT, criado_em TEXT, dados TEXT)').run();
+    await env.DB_PLOOMES.prepare('INSERT INTO diagnosticos (tipo, criado_em, dados) VALUES (?1, ?2, ?3)')
+      .bind('metodologia-validacao', agoraISO(), JSON.stringify(rec)).run();
+  } catch { /* espelho é best-effort; a validação em si nunca depende dele */ }
+}
 export async function lerValidacao(env) {
   if (!env.PORTAL_KV) return null;
   const raw = await env.PORTAL_KV.get('carbono:validacao');
-  return raw ? JSON.parse(raw) : null;
+  const rec = raw ? JSON.parse(raw) : null;
+  if (rec) await espelharValidacaoD1(env, rec);
+  return rec;
 }
 async function lerValidacaoPorHash(env, hash) {
   if (!env.PORTAL_KV) return null;
@@ -51,6 +69,7 @@ export async function registrarValidacao(env, { validadorEmail, comentario }) {
     await env.PORTAL_KV.put(`carbono:validacao:${hash}`, JSON.stringify(rec), { expirationTtl: 60 * 60 * 24 * 365 * 5 });
     await env.PORTAL_KV.put('carbono:validacao', JSON.stringify(rec), { expirationTtl: 60 * 60 * 24 * 365 * 5 });
   }
+  await espelharValidacaoD1(env, rec);
   return rec;
 }
 
