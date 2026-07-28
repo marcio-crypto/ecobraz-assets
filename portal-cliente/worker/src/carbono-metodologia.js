@@ -79,21 +79,58 @@ export const METODOLOGIA = {
   compensacaoAdote: { valor: null, unidade: 'kgCO₂e/coleta', coletaKgMedio: 25, fonte: 'Villanova ESG (a validar) — base WARM/WEEE por ~25 kg de REEE', versaoFonte: '', status: 'proposto', nota: 'Karina valida o fator; até lá o termômetro mostra só o dado físico (coletas e quilos).' },
 };
 
+// ---- HOMOLOGAÇÃO DE FATORES (a Karina digita o valor da fonte e assina) -----
+// O CÓDIGO guarda só o ESQUELETO (material, unidade, fonte, valor:null). Os
+// VALORES vivem no KV, gravados exclusivamente pela área da Villanova
+// (/validacao), fator a fator, com trilha imutável no D1. Nenhum número entra
+// por deploy — só por assinatura da RT.
+export async function lerFatoresHomologados(env) {
+  try {
+    if (!env || !env.PORTAL_KV) return {};
+    const raw = await env.PORTAL_KV.get('carbono:fatores:homologados');
+    const o = raw ? JSON.parse(raw) : {};
+    return o && typeof o === 'object' ? o : {};
+  } catch { return {}; }
+}
+// A versão ATUAL do esqueleto está assinada pela Villanova? (lê o registro que a
+// área de validação grava no KV — sem import circular.)
+export async function versaoValidada(env) {
+  try {
+    if (!env || !env.PORTAL_KV) return false;
+    const raw = await env.PORTAL_KV.get('carbono:validacao');
+    const rec = raw ? JSON.parse(raw) : null;
+    return !!(rec && rec.versao === METODOLOGIA.versao);
+  } catch { return false; }
+}
+// Metodologia VIGENTE = esqueleto do código + valores homologados + status real.
+// É o que o motor de cálculo deve consumir (calcularEvitado já trava por fator).
+export async function metodologiaVigente(env) {
+  const homolog = await lerFatoresHomologados(env);
+  const fatores = METODOLOGIA.fatores.map((f) => {
+    const h = homolog[f.id];
+    return (h && h.valor != null) ? { ...f, valor: Number(h.valor), status: 'validado', homologadoPor: h.por || '', homologadoEm: h.em || '' } : { ...f };
+  });
+  const ok = await versaoValidada(env);
+  return { ...METODOLOGIA, status: ok ? 'validado' : METODOLOGIA.status, fatores, _homologados: homolog };
+}
+
 // Lê o fator de compensação do Adote (número C), pronto para o termômetro.
-// REGRA DE OURO: só devolve número quando a metodologia estiver 'validado' E o fator
-// 'validado'. O valor pode vir da metodologia OU da var de ambiente (plugue sem deploy),
-// mas a trava de validação é a mesma — nada acende antes da assinatura da Villanova.
-export function fatorCompensacaoAdote(env, metodologia) {
+// REGRA DE OURO: só devolve número quando a VERSÃO vigente está assinada E o
+// fator 'compensacaoAdote' foi homologado pela Villanova na área dela. A var de
+// ambiente ADOTE_KGCO2E_POR_COLETA segue como plugue, mas com a MESMA trava.
+export async function fatorCompensacaoAdote(env, metodologia) {
   const M = metodologia || METODOLOGIA;
   const base = (M && M.compensacaoAdote) || null;
-  const validado = !!(M && M.status === 'validado' && base && base.status === 'validado');
+  const homolog = await lerFatoresHomologados(env);
+  const h = homolog.compensacaoAdote || null;
+  const validado = !!((await versaoValidada(env)) && h && h.valor != null);
   let valor = null;
   if (validado) {
     const ov = env && env.ADOTE_KGCO2E_POR_COLETA;
     const envVal = (ov != null && ov !== '') ? Number(ov) : null;
-    valor = (envVal != null && !Number.isNaN(envVal)) ? envVal : (base.valor != null ? Number(base.valor) : null);
+    valor = (envVal != null && !Number.isNaN(envVal)) ? envVal : Number(h.valor);
   }
-  return { valorKgPorColeta: valor, pendente: valor == null, unidade: base ? base.unidade : 'kgCO₂e/coleta', coletaKgMedio: (base && base.coletaKgMedio) || 25, fonte: base ? base.fonte : '', validado };
+  return { valorKgPorColeta: valor, pendente: valor == null, unidade: base ? base.unidade : 'kgCO₂e/coleta', coletaKgMedio: (base && base.coletaKgMedio) || 25, fonte: (h && h.fonte) || (base ? base.fonte : ''), validado, homologadoPor: h ? (h.por || null) : null, homologadoEm: h ? (h.em || null) : null };
 }
 
 // "Impressão digital" do CONTEÚDO validável (normas, números, fronteira, fatores, versão) — NÃO inclui
@@ -116,8 +153,10 @@ function badge(status) { const b = BADGE[status] || BADGE.proposto; return `<spa
 
 // Página da metodologia — superfície compartilhada (Auditor + Villanova veem isto).
 // Read-only nesta fase; a validação interativa (login Villanova + aprovar) vem na Fase 2.
-export function paginaMetodologia(env, validacao) {
+export async function paginaMetodologia(env, validacao) {
   const m = METODOLOGIA;
+  const MV = await metodologiaVigente(env);
+  const hAdote = (MV._homologados && MV._homologados.compensacaoAdote) || null;
   const validado = !!(validacao && validacao.versao === m.versao);
   const statusGeral = badge(validado ? 'validado' : 'proposto');
   const normas = m.normas.map((n) => `<li style="margin:0 0 10px;"><a href="${esc(n.url)}" target="_blank" rel="noopener" style="color:#00333B;font-weight:700;text-decoration:none;border-bottom:1px solid #cfe0dd;">${esc(n.nome)}</a><div style="font-size:12.5px;color:#5B6570;margin-top:2px;">${esc(n.uso)}</div></li>`).join('');
@@ -127,7 +166,7 @@ export function paginaMetodologia(env, validacao) {
       <div style="font-size:11px;color:#8fa39f;margin-top:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;">${esc(x.base)}</div>
     </div>`).join('');
   const passos = m.fronteira.map((p, i) => `<div style="display:flex;gap:12px;align-items:flex-start;margin:0 0 10px;"><span style="flex:none;width:22px;height:22px;border-radius:50%;background:#92C430;color:#10262B;font-weight:800;font-size:12px;display:inline-flex;align-items:center;justify-content:center;">${i + 1}</span><span style="font-size:13.5px;color:#283b3f;line-height:1.5;padding-top:1px;">${esc(p)}</span></div>`).join('');
-  const linhas = m.fatores.map((f) => `<tr>
+  const linhas = MV.fatores.map((f) => `<tr>
       <td style="padding:11px 12px;border-top:1px solid #EDF1F0;font-size:13px;color:#10262B;font-weight:600;">${esc(f.material)}</td>
       <td style="padding:11px 12px;border-top:1px solid #EDF1F0;font-size:13px;color:#4F6469;">${f.valor == null ? '<span style="color:#9aa7a4;">—</span>' : esc(f.valor)}</td>
       <td style="padding:11px 12px;border-top:1px solid #EDF1F0;font-size:12px;color:#5B6570;">${esc(f.unidade)}</td>
@@ -197,8 +236,9 @@ export function paginaMetodologia(env, validacao) {
       <div style="font-size:12.5px;color:#5B6570;margin-top:4px;line-height:1.55;">${esc(m.compensacaoAdote.fonte)}. Coleta média de <b>${esc(String(m.compensacaoAdote.coletaKgMedio))} kg</b>. ${esc(m.compensacaoAdote.nota)}</div>
     </div>
     <div style="text-align:right;">
-      <div style="font-size:20px;font-weight:800;color:#10262B;">${m.compensacaoAdote.valor == null ? '<span style="color:#9aa7a4;">—</span>' : esc(m.compensacaoAdote.valor)} <span style="font-size:12px;color:#8fa39f;font-weight:700;">${esc(m.compensacaoAdote.unidade)}</span></div>
-      <div style="margin-top:6px;">${badge(m.compensacaoAdote.status)}</div>
+      <div style="font-size:20px;font-weight:800;color:#10262B;">${(hAdote && hAdote.valor != null) ? esc(String(hAdote.valor)) : '<span style="color:#9aa7a4;">—</span>'} <span style="font-size:12px;color:#8fa39f;font-weight:700;">${esc(m.compensacaoAdote.unidade)}</span></div>
+      <div style="margin-top:6px;">${badge((hAdote && hAdote.valor != null) ? 'validado' : m.compensacaoAdote.status)}</div>
+      ${(hAdote && hAdote.em) ? `<div style="font-size:10.5px;color:#8fa39f;margin-top:4px;">homologado em ${esc(String(hAdote.em).slice(0, 10).split('-').reverse().join('/'))}</div>` : ''}
     </div>
   </div>
 

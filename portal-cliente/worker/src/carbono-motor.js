@@ -8,7 +8,7 @@
 // como "pendente". No dia em que a Villanova validar, os números acendem sozinhos.
 // Nada é inventado.
 
-import { METODOLOGIA } from './carbono-metodologia.js';
+import { METODOLOGIA, metodologiaVigente } from './carbono-metodologia.js';
 import { listarOperacoes, lerOperacao } from './operacional.js';
 
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -97,7 +97,8 @@ export async function carbonoDoCliente(env, clienteNome) {
     for (const m of (full.materiais || [])) materiais.push(m);
     operacoes.push({ osId: full.osId, numero: full.numero, entradaKg: (full.entrada && full.entrada.pesoKg) || 0, materiais: (full.materiais || []).length });
   }
-  const calc = calcularEvitado(materiais, METODOLOGIA);
+  // Metodologia VIGENTE: esqueleto + fatores homologados pela Villanova no KV.
+  const calc = calcularEvitado(materiais, await metodologiaVigente(env));
   return { clienteNome, coletas: ops.length, pesoEntradaKg, pesoSaidaKg, operacoes, ...calc };
 }
 

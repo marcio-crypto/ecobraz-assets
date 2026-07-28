@@ -42,7 +42,7 @@ import { qrCDF, validarCDF } from './validacao.js';
 import { paginaMetodologia, fatorCompensacaoAdote } from './carbono-metodologia.js';
 import { registrarUso, resumoUso, contarPorPeriodo, reunirPendencias } from './uso.js';
 import { sondaRotaExata, paginaSondaRotaExata, paginaRastreio, posicaoDoVeiculo, posicoesFrota, capturarTelemetria, paginaFrotaAoVivo, rastreioDisponivel } from './rotaexata.js';
-import { lerValidacao, registrarValidacao, paginaAreaValidacao, qrMetodologia, validarMetodologiaPublico } from './validacao-metodologia.js';
+import { lerValidacao, registrarValidacao, paginaAreaValidacao, qrMetodologia, validarMetodologiaPublico, homologarFatorAcao } from './validacao-metodologia.js';
 import { paginaPainelCarbono } from './carbono-painel.js';
 import { clientesComOperacoes, carbonoDoCliente, paginaCarbonoAnalista, paginaCarbonoAuditor } from './carbono-motor.js';
 import { agentePermitido, nomeAgente, listarColetasComStatus, paginaLoginAgente, paginaAppAgente, detalheColeta, lerEstadoColeta, registrarCheckin, registrarACaminho, registrarFoto, servirFotoColeta, paginaColetaDetalhe, registrarEncerramento, registrarReagendamento, qrColeta, validarColetaPublico, paginaComprovante } from './agente.js';
@@ -1438,10 +1438,15 @@ export default {
         if (!validador) return json({ ok: false, error: 'nao_autenticado' }, 401);
         return await validarMetodologiaAcao(request, env, validador);
       }
+      // Homologação de UM fator (valor da fonte, assinado pela RT) — só validador.
+      if (pathname === '/api/validacao/fator' && request.method === 'POST') {
+        if (!validador) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        return await homologarFatorAcao(request, env, validador);
+      }
       // Metodologia — FECHADA (proteção contra concorrente): cliente logado OU validador.
       if (pathname === '/metodologia' && request.method === 'GET') {
         if (!sessao && !validador) return new Response(null, { status: 302, headers: { Location: '/', 'cache-control': 'no-store' } });
-        return html(paginaMetodologia(env, await lerValidacao(env)));
+        return html(await paginaMetodologia(env, await lerValidacao(env)));
       }
       // Painel de carbono do cliente — ligado ao motor (peso/composição REAIS; tCO₂e
       // pendente até a Villanova validar). Só cliente logado.
@@ -1449,7 +1454,7 @@ export default {
         if (!sessao) return new Response(null, { status: 302, headers: { Location: '/', 'cache-control': 'no-store' } });
         const dadosCli = await carbonoDoCliente(env, sessao.nome || '');
         // Termômetro de neutralidade: patrocínio (Adote, número C) + inventário (número B) + fator.
-        let extra = { adote: null, inventario: null, compensacao: fatorCompensacaoAdote(env) };
+        let extra = { adote: null, inventario: null, compensacao: await fatorCompensacaoAdote(env) };
         try {
           const doc = String(sessao.documento || '').replace(/\D/g, '');
           const cred = await lerCreditoPorDoc(env, doc); // Adote (compensação C) já amarra pelo CNPJ

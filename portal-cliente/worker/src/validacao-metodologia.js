@@ -7,7 +7,7 @@
 // assinado + hash (inviolável). Público vê SÓ a confirmação — nunca a receita.
 
 import qrcode from 'qrcode-generator';
-import { METODOLOGIA, hashConteudo } from './carbono-metodologia.js';
+import { METODOLOGIA, hashConteudo, lerFatoresHomologados } from './carbono-metodologia.js';
 
 const TE = new TextEncoder();
 function b64url(bytes) { let s = ''; for (const b of bytes) s += String.fromCharCode(b); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
@@ -80,7 +80,26 @@ export async function paginaAreaValidacao(env, validador, url) {
   const jaValidada = !!(rec && rec.versao === m.versao);
   const hashAtual = await hashConteudo();
   const seloUrl = jaValidada ? `${origemPortal(env, url)}/validar-metodologia?v=${encodeURIComponent(rec.versao)}&h=${rec.hash}&c=${await seloCodigo(rec.versao, rec.hash, env)}` : '';
-  const fatores = m.fatores.map((f) => `<tr><td style="padding:9px 12px;border-top:1px solid #EDF1F0;font-size:13px;font-weight:600;color:#10262B;">${esc(f.material)}</td><td style="padding:9px 12px;border-top:1px solid #EDF1F0;font-size:12px;color:#5B6570;">${esc(f.fonte)}</td></tr>`).join('');
+  // Homologação fator a fator: a RT digita o valor EXATO da fonte citada (na
+  // unidade indicada) e assina. Cada assinatura fica registrada (quem/quando) e
+  // espelhada no D1 — trilha imutável. Só libera depois de a versão ser validada.
+  const homolog = await lerFatoresHomologados(env);
+  const itensFat = [
+    ...m.fatores.map((f) => ({ id: f.id, material: f.material, unidade: f.unidade, fonte: `${f.fonte}${f.versaoFonte ? ` (${f.versaoFonte})` : ''}`, nota: f.nota || '' })),
+    { id: 'compensacaoAdote', material: 'Compensação — Adote um Bairro (por coleta de ~25 kg)', unidade: m.compensacaoAdote.unidade, fonte: m.compensacaoAdote.fonte, nota: 'É o fator que acende o termômetro de neutralidade dos clientes.' },
+  ];
+  const tdF = 'padding:10px 10px;border-top:1px solid #EDF1F0;vertical-align:top;';
+  const fatores = itensFat.map((f) => {
+    const h = homolog[f.id];
+    const tem = !!(h && h.valor != null);
+    return `<tr>
+      <td style="${tdF}font-size:13px;font-weight:600;color:#10262B;">${esc(f.material)}<div style="font-size:11px;font-weight:400;color:#8fa39f;margin-top:2px;">${esc(f.fonte)}${f.nota ? ` · ${esc(f.nota)}` : ''}</div></td>
+      <td style="${tdF}font-size:12px;color:#5B6570;white-space:nowrap;">${esc(f.unidade)}</td>
+      <td style="${tdF}"><input id="fat_${esc(f.id)}" value="${tem ? esc(String(h.valor)) : ''}" inputmode="decimal" placeholder="—" ${jaValidada ? '' : 'disabled'} style="width:110px;border:1px solid #DDE1E6;border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;${jaValidada ? '' : 'background:#F4F6F5;'}"></td>
+      <td style="${tdF}font-size:11.5px;white-space:nowrap;">${tem ? `<span style="color:#1E7A3D;font-weight:800;">✓ homologado</span><div style="color:#8fa39f;">${esc(String(h.em || '').slice(0, 10).split('-').reverse().join('/'))}</div>` : '<span style="color:#8A6A16;font-weight:700;">a homologar</span>'}</td>
+      <td style="${tdF}text-align:right;"><button onclick="homologar('${esc(f.id)}')" ${jaValidada ? '' : 'disabled'} style="background:${jaValidada ? '#00333B' : '#cfd8d6'};color:#fff;border:none;border-radius:8px;padding:9px 14px;font-size:12px;font-weight:800;cursor:${jaValidada ? 'pointer' : 'default'};white-space:nowrap;">${tem ? 'Reassinar' : 'Assinar'}</button></td>
+    </tr>`;
+  }).join('');
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Validação de Metodologia — Ecobraz</title></head>
 <body style="margin:0;background:#F2F6F4;font-family:Montserrat,'Segoe UI',Arial,Helvetica,sans-serif;color:#10262B;">
 <div style="max-width:760px;margin:0 auto;padding:26px 18px 60px;">
@@ -94,7 +113,19 @@ export async function paginaAreaValidacao(env, validador, url) {
     <div style="font-size:13px;color:#5B6570;">Logado como <strong style="color:#10262B;">${esc(validador.email)}</strong></div>
     <h1 style="margin:8px 0 6px;font-size:22px;color:#00333B;letter-spacing:-.02em;">Metodologia de Carbono — versão ${esc(m.versao)}</h1>
     <p style="margin:0 0 16px;font-size:13.5px;color:#4F6469;line-height:1.6;">Revise a metodologia completa em <a href="/metodologia" style="color:#00333B;font-weight:700;">/metodologia</a>. Ao validar, sua aprovação fica <strong>registrada</strong> (com data e versão) e gera um <strong>selo público com QR</strong> que comprova a validação — inclusive detectando se a metodologia for alterada depois.</p>
-    <table role="presentation" style="width:100%;border-collapse:collapse;margin-bottom:6px;"><tbody>${fatores}</tbody></table>
+
+    <div style="font-size:14px;font-weight:800;color:#00333B;margin:4px 0 6px;">Fatores de emissão — homologação individual</div>
+    <div style="font-size:12.5px;color:#4F6469;line-height:1.6;margin-bottom:10px;">Digite o valor <strong>exatamente como consta na fonte citada</strong>, já convertido para a unidade indicada (aceita vírgula decimal), e clique em <strong>Assinar</strong>. Cada homologação fica registrada no seu nome, com data, e espelhada na trilha de auditoria. <strong>Só fator homologado acende número</strong> nos painéis dos clientes.${jaValidada ? '' : ' <strong style="color:#8A6A16;">Valide a versão (abaixo) para liberar os campos.</strong>'}</div>
+    <div style="overflow-x:auto;"><table role="presentation" style="width:100%;border-collapse:collapse;margin-bottom:6px;min-width:640px;">
+      <thead><tr>
+        <th style="text-align:left;padding:8px 10px;font-size:10.5px;color:#7c8a87;text-transform:uppercase;letter-spacing:.05em;">Fator / fonte</th>
+        <th style="text-align:left;padding:8px 10px;font-size:10.5px;color:#7c8a87;text-transform:uppercase;letter-spacing:.05em;">Unidade</th>
+        <th style="text-align:left;padding:8px 10px;font-size:10.5px;color:#7c8a87;text-transform:uppercase;letter-spacing:.05em;">Valor</th>
+        <th style="text-align:left;padding:8px 10px;font-size:10.5px;color:#7c8a87;text-transform:uppercase;letter-spacing:.05em;">Status</th>
+        <th></th>
+      </tr></thead>
+      <tbody>${fatores}</tbody>
+    </table></div>
   </div>
 
   ${jaValidada ? `<div style="background:#E4F3E6;border:1px solid #B7E0BE;border-radius:14px;padding:20px 24px;margin-top:16px;">
@@ -112,7 +143,55 @@ export async function paginaAreaValidacao(env, validador, url) {
 
   <div style="margin-top:22px;font-size:11px;color:#9fb0ac;line-height:1.6;">Impressão digital da versão atual: <code style="color:#5B6570;">${esc(hashAtual)}</code> · A validação é registrada de forma imutável e versionada.</div>
 </div>
+<script>
+function homologar(id){
+  var inp=document.getElementById('fat_'+id);
+  var v=(inp&&inp.value?inp.value:'').trim();
+  if(!v){alert('Digite o valor do fator (conforme a fonte) antes de assinar.');return;}
+  if(!confirm('Homologar este fator com o valor '+v+'?\\n\\nA assinatura fica registrada no seu nome, com data, na trilha de auditoria.'))return;
+  fetch('/api/validacao/fator',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:id,valor:v})})
+    .then(function(r){return r.json();})
+    .then(function(j){if(j.ok){location.reload();}else{alert(j.error||'Não foi possível homologar.');}})
+    .catch(function(){alert('Sem conexão. Tente de novo.');});
+}
+</script>
 </body></html>`;
+}
+
+// ---- Ação: homologar um fator (só validador logado; versão precisa estar assinada) ----
+export async function homologarFatorAcao(request, env, validador) {
+  const rj = (obj, status) => new Response(JSON.stringify(obj), { status: status || 200, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
+  let b; try { b = await request.json(); } catch { b = {}; }
+  const id = String((b && b.id) || '').slice(0, 40);
+  const meta = id === 'compensacaoAdote' ? METODOLOGIA.compensacaoAdote : METODOLOGIA.fatores.find((f) => f.id === id);
+  if (!meta) return rj({ ok: false, error: 'Fator desconhecido.' }, 400);
+  const rec0 = await lerValidacao(env);
+  if (!rec0 || rec0.versao !== METODOLOGIA.versao) return rj({ ok: false, error: 'Valide a versão da metodologia antes de homologar fatores.' }, 409);
+  let sv = String((b && b.valor) ?? '').trim();
+  if (sv.includes(',')) sv = sv.replace(/\./g, '').replace(',', '.'); // "1.234,56" → "1234.56"
+  const valor = Number(sv);
+  if (!Number.isFinite(valor) || valor <= 0 || valor > 1e6) return rj({ ok: false, error: 'Valor inválido — use número positivo (aceita vírgula decimal).' }, 400);
+  if (!env.PORTAL_KV) return rj({ ok: false, error: 'Armazenamento indisponível.' }, 500);
+  const mapa = await lerFatoresHomologados(env);
+  mapa[id] = {
+    valor,
+    unidade: meta.unidade || '',
+    fonte: meta.fonte || '',
+    por: (validador && validador.email) || '',
+    em: agoraISO(),
+    versaoMetodologia: METODOLOGIA.versao,
+    hashMetodologia: await hashConteudo(),
+  };
+  await env.PORTAL_KV.put('carbono:fatores:homologados', JSON.stringify(mapa));
+  // Trilha imutável no D1: cada homologação vira um registro próprio (auditoria).
+  try {
+    if (env.DB_PLOOMES) {
+      await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS diagnosticos (id INTEGER PRIMARY KEY AUTOINCREMENT, tipo TEXT, criado_em TEXT, dados TEXT)').run();
+      await env.DB_PLOOMES.prepare('INSERT INTO diagnosticos (tipo, criado_em, dados) VALUES (?1, ?2, ?3)')
+        .bind('fator-homologacao', agoraISO(), JSON.stringify({ id, ...mapa[id] })).run();
+    }
+  } catch { /* trilha é best-effort; a homologação em si já está no KV */ }
+  return rj({ ok: true, id, valor });
 }
 
 // ---- QR do selo (imagem) ----
