@@ -127,7 +127,18 @@ export async function lerClienteD1(env, ploomesId) {
   const enderecoTexto = temEndEstruturado ? '' : px.enderecoTexto;
   const fone = limpar(c.telefone) || px.telefones[0] || '';
   const base = { id: 'p' + c.ploomes_id, ploomesId: c.ploomes_id, _fonte: 'd1', tipo: c.tipo === 'PJ' ? 'PJ' : 'PF', endereco, enderecoTexto, responsavel: px.responsavel, telefone: fone, criadoEm: c.criado_em || '', companyId: c.company_id || null };
-  if (c.tipo === 'PJ') return { ...base, razaoSocial: limpar(c.nome), nomeFantasia: limpar(c.nome_fantasia), cnpj: digits(c.documento), email: limpar(c.email), fone, contatos: [] };
+  if (c.tipo === 'PJ') {
+    // Pessoas de contato da empresa: quem tem company_id apontando para ela (migrado do Ploomes).
+    let pessoas = [];
+    try {
+      const lig = await env.DB_PLOOMES.prepare("SELECT nome, email, telefone, dados_json FROM contatos WHERE company_id=?1 AND tipo='PF' ORDER BY nome LIMIT 60").bind(pid).all();
+      pessoas = (lig.results || []).map((p) => {
+        const pex = extrairPloomes(p.dados_json);
+        return { nome: limpar(p.nome), cargo: '', fone: limpar(p.telefone) || pex.telefones[0] || '', email: limpar(p.email), status: '' };
+      }).filter((p) => p.nome || p.fone || p.email);
+    } catch { pessoas = []; }
+    return { ...base, razaoSocial: limpar(c.nome), nomeFantasia: limpar(c.nome_fantasia), cnpj: digits(c.documento), email: limpar(c.email), fone, contatos: pessoas };
+  }
   return { ...base, nome: limpar(c.nome), cpf: digits(c.documento), fone, email: limpar(c.email) };
 }
 // Ordens de coleta ANTIGAS (negócios migrados) de um cliente — pelo id do contato
