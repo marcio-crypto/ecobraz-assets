@@ -70,7 +70,7 @@ export async function criarColetaOS(env, dados, criadoPor) {
     veiculoPlaca: String(d.veiculoPlaca || '').slice(0, 12),
     material: String(d.material || '').slice(0, 500), quantidade: String(d.quantidade || '').slice(0, 100),
     itens: Array.isArray(d.itens) ? d.itens.slice(0, 80).map((it) => ({ nome: String(it.nome || '').slice(0, 140), qtd: String(it.qtd || '1').slice(0, 12) })).filter((it) => it.nome) : parseItensColeta(d.itensTexto),
-    acondicionamento: String(d.acondicionamento || '').slice(0, 120), obs: String(d.obs || '').slice(0, 600),
+    acondicionamento: String(d.acondicionamento || '').slice(0, 120), obs: String(d.obs || '').slice(0, 4000),
     contato: String(d.contato || '').slice(0, 200),
     certificados: normalizarCertificados(d.certificados),
     criadoEm: agora(), criadoPor: criadoPor || '',
@@ -122,7 +122,7 @@ export async function atualizarColetaOS(env, id, dados) {
   const d = dados || {};
   const setStr = (campo, max) => { if (d[campo] != null) rec[campo] = String(d[campo]).slice(0, max); };
   setStr('endereco', 400); setStr('dataAgendada', 10); setStr('janela', 40); setStr('contato', 200);
-  setStr('material', 500); setStr('quantidade', 100); setStr('acondicionamento', 120); setStr('obs', 600); setStr('veiculoPlaca', 12);
+  setStr('material', 500); setStr('quantidade', 100); setStr('acondicionamento', 120); setStr('obs', 4000); setStr('veiculoPlaca', 12);
   if (d.itensTexto != null) rec.itens = parseItensColeta(d.itensTexto);
   if (d.certificados != null) rec.certificados = normalizarCertificados(d.certificados);
   if (d.agenteEmail != null) { rec.agenteEmail = String(d.agenteEmail || '').trim().toLowerCase(); rec.agenteNome = d.agenteNome || ''; }
@@ -229,7 +229,8 @@ export function paginaGerarColeta(user, cliente, agentes, patrocinadores, veicul
     <div class="g2"><div><label>Quantidade estimada</label><input id="quantidade" placeholder="ex.: ~500 kg (3 pallets)"></div>
     <div><label>Acondicionamento</label><input id="acondicionamento" placeholder="ex.: paletizado / caixas"></div></div>
     <div class="g2"><div><label>Motorista</label><select id="agente">${optAgentes}</select></div><div><label>Veículo</label><select id="veiculo">${optVeiculos}</select></div></div>
-    <label>Observações / instruções de acesso</label><textarea id="obs" rows="2">${esc(cliente.obsColeta || '')}</textarea>
+    <label>Observações / instruções de acesso</label><textarea id="obs" rows="5">${esc(cliente.obsColeta || '')}</textarea>
+    <div style="font-size:11px;color:#9aa7a4;margin:-4px 0 4px">Pode colar texto longo (até 4.000 caracteres) — as quebras de linha são preservadas no documento da OS. Planilha/PDF do cliente: anexe na tela da OS depois de criar (aparece no documento).</div>
     <div class="sec">Certificados solicitados pelo cliente</div>
     <div style="font-size:11px;color:#9aa7a4;margin:-4px 0 8px">Marque o que o cliente precisa. Fica registrado na Ordem de Coleta e orienta a emissão dos documentos.</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px 16px">${CERTIFICADOS_OS.map((c) => `<label style="display:flex;align-items:center;gap:8px;font-size:13.5px;cursor:pointer"><input type="checkbox" class="cert" value="${esc(c)}" style="width:17px;height:17px;flex:none"> ${esc(c)}</label>`).join('')}</div>
@@ -264,7 +265,7 @@ function gerar(){var ag=g('agente').split('|');
 }
 
 export function paginaColetaOSDetalhe(user, os, seloUrl) {
-  const linha = (l, v) => v ? `<tr><td style="padding:8px 0;border-top:1px solid #EEF1F0;color:#6B7B78;width:38%">${esc(l)}</td><td style="padding:8px 0;border-top:1px solid #EEF1F0;font-weight:600">${esc(v)}</td></tr>` : '';
+  const linha = (l, v) => v ? `<tr><td style="padding:8px 0;border-top:1px solid #EEF1F0;color:#6B7B78;width:38%">${esc(l)}</td><td style="padding:8px 0;border-top:1px solid #EEF1F0;font-weight:600;white-space:pre-wrap;word-break:break-word">${esc(v)}</td></tr>` : '';
   const anexosArr = Array.isArray(os.anexos) ? os.anexos : [];
   const anexosHTML = anexosArr.length ? anexosArr.map((a) => `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid #EEF1F0;border-radius:10px;padding:9px 12px;margin-bottom:7px;background:#FBFDFC">
       <a href="/coletas/anexo?key=${encodeURIComponent(a.key)}" target="_blank" rel="noopener" style="text-decoration:none;color:#10262B;font-weight:600;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">${/image/.test(a.content_type || '') ? '🖼️' : '📄'} ${esc(a.nome || 'arquivo')} ↗</a>
@@ -353,7 +354,8 @@ export function paginaEditarColeta(user, os, contatos, agentes, veiculos) {
     <label>Equipamentos item a item <span style="color:#9aa7a4;font-weight:400">(um por linha — ex.: Monitor LCD ; 5)</span></label><textarea id="itens" rows="4">${esc(itensTxt)}</textarea>
     <div class="g2"><div><label>Quantidade estimada</label><input id="quantidade" value="${esc(os.quantidade || '')}"></div><div><label>Acondicionamento</label><input id="acondicionamento" value="${esc(os.acondicionamento || '')}"></div></div>
     <div class="g2"><div><label>Motorista</label><select id="agente">${optAgentes}</select></div><div><label>Veículo</label><select id="veiculo">${optVeiculos}</select></div></div>
-    <label>Observações / instruções de acesso</label><textarea id="obs" rows="2">${esc(os.obs || '')}</textarea>
+    <label>Observações / instruções de acesso</label><textarea id="obs" rows="5">${esc(os.obs || '')}</textarea>
+    <div style="font-size:11px;color:#9aa7a4;margin:-4px 0 4px">Pode colar texto longo (até 4.000 caracteres) — as quebras de linha são preservadas no documento da OS.</div>
     <div class="sec">Certificados solicitados pelo cliente</div>
     <div style="font-size:11px;color:#9aa7a4;margin:-4px 0 8px">Marque o que o cliente precisa. Fica registrado na Ordem de Coleta.</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px 16px">${CERTIFICADOS_OS.map((c) => `<label style="display:flex;align-items:center;gap:8px;font-size:13.5px;cursor:pointer"><input type="checkbox" class="cert" value="${esc(c)}"${(os.certificados || []).includes(c) ? ' checked' : ''} style="width:17px;height:17px;flex:none"> ${esc(c)}</label>`).join('')}</div>
@@ -542,7 +544,28 @@ export async function validarOSPublico(request, env, url) {
 export function paginaComprovanteOS(os, seloUrl) {
   const passos = ['Coleta', 'MTR', 'Pesagem', 'Triagem', 'Processamento', 'Destinação', 'CDF'];
   const stepper = passos.map((p, i) => `<span style="display:inline-flex;align-items:center"><span style="background:${i === 0 ? '#92C430' : '#E7EDEA'};color:${i === 0 ? '#10262B' : '#7c8a87'};font-size:10.5px;font-weight:800;padding:5px 11px;border-radius:20px">${p}</span>${i < passos.length - 1 ? '<span style="color:#c2cdc9;margin:0 3px;font-weight:800">›</span>' : ''}</span>`).join('');
-  const f = (l, v, span) => `<div style="${span ? 'grid-column:1/-1;' : ''}"><div style="font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#93a6a2">${esc(l)}</div><div style="font-size:13px;color:#10262B;font-weight:600;margin-top:3px;line-height:1.5">${esc(v || '—')}</div></div>`;
+  const f = (l, v, span, pre) => `<div style="${span ? 'grid-column:1/-1;' : ''}"><div style="font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#93a6a2">${esc(l)}</div><div style="font-size:13px;color:#10262B;font-weight:600;margin-top:3px;line-height:1.5;${pre ? 'white-space:pre-wrap;word-break:break-word;' : ''}">${esc(v || '—')}</div></div>`;
+  // Tabela de equipamentos item a item (pedido da Débora, 2026-07-28: "igual tem
+  // na carta de descarte e na MTR" — dá noção de volume no próprio documento).
+  const tdOS = 'padding:7px 10px;border:1px solid #E4EBE9;font-size:12px;color:#10262B';
+  const equipsHTML = (os.itens && os.itens.length) ? `<div style="margin-top:16px">
+      <div style="font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#93a6a2;margin-bottom:6px">Equipamentos — item a item</div>
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr>
+          <th style="${tdOS};background:#F2F6F4;text-align:left;width:34px;font-size:10px;text-transform:uppercase;color:#5B6570">#</th>
+          <th style="${tdOS};background:#F2F6F4;text-align:left;font-size:10px;text-transform:uppercase;color:#5B6570">Equipamento / material</th>
+          <th style="${tdOS};background:#F2F6F4;text-align:right;width:90px;font-size:10px;text-transform:uppercase;color:#5B6570">Qtde</th>
+        </tr></thead>
+        <tbody>${os.itens.map((it, i) => `<tr><td style="${tdOS}">${i + 1}</td><td style="${tdOS};font-weight:600">${esc(it.nome)}</td><td style="${tdOS};text-align:right;font-weight:700">${esc(it.qtd)}</td></tr>`).join('')}</tbody>
+      </table></div>` : '';
+  // Anexos NÃO-imagem (planilha do cliente, PDF etc.) — exigência de clientes
+  // corporativos: o arquivo precisa constar NO documento da OS, não só na edição.
+  const arquivosDoc = (Array.isArray(os.anexos) ? os.anexos : []).filter((a) => !/image/.test(a.content_type || ''));
+  const anexosDocHTML = arquivosDoc.length ? `<div style="margin-top:22px"><div style="display:flex;align-items:center;gap:9px;margin:0 0 12px"><span style="width:4px;height:16px;background:#92C430;border-radius:2px"></span><span style="font-size:12px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:#00333B">Anexos da coleta</span></div>
+      ${arquivosDoc.map((a) => `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid #E4EBE9;border-radius:10px;padding:9px 13px;margin-bottom:7px;background:#FBFDFC">
+        <a href="/coletas/anexo?key=${encodeURIComponent(a.key)}" target="_blank" rel="noopener" style="text-decoration:none;color:#10262B;font-weight:600;font-size:12.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📄 ${esc(a.nome || 'arquivo')}</a>
+        <span style="flex:none;font-size:11px;color:#8fa39f">${a.tamanho ? Math.max(1, Math.round(a.tamanho / 1024)) + ' KB · ' : ''}parte integrante desta OS</span>
+      </div>`).join('')}</div>` : '';
   const fotos = (Array.isArray(os.anexos) ? os.anexos : []).filter((a) => /image/.test(a.content_type || ''));
   const fotosHTML = fotos.length ? `<div style="margin-top:22px"><div style="display:flex;align-items:center;gap:9px;margin:0 0 12px"><span style="width:4px;height:16px;background:#92C430;border-radius:2px"></span><span style="font-size:12px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:#00333B">Registro fotográfico</span></div>
       <div style="display:flex;flex-wrap:wrap;gap:10px">${fotos.map((a) => `<img src="/coletas/anexo?key=${encodeURIComponent(a.key)}" alt="${esc(a.nome || 'foto')}" style="width:160px;height:120px;object-fit:cover;border:1px solid #E4EBE9;border-radius:8px;background:#fff">`).join('')}</div></div>` : '';
@@ -579,9 +602,11 @@ export function paginaComprovanteOS(os, seloUrl) {
         ${f('Data da coleta', [dataBR(os.dataAgendada), os.janela].filter(Boolean).join(' · '))}${f('Quantidade estimada', os.quantidade)}
         ${f('Material declarado', os.material, true)}
         ${f('Acondicionamento', os.acondicionamento)}${f('Situação', STATUS[os.status] || os.status)}
-        ${os.obs ? f('Observações', os.obs, true) : ''}
+        ${os.obs ? f('Observações', os.obs, true, true) : ''}
         ${(os.certificados && os.certificados.length) ? f('Certificados solicitados', os.certificados.join(' · '), true) : ''}
       </div>
+      ${equipsHTML}
+      ${anexosDocHTML}
       ${os.patrocinadorNome ? `<div style="margin-top:22px;background:#F1F8EC;border:1px solid #cfe6b8;border-radius:12px;padding:16px 18px">
         <div style="font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:#3f6b1e">🤝 Coleta patrocinada · Adote um Bairro</div>
         <div style="font-size:13px;color:#28413f;margin-top:6px;line-height:1.55">Esta coleta é <b>financiada por ${esc(os.patrocinadorNome)}</b>. Ao receber este documento, o cliente <b>autoriza o compartilhamento das informações desta coleta</b> (materiais, peso e comprovantes de destinação) com o patrocinador, para fins de comprovação e relatório socioambiental — nos termos da LGPD (Lei 13.709/2018).</div>
