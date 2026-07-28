@@ -577,7 +577,7 @@ export async function arquivosDoCliente(env, cli) {
   if (doc.length < 11) return [];
   try {
     const r = await env.DB_PLOOMES.prepare(
-      "SELECT r2_key, nome_arquivo, content_type, tamanho, fonte, criado_em FROM arquivos_ploomes WHERE contact_id IN (SELECT ploomes_id FROM contatos WHERE documento = ?1) ORDER BY (fonte='documento') DESC, criado_em DESC LIMIT 300"
+      "SELECT r2_key, nome_arquivo, content_type, tamanho, fonte, criado_em FROM arquivos_ploomes WHERE contact_id IN (SELECT ploomes_id FROM contatos WHERE documento = ?1) AND (deal_id IS NULL OR deal_id = 0) ORDER BY (fonte='upload') DESC, criado_em DESC LIMIT 300"
     ).bind(doc).all();
     return r.results || [];
   } catch { return []; }
@@ -607,7 +607,7 @@ export function paginaClienteDetalhe(user, cli, arquivos, negocios) {
   const arqRows = arqs.length ? arqs.map((a) => `<a href="/cadastro/arquivo?key=${encodeURIComponent(a.r2_key)}&nome=${encodeURIComponent(a.nome_arquivo || '')}" target="_blank" rel="noopener" style="display:flex;justify-content:space-between;align-items:center;gap:10px;text-decoration:none;border:1px solid #EEF1F0;border-radius:10px;padding:10px 12px;margin-bottom:7px;background:#FBFDFC">
       <div style="min-width:0;display:flex;align-items:center;gap:9px"><span style="font-size:18px;flex:none">${iconArq(a.content_type, a.nome_arquivo)}</span><span style="font-size:12.5px;color:#10262B;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(a.nome_arquivo || a.r2_key)}</span></div>
       <span style="flex:none;font-size:11px;color:#8fa39f">${a.fonte === 'documento' ? 'proposta' : 'anexo'}${fmtTam(a.tamanho) ? ' · ' + fmtTam(a.tamanho) : ''} ↗</span>
-    </a>`).join('') : `<div style="font-size:12.5px;color:#8fa39f">Nenhum documento migrado encontrado para este cliente.${semDoc ? ' Cadastre o ' + (cli.tipo === 'PJ' ? 'CNPJ' : 'CPF') + ' para localizar os arquivos.' : ''}</div>`;
+    </a>`).join('') : `<div style="font-size:12.5px;color:#8fa39f">Nenhum documento geral. Os documentos das coletas estão dentro de cada OS, no histórico acima.${semDoc ? ' Cadastre o ' + (cli.tipo === 'PJ' ? 'CNPJ' : 'CPF') + ' para localizar os arquivos.' : ''}</div>`;
   const contatos = (cli.contatos || []).filter((c) => c.nome || c.fone || c.email).map((c) => `<div style="border:1px solid #EEF1F0;border-radius:10px;padding:11px 13px;margin-bottom:8px"><div style="font-weight:800;font-size:13.5px">${esc(c.nome || '')}${c.cargo ? ` <span style="font-weight:600;color:#7c8a87">· ${esc(c.cargo)}</span>` : ''}${c.status ? ` <span style="display:inline-block;font-size:10.5px;font-weight:700;color:#0B6B3A;background:#E7F4EC;border-radius:999px;padding:1px 8px;vertical-align:middle">${esc(c.status)}</span>` : ''}</div><div style="font-size:12.5px;color:#4F6469;margin-top:3px">${[c.fone, c.email].filter(Boolean).map(esc).join(' · ')}</div></div>`).join('') || '<div style="font-size:12.5px;color:#8fa39f">Sem contatos cadastrados.</div>';
   return `${head(cli.tipo === 'PJ' ? (cli.razaoSocial || 'Empresa') : (cli.nome || 'Pessoa física'))}<body>${topo(user, 'cadastro')}
 <div class="wrap">
@@ -639,7 +639,7 @@ export function paginaClienteDetalhe(user, cli, arquivos, negocios) {
   </div>
   <div class="card" style="margin-top:14px">
     <div style="display:flex;justify-content:space-between;align-items:baseline"><div class="sec" style="margin-top:0">📎 Documentos &amp; anexos</div>${arqs.length ? `<span style="font-size:11px;color:#8fa39f">${arqs.length} arquivo(s)</span>` : ''}</div>
-    <div style="font-size:11.5px;color:#9aa7a4;margin:-2px 0 10px">Notas, certificados, MTR e propostas migrados do Ploomes + os que você anexar aqui — ligados a este cliente pelo CNPJ/CPF.</div>
+    <div style="font-size:11.5px;color:#9aa7a4;margin:-2px 0 10px">Documentos gerais do cliente e os que você anexar aqui. Os documentos de <b>cada coleta</b> ficam dentro da própria OS, no histórico acima.</div>
     ${arqRows}
     ${uploadUI}
   </div>
