@@ -7,9 +7,11 @@
 
 ## Canais
 
-- **Imagem (diário, fase 1 — já começa):** Instagram feed · Facebook feed ·
-  LinkedIn Pages · LinkedIn Pessoal (Marcio) · Google Meu Negócio (Postagem)
-  · Threads
+- **EXECUTADO via Metricool (importação em massa, 28/07):** diário 10h —
+  Instagram, Facebook, LinkedIn (perfil pessoal), Google Meu Negócio e X;
+  vídeos: YouTube Shorts (terças) e TikTok (quintas). ~318 publicações.
+- **Threads: excluído por decisão do Marcio (28/07)** — o importador do
+  Metricool rejeita Threads via CSV; reavaliar no relatório de 30 dias.
 - **Vídeo (fase 2, assim que os vídeos existirem):** Reels · FB Reels ·
   TikTok · YouTube Shorts — posso gerar vídeos-slideshow de 15s a partir das
   artes; TikTok exige o app mLabs no celular do Marcio.
