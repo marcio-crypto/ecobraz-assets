@@ -2025,9 +2025,11 @@ async function materializarClienteKV(env, id) {
   if (doc) {
     try { const idx = await listarClientes(env); const hit = idx.find((c) => String(c.doc || '').replace(/\D/g, '') === doc); if (hit) { const kv = await lerCliente(env, hit.id); if (kv) return kv; } } catch { /* segue e cria */ }
   }
-  const novo = { tipo: d1.tipo, endereco: d1.endereco || {}, ploomesId: d1.ploomesId };
-  if (d1.tipo === 'PJ') { novo.razaoSocial = d1.razaoSocial || ''; novo.nomeFantasia = d1.nomeFantasia || ''; novo.cnpj = d1.cnpj || ''; novo.email = d1.email || ''; novo.contatos = []; }
-  else { novo.nome = d1.nome || ''; novo.cpf = d1.cpf || ''; novo.fone = d1.fone || ''; novo.email = d1.email || ''; }
+  const endBase = { ...(d1.endereco || {}) };
+  if (d1.enderecoTexto && !(endBase.logradouro || endBase.cep)) endBase.logradouro = d1.enderecoTexto;
+  const novo = { tipo: d1.tipo, endereco: endBase, ploomesId: d1.ploomesId };
+  if (d1.tipo === 'PJ') { novo.razaoSocial = d1.razaoSocial || ''; novo.nomeFantasia = d1.nomeFantasia || ''; novo.cnpj = d1.cnpj || ''; novo.email = d1.email || ''; novo.contatos = (d1.telefone ? [{ nome: '', cargo: '', fone: d1.telefone, email: d1.email || '', status: '' }] : []); }
+  else { novo.nome = d1.nome || ''; novo.cpf = d1.cpf || ''; novo.fone = d1.fone || d1.telefone || ''; novo.email = d1.email || ''; }
   return await salvarCliente(env, novo);
 }
 

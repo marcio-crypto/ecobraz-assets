@@ -96,18 +96,39 @@ function parseEnderecoD1(txt, cidade, uf) {
   if (t[0] === '{') { try { const o = JSON.parse(t); return { ...base, ...o, cidade: o.cidade || base.cidade, uf: o.uf || base.uf }; } catch { /* string simples */ } }
   return { ...base, logradouro: t };
 }
+// Extrai do registro completo (dados_json) do Ploomes o que não coube em colunas:
+// telefones (Phones), endereço (fica em campo personalizado — pego o StringValue que
+// tem CEP) e o responsável (UserValueName). Robusto: não depende de FieldId fixo.
+function extrairPloomes(dj) {
+  const out = { telefones: [], enderecoTexto: '', responsavel: '' };
+  if (!dj) return out;
+  let o; try { o = JSON.parse(dj); } catch { return out; }
+  for (const p of (Array.isArray(o.Phones) ? o.Phones : [])) { const n = p && (p.PhoneNumber || p.Number); if (n) out.telefones.push(limpar(n)); }
+  for (const op of (Array.isArray(o.OtherProperties) ? o.OtherProperties : [])) {
+    if (!op) continue;
+    if (op.UserValueName && !out.responsavel) out.responsavel = limpar(op.UserValueName);
+    const sv = op.StringValue || op.BigStringValue;
+    if (sv && !out.enderecoTexto && /\d{5}-?\d{3}/.test(sv)) out.enderecoTexto = limpar(sv);
+  }
+  return out;
+}
+
 // Lê um contato do D1 e devolve no formato "cli" (para a ficha e o formulário).
 export async function lerClienteD1(env, ploomesId) {
   if (!env.DB_PLOOMES) return null;
   const pid = Number(digits(ploomesId));
   if (!pid) return null;
   let c = null;
-  try { c = await env.DB_PLOOMES.prepare('SELECT ploomes_id,tipo,nome,nome_fantasia,documento,email,telefone,cidade,uf,endereco,company_id,criado_em FROM contatos WHERE ploomes_id=?1').bind(pid).first(); } catch { c = null; }
+  try { c = await env.DB_PLOOMES.prepare('SELECT ploomes_id,tipo,nome,nome_fantasia,documento,email,telefone,cidade,uf,endereco,company_id,criado_em,dados_json FROM contatos WHERE ploomes_id=?1').bind(pid).first(); } catch { c = null; }
   if (!c) return null;
+  const px = extrairPloomes(c.dados_json);
   const endereco = parseEnderecoD1(c.endereco, c.cidade, c.uf);
-  const base = { id: 'p' + c.ploomes_id, ploomesId: c.ploomes_id, _fonte: 'd1', tipo: c.tipo === 'PJ' ? 'PJ' : 'PF', endereco, criadoEm: c.criado_em || '', companyId: c.company_id || null };
-  if (c.tipo === 'PJ') return { ...base, razaoSocial: limpar(c.nome), nomeFantasia: limpar(c.nome_fantasia), cnpj: digits(c.documento), email: limpar(c.email), contatos: [] };
-  return { ...base, nome: limpar(c.nome), cpf: digits(c.documento), fone: limpar(c.telefone), email: limpar(c.email) };
+  const temEndEstruturado = !!(endereco.logradouro || endereco.cep || endereco.bairro);
+  const enderecoTexto = temEndEstruturado ? '' : px.enderecoTexto;
+  const fone = limpar(c.telefone) || px.telefones[0] || '';
+  const base = { id: 'p' + c.ploomes_id, ploomesId: c.ploomes_id, _fonte: 'd1', tipo: c.tipo === 'PJ' ? 'PJ' : 'PF', endereco, enderecoTexto, responsavel: px.responsavel, telefone: fone, criadoEm: c.criado_em || '', companyId: c.company_id || null };
+  if (c.tipo === 'PJ') return { ...base, razaoSocial: limpar(c.nome), nomeFantasia: limpar(c.nome_fantasia), cnpj: digits(c.documento), email: limpar(c.email), fone, contatos: [] };
+  return { ...base, nome: limpar(c.nome), cpf: digits(c.documento), fone, email: limpar(c.email) };
 }
 // Ordens de coleta ANTIGAS (negócios migrados) de um cliente — pelo id do contato
 // (ploomes) e/ou pelo documento. status_id 1=aberto, 2=concluído, 3=perdido.
@@ -577,7 +598,7 @@ export function paginaClienteDetalhe(user, cli, arquivos, negocios) {
       <span id="arqMsg" style="font-size:12px;color:#4F6469;margin-left:10px"></span>
     </div>` : `<div style="font-size:12px;color:#a06a62;margin-top:10px">Cadastre o ${cli.tipo === 'PJ' ? 'CNPJ' : 'CPF'} para poder anexar documentos a este cliente.</div>`;
   const e = cli.endereco || {};
-  const endereco = [[e.logradouro, e.numero].filter(Boolean).join(', '), e.complemento, e.bairro, [e.cidade, e.uf].filter(Boolean).join('/'), e.cep].filter(Boolean).join(' · ');
+  const endereco = [[e.logradouro, e.numero].filter(Boolean).join(', '), e.complemento, e.bairro, [e.cidade, e.uf].filter(Boolean).join('/'), e.cep].filter(Boolean).join(' · ') || limpar(cli.enderecoTexto || '');
   const linha = (l, v) => v ? `<tr><td style="padding:8px 0;border-top:1px solid #EEF1F0;color:#6B7B78;width:38%">${esc(l)}</td><td style="padding:8px 0;border-top:1px solid #EEF1F0;font-weight:600">${esc(v)}</td></tr>` : '';
   const fmtTam = (n) => { n = Number(n || 0); if (!n) return ''; return n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; };
   const iconArq = (ct, nome) => { const s = (String(ct || '') + ' ' + String(nome || '')).toLowerCase(); if (/pdf/.test(s)) return '📕'; if (/image|jpg|jpeg|png|gif|webp/.test(s)) return '🖼️'; if (/zip|rar/.test(s)) return '🗜️'; if (/xml/.test(s)) return '📑'; if (/sheet|excel|xls|csv/.test(s)) return '📊'; if (/word|\bdoc/.test(s)) return '📘'; return '📄'; };
@@ -599,8 +620,11 @@ export function paginaClienteDetalhe(user, cli, arquivos, negocios) {
   </div>
   <div class="card">
     <table role="presentation" style="width:100%;border-collapse:collapse;font-size:13.5px">
-      ${cli.tipo === 'PJ' ? linha('CNPJ', fmtCNPJ(cli.cnpj)) + linha('Inscrição estadual', cli.ie) : linha('CPF', fmtCPF(cli.cpf)) + linha('Telefone', cli.fone) + linha('E-mail', cli.email)}
+      ${cli.tipo === 'PJ'
+        ? linha('CNPJ', fmtCNPJ(cli.cnpj)) + linha('Inscrição estadual', cli.ie) + linha('Telefone', cli.telefone || cli.fone) + linha('E-mail', cli.email)
+        : linha('CPF', fmtCPF(cli.cpf)) + linha('Telefone', cli.fone) + linha('E-mail', cli.email)}
       ${linha('Endereço', endereco)}
+      ${linha('Responsável (Ploomes)', cli.responsavel)}
       ${linha('Status', cli.status)}
       ${cli.tipo === 'PJ' ? linha('Nº de contrato', cli.contrato) + linha('Pagamento', cli.pagamento) : ''}
       ${linha('Observação de coleta', cli.obsColeta)}
