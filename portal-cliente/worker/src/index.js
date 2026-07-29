@@ -35,6 +35,7 @@ import { paginaLogin, paginaPainel, paginaMensagem } from './paginas.js';
 import { LOGO_ESCURO_B64, LOGO_CLARO_B64 } from './logos.js';
 import { paginaCalculadora, estimativaCarbono, paginaCalculoDetalhado, calculoDetalhadoGHG, paginaLojaCarbono, paginaCarbonoContato, paginaCarbonoObrigado, nivelCarbono, faixaValida, precoNivel } from './carbono.js';
 import { criarPreferencia, consultarPagamento, criarPixDireto, consultarMeiosPagamento } from './mercadopago.js';
+import { criarCheckoutStripe, consultarCheckoutStripe, verificarEventoStripe, stripeConfigurado } from './stripe.js';
 import { registrarFalha, receberErroCliente, listarFalhas } from './monitor.js';
 import { segmentoDoCliente, definirSegmento, SEGMENTOS, fluxoDeVendas } from './premium.js';
 import { MANUAL_CLIENTE_PDF_B64 } from './manual-pdf.js';
@@ -772,16 +773,62 @@ export default {
           return html(paginaMensagem('Pix não pôde ser gerado', `O Mercado Pago respondeu: <b>${esc(det)}</b><br><br>${dica}`, '/diretoria'), 502);
         }
       }
+      // TESTE STRIPE: cria um Checkout (Pix + cartão) de R$ 1 e redireciona.
+      if (pathname === '/diretoria/teste-stripe' && request.method === 'GET') {
+        if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
+        if (!stripeConfigurado(env)) return html(paginaMensagem('Stripe não configurada', 'Falta a chave STRIPE_SECRET_KEY no cofre do Cloudflare. Cadastre e tente de novo.', '/diretoria'), 503);
+        const valor = Math.min(Math.max(Number(url.searchParams.get('valor')) || 1, 1), 55);
+        const ref = 'teste-' + novoId();
+        const base = String(env.PORTAL_BASE_URL || env.PORTAL_URL || url.origin).replace(/\/+$/, '');
+        try {
+          const s = await criarCheckoutStripe({ valor, descricao: `Teste Stripe Ecobraz (R$ ${valor})`, externalReference: ref, baseUrl: base, backPath: '/diretoria/teste-stripe-ok', clienteEmail: diretoria.email }, env);
+          if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${ref}`, JSON.stringify({ produto: 'teste', gateway: 'stripe', valor, status: 'pendente', sessionId: s.id, criadoEm: nowS() }), { expirationTtl: 3 * 86400 });
+          if (!s.url) return html(paginaMensagem('Não gerou o checkout', 'A Stripe não devolveu a URL de pagamento.', '/diretoria'), 502);
+          console.log('teste_stripe_gerado', { ref, valor });
+          return new Response(null, { status: 302, headers: { Location: s.url, 'cache-control': 'no-store' } });
+        } catch (error) {
+          const det = (error && error.detalhe) || safeError(error).message;
+          console.error('teste_stripe_erro', safeError(error));
+          await registrarFalha(env, 'teste-stripe', det, { ref });
+          const dica = /pix/i.test(det) ? ' Pode ser que o Pix precise ser ativado na conta Stripe (Configurações → Métodos de pagamento).' : ' Tente de novo em instantes.';
+          return html(paginaMensagem('Stripe: não deu para gerar', `A Stripe respondeu: ${det}.${dica}`, '/diretoria'), 502);
+        }
+      }
+      if (pathname === '/diretoria/teste-stripe-ok' && request.method === 'GET') {
+        if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
+        const sid = url.searchParams.get('stripe') || '';
+        const s = sid ? await consultarCheckoutStripe(sid, env) : null;
+        if (s && s.pago && s.ref && env.PORTAL_KV) {
+          try { const raw = await env.PORTAL_KV.get(`pedido:${s.ref}`); const ped = raw ? JSON.parse(raw) : { status: 'pendente' }; if (ped.status !== 'pago') { ped.status = 'pago'; ped.pagoEm = nowS(); await env.PORTAL_KV.put(`pedido:${s.ref}`, JSON.stringify(ped), { expirationTtl: 3 * 86400 }); } } catch { /* segue */ }
+        }
+        const pago = !!(s && s.pago);
+        return html(paginaMensagem(pago ? '✅ Pagamento aprovado na Stripe!' : '⏳ Aguardando confirmação', pago ? 'A Stripe confirmou o pagamento — o sistema de pagamentos com Stripe está funcionando (inclusive o Pix, se foi assim que você pagou).' : 'Se você concluiu o pagamento, a confirmação leva alguns segundos. Atualize esta página em instantes.', '/diretoria'));
+      }
+      // Webhook da Stripe: confirma o pagamento (assinatura + consulta à API) e libera.
+      if (pathname === '/api/stripe/webhook' && request.method === 'POST') {
+        const raw = await request.text();
+        const { evento, verificado } = await verificarEventoStripe(raw, request.headers.get('stripe-signature'), env);
+        const tipo = evento && evento.type;
+        if (tipo === 'checkout.session.completed' || tipo === 'checkout.session.async_payment_succeeded') {
+          const sid = evento.data && evento.data.object && evento.data.object.id;
+          // Fonte da verdade: reconsulta a sessão pela API (autenticada com nossa chave).
+          const s = sid ? await consultarCheckoutStripe(sid, env) : null;
+          if (s && s.pago && s.ref && env.PORTAL_KV) {
+            try {
+              const chave = `pedido:${s.ref}`; const rawp = await env.PORTAL_KV.get(chave); const ped = rawp ? JSON.parse(rawp) : { status: 'pendente' };
+              if (ped.status !== 'pago') { ped.status = 'pago'; ped.pagoEm = nowS(); ped.gateway = 'stripe'; await env.PORTAL_KV.put(chave, JSON.stringify(ped), { expirationTtl: 30 * 86400 }); console.log('stripe_pago', { ref: s.ref, valor: s.valor, verificado }); }
+            } catch (error) { console.error('stripe_webhook_falhou', safeError(error)); await registrarFalha(env, 'stripe-webhook', safeError(error), { ref: s.ref }); }
+          }
+        }
+        return json({ received: true });
+      }
       // Diagnóstico definitivo: quais meios de pagamento a conta MP aceita (tem Pix?).
       if (pathname === '/diretoria/mp-diagnostico' && request.method === 'GET') {
         if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
         const d = await consultarMeiosPagamento(env);
         const corpo = d.ok
-          ? `<b style="font-size:16px;color:${d.temPix ? '#1E7A3D' : '#B23A2E'}">${d.temPix ? '✅ O Pix ESTÁ habilitado na conta.' : '⛔ O Pix NÃO está na lista de meios aceitos.'}</b><br><br>
-             Tipos aceitos: <b>${esc(d.tipos.join(', ') || '—')}</b><br><br>
-             <span style="font-size:12px;color:#4F6469">${d.total} meio(s) ativo(s): ${esc(d.nomes.join(', '))}</span>
-             ${d.temPix ? '<br><br>Se está habilitado mas não aparece no checkout, o problema é de exibição — eu forço o Pix na cobrança.' : '<br><br>Solução: pedir ao Mercado Pago para habilitar o Pix no checkout desta conta (a chave Pix sozinha não basta).'}`
-          : `Não consegui consultar o Mercado Pago: <b>${esc(d.erro || 'erro')}</b>`;
+          ? `${d.temPix ? '✅ O Pix ESTÁ habilitado na conta.' : '⛔ O Pix NÃO está na lista de meios aceitos.'} Tipos aceitos: ${d.tipos.join(', ') || '—'}. ${d.temPix ? 'Se não aparece no checkout, é exibição — eu forço o Pix.' : 'Solução: habilitar o Pix no checkout desta conta (a chave Pix sozinha não basta).'}`
+          : `Não consegui consultar o Mercado Pago: ${d.erro || 'erro'}`;
         return html(paginaMensagem('Diagnóstico Mercado Pago', corpo, '/diretoria'), d.ok ? 200 : 502);
       }
       if (pathname === '/api/diretoria/pix-status' && request.method === 'GET') {
