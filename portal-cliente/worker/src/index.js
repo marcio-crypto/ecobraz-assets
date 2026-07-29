@@ -36,6 +36,7 @@ import { LOGO_ESCURO_B64, LOGO_CLARO_B64 } from './logos.js';
 import { paginaCalculadora, estimativaCarbono, paginaCalculoDetalhado, calculoDetalhadoGHG, paginaLojaCarbono, paginaCarbonoContato, paginaCarbonoObrigado, nivelCarbono, faixaValida, precoNivel } from './carbono.js';
 import { criarPreferencia, consultarPagamento } from './mercadopago.js';
 import { registrarFalha, receberErroCliente, listarFalhas } from './monitor.js';
+import { sondaMTR } from './mtr.js';
 import { acharPacote, precoPacote, acharModuloAdote, precoModuloAdote, paginaLojaAdote, paginaObrigadoAdote, paginaDiagnostico, lerCredito, salvarCredito, novoCredito, aplicarCompra, aplicarRecarga, precisaRecarga, listarPatrocinadores, resumoPatrocinio, lerCreditoPorDoc } from './adote.js';
 import { paginaLojaESG, paginaESGContato, paginaESGObrigado, relatorioESG, precoRelatorioESG } from './esg.js';
 import { statusDaEtapa, valorProp, CAMPOS_OS } from './os-utils.js';
@@ -112,6 +113,9 @@ export default {
           baseUrl: !!env.PORTAL_BASE_URL,
           kv: !!env.PORTAL_KV,
           mercadopago: !!env.MERCADOPAGO_ACCESS_TOKEN,
+          // MTR: só a PRESENÇA das credenciais no cofre (nunca os valores).
+          mtrSigor: !!(env.SIGOR_CNPJ && env.SIGOR_CPF && env.SIGOR_SENHA),
+          mtrSinir: !!(env.SINIR_CNPJ && env.SINIR_CPF && env.SINIR_SENHA),
           mercadopagoModo: env.MERCADOPAGO_ACCESS_TOKEN ? (env.MERCADOPAGO_ACCESS_TOKEN.startsWith('TEST-') ? 'teste' : 'producao') : null,
           avisoEmail: !!env.PLOOMES_WEBHOOK_SECRET,
           avisoModoTeste: env.NOTIF_MODO_TESTE === '1', // true = só contato de teste; false = vale p/ todos
@@ -850,6 +854,12 @@ export default {
       if (pathname === '/api/monitor/falhas' && request.method === 'GET') {
         if (!escritorio && !diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);
         return json({ ok: true, falhas: await listarFalhas(env, url.searchParams.get('n')) });
+      }
+      // Sonda MTR (SIGOR/SINIR): SÓ LEITURA — autentica e consulta tabela de
+      // domínio para provar a conexão com o órgão. Evidência vai para o D1.
+      if (pathname === '/api/mtr/sonda' && request.method === 'POST') {
+        if (!escritorio && !diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        return json(await sondaMTR(env));
       }
       // Prova de gravação: 1 escrita de teste no KV para saber NA HORA se o
       // limite diário está bloqueando (usado após o upgrade do plano).
