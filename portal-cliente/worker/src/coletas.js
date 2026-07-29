@@ -437,6 +437,7 @@ export function paginaEditarColeta(user, os, contatos, agentes, veiculos) {
     </div>
     <div style="margin-top:10px"><button type="button" class="btn btn-d" onclick="gerarCobranca()">Gerar link de cobrança</button> <span id="mCob" style="font-size:13px;color:#4F6469"></span></div>`}
     <div class="sec">🏛️ MTR — Manifesto de Transporte de Resíduos (SIGOR/CETESB)</div>
+    ${os.patrocinadorNome ? `<div style="font-size:12px;color:#3f6b1e;background:#F1F8EC;border:1px solid #cfe6b8;border-radius:8px;padding:8px 11px;margin-bottom:8px">🤝 Coleta patrocinada por <b>${esc(os.patrocinadorNome)}</b>. A MTR sai no nome do <b>gerador do resíduo</b> (o cliente desta OS), não do patrocinador — o patrocinador aparece no relatório do Adote um Bairro.</div>` : ''}
     ${os.mtr && os.mtr.numero ? `
     <div style="border:1px solid #CBE7E3;background:#F0FAF9;border-radius:10px;padding:12px 14px;font-size:13.5px">
       <b>MTR ${esc(os.mtr.numero)}</b> · situação: <b>${esc(os.mtr.situacao || '—')}</b>${os.mtr.cdf ? ` · CDF ${esc(String(os.mtr.cdf))}` : ''}
