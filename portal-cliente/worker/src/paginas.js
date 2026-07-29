@@ -179,13 +179,37 @@ async function enviar(e){e.preventDefault();
 </script></body></html>`;
 }
 
-export function paginaPainel({ nome, email, dataFim, whatsapp }) {
+export function paginaPainel({ nome, email, dataFim, whatsapp, segmento }) {
   const primeiro = esc((nome || '').split(/\s+/)[0] || 'cliente');
   const empresa = esc(nome || 'Sua empresa');
   // WhatsApp do comercial (pedido do Marcio): número oficial do site; o env
   // WHATSAPP_COMERCIAL troca sem deploy. Só dígitos, com DDI.
   const zap = String(whatsapp || '5511912728412').replace(/\D/g, '');
   const zapLink = `https://wa.me/${zap}?text=${encodeURIComponent('Olá! Sou cliente Ecobraz e preciso de uma ajuda com o sistema.')}`;
+  // Segmento (Premium/Plus/Tradicional). Premium e Plus ganham selo + faixa de
+  // benefícios; Tradicional vê o painel normal.
+  const seg = (segmento && segmento.efetivo) || 'tradicional';
+  const ehPremium = seg === 'premium', ehPlus = seg === 'plus', destaque = ehPremium || ehPlus;
+  const badge = ehPremium
+    ? '<div class="badge-ok" style="background:linear-gradient(90deg,#0B5B66,#00333B);color:#fff;border:none"><span class="dot" style="background:#FFD46B"></span> Cliente Premium ⭐</div>'
+    : ehPlus
+      ? '<div class="badge-ok" style="background:#EAF3F1;color:#0B5B66"><span class="dot"></span> Cliente Plus ✦</div>'
+      : '<div class="badge-ok"><span class="dot"></span> Cliente Ecobraz</div>';
+  const faixaPremium = destaque ? `
+  <section style="background:${ehPremium ? 'linear-gradient(90deg,#00333B,#0B5B66)' : '#0B5B66'};border-radius:14px;padding:15px 18px;margin-bottom:16px;color:#fff">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between">
+      <div style="min-width:0">
+        <div style="font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#FFD46B">${ehPremium ? '⭐ Atendimento Premium' : '✦ Atendimento Plus'}</div>
+        <div style="font-size:13.5px;line-height:1.5;margin-top:4px;color:#EAF3F1">Suas coletas entram com <b>prioridade</b>. Fale direto com o comercial e gere seus relatórios em 1 clique.</div>
+      </div>
+      <a href="${zapLink}" target="_blank" rel="noopener" style="flex:none;background:#25D366;color:#fff;text-decoration:none;font-weight:800;font-size:13px;padding:10px 15px;border-radius:24px">💬 Comercial dedicado</a>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+      <a href="/painel-carbono" style="flex:1;min-width:130px;text-align:center;background:rgba(255,255,255,.14);color:#fff;text-decoration:none;font-weight:700;font-size:12.5px;padding:9px;border-radius:9px">🌡️ Carbono</a>
+      <a href="/esg/planos" style="flex:1;min-width:130px;text-align:center;background:rgba(255,255,255,.14);color:#fff;text-decoration:none;font-weight:700;font-size:12.5px;padding:9px;border-radius:9px">📄 Relatório ESG</a>
+      <a href="/adote" style="flex:1;min-width:130px;text-align:center;background:rgba(255,255,255,.14);color:#fff;text-decoration:none;font-weight:700;font-size:12.5px;padding:9px;border-radius:9px">🌱 Adote um Bairro</a>
+    </div>
+  </section>` : '';
   return `${head('Painel')}
 <header class="appbar">
   <div class="appbar-in">
@@ -204,8 +228,10 @@ export function paginaPainel({ nome, email, dataFim, whatsapp }) {
       <h1>Olá, ${primeiro}</h1>
       <p class="muted">${esc(email)}</p>
     </div>
-    <div class="badge-ok"><span class="dot"></span> Cliente Ecobraz</div>
+    ${badge}
   </section>
+
+  ${faixaPremium}
 
   <section class="kpis">
     <div class="kpi"><span class="kpi-label">Ordens de serviço</span><strong class="kpi-num" id="kpiOs">—</strong><span class="kpi-hint">registradas no seu histórico</span></div>

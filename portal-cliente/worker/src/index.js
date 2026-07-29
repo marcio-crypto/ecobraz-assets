@@ -36,6 +36,7 @@ import { LOGO_ESCURO_B64, LOGO_CLARO_B64 } from './logos.js';
 import { paginaCalculadora, estimativaCarbono, paginaCalculoDetalhado, calculoDetalhadoGHG, paginaLojaCarbono, paginaCarbonoContato, paginaCarbonoObrigado, nivelCarbono, faixaValida, precoNivel } from './carbono.js';
 import { criarPreferencia, consultarPagamento } from './mercadopago.js';
 import { registrarFalha, receberErroCliente, listarFalhas } from './monitor.js';
+import { segmentoDoCliente, definirSegmento, SEGMENTOS, fluxoDeVendas } from './premium.js';
 import { sondaMTR, consultarMtrSigor, baixarPdfManifesto } from './mtr.js';
 import { acharPacote, precoPacote, acharModuloAdote, precoModuloAdote, paginaLojaAdote, paginaObrigadoAdote, paginaDiagnostico, lerCredito, salvarCredito, novoCredito, aplicarCompra, aplicarRecarga, precisaRecarga, listarPatrocinadores, resumoPatrocinio, lerCreditoPorDoc } from './adote.js';
 import { paginaLojaESG, paginaESGContato, paginaESGObrigado, relatorioESG, precoRelatorioESG } from './esg.js';
@@ -627,6 +628,10 @@ export default {
           pend: reunirPendencias({ leads: leadsIdx, coletas: coletasValidas, aguardandoValidacao: dados.aguardando }),
         };
         try { extras.frota = await montarFrotaAoVivo(env); } catch { extras.frota = null; }
+        // Fluxo de vendas: SÓ no acesso do dono (marcio@ecobraz.org.br).
+        if (String(diretoria.email || '').trim().toLowerCase() === 'marcio@ecobraz.org.br') {
+          try { extras.vendas = await fluxoDeVendas(env); } catch { extras.vendas = null; }
+        }
         return html(paginaPainelDiretoria(diretoria, dados, extras));
       }
       // RotaExata — sonda de configuração (só Diretoria): lê a documentação da API e
@@ -940,7 +945,17 @@ export default {
         if (!cli) return html(paginaMensagem('Cliente não encontrado', 'Volte e tente de novo.'), 404);
         let arquivos = []; try { arquivos = await arquivosDoCliente(env, cli); } catch { /* sem arquivos, tudo bem */ }
         let negocios = []; try { negocios = await negociosDoCliente(env, cli); } catch { /* sem histórico, tudo bem */ }
-        return html(paginaClienteDetalhe(escritorio, cli, arquivos, negocios));
+        let segmento = null; try { segmento = await segmentoDoCliente(env, cli.tipo === 'PJ' ? cli.cnpj : cli.cpf); } catch { /* segmento é opcional */ }
+        return html(paginaClienteDetalhe(escritorio, cli, arquivos, negocios, segmento));
+      }
+      // Segmento do cliente (Premium/Plus/Tradicional) — override manual da equipe.
+      if (pathname === '/api/cliente/segmento' && request.method === 'POST') {
+        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = {}; }
+        const seg = String((b && b.segmento) || '').trim();
+        if (seg && !SEGMENTOS[seg]) return json({ ok: false, error: 'segmento_invalido' }, 400);
+        const ok = await definirSegmento(env, b && b.doc, seg);
+        return json({ ok });
       }
       // Ficha de uma OS migrada (negócio/venda do Ploomes): dados da venda + documentos dela.
       if (pathname === '/cadastro/os-ploomes' && request.method === 'GET') {
@@ -1780,7 +1795,9 @@ export default {
 async function telaInicial(request, env) {
   const sessao = await lerSessao(request, env);
   if (!sessao) return html(paginaLogin(googleConfigurado(env)));
-  return html(paginaPainel({ nome: sessao.nome, email: sessao.email, dataFim: sessao.dataFim || '', whatsapp: env.WHATSAPP_COMERCIAL || '' }));
+  let segmento = null;
+  try { segmento = await segmentoDoCliente(env, sessao.documento); } catch { /* painel nunca depende do segmento */ }
+  return html(paginaPainel({ nome: sessao.nome, email: sessao.email, dataFim: sessao.dataFim || '', whatsapp: env.WHATSAPP_COMERCIAL || '', segmento }));
 }
 
 // Tela "Entrar como…" — quando o e-mail tem mais de um acesso (os cookies de
@@ -2674,6 +2691,20 @@ async function solicitarOS(request, sessao, env) {
     source: 'portal-coleta', volume: itens ? `${itens} itens` : '',
   });
   if (!r || !r.ok) { console.error('solicitar_os_erro', r && r.error); return json({ ok: false, error: 'nao_foi_possivel' }, 502); }
+  // Cliente Premium/Plus: a coleta dele entra com PRIORIDADE (benefício do porte),
+  // mesmo que a triagem por material/volume não a marque como prioritária.
+  try {
+    const seg = await segmentoDoCliente(env, sessao.documento);
+    if (seg.prioritario && triagem.tipo === 'normal') {
+      const lead = await lerLead(env, r.id);
+      if (lead) {
+        lead.prioridade = 'alta';
+        lead.descricao = `⭐ CLIENTE ${seg.rotulo.toUpperCase()} — atender com prioridade.\n${lead.descricao}`;
+        await salvarLead(env, lead);
+        await atualizarIndexLead(env, r.id, { prioridade: 'alta', triagem: 'prioritaria' });
+      }
+    }
+  } catch (error) { console.error('premium_prioridade', safeError(error)); }
   // Fotos → R2 (referenciadas no lead). Cada foto já vem reduzida (JPEG) do navegador.
   const fotos = Array.isArray(input.fotos) ? input.fotos.slice(0, 4) : [];
   let fotosOk = 0;

@@ -6,6 +6,7 @@
 
 import { botaoGoogle } from './google-auth.js';
 import { sincronizarClienteEgoi } from './egoi.js';
+import { SEGMENTOS } from './premium.js';
 
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const agora = () => { try { return new Date().toISOString(); } catch { return ''; } };
@@ -795,8 +796,24 @@ export async function arquivosDoCliente(env, cli) {
   } catch { return []; }
 }
 
-export function paginaClienteDetalhe(user, cli, arquivos, negocios) {
+export function paginaClienteDetalhe(user, cli, arquivos, negocios, segmento) {
   const negs = negocios || [];
+  const segDoc = String((cli.tipo === 'PJ' ? cli.cnpj : cli.cpf) || '').replace(/\D/g, '');
+  const seg = segmento || { efetivo: 'tradicional', manual: '', auto: 'tradicional', stats: { coletas: 0 }, rotulo: 'Tradicional' };
+  const opt = (v, r) => `<option value="${v}"${seg.manual === v ? ' selected' : ''}>${r}</option>`;
+  const cardSegmento = segDoc ? `<div class="card" style="margin-top:14px">
+    <div class="sec" style="margin-top:0">⭐ Segmento do cliente</div>
+    <div style="font-size:12.5px;color:#4F6469;line-height:1.5;margin:-2px 0 10px">Selo do porte do cliente. <b>Automático</b> pelo volume de coletas (${seg.stats.coletas} registrada(s) → sugere <b>${esc(seg.rotulo)}</b>). Você pode <b>cravar</b> um selo manual que sobrepõe o automático.</div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <select id="segSel" style="max-width:230px">
+        ${opt('', '— Automático (' + esc(SEGMENTOS[seg.auto] || 'Tradicional') + ') —')}
+        ${opt('premium', '⭐ Premium')}${opt('plus', '✦ Plus')}${opt('tradicional', 'Tradicional')}
+      </select>
+      <button type="button" class="btn btn-d" style="padding:8px 12px;font-size:12.5px" onclick="salvarSegmento()">Salvar selo</button>
+      <span id="segMsg" style="font-size:12px;color:#4F6469"></span>
+    </div>
+    <div style="font-size:11.5px;color:#9aa7a4;margin-top:8px">Selo atual em uso: <b>${esc(seg.rotulo)}</b>${seg.manual ? ' (manual)' : ' (automático)'}.</div>
+  </div>` : '';
   const temDoc = cli.tipo === 'PJ' ? !!digits(cli.cnpj) : !!digits(cli.cpf);
   const negRows = negs.length ? negs.map((n) => {
     const docs = n.arquivos || [];
@@ -845,6 +862,7 @@ export function paginaClienteDetalhe(user, cli, arquivos, negocios) {
     </table>
     ${cli.tipo === 'PJ' ? `<div class="sec">Contatos</div>${contatos}` : ''}
   </div>
+  ${cardSegmento}
   <div class="card" style="margin-top:14px">
     <div style="display:flex;justify-content:space-between;align-items:baseline"><div class="sec" style="margin-top:0">📋 Ordens de coleta — histórico</div>${negs.length ? `<span style="font-size:11px;color:#8fa39f">${negs.length}</span>` : ''}</div>
     <div style="font-size:11.5px;color:#9aa7a4;margin:-2px 0 10px">Coletas e atendimentos anteriores deste cliente, migrados do Ploomes.</div>
@@ -860,6 +878,12 @@ export function paginaClienteDetalhe(user, cli, arquivos, negocios) {
     <a href="/coletas?cliente=${esc(cli.id)}" class="btn btn-g">Ver coletas deste cliente</a></div>
 </div>
 <script>
+function salvarSegmento(){var s=document.getElementById('segSel'),m=document.getElementById('segMsg');if(!s)return;
+  m.style.color='#4F6469';m.textContent='Salvando…';
+  fetch('/api/cliente/segmento',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({doc:${JSON.stringify(segDoc)},segmento:s.value})})
+    .then(function(r){return r.json();}).then(function(j){ if(j&&j.ok){ m.style.color='#1E7A3D'; m.textContent='✓ Selo salvo! Atualizando…'; setTimeout(function(){location.reload();},600); } else { m.style.color='#a06a62'; m.textContent=(j&&j.error)||'Não consegui salvar.'; } })
+    .catch(function(){ m.style.color='#a06a62'; m.textContent='Sem conexão.'; });
+}
 function subirAnexo(){var f=document.getElementById('arqFile'),m=document.getElementById('arqMsg');if(!f||!f.files||!f.files[0])return;var file=f.files[0];
   if(file.size>15728640){m.style.color='#a06a62';m.textContent='Arquivo muito grande (máx. 15 MB).';return;}
   m.style.color='#4F6469';m.textContent='Enviando '+file.name+'…';

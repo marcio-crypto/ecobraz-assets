@@ -127,6 +127,22 @@ export function paginaPainelDiretoria(diretor, d, x) {
   if (d.aguardando > 0) alertas.push(`<div style="color:#8A6A16">⏳ <b>${d.aguardando}</b> operação(ões) aguardando validação da Engenharia.</div>`);
   d.pendentes.forEach((x) => alertas.push(`<div style="color:#8A6A16">• Destino sem homologação: ${esc(x.razaoSocial || x.cnpj)}</div>`));
   const alertasHtml = alertas.length ? alertas.join('') : '<div style="color:#1E7A3D">✓ Sem alertas críticos no momento.</div>';
+  // Fluxo de vendas — só chega preenchido no acesso do dono (gate no index.js).
+  const brl = (v) => 'R$ ' + (Number(v) || 0).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  const vv = x.vendas;
+  const vendasHtml = vv ? `<div style="background:linear-gradient(90deg,#00333B,#0B5B66);border-radius:16px;padding:18px;margin-bottom:14px;color:#fff">
+    <div style="font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#FFD46B;margin-bottom:12px">💰 Fluxo de vendas — pagamentos confirmados</div>
+    <div style="display:flex;gap:14px;text-align:center">
+      <div style="flex:1"><div style="font-size:22px;font-weight:800;line-height:1.05">${esc(brl(vv.dia))}</div><div style="font-size:10px;color:#9FC6C1;font-weight:700;margin-top:5px">HOJE</div></div>
+      <div style="flex:1;border-left:1px solid rgba(255,255,255,.18)"><div style="font-size:22px;font-weight:800;line-height:1.05">${esc(brl(vv.semana))}</div><div style="font-size:10px;color:#9FC6C1;font-weight:700;margin-top:5px">7 DIAS</div></div>
+      <div style="flex:1;border-left:1px solid rgba(255,255,255,.18)"><div style="font-size:22px;font-weight:800;line-height:1.05">${esc(brl(vv.mes))}</div><div style="font-size:10px;color:#9FC6C1;font-weight:700;margin-top:5px">30 DIAS</div></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:14px;border-top:1px solid rgba(255,255,255,.18);padding-top:12px;flex-wrap:wrap">
+      <span style="font-size:12.5px;color:#EAF3F1">⚠️ Não concretizadas no mês (geradas e não pagas)</span>
+      <span style="font-weight:800;font-size:15px;color:#FFD46B">${esc(brl(vv.naoConcretizadasValor))} · ${esc(String(vv.naoConcretizadasQtd))} pedido(s)</span>
+    </div>
+    <div style="font-size:10px;color:#9FC6C1;margin-top:8px">Soma dos pagamentos aprovados (coleta expressa, OS paga, Adote, carbono, ESG).${vv.truncado ? ' Mostrando os primeiros 800 pedidos.' : ''}</div>
+  </div>` : '';
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Painel da Diretoria — Ecobraz</title></head>
 <body style="margin:0;background:#F2F6F4;min-height:100vh;font-family:Montserrat,'Segoe UI',Arial,Helvetica,sans-serif;color:#10262B">
 <div style="background:#00333B;padding:16px 20px"><div style="max-width:900px;margin:0 auto;display:flex;justify-content:space-between;align-items:center">
@@ -135,6 +151,7 @@ export function paginaPainelDiretoria(diretor, d, x) {
 </div></div>
 <div style="max-width:900px;margin:0 auto;padding:20px 18px 48px">
 
+  ${vendasHtml}
   <a href="/diretoria/prevencao" style="display:flex;justify-content:space-between;align-items:center;gap:12px;text-decoration:none;background:#062f36;border:1px solid #12525d;border-radius:14px;padding:14px 16px;margin-bottom:12px;color:#eaf5f3">
     <div><div style="font-size:14px;font-weight:800">🛡️ Prevenção de perdas</div><div style="font-size:12px;color:#9FC6C1;margin-top:2px">Reconciliação por peso, valor estimado e conferência das fotos por IA.</div></div>
     <span style="font-size:12px;font-weight:800;color:#92C430">Abrir →</span>
