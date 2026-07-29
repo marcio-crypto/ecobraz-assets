@@ -167,13 +167,11 @@ export async function sondaMTR(env) {
 // TOKEN em cache no KV (o manual pede para NÃO chamar gettoken a cada requisição).
 // Contrato PROVADO ao vivo (D1 id 34): POST mtrr/apiws/rest/gettoken
 // { cpfCnpj, senha, unidade(número) } → objetoResposta = token (usar cru no header).
-export async function tokenSigor(env, { forcar } = {}) {
-  const cfg = SISTEMAS(env).find((s) => s.tipo === 'sigor');
+// Token de UM sistema (sigor OU sinir), com cache no KV por 1h.
+async function tokenDe(env, cfg, { forcar } = {}) {
   if (!cfg || !(cfg.cpf || cfg.email) || !cfg.senha || !cfg.unidade) return null;
-  if (!forcar && env.PORTAL_KV) {
-    const cached = await env.PORTAL_KV.get('mtr:sigor:token');
-    if (cached) return cached;
-  }
+  const chave = `mtr:${cfg.tipo}:token`;
+  if (!forcar && env.PORTAL_KV) { const c = await env.PORTAL_KV.get(chave); if (c) return c; }
   const doc = cfg.cpf || cfg.email;
   const uni = /^\d+$/.test(cfg.unidade) ? Number(cfg.unidade) : cfg.unidade;
   try {
@@ -182,10 +180,11 @@ export async function tokenSigor(env, { forcar } = {}) {
       body: JSON.stringify({ cpfCnpj: doc, senha: cfg.senha, unidade: uni }), signal: AbortSignal.timeout(20000),
     });
     const t = acharToken(await r.text());
-    if (t && env.PORTAL_KV) await env.PORTAL_KV.put('mtr:sigor:token', t, { expirationTtl: 3600 }); // 1h
+    if (t && env.PORTAL_KV) await env.PORTAL_KV.put(chave, t, { expirationTtl: 3600 });
     return t || null;
   } catch { return null; }
 }
+export async function tokenSigor(env, opts) { return tokenDe(env, SISTEMAS(env).find((s) => s.tipo === 'sigor'), opts); }
 
 // CONSTATAÇÃO (pacote oficial de tipos v1.15): a API do SIGOR/SINIR NÃO tem
 // endpoint de "listar/pescar manifestos". A consulta é sempre POR NÚMERO:
@@ -197,38 +196,60 @@ export async function tokenSigor(env, { forcar } = {}) {
 // para "descobrir" MTRs às cegas — é uma característica da API, não uma limitação
 // nossa. Isso torna o vínculo mais preciso (chave exata, sem casar por CNPJ+data).
 const soDigitos = (s) => String(s || '').replace(/[^0-9A-Za-z-]/g, '').slice(0, 40);
+const soNum = (s) => String(s || '').replace(/\D/g, '');
+// epoch ms → dd/mm/aaaa (a API devolve datas como número).
+const dataDeEpoch = (v) => {
+  const n = Number(v);
+  if (!Number.isFinite(n) || n <= 0) return '';
+  const d = new Date(n);
+  return `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${d.getUTCFullYear()}`;
+};
+// Extrai um resumo SEGURO e útil do objetoResposta do retornaManifesto.
+function resumoManifesto(obj, num) {
+  const par = (p) => (p && (p.parDescricao || p.parRazaoSocial || p.parNome)) || '';
+  const parDoc = (p) => (p && (p.parCnpj || p.parCpfCnpj)) || '';
+  return {
+    numero: obj.manNumero || num,
+    situacao: (obj.situacaoManifesto && obj.situacaoManifesto.simDescricao) || '',
+    gerador: par(obj.parceiroGerador), geradorCnpj: parDoc(obj.parceiroGerador),
+    transportador: par(obj.parceiroTransportador),
+    destinador: par(obj.parceiroDestinador), destinadorCnpj: parDoc(obj.parceiroDestinador),
+    emissao: dataDeEpoch(obj.manData), expedicao: dataDeEpoch(obj.manDataExpedicao),
+    motorista: obj.manNomeMotorista || '', placa: obj.manPlacaVeiculo || '',
+    cdf: obj.cdfCodigo || obj.cdfNumero || '',
+    qtdResiduos: Array.isArray(obj.listaManifestoResiduo) ? obj.listaManifestoResiduo.length : null,
+  };
+}
 
-export async function consultarMtrSigor(env, numero) {
-  const cfg = SISTEMAS(env).find((s) => s.tipo === 'sigor');
-  if (!cfg) return { ok: false, error: 'sem_sigor', message: 'SIGOR não está configurado no cofre.' };
-  const num = soDigitos(numero);
-  if (!num) return { ok: false, error: 'sem_numero', message: 'Informe o número da MTR para consultar (a API do órgão consulta por número, não tem listagem).' };
-  const token = await tokenSigor(env);
-  if (!token) return { ok: false, error: 'sem_token', message: 'Não consegui autenticar no SIGOR agora. Rode o "Testar conexão MTR" antes.' };
-  const out = { ok: false, numero: num };
+// Consulta retornaManifesto em UM sistema.
+async function consultarEm(env, cfg, num) {
+  const token = await tokenDe(env, cfg);
+  if (!token) return { erroToken: true, sistema: cfg.nome };
   try {
     const r = await fetch(`${cfg.base}/apiws/rest/retornaManifesto/${encodeURIComponent(num)}`, { headers: { Authorization: token, accept: 'application/json' }, signal: AbortSignal.timeout(15000) });
     const txt = await r.text();
-    out.status = r.status;
     let dado = null; try { dado = JSON.parse(txt); } catch { /* não-JSON */ }
     const obj = dado && dado.objetoResposta;
-    if (r.status === 200 && obj && !dado.erro) {
-      out.ok = true;
-      // Resumo SEGURO (sem despejar o objeto inteiro): campos úteis para a OS.
-      out.resumo = {
-        numero: obj.manCodigo || obj.manNumeroManifesto || num,
-        situacao: (obj.situacaoManifesto && (obj.situacaoManifesto.simDescricao || obj.situacaoManifesto.simCodigo)) || obj.manSituacao || '',
-        gerador: (obj.gerador && (obj.gerador.parRazaoSocial || obj.gerador.parNome)) || obj.geradorNome || '',
-        geradorCnpj: (obj.gerador && (obj.gerador.parCpfCnpj)) || obj.geradorCnpj || '',
-        emissao: obj.manData || obj.manDataExpedicao || '',
-        cdf: obj.cdfCodigo || '',
-        qtdResiduos: Array.isArray(obj.listaManifestoResiduo) ? obj.listaManifestoResiduo.length : (Array.isArray(obj.residuos) ? obj.residuos.length : null),
-      };
-    } else {
-      out.mensagem = (dado && (dado.mensagem || dado.restResponseMensagem)) || `HTTP ${r.status}`;
-    }
-    out.corpoInicio = semSegredos(txt, cfg, token).slice(0, 200);
-  } catch (e) { out.erro = String(e && e.message || e).slice(0, 100); }
+    if (r.status === 200 && obj && !dado.erro) return { ok: true, sistema: cfg.tipo, nomeSistema: cfg.nome, resumo: resumoManifesto(obj, num) };
+    return { ok: false, sistema: cfg.nome, status: r.status, mensagem: (dado && (dado.mensagem || dado.restResponseMensagem)) || `HTTP ${r.status}`, corpoInicio: semSegredos(txt, cfg, token).slice(0, 160) };
+  } catch (e) { return { ok: false, sistema: cfg.nome, erro: String(e && e.message || e).slice(0, 100) }; }
+}
+
+// Consulta uma MTR por número tentando OS DOIS sistemas (SIGOR e SINIR): um MTR
+// vive em um só (SP começa com "26" no SIGOR; nacional/outros no SINIR).
+export async function consultarMtrSigor(env, numero) {
+  const num = soDigitos(numero);
+  if (!num) return { ok: false, error: 'sem_numero', message: 'Informe o número da MTR para consultar (a API do órgão consulta por número, não tem listagem).' };
+  const sistemas = SISTEMAS(env);
+  if (!sistemas.length) return { ok: false, error: 'sem_config', message: 'MTR não está configurado no cofre.' };
+  const out = { ok: false, numero: num, tentativas: [] };
+  let ultima = null;
+  for (const cfg of sistemas) {
+    const res = await consultarEm(env, cfg, num);
+    out.tentativas.push({ sistema: res.sistema, ok: !!res.ok, status: res.status, mensagem: res.mensagem, erroToken: !!res.erroToken, corpoInicio: res.corpoInicio });
+    if (res.ok) { out.ok = true; out.resumo = res.resumo; out.sistema = res.sistema; out.nomeSistema = res.nomeSistema; break; }
+    ultima = res;
+  }
   // Evidência no D1 — token/segredos já vêm mascarados.
   try {
     if (env.DB_PLOOMES) {
@@ -238,7 +259,52 @@ export async function consultarMtrSigor(env, numero) {
     }
   } catch { /* best-effort */ }
   out.message = out.ok
-    ? `✅ MTR ${out.resumo.numero} encontrada no órgão — gerador: ${out.resumo.gerador || '(n/d)'} · situação: ${out.resumo.situacao || '(n/d)'}. A leitura por número funciona.`
-    : `Não consegui ler a MTR ${num}: ${out.mensagem || out.erro || 'sem resposta'}.`;
+    ? `✅ MTR ${out.resumo.numero} encontrada no ${out.nomeSistema} — gerador: ${out.resumo.gerador || '(n/d)'} · situação: ${out.resumo.situacao || '(n/d)'}.`
+    : `Não consegui ler a MTR ${num} em nenhum dos sistemas: ${(ultima && (ultima.mensagem || ultima.erro)) || 'sem resposta'}.`;
   return out;
+}
+
+// Baixa o PDF oficial (downloadManifesto) de UM sistema.
+async function baixarPdfEm(env, cfg, num) {
+  const token = await tokenDe(env, cfg);
+  if (!token) return { erro: 'sem_token' };
+  try {
+    const r = await fetch(`${cfg.base}/apiws/rest/downloadManifesto/${encodeURIComponent(num)}`, { headers: { Authorization: token, accept: 'application/json' }, signal: AbortSignal.timeout(20000) });
+    if (r.status !== 200) return { erro: `HTTP ${r.status}` };
+    const ct = r.headers.get('content-type') || '';
+    if (/application\/pdf|octet-stream/i.test(ct)) {
+      const buf = new Uint8Array(await r.arrayBuffer());
+      return buf.length > 100 ? { bytes: buf } : { erro: 'pdf_vazio' };
+    }
+    const txt = await r.text();
+    let b64 = '';
+    try { const j = JSON.parse(txt); b64 = (j && (j.objetoResposta || j.arquivo || j.pdf)) || ''; }
+    catch { b64 = txt.trim().replace(/^"|"$/g, ''); }
+    b64 = String(b64).replace(/^data:.*?;base64,/, '');
+    if (!/^[A-Za-z0-9+/=\s]{200,}$/.test(b64)) return { erro: 'sem_pdf_reconhecivel' };
+    const bin = atob(b64.replace(/\s/g, ''));
+    const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
+    return bytes.length > 100 ? { bytes } : { erro: 'pdf_vazio' };
+  } catch (e) { return { erro: String(e && e.message || e).slice(0, 80) }; }
+}
+// Baixa o PDF do sistema informado (tipo), ou tenta os dois se não souber.
+// Best-effort: nunca derruba o fluxo — o número/dados já valem sem o PDF.
+export async function baixarPdfManifesto(env, numero, tipo) {
+  const num = soDigitos(numero);
+  if (!num) return null;
+  const sistemas = SISTEMAS(env);
+  const ordenados = tipo ? sistemas.filter((s) => s.tipo === tipo).concat(sistemas.filter((s) => s.tipo !== tipo)) : sistemas;
+  let ultimo = null;
+  for (const cfg of ordenados) {
+    const res = await baixarPdfEm(env, cfg, num);
+    if (res && res.bytes) return res;
+    ultimo = res;
+  }
+  return ultimo;
+}
+
+// Consulta um MTR e devolve só o resumo seguro (para vincular à OS).
+export async function dadosManifesto(env, numero) {
+  const j = await consultarMtrSigor(env, numero);
+  return j.ok ? j.resumo : null;
 }

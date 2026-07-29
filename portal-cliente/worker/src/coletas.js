@@ -141,6 +141,20 @@ export async function marcarCobrancaPagaOS(env, id, pagamento) {
   return rec;
 }
 
+// MTR vinculada à OS (SIGOR/SINIR). Guarda os dados oficiais puxados do órgão +
+// referência do PDF no R2 (quando baixado). Não trava nada — é evidência.
+export async function definirMtrOS(env, id, mtr) {
+  const rec = await lerColetaOS(env, id); if (!rec) return null;
+  rec.mtr = mtr || null;
+  rec.atualizadoEm = agora();
+  if (env.PORTAL_KV) {
+    await env.PORTAL_KV.put(`os:${rec.id}`, JSON.stringify(rec));
+    const idx = await listarColetasOS(env); const i = idx.findIndex((x) => x.id === rec.id);
+    if (i >= 0) { if (mtr && mtr.numero) idx[i].mtr = mtr.numero; else delete idx[i].mtr; await env.PORTAL_KV.put('os:index', JSON.stringify(idx).slice(0, 900000)); }
+  }
+  return rec;
+}
+
 // Persiste um registro de OS já existente sem mexer no status (ex.: anexar as
 // notas fiscais vinculadas em os.notas). O índice não guarda notas, então basta
 // regravar o registro completo.
@@ -339,6 +353,11 @@ export function paginaColetaOSDetalhe(user, os, seloUrl) {
       <div style="font-size:13px;color:#4F6469;margin-top:5px">${esc(os.cobranca.descricao || '')}${os.cobranca.status === 'pago' && os.cobranca.pagoEm ? ` · paga em ${esc(dataBR(os.cobranca.pagoEm))}` : ''}</div>
       ${os.cobranca.status !== 'pago' && os.cobranca.link ? `<input readonly value="${esc(os.cobranca.link)}" onclick="this.select()" style="width:100%;font-size:12px;margin-top:8px;border:1px solid #DDE1E6;border-radius:8px;padding:8px 10px">` : ''}
     </div>` : ''}
+    ${os.mtr && os.mtr.numero ? `<div style="margin-top:14px;border:1px solid #CBE7E3;background:#F0FAF9;border-radius:12px;padding:13px 15px">
+      <div style="font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#1F4348">🏛️ MTR ${esc(os.mtr.numero)} · ${esc(os.mtr.situacao || '—')}${os.mtr.cdf ? ' · CDF ' + esc(String(os.mtr.cdf)) : ''}</div>
+      <div style="font-size:13px;color:#4F6469;margin-top:5px">Gerador: ${esc(os.mtr.gerador || '—')}${os.mtr.emissao ? ' · emitida em ' + esc(os.mtr.emissao) : ''}${os.mtr.pdfAnexado ? ' · 📎 PDF nos documentos' : ''}</div>
+      ${os.mtr.divergenciaGerador ? '<div style="font-size:12px;color:#9B1C1C;font-weight:700;margin-top:5px">⚠️ CNPJ do gerador diverge do cliente desta OS.</div>' : ''}
+    </div>` : ''}
     ${os.patrocinadorNome ? `<div style="margin-top:14px;background:#F1F8EC;border:1px solid #cfe6b8;border-radius:12px;padding:14px">
       <div style="font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#3f6b1e">🤝 Coleta patrocinada · Adote um Bairro</div>
       <div style="font-size:13.5px;color:#28413f;margin-top:6px">Esta coleta é <b>financiada por ${esc(os.patrocinadorNome)}</b>.</div>
@@ -417,6 +436,21 @@ export function paginaEditarColeta(user, os, contatos, agentes, veiculos) {
       <div><label>Descrição (aparece para o cliente)</label><input id="cobDesc" maxlength="200" placeholder="ex.: Taxa de coleta — itens perigosos"></div>
     </div>
     <div style="margin-top:10px"><button type="button" class="btn btn-d" onclick="gerarCobranca()">Gerar link de cobrança</button> <span id="mCob" style="font-size:13px;color:#4F6469"></span></div>`}
+    <div class="sec">🏛️ MTR — Manifesto de Transporte de Resíduos (SIGOR/CETESB)</div>
+    ${os.mtr && os.mtr.numero ? `
+    <div style="border:1px solid #CBE7E3;background:#F0FAF9;border-radius:10px;padding:12px 14px;font-size:13.5px">
+      <b>MTR ${esc(os.mtr.numero)}</b> · situação: <b>${esc(os.mtr.situacao || '—')}</b>${os.mtr.cdf ? ` · CDF ${esc(String(os.mtr.cdf))}` : ''}
+      <div style="font-size:12.5px;color:#4F6469;margin-top:5px">Gerador: ${esc(os.mtr.gerador || '—')}${os.mtr.geradorCnpj ? ' (' + esc(os.mtr.geradorCnpj) + ')' : ''}${os.mtr.emissao ? ' · emitida em ' + esc(os.mtr.emissao) : ''}</div>
+      ${os.mtr.divergenciaGerador ? '<div style="font-size:12px;color:#9B1C1C;font-weight:700;margin-top:5px">⚠️ O CNPJ do gerador da MTR NÃO bate com o cliente desta OS — confira.</div>' : ''}
+      <div style="font-size:12px;color:#4F6469;margin-top:5px">${os.mtr.pdfAnexado ? '📎 PDF oficial anexado nos documentos da OS.' : 'PDF não pôde ser baixado do órgão (o número e os dados valem mesmo assim).'}</div>
+      <div style="margin-top:9px"><button type="button" class="btn btn-g" style="padding:7px 11px;font-size:12px" onclick="desvincularMtr()">Remover vínculo</button></div>
+    </div>` : `
+    <div style="font-size:11px;color:#9aa7a4;margin:-4px 0 8px">Se o cliente já emitiu a MTR, informe o número: o sistema puxa os dados oficiais do órgão e anexa o PDF. (Emissão automática quando o cliente não gera vem na próxima etapa.)</div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <input id="mtrNumero" placeholder="nº da MTR" maxlength="40" style="max-width:220px">
+      <button type="button" class="btn btn-d" onclick="vincularMtr()">Puxar MTR do órgão</button>
+      <span id="mMtr" style="font-size:13px;color:#4F6469"></span>
+    </div>`}
     <div style="display:flex;gap:10px;align-items:center;margin-top:22px">
       <button class="btn btn-p" onclick="salvar()">Salvar alterações</button>
       <a href="/coletas/os?id=${esc(os.id)}" class="btn btn-g" style="text-decoration:none">Cancelar</a>
@@ -445,6 +479,23 @@ function removerCobranca(){
   if(!confirm('Remover a cobrança desta coleta?')) return;
   fetch('/api/coletas/cobranca-remover',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:'${esc(os.id)}'})})
     .then(function(r){return r.json();}).then(function(j){ if(j.ok){ location.reload(); } else { alert(j.error==='ja_paga'?'Essa cobrança já foi paga — não dá para remover.':'Não consegui remover agora.'); } })
+    .catch(function(){ alert('Sem conexão.'); });
+}
+function vincularMtr(){
+  var num=(document.getElementById('mtrNumero')||{}).value||'';
+  var m=document.getElementById('mMtr');
+  if(!num.trim()){ if(m) m.textContent='Informe o número da MTR.'; return; }
+  if(m) m.textContent='Puxando do órgão…';
+  fetch('/api/mtr/vincular',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({osId:'${esc(os.id)}',numero:num})})
+    .then(function(r){return r.json();}).then(function(j){
+      if(j.ok){ location.reload(); }
+      else if(m){ m.textContent=j.message||'Não consegui puxar essa MTR.'; }
+    }).catch(function(){ if(m) m.textContent='Sem conexão.'; });
+}
+function desvincularMtr(){
+  if(!confirm('Remover o vínculo da MTR com esta coleta?')) return;
+  fetch('/api/mtr/desvincular',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({osId:'${esc(os.id)}'})})
+    .then(function(r){return r.json();}).then(function(j){ if(j.ok){ location.reload(); } else { alert('Não consegui remover agora.'); } })
     .catch(function(){ alert('Sem conexão.'); });
 }
 </script></body></html>`;

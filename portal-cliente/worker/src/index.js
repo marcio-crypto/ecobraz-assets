@@ -36,7 +36,7 @@ import { LOGO_ESCURO_B64, LOGO_CLARO_B64 } from './logos.js';
 import { paginaCalculadora, estimativaCarbono, paginaCalculoDetalhado, calculoDetalhadoGHG, paginaLojaCarbono, paginaCarbonoContato, paginaCarbonoObrigado, nivelCarbono, faixaValida, precoNivel } from './carbono.js';
 import { criarPreferencia, consultarPagamento } from './mercadopago.js';
 import { registrarFalha, receberErroCliente, listarFalhas } from './monitor.js';
-import { sondaMTR, consultarMtrSigor } from './mtr.js';
+import { sondaMTR, consultarMtrSigor, baixarPdfManifesto } from './mtr.js';
 import { acharPacote, precoPacote, acharModuloAdote, precoModuloAdote, paginaLojaAdote, paginaObrigadoAdote, paginaDiagnostico, lerCredito, salvarCredito, novoCredito, aplicarCompra, aplicarRecarga, precisaRecarga, listarPatrocinadores, resumoPatrocinio, lerCreditoPorDoc } from './adote.js';
 import { paginaLojaESG, paginaESGContato, paginaESGObrigado, relatorioESG, precoRelatorioESG } from './esg.js';
 import { statusDaEtapa, valorProp, CAMPOS_OS } from './os-utils.js';
@@ -58,7 +58,7 @@ import { amostraContatosPloomes, paginaAmostraContatos, importarLoteContatos, es
 import { importarLoteAnexos, importarLoteAnexosContatos, completarAnexos, importarAnexosJanela, reprocessarFalhas, importarLoteDocumentos, recuperarDocumentos, estatisticasArquivos, paginaMigrarArquivos, diagnosticoAnexos, paginaDiagAnexos } from './ploomes-arquivos.js';
 import { fiscalPermitido, nomeFiscal, listarNotas, lerNota, importarLote, vincularNota, sugerirVinculoSync, paginaFiscalLogin, paginaFiscalHome, paginaFiscalResultado, paginaFiscalNota } from './fiscal.js';
 import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, emailsDoCliente, reindexarEmailsClientes, backfillEnderecos, paginaManutencao, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, clienteDeLead, arquivosDoCliente, paginaLeads, paginaLeadDetalhe, paginaInicio, listarClientesD1, contagensClientesD1, lerClienteD1, negociosDoCliente, espelharClienteD1, sincronizarKVparaD1, lerNegocioDetalheD1, paginaOSDetalhe, curarContatosKV, classificarPedido, atualizarIndexLead } from './cadastro.js';
-import { listarColetasOS, lerColetaOS, criarColetaOS, atualizarStatusOS, atualizarColetaOS, anexarTelemetriaOS, registrarAnexoColeta, removerAnexoColeta, paginaColetasLista, paginaGerarColeta, paginaEditarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga, definirCobrancaOS, marcarCobrancaPagaOS } from './coletas.js';
+import { listarColetasOS, lerColetaOS, criarColetaOS, atualizarStatusOS, atualizarColetaOS, anexarTelemetriaOS, registrarAnexoColeta, removerAnexoColeta, paginaColetasLista, paginaGerarColeta, paginaEditarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga, definirCobrancaOS, marcarCobrancaPagaOS, definirMtrOS } from './coletas.js';
 import { listarVeiculos, lerVeiculo, salvarVeiculo, paginaFrota, paginaVeiculoForm, lerJornadaAtiva, abrirJornada, fecharJornada, registrarAbastecimento, tagColetaComVeiculo, servirFotoJornada, bannerJornada, paginaAbrirDia, paginaFecharDia, paginaAbastecer, placaDaColeta } from './frota.js';
 import { carregarEquipeNoEnv, listarUsuarios, lerUsuario, salvarUsuario, importarUsuarios, paginaEquipe, paginaUsuarioForm, paginaEquipeImportar } from './equipe.js';
 import { agentesDe } from './agente.js';
@@ -869,6 +869,43 @@ export default {
         if (!escritorio && !diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);
         let b; try { b = await request.json(); } catch { b = {}; }
         return json(await consultarMtrSigor(env, b && b.numero));
+      }
+      // Vincula uma MTR (por número) a uma OS: puxa os dados oficiais do órgão,
+      // baixa o PDF (best-effort) para o R2 e anexa. Confere o CNPJ do gerador.
+      if (pathname === '/api/mtr/vincular' && request.method === 'POST') {
+        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = {}; }
+        const osId = String((b && b.osId) || '').replace(/[^a-zA-Z0-9_-]/g, '');
+        const os = await lerColetaOS(env, osId);
+        if (!os) return json({ ok: false, error: 'nao_encontrada' }, 404);
+        const consulta = await consultarMtrSigor(env, b && b.numero);
+        if (!consulta.ok) return json({ ok: false, error: 'mtr_nao_lida', message: consulta.message }, 422);
+        const resumo = consulta.resumo;
+        // Confere se o gerador da MTR bate com o cliente da OS (aviso, não trava).
+        const docOS = String(os.clienteDoc || '').replace(/\D/g, '');
+        const docMtr = String(resumo.geradorCnpj || '').replace(/\D/g, '');
+        const diverge = docOS && docMtr && docOS !== docMtr;
+        // PDF oficial → R2 (best-effort). Não impede o vínculo se falhar.
+        let pdf = null;
+        try {
+          const baixado = await baixarPdfManifesto(env, resumo.numero, consulta.sistema);
+          if (baixado && baixado.bytes && env.R2_ARQUIVOS) {
+            const key = `coleta-anexo/mtr/${os.id}-${String(resumo.numero).replace(/[^0-9A-Za-z]/g, '')}.pdf`;
+            await env.R2_ARQUIVOS.put(key, baixado.bytes, { httpMetadata: { contentType: 'application/pdf' } });
+            await registrarAnexoColeta(env, os.id, { key, nome: `MTR-${resumo.numero}.pdf`, content_type: 'application/pdf', tamanho: baixado.bytes.length });
+            pdf = { anexado: true };
+          } else { pdf = { anexado: false, motivo: (baixado && baixado.erro) || 'sem_pdf' }; }
+        } catch (error) { console.error('mtr_pdf', safeError(error)); pdf = { anexado: false, motivo: 'erro' }; }
+        await definirMtrOS(env, os.id, { ...resumo, divergenciaGerador: !!diverge, pdfAnexado: !!(pdf && pdf.anexado), vinculadoEm: nowS(), vinculadoPor: escritorio.email || '' });
+        return json({ ok: true, resumo, diverge: !!diverge, pdf });
+      }
+      if (pathname === '/api/mtr/desvincular' && request.method === 'POST') {
+        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = {}; }
+        const os = await lerColetaOS(env, String((b && b.osId) || '').replace(/[^a-zA-Z0-9_-]/g, ''));
+        if (!os) return json({ ok: false, error: 'nao_encontrada' }, 404);
+        await definirMtrOS(env, os.id, null);
+        return json({ ok: true });
       }
       // Prova de gravação: 1 escrita de teste no KV para saber NA HORA se o
       // limite diário está bloqueando (usado após o upgrade do plano).
