@@ -85,8 +85,8 @@ export async function paginaAreaValidacao(env, validador, url) {
   // espelhada no D1 — trilha imutável. Só libera depois de a versão ser validada.
   const homolog = await lerFatoresHomologados(env);
   const itensFat = [
-    ...m.fatores.map((f) => ({ id: f.id, material: f.material, unidade: f.unidade, fonte: `${f.fonte}${f.versaoFonte ? ` (${f.versaoFonte})` : ''}`, nota: f.nota || '' })),
-    { id: 'compensacaoAdote', material: 'Compensação — Adote um Bairro (por coleta de ~25 kg)', unidade: m.compensacaoAdote.unidade, fonte: m.compensacaoAdote.fonte, nota: 'É o fator que acende o termômetro de neutralidade dos clientes.' },
+    ...m.fatores.map((f) => ({ id: f.id, material: f.material, unidade: f.unidade, fonte: `${f.fonte}${f.versaoFonte ? ` (${f.versaoFonte})` : ''}${f.cenarioBase ? ` · Cenário-base: ${f.cenarioBase}` : ''}`, nota: f.nota || '' })),
+    { id: 'compensacaoAdote', material: 'Compensação — Adote um Bairro (por coleta de ~25 kg)', unidade: m.compensacaoAdote.unidade, fonte: m.compensacaoAdote.fonte, nota: 'Voluntária, reportada à parte — NÃO abate o inventário. Acende o termômetro dos clientes.' },
   ];
   const tdF = 'padding:10px 10px;border-top:1px solid #EDF1F0;vertical-align:top;';
   const fatores = itensFat.map((f) => {

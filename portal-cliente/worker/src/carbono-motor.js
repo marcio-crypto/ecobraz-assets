@@ -39,15 +39,21 @@ export function categoriaDoMaterial(mat) {
 export function calcularEvitado(materiais, metodologia) {
   const M = metodologia || METODOLOGIA;
   const validadoGlobal = M && M.status === 'validado';
-  const fatorDe = (id) => (M && M.fatores || []).find((f) => f.id === id) || null;
+  // Fatores desmembrados (v1.3): 'aplicaA' liga o subtipo (ex.: aco_lata) à
+  // categoria operacional (aco). REGRA DA RT: se 2+ fatores homologados disputam
+  // a mesma categoria SEM a proporção em massa da triagem, NÃO se calcula —
+  // nada de média escondida. Só calcula com exatamente 1 fator homologado.
+  const candidatosDe = (cat) => (M && M.fatores || []).filter((f) => (f.aplicaA || f.id) === cat);
   let totalKg = 0, totalEvitadoKg = 0, algumPendente = false, algumSemCategoria = false;
   const linhas = (materiais || []).map((mat) => {
     const kg = Math.max(0, Number(mat.qtd) || 0);
     totalKg += kg;
     const cat = categoriaDoMaterial(mat);
     if (!cat) algumSemCategoria = true;
-    const f = cat ? fatorDe(cat) : null;
-    const fatorValido = !!(validadoGlobal && f && f.valor != null && f.status === 'validado');
+    const cands = cat ? candidatosDe(cat) : [];
+    const homologados = cands.filter((x) => x.valor != null && x.status === 'validado');
+    const f = homologados.length === 1 ? homologados[0] : null;
+    const fatorValido = !!(validadoGlobal && f);
     const evitadoKg = fatorValido ? kg * Number(f.valor) : null;
     if (evitadoKg == null) algumPendente = true; else totalEvitadoKg += evitadoKg;
     return {
@@ -55,7 +61,7 @@ export function calcularEvitado(materiais, metodologia) {
       categoria: cat || null, auto: !mat.categoriaFator,
       fatorId: f ? f.id : null, fatorValor: f ? f.valor : null, fatorUnidade: f ? f.unidade : null,
       fatorFonte: f ? f.fonte : null,
-      fatorStatus: f ? f.status : (cat ? 'sem_fator' : 'sem_categoria'),
+      fatorStatus: f ? f.status : (homologados.length > 1 ? 'requer_proporcao' : (cands.length ? (cands[0].status || 'proposto') : (cat ? 'sem_fator' : 'sem_categoria'))),
       evitadoKg, pendente: evitadoKg == null,
     };
   });

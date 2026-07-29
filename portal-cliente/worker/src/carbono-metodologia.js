@@ -6,10 +6,17 @@
 // Regra de ouro: nenhum número é inventado. valor:null = ainda precisa ser extraído da fonte citada.
 
 export const METODOLOGIA = {
-  versao: '1.2-rascunho',
+  versao: '1.3-rascunho',
   status: 'proposto', // proposto | em_validacao | validado
   atualizadoEm: '2026-07-28',
   validadoPor: null, // preenchido quando a Villanova assinar (nome, data)
+
+  // Regra de USO dos fatores (exigência da RT, 2026-07-28): todos os fatores da
+  // tabela-mãe servem ao cálculo de EMISSÕES EVITADAS (número A) — comparação
+  // contra o cenário-base declarado em cada fator — e são reportados À PARTE do
+  // inventário de GEE (número B). A própria EPA esclarece que o WARM NÃO deve
+  // ser usado como inventário. O inventário segue GHG Protocol / ISO 14064-1.
+  regraUsoFatores: 'Fatores desta tabela calculam EMISSÕES EVITADAS (número A), sempre contra o cenário-base declarado, e são reportados À PARTE do inventário (número B). WARM não é inventário (EPA). Eletricidade e transporte entram como DESCONTO do projeto no cálculo do evitado — nunca como inventário do cliente.',
 
   // DECISÃO DO MARCIO (2026-07-28): a Ecobraz NÃO vende créditos de carbono.
   // A camada Verra/UNFCCC (VMR0008 + AMS-III.BA) que existiu na v1.1 foi REMOVIDA
@@ -30,7 +37,7 @@ export const METODOLOGIA = {
   numeros: [
     { id: 'A', titulo: 'Emissões evitadas (benefício)', desc: 'CO₂e que a destinação correta evita vs. cenário-base. Reportado À PARTE — não entra no inventário, não é neutralização.', base: 'WRI / WBCSD' },
     { id: 'B', titulo: 'Inventário do cliente (Escopo 3, Cat. 5)', desc: 'Emissões do tratamento do resíduo do cliente. É o que ENTRA no inventário de GEE dele.', base: 'GHG Protocol' },
-    { id: 'C', titulo: 'Neutralização / compensação', desc: 'Offset (Adote um Bairro) — OUTRO produto, só com lastro real. NÃO se soma a A nem a B.', base: 'Pacote 4 (fora daqui)' },
+    { id: 'C', titulo: 'Compensação voluntária (à parte)', desc: 'Adote um Bairro — reportada SEMPRE à parte de A e B, com lastro real. NÃO abate o inventário como neutralização (regra RT, 2026-07-28).', base: 'Pacote 4 (fora daqui)' },
   ],
 
   // O que ENTREGAMOS — e nada além (regra do Marcio, 2026-07-28: "não vamos
@@ -59,16 +66,23 @@ export const METODOLOGIA = {
     'Destino: reciclagem (com MTR + NF) OU reuso/reintrodução no mercado (com NF)',
   ],
 
-  // Tabela-mãe de fatores. valor:null até extrair da fonte + validar.
+  // Tabela-mãe de fatores — DESMEMBRADA conforme o parecer da RT (2026-07-28):
+  // o WARM distingue subtipos (lata/estrutural, lata/lingote, HDPE/PET) e cada
+  // fator declara o CENÁRIO-BASE. 'aplicaA' liga o fator à categoria operacional
+  // da triagem; quando 2+ fatores homologados disputam a mesma categoria SEM a
+  // proporção em massa, o motor NÃO calcula (fica pendente — sem média escondida).
   fatores: [
-    { id: 'aco', material: 'Aço / ferro recuperado', valor: null, unidade: 'kgCO₂e/kg', fonte: 'EPA WARM v16', versaoFonte: '2023', status: 'proposto', nota: '' },
-    { id: 'aluminio', material: 'Alumínio recuperado', valor: null, unidade: 'kgCO₂e/kg', fonte: 'EPA WARM v16', versaoFonte: '2023', status: 'proposto', nota: '' },
-    { id: 'cobre', material: 'Cobre recuperado', valor: null, unidade: 'kgCO₂e/kg', fonte: 'EPA WARM v16 / ACV', versaoFonte: '2023', status: 'proposto', nota: '' },
-    { id: 'plasticos', material: 'Plásticos (HDPE/PET)', valor: null, unidade: 'kgCO₂e/kg', fonte: 'EPA WARM v16', versaoFonte: '2023', status: 'proposto', nota: '' },
-    { id: 'preciosos', material: 'Metais preciosos', valor: null, unidade: 'kgCO₂e/kg', fonte: 'ACV específica', versaoFonte: '', status: 'proposto', nota: 'Alta variação — usar fonte específica' },
-    { id: 'reuso', material: 'Reuso (por tipo de equipamento)', valor: null, unidade: 'kgCO₂e/kg', fonte: 'ACV / WEEE Forum', versaoFonte: '', status: 'proposto', nota: 'Benefício maior que reciclagem' },
-    { id: 'eletricidade', material: 'Eletricidade da planta (BR)', valor: null, unidade: 'tCO₂e/MWh', fonte: 'MCTI/SIRENE (fator do ano)', versaoFonte: '2025', status: 'fonte_oficial', nota: 'Fator oficial publicado; atualizar por ano' },
-    { id: 'transporte', material: 'Transporte da coleta (km × modal)', valor: null, unidade: 'kgCO₂e/t·km', fonte: 'GHG Protocol / Defra', versaoFonte: '', status: 'proposto', nota: '' },
+    { id: 'aco_lata', aplicaA: 'aco', material: 'Aço — latas (WARM: Steel Cans)', valor: null, unidade: 'kgCO₂e/kg', fonte: 'EPA WARM v16', versaoFonte: '2023', status: 'proposto', cenarioBase: 'Reciclagem vs. produção virgem + destino-base', nota: '' },
+    { id: 'aco_estrutural', aplicaA: 'aco', material: 'Aço — estrutural/misto (WARM: Structural Steel)', valor: null, unidade: 'kgCO₂e/kg', fonte: 'EPA WARM v16', versaoFonte: '2023', status: 'proposto', cenarioBase: 'Reciclagem vs. produção virgem + destino-base', nota: '' },
+    { id: 'aluminio_lata', aplicaA: 'aluminio', material: 'Alumínio — latas (WARM: Aluminum Cans)', valor: null, unidade: 'kgCO₂e/kg', fonte: 'EPA WARM v16', versaoFonte: '2023', status: 'proposto', cenarioBase: 'Reciclagem vs. produção virgem + destino-base', nota: '' },
+    { id: 'aluminio_lingote', aplicaA: 'aluminio', material: 'Alumínio — lingote (WARM: Aluminum Ingot)', valor: null, unidade: 'kgCO₂e/kg', fonte: 'EPA WARM v16', versaoFonte: '2023', status: 'proposto', cenarioBase: 'Reciclagem vs. produção virgem + destino-base', nota: '' },
+    { id: 'cobre', aplicaA: 'cobre', material: 'Cobre recuperado (fio/cabo)', valor: null, unidade: 'kgCO₂e/kg', fonte: 'ACV comparativa', versaoFonte: '', status: 'proposto', cenarioBase: 'A DEFINIR com a RT (ACV comparativa)', nota: 'Não homologar antes de definir o cenário comparativo.' },
+    { id: 'plastico_hdpe', aplicaA: 'plasticos', material: 'Plástico HDPE', valor: null, unidade: 'kgCO₂e/kg', fonte: 'EPA WARM v16', versaoFonte: '2023', status: 'proposto', cenarioBase: 'Reciclagem vs. produção virgem + destino-base', nota: 'Aplicar por PROPORÇÃO EM MASSA da triagem — nunca média sem proporção.' },
+    { id: 'plastico_pet', aplicaA: 'plasticos', material: 'Plástico PET', valor: null, unidade: 'kgCO₂e/kg', fonte: 'EPA WARM v16', versaoFonte: '2023', status: 'proposto', cenarioBase: 'Reciclagem vs. produção virgem + destino-base', nota: 'Aplicar por PROPORÇÃO EM MASSA da triagem — nunca média sem proporção.' },
+    { id: 'preciosos', aplicaA: 'preciosos', material: 'Metais preciosos (placas/conectores)', valor: null, unidade: 'kgCO₂e/kg', fonte: 'ACV específica', versaoFonte: '', status: 'proposto', cenarioBase: 'A DEFINIR (ACV específica por fração)', nota: 'Exige fonte específica — sem proxy genérico.' },
+    { id: 'reuso', aplicaA: 'reuso', material: 'Reuso — por tipo de equipamento', valor: null, unidade: 'kgCO₂e/kg', fonte: 'ACV / WEEE Forum', versaoFonte: '', status: 'proposto', cenarioBase: 'Reuso vs. produção de equipamento novo', nota: 'Desmembrar por tipo de equipamento com a RT antes de homologar.' },
+    { id: 'eletricidade', material: 'Eletricidade da planta (BR)', valor: null, unidade: 'tCO₂e/MWh', fonte: 'MCTI/SIRENE (fator do ano)', versaoFonte: '2025', status: 'fonte_oficial', cenarioBase: 'DESCONTO do projeto — consumo real da planta × fator do SIN', nota: 'Fator oficial publicado; atualizar por ano' },
+    { id: 'transporte', material: 'Transporte da coleta', valor: null, unidade: 'kgCO₂e/t·km', fonte: 'GHG Protocol / Defra', versaoFonte: '', status: 'proposto', cenarioBase: 'DESCONTO do projeto — km reais × modal', nota: 'Requer modal, veículo, combustível e carga — definir com a operação antes de homologar.' },
   ],
 
   // Fator de COMPENSAÇÃO do "Adote um Bairro" (o número C). Quanto de CO₂e cada
@@ -76,7 +90,7 @@ export const METODOLOGIA = {
   // Villanova/Karina validar (ou via var de ambiente ADOTE_KGCO2E_POR_COLETA, com a
   // MESMA trava de validação). C é reportado À PARTE de A (evitado) e B (inventário)
   // — NUNCA somado. É o que alimenta o "termômetro de neutralidade" do cliente.
-  compensacaoAdote: { valor: null, unidade: 'kgCO₂e/coleta', coletaKgMedio: 25, fonte: 'Villanova ESG (a validar) — base WARM/WEEE por ~25 kg de REEE', versaoFonte: '', status: 'proposto', nota: 'Karina valida o fator; até lá o termômetro mostra só o dado físico (coletas e quilos).' },
+  compensacaoAdote: { valor: null, unidade: 'kgCO₂e/coleta', coletaKgMedio: 25, fonte: 'Villanova ESG (a validar) — base WARM/WEEE por ~25 kg de REEE', versaoFonte: '', status: 'proposto', nota: 'Compensação VOLUNTÁRIA, reportada à parte — NÃO abate o inventário como neutralização (regra RT, 2026-07-28). Karina valida o fator; até lá o termômetro mostra só o dado físico (coletas e quilos).' },
 };
 
 // ---- HOMOLOGAÇÃO DE FATORES (a Karina digita o valor da fonte e assina) -----
@@ -137,7 +151,7 @@ export async function fatorCompensacaoAdote(env, metodologia) {
 // metadados mutáveis (status/validadoPor). Se alguém mudar a receita depois de validada, o hash muda e o
 // selo deixa de bater → a página pública avisa "conteúdo alterado após a validação".
 export async function hashConteudo() {
-  const conteudo = { versao: METODOLOGIA.versao, normas: METODOLOGIA.normas, numeros: METODOLOGIA.numeros, escopoEntrega: METODOLOGIA.escopoEntrega, fronteira: METODOLOGIA.fronteira, fatores: METODOLOGIA.fatores, compensacaoAdote: METODOLOGIA.compensacaoAdote };
+  const conteudo = { versao: METODOLOGIA.versao, regraUsoFatores: METODOLOGIA.regraUsoFatores, normas: METODOLOGIA.normas, numeros: METODOLOGIA.numeros, escopoEntrega: METODOLOGIA.escopoEntrega, fronteira: METODOLOGIA.fronteira, fatores: METODOLOGIA.fatores, compensacaoAdote: METODOLOGIA.compensacaoAdote };
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(conteudo)));
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
 }
@@ -170,7 +184,7 @@ export async function paginaMetodologia(env, validacao) {
       <td style="padding:11px 12px;border-top:1px solid #EDF1F0;font-size:13px;color:#10262B;font-weight:600;">${esc(f.material)}</td>
       <td style="padding:11px 12px;border-top:1px solid #EDF1F0;font-size:13px;color:#4F6469;">${f.valor == null ? '<span style="color:#9aa7a4;">—</span>' : esc(f.valor)}</td>
       <td style="padding:11px 12px;border-top:1px solid #EDF1F0;font-size:12px;color:#5B6570;">${esc(f.unidade)}</td>
-      <td style="padding:11px 12px;border-top:1px solid #EDF1F0;font-size:12px;color:#5B6570;">${esc(f.fonte)}${f.versaoFonte ? ` <span style="color:#9aa7a4;">(${esc(f.versaoFonte)})</span>` : ''}</td>
+      <td style="padding:11px 12px;border-top:1px solid #EDF1F0;font-size:12px;color:#5B6570;">${esc(f.fonte)}${f.versaoFonte ? ` <span style="color:#9aa7a4;">(${esc(f.versaoFonte)})</span>` : ''}${f.cenarioBase ? `<div style="font-size:10.5px;color:#9aa7a4;margin-top:2px;">Cenário-base: ${esc(f.cenarioBase)}</div>` : ''}</td>
       <td style="padding:11px 12px;border-top:1px solid #EDF1F0;text-align:right;">${badge(f.status)}</td>
     </tr>`).join('');
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Metodologia de Carbono — Ecobraz</title></head>
@@ -215,7 +229,8 @@ export async function paginaMetodologia(env, validacao) {
   <h2 style="font-size:16px;color:#00333B;margin:30px 0 12px;">Fronteira do sistema — a cadeia de custódia (o lastro)</h2>
   <div style="background:#fff;border:1px solid #E4EBE9;border-radius:14px;padding:20px 22px;">${passos}</div>
 
-  <h2 style="font-size:16px;color:#00333B;margin:30px 0 12px;">Fatores de emissão <span style="font-size:12.5px;color:#8fa39f;font-weight:600;">(tabela-mãe — cada um com fonte, versão e status)</span></h2>
+  <h2 style="font-size:16px;color:#00333B;margin:30px 0 12px;">Fatores de emissão <span style="font-size:12.5px;color:#8fa39f;font-weight:600;">(tabela-mãe — cada um com fonte, cenário-base e status)</span></h2>
+  <div style="background:#FFFBEB;border:1px solid #F0DCA6;border-radius:12px;padding:12px 16px;margin:0 0 12px;font-size:12.5px;color:#7a5f13;line-height:1.6;"><b>Regra de uso (RT):</b> ${esc(m.regraUsoFatores)}</div>
   <div style="background:#fff;border:1px solid #E4EBE9;border-radius:14px;overflow:hidden;">
     <div style="overflow-x:auto;"><table role="presentation" style="width:100%;border-collapse:collapse;min-width:560px;">
       <thead><tr style="background:#F7FAF9;">
