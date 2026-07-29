@@ -24,27 +24,29 @@ const semSegredos = (txt, cfg, token) => {
 const SISTEMAS = (env) => {
   const out = [];
   if (env.SIGOR_CNPJ || env.SIGOR_CPF || env.SIGOR_SENHA) {
-    out.push({ nome: 'SIGOR (CETESB/SP)', base: 'https://mtr.cetesb.sp.gov.br', cnpj: String(env.SIGOR_CNPJ || '').replace(/\D/g, ''), cpf: String(env.SIGOR_CPF || '').replace(/\D/g, ''), senha: String(env.SIGOR_SENHA || '') });
+    out.push({ nome: 'SIGOR (CETESB/SP)', base: 'https://mtr.cetesb.sp.gov.br', cnpj: String(env.SIGOR_CNPJ || '').replace(/\D/g, ''), cpf: String(env.SIGOR_CPF || '').replace(/\D/g, ''), senha: String(env.SIGOR_SENHA || ''), unidade: String(env.SIGOR_UNIDADE || '').replace(/\D/g, ''), caminhos: ['/api/apiws/rest/gettoken', '/apiws/rest/gettoken'] });
   }
   if (env.SINIR_CNPJ || env.SINIR_CPF || env.SINIR_SENHA) {
-    out.push({ nome: 'SINIR (nacional)', base: 'https://mtr.sinir.gov.br', cnpj: String(env.SINIR_CNPJ || '').replace(/\D/g, ''), cpf: String(env.SINIR_CPF || '').replace(/\D/g, ''), senha: String(env.SINIR_SENHA || '') });
+    out.push({ nome: 'SINIR (nacional)', base: 'https://mtr.sinir.gov.br', cnpj: String(env.SINIR_CNPJ || '').replace(/\D/g, ''), cpf: String(env.SINIR_CPF || '').replace(/\D/g, ''), senha: String(env.SINIR_SENHA || ''), unidade: String(env.SINIR_UNIDADE || '').replace(/\D/g, ''), caminhos: ['/apiws/rest/gettoken', '/api/apiws/rest/gettoken', '/api/mtr/v1/gettoken'] });
   }
   return out;
 };
 
-// Caminhos de autenticação conhecidos na família MTR (a sonda descobre o certo).
-const CAMINHOS_TOKEN = [
-  '/apiws/rest/gettoken',
-  '/api/apiws/rest/gettoken',
-  '/mtrservice/rest/gettoken',
-  '/ws/rest/gettoken',
-  '/api/mtr/v1/gettoken',
-];
-const CORPOS = (c) => [
-  { cpf: c.cpf, senha: c.senha, unidade: c.cnpj },
-  { login: c.cpf, senha: c.senha, cnpj: c.cnpj },
-  { cpf: c.cpf, senha: c.senha, cnpj: c.cnpj },
-];
+// Descoberta da sonda de 2026-07-29 (D1 id 28): no SIGOR, /api/apiws/rest/gettoken
+// EXISTE (respondeu 401) — o formato/credencial é que não casou. Nesses sistemas
+// o login costuma pedir o CÓDIGO DA UNIDADE (número interno do portal), não o
+// CNPJ — por isso os corpos abaixo priorizam a unidade quando configurada.
+const CORPOS = (c) => {
+  const lista = [];
+  if (c.unidade) {
+    lista.push({ cpf: c.cpf, senha: c.senha, unidade: c.unidade });
+    lista.push({ login: c.cpf, senha: c.senha, unidade: c.unidade });
+    lista.push({ cpf: c.cpf, senha: c.senha, parCodigoUnidade: c.unidade });
+  }
+  lista.push({ cpf: c.cpf, senha: c.senha, unidade: c.cnpj });
+  lista.push({ login: c.cpf, senha: c.senha, cnpj: c.cnpj });
+  return lista;
+};
 // Consultas INOFENSIVAS (tabelas de domínio) para provar que o token funciona.
 const CAMINHOS_CONSULTA = [
   '/apiws/rest/retornaListaClasse',
@@ -73,23 +75,25 @@ export async function sondaMTR(env) {
     const reg = { sistema: cfg.nome, base: cfg.base, tentativas: [], autenticou: false, consulta: null, faltando };
     if (faltando.length) { resultado.sistemas.push(reg); continue; }
     let token = '';
-    for (const caminho of CAMINHOS_TOKEN) {
+    for (const caminho of (cfg.caminhos || ['/apiws/rest/gettoken'])) {
       if (token) break;
       for (const corpo of CORPOS(cfg)) {
         if (token) break;
         const url = cfg.base + caminho;
         try {
-          const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', accept: 'application/json' }, body: JSON.stringify(corpo), signal: AbortSignal.timeout(9000) });
+          // Servidor do governo pode ser lento — paciência de 20s por tentativa.
+          const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', accept: 'application/json' }, body: JSON.stringify(corpo), signal: AbortSignal.timeout(20000) });
           const txt = await r.text();
           const t = acharToken(txt);
           reg.tentativas.push({ url: caminho, campos: Object.keys(corpo).join(','), status: r.status, corpoInicio: semSegredos(txt, cfg, t).slice(0, 140), temToken: !!t });
           if (r.status === 200 && t) { token = t; reg.autenticou = true; reg.tokenMascarado = mascara(t); }
+          if (r.status === 404) break; // caminho não existe — não insiste com outros corpos
         } catch (e) {
           reg.tentativas.push({ url: caminho, campos: Object.keys(corpo).join(','), erro: String(e && e.message || e).slice(0, 80) });
         }
-        if (reg.tentativas.length >= 12) break; // teto de segurança
+        if (reg.tentativas.length >= 10) break; // teto de segurança
       }
-      if (reg.tentativas.length >= 12) break;
+      if (reg.tentativas.length >= 10) break;
     }
     // Prova de vida do token: uma consulta de tabela de domínio (só leitura).
     if (token) {

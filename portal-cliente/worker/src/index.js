@@ -116,6 +116,8 @@ export default {
           // MTR: só a PRESENÇA das credenciais no cofre (nunca os valores).
           mtrSigor: !!(env.SIGOR_CNPJ && env.SIGOR_CPF && env.SIGOR_SENHA),
           mtrSinir: !!(env.SINIR_CNPJ && env.SINIR_CPF && env.SINIR_SENHA),
+          mtrSigorUnidade: !!env.SIGOR_UNIDADE,
+          mtrSinirUnidade: !!env.SINIR_UNIDADE,
           mercadopagoModo: env.MERCADOPAGO_ACCESS_TOKEN ? (env.MERCADOPAGO_ACCESS_TOKEN.startsWith('TEST-') ? 'teste' : 'producao') : null,
           avisoEmail: !!env.PLOOMES_WEBHOOK_SECRET,
           avisoModoTeste: env.NOTIF_MODO_TESTE === '1', // true = só contato de teste; false = vale p/ todos
