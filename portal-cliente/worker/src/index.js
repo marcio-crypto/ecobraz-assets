@@ -114,8 +114,9 @@ export default {
           kv: !!env.PORTAL_KV,
           mercadopago: !!env.MERCADOPAGO_ACCESS_TOKEN,
           // MTR: só a PRESENÇA das credenciais no cofre (nunca os valores).
-          mtrSigor: !!(env.SIGOR_CNPJ && env.SIGOR_CPF && env.SIGOR_SENHA),
-          mtrSinir: !!(env.SINIR_CNPJ && env.SINIR_CPF && env.SINIR_SENHA),
+          mtrSigor: !!(env.SIGOR_EMAIL && env.SIGOR_CNPJ && env.SIGOR_SENHA && env.SIGOR_UNIDADE),
+          mtrSinir: !!(env.SINIR_CNPJ && env.SINIR_CPF && env.SINIR_SENHA && env.SINIR_UNIDADE),
+          mtrSigorEmail: !!env.SIGOR_EMAIL,
           mtrSigorUnidade: !!env.SIGOR_UNIDADE,
           mtrSinirUnidade: !!env.SINIR_UNIDADE,
           mercadopagoModo: env.MERCADOPAGO_ACCESS_TOKEN ? (env.MERCADOPAGO_ACCESS_TOKEN.startsWith('TEST-') ? 'teste' : 'producao') : null,
