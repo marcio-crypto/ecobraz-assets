@@ -80,6 +80,23 @@ export async function criarPixDireto({ valor, descricao, externalReference, paye
   };
 }
 
+// Diagnóstico: lista as formas de pagamento que a CONTA aceita (GET
+// /v1/payment_methods). Responde de vez se o Pix está habilitado no checkout.
+export async function consultarMeiosPagamento(env) {
+  const token = env.MERCADOPAGO_ACCESS_TOKEN;
+  if (!token) return { ok: false, erro: 'sem_token' };
+  try {
+    const r = await fetch(`${MP_API}/v1/payment_methods`, { headers: { authorization: `Bearer ${token}` } });
+    const txt = await r.text();
+    if (!r.ok) return { ok: false, status: r.status, erro: txt.slice(0, 200) };
+    const lista = JSON.parse(txt);
+    const ativos = (Array.isArray(lista) ? lista : []).filter((m) => m && m.status === 'active');
+    const nomes = ativos.map((m) => `${m.id} (${m.name || m.payment_type_id})`);
+    const pix = ativos.find((m) => m.id === 'pix' || m.payment_type_id === 'bank_transfer');
+    return { ok: true, temPix: !!pix, tipos: [...new Set(ativos.map((m) => m.payment_type_id))], nomes: nomes.slice(0, 40), total: ativos.length };
+  } catch (e) { return { ok: false, erro: String(e && e.message || e).slice(0, 160) }; }
+}
+
 export async function consultarPagamento(paymentId, env) {
   const token = env.MERCADOPAGO_ACCESS_TOKEN;
   if (!token || !paymentId) return null;

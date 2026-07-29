@@ -34,7 +34,7 @@ const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8', 'cache
 import { paginaLogin, paginaPainel, paginaMensagem } from './paginas.js';
 import { LOGO_ESCURO_B64, LOGO_CLARO_B64 } from './logos.js';
 import { paginaCalculadora, estimativaCarbono, paginaCalculoDetalhado, calculoDetalhadoGHG, paginaLojaCarbono, paginaCarbonoContato, paginaCarbonoObrigado, nivelCarbono, faixaValida, precoNivel } from './carbono.js';
-import { criarPreferencia, consultarPagamento, criarPixDireto } from './mercadopago.js';
+import { criarPreferencia, consultarPagamento, criarPixDireto, consultarMeiosPagamento } from './mercadopago.js';
 import { registrarFalha, receberErroCliente, listarFalhas } from './monitor.js';
 import { segmentoDoCliente, definirSegmento, SEGMENTOS, fluxoDeVendas } from './premium.js';
 import { MANUAL_CLIENTE_PDF_B64 } from './manual-pdf.js';
@@ -771,6 +771,18 @@ export default {
             : 'Tente de novo em instantes.';
           return html(paginaMensagem('Pix não pôde ser gerado', `O Mercado Pago respondeu: <b>${esc(det)}</b><br><br>${dica}`, '/diretoria'), 502);
         }
+      }
+      // Diagnóstico definitivo: quais meios de pagamento a conta MP aceita (tem Pix?).
+      if (pathname === '/diretoria/mp-diagnostico' && request.method === 'GET') {
+        if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
+        const d = await consultarMeiosPagamento(env);
+        const corpo = d.ok
+          ? `<b style="font-size:16px;color:${d.temPix ? '#1E7A3D' : '#B23A2E'}">${d.temPix ? '✅ O Pix ESTÁ habilitado na conta.' : '⛔ O Pix NÃO está na lista de meios aceitos.'}</b><br><br>
+             Tipos aceitos: <b>${esc(d.tipos.join(', ') || '—')}</b><br><br>
+             <span style="font-size:12px;color:#4F6469">${d.total} meio(s) ativo(s): ${esc(d.nomes.join(', '))}</span>
+             ${d.temPix ? '<br><br>Se está habilitado mas não aparece no checkout, o problema é de exibição — eu forço o Pix na cobrança.' : '<br><br>Solução: pedir ao Mercado Pago para habilitar o Pix no checkout desta conta (a chave Pix sozinha não basta).'}`
+          : `Não consegui consultar o Mercado Pago: <b>${esc(d.erro || 'erro')}</b>`;
+        return html(paginaMensagem('Diagnóstico Mercado Pago', corpo, '/diretoria'), d.ok ? 200 : 502);
       }
       if (pathname === '/api/diretoria/pix-status' && request.method === 'GET') {
         if (!diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);
