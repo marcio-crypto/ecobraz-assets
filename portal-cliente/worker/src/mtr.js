@@ -207,7 +207,8 @@ const dataDeEpoch = (v) => {
 // Extrai um resumo SEGURO e útil do objetoResposta do retornaManifesto.
 function resumoManifesto(obj, num) {
   const par = (p) => (p && (p.parDescricao || p.parRazaoSocial || p.parNome)) || '';
-  const parDoc = (p) => (p && (p.parCnpj || p.parCpfCnpj)) || '';
+  // Documento do parceiro: PJ (parCnpj) ou PF (parCpf) — a MTR aceita os dois.
+  const parDoc = (p) => (p && (p.parCnpj || p.parCpfCnpj || p.parCpf || p.parDocumento)) || '';
   return {
     numero: obj.manNumero || num,
     situacao: (obj.situacaoManifesto && obj.situacaoManifesto.simDescricao) || '',
