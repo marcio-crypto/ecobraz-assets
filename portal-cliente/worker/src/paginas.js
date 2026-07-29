@@ -336,6 +336,12 @@ export function paginaPainel({ nome, email, dataFim, whatsapp, segmento }) {
     <div class="docrow"><span class="docpill">Nota Fiscal</span><span class="docpill">MTR</span><span class="docpill">Carta de Doação</span><span class="docpill">Certificado de Destinação Final</span><span class="docpill">Relatório de conformidade</span></div>
   </section>
 
+  <a href="/manual-cliente.pdf" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:12px;background:#EDF2FB;border:1px solid #CFDCF2;border-radius:12px;padding:13px 16px;margin-top:16px;text-decoration:none">
+    <span style="font-size:22px">📘</span>
+    <span style="min-width:0;flex:1;font-size:13.5px;color:#33456B;line-height:1.4"><b style="color:#1F3057">Manual do Portal (PDF)</b><br><span style="font-size:12.5px;color:#5a6b8a">Como solicitar coletas, acompanhar o caminhão e baixar seus documentos — passo a passo.</span></span>
+    <span style="flex:none;font-size:12px;font-weight:800;background:#1F3057;color:#fff;border-radius:8px;padding:8px 13px">⬇ Baixar</span>
+  </a>
+
   <div class="foot">Ecobraz Emigre — Portal do Cliente · destinação correta, conformidade e evidências.</div>
 </main>
 <a href="${zapLink}" target="_blank" rel="noopener" title="Dúvida ou problema? Fale direto com o nosso comercial"

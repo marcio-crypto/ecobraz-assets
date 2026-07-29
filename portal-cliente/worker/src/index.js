@@ -37,6 +37,7 @@ import { paginaCalculadora, estimativaCarbono, paginaCalculoDetalhado, calculoDe
 import { criarPreferencia, consultarPagamento } from './mercadopago.js';
 import { registrarFalha, receberErroCliente, listarFalhas } from './monitor.js';
 import { segmentoDoCliente, definirSegmento, SEGMENTOS, fluxoDeVendas } from './premium.js';
+import { MANUAL_CLIENTE_PDF_B64 } from './manual-pdf.js';
 import { sondaMTR, consultarMtrSigor, baixarPdfManifesto } from './mtr.js';
 import { acharPacote, precoPacote, acharModuloAdote, precoModuloAdote, paginaLojaAdote, paginaObrigadoAdote, paginaDiagnostico, lerCredito, salvarCredito, novoCredito, aplicarCompra, aplicarRecarga, precisaRecarga, listarPatrocinadores, resumoPatrocinio, lerCreditoPorDoc } from './adote.js';
 import { paginaLojaESG, paginaESGContato, paginaESGObrigado, relatorioESG, precoRelatorioESG } from './esg.js';
@@ -135,6 +136,11 @@ export default {
 
       if (pathname === '/assets/logo.png') return servirLogo(LOGO_ESCURO_B64);
       if (pathname === '/assets/logo-claro.png') return servirLogo(LOGO_CLARO_B64);
+      // Manual do Cliente em PDF (baixável na área do cliente).
+      if (pathname === '/manual-cliente.pdf') {
+        const bytes = Uint8Array.from(atob(MANUAL_CLIENTE_PDF_B64), (c) => c.charCodeAt(0));
+        return new Response(bytes, { headers: { 'content-type': 'application/pdf', 'content-disposition': 'inline; filename="Manual-Portal-Ecobraz.pdf"', 'cache-control': 'public, max-age=86400' } });
+      }
       // PWA (app instalável): ícones, manifesto e service worker.
       if (pathname === '/assets/icon-192.png') return servirIcone('192');
       if (pathname === '/assets/icon-512.png') return servirIcone('512');
