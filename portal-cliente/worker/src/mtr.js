@@ -157,3 +157,81 @@ export async function sondaMTR(env) {
       : 'Ainda não autenticou. As respostas do órgão ficaram gravadas para eu analisar — nenhum dado foi exposto.';
   return resultado;
 }
+
+// ---------------------------------------------------------------------------
+// ETAPA 1 — CONSULTA de MTRs (SIGOR). Token reaproveitável + sonda de leitura.
+// ---------------------------------------------------------------------------
+// TOKEN em cache no KV (o manual pede para NÃO chamar gettoken a cada requisição).
+// Contrato PROVADO ao vivo (D1 id 34): POST mtrr/apiws/rest/gettoken
+// { cpfCnpj, senha, unidade(número) } → objetoResposta = token (usar cru no header).
+export async function tokenSigor(env, { forcar } = {}) {
+  const cfg = SISTEMAS(env).find((s) => s.tipo === 'sigor');
+  if (!cfg || !(cfg.cpf || cfg.email) || !cfg.senha || !cfg.unidade) return null;
+  if (!forcar && env.PORTAL_KV) {
+    const cached = await env.PORTAL_KV.get('mtr:sigor:token');
+    if (cached) return cached;
+  }
+  const doc = cfg.cpf || cfg.email;
+  const uni = /^\d+$/.test(cfg.unidade) ? Number(cfg.unidade) : cfg.unidade;
+  try {
+    const r = await fetch(cfg.base + '/apiws/rest/gettoken', {
+      method: 'POST', headers: { 'content-type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify({ cpfCnpj: doc, senha: cfg.senha, unidade: uni }), signal: AbortSignal.timeout(20000),
+    });
+    const t = acharToken(await r.text());
+    if (t && env.PORTAL_KV) await env.PORTAL_KV.put('mtr:sigor:token', t, { expirationTtl: 3600 }); // 1h
+    return t || null;
+  } catch { return null; }
+}
+
+// Candidatos de endpoint para LISTAR manifestos do destinador (a descobrir).
+// Cada item: [método, caminho, corpo?]. Só LEITURA de consulta — nada é emitido.
+const CONSULTA_MTR_CANDIDATOS = (cnpj, di, df) => [
+  ['GET', '/apiws/rest/retornaManifestosPendentes', null],
+  ['GET', '/apiws/rest/manifestosPendentes', null],
+  ['GET', '/apiws/rest/retornaManifestoPendente', null],
+  ['GET', `/apiws/rest/retornaManifestosPorDestinador/${cnpj}`, null],
+  ['POST', '/apiws/rest/retornaManifestosPorPeriodo', { dataInicial: di, dataFinal: df }],
+  ['POST', '/apiws/rest/manifestosPorPeriodo', { dataInicial: di, dataFinal: df, cpfCnpj: cnpj }],
+  ['POST', '/apiws/rest/retornaListaMTRporPeriodo', { dataInicial: di, dataFinal: df }],
+  ['GET', '/apiws/rest/retornaManifestosArmazenamento', null],
+];
+const dataBR = (d) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+
+export async function consultarMtrSigor(env) {
+  const cfg = SISTEMAS(env).find((s) => s.tipo === 'sigor');
+  if (!cfg) return { ok: false, error: 'sem_sigor', message: 'SIGOR não está configurado no cofre.' };
+  const token = await tokenSigor(env, { forcar: true });
+  if (!token) return { ok: false, error: 'sem_token', message: 'Não consegui autenticar no SIGOR agora. Rode o "Testar conexão MTR" antes.' };
+  // Janela dos últimos 30 dias (a data de "hoje" vem do ambiente do Worker).
+  const hoje = env.__AGORA__ ? new Date(env.__AGORA__) : new Date();
+  const ini = new Date(hoje.getTime() - 30 * 86400e3);
+  const cnpj = cfg.cnpj;
+  const out = { ok: false, achou: null, tentativas: [] };
+  for (const [metodo, caminho, corpo] of CONSULTA_MTR_CANDIDATOS(cnpj, dataBR(ini), dataBR(hoje))) {
+    try {
+      const opts = { method: metodo, headers: { Authorization: token, accept: 'application/json' }, signal: AbortSignal.timeout(15000) };
+      if (corpo) { opts.headers['content-type'] = 'application/json'; opts.body = JSON.stringify(corpo); }
+      const r = await fetch(cfg.base + caminho, opts);
+      const txt = await r.text();
+      const ehJson = txt.trim().startsWith('{') || txt.trim().startsWith('[');
+      const temLista = /"objetoResposta"\s*:\s*\[/.test(txt) || txt.trim().startsWith('[');
+      out.tentativas.push({ metodo, caminho, status: r.status, ehJson, temLista, corpoInicio: semSegredos(txt, cfg, token).slice(0, 180) });
+      if (r.status === 200 && temLista) { out.ok = true; out.achou = { metodo, caminho }; break; }
+    } catch (e) {
+      out.tentativas.push({ metodo, caminho, erro: String(e && e.message || e).slice(0, 80) });
+    }
+  }
+  // Evidência no D1 — token/segredos já vêm mascarados.
+  try {
+    if (env.DB_PLOOMES) {
+      await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS diagnosticos (id INTEGER PRIMARY KEY AUTOINCREMENT, tipo TEXT, criado_em TEXT, dados TEXT)').run();
+      await env.DB_PLOOMES.prepare('INSERT INTO diagnosticos (tipo, criado_em, dados) VALUES (?1, ?2, ?3)')
+        .bind('mtr-consulta', new Date().toISOString(), JSON.stringify(out).slice(0, 60000)).run();
+    }
+  } catch { /* best-effort */ }
+  out.message = out.ok
+    ? `✅ Encontrei o endereço de consulta de MTRs (${out.achou.caminho}). Vou montar o anexo automático nas OS.`
+    : 'Ainda não achei o endereço certo de listagem — as respostas ficaram gravadas para eu analisar e ajustar.';
+  return out;
+}

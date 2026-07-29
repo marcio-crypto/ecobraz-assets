@@ -36,7 +36,7 @@ import { LOGO_ESCURO_B64, LOGO_CLARO_B64 } from './logos.js';
 import { paginaCalculadora, estimativaCarbono, paginaCalculoDetalhado, calculoDetalhadoGHG, paginaLojaCarbono, paginaCarbonoContato, paginaCarbonoObrigado, nivelCarbono, faixaValida, precoNivel } from './carbono.js';
 import { criarPreferencia, consultarPagamento } from './mercadopago.js';
 import { registrarFalha, receberErroCliente, listarFalhas } from './monitor.js';
-import { sondaMTR } from './mtr.js';
+import { sondaMTR, consultarMtrSigor } from './mtr.js';
 import { acharPacote, precoPacote, acharModuloAdote, precoModuloAdote, paginaLojaAdote, paginaObrigadoAdote, paginaDiagnostico, lerCredito, salvarCredito, novoCredito, aplicarCompra, aplicarRecarga, precisaRecarga, listarPatrocinadores, resumoPatrocinio, lerCreditoPorDoc } from './adote.js';
 import { paginaLojaESG, paginaESGContato, paginaESGObrigado, relatorioESG, precoRelatorioESG } from './esg.js';
 import { statusDaEtapa, valorProp, CAMPOS_OS } from './os-utils.js';
@@ -863,6 +863,11 @@ export default {
       if (pathname === '/api/mtr/sonda' && request.method === 'POST') {
         if (!escritorio && !diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);
         return json(await sondaMTR(env));
+      }
+      // Etapa 1: descobre/roda a CONSULTA de MTRs no SIGOR (só leitura).
+      if (pathname === '/api/mtr/consultar' && request.method === 'POST') {
+        if (!escritorio && !diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        return json(await consultarMtrSigor(env));
       }
       // Prova de gravação: 1 escrita de teste no KV para saber NA HORA se o
       // limite diário está bloqueando (usado após o upgrade do plano).

@@ -456,6 +456,7 @@ export function paginaManutencao(user) {
     <div style="font-size:15px;font-weight:800;color:#10262B">🏛️ MTR — conexão com o órgão (SIGOR/SINIR)</div>
     <p style="font-size:13px;color:#4F6469;line-height:1.5;margin:8px 0 12px">Testa a conexão com o sistema oficial de MTR usando as credenciais guardadas no cofre. <b>Só leitura</b> — nada é emitido. O resultado fica gravado para auditoria.</p>
     <button class="btn btn-d" id="bMtr" onclick="sondarMTR()">Testar conexão MTR agora</button>
+    <button class="btn" id="bMtrC" onclick="consultarMTR()" style="margin-left:8px">Buscar MTRs no órgão (teste)</button>
     <div id="mMtr" style="font-size:12.5px;color:#4F6469;margin-top:10px"></div>
   </div>
   <div class="card" style="margin-top:14px">
@@ -477,6 +478,16 @@ async function sondarMTR(){
     if(d.error==='sem_credenciais'){ m.innerHTML='⚠️ '+escTxt(d.message); }
     else if(d.ok){ m.innerHTML='✅ '+escTxt(d.message); }
     else { m.innerHTML='⛔ '+escTxt(d.message||'Não autenticou ainda.')+' Avise que eu analiso o registro.'; }
+  }catch(_){ m.textContent='Sem conexão com o sistema. Tente de novo.'; }
+  b.disabled=false;
+}
+async function consultarMTR(){
+  var b=document.getElementById('bMtrC'), m=document.getElementById('mMtr');
+  b.disabled=true; m.textContent='Buscando MTRs no órgão… (pode levar até 1 minuto)';
+  try{
+    var r=await fetch('/api/mtr/consultar',{method:'POST'});
+    var d=await r.json();
+    m.innerHTML=(d.ok?'✅ ':'⛔ ')+escTxt(d.message||'Sem resposta.');
   }catch(_){ m.textContent='Sem conexão com o sistema. Tente de novo.'; }
   b.disabled=false;
 }
