@@ -87,7 +87,9 @@ export default {
     const { pathname } = url;
     try {
       if (pathname === '/health') return json({
-        ok: true, service: 'ecobraz-portal', version: 27,
+        ok: true, service: 'ecobraz-portal', version: 28,
+        // Nº de usuários no cadastro de equipe (KV) — só a contagem, nunca dados.
+        equipeCadastrada: await (async () => { try { return (await listarUsuarios(env)).length; } catch { return -1; } })(),
         // Só presença (true/false) — NUNCA os valores. Ajuda a confirmar a
         // configuração pelo navegador sem expor segredo nenhum.
         config: {
@@ -388,6 +390,9 @@ export default {
       if (pathname === '/' && request.method === 'GET') return await telaInicial(request, env);
       if (pathname === '/entrar' && request.method === 'GET') return await entrarComToken(request, env, url);
       if (pathname === '/api/auth/solicitar' && request.method === 'POST') return await solicitarLink(request, env);
+      // LOGIN UNIFICADO (tela única na raiz): descobre o papel do e-mail — equipe
+      // (por prioridade) ou cliente — e delega ao fluxo de link daquele papel.
+      if (pathname === '/api/entrar-unificado' && request.method === 'POST') return await solicitarLinkUnificado(request, env);
       if (pathname === '/api/auth/sair' && request.method === 'POST') return sair();
       // Aviso ao cliente quando a OS muda de etapa (o Ploomes chama esta rota na automação).
       if (pathname === '/api/ploomes/webhook' && request.method === 'POST') return await webhookPloomes(request, env);
@@ -486,6 +491,34 @@ export default {
         if (g.ctx === 'validador' && emailValidadorPermitido(g.email, env)) {
           const s = await criarToken({ em: g.email, tipo: 'sessao_validador' }, SESSAO_TTL_S, env);
           return new Response(null, { status: 302, headers: { Location: '/validacao', 'Set-Cookie': cookieValidador(s.valor, SESSAO_TTL_S) } });
+        }
+        // LOGIN UNIFICADO (ctx=auto, tela inicial) ou cliente via Google (ctx=cliente):
+        // identifica TODOS os acessos do e-mail (equipe + cliente), grava o cookie de
+        // cada um e leva ao destino — 1 destino vai direto; vários, tela "Entrar como…".
+        if (g.ctx === 'auto' || g.ctx === 'cliente') {
+          const headers = new Headers();
+          const destinos = [];
+          if (g.ctx === 'auto') {
+            if (escritorioPermitido(g.email, env)) { const s = await criarToken({ em: g.email, tipo: 'sessao_escritorio' }, SESSAO_TTL_S, env); headers.append('Set-Cookie', cookieEscritorio(s.valor, SESSAO_TTL_S)); destinos.push(['Escritório / Comercial', '/inicio']); }
+            if (diretorPermitido(g.email, env)) { const s = await criarToken({ em: g.email, tipo: 'sessao_diretoria' }, SESSAO_TTL_S, env); headers.append('Set-Cookie', cookieDiretoria(s.valor, SESSAO_TTL_S)); destinos.push(['Diretoria', '/diretoria']); }
+            if (engenheiroPermitido(g.email, env)) { const s = await criarToken({ em: g.email, tipo: 'sessao_eng' }, SESSAO_TTL_S, env); headers.append('Set-Cookie', cookieEng(s.valor, SESSAO_TTL_S)); destinos.push(['Engenharia Ambiental', '/eng']); }
+            if (operadorPermitido(g.email, env)) { const s = await criarToken({ em: g.email, tipo: 'sessao_operacao' }, APP_SESSAO_TTL_S, env); headers.append('Set-Cookie', cookieOperacao(s.valor, APP_SESSAO_TTL_S)); destinos.push(['Operação (doca)', '/operacao']); }
+            if (agentePermitido(g.email, env)) { const s = await criarToken({ em: g.email, tipo: 'sessao_agente' }, APP_SESSAO_TTL_S, env); headers.append('Set-Cookie', cookieAgente(s.valor, APP_SESSAO_TTL_S)); destinos.push(['Coletas (motorista)', '/agente']); }
+            if (fiscalPermitido(g.email, env)) { const s = await criarToken({ em: g.email, tipo: 'sessao_fiscal' }, SESSAO_TTL_S, env); headers.append('Set-Cookie', cookieFiscal(s.valor, SESSAO_TTL_S)); destinos.push(['Fiscal (notas)', '/fiscal']); }
+            if (emailValidadorPermitido(g.email, env)) { const s = await criarToken({ em: g.email, tipo: 'sessao_validador' }, SESSAO_TTL_S, env); headers.append('Set-Cookie', cookieValidador(s.valor, SESSAO_TTL_S)); destinos.push(['Validação (Villanova ESG)', '/validacao']); }
+          }
+          let cli = null;
+          try { cli = await buscarClienteBase(g.email, env); } catch (error) { console.error('google_cliente_lookup', safeError(error)); }
+          if (cli && cli.liberado) {
+            const s = await criarToken({ cid: cli.contactId, emp: cli.empresaId, em: cli.email, nome: cli.nome, fim: cli.dataFim || '', doc: cli.documento || '', tipo: 'sessao' }, SESSAO_TTL_S, env);
+            headers.append('Set-Cookie', cookieSessao(s.valor, SESSAO_TTL_S));
+            destinos.push(['Portal do cliente', '/']);
+          }
+          if (!destinos.length) return html(paginaMensagem('Acesso não liberado', `O e-mail ${esc(g.email)} entrou no Google, mas não está na nossa base (cliente ou equipe). Fale com a Ecobraz.`), 403);
+          if (destinos.length === 1) { headers.set('Location', destinos[0][1]); return new Response(null, { status: 302, headers }); }
+          headers.set('content-type', 'text/html; charset=utf-8');
+          headers.set('cache-control', 'no-store');
+          return new Response(paginaEscolherAcesso(destinos), { status: 200, headers });
         }
         return html(paginaMensagem('Acesso não liberado', `O e-mail ${esc(g.email)} entrou no Google, mas não está cadastrado para este acesso.`), 403);
       }
@@ -1554,8 +1587,46 @@ export default {
 // ---------------------------------------------------------------------------
 async function telaInicial(request, env) {
   const sessao = await lerSessao(request, env);
-  if (!sessao) return html(paginaLogin());
+  if (!sessao) return html(paginaLogin(googleConfigurado(env)));
   return html(paginaPainel({ nome: sessao.nome, email: sessao.email, dataFim: sessao.dataFim || '' }));
+}
+
+// Tela "Entrar como…" — quando o e-mail tem mais de um acesso (os cookies de
+// todos já foram gravados; aqui é só escolher a porta de entrada).
+function paginaEscolherAcesso(destinos) {
+  const botoes = destinos.map(([rotulo, href]) => `<a href="${esc(href)}" style="display:block;background:#00333B;color:#fff;text-decoration:none;border-radius:12px;padding:15px 18px;font-size:15px;font-weight:800;margin-bottom:10px;text-align:center">${esc(rotulo)} →</a>`).join('');
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Entrar como… — Ecobraz</title></head>
+<body style="margin:0;background:#F2F6F4;font-family:Montserrat,'Segoe UI',Arial,sans-serif;color:#10262B">
+<div style="max-width:420px;margin:0 auto;padding:40px 18px">
+  <div style="background:#00333B;border-radius:16px 16px 0 0;padding:20px 24px"><span style="color:#fff;font-size:18px;font-weight:800">ecobraz</span><span style="color:#92C430;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin-left:8px">emigre</span></div>
+  <div style="background:#fff;border:1px solid #E4EBE9;border-top:none;border-radius:0 0 16px 16px;padding:26px 24px">
+    <h1 style="font-size:19px;margin:0 0 6px;color:#00333B">Você tem mais de um acesso</h1>
+    <p style="font-size:13px;color:#4F6469;margin:0 0 18px;line-height:1.55">Todos já estão liberados neste navegador — escolha por onde quer entrar (dá para trocar depois voltando aqui).</p>
+    ${botoes}
+  </div>
+</div></body></html>`;
+}
+
+// LOGIN UNIFICADO por e-mail: identifica o papel (equipe, por prioridade) ou o
+// cliente e delega ao fluxo de link mágico correspondente — reaproveitando os
+// throttles e templates de cada papel. Resposta SEMPRE genérica (anti-enumeração).
+async function solicitarLinkUnificado(request, env) {
+  const generica = json({ ok: true, message: 'Se o e-mail estiver na nossa base (cliente ou equipe), enviamos um link de acesso.' });
+  let input; try { input = await request.json(); } catch { return generica; }
+  const email = String(input?.email || '').trim().toLowerCase();
+  if (!/^\S+@\S+\.\S+$/.test(email)) return generica;
+  const reenc = { json: async () => ({ email, turnstile_token: input?.turnstile_token }), headers: request.headers };
+  try {
+    if (escritorioPermitido(email, env)) { await solicitarLinkEscritorio(reenc, env); return generica; }
+    if (diretorPermitido(email, env)) { await solicitarLinkDiretoria(reenc, env); return generica; }
+    if (engenheiroPermitido(email, env)) { await solicitarLinkEng(reenc, env); return generica; }
+    if (operadorPermitido(email, env)) { await solicitarLinkOperacao(reenc, env); return generica; }
+    if (agentePermitido(email, env)) { await solicitarLinkAgente(reenc, env); return generica; }
+    if (fiscalPermitido(email, env)) { await solicitarLinkFiscal(reenc, env); return generica; }
+    if (emailValidadorPermitido(email, env)) { await solicitarLinkValidador(reenc, env); return generica; }
+    await solicitarLink(reenc, env); // cliente — fluxo atual (throttle + Turnstile)
+  } catch (error) { console.error('entrar_unificado_falhou', safeError(error)); }
+  return generica;
 }
 
 // ---------------------------------------------------------------------------

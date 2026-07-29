@@ -132,7 +132,7 @@ function head(titulo) {
 <style>${CSS}</style></head><body>`;
 }
 
-export function paginaLogin() {
+export function paginaLogin(googleOn) {
   return `${head('Entrar')}
 <div class="auth">
   <aside class="auth-brand">
@@ -147,19 +147,22 @@ export function paginaLogin() {
         <li>Acesso seguro por link — sem senha para decorar</li>
       </ul>
     </div>
-    <div class="auth-foot">Acesso para clientes da Ecobraz — simples e seguro, por link.</div>
+    <div class="auth-foot">Um só acesso — clientes e equipe Ecobraz. Simples e seguro.</div>
   </aside>
   <main class="auth-form">
     <div class="auth-card">
       <img class="auth-logo-sm" src="/assets/logo.png" alt="Ecobraz Emigre">
-      <h2>Acesso do cliente</h2>
-      <p class="muted">Digite o e-mail cadastrado na Ecobraz. Enviamos um <strong>link de acesso</strong> — simples e seguro.</p>
+      <h2>Entrar no sistema</h2>
+      <p class="muted">Digite o e-mail cadastrado na Ecobraz — <strong>cliente ou equipe</strong>. Enviamos um <strong>link de acesso</strong>; o sistema identifica sozinho para onde te levar.</p>
       <form id="f" onsubmit="return enviar(event)">
         <label for="email">Seu e-mail</label>
         <input id="email" name="email" type="email" autocomplete="email" required placeholder="voce@empresa.com.br">
         <div style="margin-top:20px"><button class="btn btn-block" id="b" type="submit">Enviar link de acesso</button></div>
       </form>
       <div id="msg" class="notice" hidden></div>
+      ${googleOn ? `<div style="display:flex;align-items:center;gap:10px;margin:18px 0 14px"><div style="flex:1;height:1px;background:#E4EBE9"></div><span style="font-size:11px;color:#8fa39f;font-weight:700">OU</span><div style="flex:1;height:1px;background:#E4EBE9"></div></div>
+      <a href="/auth/google?ctx=auto" style="display:flex;align-items:center;justify-content:center;gap:10px;border:1px solid #DADCE0;border-radius:12px;padding:13px;font-size:14px;font-weight:700;color:#3c4043;text-decoration:none;background:#fff">Entrar com Google</a>
+      <div style="font-size:11px;color:#8fa39f;margin-top:8px;text-align:center">Com o Google não precisa esperar e-mail — vale para clientes e equipe.</div>` : ''}
     </div>
   </main>
 </div>
@@ -167,7 +170,7 @@ export function paginaLogin() {
 async function enviar(e){e.preventDefault();
   var b=document.getElementById('b'),m=document.getElementById('msg');
   b.disabled=true;b.textContent='Enviando…';
-  try{ await fetch('/api/auth/solicitar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:document.getElementById('email').value})}); }catch(_){}
+  try{ await fetch('/api/entrar-unificado',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:document.getElementById('email').value})}); }catch(_){}
   m.hidden=false;
   m.innerHTML='Se o e-mail estiver cadastrado na Ecobraz, enviamos um <strong>link de acesso</strong>. Confira sua caixa de entrada (e o spam). O link vale por 15 minutos.';
   document.getElementById('f').style.display='none';

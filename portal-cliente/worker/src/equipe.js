@@ -93,6 +93,39 @@ export async function importarUsuarios(env, texto, criadoPor) {
   return { criados, erros };
 }
 
+// SEMENTE da equipe (pedido do Marcio, 2026-07-29): nome, e-mail e papéis dos
+// funcionários que ele passou — SEM CPF (CPF é sensível e só entra pela tela
+// /equipe, direto no KV; o CREA do RT é registro profissional público, vai no
+// CDF de qualquer forma). Mescla por e-mail: NUNCA sobrescreve cadastro
+// existente — só cria quem falta e adiciona papel que falta. Quem estiver
+// marcado como inativo continua inativo (a semente não reativa ninguém).
+const SEED_EQUIPE = [
+  { email: 'debora.villanova@ecobraz.org.br', nome: 'Debora Villanova Santos', papeis: ['escritorio'] },
+  { email: 'paulorvieirasantos@gmail.com', nome: 'Paulo Roberto Vieira dos Santos', papeis: ['motorista'] },
+  { email: 'daniel.villanova@ecobraz.org.br', nome: 'Daniel Villanova Santos', papeis: ['motorista'] },
+  { email: 'kreator@ecobraz.org.br', nome: 'Kreator Rodrigues', papeis: ['operacao', 'motorista'] },
+  { email: 'marcelo.oliveira@ecobraz.org.br', nome: 'Marcelo de Oliveira Lopes Aragão', registro: 'CREA 5062654748', papeis: ['engenharia'] },
+  { email: 'rita.fernandes@ecobraz.org.br', nome: 'Rita de Cássia Silva Fernandes', papeis: ['fiscal'] },
+  { email: 'marcio@villanovaesg.com', nome: 'Marcio Villanova', papeis: ['diretoria'] },
+  { email: 'contact@villanovaesg.com', nome: 'Karina Gargiulo da Cunha', papeis: ['validador', 'diretoria'] },
+];
+async function semearFaltantes(env, usuarios) {
+  let mudou = false;
+  for (const s of SEED_EQUIPE) {
+    const i = usuarios.findIndex((u) => u && u.email === s.email);
+    if (i < 0) {
+      usuarios.push({ email: s.email, nome: s.nome, cpf: '', registro: s.registro || '', papeis: [...s.papeis], ativo: true, criadoEm: agora(), criadoPor: 'semente-codigo', atualizadoEm: agora(), atualizadoPor: 'semente-codigo' });
+      mudou = true; continue;
+    }
+    const u = usuarios[i];
+    for (const p of s.papeis) if (!(u.papeis || []).includes(p)) { u.papeis = [...(u.papeis || []), p]; mudou = true; }
+    if (!u.nome && s.nome) { u.nome = s.nome; mudou = true; }
+    if (!u.registro && s.registro) { u.registro = s.registro; mudou = true; }
+  }
+  if (mudou && env.PORTAL_KV) await env.PORTAL_KV.put('usuarios:index', JSON.stringify(usuarios).slice(0, 600000));
+  return usuarios;
+}
+
 // Coração da integração aditiva: devolve um env com as listas de acesso de cada
 // papel acrescidas dos usuários ativos cadastrados. Defensivo: qualquer falha
 // devolve o env original (mantém o acesso atual intacto).
@@ -100,6 +133,8 @@ export async function carregarEquipeNoEnv(env) {
   if (!env || !env.PORTAL_KV) return env;
   let usuarios;
   try { usuarios = await listarUsuarios(env); } catch { return env; }
+  usuarios = usuarios || [];
+  try { usuarios = await semearFaltantes(env, usuarios); } catch { /* semente é best-effort — nunca derruba o acesso */ }
   if (!usuarios || !usuarios.length) return env;
   const add = {};
   for (const u of usuarios) {
