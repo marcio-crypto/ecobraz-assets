@@ -345,8 +345,11 @@ async function carregar(){
       var meta=[]; meta.push(o.dataColeta?('Coleta em '+fmt(o.dataColeta)):('Aberta em '+fmt(o.aberturaISO)));
       if(o.peso && String(o.peso).toLowerCase().indexOf('não informado')<0 && String(o.peso).toLowerCase().indexOf('nao informado')<0) meta.push('Peso: '+escapeHtml(String(o.peso)));
       var rastreio=o.rastreavel?'<a class="doclnk" style="text-decoration:none;background:#92C430;color:#10262B;border-color:#92C430" href="/rastreio?os='+encodeURIComponent(o.id)+'">🚚 Acompanhar o caminhão</a> ':'';
+      var cobr='';
+      if(o.cobranca&&o.cobranca.status==='pago'){ cobr='<span class="doclnk" style="background:#E5F6E5;color:#1E7A1E;border-color:#CBE7CB">💳 Pago ✓</span> '; }
+      else if(o.cobranca&&o.cobranca.link){ cobr='<a class="doclnk" style="text-decoration:none;background:#FFF4DE;color:#8A4B00;border-color:#F2C173;font-weight:800" href="'+o.cobranca.link+'" target="_blank" rel="noopener">💳 Pagar R$ '+String(o.cobranca.valor).replace('.',',')+'</a> '; }
       return '<div class="os"><div class="os-main"><div class="os-title">'+titulo+'</div><div class="os-meta">'+meta.join(' · ')+'</div>'
-        +rastreio
+        +rastreio+cobr
         +'<button class="doclnk" type="button" onclick="verDocs(&#39;'+o.id+'&#39;,this)">📄 Documentos</button>'
         +'<div class="docwrap" id="docs-'+o.id+'"></div>'
         +'</div><span class="tag '+tagCls(o.status)+'">'+escapeHtml(o.status)+'</span></div>';

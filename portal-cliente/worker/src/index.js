@@ -57,7 +57,7 @@ import { amostraContatosPloomes, paginaAmostraContatos, importarLoteContatos, es
 import { importarLoteAnexos, importarLoteAnexosContatos, completarAnexos, importarAnexosJanela, reprocessarFalhas, importarLoteDocumentos, recuperarDocumentos, estatisticasArquivos, paginaMigrarArquivos, diagnosticoAnexos, paginaDiagAnexos } from './ploomes-arquivos.js';
 import { fiscalPermitido, nomeFiscal, listarNotas, lerNota, importarLote, vincularNota, sugerirVinculoSync, paginaFiscalLogin, paginaFiscalHome, paginaFiscalResultado, paginaFiscalNota } from './fiscal.js';
 import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, emailsDoCliente, reindexarEmailsClientes, backfillEnderecos, paginaManutencao, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, clienteDeLead, arquivosDoCliente, paginaLeads, paginaLeadDetalhe, paginaInicio, listarClientesD1, contagensClientesD1, lerClienteD1, negociosDoCliente, espelharClienteD1, sincronizarKVparaD1, lerNegocioDetalheD1, paginaOSDetalhe, curarContatosKV, classificarPedido, atualizarIndexLead } from './cadastro.js';
-import { listarColetasOS, lerColetaOS, criarColetaOS, atualizarStatusOS, atualizarColetaOS, anexarTelemetriaOS, registrarAnexoColeta, removerAnexoColeta, paginaColetasLista, paginaGerarColeta, paginaEditarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga } from './coletas.js';
+import { listarColetasOS, lerColetaOS, criarColetaOS, atualizarStatusOS, atualizarColetaOS, anexarTelemetriaOS, registrarAnexoColeta, removerAnexoColeta, paginaColetasLista, paginaGerarColeta, paginaEditarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga, definirCobrancaOS, marcarCobrancaPagaOS } from './coletas.js';
 import { listarVeiculos, lerVeiculo, salvarVeiculo, paginaFrota, paginaVeiculoForm, lerJornadaAtiva, abrirJornada, fecharJornada, registrarAbastecimento, tagColetaComVeiculo, servirFotoJornada, bannerJornada, paginaAbrirDia, paginaFecharDia, paginaAbastecer, placaDaColeta } from './frota.js';
 import { carregarEquipeNoEnv, listarUsuarios, lerUsuario, salvarUsuario, importarUsuarios, paginaEquipe, paginaUsuarioForm, paginaEquipeImportar } from './equipe.js';
 import { agentesDe } from './agente.js';
@@ -351,6 +351,14 @@ export default {
                   if (ped.clienteEmail) { try { await enviarEmailColetaPaga(ped, env); } catch (error) { console.error('email_coleta_paga', safeError(error)); } }
                   console.log('coleta_taxa_paga', { lead: ped.leadId, valor: pg.valor, expressa: !!ped.expressa });
                 } catch (error) { console.error('coleta_paga_falhou', safeError(error)); await registrarFalha(env, 'compra-coleta-liberacao', safeError(error), { lead: ped.leadId }); }
+              } else if (ped.produto === 'oscobranca') {
+                // Cobrança de uma OS paga → marca PAGO na OS (e no índice) sozinho
+                // e confirma por e-mail ao cliente. Nunca trava a operação.
+                try {
+                  await marcarCobrancaPagaOS(env, ped.osId, pg);
+                  if (ped.clienteEmail) { try { await enviarEmailCobrancaOSPaga(ped, env); } catch (error) { console.error('email_oscobranca', safeError(error)); } }
+                  console.log('oscobranca_paga', { os: ped.osId, valor: pg.valor });
+                } catch (error) { console.error('oscobranca_falhou', safeError(error)); await registrarFalha(env, 'compra-oscobranca', safeError(error), { os: ped.osId }); }
               } else {
                 try { await enviarEmailNF(ped, pg, env); } catch (error) { console.error('nf_email_falhou', safeError(error)); }
               }
@@ -1007,6 +1015,45 @@ export default {
         const r = await atualizarColetaOS(env, b.id, b);
         if (!r) return json({ ok: false, error: 'nao_encontrada' }, 404);
         return json({ ok: true, id: r.id });
+      }
+      // OS PAGA: gera a cobrança da coleta (Mercado Pago — Pix, cartão e boleto).
+      // O link fica anexado à OS e o cliente vê o botão "Pagar" no portal dele.
+      if (pathname === '/api/coletas/cobranca' && request.method === 'POST') {
+        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = null; }
+        const id = String((b && b.id) || '').replace(/[^a-zA-Z0-9_-]/g, '');
+        // Valor em reais, aceitando formato BR ("1.234,56") e ponto decimal.
+        const valor = Math.round((Number(String((b && b.valor) || '').replace(/\s|R\$/g, '').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.')) || 0) * 100) / 100;
+        if (!id || !Number.isFinite(valor) || valor < 1 || valor > 100000) return json({ ok: false, error: 'valor_invalido' }, 400);
+        const os = await lerColetaOS(env, id);
+        if (!os) return json({ ok: false, error: 'nao_encontrada' }, 404);
+        if (os.cobranca && os.cobranca.status === 'pago') return json({ ok: false, error: 'ja_paga' }, 409);
+        const descricao = String((b && b.descricao) || '').slice(0, 200) || `Coleta ${os.numero || ''} — Ecobraz`.trim();
+        const ref = `oscobranca-${id}`;
+        try {
+          const base = String(env.PORTAL_BASE_URL || env.PORTAL_URL || url.origin).replace(/\/+$/, '');
+          const pref = await criarPreferencia({ valor, descricao, externalReference: ref, baseUrl: base, backPath: '/painel' }, env);
+          let clienteEmail = '';
+          try { const cli = os.clienteId ? await lerCliente(env, os.clienteId) : null; clienteEmail = (cli && (cli.email || (Array.isArray(cli.contatos) && cli.contatos[0] && cli.contatos[0].email))) || ''; } catch { /* segue sem e-mail */ }
+          if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${ref}`, JSON.stringify({ produto: 'oscobranca', osId: id, numero: os.numero || '', valor, clienteEmail, clienteNome: os.clienteNome || '', criadoEm: nowS() }), { expirationTtl: 90 * 86400 });
+          await definirCobrancaOS(env, id, { valor, descricao, ref, link: pref.initPoint, criadoPor: escritorio.email || '' });
+          return json({ ok: true, link: pref.initPoint, valor });
+        } catch (error) {
+          console.error('oscobranca_mp', safeError(error));
+          await registrarFalha(env, 'cobranca-os', safeError(error), { os: id });
+          return json({ ok: false, error: 'mp_indisponivel' }, 502);
+        }
+      }
+      if (pathname === '/api/coletas/cobranca-remover' && request.method === 'POST') {
+        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = null; }
+        const id = String((b && b.id) || '').replace(/[^a-zA-Z0-9_-]/g, '');
+        const os = await lerColetaOS(env, id);
+        if (!os) return json({ ok: false, error: 'nao_encontrada' }, 404);
+        if (os.cobranca && os.cobranca.status === 'pago') return json({ ok: false, error: 'ja_paga' }, 409);
+        if (env.PORTAL_KV && os.cobranca && os.cobranca.ref) { try { await env.PORTAL_KV.delete(`pedido:${os.cobranca.ref}`); } catch { /* segue */ } }
+        await definirCobrancaOS(env, id, null);
+        return json({ ok: true });
       }
       // Anexar foto/arquivo a uma coleta (upload para o R2 + registro em os.anexos).
       if (pathname === '/api/coletas/anexo' && request.method === 'POST') {
@@ -2244,7 +2291,11 @@ async function listarOS(sessao, env) {
       for (const c of idx) {
         if (String(c.clienteDoc || '').replace(/\D/g, '') !== doc) continue;
         if (c.status === 'cancelada') continue;
-        out.push({ id: 'k' + c.id, numeroOS: c.numero || '', titulo: 'Ordem de Coleta', status: ROT[c.status] || 'Em atendimento', dataColeta: c.dataAgendada || '', aberturaISO: c.criadoEm || null, peso: '', rastreavel: rastreioDisponivel(env) && c.status === 'em_transporte' });
+        out.push({
+          id: 'k' + c.id, numeroOS: c.numero || '', titulo: 'Ordem de Coleta', status: ROT[c.status] || 'Em atendimento', dataColeta: c.dataAgendada || '', aberturaISO: c.criadoEm || null, peso: '', rastreavel: rastreioDisponivel(env) && c.status === 'em_transporte',
+          // Cobrança da OS (OS paga): o cliente vê "Pagar" enquanto aguarda; "Pago ✓" depois.
+          cobranca: c.cobranca ? { valor: c.cobranca.valor, status: c.cobranca.status, link: c.cobranca.status === 'pago' ? '' : (c.cobranca.link || '') } : undefined,
+        });
       }
     }
   } catch (error) { console.error('listar_os_kv', safeError(error)); }
@@ -2673,6 +2724,19 @@ async function enviarEmailColetaPaga(ped, env) {
   if (env.RESEND_REPLY_TO) payload.reply_to = env.RESEND_REPLY_TO;
   const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${env.RESEND_API_KEY}` }, body: JSON.stringify(payload) });
   if (!r.ok) throw new Error('resend_coleta_paga_' + r.status);
+}
+
+// Confirmação automática do pagamento de uma OS cobrada (OS paga).
+async function enviarEmailCobrancaOSPaga(ped, env) {
+  if (!env.RESEND_API_KEY || !ped.clienteEmail) return;
+  const num = ped.numero ? ` ${ped.numero}` : '';
+  const assunto = `Pagamento aprovado — coleta${num} confirmada ✔`;
+  const texto = `Olá!\n\nRecebemos o pagamento de R$ ${ped.valor} referente à sua coleta${num}. Está tudo certo — obrigado!\n\nO comprovante e os documentos ficam disponíveis no portal.\n\nEcobraz · sistema.ecobraz.org`;
+  const htmlCorpo = `<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;color:#10262B"><div style="background:#00333B;border-radius:14px 14px 0 0;padding:18px 22px"><span style="color:#fff;font-size:18px;font-weight:800">ecobraz</span><span style="color:#92C430;font-size:10px;font-weight:800;letter-spacing:.14em;margin-left:8px">EMIGRE</span></div><div style="border:1px solid #E4EBE9;border-top:none;border-radius:0 0 14px 14px;padding:24px 22px"><h1 style="font-size:19px;margin:0 0 10px">Pagamento aprovado ✔</h1><p style="font-size:14px;line-height:1.6;color:#4F6469">Recebemos o pagamento de <b>R$ ${ped.valor}</b> da sua coleta${num}. Está tudo certo — obrigado! Os documentos ficam no portal.</p><a href="https://sistema.ecobraz.org/painel" style="display:block;background:#92C430;color:#10262B;text-decoration:none;border-radius:10px;padding:14px;text-align:center;font-weight:800;font-size:15px;margin:16px 0">Abrir o portal →</a></div></div>`;
+  const payload = { from: env.RESEND_FROM || 'Portal Ecobraz <acesso@ecobraz.org.br>', to: [ped.clienteEmail], subject: assunto, html: htmlCorpo, text: texto };
+  if (env.RESEND_REPLY_TO) payload.reply_to = env.RESEND_REPLY_TO;
+  const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${env.RESEND_API_KEY}` }, body: JSON.stringify(payload) });
+  if (!r.ok) throw new Error('resend_oscobranca_' + r.status);
 }
 
 async function enviarEmailLogin(cliente, link, env) {

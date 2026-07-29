@@ -108,6 +108,39 @@ export async function anexarTelemetriaOS(env, id, registro) {
   return rec;
 }
 
+// COBRANÇA NA OS (OS paga — Marcio/Debora, 2026-07-29): a equipe define o
+// valor, o link do Mercado Pago (Pix/cartão/boleto) fica ANEXADO à OS e o
+// cliente paga pelo portal. REGRA: a cobrança nunca trava a operação — é um
+// status visível; o webhook marca "pago" sozinho.
+export async function definirCobrancaOS(env, id, cobranca) {
+  const rec = await lerColetaOS(env, id); if (!rec) return null;
+  if (cobranca) {
+    rec.cobranca = { valor: Number(cobranca.valor) || 0, descricao: String(cobranca.descricao || '').slice(0, 200), ref: String(cobranca.ref || ''), link: String(cobranca.link || ''), status: 'aguardando', criadoEm: agora(), criadoPor: String(cobranca.criadoPor || '') };
+  } else { delete rec.cobranca; }
+  rec.atualizadoEm = agora();
+  if (env.PORTAL_KV) {
+    await env.PORTAL_KV.put(`os:${rec.id}`, JSON.stringify(rec));
+    const idx = await listarColetasOS(env); const i = idx.findIndex((x) => x.id === rec.id);
+    if (i >= 0) {
+      if (rec.cobranca) idx[i].cobranca = { valor: rec.cobranca.valor, status: rec.cobranca.status, link: rec.cobranca.link };
+      else delete idx[i].cobranca;
+      await env.PORTAL_KV.put('os:index', JSON.stringify(idx).slice(0, 900000));
+    }
+  }
+  return rec;
+}
+export async function marcarCobrancaPagaOS(env, id, pagamento) {
+  const rec = await lerColetaOS(env, id); if (!rec || !rec.cobranca) return null;
+  rec.cobranca.status = 'pago'; rec.cobranca.paymentId = String((pagamento && pagamento.id) || ''); rec.cobranca.pagoEm = agora();
+  rec.atualizadoEm = agora();
+  if (env.PORTAL_KV) {
+    await env.PORTAL_KV.put(`os:${rec.id}`, JSON.stringify(rec));
+    const idx = await listarColetasOS(env); const i = idx.findIndex((x) => x.id === rec.id);
+    if (i >= 0 && idx[i].cobranca) { idx[i].cobranca.status = 'pago'; await env.PORTAL_KV.put('os:index', JSON.stringify(idx).slice(0, 900000)); }
+  }
+  return rec;
+}
+
 // Persiste um registro de OS já existente sem mexer no status (ex.: anexar as
 // notas fiscais vinculadas em os.notas). O índice não guarda notas, então basta
 // regravar o registro completo.
@@ -301,6 +334,11 @@ export function paginaColetaOSDetalhe(user, os, seloUrl) {
       ${linha('Certificados solicitados', (os.certificados || []).join(' · '))}
       ${linha('Aberta em', dataBR(os.criadoEm))}
     </table>
+    ${os.cobranca ? `<div style="margin-top:14px;border:1px solid ${os.cobranca.status === 'pago' ? '#CBE7CB;background:#F0FAF0' : '#F2C173;background:#FFF9EE'};border-radius:12px;padding:13px 15px">
+      <div style="font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:${os.cobranca.status === 'pago' ? '#1E7A1E' : '#8A4B00'}">💰 Cobrança: R$ ${esc(String(os.cobranca.valor).replace('.', ','))} — ${os.cobranca.status === 'pago' ? '✅ PAGA' : 'aguardando pagamento'}</div>
+      <div style="font-size:13px;color:#4F6469;margin-top:5px">${esc(os.cobranca.descricao || '')}${os.cobranca.status === 'pago' && os.cobranca.pagoEm ? ` · paga em ${esc(dataBR(os.cobranca.pagoEm))}` : ''}</div>
+      ${os.cobranca.status !== 'pago' && os.cobranca.link ? `<input readonly value="${esc(os.cobranca.link)}" onclick="this.select()" style="width:100%;font-size:12px;margin-top:8px;border:1px solid #DDE1E6;border-radius:8px;padding:8px 10px">` : ''}
+    </div>` : ''}
     ${os.patrocinadorNome ? `<div style="margin-top:14px;background:#F1F8EC;border:1px solid #cfe6b8;border-radius:12px;padding:14px">
       <div style="font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#3f6b1e">🤝 Coleta patrocinada · Adote um Bairro</div>
       <div style="font-size:13.5px;color:#28413f;margin-top:6px">Esta coleta é <b>financiada por ${esc(os.patrocinadorNome)}</b>.</div>
@@ -365,6 +403,20 @@ export function paginaEditarColeta(user, os, contatos, agentes, veiculos) {
     <div class="sec">Certificados solicitados pelo cliente</div>
     <div style="font-size:11px;color:#9aa7a4;margin:-4px 0 8px">Marque o que o cliente precisa. Fica registrado na Ordem de Coleta.</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px 16px">${CERTIFICADOS_OS.map((c) => `<label style="display:flex;align-items:center;gap:8px;font-size:13.5px;cursor:pointer"><input type="checkbox" class="cert" value="${esc(c)}"${(os.certificados || []).includes(c) ? ' checked' : ''} style="width:17px;height:17px;flex:none"> ${esc(c)}</label>`).join('')}</div>
+    <div class="sec">💰 Cobrança desta coleta (opcional)</div>
+    ${os.cobranca ? `
+    <div style="border:1px solid ${os.cobranca.status === 'pago' ? '#CBE7CB;background:#F0FAF0' : '#F2C173;background:#FFF9EE'};border-radius:10px;padding:12px 14px;font-size:13.5px">
+      <b>R$ ${esc(String(os.cobranca.valor).replace('.', ','))}</b> — ${esc(os.cobranca.descricao || 'cobrança da coleta')} ·
+      <b>${os.cobranca.status === 'pago' ? '✅ PAGO' : '💳 aguardando pagamento'}</b>
+      ${os.cobranca.status !== 'pago' && os.cobranca.link ? `<div style="margin-top:8px"><input readonly value="${esc(os.cobranca.link)}" onclick="this.select()" style="font-size:12px"><div style="font-size:11.5px;color:#8a6a16;margin-top:4px">O cliente também vê o botão “Pagar” no portal dele. Você pode copiar o link e mandar por WhatsApp/e-mail.</div></div>` : ''}
+      ${os.cobranca.status !== 'pago' ? `<div style="margin-top:9px"><button type="button" class="btn btn-g" style="padding:8px 12px;font-size:12px" onclick="removerCobranca()">Remover cobrança</button></div>` : ''}
+    </div>` : `
+    <div style="font-size:11px;color:#9aa7a4;margin:-4px 0 8px">Se esta coleta for cobrada, informe o valor e gere o link — ele fica anexado à OS e aparece para o cliente no portal (Pix, cartão e boleto). O pagamento marca “PAGO” sozinho e não trava a operação.</div>
+    <div class="g2">
+      <div><label>Valor (R$)</label><input id="cobValor" inputmode="decimal" placeholder="ex.: 150,00"></div>
+      <div><label>Descrição (aparece para o cliente)</label><input id="cobDesc" maxlength="200" placeholder="ex.: Taxa de coleta — itens perigosos"></div>
+    </div>
+    <div style="margin-top:10px"><button type="button" class="btn btn-d" onclick="gerarCobranca()">Gerar link de cobrança</button> <span id="mCob" style="font-size:13px;color:#4F6469"></span></div>`}
     <div style="display:flex;gap:10px;align-items:center;margin-top:22px">
       <button class="btn btn-p" onclick="salvar()">Salvar alterações</button>
       <a href="/coletas/os?id=${esc(os.id)}" class="btn btn-g" style="text-decoration:none">Cancelar</a>
@@ -380,6 +432,21 @@ function salvar(){var ag=g('agente').split('|');
   if(!rec.endereco){document.getElementById('m').textContent='Informe o endereço da coleta.';return;}
   document.getElementById('m').textContent='Salvando…';
   fetch('/api/coletas/editar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(rec)}).then(function(r){return r.json();}).then(function(j){if(j.ok){location.href='/coletas/os?id=${esc(os.id)}';}else{document.getElementById('m').textContent=j.error||'Erro ao salvar.';}}).catch(function(){document.getElementById('m').textContent='Sem conexão.';});}
+function gerarCobranca(){
+  var m=document.getElementById('mCob'); m.textContent='Gerando link…';
+  fetch('/api/coletas/cobranca',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:'${esc(os.id)}',valor:g('cobValor'),descricao:g('cobDesc')})})
+    .then(function(r){return r.json();}).then(function(j){
+      if(j.ok){ m.textContent='✅ Link gerado!'; location.reload(); }
+      else if(j.error==='valor_invalido'){ m.textContent='Informe um valor válido (ex.: 150,00).'; }
+      else { m.textContent='Não consegui gerar o link agora ('+(j.error||'erro')+').'; }
+    }).catch(function(){ m.textContent='Sem conexão.'; });
+}
+function removerCobranca(){
+  if(!confirm('Remover a cobrança desta coleta?')) return;
+  fetch('/api/coletas/cobranca-remover',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:'${esc(os.id)}'})})
+    .then(function(r){return r.json();}).then(function(j){ if(j.ok){ location.reload(); } else { alert(j.error==='ja_paga'?'Essa cobrança já foi paga — não dá para remover.':'Não consegui remover agora.'); } })
+    .catch(function(){ alert('Sem conexão.'); });
+}
 </script></body></html>`;
 }
 
