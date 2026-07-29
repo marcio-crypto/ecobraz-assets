@@ -38,6 +38,48 @@ export async function criarPreferencia({ valor, descricao, externalReference, ba
   return { id: data.id, initPoint: data.init_point || data.sandbox_init_point };
 }
 
+// PIX NATIVO: cria uma cobrança Pix direta (sem a tela do Checkout Pro) e devolve
+// o QR Code (imagem) + o "copia e cola". Pedido do Marcio (2026-07-29): eliminar a
+// fricção de "entrar na conta". Quando pago, o webhook padrão (notification_url) faz
+// a baixa igual aos demais. Se o Pix NÃO estiver habilitado na conta, o Mercado Pago
+// devolve um erro claro — que a gente mostra para saber o que ativar.
+export async function criarPixDireto({ valor, descricao, externalReference, payerEmail, baseUrl }, env) {
+  const token = env.MERCADOPAGO_ACCESS_TOKEN;
+  if (!token) throw new Error('sem_token_mp');
+  const base = String(baseUrl || '').replace(/\/+$/, '');
+  const email = String(payerEmail || '').trim() || 'pagador+ecobraz@ecobraz.org.br';
+  const body = {
+    transaction_amount: Number(valor),
+    description: descricao || 'Cobrança Ecobraz',
+    payment_method_id: 'pix',
+    external_reference: externalReference,
+    notification_url: `${base}/api/mp/webhook`,
+    payer: { email },
+  };
+  const r = await fetch(`${MP_API}/v1/payments`, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json', 'X-Idempotency-Key': (crypto.randomUUID ? crypto.randomUUID() : String(externalReference)) },
+    body: JSON.stringify(body),
+  });
+  const txt = await r.text();
+  let d = {}; try { d = JSON.parse(txt); } catch { /* não-JSON */ }
+  if (!r.ok) {
+    // Erro do MP: mensagem + causa (ex.: Pix não habilitado). Nunca vaza token.
+    const causa = (d && (d.message || (Array.isArray(d.cause) && d.cause[0] && (d.cause[0].description || d.cause[0].code)))) || `HTTP ${r.status}`;
+    const err = new Error('mp_pix_' + r.status + ': ' + String(causa).slice(0, 160));
+    err.mpStatus = r.status; err.mpDetalhe = String(causa).slice(0, 200);
+    throw err;
+  }
+  const tx = (d.point_of_interaction && d.point_of_interaction.transaction_data) || {};
+  return {
+    id: d.id, status: d.status, // 'pending' até pagar
+    copiaECola: tx.qr_code || '',
+    qrCodeBase64: tx.qr_code_base64 || '', // PNG em base64 (sem prefixo data:)
+    ticketUrl: tx.ticket_url || '',
+    expira: d.date_of_expiration || '',
+  };
+}
+
 export async function consultarPagamento(paymentId, env) {
   const token = env.MERCADOPAGO_ACCESS_TOKEN;
   if (!token || !paymentId) return null;

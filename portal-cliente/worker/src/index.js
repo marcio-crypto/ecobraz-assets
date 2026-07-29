@@ -34,7 +34,7 @@ const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8', 'cache
 import { paginaLogin, paginaPainel, paginaMensagem } from './paginas.js';
 import { LOGO_ESCURO_B64, LOGO_CLARO_B64 } from './logos.js';
 import { paginaCalculadora, estimativaCarbono, paginaCalculoDetalhado, calculoDetalhadoGHG, paginaLojaCarbono, paginaCarbonoContato, paginaCarbonoObrigado, nivelCarbono, faixaValida, precoNivel } from './carbono.js';
-import { criarPreferencia, consultarPagamento } from './mercadopago.js';
+import { criarPreferencia, consultarPagamento, criarPixDireto } from './mercadopago.js';
 import { registrarFalha, receberErroCliente, listarFalhas } from './monitor.js';
 import { segmentoDoCliente, definirSegmento, SEGMENTOS, fluxoDeVendas } from './premium.js';
 import { MANUAL_CLIENTE_PDF_B64 } from './manual-pdf.js';
@@ -747,6 +747,37 @@ export default {
           await registrarFalha(env, 'teste-pagamento', safeError(error), { ref });
           return html(paginaMensagem('Erro ao gerar o pagamento', 'Não consegui criar a cobrança de teste agora: ' + safeError(error).message, '/diretoria'), 502);
         }
+      }
+      // TESTE PIX NATIVO (Marcio): gera uma cobrança Pix direta e mostra o QR +
+      // copia-e-cola na NOSSA página (sem a tela do Checkout Pro). Se o Pix não
+      // estiver habilitado na conta, mostra o erro exato do Mercado Pago.
+      if (pathname === '/diretoria/teste-pix' && request.method === 'GET') {
+        if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
+        if (!env.MERCADOPAGO_ACCESS_TOKEN) return html(paginaMensagem('Mercado Pago não configurado', 'A chave MERCADOPAGO_ACCESS_TOKEN não está no cofre.', '/diretoria'), 503);
+        const valor = Math.min(Math.max(Number(url.searchParams.get('valor')) || 1, 1), 55);
+        const ref = 'teste-' + novoId();
+        const base = String(env.PORTAL_BASE_URL || env.PORTAL_URL || url.origin).replace(/\/+$/, '');
+        try {
+          const pix = await criarPixDireto({ valor, descricao: `Teste Pix Ecobraz (R$ ${valor})`, externalReference: ref, payerEmail: diretoria.email, baseUrl: base }, env);
+          if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${ref}`, JSON.stringify({ produto: 'teste', valor, status: 'pendente', pixId: pix.id, criadoEm: nowS() }), { expirationTtl: 3 * 86400 });
+          console.log('teste_pix_gerado', { ref, valor, pixId: pix.id });
+          return html(paginaPixTeste(valor, pix, ref));
+        } catch (error) {
+          const det = (error && error.mpDetalhe) || safeError(error).message;
+          console.error('teste_pix_erro', safeError(error));
+          await registrarFalha(env, 'teste-pix', det, { ref });
+          const dica = /pix/i.test(det) || (error && error.mpStatus === 400)
+            ? 'Isso normalmente significa que o <b>Pix ainda não está habilitado</b> na conta Mercado Pago da Ecobraz (falta cadastrar a chave Pix). Assim que ativar, este teste mostra o QR Code.'
+            : 'Tente de novo em instantes.';
+          return html(paginaMensagem('Pix não pôde ser gerado', `O Mercado Pago respondeu: <b>${esc(det)}</b><br><br>${dica}`, '/diretoria'), 502);
+        }
+      }
+      if (pathname === '/api/diretoria/pix-status' && request.method === 'GET') {
+        if (!diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        const ref = String(url.searchParams.get('ref') || '');
+        let status = 'pendente';
+        try { const raw = ref && env.PORTAL_KV ? await env.PORTAL_KV.get(`pedido:${ref}`) : null; if (raw) status = JSON.parse(raw).status || 'pendente'; } catch { /* segue */ }
+        return json({ ok: true, status });
       }
       if (pathname === '/diretoria/teste-pagamento-ok' && request.method === 'GET') {
         if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
@@ -3282,6 +3313,39 @@ function servirLogo(b64) {
   return new Response(bytes, { headers: { 'content-type': 'image/png', 'cache-control': 'public, max-age=604800' } });
 }
 function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+// Página do Pix nativo: QR Code + copia-e-cola, com verificação automática do pagamento.
+function paginaPixTeste(valor, pix, ref) {
+  const img = pix.qrCodeBase64 ? `<img src="data:image/png;base64,${esc(pix.qrCodeBase64)}" alt="QR Code Pix" style="width:230px;height:230px;border:1px solid #E4EBE9;border-radius:12px;background:#fff;padding:8px">` : '<div style="color:#8fa39f;font-size:13px">QR não veio na resposta — use o código copia-e-cola abaixo.</div>';
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Teste Pix — Ecobraz</title>
+<style>body{margin:0;font-family:Montserrat,'Segoe UI',Arial,sans-serif;background:#F2F6F4;color:#10262B}.wrap{max-width:440px;margin:0 auto;padding:26px 18px}
+.card{background:#fff;border:1px solid #E4EBE9;border-radius:16px;padding:22px;text-align:center}
+.btn{display:inline-block;border:none;border-radius:11px;padding:12px 16px;font-size:14px;font-weight:800;cursor:pointer;text-decoration:none}
+input{width:100%;box-sizing:border-box;border:1px solid #DDE1E6;border-radius:10px;padding:11px;font-size:12px;margin-top:8px}</style></head>
+<body><div class="wrap">
+  <a href="/diretoria" style="font-size:13px;font-weight:800;text-decoration:none;color:#4F6469">← Painel</a>
+  <div class="card" style="margin-top:14px">
+    <div style="font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#0B7A66">Pix nativo · teste</div>
+    <h1 style="font-size:22px;margin:6px 0 2px">R$ ${esc(String(valor).replace('.', ','))}</h1>
+    <p style="font-size:13px;color:#4F6469;margin:0 0 16px">Abra o app do seu banco, escolha <b>Pix › Pagar com QR Code</b> e aponte para a imagem — ou use o <b>copia e cola</b>.</p>
+    ${img}
+    <div style="margin-top:14px;text-align:left"><label style="font-size:11px;font-weight:800;color:#7c8a87">Pix copia e cola</label>
+      <input id="cec" readonly value="${esc(pix.copiaECola)}" onclick="this.select()">
+      <button class="btn" style="background:#EEF1F0;color:#10262B;margin-top:8px;width:100%" onclick="navigator.clipboard&&navigator.clipboard.writeText(document.getElementById('cec').value);this.textContent='✓ Copiado!'">Copiar código</button>
+    </div>
+    <div id="st" style="margin-top:16px;font-size:14px;font-weight:800;color:#8A6A16">⏳ Aguardando pagamento…</div>
+    <div style="font-size:11.5px;color:#9aa7a4;margin-top:6px">A confirmação é automática. Esta página verifica sozinha a cada 4 segundos.</div>
+  </div>
+</div>
+<script>
+var ref=${JSON.stringify(ref)};
+var timer=setInterval(check,4000);
+async function check(){
+  try{ var r=await fetch('/api/diretoria/pix-status?ref='+encodeURIComponent(ref)); var d=await r.json();
+    if(d.ok&&d.status==='pago'){ clearInterval(timer); var s=document.getElementById('st'); s.textContent='✅ Pagamento confirmado! O Pix nativo funciona.'; s.style.color='#1E7A3D'; }
+  }catch(_){}
+}
+</script></body></html>`;
+}
 function requireEnv(env, names) { const m = names.filter((n) => !env[n]); if (m.length) throw new Error(`missing_env_${m.join('_')}`); }
 function safeError(e) { return { name: e?.name || 'Error', message: String(e?.message || 'unknown').slice(0, 200) }; }
 async function verifyTurnstile(token, ip, secret) { if (!token) return false; const f = new FormData(); f.set('secret', secret); f.set('response', token); if (ip) f.set('remoteip', ip); const r = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', { method: 'POST', body: f }); if (!r.ok) return false; return Boolean((await r.json()).success); }
