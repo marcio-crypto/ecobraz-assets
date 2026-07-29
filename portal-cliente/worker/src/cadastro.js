@@ -452,8 +452,31 @@ export function paginaManutencao(user) {
     <button class="btn btn-p" id="bEgoi" onclick="rodarEgoi()">Enviar para o e-Goi</button>
     <div id="mEgoi" style="font-size:13px;color:#4F6469;margin-top:10px"></div>
   </div>
+  <div class="card" style="margin-top:14px">
+    <div style="font-size:15px;font-weight:800;color:#10262B">🩺 Falhas recentes do sistema</div>
+    <p style="font-size:13px;color:#4F6469;line-height:1.5;margin:8px 0 12px">Erros que aconteceram na tela dos clientes ou nos pagamentos — registrados automaticamente, mesmo sem ninguém reclamar. Se aparecer falha de <b>compra</b>, avise o Marcio.</p>
+    <button class="btn" id="bFalhas" onclick="verFalhas()">Ver falhas recentes</button>
+    <div id="mFalhas" style="font-size:12.5px;color:#4F6469;margin-top:10px"></div>
+  </div>
 </div>
 <script>
+function escTxt(s){var d=document.createElement('div');d.textContent=s==null?'':String(s);return d.innerHTML;}
+async function verFalhas(){
+  var b=document.getElementById('bFalhas'), m=document.getElementById('mFalhas');
+  b.disabled=true; m.textContent='Buscando…';
+  try{
+    var r=await fetch('/api/monitor/falhas?n=30'); var d=await r.json();
+    if(!d.ok){ m.textContent='Não consegui buscar agora.'; b.disabled=false; return; }
+    if(!d.falhas.length){ m.innerHTML='✅ Nenhuma falha registrada. Tudo limpo.'; b.disabled=false; return; }
+    m.innerHTML=d.falhas.map(function(f){
+      var quando=(f.em||'').replace('T',' ').slice(0,16);
+      var quem=f.cliente?(' · cliente: '+escTxt(f.cliente)):'';
+      var tag=f.tipo==='falha-sistema'?'<b style="color:#9B1C1C">[sistema]</b>':'<b style="color:#8A6A16">[tela do cliente]</b>';
+      return '<div style="border:1px solid #E4EBE9;border-radius:8px;padding:8px 10px;margin-bottom:6px">'+tag+' '+quando+quem+'<br>'+escTxt(f.onde||'')+': '+escTxt(f.detalhe||f.mensagem||'')+(f.pagina?(' <span style="color:#8fa39f">('+escTxt(f.pagina)+')</span>'):'')+'</div>';
+    }).join('');
+  }catch(_){ m.textContent='Não consegui buscar agora.'; }
+  b.disabled=false;
+}
 async function rodarEgoi(){
   var b=document.getElementById('bEgoi'), m=document.getElementById('mEgoi');
   b.disabled=true; var criados=0, jaTinha=0, erros=0, lotes=0;
@@ -821,22 +844,114 @@ export async function salvarLead(env, rec) {
   if (i >= 0) { idx[i].status = rec.status; await env.PORTAL_KV.put('leads:index', JSON.stringify(idx).slice(0, 800000)); }
   return rec;
 }
+// Atualiza campos de um lead no índice (pagamento, prioridade…) sem regravar tudo.
+export async function atualizarIndexLead(env, id, patch) {
+  if (!env.PORTAL_KV || !id) return;
+  const idx = await listarLeads(env);
+  const i = idx.findIndex((x) => x.id === id);
+  if (i >= 0) { Object.assign(idx[i], patch); await env.PORTAL_KV.put('leads:index', JSON.stringify(idx).slice(0, 800000)); }
+}
 // Recebe um lead do site (worker ecobraz-coletas) e guarda na nossa base.
-// FILTRO DE MATERIAIS (Debora, 2026-07-29): o telefone filtrava cliente ruim;
-// no autoatendimento o servidor detecta e MARCA o pedido para análise — nada
-// vira coleta sem a equipe ver o alerta. Listas em minúsculas, sem acento.
+// LISTA OFICIAL DA DEBORA (2026-07-29) — preços e regras dela, item por item.
+// Casamento por regex em texto minúsculo sem acento; \b evita falso positivo
+// (papel ≠ papelão, tubo ≠ TV de tubo, móveis ≠ telefone móvel, oleo ≠ petroleo).
 const MATERIAIS_RECUSADOS = [
-  ['pilha', 'pilhas'], ['bateria moeda', 'baterias moeda'], ['lampada', 'lâmpadas'], ['oleo', 'óleo'],
-  ['toner', 'toner'], ['cartucho', 'cartucho de tinta'], ['entulho', 'entulho'],
-  ['toxic', 'contaminação tóxica'], ['biologic', 'contaminação biológica'], ['hospitalar', 'resíduo hospitalar'],
+  ['\\bcds?\\b|\\bdvds?\\b', 'CDs/DVDs'],
+  ['fita\\s+(cassete|caseta|k7)|\\bvhs\\b', 'fitas cassete/VHS'],
+  ['\\bvinil\\b|\\bvinis\\b|disco de vinil', 'vinil'],
+  ['baterias?\\s+inchadas?', 'baterias inchadas'],
+  ['\\buniformes?\\b|\\btecidos?\\b', 'uniformes/tecidos'],
+  ['\\bpapel\\b|\\bpapeis\\b|\\bdocumentos\\b', 'papel/documentos'],
+  ['\\bplasticos?\\b', 'plástico'],
+  ['\\bvidros?\\b', 'vidro'],
+  ['entulho', 'entulho'],
+  ['biologic|quimic|toxic', 'risco biológico/químico'],
+  ['\\bagulhas?\\b', 'agulhas'],
+  ['(?<!de\\s)(?<!tv\\s)(?<!monitor\\s)(?<!monitores\\s)\\btubos?\\b', 'tubos'],
+  ['\\bmoveis\\b|\\bmobiliario\\b|\\bmobilia\\b', 'móveis'],
+  ['\\boleos?\\b', 'óleo'],
   ['radioativ', 'material radioativo'], ['amianto', 'amianto'], ['agrotoxic', 'agrotóxico'],
 ];
-const MATERIAIS_COM_CUSTO = [['tv de tubo', 'TV de tubo'], ['crt', 'monitor/TV CRT'], ['monitor de tubo', 'monitor de tubo']];
+// COM CUSTO (tabela oficial da Debora) + REGRA DELA: mesmo pagando, esses itens
+// só são coletados no endereço JUNTO com outros equipamentos não perigosos.
+const MATERIAIS_COM_CUSTO = [
+  ['\\bpilhas?\\b', 'pilhas — R$ 0,50/un ou R$ 15,00/kg'],
+  ['baterias?\\s+(de\\s+)?litio|bateria\\s+moeda|cr2032', 'baterias de lítio — R$ 2,00/un ou R$ 17,00/kg'],
+  ['cartuchos?', 'cartucho — R$ 2,50/un'],
+  ['\\btoners?\\b|tonner', 'toner — R$ 5,00/un'],
+  ['lampadas?', 'lâmpada — R$ 5,00/un'],
+  ['tvs?\\s+(de\\s+)?tubo|televisor(es)?\\s+(de\\s+)?tubo|monitor(es)?\\s+(de\\s+)?tubo|\\bcrt\\b', 'TV/monitor de tubo — R$ 50,00/un'],
+];
+// ORÇAMENTO obrigatório (categoria à parte, caso a caso — nunca OS direta).
+const MATERIAIS_ORCAMENTO = [
+  ['hospitalar', 'equipamento hospitalar'], ['equipamentos?\\s+medicos?', 'equipamento médico'], ['raio-?\\s?x\\b', 'raio-X'],
+];
 const semAcentoMin = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+const compila = (lista) => lista.map(([re, rotulo]) => [new RegExp(re), rotulo]);
+const RE_RECUSADOS = compila(MATERIAIS_RECUSADOS), RE_COM_CUSTO = compila(MATERIAIS_COM_CUSTO), RE_ORCAMENTO = compila(MATERIAIS_ORCAMENTO);
 export function analisarMateriais(texto) {
   const t = ' ' + semAcentoMin(texto) + ' ';
-  const acha = (lista) => [...new Set(lista.filter(([k]) => t.includes(k)).map(([, rotulo]) => rotulo))];
-  return { recusados: acha(MATERIAIS_RECUSADOS), comCusto: acha(MATERIAIS_COM_CUSTO) };
+  const acha = (lista) => [...new Set(lista.filter(([re]) => re.test(t)).map(([, rotulo]) => rotulo))];
+  return { recusados: acha(RE_RECUSADOS), comCusto: acha(RE_COM_CUSTO), orcamento: acha(RE_ORCAMENTO) };
+}
+// "Tem outros equipamentos junto?" — tira do texto os itens com custo e vê se
+// sobra equipamento de verdade (a regra da Debora: perigoso nunca vai sozinho).
+const RE_EQUIPAMENTOS = /servidor|computador|desktop|gabinete|notebook|laptop|impressora|multifuncional|nobreak|no.?break|estabilizador|geladeira|refrigerador|ar condicionado|roteador|projetor|celular|smartphone|telefone|placa|processador|\bmemorias?\b|\bhds?\b|\bssds?\b|\bcpus?\b|monitor|televis|\btvs?\b|eletronico|eletroeletronico|informatica|equipamento/;
+export function temEquipamentosJunto(texto) {
+  let t = ' ' + semAcentoMin(texto) + ' ';
+  for (const [re] of RE_COM_CUSTO) t = t.replace(new RegExp(re.source, 'g'), ' ');
+  return RE_EQUIPAMENTOS.test(t);
+}
+
+// Estimador de VOLUME (kg) a partir do texto — para a triagem PRIORITÁRIA.
+// Determinístico e conservador: peso declarado + pallets + quantidade × peso típico.
+const PESOS_TIPICOS = [
+  ['servidor', 15], ['cpu', 8], ['computador', 8], ['desktop', 8], ['gabinete', 8],
+  ['notebook', 3], ['laptop', 3], ['monitor', 5], ['televis', 15], ['tv', 15],
+  ['impressora', 10], ['multifuncional', 15], ['nobreak', 10], ['no-break', 10],
+  ['estabilizador', 5], ['geladeira', 50], ['refrigerador', 50], ['ar condicionado', 30],
+  ['roteador', 1], ['projetor', 3], ['bateria', 10], ['maquina de lavar', 40],
+  ['motor eletrico', 20], ['motores eletricos', 20],
+];
+// Lista OFICIAL de alto valor (Marcio, 2026-07-29). Tokens curtos (hd, cpu, tv)
+// casam por palavra inteira para não pegar HDPE etc.
+const ALTO_VALOR = [
+  'notebook', 'laptop', 'nobreak', 'no-break', 'bateria', 'cpu', 'servidor', 'roteador',
+  'projetor', 'maquina industrial', 'maquinas industriais', 'motor eletrico', 'motores eletricos',
+  'descontinuado', 'danificado', 'logistica reversa', 'monitor', 'placa de circuito',
+  'placas de circuito', 'placa-mae', 'placa mae', 'sucata de placa', 'processador', 'memoria',
+  'hd', 'ssd', 'geladeira', 'refrigerador', 'maquina de lavar', 'celular', 'smartphone',
+  'data center', 'datacenter',
+];
+const achaAltoValor = (t) => ALTO_VALOR.filter((k) => (k.length <= 3 ? new RegExp(`\\b${k}s?\\b`).test(t) : t.includes(k)));
+export function estimarPesoKg(texto) {
+  const t = semAcentoMin(texto).replace(/\./g, '');
+  let kg = 0;
+  for (const m of t.matchAll(/(\d{1,6})(?:,\d+)?\s*(kg|quilo|kilo)/g)) kg += Number(m[1]);
+  for (const m of t.matchAll(/(\d{1,3})(?:,\d+)?\s*(?:t\b|ton\b|tonelada)/g)) kg += Number(m[1]) * 1000;
+  if (/meia\s+tonelada/.test(t)) kg += 500;
+  for (const m of t.matchAll(/(\d{1,3})\s*pallets?/g)) kg += Number(m[1]) * 200;
+  for (const [chave, peso] of PESOS_TIPICOS) {
+    for (const m of t.matchAll(new RegExp(`(\\d{1,4})\\s*(?:x\\s*)?(?:unidades?\\s+(?:de\\s+)?)?${chave}`, 'g'))) kg += Number(m[1]) * peso;
+    for (const m of t.matchAll(new RegExp(`${chave}\\w*\\s*\\((\\d{1,4})\\)`, 'g'))) kg += Number(m[1]) * peso;
+  }
+  return Math.round(kg);
+}
+
+// TRIAGEM COMPLETA do pedido (matriz do Marcio, 2026-07-29), por precedência:
+// barrado > orcamento > prioritaria (≥200 kg ou alto valor) > normal (c/ custo à parte).
+export function classificarPedido(texto) {
+  const a = analisarMateriais(texto);
+  if (a.recusados.length) return { tipo: 'barrado', itens: a.recusados, comCusto: a.comCusto, estimativaKg: 0 };
+  if (a.orcamento.length) return { tipo: 'orcamento', itens: a.orcamento, comCusto: a.comCusto, estimativaKg: 0 };
+  // Regra da Debora: itens perigosos (com custo) NUNCA são coletados sozinhos.
+  if (a.comCusto.length && !temEquipamentosJunto(texto)) return { tipo: 'so_perigosos', itens: a.comCusto, comCusto: a.comCusto, estimativaKg: 0 };
+  const estimativaKg = estimarPesoKg(texto);
+  const t = ' ' + semAcentoMin(texto) + ' ';
+  const valioso = achaAltoValor(t);
+  const altoValor = valioso.length && (estimativaKg >= 100 || /\blote\b/.test(t) || /grande\s+(quantidade|volume)/.test(t) || t.includes('data center') || t.includes('datacenter'));
+  if (estimativaKg >= 200 || altoValor) return { tipo: 'prioritaria', itens: valioso, comCusto: a.comCusto, estimativaKg, motivo: estimativaKg >= 200 ? `~${estimativaKg} kg estimados` : `material de alto valor (${valioso.slice(0, 4).join(', ')})` };
+  return { tipo: 'normal', itens: [], comCusto: a.comCusto, estimativaKg };
 }
 
 export async function ingestLead(env, body) {
@@ -845,14 +960,17 @@ export async function ingestLead(env, body) {
   const nome = String(b.name || b.nome || '').trim();
   const empresa = String(b.company || b.empresa || '').trim();
   if (!email && !nome && !empresa) return { ok: false, error: 'dados' };
-  // Detector de materiais: se o texto citar item recusado/com custo, o pedido
-  // chega à equipe com o ALERTA no topo da descrição — impossível não ver.
-  const filtro = analisarMateriais(`${b.material_category || b.material || ''} ${b.material_description || b.descricao || ''}`);
-  if (filtro.recusados.length || filtro.comCusto.length) {
+  // TRIAGEM AUTOMÁTICA (matriz do Marcio, 2026-07-29): todo pedido é classificado
+  // e chega à equipe com o destino no topo da descrição — impossível não ver.
+  const triagem = classificarPedido(`${b.material_category || b.material || ''} ${b.material_description || b.descricao || ''} ${b.volume || ''}`);
+  {
     const avisos = [];
-    if (filtro.recusados.length) avisos.push(`NÃO COLETAMOS: ${filtro.recusados.join(', ')}`);
-    if (filtro.comCusto.length) avisos.push(`COM TAXA: ${filtro.comCusto.join(', ')}`);
-    b.material_description = `⚠️⚠️ ANÁLISE OBRIGATÓRIA ANTES DE GERAR COLETA — ${avisos.join(' · ')} ⚠️⚠️\n\n${String(b.material_description || b.descricao || '')}`;
+    if (triagem.tipo === 'barrado') avisos.push(`🚫 NÃO COLETAMOS: ${triagem.itens.join(', ')} — responder ao cliente com a recusa, NÃO gerar coleta`);
+    if (triagem.tipo === 'orcamento') avisos.push(`📋 ORÇAMENTO OBRIGATÓRIO (${triagem.itens.join(', ')}) — fazer proposta antes; nunca gerar OS direta`);
+    if (triagem.tipo === 'so_perigosos') avisos.push(`⛔ SÓ ITENS PERIGOSOS (${triagem.itens.join(' · ')}) — pela regra, coletamos esses itens SOMENTE junto com outros equipamentos. NÃO gerar coleta sem confirmar o que mais vai junto`);
+    if (triagem.tipo === 'prioritaria') avisos.push(`🌟 PRIORITÁRIA — COLETAR COM BREVIDADE: ${triagem.motivo} — contato hoje, coleta de um dia para o outro`);
+    if (triagem.comCusto.length && triagem.tipo !== 'so_perigosos') avisos.push(`⚠️ COM TAXA: ${triagem.comCusto.join(' · ')} — combinar o valor antes de gerar a coleta`);
+    if (avisos.length) b.material_description = `${avisos.join('\n')}\n\n${String(b.material_description || b.descricao || '')}`;
   }
   const id = 'lead_' + (crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '').slice(0, 12) : Math.random().toString(36).slice(2, 14));
   const rec = {
@@ -865,23 +983,36 @@ export async function ingestLead(env, body) {
     consentimentoMkt: b.marketing_consent === true || b.marketing_consent === 'yes',
     origem: String(b.source || 'site'), pagina: String(b.page_url || '').slice(0, 500),
     utm: { source: b.utm_source || '', medium: b.utm_medium || '', campaign: b.utm_campaign || '', content: b.utm_content || '', term: b.utm_term || '' },
+    triagem: { tipo: triagem.tipo, itens: triagem.itens, comCusto: triagem.comCusto, estimativaKg: triagem.estimativaKg, motivo: triagem.motivo || '' },
+    prioridade: triagem.tipo === 'prioritaria' ? 'alta' : '',
     criadoEm: agora(),
   };
   if (env.PORTAL_KV) {
     await env.PORTAL_KV.put(`lead:${id}`, JSON.stringify(rec));
     const idx = await listarLeads(env);
-    idx.unshift({ id, nome: nome || empresa || email, empresa, email, cidade: rec.cidade, status: 'novo', criadoEm: rec.criadoEm });
+    idx.unshift({ id, nome: nome || empresa || email, empresa, email, cidade: rec.cidade, status: 'novo', criadoEm: rec.criadoEm, triagem: triagem.tipo, prioridade: rec.prioridade });
     await env.PORTAL_KV.put('leads:index', JSON.stringify(idx).slice(0, 800000));
   }
-  return { ok: true, id };
+  return { ok: true, id, triagem };
 }
 
 export function paginaLeads(user, leads) {
   const novos = leads.filter((l) => l.status !== 'tratado').length;
-  const linhas = leads.length ? leads.map((l) => `<a href="/leads/lead?id=${esc(l.id)}" style="display:flex;justify-content:space-between;align-items:center;gap:12px;text-decoration:none;background:#fff;border:1px solid #E4EBE9;border-radius:12px;padding:13px 15px;margin-bottom:9px">
+  // Prioritárias ainda não tratadas sobem para o topo da fila.
+  const ordenados = [...leads].sort((a, b2) => Number(b2.prioridade === 'alta' && b2.status !== 'tratado') - Number(a.prioridade === 'alta' && a.status !== 'tratado'));
+  const seloTriagem = (l) => {
+    if (l.prioridade === 'alta') return '<span style="flex:none;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;background:#FFE9C7;color:#8A4B00;border:1px solid #F2C173">🌟 PRIORITÁRIA</span>';
+    if (l.triagem === 'barrado') return '<span style="flex:none;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;background:#FDE8E8;color:#9B1C1C">🚫 NÃO COLETAMOS</span>';
+    if (l.triagem === 'orcamento') return '<span style="flex:none;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;background:#E8F0FD;color:#1C4E9B">📋 ORÇAMENTO</span>';
+    if (l.triagem === 'so_perigosos') return '<span style="flex:none;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;background:#FDE8E8;color:#9B1C1C">⛔ SÓ PERIGOSOS</span>';
+    if (l.pagamento === 'aguardando') return '<span style="flex:none;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;background:#FFF4DE;color:#8A6A16">💳 AGUARDANDO PGTO</span>';
+    if (l.pagamento === 'pago') return '<span style="flex:none;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;background:#E5F6E5;color:#1E7A1E">💳 TAXA PAGA</span>';
+    return '';
+  };
+  const linhas = ordenados.length ? ordenados.map((l) => `<a href="/leads/lead?id=${esc(l.id)}" style="display:flex;justify-content:space-between;align-items:center;gap:12px;text-decoration:none;background:#fff;border:1px solid ${l.prioridade === 'alta' && l.status !== 'tratado' ? '#F2C173;box-shadow:0 0 0 2px #FFF3DF' : '#E4EBE9'};border-radius:12px;padding:13px 15px;margin-bottom:9px">
       <div style="min-width:0"><div style="font-size:14px;font-weight:800;color:#10262B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.nome || l.empresa || '(sem nome)')}</div>
       <div style="font-size:12px;color:#7c8a87;margin-top:3px">${esc(l.email || '')}${l.cidade ? ' · ' + esc(l.cidade) : ''} · ${esc(dataBR(l.criadoEm))}</div></div>
-      <span style="flex:none;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;${l.status === 'tratado' ? 'background:#EEF1F0;color:#7c8a87' : 'background:#FFF4DE;color:#8A6A16'}">${l.status === 'tratado' ? 'TRATADO' : 'NOVO'}</span>
+      <span style="display:flex;flex:none;gap:6px;align-items:center">${seloTriagem(l)}<span style="flex:none;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;${l.status === 'tratado' ? 'background:#EEF1F0;color:#7c8a87' : 'background:#FFF4DE;color:#8A6A16'}">${l.status === 'tratado' ? 'TRATADO' : 'NOVO'}</span></span>
     </a>`).join('') : `<div class="card" style="text-align:center;color:#8fa39f;font-size:13.5px">Nenhum lead ainda. Quando alguém preencher o formulário do site, aparece aqui.</div>`;
   return `${head('Leads do site')}<body>${topo(user, 'leads')}
 <div class="wrap">

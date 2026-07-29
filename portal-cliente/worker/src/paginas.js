@@ -179,9 +179,13 @@ async function enviar(e){e.preventDefault();
 </script></body></html>`;
 }
 
-export function paginaPainel({ nome, email, dataFim }) {
+export function paginaPainel({ nome, email, dataFim, whatsapp }) {
   const primeiro = esc((nome || '').split(/\s+/)[0] || 'cliente');
   const empresa = esc(nome || 'Sua empresa');
+  // WhatsApp do comercial (pedido do Marcio): número oficial do site; o env
+  // WHATSAPP_COMERCIAL troca sem deploy. Só dígitos, com DDI.
+  const zap = String(whatsapp || '5511912728412').replace(/\D/g, '');
+  const zapLink = `https://wa.me/${zap}?text=${encodeURIComponent('Olá! Sou cliente Ecobraz e preciso de uma ajuda com o sistema.')}`;
   return `${head('Painel')}
 <header class="appbar">
   <div class="appbar-in">
@@ -210,6 +214,12 @@ export function paginaPainel({ nome, email, dataFim }) {
     <div class="kpi"><span class="kpi-label">Pegada de carbono</span><a class="kpi-num ok" href="/painel-carbono" style="font-size:20px;text-decoration:none">Ver painel →</a><span class="kpi-hint">termômetro de neutralidade</span></div>
   </section>
 
+  <a href="/adote" style="display:flex;align-items:center;gap:12px;background:#F3FAEA;border:1px solid #D9EDBB;border-radius:12px;padding:11px 16px;margin:0 0 16px;text-decoration:none">
+    <span style="font-size:20px">🌱</span>
+    <span style="min-width:0;flex:1;font-size:13px;color:#3F5A34;line-height:1.4"><b style="color:#2E4A24">Adote um Bairro:</b> patrocine coletas com o selo da sua empresa e mostre o impacto no seu termômetro.</span>
+    <span style="flex:none;font-size:12px;font-weight:800;background:#92C430;color:#10262B;border-radius:8px;padding:7px 12px">Conhecer →</span>
+  </a>
+
   <section class="panel" style="margin-bottom:16px">
     <h2>Seus serviços</h2>
     <p class="muted" style="margin:6px 0 16px">Tudo no seu perfil: acompanhe o impacto, patrocine coletas e gere os relatórios — a compra fica amarrada ao CNPJ da sua empresa.</p>
@@ -226,6 +236,12 @@ export function paginaPainel({ nome, email, dataFim }) {
     <p class="muted" style="margin:0 0 4px">Acompanhe suas coletas e atendimentos com a Ecobraz.</p>
     <div id="oslista" class="oslist"><p class="muted">Carregando…</p></div>
   </section>
+
+  <a href="/carbono/planos" style="display:flex;align-items:center;gap:12px;background:#EDF7F6;border:1px solid #CBE7E3;border-radius:12px;padding:11px 16px;margin:16px 0 0;text-decoration:none">
+    <span style="font-size:20px">🧮</span>
+    <span style="min-width:0;flex:1;font-size:13px;color:#33565A;line-height:1.4"><b style="color:#1F4348">Sua empresa já mediu a pegada de carbono?</b> Inventário no padrão GHG Protocol, a partir dos seus dados reais.</span>
+    <span style="flex:none;font-size:12px;font-weight:800;background:#00333B;color:#fff;border-radius:8px;padding:7px 12px">Ver planos →</span>
+  </a>
 
   <section class="panel" style="margin-top:16px">
     <div class="sol-lead"><h2 style="margin:0">Solicitar nova coleta</h2><span class="sol-badge">✓ dados do seu cadastro</span></div>
@@ -255,6 +271,21 @@ export function paginaPainel({ nome, email, dataFim }) {
       <div class="sol-sec">
         <h3><span class="ic">📦</span> Equipamentos</h3>
         <textarea id="s_equip" rows="3" maxlength="4000" placeholder="Ex.: 10 monitores, 5 CPUs, 2 no-breaks, 1 impressora…"></textarea>
+        <div class="sol-grid" style="margin-top:10px">
+          <div><label for="s_itens">Quantos itens no total? (aproximado)</label><input id="s_itens" inputmode="numeric" required maxlength="6" placeholder="ex.: 25" oninput="atualizaTaxa()"></div>
+        </div>
+      </div>
+      <div class="sol-sec">
+        <h3><span class="ic">⏱️</span> Prazo da coleta</h3>
+        <label style="display:flex;gap:10px;align-items:flex-start;padding:11px 13px;border:1px solid #E4EBE9;border-radius:10px;cursor:pointer;margin-bottom:8px">
+          <input type="radio" name="s_modo" value="tradicional" checked onchange="atualizaTaxa()" style="margin-top:3px">
+          <span style="font-size:13.5px;line-height:1.45"><b>Tradicional</b> — coleta em 1 a 7 dias úteis.<br><span class="muted" style="font-size:12.5px">Gratuita a partir de 20 itens. Abaixo de 20 itens há taxa de R$ 55.</span></span>
+        </label>
+        <label style="display:flex;gap:10px;align-items:flex-start;padding:11px 13px;border:1px solid #E4EBE9;border-radius:10px;cursor:pointer">
+          <input type="radio" name="s_modo" value="expressa" onchange="atualizaTaxa()" style="margin-top:3px">
+          <span style="font-size:13.5px;line-height:1.45"><b>⚡ Expressa</b> — coleta em até 24h. <b>R$ 55</b>.<br><span class="muted" style="font-size:12.5px">Pagamento na hora e liberação automática.</span></span>
+        </label>
+        <div id="taxainfo" style="margin-top:10px;font-size:13px;font-weight:700;color:#3F5A34;background:#F3FAEA;border:1px solid #D9EDBB;border-radius:10px;padding:9px 13px">Coleta gratuita — prazo de 1 a 7 dias úteis.</div>
       </div>
       <div class="sol-sec">
         <h3><span class="ic">📸</span> Fotos dos equipamentos <span style="font-weight:600;text-transform:none;letter-spacing:0;color:var(--muted)">— opcional</span></h3>
@@ -267,6 +298,12 @@ export function paginaPainel({ nome, email, dataFim }) {
     <div id="cmsg" class="notice" hidden></div>
   </section>
 
+  <a href="/esg/planos" style="display:flex;align-items:center;gap:12px;background:#EDF2FB;border:1px solid #CFDCF2;border-radius:12px;padding:11px 16px;margin:16px 0 0;text-decoration:none">
+    <span style="font-size:20px">📄</span>
+    <span style="min-width:0;flex:1;font-size:13px;color:#33456B;line-height:1.4"><b style="color:#1F3057">Relatório de ESG para banco, cliente e auditoria</b> — gerado a partir das suas coletas e documentos reais.</span>
+    <span style="flex:none;font-size:12px;font-weight:800;background:#1F3057;color:#fff;border-radius:8px;padding:7px 12px">Ver opções →</span>
+  </a>
+
   <section class="panel docs">
     <h2>Documentos e conformidade <span class="chip">em breve</span></h2>
     <p class="muted" style="margin:6px 0 0">Nota Fiscal, MTR, Carta de Doação e Certificado de Destinação Final — no padrão aceito por auditoria e ESG, gerados a partir do seu histórico de descartes.</p>
@@ -275,7 +312,25 @@ export function paginaPainel({ nome, email, dataFim }) {
 
   <div class="foot">Ecobraz Emigre — Portal do Cliente · destinação correta, conformidade e evidências.</div>
 </main>
+<a href="${zapLink}" target="_blank" rel="noopener" title="Dúvida ou problema? Fale direto com o nosso comercial"
+   style="position:fixed;right:18px;bottom:18px;z-index:60;display:flex;align-items:center;gap:8px;background:#25D366;color:#fff;text-decoration:none;font-weight:800;font-size:13px;padding:11px 16px;border-radius:30px;box-shadow:0 6px 18px rgba(0,0,0,.18)">
+  <span style="font-size:17px">💬</span> Falar com o comercial
+</a>
 <script>
+// Monitor de falhas: qualquer erro na tela do cliente é reportado ao servidor
+// (a equipe enxerga mesmo se o cliente não reclamar). Nunca atrapalha o uso.
+(function(){
+  function rep(onde,msg,stack){
+    try{
+      var corpo=JSON.stringify({pagina:location.pathname,onde:onde,mensagem:String(msg||'').slice(0,600),stack:String(stack||'').slice(0,900)});
+      if(navigator.sendBeacon){ navigator.sendBeacon('/api/monitor/erro', new Blob([corpo],{type:'application/json'})); }
+      else { fetch('/api/monitor/erro',{method:'POST',headers:{'content-type':'application/json'},body:corpo}); }
+    }catch(_){}
+  }
+  window.addEventListener('error',function(e){ rep('js', e.message||'erro', e.error&&e.error.stack); });
+  window.addEventListener('unhandledrejection',function(e){ rep('promise',(e.reason&&e.reason.message)||String(e.reason||''), e.reason&&e.reason.stack); });
+  window.__repErro=rep;
+})();
 function fmt(iso){ if(!iso) return '—'; try{ return new Date(iso).toLocaleDateString('pt-BR'); }catch(_){ return '—'; } }
 function tagCls(s){ s=(s||'').toLowerCase(); if(s.indexOf('conclu')>=0) return 'tag-ok'; if(s.indexOf('atendimento')>=0||s.indexOf('andamento')>=0) return 'tag-and'; return 'tag-x'; }
 function escapeHtml(s){var d=document.createElement('div');d.textContent=s==null?'':String(s);return d.innerHTML;}
@@ -359,24 +414,55 @@ function addFiles(files){
     dz.addEventListener('drop',function(e){e.preventDefault();dz.classList.remove('drag');addFiles(e.dataTransfer.files);});
   }
 })();
+function modoColeta(){ var r=document.querySelector('input[name="s_modo"]:checked'); return r?r.value:'tradicional'; }
+function atualizaTaxa(){
+  var box=document.getElementById('taxainfo'); if(!box) return;
+  var itens=parseInt((campoVal('s_itens')||'').replace(/\\D/g,''),10)||0;
+  var expressa=modoColeta()==='expressa';
+  var pouco=itens>0&&itens<20;
+  if(expressa||pouco){
+    var motivo=expressa?(pouco?'expressa + menos de 20 itens':'coleta expressa em até 24h'):'menos de 20 itens';
+    box.style.background='#FFF4DE';box.style.borderColor='#F2C173';box.style.color='#8A4B00';
+    box.innerHTML='💳 Esta coleta tem taxa de <b>R$ 55</b> ('+motivo+'). Você paga na hora, e a liberação é automática.';
+  } else if(itens===0){
+    box.style.background='#F3FAEA';box.style.borderColor='#D9EDBB';box.style.color='#3F5A34';
+    box.textContent='Informe a quantidade de itens: a coleta é gratuita a partir de 20 itens (1 a 7 dias úteis).';
+  } else {
+    box.style.background='#F3FAEA';box.style.borderColor='#D9EDBB';box.style.color='#3F5A34';
+    box.textContent='✓ Coleta gratuita ('+itens+' itens) — prazo de 1 a 7 dias úteis.';
+  }
+}
 async function solicitar(e){e.preventDefault();
   var b=document.getElementById('bc'),m=document.getElementById('cmsg');
   b.disabled=true;b.textContent='Enviando…';
   var cep=campoVal('s_cep'),log=campoVal('s_log'),num=campoVal('s_num'),bairro=campoVal('s_bairro'),cidade=campoVal('s_cidade'),compl=campoVal('s_compl');
   var endereco=[log+(num?(', '+num):''),bairro,cidade,cep?('CEP '+cep):'',compl?('('+compl+')'):''].filter(Boolean).join(' - ');
-  var body={razaoSocial:campoVal('s_razao'),cnpj:campoVal('s_cnpj'),endereco:endereco,cep:cep,logradouro:log,numero:num,bairro:bairro,cidade:cidade,complemento:compl,telefone:campoVal('s_tel'),email:campoVal('s_email'),responsavel:campoVal('s_resp'),equipamentos:campoVal('s_equip'),fotos:_fotos};
+  var body={razaoSocial:campoVal('s_razao'),cnpj:campoVal('s_cnpj'),endereco:endereco,cep:cep,logradouro:log,numero:num,bairro:bairro,cidade:cidade,complemento:compl,telefone:campoVal('s_tel'),email:campoVal('s_email'),responsavel:campoVal('s_resp'),equipamentos:campoVal('s_equip'),itens:campoVal('s_itens'),expressa:modoColeta()==='expressa',fotos:_fotos};
   try{
     var r=await fetch('/api/os/solicitar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
     var d=await r.json(); m.hidden=false;
-    if(d.ok){ m.innerHTML=(d.message||'Coleta solicitada!')+(d.fotos?' <b>'+d.fotos+' foto(s) anexada(s).</b>':''); ['s_cep','s_log','s_num','s_bairro','s_cidade','s_compl','s_equip'].forEach(function(id){var el=document.getElementById(id); if(el) el.value='';}); var cm=document.getElementById('cepmsg'); if(cm) cm.textContent=''; _fotos=[]; renderThumbs(); carregar(); }
+    if(d.ok){
+      var extra=d.fotos?' <b>'+d.fotos+' foto(s) anexada(s).</b>':'';
+      if(d.pagamento&&d.pagamento.link){
+        m.innerHTML=escapeHtml(d.message||'Falta só o pagamento.')+extra
+          +'<a href="'+d.pagamento.link+'" target="_blank" rel="noopener" style="display:block;background:#92C430;color:#10262B;text-decoration:none;border-radius:10px;padding:13px;text-align:center;font-weight:800;font-size:15px;margin-top:12px">💳 Pagar R$ '+d.pagamento.valor+' agora →</a>'
+          +'<div style="font-size:12px;color:#7c8a87;margin-top:8px">Pagamento seguro pelo Mercado Pago (Pix, cartão e boleto). Assim que aprovar, sua coleta é liberada automaticamente.</div>';
+      } else {
+        m.innerHTML=escapeHtml(d.message||'Coleta solicitada!')+extra;
+      }
+      ['s_cep','s_log','s_num','s_bairro','s_cidade','s_compl','s_equip','s_itens'].forEach(function(id){var el=document.getElementById(id); if(el) el.value='';});
+      var cm=document.getElementById('cepmsg'); if(cm) cm.textContent=''; _fotos=[]; renderThumbs(); atualizaTaxa(); carregar();
+    }
     else if(d.error==='endereco_obrigatorio'){ m.textContent='Informe o endereço de coleta.'; }
-    else { m.textContent='Não foi possível solicitar agora. Tente novamente em instantes.'; }
-  }catch(_){ m.hidden=false; m.textContent='Falha de conexão. Tente novamente.'; }
+    else if(d.tipo==='barrado'||d.tipo==='so_perigosos'){ m.innerHTML='⚠️ '+escapeHtml(d.message||'Não coletamos esse tipo de material.'); }
+    else { m.textContent='Não foi possível solicitar agora. Tente novamente em instantes.'; window.__repErro&&window.__repErro('solicitar-coleta-servidor', d.error||('http '+r.status)); }
+  }catch(err){ m.hidden=false; m.textContent='Falha de conexão. Tente novamente.'; window.__repErro&&window.__repErro('solicitar-coleta', err&&err.message, err&&err.stack); }
   b.disabled=false;b.textContent='Solicitar coleta →';
   return false;
 }
 carregar();
 preencherPerfil();
+atualizaTaxa();
 </script></body></html>`;
 }
 

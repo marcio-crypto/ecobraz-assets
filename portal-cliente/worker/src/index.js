@@ -35,6 +35,7 @@ import { paginaLogin, paginaPainel, paginaMensagem } from './paginas.js';
 import { LOGO_ESCURO_B64, LOGO_CLARO_B64 } from './logos.js';
 import { paginaCalculadora, estimativaCarbono, paginaCalculoDetalhado, calculoDetalhadoGHG, paginaLojaCarbono, paginaCarbonoContato, paginaCarbonoObrigado, nivelCarbono, faixaValida, precoNivel } from './carbono.js';
 import { criarPreferencia, consultarPagamento } from './mercadopago.js';
+import { registrarFalha, receberErroCliente, listarFalhas } from './monitor.js';
 import { acharPacote, precoPacote, acharModuloAdote, precoModuloAdote, paginaLojaAdote, paginaObrigadoAdote, paginaDiagnostico, lerCredito, salvarCredito, novoCredito, aplicarCompra, aplicarRecarga, precisaRecarga, listarPatrocinadores, resumoPatrocinio, lerCreditoPorDoc } from './adote.js';
 import { paginaLojaESG, paginaESGContato, paginaESGObrigado, relatorioESG, precoRelatorioESG } from './esg.js';
 import { statusDaEtapa, valorProp, CAMPOS_OS } from './os-utils.js';
@@ -55,7 +56,7 @@ import { sondarAnexosPloomes, paginaSondaAnexos } from './ploomes-docs.js';
 import { amostraContatosPloomes, paginaAmostraContatos, importarLoteContatos, estatisticasMigracao, buscarContatos, paginaMigrarPloomes, detalheContato, paginaContatoDetalhe, importarLoteNegocios, estatisticasNegocios, paginaMigrarNegocios } from './ploomes-migracao.js';
 import { importarLoteAnexos, importarLoteAnexosContatos, completarAnexos, importarAnexosJanela, reprocessarFalhas, importarLoteDocumentos, recuperarDocumentos, estatisticasArquivos, paginaMigrarArquivos, diagnosticoAnexos, paginaDiagAnexos } from './ploomes-arquivos.js';
 import { fiscalPermitido, nomeFiscal, listarNotas, lerNota, importarLote, vincularNota, sugerirVinculoSync, paginaFiscalLogin, paginaFiscalHome, paginaFiscalResultado, paginaFiscalNota } from './fiscal.js';
-import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, emailsDoCliente, reindexarEmailsClientes, backfillEnderecos, paginaManutencao, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, clienteDeLead, arquivosDoCliente, paginaLeads, paginaLeadDetalhe, paginaInicio, listarClientesD1, contagensClientesD1, lerClienteD1, negociosDoCliente, espelharClienteD1, sincronizarKVparaD1, lerNegocioDetalheD1, paginaOSDetalhe, curarContatosKV } from './cadastro.js';
+import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, emailsDoCliente, reindexarEmailsClientes, backfillEnderecos, paginaManutencao, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, clienteDeLead, arquivosDoCliente, paginaLeads, paginaLeadDetalhe, paginaInicio, listarClientesD1, contagensClientesD1, lerClienteD1, negociosDoCliente, espelharClienteD1, sincronizarKVparaD1, lerNegocioDetalheD1, paginaOSDetalhe, curarContatosKV, classificarPedido, atualizarIndexLead } from './cadastro.js';
 import { listarColetasOS, lerColetaOS, criarColetaOS, atualizarStatusOS, atualizarColetaOS, anexarTelemetriaOS, registrarAnexoColeta, removerAnexoColeta, paginaColetasLista, paginaGerarColeta, paginaEditarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga } from './coletas.js';
 import { listarVeiculos, lerVeiculo, salvarVeiculo, paginaFrota, paginaVeiculoForm, lerJornadaAtiva, abrirJornada, fecharJornada, registrarAbastecimento, tagColetaComVeiculo, servirFotoJornada, bannerJornada, paginaAbrirDia, paginaFecharDia, paginaAbastecer, placaDaColeta } from './frota.js';
 import { carregarEquipeNoEnv, listarUsuarios, lerUsuario, salvarUsuario, importarUsuarios, paginaEquipe, paginaUsuarioForm, paginaEquipeImportar } from './equipe.js';
@@ -88,9 +89,17 @@ export default {
     const { pathname } = url;
     try {
       if (pathname === '/health') return json({
-        ok: true, service: 'ecobraz-portal', version: 28,
+        ok: true, service: 'ecobraz-portal', version: 29,
         // Nº de usuários no cadastro de equipe (KV) — só a contagem, nunca dados.
         equipeCadastrada: await (async () => { try { return (await listarUsuarios(env)).length; } catch { return -1; } })(),
+        // Integridade do índice de OS (só contagem/tamanho — nunca dados).
+        osIndex: await (async () => {
+          try {
+            const raw = env.PORTAL_KV ? await env.PORTAL_KV.get('os:index') : null;
+            if (!raw) return { ok: true, qtd: 0, bytes: 0 };
+            return { ok: true, qtd: JSON.parse(raw).length, bytes: raw.length };
+          } catch (e) { return { ok: false, erro: String(e && e.message || e).slice(0, 80) }; }
+        })(),
         // Só presença (true/false) — NUNCA os valores. Ajuda a confirmar a
         // configuração pelo navegador sem expor segredo nenhum.
         config: {
@@ -305,7 +314,7 @@ export default {
                     await salvarCredito(env, cred);
                     console.log('adote_credito', { cliente: ped.clienteId, saldo: cred.saldoKg, evento: ped.evento || 'compra' });
                   }
-                } catch (error) { console.error('adote_credito_falhou', safeError(error)); }
+                } catch (error) { console.error('adote_credito_falhou', safeError(error)); await registrarFalha(env, 'compra-adote-credito', safeError(error), { pedido: pg.externalReference }); }
               } else if (ped.produto === 'carbono') {
                 // Inventário de carbono pago: marca validade anual e, se Contratado, abre
                 // tarefa pra Villanova coletar os dados e executar (com o e-mail do pagador).
@@ -316,7 +325,7 @@ export default {
                   if (ped.nivel === 'contratado') {
                     await ingestLead(env, { email: pg.payerEmail || '', company: '', material_category: 'Carbono — Contratado (PAGO)', material_description: `Cliente CONTRATOU e PAGOU o inventário nível Contratado. A Villanova coleta os dados e faz o inventário.\nFaturamento: ${ped.faixa}\nValor: R$ ${ped.valor}\nPedido: ${pg.externalReference}\nE-mail do pagador: ${pg.payerEmail || '(não informado)'}`, source: 'carbono-contratado-pago' });
                   }
-                } catch (error) { console.error('carbono_pago_falhou', safeError(error)); }
+                } catch (error) { console.error('carbono_pago_falhou', safeError(error)); await registrarFalha(env, 'compra-carbono', safeError(error), { pedido: pg.externalReference }); }
               } else if (ped.produto === 'esg') {
                 // Relatório de ESG pago: valida por 1 ano e abre tarefa para a Villanova produzir.
                 try {
@@ -325,7 +334,23 @@ export default {
                   await env.PORTAL_KV.put(chave, JSON.stringify(ped), { expirationTtl: 400 * 86400 });
                   const rel = relatorioESG(ped.relatorio || '');
                   await ingestLead(env, { email: pg.payerEmail || ped.email || '', company: ped.clienteNome || '', material_category: `ESG — ${rel ? rel.nome : 'relatório'} (PAGO)`, material_description: `Cliente CONTRATOU e PAGOU um relatório de ESG. A Villanova ESG produz a partir dos dados do sistema.\nRelatório: ${rel ? rel.nome : ped.relatorio}\nFaturamento: ${ped.faixa}\nValor: R$ ${ped.valor}\nPedido: ${pg.externalReference}\nE-mail do pagador: ${pg.payerEmail || '(não informado)'}`, source: 'esg-pago' });
-                } catch (error) { console.error('esg_pago_falhou', safeError(error)); }
+                } catch (error) { console.error('esg_pago_falhou', safeError(error)); await registrarFalha(env, 'compra-esg', safeError(error), { pedido: pg.externalReference }); }
+              } else if (ped.produto === 'coleta') {
+                // Taxa de coleta (expressa / pequeno volume) paga → LIBERAÇÃO AUTOMÁTICA:
+                // lead sai de "aguardando pagamento", ganha o selo pago e o cliente
+                // recebe a confirmação por e-mail. Tudo sem ninguém precisar mexer.
+                try {
+                  const lead = await lerLead(env, ped.leadId);
+                  if (lead) {
+                    lead.cobranca = { ...(lead.cobranca || {}), status: 'pago', paymentId: pg.id, pagoEm: nowS() };
+                    if (lead.status === 'aguardando-pagamento') lead.status = 'novo';
+                    lead.descricao = `💳 TAXA PAGA (R$ ${ped.valor})${ped.expressa ? ' — ⚡ EXPRESSA: COLETAR EM ATÉ 24H' : ''} ✔ LIBERADA\n\n${lead.descricao}`;
+                    await salvarLead(env, lead);
+                    await atualizarIndexLead(env, ped.leadId, { pagamento: 'pago', status: lead.status, prioridade: ped.expressa ? 'alta' : (lead.prioridade || '') });
+                  }
+                  if (ped.clienteEmail) { try { await enviarEmailColetaPaga(ped, env); } catch (error) { console.error('email_coleta_paga', safeError(error)); } }
+                  console.log('coleta_taxa_paga', { lead: ped.leadId, valor: pg.valor, expressa: !!ped.expressa });
+                } catch (error) { console.error('coleta_paga_falhou', safeError(error)); await registrarFalha(env, 'compra-coleta-liberacao', safeError(error), { lead: ped.leadId }); }
               } else {
                 try { await enviarEmailNF(ped, pg, env); } catch (error) { console.error('nf_email_falhou', safeError(error)); }
               }
@@ -333,6 +358,10 @@ export default {
           }
         }
         return json({ ok: true }); // sempre 200 para o MP não reenviar sem parar
+      }
+      // O navegador do cliente reporta erros de tela aqui (monitor de falhas).
+      if (pathname === '/api/monitor/erro' && request.method === 'POST') {
+        return await receberErroCliente(request, env, null);
       }
       // Status do pedido (a página consulta para saber se já foi pago).
       if (pathname === '/api/carbono/pedido' && request.method === 'GET') {
@@ -389,6 +418,8 @@ export default {
       env = garantirAcessosFixos(env);
 
       if (pathname === '/' && request.method === 'GET') return await telaInicial(request, env);
+      // /painel = mesmo painel do cliente (vários links e retornos apontam para cá).
+      if (pathname === '/painel' && request.method === 'GET') return await telaInicial(request, env);
       if (pathname === '/entrar' && request.method === 'GET') return await entrarComToken(request, env, url);
       if (pathname === '/api/auth/solicitar' && request.method === 'POST') return await solicitarLink(request, env);
       // LOGIN UNIFICADO (tela única na raiz): descobre o papel do e-mail — equipe
@@ -806,6 +837,11 @@ export default {
         if (!escritorio && !diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);
         let b; try { b = await request.json(); } catch { b = {}; }
         return json(await backfillEgoi(env, b && b.desde, 40));
+      }
+      // Monitor de falhas: as últimas falhas do sistema/da tela do cliente.
+      if (pathname === '/api/monitor/falhas' && request.method === 'GET') {
+        if (!escritorio && !diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        return json({ ok: true, falhas: await listarFalhas(env, url.searchParams.get('n')) });
       }
       if (pathname === '/cadastro/novo' && request.method === 'GET') {
         if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
@@ -1609,6 +1645,9 @@ export default {
       return json({ ok: false, error: 'not_found' }, 404);
     } catch (error) {
       console.error('erro_inesperado', safeError(error));
+      // Monitor de falhas: guarda a rota + o erro REAL (com um pedaço do stack)
+      // no D1, para diagnosticar sem depender do cliente reclamar.
+      try { await registrarFalha(env, `rota:${url.pathname}`, `${safeError(error).name}: ${safeError(error).message} | ${String(error?.stack || '').slice(0, 500)}`); } catch { /* nunca piora o erro */ }
       return json({ ok: false, error: 'erro_interno' }, 500);
     }
   },
@@ -1620,7 +1659,7 @@ export default {
 async function telaInicial(request, env) {
   const sessao = await lerSessao(request, env);
   if (!sessao) return html(paginaLogin(googleConfigurado(env)));
-  return html(paginaPainel({ nome: sessao.nome, email: sessao.email, dataFim: sessao.dataFim || '' }));
+  return html(paginaPainel({ nome: sessao.nome, email: sessao.email, dataFim: sessao.dataFim || '', whatsapp: env.WHATSAPP_COMERCIAL || '' }));
 }
 
 // Tela "Entrar como…" — quando o e-mail tem mais de um acesso (os cookies de
@@ -2464,6 +2503,11 @@ async function consultaCep(request, env) {
 // Solicitação de coleta: vira um LEAD na nossa base (a Débora vê em /leads e
 // converte em cliente/coleta). Sem Ploomes. As fotos enviadas vão para o R2 e
 // ficam referenciadas no lead. O endereço de coleta é obrigatório.
+// TRIAGEM (matriz Marcio/Debora 2026-07-29): barrado e "só perigosos" são
+// recusados aqui mesmo, com explicação honesta; hospitalar vira orçamento;
+// grande volume/alto valor vira PRIORITÁRIA (sem cobrança); no resto vale a
+// regra da taxa: grátis com 20+ itens (1–7 dias úteis); menos de 20 itens OU
+// expressa (até 24h) = R$ 55, cobrança na hora e liberação automática no pago.
 async function solicitarOS(request, sessao, env) {
   let input;
   try { input = await request.json(); } catch { return json({ ok: false, error: 'json_invalido' }, 400); }
@@ -2474,12 +2518,27 @@ async function solicitarOS(request, sessao, env) {
   const email = g('email', 120), responsavel = g('responsavel', 120), equipamentos = g('equipamentos', 4000);
   const cep = g('cep', 12), logradouro = g('logradouro', 200), numero = g('numero', 20);
   const bairro = g('bairro', 120), cidade = g('cidade', 120), complemento = g('complemento', 160), uf = g('uf', 2);
+  const itens = Math.max(0, Math.min(100000, Number(g('itens', 8).replace(/\D/g, '')) || 0));
+  const expressa = input?.expressa === true || input?.expressa === 'sim' || input?.modalidade === 'expressa';
+  const triagem = classificarPedido(`${equipamentos} ${itens ? itens + ' itens' : ''}`);
+  if (triagem.tipo === 'barrado') {
+    return json({ ok: false, error: 'material_nao_coletado', tipo: 'barrado', itens: triagem.itens, message: `Infelizmente não coletamos: ${triagem.itens.join(', ')}. Se o seu descarte também inclui equipamentos eletrônicos, descreva só os equipamentos e envie de novo — ou fale com a nossa equipe.` }, 422);
+  }
+  if (triagem.tipo === 'so_perigosos') {
+    return json({ ok: false, error: 'so_itens_perigosos', tipo: 'so_perigosos', itens: triagem.itens, message: `Itens como ${triagem.itens.join(' · ')} têm custo por unidade e só são coletados JUNTO com outros equipamentos eletrônicos — não fazemos coleta só deles. Inclua os equipamentos na lista ou fale com a nossa equipe.` }, 422);
+  }
+  const minGratis = Math.max(1, Number(env.COLETA_ITENS_GRATIS) || 20);
+  const valorTaxa = Math.max(1, Number(env.TAXA_COLETA_REAIS) || 55);
+  const poucoVolume = itens > 0 && itens < minGratis;
+  const cobrar = triagem.tipo === 'normal' && (expressa || poucoVolume);
   const descricao = [
     'Solicitação de coleta pelo Portal do Cliente.',
     cnpj ? `CNPJ/CPF: ${cnpj}` : '',
     `Endereço de coleta: ${endereco}`,
     (cep || logradouro) ? `  (CEP ${cep} · ${logradouro}${numero ? ', ' + numero : ''}${complemento ? ' · ' + complemento : ''} · ${bairro} · ${cidade}${uf ? '/' + uf : ''})` : '',
     responsavel ? `Responsável: ${responsavel}` : '',
+    `Quantidade de itens: ${itens || '(não informada)'}`,
+    `Modalidade: ${expressa ? '⚡ EXPRESSA (até 24h)' : 'tradicional (1 a 7 dias úteis)'}`,
     `Equipamentos:\n${equipamentos || '(não informado)'}`,
   ].filter(Boolean).join('\n');
   const r = await ingestLead(env, {
@@ -2487,7 +2546,7 @@ async function solicitarOS(request, sessao, env) {
     email: email || sessao.email || '', phone: telefone,
     material_category: 'Solicitação de coleta (portal)', material_description: descricao,
     postal_code: cep, city: cidade, state: uf, profile: cnpj ? 'empresa' : 'pessoa_fisica',
-    source: 'portal-coleta',
+    source: 'portal-coleta', volume: itens ? `${itens} itens` : '',
   });
   if (!r || !r.ok) { console.error('solicitar_os_erro', r && r.error); return json({ ok: false, error: 'nao_foi_possivel' }, 502); }
   // Fotos → R2 (referenciadas no lead). Cada foto já vem reduzida (JPEG) do navegador.
@@ -2509,7 +2568,50 @@ async function solicitarOS(request, sessao, env) {
     }
     if (refs.length) { try { const lead = await lerLead(env, r.id); if (lead) { lead.fotos = refs; await salvarLead(env, lead); } } catch (error) { console.error('foto_ref', safeError(error)); } }
   }
-  return json({ ok: true, pedido_id: r.id, fotos: fotosOk, message: 'Pronto! Sua solicitação de coleta foi enviada. Nossa equipe vai entrar em contato para agendar.' }, 201);
+  // Respostas por destino da triagem (sem cobrança para orçamento e prioritária).
+  if (triagem.tipo === 'orcamento') {
+    return json({ ok: true, pedido_id: r.id, tipo: 'orcamento', fotos: fotosOk, message: 'Recebemos! Esse tipo de material tem categoria à parte e precisa de orçamento: nossa equipe vai avaliar e entrar em contato com a proposta antes de qualquer coleta.' }, 201);
+  }
+  if (triagem.tipo === 'prioritaria') {
+    return json({ ok: true, pedido_id: r.id, tipo: 'prioritaria', fotos: fotosOk, message: '🌟 Recebemos! Pelo volume/valor informado, sua coleta entra como PRIORITÁRIA: nossa equipe entra em contato com prioridade para agendar a coleta de um dia para o outro — sem custo.' }, 201);
+  }
+  // Taxa de R$ 55: expressa (até 24h) OU menos de 20 itens. Nunca soma as duas.
+  let pagamento = null;
+  if (cobrar) {
+    const motivo = expressa && poucoVolume ? `coleta expressa + menos de ${minGratis} itens` : (expressa ? 'coleta expressa (até 24h)' : `menos de ${minGratis} itens`);
+    const ref = `coleta-${r.id}`;
+    try {
+      const base = String(env.PORTAL_BASE_URL || env.PORTAL_URL || new URL(request.url).origin).replace(/\/+$/, '');
+      const pref = await criarPreferencia({ valor: valorTaxa, descricao: expressa ? 'Coleta Expressa Ecobraz — até 24h' : 'Taxa de coleta Ecobraz — pequeno volume', externalReference: ref, baseUrl: base, backPath: '/painel' }, env);
+      if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${ref}`, JSON.stringify({ produto: 'coleta', leadId: r.id, expressa, itens, valor: valorTaxa, status: 'pendente', clienteEmail: email || sessao.email || '', clienteNome: responsavel || sessao.nome || '', criadoEm: nowS() }), { expirationTtl: 30 * 86400 });
+      const lead = await lerLead(env, r.id);
+      if (lead) {
+        lead.cobranca = { valor: valorTaxa, motivo, ref, link: pref.initPoint, status: 'aguardando', criadoEm: nowS() };
+        lead.expressa = expressa;
+        // Menos de 20 itens: só agenda depois de pago. Expressa com 20+: se não
+        // pagar, a coleta segue valendo como tradicional gratuita.
+        if (poucoVolume) lead.status = 'aguardando-pagamento';
+        lead.descricao = `💳 TAXA DE R$ ${valorTaxa} (${motivo}) — AGUARDANDO PAGAMENTO. ${poucoVolume ? 'SÓ AGENDAR DEPOIS DE PAGO.' : 'Se não pagar, tratar como tradicional gratuita (1–7 dias úteis).'}\n\n${lead.descricao}`;
+        await salvarLead(env, lead);
+        await atualizarIndexLead(env, r.id, { pagamento: 'aguardando', status: lead.status });
+      }
+      pagamento = { valor: valorTaxa, link: pref.initPoint, motivo };
+    } catch (error) {
+      // Mercado Pago fora do ar / sem chave: NUNCA cobra às cegas nem trava o
+      // pedido — registra para a equipe combinar a cobrança manualmente.
+      console.error('coleta_taxa_mp', safeError(error));
+      await registrarFalha(env, 'compra-taxa-coleta', safeError(error), { lead: r.id, expressa, itens });
+      try { const lead = await lerLead(env, r.id); if (lead) { lead.cobranca = { valor: valorTaxa, motivo, ref, status: 'cobrar-manual' }; lead.descricao = `💳 TAXA DE R$ ${valorTaxa} (${motivo}) — o link de pagamento NÃO pôde ser gerado; combinar a cobrança com o cliente.\n\n${lead.descricao}`; await salvarLead(env, lead); await atualizarIndexLead(env, r.id, { pagamento: 'aguardando' }); } } catch { /* segue */ }
+      pagamento = { valor: valorTaxa, motivo, indisponivel: true };
+    }
+  }
+  if (pagamento && pagamento.link) {
+    return json({ ok: true, pedido_id: r.id, tipo: expressa ? 'expressa' : 'normal', fotos: fotosOk, pagamento, message: `Quase lá! Para confirmar sua coleta ${expressa ? 'EXPRESSA (até 24h)' : ''} falta o pagamento da taxa de R$ ${valorTaxa} (${pagamento.motivo}). A liberação é automática assim que o pagamento é aprovado.` }, 201);
+  }
+  if (pagamento) {
+    return json({ ok: true, pedido_id: r.id, tipo: expressa ? 'expressa' : 'normal', fotos: fotosOk, pagamento, message: `Recebemos sua solicitação! Há uma taxa de R$ ${valorTaxa} (${pagamento.motivo}) e nossa equipe vai combinar o pagamento com você — o link automático não pôde ser gerado agora.` }, 201);
+  }
+  return json({ ok: true, pedido_id: r.id, tipo: 'normal', fotos: fotosOk, message: 'Pronto! Sua solicitação de coleta foi enviada — coleta gratuita com prazo de 1 a 7 dias úteis. Nossa equipe vai entrar em contato para agendar.' }, 201);
 }
 
 function rotuloStatus(statusId) {
@@ -2556,6 +2658,21 @@ async function enviarEmailJaCliente(cliente, link, env) {
     return;
   }
   await enviarEmailLogin(cliente, link, env); // reserva (e-Goi): pelo menos o link chega
+}
+
+// Confirmação automática da taxa de coleta paga (expressa / pequeno volume).
+async function enviarEmailColetaPaga(ped, env) {
+  if (!env.RESEND_API_KEY || !ped.clienteEmail) return;
+  const primeiro = String(ped.clienteNome || '').split(/\s+/)[0] || '';
+  const expressa = !!ped.expressa;
+  const assunto = expressa ? '⚡ Pagamento aprovado — sua coleta expressa está confirmada' : 'Pagamento aprovado — sua coleta está confirmada';
+  const prazo = expressa ? 'em até 24 horas' : 'no prazo de 1 a 7 dias úteis';
+  const texto = `Olá${primeiro ? ' ' + primeiro : ''}!\n\nRecebemos o pagamento da taxa de R$ ${ped.valor} e sua coleta está CONFIRMADA — nossa equipe fará a coleta ${prazo}.\n\nQualquer dúvida, é só responder este e-mail ou falar com a gente pelo portal.\n\nEcobraz · sistema.ecobraz.org`;
+  const htmlCorpo = `<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;color:#10262B"><div style="background:#00333B;border-radius:14px 14px 0 0;padding:18px 22px"><span style="color:#fff;font-size:18px;font-weight:800">ecobraz</span><span style="color:#92C430;font-size:10px;font-weight:800;letter-spacing:.14em;margin-left:8px">EMIGRE</span></div><div style="border:1px solid #E4EBE9;border-top:none;border-radius:0 0 14px 14px;padding:24px 22px"><h1 style="font-size:19px;margin:0 0 10px">${expressa ? '⚡ Coleta expressa confirmada!' : 'Coleta confirmada!'}</h1><p style="font-size:14px;line-height:1.6;color:#4F6469">Recebemos o pagamento da taxa de <b>R$ ${ped.valor}</b>. Sua coleta será feita <b>${prazo}</b>. Acompanhe tudo pelo portal.</p><a href="https://sistema.ecobraz.org/painel" style="display:block;background:#92C430;color:#10262B;text-decoration:none;border-radius:10px;padding:14px;text-align:center;font-weight:800;font-size:15px;margin:16px 0">Abrir o portal →</a></div></div>`;
+  const payload = { from: env.RESEND_FROM || 'Portal Ecobraz <acesso@ecobraz.org.br>', to: [ped.clienteEmail], subject: assunto, html: htmlCorpo, text: texto };
+  if (env.RESEND_REPLY_TO) payload.reply_to = env.RESEND_REPLY_TO;
+  const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${env.RESEND_API_KEY}` }, body: JSON.stringify(payload) });
+  if (!r.ok) throw new Error('resend_coleta_paga_' + r.status);
 }
 
 async function enviarEmailLogin(cliente, link, env) {
