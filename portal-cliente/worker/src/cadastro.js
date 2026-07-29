@@ -456,7 +456,11 @@ export function paginaManutencao(user) {
     <div style="font-size:15px;font-weight:800;color:#10262B">🏛️ MTR — conexão com o órgão (SIGOR/SINIR)</div>
     <p style="font-size:13px;color:#4F6469;line-height:1.5;margin:8px 0 12px">Testa a conexão com o sistema oficial de MTR usando as credenciais guardadas no cofre. <b>Só leitura</b> — nada é emitido. O resultado fica gravado para auditoria.</p>
     <button class="btn btn-d" id="bMtr" onclick="sondarMTR()">Testar conexão MTR agora</button>
-    <button class="btn" id="bMtrC" onclick="consultarMTR()" style="margin-left:8px">Buscar MTRs no órgão (teste)</button>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
+      <input id="mtrNum" placeholder="nº da MTR (ex.: 25012345678)" maxlength="40" style="max-width:230px">
+      <button class="btn" id="bMtrC" onclick="consultarMTR()">Consultar MTR por número</button>
+    </div>
+    <div style="font-size:11px;color:#9aa7a4;margin-top:4px">A API do órgão consulta por número (não tem “listar tudo”). Teste com uma MTR real que a Debora tenha em mãos.</div>
     <div id="mMtr" style="font-size:12.5px;color:#4F6469;margin-top:10px"></div>
   </div>
   <div class="card" style="margin-top:14px">
@@ -483,9 +487,11 @@ async function sondarMTR(){
 }
 async function consultarMTR(){
   var b=document.getElementById('bMtrC'), m=document.getElementById('mMtr');
-  b.disabled=true; m.textContent='Buscando MTRs no órgão… (pode levar até 1 minuto)';
+  var num=(document.getElementById('mtrNum')||{}).value||'';
+  if(!num.trim()){ m.innerHTML='⚠️ Digite o número de uma MTR para consultar.'; return; }
+  b.disabled=true; m.textContent='Consultando a MTR no órgão…';
   try{
-    var r=await fetch('/api/mtr/consultar',{method:'POST'});
+    var r=await fetch('/api/mtr/consultar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({numero:num})});
     var d=await r.json();
     m.innerHTML=(d.ok?'✅ ':'⛔ ')+escTxt(d.message||'Sem resposta.');
   }catch(_){ m.textContent='Sem conexão com o sistema. Tente de novo.'; }

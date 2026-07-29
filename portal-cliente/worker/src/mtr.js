@@ -37,11 +37,13 @@ const SISTEMAS = (env) => {
   }
   if (env.SINIR_CNPJ || env.SINIR_CPF || env.SINIR_SENHA) {
     out.push({
-      nome: 'SINIR (nacional)', base: String(env.SINIR_BASE || 'https://mtr.sinir.gov.br').replace(/\/+$/, ''), tipo: 'sinir',
+      // DESCOBERTA (2026-07-29, pacote oficial de tipos v1.15): o host da API do
+      // SINIR é admin.sinir.gov.br (não mtr.sinir.gov.br, que é só o site).
+      nome: 'SINIR (nacional)', base: String(env.SINIR_BASE || 'https://admin.sinir.gov.br').replace(/\/+$/, ''), tipo: 'sinir',
       email: String(env.SINIR_EMAIL || '').trim(), cnpj: String(env.SINIR_CNPJ || '').replace(/\D/g, ''),
       cpf: String(env.SINIR_CPF || '').replace(/\D/g, ''), senha: String(env.SINIR_SENHA || ''),
       unidade: String(env.SINIR_UNIDADE || '').replace(/\D/g, ''),
-      caminhos: ['/apiws/rest/gettoken', '/controller/rest/gettoken'],
+      caminhos: ['/apiws/rest/gettoken'],
     });
   }
   return out;
@@ -70,10 +72,11 @@ const CORPOS = (c) => {
   return lista;
 };
 // Consultas INOFENSIVAS (tabelas de domínio) para provar que o token funciona.
+// Nomes oficiais confirmados no pacote de tipos v1.15 (idêntico ao manual).
 const CAMINHOS_CONSULTA = [
   '/apiws/rest/retornaListaClasse',
   '/apiws/rest/retornaListaAcondicionamento',
-  '/apiws/rest/retornaListaUnidadeMedida',
+  '/apiws/rest/retornaListaUnidade',
 ];
 
 function acharToken(corpo) {
@@ -184,54 +187,58 @@ export async function tokenSigor(env, { forcar } = {}) {
   } catch { return null; }
 }
 
-// Candidatos de endpoint para LISTAR manifestos do destinador (a descobrir).
-// Cada item: [método, caminho, corpo?]. Só LEITURA de consulta — nada é emitido.
-const CONSULTA_MTR_CANDIDATOS = (cnpj, di, df) => [
-  ['GET', '/apiws/rest/retornaManifestosPendentes', null],
-  ['GET', '/apiws/rest/manifestosPendentes', null],
-  ['GET', '/apiws/rest/retornaManifestoPendente', null],
-  ['GET', `/apiws/rest/retornaManifestosPorDestinador/${cnpj}`, null],
-  ['POST', '/apiws/rest/retornaManifestosPorPeriodo', { dataInicial: di, dataFinal: df }],
-  ['POST', '/apiws/rest/manifestosPorPeriodo', { dataInicial: di, dataFinal: df, cpfCnpj: cnpj }],
-  ['POST', '/apiws/rest/retornaListaMTRporPeriodo', { dataInicial: di, dataFinal: df }],
-  ['GET', '/apiws/rest/retornaManifestosArmazenamento', null],
-];
-const dataBR = (d) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+// CONSTATAÇÃO (pacote oficial de tipos v1.15): a API do SIGOR/SINIR NÃO tem
+// endpoint de "listar/pescar manifestos". A consulta é sempre POR NÚMERO:
+//   - retornaManifesto/{numero}          → dados do MTR
+//   - retornaManifestoSeuCodigo/{codigo} → por referência própria do gerador
+//   - downloadManifesto/{numero}         → PDF oficial
+// Ou seja: para anexar o MTR do cliente, precisamos do NÚMERO do MTR (o cliente
+// informa, ou a Ecobraz emite via salvarManifestoLote e recebe o número). Não dá
+// para "descobrir" MTRs às cegas — é uma característica da API, não uma limitação
+// nossa. Isso torna o vínculo mais preciso (chave exata, sem casar por CNPJ+data).
+const soDigitos = (s) => String(s || '').replace(/[^0-9A-Za-z-]/g, '').slice(0, 40);
 
-export async function consultarMtrSigor(env) {
+export async function consultarMtrSigor(env, numero) {
   const cfg = SISTEMAS(env).find((s) => s.tipo === 'sigor');
   if (!cfg) return { ok: false, error: 'sem_sigor', message: 'SIGOR não está configurado no cofre.' };
-  const token = await tokenSigor(env, { forcar: true });
+  const num = soDigitos(numero);
+  if (!num) return { ok: false, error: 'sem_numero', message: 'Informe o número da MTR para consultar (a API do órgão consulta por número, não tem listagem).' };
+  const token = await tokenSigor(env);
   if (!token) return { ok: false, error: 'sem_token', message: 'Não consegui autenticar no SIGOR agora. Rode o "Testar conexão MTR" antes.' };
-  // Janela dos últimos 30 dias (a data de "hoje" vem do ambiente do Worker).
-  const hoje = env.__AGORA__ ? new Date(env.__AGORA__) : new Date();
-  const ini = new Date(hoje.getTime() - 30 * 86400e3);
-  const cnpj = cfg.cnpj;
-  const out = { ok: false, achou: null, tentativas: [] };
-  for (const [metodo, caminho, corpo] of CONSULTA_MTR_CANDIDATOS(cnpj, dataBR(ini), dataBR(hoje))) {
-    try {
-      const opts = { method: metodo, headers: { Authorization: token, accept: 'application/json' }, signal: AbortSignal.timeout(15000) };
-      if (corpo) { opts.headers['content-type'] = 'application/json'; opts.body = JSON.stringify(corpo); }
-      const r = await fetch(cfg.base + caminho, opts);
-      const txt = await r.text();
-      const ehJson = txt.trim().startsWith('{') || txt.trim().startsWith('[');
-      const temLista = /"objetoResposta"\s*:\s*\[/.test(txt) || txt.trim().startsWith('[');
-      out.tentativas.push({ metodo, caminho, status: r.status, ehJson, temLista, corpoInicio: semSegredos(txt, cfg, token).slice(0, 180) });
-      if (r.status === 200 && temLista) { out.ok = true; out.achou = { metodo, caminho }; break; }
-    } catch (e) {
-      out.tentativas.push({ metodo, caminho, erro: String(e && e.message || e).slice(0, 80) });
+  const out = { ok: false, numero: num };
+  try {
+    const r = await fetch(`${cfg.base}/apiws/rest/retornaManifesto/${encodeURIComponent(num)}`, { headers: { Authorization: token, accept: 'application/json' }, signal: AbortSignal.timeout(15000) });
+    const txt = await r.text();
+    out.status = r.status;
+    let dado = null; try { dado = JSON.parse(txt); } catch { /* não-JSON */ }
+    const obj = dado && dado.objetoResposta;
+    if (r.status === 200 && obj && !dado.erro) {
+      out.ok = true;
+      // Resumo SEGURO (sem despejar o objeto inteiro): campos úteis para a OS.
+      out.resumo = {
+        numero: obj.manCodigo || obj.manNumeroManifesto || num,
+        situacao: (obj.situacaoManifesto && (obj.situacaoManifesto.simDescricao || obj.situacaoManifesto.simCodigo)) || obj.manSituacao || '',
+        gerador: (obj.gerador && (obj.gerador.parRazaoSocial || obj.gerador.parNome)) || obj.geradorNome || '',
+        geradorCnpj: (obj.gerador && (obj.gerador.parCpfCnpj)) || obj.geradorCnpj || '',
+        emissao: obj.manData || obj.manDataExpedicao || '',
+        cdf: obj.cdfCodigo || '',
+        qtdResiduos: Array.isArray(obj.listaManifestoResiduo) ? obj.listaManifestoResiduo.length : (Array.isArray(obj.residuos) ? obj.residuos.length : null),
+      };
+    } else {
+      out.mensagem = (dado && (dado.mensagem || dado.restResponseMensagem)) || `HTTP ${r.status}`;
     }
-  }
+    out.corpoInicio = semSegredos(txt, cfg, token).slice(0, 200);
+  } catch (e) { out.erro = String(e && e.message || e).slice(0, 100); }
   // Evidência no D1 — token/segredos já vêm mascarados.
   try {
     if (env.DB_PLOOMES) {
       await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS diagnosticos (id INTEGER PRIMARY KEY AUTOINCREMENT, tipo TEXT, criado_em TEXT, dados TEXT)').run();
       await env.DB_PLOOMES.prepare('INSERT INTO diagnosticos (tipo, criado_em, dados) VALUES (?1, ?2, ?3)')
-        .bind('mtr-consulta', new Date().toISOString(), JSON.stringify(out).slice(0, 60000)).run();
+        .bind('mtr-consulta', new Date().toISOString(), JSON.stringify(out).slice(0, 20000)).run();
     }
   } catch { /* best-effort */ }
   out.message = out.ok
-    ? `✅ Encontrei o endereço de consulta de MTRs (${out.achou.caminho}). Vou montar o anexo automático nas OS.`
-    : 'Ainda não achei o endereço certo de listagem — as respostas ficaram gravadas para eu analisar e ajustar.';
+    ? `✅ MTR ${out.resumo.numero} encontrada no órgão — gerador: ${out.resumo.gerador || '(n/d)'} · situação: ${out.resumo.situacao || '(n/d)'}. A leitura por número funciona.`
+    : `Não consegui ler a MTR ${num}: ${out.mensagem || out.erro || 'sem resposta'}.`;
   return out;
 }

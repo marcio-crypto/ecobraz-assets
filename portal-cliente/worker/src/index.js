@@ -864,10 +864,11 @@ export default {
         if (!escritorio && !diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);
         return json(await sondaMTR(env));
       }
-      // Etapa 1: descobre/roda a CONSULTA de MTRs no SIGOR (só leitura).
+      // Etapa 1: CONSULTA de uma MTR por número no SIGOR (só leitura).
       if (pathname === '/api/mtr/consultar' && request.method === 'POST') {
         if (!escritorio && !diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);
-        return json(await consultarMtrSigor(env));
+        let b; try { b = await request.json(); } catch { b = {}; }
+        return json(await consultarMtrSigor(env, b && b.numero));
       }
       // Prova de gravação: 1 escrita de teste no KV para saber NA HORA se o
       // limite diário está bloqueando (usado após o upgrade do plano).
