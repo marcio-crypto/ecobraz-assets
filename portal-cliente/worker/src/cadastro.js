@@ -822,12 +822,38 @@ export async function salvarLead(env, rec) {
   return rec;
 }
 // Recebe um lead do site (worker ecobraz-coletas) e guarda na nossa base.
+// FILTRO DE MATERIAIS (Debora, 2026-07-29): o telefone filtrava cliente ruim;
+// no autoatendimento o servidor detecta e MARCA o pedido para análise — nada
+// vira coleta sem a equipe ver o alerta. Listas em minúsculas, sem acento.
+const MATERIAIS_RECUSADOS = [
+  ['pilha', 'pilhas'], ['bateria moeda', 'baterias moeda'], ['lampada', 'lâmpadas'], ['oleo', 'óleo'],
+  ['toner', 'toner'], ['cartucho', 'cartucho de tinta'], ['entulho', 'entulho'],
+  ['toxic', 'contaminação tóxica'], ['biologic', 'contaminação biológica'], ['hospitalar', 'resíduo hospitalar'],
+  ['radioativ', 'material radioativo'], ['amianto', 'amianto'], ['agrotoxic', 'agrotóxico'],
+];
+const MATERIAIS_COM_CUSTO = [['tv de tubo', 'TV de tubo'], ['crt', 'monitor/TV CRT'], ['monitor de tubo', 'monitor de tubo']];
+const semAcentoMin = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+export function analisarMateriais(texto) {
+  const t = ' ' + semAcentoMin(texto) + ' ';
+  const acha = (lista) => [...new Set(lista.filter(([k]) => t.includes(k)).map(([, rotulo]) => rotulo))];
+  return { recusados: acha(MATERIAIS_RECUSADOS), comCusto: acha(MATERIAIS_COM_CUSTO) };
+}
+
 export async function ingestLead(env, body) {
   const b = body || {};
   const email = String(b.email || '').trim().toLowerCase();
   const nome = String(b.name || b.nome || '').trim();
   const empresa = String(b.company || b.empresa || '').trim();
   if (!email && !nome && !empresa) return { ok: false, error: 'dados' };
+  // Detector de materiais: se o texto citar item recusado/com custo, o pedido
+  // chega à equipe com o ALERTA no topo da descrição — impossível não ver.
+  const filtro = analisarMateriais(`${b.material_category || b.material || ''} ${b.material_description || b.descricao || ''}`);
+  if (filtro.recusados.length || filtro.comCusto.length) {
+    const avisos = [];
+    if (filtro.recusados.length) avisos.push(`NÃO COLETAMOS: ${filtro.recusados.join(', ')}`);
+    if (filtro.comCusto.length) avisos.push(`COM TAXA: ${filtro.comCusto.join(', ')}`);
+    b.material_description = `⚠️⚠️ ANÁLISE OBRIGATÓRIA ANTES DE GERAR COLETA — ${avisos.join(' · ')} ⚠️⚠️\n\n${String(b.material_description || b.descricao || '')}`;
+  }
   const id = 'lead_' + (crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '').slice(0, 12) : Math.random().toString(36).slice(2, 14));
   const rec = {
     id, status: 'novo', perfil: String(b.profile || b.perfil || ''),
