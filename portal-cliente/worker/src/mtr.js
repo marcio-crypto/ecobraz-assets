@@ -56,16 +56,16 @@ const CORPOS = (c) => {
   const lista = [];
   const doc = c.cpf || c.email; // a API usa o CPF do usuário
   const uniNum = /^\d+$/.test(c.unidade) ? Number(c.unidade) : c.unidade;
+  // Campo confirmado pela própria API (D1 id 33): "cpfCnpj deve ser informado".
   if (c.tipo === 'sigor') {
-    lista.push({ cpf: doc, senha: c.senha, cnpj: c.cnpj, unidade: c.unidade });
+    lista.push({ cpfCnpj: doc, senha: c.senha, unidade: uniNum });
     lista.push({ cpfCnpj: doc, senha: c.senha, unidade: c.unidade });
-    lista.push({ cpf: doc, senha: c.senha, cnpj: c.cnpj, unidade: uniNum });
-    lista.push({ cpf: doc, senha: c.senha, unidade: c.unidade });
-    lista.push({ cpfCnpj: doc, senha: c.senha, cnpj: c.cnpj, unidade: c.unidade });
+    lista.push({ cpfCnpj: doc, senha: c.senha, cnpj: c.cnpj, unidade: uniNum });
+    lista.push({ cpfCnpj: c.cnpj, senha: c.senha, unidade: uniNum });
   } else {
+    lista.push({ cpfCnpj: doc, senha: c.senha, unidade: uniNum });
     lista.push({ cpf: doc, senha: c.senha, cnpj: c.cnpj, unidade: c.unidade });
-    lista.push({ cpf: doc, senha: c.senha, cnpj: c.cnpj, unidade: uniNum });
-    lista.push({ cpfCnpj: doc, senha: c.senha, unidade: c.unidade });
+    lista.push({ cpfCnpj: doc, senha: c.senha, cnpj: c.cnpj, unidade: uniNum });
   }
   return lista;
 };
@@ -113,9 +113,13 @@ export async function sondaMTR(env) {
           const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', accept: 'application/json' }, body: JSON.stringify(corpo), signal: AbortSignal.timeout(20000) });
           const txt = await r.text();
           const t = acharToken(txt);
-          reg.tentativas.push({ url: caminho, campos: Object.keys(corpo).join(','), status: r.status, corpoInicio: semSegredos(txt, cfg, t).slice(0, 140), temToken: !!t });
-          if (r.status === 200 && t) { token = t; reg.autenticou = true; reg.tokenMascarado = mascara(t); }
-          if (r.status === 404 || r.status === 405) break; // caminho errado — tenta o próximo caminho, não os outros corpos
+          reg.tentativas.push({ url: caminho, campos: Object.keys(corpo).join(','), status: r.status, corpoInicio: semSegredos(txt, cfg, t).slice(0, 160), temToken: !!t });
+          if (t) { token = t; reg.autenticou = true; reg.tokenMascarado = mascara(t); } // esta API pode devolver token com status != 200
+          // A API da CETESB responde erro de campo com status 404 MAS corpo JSON.
+          // Só desistimos deste caminho quando a resposta é do servidor web (HTML),
+          // não da aplicação (JSON) — senão pularíamos o formato certo cedo demais.
+          const ehRespostaApp = txt.trim().startsWith('{') || txt.trim().startsWith('[');
+          if ((r.status === 404 || r.status === 405) && !ehRespostaApp) break;
         } catch (e) {
           reg.tentativas.push({ url: caminho, campos: Object.keys(corpo).join(','), erro: String(e && e.message || e).slice(0, 80) });
         }
