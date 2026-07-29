@@ -122,7 +122,7 @@ export async function metodologiaVigente(env) {
   const homolog = await lerFatoresHomologados(env);
   const fatores = METODOLOGIA.fatores.map((f) => {
     const h = homolog[f.id];
-    return (h && h.valor != null) ? { ...f, valor: Number(h.valor), status: 'validado', homologadoPor: h.por || '', homologadoEm: h.em || '' } : { ...f };
+    return (h && h.valor != null) ? { ...f, valor: Number(h.valor), status: 'validado', homologadoPor: h.por || '', homologadoEm: h.em || '', notaRT: h.nota || '' } : { ...f };
   });
   const ok = await versaoValidada(env);
   return { ...METODOLOGIA, status: ok ? 'validado' : METODOLOGIA.status, fatores, _homologados: homolog };
@@ -184,7 +184,7 @@ export async function paginaMetodologia(env, validacao) {
       <td style="padding:11px 12px;border-top:1px solid #EDF1F0;font-size:13px;color:#10262B;font-weight:600;">${esc(f.material)}</td>
       <td style="padding:11px 12px;border-top:1px solid #EDF1F0;font-size:13px;color:#4F6469;">${f.valor == null ? '<span style="color:#9aa7a4;">—</span>' : esc(f.valor)}</td>
       <td style="padding:11px 12px;border-top:1px solid #EDF1F0;font-size:12px;color:#5B6570;">${esc(f.unidade)}</td>
-      <td style="padding:11px 12px;border-top:1px solid #EDF1F0;font-size:12px;color:#5B6570;">${esc(f.fonte)}${f.versaoFonte ? ` <span style="color:#9aa7a4;">(${esc(f.versaoFonte)})</span>` : ''}${f.cenarioBase ? `<div style="font-size:10.5px;color:#9aa7a4;margin-top:2px;">Cenário-base: ${esc(f.cenarioBase)}</div>` : ''}</td>
+      <td style="padding:11px 12px;border-top:1px solid #EDF1F0;font-size:12px;color:#5B6570;">${esc(f.fonte)}${f.versaoFonte ? ` <span style="color:#9aa7a4;">(${esc(f.versaoFonte)})</span>` : ''}${f.cenarioBase ? `<div style="font-size:10.5px;color:#9aa7a4;margin-top:2px;">Cenário-base: ${esc(f.cenarioBase)}</div>` : ''}${f.notaRT ? `<div style="font-size:10.5px;color:#8A6A16;margin-top:2px;">Nota da RT: “${esc(f.notaRT)}”</div>` : ''}</td>
       <td style="padding:11px 12px;border-top:1px solid #EDF1F0;text-align:right;">${badge(f.status)}</td>
     </tr>`).join('');
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Metodologia de Carbono — Ecobraz</title></head>

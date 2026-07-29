@@ -96,7 +96,7 @@ export async function paginaAreaValidacao(env, validador, url) {
       <td style="${tdF}font-size:13px;font-weight:600;color:#10262B;">${esc(f.material)}<div style="font-size:11px;font-weight:400;color:#8fa39f;margin-top:2px;">${esc(f.fonte)}${f.nota ? ` · ${esc(f.nota)}` : ''}</div></td>
       <td style="${tdF}font-size:12px;color:#5B6570;white-space:nowrap;">${esc(f.unidade)}</td>
       <td style="${tdF}"><input id="fat_${esc(f.id)}" value="${tem ? esc(String(h.valor)) : ''}" inputmode="decimal" placeholder="—" ${jaValidada ? '' : 'disabled'} style="width:110px;border:1px solid #DDE1E6;border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;${jaValidada ? '' : 'background:#F4F6F5;'}"></td>
-      <td style="${tdF}font-size:11.5px;white-space:nowrap;">${tem ? `<span style="color:#1E7A3D;font-weight:800;">✓ homologado</span><div style="color:#8fa39f;">${esc(String(h.em || '').slice(0, 10).split('-').reverse().join('/'))}</div>` : '<span style="color:#8A6A16;font-weight:700;">a homologar</span>'}</td>
+      <td style="${tdF}font-size:11.5px;white-space:nowrap;">${tem ? `<span style="color:#1E7A3D;font-weight:800;">✓ homologado</span><div style="color:#8fa39f;">${esc(String(h.em || '').slice(0, 10).split('-').reverse().join('/'))}</div>${h.nota ? `<div style="color:#8A6A16;max-width:170px;white-space:normal;line-height:1.4;">“${esc(h.nota)}”</div>` : ''}` : '<span style="color:#8A6A16;font-weight:700;">a homologar</span>'}</td>
       <td style="${tdF}text-align:right;"><button onclick="homologar('${esc(f.id)}')" ${jaValidada ? '' : 'disabled'} style="background:${jaValidada ? '#00333B' : '#cfd8d6'};color:#fff;border:none;border-radius:8px;padding:9px 14px;font-size:12px;font-weight:800;cursor:${jaValidada ? 'pointer' : 'default'};white-space:nowrap;">${tem ? 'Reassinar' : 'Assinar'}</button></td>
     </tr>`;
   }).join('');
@@ -153,7 +153,8 @@ function homologar(id){
   var v=(inp&&inp.value?inp.value:'').trim();
   if(!v){alert('Digite o valor do fator (conforme a fonte) antes de assinar.');return;}
   if(!confirm('Homologar este fator com o valor '+v+'?\\n\\nA assinatura fica registrada no seu nome, com data, na trilha de auditoria.'))return;
-  fetch('/api/validacao/fator',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:id,valor:v})})
+  var nota=prompt('Observação/justificativa da RT (opcional — recomendado quando usar proxy, ex.: "proxy conservador: alumínio lingote, até ACV específica"):')||'';
+  fetch('/api/validacao/fator',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:id,valor:v,nota:nota})})
     .then(function(r){return r.json();})
     .then(function(j){if(j.ok){location.reload();}else{alert(j.error||'Não foi possível homologar.');}})
     .catch(function(){alert('Sem conexão. Tente de novo.');});
@@ -176,9 +177,11 @@ export async function homologarFatorAcao(request, env, validador) {
   const valor = Number(sv);
   if (!Number.isFinite(valor) || valor <= 0 || valor > 1e6) return rj({ ok: false, error: 'Valor inválido — use número positivo (aceita vírgula decimal).' }, 400);
   if (!env.PORTAL_KV) return rj({ ok: false, error: 'Armazenamento indisponível.' }, 500);
+  const nota = String((b && b.nota) || '').slice(0, 240); // justificativa da RT (ex.: proxy conservador até ACV específica)
   const mapa = await lerFatoresHomologados(env);
   mapa[id] = {
     valor,
+    nota,
     unidade: meta.unidade || '',
     fonte: meta.fonte || '',
     por: (validador && validador.email) || '',
