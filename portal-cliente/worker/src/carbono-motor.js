@@ -43,7 +43,12 @@ export function calcularEvitado(materiais, metodologia) {
   // categoria operacional (aco). REGRA DA RT: se 2+ fatores homologados disputam
   // a mesma categoria SEM a proporção em massa da triagem, NÃO se calcula —
   // nada de média escondida. Só calcula com exatamente 1 fator homologado.
-  const candidatosDe = (cat) => (M && M.fatores || []).filter((f) => (f.aplicaA || f.id) === cat);
+  const candidatosDe = (cat) => {
+    const todos = (M && M.fatores) || [];
+    // Subtipo marcado na TRIAGEM (ex.: aco_lata): usa o fator EXATO daquela massa.
+    const exatos = todos.filter((f) => f.id === cat);
+    return exatos.length ? exatos : todos.filter((f) => (f.aplicaA || f.id) === cat);
+  };
   let totalKg = 0, totalEvitadoKg = 0, algumPendente = false, algumSemCategoria = false;
   const linhas = (materiais || []).map((mat) => {
     const kg = Math.max(0, Number(mat.qtd) || 0);

@@ -12,6 +12,14 @@ import { tagsPWA } from './pwa.js';
 import { botaoGoogle } from './google-auth.js';
 import { listarColetasOS, lerColetaOS, atualizarStatusOS } from './coletas.js';
 import { debitarPatrocinio } from './adote.js';
+import { METODOLOGIA } from './carbono-metodologia.js';
+
+// Subtipos de FATOR DE CARBONO marcáveis na triagem (ex.: aco_lata). Quando o
+// operador marca o subtipo, o motor de carbono usa o fator EXATO daquela massa
+// — sem depender de proporção estimada (regra da RT, 2026-07-29).
+const FATORES_TRIAGEM = METODOLOGIA.fatores.filter((f) => f.aplicaA);
+const IDS_FATOR_TRIAGEM = new Set(FATORES_TRIAGEM.map((f) => f.id));
+const ROTULO_FATOR = Object.fromEntries(FATORES_TRIAGEM.map((f) => [f.id, f.material]));
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const agora = () => { try { return new Date().toISOString(); } catch { return ''; } };
 const hhmm = (iso) => { const m = String(iso || '').match(/T(\d{2}:\d{2})/); return m ? m[1] : ''; };
@@ -413,6 +421,7 @@ export async function adicionarMaterial(env, osId, operador, d) {
     classe: CLASSES.includes(d && d.classe) ? d.classe : 'II-A',
     qtd,
     destino: DESTINOS[d && d.destino] ? d.destino : 'reciclagem',
+    categoriaFator: IDS_FATOR_TRIAGEM.has(d && d.categoriaFator) ? d.categoriaFator : '',
     por: operador.email, em: agora(),
   });
   if (op.etapa === 'recepcao' && inicioCompleto(op)) op.etapa = 'triagem';
@@ -437,7 +446,7 @@ export function paginaTriagem(operador, op) {
   const dif = Math.round((entrada - soma) * 100) / 100;
   const linhas = mats.length ? mats.map((m, i) => `<div style="border-top:1px solid #EEF1F0;padding:11px 0;display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
       <div><div style="font-size:13.5px;font-weight:700">${esc(m.rotulo)}</div>
-        <div style="font-size:11px;color:#7c8a87;margin-top:3px">IBAMA ${esc(m.ibama || '—')} · Classe ${esc(m.classe)} · <b style="color:#0B5B66">${esc(DESTINOS[m.destino] || m.destino)}</b></div></div>
+        <div style="font-size:11px;color:#7c8a87;margin-top:3px">IBAMA ${esc(m.ibama || '—')} · Classe ${esc(m.classe)} · <b style="color:#0B5B66">${esc(DESTINOS[m.destino] || m.destino)}</b>${m.categoriaFator && ROTULO_FATOR[m.categoriaFator] ? ` · 🎯 ${esc(ROTULO_FATOR[m.categoriaFator])}` : ''}</div></div>
       <div style="text-align:right;white-space:nowrap"><div style="font-size:14px;font-weight:800">${String(m.qtd).replace('.', ',')} kg</div>
         <form method="post" action="/api/operacao/material/remover" style="margin:2px 0 0"><input type="hidden" name="osId" value="${esc(op.osId)}"><input type="hidden" name="idx" value="${i}"><button style="background:none;border:none;color:#B23A2E;font-size:11px;font-weight:700;cursor:pointer;padding:0">remover</button></form></div>
     </div>`).join('') : `<div style="color:#9aa7a4;font-size:13px;padding:10px 0">Nenhum material classificado ainda.</div>`;
@@ -475,6 +484,9 @@ export function paginaTriagem(operador, op) {
       <div style="flex:1"><label class="fld">Quantidade (kg)</label><input id="qtd" class="txt" inputmode="decimal" placeholder="ex.: 120"></div>
       <div style="flex:1"><label class="fld">Destino</label><select id="destino" class="txt">${optDest}</select></div>
     </div>
+    <label class="fld" style="margin-top:10px;display:block">🎯 Fator de carbono (subtipo)</label>
+    <select id="catfat" class="txt"><option value="">automático (pelo nome do material)</option>${FATORES_TRIAGEM.map((f) => `<option value="${esc(f.id)}">${esc(f.material)}</option>`).join('')}</select>
+    <div style="font-size:11px;color:#9aa7a4;margin-top:4px">Marcando o subtipo (ex.: Aço — latas), o cálculo de carbono usa o fator exato desta massa. Sem marcar, materiais com dois fatores possíveis (aço, alumínio, plásticos) ficam <b>pendentes</b> no carbono até serem detalhados.</div>
     <button class="btn primary" style="margin-top:12px" onclick="add()">Adicionar material</button>
     <div style="font-size:11px;color:#9aa7a4;margin-top:6px">IBAMA e classe são sugestões — a classificação final é validada pela Engenharia Ambiental.</div>
   </div>
@@ -493,7 +505,7 @@ export function paginaTriagem(operador, op) {
   async function add(){ const rotulo=sel.options[sel.selectedIndex].getAttribute('data-rotulo'); const qtd=document.getElementById('qtd').value;
     if(!qtd||Number(qtd.replace(',','.'))<=0){ msg.textContent='Digite a quantidade em kg.'; return; }
     msg.textContent='Salvando…';
-    try{ const r=await fetch('/api/operacao/material',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({osId:OS,rotulo:rotulo,ibama:ib.value,classe:cl.value,qtd:qtd,destino:de.value})});
+    try{ const r=await fetch('/api/operacao/material',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({osId:OS,rotulo:rotulo,ibama:ib.value,classe:cl.value,qtd:qtd,destino:de.value,categoriaFator:document.getElementById('catfat').value})});
       if(r.ok) location.reload(); else msg.textContent='Falha ao salvar. Tente de novo.';
     }catch{ msg.textContent='Sem conexão. Tente de novo.'; } }
 </script></body></html>`;
