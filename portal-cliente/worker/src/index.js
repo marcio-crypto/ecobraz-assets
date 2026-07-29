@@ -41,6 +41,7 @@ import { statusDaEtapa, valorProp, CAMPOS_OS } from './os-utils.js';
 import { qrCDF, validarCDF } from './validacao.js';
 import { paginaMetodologia, fatorCompensacaoAdote } from './carbono-metodologia.js';
 import { registrarUso, resumoUso, contarPorPeriodo, reunirPendencias } from './uso.js';
+import { backfillEgoi } from './egoi.js';
 import { sondaRotaExata, paginaSondaRotaExata, paginaRastreio, posicaoDoVeiculo, posicoesFrota, capturarTelemetria, paginaFrotaAoVivo, rastreioDisponivel } from './rotaexata.js';
 import { lerValidacao, registrarValidacao, paginaAreaValidacao, qrMetodologia, validarMetodologiaPublico, homologarFatorAcao } from './validacao-metodologia.js';
 import { paginaPainelCarbono } from './carbono-painel.js';
@@ -774,6 +775,12 @@ export default {
         if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
         let b; try { b = await request.json(); } catch { b = {}; }
         return json(await sincronizarKVparaD1(env, b && b.desde, 100));
+      }
+      // Marketing: carga inicial dos e-mails da base para a lista do e-Goi (lotes).
+      if (pathname === '/api/cadastro/egoi-backfill' && request.method === 'POST') {
+        if (!escritorio && !diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = {}; }
+        return json(await backfillEgoi(env, b && b.desde, 40));
       }
       if (pathname === '/cadastro/novo' && request.method === 'GET') {
         if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });

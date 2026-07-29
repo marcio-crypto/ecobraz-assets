@@ -5,6 +5,7 @@
 // Autorização: env ESCRITORIO_EMAILS = "email|Nome,email2|Nome2". Login por link mágico (e Google).
 
 import { botaoGoogle } from './google-auth.js';
+import { sincronizarClienteEgoi } from './egoi.js';
 
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const agora = () => { try { return new Date().toISOString(); } catch { return ''; } };
@@ -307,6 +308,8 @@ export async function salvarCliente(env, rec) {
   }
   // Espelha na base D1 (a lista de Cadastro lê de lá) — casa por documento. Best-effort.
   try { const pid = await espelharClienteD1(env, rec); if (pid && rec.ploomesId !== pid && env.PORTAL_KV) { rec.ploomesId = pid; await env.PORTAL_KV.put(`cli:${rec.id}`, JSON.stringify(rec)); } } catch { /* não bloqueia o cadastro */ }
+  // Marketing: manda os e-mails do cliente para a lista do e-Goi (best-effort).
+  try { await sincronizarClienteEgoi(env, rec); } catch { /* nunca bloqueia o cadastro */ }
   return rec;
 }
 
@@ -443,8 +446,29 @@ export function paginaManutencao(user) {
     <button class="btn btn-p" id="bSync" onclick="rodarSync()">Sincronizar agora</button>
     <div id="mSync" style="font-size:13px;color:#4F6469;margin-top:10px"></div>
   </div>
+  <div class="card" style="margin-top:14px">
+    <div style="font-size:15px;font-weight:800;color:#10262B">📣 Enviar e-mails dos clientes para o e-Goi (marketing)</div>
+    <p style="font-size:13px;color:#4F6469;line-height:1.5;margin:8px 0 12px">Manda <b>todos os clientes com e-mail</b> da base para a lista "Clientes Ativos" do e-Goi. Quem já está lá é pulado (sem duplicar). Novos cadastros passam a entrar <b>sozinhos</b> — este botão é só a carga inicial. Roda em lotes; pode parar e continuar.</p>
+    <button class="btn btn-p" id="bEgoi" onclick="rodarEgoi()">Enviar para o e-Goi</button>
+    <div id="mEgoi" style="font-size:13px;color:#4F6469;margin-top:10px"></div>
+  </div>
 </div>
 <script>
+async function rodarEgoi(){
+  var b=document.getElementById('bEgoi'), m=document.getElementById('mEgoi');
+  b.disabled=true; var criados=0, jaTinha=0, erros=0, lotes=0;
+  m.textContent='Iniciando… (deixe a aba aberta; continua de onde parou)';
+  try{
+    while(true){
+      var r=await fetch('/api/cadastro/egoi-backfill',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({})});
+      var d=await r.json();
+      if(!d.ok){ m.textContent='Erro: '+(d.error||'falhou'); b.disabled=false; return; }
+      criados+=d.criados||0; jaTinha+=d.jaExistiam||0; erros+=d.erros||0; lotes++;
+      m.innerHTML='Lote '+lotes+' · novos no e-Goi: <b>'+criados+'</b> · já estavam: '+jaTinha+(erros?' · erros: '+erros:'')+'…';
+      if(d.terminou){ m.innerHTML='✅ Pronto! Novos enviados: <b>'+criados+'</b> · já estavam lá: <b>'+jaTinha+'</b>'+(erros?' · erros: <b>'+erros+'</b> (pode rodar de novo)':'')+'.'; b.disabled=false; return; }
+    }
+  }catch(_){ m.textContent='Parou (conexão). Clique de novo — continua de onde parou.'; b.disabled=false; }
+}
 async function rodarEmails(){
   var b=document.getElementById('bEmail'), m=document.getElementById('mEmail');
   b.disabled=true; var desde=0, emails=0, total=0;
