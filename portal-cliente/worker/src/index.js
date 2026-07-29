@@ -454,6 +454,31 @@ export default {
         let b; try { b = await request.json(); } catch { b = null; }
         if (!b) return json({ ok: false, error: 'json' }, 400);
         const r = await ingestLead(env, b);
+        // CLIENTE JÁ EXISTENTE? (Marcio, 2026-07-29): não vira pendência para o
+        // comercial — o lead entra já TRATADO ("direcionado ao portal") e a pessoa
+        // recebe NA HORA um e-mail com link mágico para abrir a coleta pelo sistema.
+        // A resposta HTTP segue idêntica à normal (privacidade: nunca revelamos a
+        // quem digita no site se um e-mail é ou não cliente da Ecobraz).
+        try {
+          const emailLead = String((b && b.email) || '').trim().toLowerCase();
+          if (r && r.ok && r.id && emailLead) {
+            const cli = await buscarClienteBase(emailLead, env);
+            if (cli && cli.liberado) {
+              const lead = await lerLead(env, r.id);
+              if (lead) {
+                lead.status = 'tratado';
+                lead.clienteId = String(cli.contactId || '');
+                lead.nota = 'Cliente já existente — direcionado ao portal automaticamente (e-mail com link de acesso enviado).';
+                await salvarLead(env, lead);
+              }
+              const token = await criarToken({ cid: cli.contactId, emp: cli.empresaId, em: cli.email, nome: cli.nome, fim: cli.dataFim || '', doc: cli.documento || '', tipo: 'login' }, LINK_TTL_S, env);
+              if (env.PORTAL_KV) await env.PORTAL_KV.put(`nonce:${token.nonce}`, '1', { expirationTtl: LINK_TTL_S });
+              const linkBase = env.PORTAL_BASE_URL || url.origin;
+              await enviarEmailJaCliente({ nome: cli.nome, email: cli.email }, `${linkBase.replace(/\/+$/, '')}/entrar?token=${encodeURIComponent(token.valor)}`, env);
+              console.log('lead_ja_cliente', { empresaId: cli.empresaId });
+            }
+          }
+        } catch (error) { console.error('lead_ja_cliente_falhou', safeError(error)); }
         return json(r, r.ok ? 201 : 400);
       }
       // Login com Google (interno) — ativa quando as credenciais estiverem configuradas.
@@ -2513,6 +2538,24 @@ async function resolverSender(apiKey, env) {
   _senderId = pick ? (pick.sender_id || pick.id || pick.senderId) : null;
   if (!_senderId) console.error('egoi_sem_sender_na_lista', { qtd: (list || []).length });
   return _senderId;
+}
+
+// "Você já é cliente!" — resposta automática quando um pedido do SITE vem de um
+// e-mail que já está na base: convida a usar o portal, com link mágico pronto.
+// Incentiva o sistema e evita lead pendente de quem já é cliente.
+async function enviarEmailJaCliente(cliente, link, env) {
+  const primeiro = String(cliente.nome || '').split(/\s+/)[0] || '';
+  const assunto = 'Você já é cliente Ecobraz — abra sua coleta pelo portal 🚀';
+  const texto = `Olá${primeiro ? ' ' + primeiro : ''}!\n\nRecebemos seu pedido pelo site — e temos uma boa notícia: você já é cliente Ecobraz.\n\nO caminho mais rápido é o portal: entre pelo link abaixo (vale uma vez) e abra sua coleta em 1 minuto, com acompanhamento em tempo real e todos os documentos:\n${link}\n\nSeu pedido do site também ficou registrado — nada se perde.\n\nEcobraz · sistema.ecobraz.org`;
+  const htmlCorpo = `<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;color:#10262B"><div style="background:#00333B;border-radius:14px 14px 0 0;padding:18px 22px"><span style="color:#fff;font-size:18px;font-weight:800">ecobraz</span><span style="color:#92C430;font-size:10px;font-weight:800;letter-spacing:.14em;margin-left:8px">EMIGRE</span></div><div style="border:1px solid #E4EBE9;border-top:none;border-radius:0 0 14px 14px;padding:24px 22px"><h1 style="font-size:19px;margin:0 0 10px">Você já é nosso cliente! 🎉</h1><p style="font-size:14px;line-height:1.6;color:#4F6469">Recebemos seu pedido pelo site. O caminho mais rápido é o <b>portal do cliente</b>: abra sua coleta em 1 minuto, acompanhe em tempo real e baixe todos os documentos.</p><a href="${link}" style="display:block;background:#92C430;color:#10262B;text-decoration:none;border-radius:10px;padding:14px;text-align:center;font-weight:800;font-size:15px;margin:16px 0">Entrar no portal e abrir minha coleta →</a><p style="font-size:11.5px;color:#8fa39f;line-height:1.5">O link vale uma vez; se expirar, peça outro em sistema.ecobraz.org. Seu pedido do site também ficou registrado — nada se perde.</p></div></div>`;
+  if (env.RESEND_API_KEY) {
+    const payload = { from: env.RESEND_FROM || 'Portal Ecobraz <acesso@ecobraz.org.br>', to: [cliente.email], subject: assunto, html: htmlCorpo, text: texto };
+    if (env.RESEND_REPLY_TO) payload.reply_to = env.RESEND_REPLY_TO;
+    const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${env.RESEND_API_KEY}` }, body: JSON.stringify(payload) });
+    if (!r.ok) throw new Error('resend_ja_cliente_' + r.status);
+    return;
+  }
+  await enviarEmailLogin(cliente, link, env); // reserva (e-Goi): pelo menos o link chega
 }
 
 async function enviarEmailLogin(cliente, link, env) {
