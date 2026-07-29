@@ -1695,6 +1695,11 @@ export default {
       // Monitor de falhas: guarda a rota + o erro REAL (com um pedaço do stack)
       // no D1, para diagnosticar sem depender do cliente reclamar.
       try { await registrarFalha(env, `rota:${url.pathname}`, `${safeError(error).name}: ${safeError(error).message} | ${String(error?.stack || '').slice(0, 500)}`); } catch { /* nunca piora o erro */ }
+      // Limite diário de gravações do plano gratuito do Cloudflare: explica em
+      // português em vez de "erro_interno" (zera à meia-noite UTC = 21h Brasília).
+      if (/KV put\(\) limit exceeded/i.test(String(error && error.message || ''))) {
+        return json({ ok: false, error: 'limite_diario_gravacoes', message: 'O sistema atingiu o limite diário de gravações do plano gratuito do Cloudflare. Nada foi perdido — volta ao normal às 21h (horário de Brasília). O upgrade do plano (US$ 5/mês) elimina esse teto.' }, 503);
+      }
       return json({ ok: false, error: 'erro_interno' }, 500);
     }
   },

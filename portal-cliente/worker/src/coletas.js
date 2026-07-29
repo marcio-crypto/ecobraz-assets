@@ -431,7 +431,7 @@ function salvar(){var ag=g('agente').split('|');
   var rec={id:'${esc(os.id)}',endereco:g('endereco'),dataAgendada:g('data'),janela:g('janela'),contato:g('contato'),material:g('material'),quantidade:g('quantidade'),acondicionamento:g('acondicionamento'),obs:g('obs'),obsInterna:g('obsInterna'),itensTexto:g('itens'),veiculoPlaca:g('veiculo'),certificados:certs,agenteEmail:ag[0]||'',agenteNome:ag[1]||''};
   if(!rec.endereco){document.getElementById('m').textContent='Informe o endereço da coleta.';return;}
   document.getElementById('m').textContent='Salvando…';
-  fetch('/api/coletas/editar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(rec)}).then(function(r){return r.json();}).then(function(j){if(j.ok){location.href='/coletas/os?id=${esc(os.id)}';}else{document.getElementById('m').textContent=j.error||'Erro ao salvar.';}}).catch(function(){document.getElementById('m').textContent='Sem conexão.';});}
+  fetch('/api/coletas/editar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(rec)}).then(function(r){return r.json();}).then(function(j){if(j.ok){location.href='/coletas/os?id=${esc(os.id)}';}else{document.getElementById('m').textContent=j.message||j.error||'Erro ao salvar.';}}).catch(function(){document.getElementById('m').textContent='Sem conexão.';});}
 function gerarCobranca(){
   var m=document.getElementById('mCob'); m.textContent='Gerando link…';
   fetch('/api/coletas/cobranca',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:'${esc(os.id)}',valor:g('cobValor'),descricao:g('cobDesc')})})

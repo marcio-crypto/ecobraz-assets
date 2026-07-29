@@ -458,7 +458,7 @@ async function solicitar(e){e.preventDefault();
     }
     else if(d.error==='endereco_obrigatorio'){ m.textContent='Informe o endereço de coleta.'; }
     else if(d.tipo==='barrado'||d.tipo==='so_perigosos'){ m.innerHTML='⚠️ '+escapeHtml(d.message||'Não coletamos esse tipo de material.'); }
-    else { m.textContent='Não foi possível solicitar agora. Tente novamente em instantes.'; window.__repErro&&window.__repErro('solicitar-coleta-servidor', d.error||('http '+r.status)); }
+    else { m.textContent=d.message||'Não foi possível solicitar agora. Tente novamente em instantes.'; window.__repErro&&window.__repErro('solicitar-coleta-servidor', d.error||('http '+r.status)); }
   }catch(err){ m.hidden=false; m.textContent='Falha de conexão. Tente novamente.'; window.__repErro&&window.__repErro('solicitar-coleta', err&&err.message, err&&err.stack); }
   b.disabled=false;b.textContent='Solicitar coleta →';
   return false;

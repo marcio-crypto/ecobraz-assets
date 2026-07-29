@@ -74,6 +74,9 @@ export async function backfillEgoi(env, desdeParam, limite) {
     if (res === 'criado') criados++; else if (res === 'ja_existe') jaExistiam++; else erros++;
     ultimoId = Number(c.ploomes_id) || ultimoId;
   }
-  if (env.PORTAL_KV && rows.length) await env.PORTAL_KV.put('egoi:backfill:desde', String(ultimoId));
+  // O progresso no KV é conveniência: se a gravação falhar (ex.: limite diário
+  // de gravações), o lote NÃO é perdido — a tela passa o "desde" adiante e o
+  // e-Goi ignora duplicados (409). Nunca deixa o erro derrubar a carga.
+  if (env.PORTAL_KV && rows.length) { try { await env.PORTAL_KV.put('egoi:backfill:desde', String(ultimoId)); } catch { /* segue com o desde da resposta */ } }
   return { ok: true, processados: rows.length, criados, jaExistiam, erros, ultimoId, terminou: rows.length < lote };
 }

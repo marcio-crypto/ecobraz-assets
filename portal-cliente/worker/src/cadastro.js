@@ -481,11 +481,14 @@ async function rodarEgoi(){
   var b=document.getElementById('bEgoi'), m=document.getElementById('mEgoi');
   b.disabled=true; var criados=0, jaTinha=0, erros=0, lotes=0;
   m.textContent='Iniciando… (deixe a aba aberta; continua de onde parou)';
+  var desde=null;
   try{
     while(true){
-      var r=await fetch('/api/cadastro/egoi-backfill',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({})});
+      var corpo=desde==null?{}:{desde:desde};
+      var r=await fetch('/api/cadastro/egoi-backfill',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(corpo)});
       var d=await r.json();
-      if(!d.ok){ m.textContent='Erro: '+(d.error||'falhou'); b.disabled=false; return; }
+      if(!d.ok){ m.textContent='Erro: '+(d.message||d.error||'falhou'); b.disabled=false; return; }
+      desde=d.ultimoId; // leva o progresso adiante mesmo se o servidor não conseguir gravar
       criados+=d.criados||0; jaTinha+=d.jaExistiam||0; erros+=d.erros||0; lotes++;
       m.innerHTML='Lote '+lotes+' · novos no e-Goi: <b>'+criados+'</b> · já estavam: '+jaTinha+(erros?' · erros: '+erros:'')+'…';
       if(d.terminou){ m.innerHTML='✅ Pronto! Novos enviados: <b>'+criados+'</b> · já estavam lá: <b>'+jaTinha+'</b>'+(erros?' · erros: <b>'+erros+'</b> (pode rodar de novo)':'')+'.'; b.disabled=false; return; }
@@ -727,7 +730,7 @@ function salvar(){var tipo=g('tipo');var rec={tipo:tipo,endereco:{cep:g('cep'),l
   else{rec.nome=g('nome');rec.cpf=g('cpf');rec.fone=g('fone');rec.email=g('email');if(!rec.nome){msg('Informe o nome.');return;}}
   if(LEAD_ORIGEM)rec.leadOrigem=LEAD_ORIGEM;
   msg('Salvando…');
-  fetch('/api/cadastro/salvar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(rec)}).then(r=>r.json()).then(j=>{if(j.ok){location.href='/cadastro/cliente?id='+j.id;}else{msg(j.error||'Erro ao salvar.');}}).catch(()=>msg('Sem conexão. Tente de novo.'));}
+  fetch('/api/cadastro/salvar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(rec)}).then(r=>r.json()).then(j=>{if(j.ok){location.href='/cadastro/cliente?id='+j.id;}else{msg(j.message||j.error||'Erro ao salvar.');}}).catch(()=>msg('Sem conexão. Tente de novo.'));}
 </script>
 </body></html>`;
 }

@@ -15,6 +15,9 @@ const dataBrasil = (menosDias = 0) => new Date(Date.now() - 3 * 3600e3 - (menosD
 const seq = (n) => Array.from({ length: n }, (_, i) => dataBrasil(i));
 
 // Registra 1 acesso (best-effort; nunca derruba a página).
+// ECONOMIA DE GRAVAÇÕES (lição de 2026-07-29, limite diário do KV estourado):
+// só grava UMA vez por pessoa por dia — se a marca do dia já existe, não grava
+// nada (leitura é barata; gravação conta no teto diário do plano).
 export async function registrarUso(env, quem) {
   if (!env.PORTAL_KV || !quem) return;
   const dia = dataBrasil();
@@ -22,11 +25,13 @@ export async function registrarUso(env, quem) {
     if (quem.tipo === 'cliente') {
       const doc = String(quem.doc || '').replace(/\D/g, '');
       if (!doc) return;
+      if (await env.PORTAL_KV.get(`uso:c:${dia}:${doc}`)) return; // já contado hoje
       await env.PORTAL_KV.put(`uso:c:${dia}:${doc}`, '1', { expirationTtl: 60 * 86400 });
       if (quem.nome) await env.PORTAL_KV.put(`uso:cnome:${doc}`, String(quem.nome).slice(0, 120), { expirationTtl: 120 * 86400 });
     } else if (quem.tipo === 'equipe') {
       const em = String(quem.email || '').trim().toLowerCase();
       if (!em) return;
+      if (await env.PORTAL_KV.get(`uso:e:${dia}:${em}`)) return; // já contado hoje
       await env.PORTAL_KV.put(`uso:e:${dia}:${em}`, '1', { expirationTtl: 60 * 86400 });
       await env.PORTAL_KV.put(`uso:enome:${em}`, JSON.stringify({ nome: quem.nome || '', papel: quem.papel || '' }), { expirationTtl: 120 * 86400 });
     }
