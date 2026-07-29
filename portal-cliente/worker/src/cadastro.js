@@ -456,11 +456,22 @@ export function paginaManutencao(user) {
     <div style="font-size:15px;font-weight:800;color:#10262B">🩺 Falhas recentes do sistema</div>
     <p style="font-size:13px;color:#4F6469;line-height:1.5;margin:8px 0 12px">Erros que aconteceram na tela dos clientes ou nos pagamentos — registrados automaticamente, mesmo sem ninguém reclamar. Se aparecer falha de <b>compra</b>, avise o Marcio.</p>
     <button class="btn" id="bFalhas" onclick="verFalhas()">Ver falhas recentes</button>
+    <button class="btn btn-g" id="bProbe" onclick="testarGravacao()" style="margin-left:8px">Testar gravação agora</button>
     <div id="mFalhas" style="font-size:12.5px;color:#4F6469;margin-top:10px"></div>
   </div>
 </div>
 <script>
 function escTxt(s){var d=document.createElement('div');d.textContent=s==null?'':String(s);return d.innerHTML;}
+async function testarGravacao(){
+  var b=document.getElementById('bProbe'), m=document.getElementById('mFalhas');
+  b.disabled=true; m.textContent='Testando gravação…';
+  try{
+    var r=await fetch('/api/monitor/testar-gravacao',{method:'POST'});
+    var d=await r.json();
+    m.innerHTML=d.ok?('✅ '+escTxt(d.message||'Gravação OK.')):('⛔ '+escTxt(d.message||d.error||'Falhou.'));
+  }catch(_){ m.textContent='Sem conexão.'; }
+  b.disabled=false;
+}
 async function verFalhas(){
   var b=document.getElementById('bFalhas'), m=document.getElementById('mFalhas');
   b.disabled=true; m.textContent='Buscando…';

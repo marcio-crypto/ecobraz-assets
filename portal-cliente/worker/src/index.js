@@ -851,6 +851,19 @@ export default {
         if (!escritorio && !diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);
         return json({ ok: true, falhas: await listarFalhas(env, url.searchParams.get('n')) });
       }
+      // Prova de gravação: 1 escrita de teste no KV para saber NA HORA se o
+      // limite diário está bloqueando (usado após o upgrade do plano).
+      if (pathname === '/api/monitor/testar-gravacao' && request.method === 'POST') {
+        if (!escritorio && !diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        try {
+          if (!env.PORTAL_KV) return json({ ok: false, error: 'sem_kv' }, 503);
+          await env.PORTAL_KV.put('probe:gravacao', new Date().toISOString(), { expirationTtl: 300 });
+          return json({ ok: true, message: 'Gravação funcionando — pode salvar normalmente.' });
+        } catch (error) {
+          const limite = /KV put\(\) limit exceeded/i.test(String(error && error.message || ''));
+          return json({ ok: false, error: limite ? 'limite_diario_gravacoes' : 'falha_gravacao', message: limite ? 'Ainda bloqueado pelo limite diário do plano gratuito.' : 'Falha ao gravar: ' + String(error && error.message || '').slice(0, 80) }, 503);
+        }
+      }
       if (pathname === '/cadastro/novo' && request.method === 'GET') {
         if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
         const leadId = (url.searchParams.get('lead') || '').trim();
