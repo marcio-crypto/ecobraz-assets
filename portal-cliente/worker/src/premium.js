@@ -78,6 +78,7 @@ export async function fluxoDeVendas(env) {
   };
   for (const k of keys.slice(0, 800)) {
     let ped; try { ped = JSON.parse((await env.PORTAL_KV.get(k.name)) || '{}'); } catch { continue; }
+    if (ped.produto === 'teste') continue; // pagamentos de teste não contam como venda
     out.lidos++;
     const valor = Number(ped.valor) || 0;
     const prod = ped.produto || 'outro';

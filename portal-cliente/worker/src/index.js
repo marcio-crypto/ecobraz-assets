@@ -373,6 +373,10 @@ export default {
                   if (ped.clienteEmail) { try { await enviarEmailCobrancaOSPaga(ped, env); } catch (error) { console.error('email_oscobranca', safeError(error)); } }
                   console.log('oscobranca_paga', { os: ped.osId, valor: pg.valor });
                 } catch (error) { console.error('oscobranca_falhou', safeError(error)); await registrarFalha(env, 'compra-oscobranca', safeError(error), { os: ped.osId }); }
+              } else if (ped.produto === 'teste') {
+                // Teste de pagamento do Marcio: nada a fazer além de marcar pago
+                // (já feito acima). Prova que o ciclo completo funcionou.
+                console.log('teste_pagamento_ok', { pedido: pg.externalReference, valor: pg.valor });
               } else {
                 try { await enviarEmailNF(ped, pg, env); } catch (error) { console.error('nf_email_falhou', safeError(error)); }
               }
@@ -722,6 +726,34 @@ export default {
       if (pathname === '/api/diretoria/negocios-importar' && request.method === 'POST') {
         if (!diretoria) return json({ ok: false, erro: 'nao_autenticado' }, 401);
         return json(await importarLoteNegocios(env, url.searchParams.get('desdeId'), url.searchParams.get('top')));
+      }
+      // TESTE DE PAGAMENTO (Marcio): gera um link REAL do Mercado Pago de valor
+      // baixo (padrão R$ 1) e redireciona para o checkout. Prova a ponta a ponta
+      // em produção: criar preferência → pagar → webhook → baixa. Só diretoria.
+      if (pathname === '/diretoria/teste-pagamento' && request.method === 'GET') {
+        if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
+        if (!env.MERCADOPAGO_ACCESS_TOKEN) return html(paginaMensagem('Mercado Pago não configurado', 'A chave MERCADOPAGO_ACCESS_TOKEN não está no cofre. Configure antes de testar.', '/diretoria'), 503);
+        const valor = Math.min(Math.max(Number(url.searchParams.get('valor')) || 1, 1), 55);
+        const ref = 'teste-' + novoId();
+        try {
+          const base = String(env.PORTAL_BASE_URL || env.PORTAL_URL || url.origin).replace(/\/+$/, '');
+          const pref = await criarPreferencia({ valor, descricao: `Teste de pagamento Ecobraz (R$ ${valor})`, externalReference: ref, baseUrl: base, backPath: '/diretoria/teste-pagamento-ok' }, env);
+          if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${ref}`, JSON.stringify({ produto: 'teste', valor, status: 'pendente', criadoEm: nowS(), por: diretoria.email || '' }), { expirationTtl: 3 * 86400 });
+          console.log('teste_pagamento_gerado', { ref, valor });
+          if (!pref.initPoint) return html(paginaMensagem('Não consegui gerar o link', 'O Mercado Pago não devolveu o link de checkout. Tente de novo.', '/diretoria'), 502);
+          return new Response(null, { status: 302, headers: { Location: pref.initPoint, 'cache-control': 'no-store' } });
+        } catch (error) {
+          console.error('teste_pagamento_erro', safeError(error));
+          await registrarFalha(env, 'teste-pagamento', safeError(error), { ref });
+          return html(paginaMensagem('Erro ao gerar o pagamento', 'Não consegui criar a cobrança de teste agora: ' + safeError(error).message, '/diretoria'), 502);
+        }
+      }
+      if (pathname === '/diretoria/teste-pagamento-ok' && request.method === 'GET') {
+        if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
+        const ref = String(url.searchParams.get('pedido') || '');
+        let pago = false;
+        try { const raw = ref && env.PORTAL_KV ? await env.PORTAL_KV.get(`pedido:${ref}`) : null; pago = raw ? JSON.parse(raw).status === 'pago' : false; } catch { /* segue */ }
+        return html(paginaMensagem(pago ? '✅ Pagamento aprovado!' : '⏳ Aguardando confirmação', pago ? 'O Mercado Pago aprovou o pagamento e o webhook registrou tudo certo. O sistema de pagamentos está funcionando em produção.' : 'Se você concluiu o pagamento, a confirmação pode levar alguns segundos (o webhook do Mercado Pago). Atualize esta página em instantes.', '/diretoria'));
       }
       // Migração Ploomes — Fase 2: arquivos (anexos + documentos) → R2. Painel + lotes.
       if (pathname === '/diretoria/migrar-arquivos' && request.method === 'GET') {
