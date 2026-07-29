@@ -71,6 +71,7 @@ export async function criarColetaOS(env, dados, criadoPor) {
     material: String(d.material || '').slice(0, 500), quantidade: String(d.quantidade || '').slice(0, 100),
     itens: Array.isArray(d.itens) ? d.itens.slice(0, 80).map((it) => ({ nome: String(it.nome || '').slice(0, 140), qtd: String(it.qtd || '1').slice(0, 12) })).filter((it) => it.nome) : parseItensColeta(d.itensTexto),
     acondicionamento: String(d.acondicionamento || '').slice(0, 120), obs: String(d.obs || '').slice(0, 4000),
+    obsInterna: String(d.obsInterna || '').slice(0, 4000), // só equipe — NUNCA vai para o cliente nem para o documento da OS
     contato: String(d.contato || '').slice(0, 200),
     certificados: normalizarCertificados(d.certificados),
     criadoEm: agora(), criadoPor: criadoPor || '',
@@ -122,7 +123,7 @@ export async function atualizarColetaOS(env, id, dados) {
   const d = dados || {};
   const setStr = (campo, max) => { if (d[campo] != null) rec[campo] = String(d[campo]).slice(0, max); };
   setStr('endereco', 400); setStr('dataAgendada', 10); setStr('janela', 40); setStr('contato', 200);
-  setStr('material', 500); setStr('quantidade', 100); setStr('acondicionamento', 120); setStr('obs', 4000); setStr('veiculoPlaca', 12);
+  setStr('material', 500); setStr('quantidade', 100); setStr('acondicionamento', 120); setStr('obs', 4000); setStr('obsInterna', 4000); setStr('veiculoPlaca', 12);
   if (d.itensTexto != null) rec.itens = parseItensColeta(d.itensTexto);
   if (d.certificados != null) rec.certificados = normalizarCertificados(d.certificados);
   if (d.agenteEmail != null) { rec.agenteEmail = String(d.agenteEmail || '').trim().toLowerCase(); rec.agenteNome = d.agenteNome || ''; }
@@ -231,6 +232,8 @@ export function paginaGerarColeta(user, cliente, agentes, patrocinadores, veicul
     <div class="g2"><div><label>Motorista</label><select id="agente">${optAgentes}</select></div><div><label>Veículo</label><select id="veiculo">${optVeiculos}</select></div></div>
     <label>Observações / instruções de acesso</label><textarea id="obs" rows="5">${esc(cliente.obsColeta || '')}</textarea>
     <div style="font-size:11px;color:#9aa7a4;margin:-4px 0 4px">Pode colar texto longo (até 4.000 caracteres) — as quebras de linha são preservadas no documento da OS. Planilha/PDF do cliente: anexe na tela da OS depois de criar (aparece no documento).</div>
+    <label style="color:#8a6a16">🔒 Observação interna (só a equipe vê)</label><textarea id="obsInterna" rows="3" style="border-color:#eadfb0;background:#FFFDF5"></textarea>
+    <div style="font-size:11px;color:#8a6a16;margin:-4px 0 4px">Comunicação entre funcionários sobre esta OS — NÃO aparece para o cliente nem no documento da OS.</div>
     <div class="sec">Certificados solicitados pelo cliente</div>
     <div style="font-size:11px;color:#9aa7a4;margin:-4px 0 8px">Marque o que o cliente precisa. Fica registrado na Ordem de Coleta e orienta a emissão dos documentos.</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px 16px">${CERTIFICADOS_OS.map((c) => `<label style="display:flex;align-items:center;gap:8px;font-size:13.5px;cursor:pointer"><input type="checkbox" class="cert" value="${esc(c)}" style="width:17px;height:17px;flex:none"> ${esc(c)}</label>`).join('')}</div>
@@ -253,7 +256,7 @@ function gerar(){var ag=g('agente').split('|');
   var certs=[].slice.call(document.querySelectorAll('.cert:checked')).map(function(c){return c.value;});
   var rec={clienteId:'${esc(cliente.id)}',clienteNome:${JSON.stringify(nome)},clienteDoc:${JSON.stringify(cliente.tipo === 'PJ' ? (cliente.cnpj || '') : (cliente.cpf || ''))},
     endereco:g('endereco'),dataAgendada:g('data'),janela:g('janela'),contato:g('contato'),
-    material:g('material'),quantidade:g('quantidade'),acondicionamento:g('acondicionamento'),obs:g('obs'),
+    material:g('material'),quantidade:g('quantidade'),acondicionamento:g('acondicionamento'),obs:g('obs'),obsInterna:g('obsInterna'),
     itensTexto:g('itens'),veiculoPlaca:g('veiculo'),certificados:certs,
     agenteEmail:ag[0]||'',agenteNome:ag[1]||''};
   var pOn=document.getElementById('patroOn');
@@ -294,6 +297,7 @@ export function paginaColetaOSDetalhe(user, os, seloUrl) {
       ${linha('Motorista', os.agenteNome)}
       ${linha('Material', os.material)}${(os.itens && os.itens.length) ? linha('Equipamentos', os.itens.map((i) => `${i.nome} (${i.qtd})`).join(' · ')) : ''}${linha('Quantidade', os.quantidade)}${linha('Acondicionamento', os.acondicionamento)}
       ${linha('Observações', os.obs)}
+      ${os.obsInterna ? `<tr><td style="padding:8px 0;border-top:1px solid #EEF1F0;color:#8a6a16;width:38%;font-weight:700">🔒 Interna (equipe)</td><td style="padding:8px 0;border-top:1px solid #EEF1F0;font-weight:600;white-space:pre-wrap;word-break:break-word;color:#7a5f13">${esc(os.obsInterna)}</td></tr>` : ''}
       ${linha('Certificados solicitados', (os.certificados || []).join(' · '))}
       ${linha('Aberta em', dataBR(os.criadoEm))}
     </table>
@@ -356,6 +360,8 @@ export function paginaEditarColeta(user, os, contatos, agentes, veiculos) {
     <div class="g2"><div><label>Motorista</label><select id="agente">${optAgentes}</select></div><div><label>Veículo</label><select id="veiculo">${optVeiculos}</select></div></div>
     <label>Observações / instruções de acesso</label><textarea id="obs" rows="5">${esc(os.obs || '')}</textarea>
     <div style="font-size:11px;color:#9aa7a4;margin:-4px 0 4px">Pode colar texto longo (até 4.000 caracteres) — as quebras de linha são preservadas no documento da OS.</div>
+    <label style="color:#8a6a16">🔒 Observação interna (só a equipe vê)</label><textarea id="obsInterna" rows="3" style="border-color:#eadfb0;background:#FFFDF5">${esc(os.obsInterna || '')}</textarea>
+    <div style="font-size:11px;color:#8a6a16;margin:-4px 0 4px">Comunicação entre funcionários — NÃO aparece para o cliente nem no documento da OS.</div>
     <div class="sec">Certificados solicitados pelo cliente</div>
     <div style="font-size:11px;color:#9aa7a4;margin:-4px 0 8px">Marque o que o cliente precisa. Fica registrado na Ordem de Coleta.</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px 16px">${CERTIFICADOS_OS.map((c) => `<label style="display:flex;align-items:center;gap:8px;font-size:13.5px;cursor:pointer"><input type="checkbox" class="cert" value="${esc(c)}"${(os.certificados || []).includes(c) ? ' checked' : ''} style="width:17px;height:17px;flex:none"> ${esc(c)}</label>`).join('')}</div>
@@ -370,7 +376,7 @@ export function paginaEditarColeta(user, os, contatos, agentes, veiculos) {
 function g(id){var el=document.getElementById(id);return el?el.value.trim():'';}
 function salvar(){var ag=g('agente').split('|');
   var certs=[].slice.call(document.querySelectorAll('.cert:checked')).map(function(c){return c.value;});
-  var rec={id:'${esc(os.id)}',endereco:g('endereco'),dataAgendada:g('data'),janela:g('janela'),contato:g('contato'),material:g('material'),quantidade:g('quantidade'),acondicionamento:g('acondicionamento'),obs:g('obs'),itensTexto:g('itens'),veiculoPlaca:g('veiculo'),certificados:certs,agenteEmail:ag[0]||'',agenteNome:ag[1]||''};
+  var rec={id:'${esc(os.id)}',endereco:g('endereco'),dataAgendada:g('data'),janela:g('janela'),contato:g('contato'),material:g('material'),quantidade:g('quantidade'),acondicionamento:g('acondicionamento'),obs:g('obs'),obsInterna:g('obsInterna'),itensTexto:g('itens'),veiculoPlaca:g('veiculo'),certificados:certs,agenteEmail:ag[0]||'',agenteNome:ag[1]||''};
   if(!rec.endereco){document.getElementById('m').textContent='Informe o endereço da coleta.';return;}
   document.getElementById('m').textContent='Salvando…';
   fetch('/api/coletas/editar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(rec)}).then(function(r){return r.json();}).then(function(j){if(j.ok){location.href='/coletas/os?id=${esc(os.id)}';}else{document.getElementById('m').textContent=j.error||'Erro ao salvar.';}}).catch(function(){document.getElementById('m').textContent='Sem conexão.';});}

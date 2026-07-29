@@ -112,20 +112,7 @@ export async function paginaAreaValidacao(env, validador, url) {
   <div style="background:#fff;border:1px solid #E4EBE9;border-radius:14px;padding:22px 24px;margin-top:16px;">
     <div style="font-size:13px;color:#5B6570;">Logado como <strong style="color:#10262B;">${esc(validador.email)}</strong></div>
     <h1 style="margin:8px 0 6px;font-size:22px;color:#00333B;letter-spacing:-.02em;">Metodologia de Carbono — versão ${esc(m.versao)}</h1>
-    <p style="margin:0 0 16px;font-size:13.5px;color:#4F6469;line-height:1.6;">Revise a metodologia completa em <a href="/metodologia" style="color:#00333B;font-weight:700;">/metodologia</a>. Ao validar, sua aprovação fica <strong>registrada</strong> (com data e versão) e gera um <strong>selo público com QR</strong> que comprova a validação — inclusive detectando se a metodologia for alterada depois.</p>
-
-    <div style="font-size:14px;font-weight:800;color:#00333B;margin:4px 0 6px;">Fatores de emissão — homologação individual</div>
-    <div style="font-size:12.5px;color:#4F6469;line-height:1.6;margin-bottom:10px;">Digite o valor <strong>exatamente como consta na fonte citada</strong>, já convertido para a unidade indicada (aceita vírgula decimal), e clique em <strong>Assinar</strong>. Cada homologação fica registrada no seu nome, com data, e espelhada na trilha de auditoria. <strong>Só fator homologado acende número</strong> nos painéis dos clientes.${jaValidada ? '' : ' <strong style="color:#8A6A16;">Valide a versão (abaixo) para liberar os campos.</strong>'}</div>
-    <div style="overflow-x:auto;"><table role="presentation" style="width:100%;border-collapse:collapse;margin-bottom:6px;min-width:640px;">
-      <thead><tr>
-        <th style="text-align:left;padding:8px 10px;font-size:10.5px;color:#7c8a87;text-transform:uppercase;letter-spacing:.05em;">Fator / fonte</th>
-        <th style="text-align:left;padding:8px 10px;font-size:10.5px;color:#7c8a87;text-transform:uppercase;letter-spacing:.05em;">Unidade</th>
-        <th style="text-align:left;padding:8px 10px;font-size:10.5px;color:#7c8a87;text-transform:uppercase;letter-spacing:.05em;">Valor</th>
-        <th style="text-align:left;padding:8px 10px;font-size:10.5px;color:#7c8a87;text-transform:uppercase;letter-spacing:.05em;">Status</th>
-        <th></th>
-      </tr></thead>
-      <tbody>${fatores}</tbody>
-    </table></div>
+    <p style="margin:0;font-size:13.5px;color:#4F6469;line-height:1.6;">Revise a metodologia completa em <a href="/metodologia" style="color:#00333B;font-weight:700;">/metodologia</a>. Ao validar, sua aprovação fica <strong>registrada</strong> (com data e versão) e gera um <strong>selo público com QR</strong> que comprova a validação — inclusive detectando se a metodologia for alterada depois.</p>
   </div>
 
   ${jaValidada ? `<div style="background:#E4F3E6;border:1px solid #B7E0BE;border-radius:14px;padding:20px 24px;margin-top:16px;">
@@ -140,6 +127,23 @@ export async function paginaAreaValidacao(env, validador, url) {
         <input type="checkbox" name="declaro" required style="margin-top:2px;"> Declaro que revisei esta metodologia (versão ${esc(m.versao)}) e a valido em nome da Villanova ESG.</label>
       <button type="submit" style="background:#92C430;color:#10262B;border:none;border-radius:10px;padding:13px 26px;font-size:14px;font-weight:800;cursor:pointer;">Validar versão ${esc(m.versao)}</button>
     </form>`}
+
+  <div style="background:#fff;border:1px solid #E4EBE9;border-radius:14px;padding:22px 24px;margin-top:16px;">
+    <div style="font-size:14px;font-weight:800;color:#00333B;margin:0 0 8px;">Fatores de emissão — homologação individual</div>
+    ${jaValidada
+    ? '<div style="font-size:12.5px;color:#4F6469;line-height:1.6;margin-bottom:10px;">Digite o valor <strong>exatamente como consta na fonte citada</strong>, já convertido para a unidade indicada (aceita vírgula decimal), e clique em <strong>Assinar</strong>. Cada homologação fica registrada no seu nome, com data, e espelhada na trilha de auditoria. <strong>Só fator homologado acende número</strong> nos painéis dos clientes.</div>'
+    : `<div style="background:#FFF4DE;border:1px solid #F0DCA6;border-left:4px solid #E0A500;border-radius:10px;padding:12px 15px;margin-bottom:12px;font-size:13px;color:#7a5f13;line-height:1.6;"><b>🔒 Campos travados de propósito:</b> a versão <b>${esc(m.versao)}</b> ainda não foi assinada. <b>Assine no quadro acima</b> ("Validar versão") — os campos destravam na hora, sem recarregar nada além da página.</div>`}
+    <div style="overflow-x:auto;"><table role="presentation" style="width:100%;border-collapse:collapse;margin-bottom:6px;min-width:640px;">
+      <thead><tr>
+        <th style="text-align:left;padding:8px 10px;font-size:10.5px;color:#7c8a87;text-transform:uppercase;letter-spacing:.05em;">Fator / fonte</th>
+        <th style="text-align:left;padding:8px 10px;font-size:10.5px;color:#7c8a87;text-transform:uppercase;letter-spacing:.05em;">Unidade</th>
+        <th style="text-align:left;padding:8px 10px;font-size:10.5px;color:#7c8a87;text-transform:uppercase;letter-spacing:.05em;">Valor</th>
+        <th style="text-align:left;padding:8px 10px;font-size:10.5px;color:#7c8a87;text-transform:uppercase;letter-spacing:.05em;">Status</th>
+        <th></th>
+      </tr></thead>
+      <tbody>${fatores}</tbody>
+    </table></div>
+  </div>
 
   <div style="margin-top:22px;font-size:11px;color:#9fb0ac;line-height:1.6;">Impressão digital da versão atual: <code style="color:#5B6570;">${esc(hashAtual)}</code> · A validação é registrada de forma imutável e versionada.</div>
 </div>
