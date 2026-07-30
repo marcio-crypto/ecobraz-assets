@@ -37,6 +37,7 @@ O objetivo comercial: **agregar valor ao serviço da Ecobraz** e virar uma
   em PDF, com rastreabilidade e verificação. Padrão audit-grade.
 - **Pacote 2 — Painel de carbono.** Cálculo das reduções por descarte (o material
   entregue "desconta" da conta do cliente), com metodologia que a Ecobraz assine.
+  Inclui a **Calculadora de Pegada de Carbono** (modelo *freemium* — ver §4.4).
 - **Pacote 3 — Radar de legislação por CNPJ/setor.** Puxa o setor (CNAE) pelo CNPJ,
   mostra obrigações e dispara alertas — com base jurídica validada e mantida.
 - **Pacote 4 — Neutralização + compensação.** Certificado de neutralização de CO₂,
@@ -79,6 +80,53 @@ legislação (BR + UE), comparar com a base de conhecimento do sistema e
   Ecobraz a responsabilidade legal por cada cliente. O que prometemos: "mantemos você
   atualizado e alertado", com validação humana.
 - Encaixe: é o motor de atualização do **Pacote 3 (Radar de Legislação)**.
+
+### 4.4 Calculadora de Pegada de Carbono — modelo *freemium* (proposto pelo Marcio, 2026-07-20)
+
+Módulo no Painel do Assinante (ativa o card **"Pegada de carbono"** já plantado no dashboard).
+Funil em **3 níveis**, do grátis ao serviço — cada nível com a palavra certa para não virar promessa que não se cumpre:
+
+**Nível 1 — Estimativa grátis (isca).** A partir do **CNPJ**, o sistema puxa **CNAE (setor) + porte**
+(API pública: BrasilAPI/ReceitaWS) e cruza com **fatores de emissão por setor** para exibir uma
+**estimativa** de tCO₂e.
+- ⚠️ **Basear no setor (CNAE), não só no porte** — porte sozinho erra feio (uma software house e uma
+  fundição do mesmo porte emitem coisas absurdamente diferentes). Opcional: 1–2 dados rápidos
+  (nº de funcionários, faixa da conta de luz) para afinar.
+- ⚠️ Rótulo obrigatório na tela: **"cálculo estimado"**, não inventário (coerente com §4-bis: a pegada
+  real "não sai só do CNPJ").
+
+**Nível 2 — Cálculo detalhado (R$ 250, pago).** Cliente clica → cobrança via **Mercado Pago**
+(Pix/cartão) → ao **confirmar o pagamento**, libera um **formulário** que ele preenche e o sistema
+calcula a pegada detalhada.
+- **Metodologia âncora:** **GHG Protocol** (e **Programa Brasileiro GHG Protocol** / FGV), Escopos 1/2/3,
+  com fatores oficiais citáveis (ex.: fator de emissão do **SIN/MCTI** p/ energia). As "perguntas padrão
+  que toda consultoria faz" **são** os campos de inventário do GHG Protocol.
+- ⚠️ **Palavra certa:** o R$250 compra um **cálculo detalhado/indicativo a partir dos dados informados**
+  — **não** um **inventário verificado** (esse exige consultor + verificação de terceiro, ISO 14064).
+  **Nunca prometer "neutralidade" nesse nível.**
+
+**Nível 3 — Inventário verificado + compensação (sob consulta — a receita de verdade).** Inventário com
+asseguração + **compensação com crédito verificado** (ISO 14068-1) e/ou *Adote um Bairro* como impacto
+social (§5.2, Caminho B). É a escada natural depois do R$250.
+
+**Fluxo de pagamento e Nota Fiscal (decidido pelo Marcio, 2026-07-20):**
+- **Pagamento:** Mercado Pago. O formulário do Nível 2 libera **só na confirmação do pagamento** — usar
+  **webhook/IPN** do Mercado Pago (status `approved`), não só o redirect, para ser confiável.
+- **NF:** o sistema **não** emite nota. Ao confirmar o pagamento, dispara **e-mail para
+  `pagamento@ecobraz.org.br`** com **dados da empresa** (razão social/CNPJ/endereço — já vêm da consulta
+  do CNPJ), **produto**, **valor pago** e o **ID do pagamento no Mercado Pago** (p/ o financeiro
+  conciliar). O **financeiro emite a NF e envia direto ao cliente**.
+
+**Campos do formulário (Nível 2) — padrão GHG Protocol (rascunho a detalhar):**
+- **Escopo 1** (direto): combustível de frota própria (litros/ano por tipo), combustão estacionária,
+  gases fugitivos (refrigeração/ar-condicionado).
+- **Escopo 2** (energia): consumo de energia elétrica (kWh/ano) → fator SIN.
+- **Escopo 3** (indireto, principais conforme o setor): viagens a negócio, deslocamento de funcionários,
+  resíduos, compras/serviços.
+
+**Pontos em aberto (ver §6):** tabela de **fatores por CNAE** (fonte + validação do especialista de
+carbono, §5.4); **enquadramento tributário** da venda (Ecobraz é Associação); taxa do Mercado Pago
+(~4–5% + fixo) sobre os R$250; curadoria da estimativa setorial para não sair irreal.
 
 ## 4-bis. Escopo detalhado do Portal (v1) — definido pelo Marcio em 2026-07-20
 
@@ -155,7 +203,16 @@ legislação (BR + UE), comparar com a base de conhecimento do sistema e
       (Id 277451, Sim/Não) como gatilho de acesso + **"Termino de Contrato"** (Id 366005, data
       que **aparece no formulário**) como validade. O campo 365984 criado via API ficou **órfão**
       (não aparece no formulário) e **deixou de ser usado**. Ambos no cadastro de empresa (EntityId 1).
-- [ ] **Metodologia de CO₂** que a Ecobraz vai assumir (fatores de emissão / fonte).
+- [ ] **Metodologia de CO₂** que a Ecobraz vai assumir — **âncora proposta: GHG Protocol / Programa
+      Brasileiro GHG Protocol (FGV)**, com fatores oficiais citáveis (fator SIN/MCTI etc.). Falta a
+      Ecobraz assumir formalmente + validação do especialista.
+- [x] **Gateway de pagamento** = **Mercado Pago** (Pix/cartão) — **conta já existe**, só integrar.
+      Produto: **"Cálculo detalhado de pegada de carbono — GHG Protocol"**, R$ 250. (2026-07-20)
+- [x] **Nota Fiscal** = o sistema manda e-mail p/ `pagamento@ecobraz.org.br` (dados da empresa + produto
+      + valor + ID do pagamento); **o financeiro emite e envia ao cliente**. (2026-07-20)
+- [x] **Enquadramento tributário/estatutário** — **resolvido** (Marcio, 2026-07-20): a Ecobraz **já
+      comercializa** esses serviços há anos; é **automação** do que já é praticado. Sem pendência nova.
+- [ ] **Tabela de fatores de emissão por CNAE** (fonte + curadoria, validada pelo especialista de carbono).
 - [x] Situação do **Adote um Bairro**: **programa de impacto social** (decidido 2026-07-20) →
       vendido como patrocínio de impacto; a neutralização de CO₂ usa **crédito verificado**.
 - [ ] Onde o Portal vai morar (ex.: `portal.ecobraz.org`) e a identidade visual.
@@ -246,3 +303,253 @@ legislação (BR + UE), comparar com a base de conhecimento do sistema e
   `ecobraz-portal` está **sem os segredos** na Cloudflare (`PLOOMES_USER_KEY`, `PORTAL_SESSION_SECRET`,
   chave do E-goi). Sem eles o login não envia e-mail e fica calado (anti-enumeração) — provável causa do
   teste anterior. `/health` passou a mostrar a **presença** (sim/não) das configs para conferência.
+- **2026-07-20** — **Portal com identidade Ecobraz Emigre publicado** (PR #158): login premium (painel
+  teal + logo), dashboard estilo corporativo, e-mail de acesso no padrão da marca (Resend). **Link
+  "Acesso do cliente" no cabeçalho do site** (deploy do tema, verde). Menu do topo enxugado
+  (Conteúdos/Notícias/Museu → rodapé, PR #159).
+- **2026-07-20** — **Calculadora de Pegada de Carbono (freemium) adotada** (§4.4): Nível 1 estimativa
+  grátis por **CNAE+porte** (API pública); Nível 2 **cálculo detalhado por R$250** via **Mercado Pago**
+  (libera na confirmação do pagamento) com **formulário GHG Protocol**; Nível 3 inventário verificado +
+  compensação. **NF pelo financeiro** (e-mail p/ `pagamento@ecobraz.org.br` com dados + valor + ID do
+  pagamento). Cuidados registrados: R$250 = **cálculo, não neutralidade**; estimativa por **setor**, não
+  só porte; validar **fatores por CNAE** e **enquadramento tributário** da associação (sem fins lucrativos).
+- **2026-07-20** — **Marcio confirmou** e destravou a calculadora: (1) **tributação/estatuto = sem
+  pendência** — a Ecobraz já vende esses serviços há anos; é só automatizar; (2) **conta Mercado Pago
+  já existe** (só integrar); (3) **produto** = "Cálculo detalhado de pegada de carbono — GHG Protocol",
+  R$ 250. Próximo (a partir de quarta, com créditos): consulta CNPJ→CNAE + esqueleto do módulo no painel.
+- **2026-07-20** — **Calculadora Nível 1 CONSTRUÍDA e TESTADA ao vivo** (página pública `/calculadora`):
+  CNPJ → BrasilAPI → CNAE + porte → faixa de tCO₂e/ano. **Bug achado e corrigido:** a BrasilAPI recusava
+  a chamada do Worker **sem `User-Agent`** (add UA + 3 tentativas → passou; provado com CNPJ real, trouxe
+  razão social, setor e faixa corretos). ⚠️ Os **fatores por setor seguem ILUSTRATIVOS** (pendente especialista).
+- **2026-07-20** — **Requisito do Marcio para o PAINEL principal (a construir):** tudo **automático** — ao
+  logar, já mostra os dados da empresa + a **estimativa já calculada** (o CNPJ vem do contrato no Ploomes,
+  sem digitar); um **"termômetro"** com o que a empresa já descartou "abatendo o ponteiro"; abrir OS;
+  consultar OS feitas; e os **documentos emitidos**.
+  - ⚠️ **FREIO (ligado ao §5.3):** "abater o descartado do ponteiro" é exatamente a armadilha de
+    *emissão evitada ≠ compensação*. Mostrar como **DOIS indicadores** ("sua pegada estimada" + "quanto você
+    já evitou destinando certo com a Ecobraz"), lado a lado — **não** um subtraindo do outro como se
+    neutralizasse. Mantém o impacto visual e fica audit-safe.
+  - **Dependências:** o número do "evitado" e os **documentos** dependem dos **dados reais de descarte
+    (conversa com a Débora)** + **fatores de emissão evitada** validados por especialista. A estimativa
+    automática por CNPJ, essa dá pra ligar já (se o CNPJ estiver no cadastro do Ploomes).
+- **2026-07-20** — **Preço do Nível 2 decidido — escalonado por porte** (usando o porte que já vem do CNPJ),
+  substitui o "R$ 250 fixo" citado antes (§4.4/§6):
+  - Micro/Pequena: **R$ 290** · Média: **R$ 690** · **Grande → não vende o indicativo, vai direto pro
+    Nível 3** (inventário verificado; empresa grande precisa do completo).
+  - Regras de ouro: (1) deixar **cristalino** que é cálculo **indicativo**, não inventário verificado
+    (preço tem que casar com a promessa); (2) desenhar o **próximo passo (Nível 3)** logo após o resultado.
+  - ⚠️ Números são **estimativa fundamentada**, não benchmark — **validar com pesquisa de concorrência**
+    (preço de mercado BR) na quarta e ajustar.
+- **2026-07-21** — **Nível 2 (pago) construído; testado até o checkout do Mercado Pago.** Feito: motor
+  de cálculo GHG (`calculoDetalhadoGHG`, testado localmente), formulário `/calculo-detalhado`, e a
+  integração **Mercado Pago Checkout Pro** (`mercadopago.js`: preferência + consulta de pagamento),
+  webhook `/api/mp/webhook`, status do pedido no KV, e e-mail da NF (no teste vai pro Marcio).
+  - ✅ **Provado ao vivo:** botão → cria a preferência → **checkout do MP abre com R$1 e descrição
+    corretos**. A parte do MP que eu não conseguia testar do sandbox **funciona**. Bug do começo
+    (BrasilAPI sem User-Agent) e este passo confirmam o motor.
+  - ⏳ **Ainda a testar** (precisa de um pagamento concluído): webhook → "pago" → e-mail da NF.
+  - ⚠️ **Pix não apareceu** no checkout — provável causa: pagar a **própria conta** (MP não oferece Pix
+    pra você mesmo). Alternativas p/ testar: cartão real de R$1, cartão de teste, ou 2ª conta.
+  - ⚠️ Token do MP ainda em **produção** (`APP_USR-`); o de teste `TEST-` ficou pendente (o painel do MP
+    confundiu). Não bloqueia — dá pra testar com valor simbólico real.
+- **2026-07-22** — **ESTRUTURA REAL DE OS/DOCUMENTOS DESCOBERTA** (inspeção só-leitura no cliente-exemplo
+  autorizado pela Débora: **ENEL Distribuição SP**, CNPJ 61.695.227/0001-93) + confirmado pela Débora:
+  - **A OS é o Negócio (Deal)**, no funil **[44259] 🟦 [PJ] VENDAS**. O **status** é a **etapa (Stage)** do
+    negócio, ajustada à mão (ex.: *"Doc. Env: OS Finalizada"* = concluída, *"❌ Cancelado"*).
+  - **Campos operacionais no Negócio (por FieldKey):**
+    - Número da OS = `deal_7EAFD2A7-7804-4B61-B717-1D895F1B4AF9` (cada OS tem nº próprio; 1 negócio pode
+      ter vários — ex.: "000019774, 000019778").
+    - Peso = `deal_6CDA6722-B287-42B9-97DA-A7987A963CBE` (ex.: "141,2 KG").
+    - Data de Coleta = `deal_C8D28B9E-0F76-492B-B03D-6935CA2C39C8`.
+    - Região = `deal_85AE1C16-E06F-4638-8D77-6DD40A576786`; Endereço = `deal_F4BF490C-707A-434A-BB3A-E187CBFD8638`.
+  - **Documentos:** ligados ao negócio via entidade **Orders** (o "documento de venda", com template HTML —
+    é o que o Ploomes **emite**: Carta de Doação etc.). **MTR e NF são ANEXADOS**; os demais o Ploomes emite.
+    Tudo no banco do Ploomes, por cliente — qualquer funcionário acessa e encaminha.
+  - **→ Destrava:** a **lista de OS real no painel** (nº, peso, data de coleta, status pela etapa) e a
+    **área de documentos**.
+  - ⚠️ **A confirmar com o Marcio/Débora:** se TODOS os clientes seguem esse padrão (a ENEL usa o funil de
+    VENDAS pra OS) ou se varia; e qual etapa = "em andamento" vs "concluída" vs "cancelada".
+- **2026-07-22** — **Respostas da Débora + lista de OS construída e verificada.** Todos os clientes seguem
+  o padrão, em **4 funis por tipo** (LEADS, PJ VENDAS, SAC/RECEPTIVO, PESSOA FÍSICA), etapas parecidas.
+  Mapeamento (agnóstico ao funil, `os-utils.js`): *Concluída* = "OS finalizada"/"certificado liberado";
+  *Em atendimento* = de "ordem de serviço" até "pesagem" (**decisão do Marcio: "coleta finalizada" = Em
+  atendimento**); *Cancelada*; negociação não aparece. **Lista de OS real no painel — construída e
+  verificada com dados reais da ENEL** (nº, peso, data de coleta, status). Login de teste = cadastro do
+  Marcio (contrato ativo = sim).
+- **2026-07-22** — **Inspeção de anexos/documentos/webhook** (via `$metadata`, 492 entidades) — destrava
+  os próximos recursos:
+  - **Documentos emitidos** (CDF/Carta de Doação): `Orders`/`Documents` têm **`DocumentUrl`** (link do PDF),
+    `Key`, `Shared`, endpoint **`/Share`** e o HTML (`BodySourceCode`) → download viável.
+  - **Anexos (MTR/NF):** sistema **`Attachments`/`AttachmentsItems`/`AttachmentsFolders`** (`Base64`,
+    `GetById`). Falta só sondar o vínculo exato anexo↔negócio (via AttachmentsItems).
+  - **Upload de fotos (Abrir OS):** `Deals/{key}/UploadFile` (também Orders/Contacts). **Formato
+    confirmado por sonda em 2026-07-22:** multipart, campo **`file`** → HTTP 200 (criação e exclusão de
+    negócio de teste também OK; nada ficou no Ploomes).
+  - **E-mail branded na mudança de status:** o Ploomes TEM **`Webhooks` + `Automations`** → o "jeito bonito"
+    (portal avisado na mudança de etapa → e-mail com a cara da Ecobraz) **é viável**. ✅
+  - **QR de validação no CDF (ideia do Marcio, anti-fraude) — adotada:** documentos têm `Key`/`/Share`; o QR
+    aponta pra uma **página de validação nossa** que confere contra o registro real. `DocumentTemplates` é
+    configurável (pode embutir o QR).
+  - **Abrir OS (form pedido pelo Marcio):** Razão Social, CNPJ, **Endereço de coleta (editável — muda por
+    coleta)**, telefone, e-mail, responsável, **lista/fotos dos equipamentos**; pré-preenche do Ploomes,
+    cliente confirma/atualiza → cria a OS. Ploomes gera a OS + documento inicial (imediato); CDF vem depois.
+- **2026-07-22** — **Carbono: direção fechada com o Marcio + base metodológica escrita.** Decisões: (1) foco =
+  **emissões evitadas (benefício)** da destinação correta **+** apoio ao **Escopo 3 (Cat. 5, resíduos)** do
+  cliente; (2) **Villanova ESG** valida/assina a metodologia; (3) dados de **material+peso** existem (Marcelo)
+  e entram pelo **módulo de operação** (a construir). **Visão do produto (confirmada):** a **cadeia de custódia
+  é o lastro** — coleta no cliente **com foto no ato + GPS do agente** → planta → **pesagem → tratamento →
+  destino** (reciclagem **com MTR+NF** ou **reuso/reintrodução com NF**); "cada porca e parafuso rastreado da
+  retirada ao destino final". O sistema **"enlata" documentos soltos num produto de prateleira de alto valor**.
+  **Pontos focais comerciais:** (1) **coleta nos clientes** (volume = ganha-pão) e (2) **Adote um Bairro**
+  (financia a última milha da coleta de PF, volumes pequenos). **Entregue hoje:** `portal-cliente/METODOLOGIA-
+  CARBONO.md` (v1) com normas (GHG Protocol, WRI/WBCSD emissões evitadas, ISO 14064/67, EPA WARM v16, WEEE
+  Forum/PRé, fator MCTI/SIRENE), fronteira, os **3 números que não se misturam** (evitadas ≠ inventário ≠
+  neutralização), tabela-mãe de fatores (a validar) e rastreabilidade. **Próximo:** validar com a Villanova →
+  motor de cálculo (puxa material/peso do Ploomes) → as 3 telas (auditor/cliente/analista).
+- **2026-07-23** — **Processo OPERACIONAL + Engenharia Ambiental (spec do Marcio) — capturado p/ construir em
+  conformidade.** DOIS fluxos: **(1) Padrão** — chega na doca → equipe **confere contra a OS** (inspeção
+  visual) → separa em 2 grupos: **Reciclagem** (paletiza/pesa/fotografa/estretcha → planta de manufatura →
+  desmonta por componente → **usina recicladora cadastrada**, com **MTR+NF**) e **Remanufatura/reuso**
+  (paletiza/pesa/fotografa → **descaracterização + remoção de HD/memória** → **dados destruídos padrão R2/R3 e
+  reciclados** → resto limpo/consertado → **leilão** com **NF**). **Regra de ouro:** celular/tablet/**memória
+  sólida = sempre reciclado, nunca reuso** (LGPD+GDPR). **(2) Pago (laudo)** — destruição/sanitização ou
+  **médico/laboratorial** → tratado **isolado**, reciclagem completa + venda de matéria-prima, **sem reuso**.
+  Envio a reciclador = **MTR+NF**; leilão = **NF**. **Engenharia Ambiental** faz laudos, acompanha, valida a
+  documentação interna, sanitização e QC. **Pedidos do Marcio:** QR/controle em CADA etapa; fotos+docs sempre
+  em anexo p/ linkar; após validação (**Eng. Ambiental + Villanova**), o sistema **gera o relatório final de
+  conformidade** (BR+Europa) que passe em KPMG/bancos. **Mapa de conformidade (a validar c/ especialista):**
+  R2v3/e-Stewards, ISO 14001/9001/27001, **NIST SP 800-88** (destruição de dados), LGPD/GDPR, **ADISA** (ITAD
+  Europa), **MTR/SINIR/PNRS/CDF** (BR), **Diretiva WEEE**/Basel (EU). **Value-add proposto (aprovar):** (a)
+  **balanço de massa** (entra = reciclado+reuso+destruído+rejeito); (b) **certificado de destruição por nº de
+  série** (NIST 800-88); (c) **due diligence do destino final** (licença/CDF da recicladora — R2 exige);
+  (d) **isolamento provado** do fluxo pago; (e) **regra do SSD como TRAVA do sistema** (dado → só reciclagem).
+  Honestidade (mesma do carbono): construímos sistema+rastreabilidade+travas+motor de relatório; **laudos e
+  padrões específicos são validados/assinados pela Eng. Ambiental + Villanova + jurídico**. Ordem: Agente →
+  **Operacional/Eng. Ambiental** → Validação Marcelo.
+  **ADENDO (Marcio) — Cadastro & validação de DESTINO FINAL (sub-módulo da Eng. Ambiental):** registro das
+  usinas que recebem o destino final (**recicladoras E incineradoras**), com CNPJ, tipo (reciclagem/
+  incineração/co-processamento), **licenças ambientais com validade**, certificações e **comprovantes de
+  recebimento** (CDF/MTR de destino). **Alerta/trava de licença vencida** (não deixa mandar p/ destino
+  irregular). **Ecobraz = ATERRO ZERO (correção Marcio):** **nada** vai para aterro; o que **não pode ser reciclado/reusado
+  OU não tem valor comercial** é **INCINERADO** (idealmente c/ recuperação energética/co-processamento) em
+  usina **licenciada**. Cada kg tem destino documentado e licenciado → 0% aterro, **provado pelo cadastro de
+  destino + balanço de massa** no dossiê. **PONTO DE HONESTIDADE (anti-greenwashing/Green
+  Claims UE):** "aterro zero" é alegação de RESÍDUO, **não** de carbono — NÃO conflar com "carbono zero"; a
+  fração **incinerada EMITE CO₂** (entra como custo no carbono, não benefício); desviar de aterro evita metano
+  (benefício), incinerar emite (custo) — a conta considera os dois; separar "incineração c/ recuperação
+  energética / co-processamento" de incineração simples.
+- **2026-07-23** — **Módulo Agente de Coletas — desenho fechado + entidade certa achada.** Fluxo (Marcio):
+  Débora move a coleta p/ "Em Transporte" → aparece no app do agente (só as dele) → **check-in GPS** ao
+  chegar → **foto da carga** → chega na Ecobraz → **encerra** → "Coleta Finalizada" (+ GPS) → gera
+  **comprovante PDF + QR anexado no Ploomes**. Botão **reagendar** (GPS + motivo). Decisões: **login por
+  agente**; **modo offline** (guarda e sincroniza); **GPS alta precisão** (carimbo hora+precisão); **agente
+  só coleta** (conferência de itens é da equipe Ecobraz); comprovante = **anexo no Ploomes**. Ordem dos 3
+  módulos: **Agente de Coletas → Operacional Ecobraz → Validação do Marcelo**. **App = PWA mobile** (câmera+GPS
+  do navegador, sem loja). Selo/QR da coleta: **público = só confirma; detalhe (GPS/fotos) = logado**.
+  **DESCOBERTA CHAVE (sonda `orders`):** o funil de coleta é a entidade **Orders (Vendas)** — `/Orders/table`,
+  **não** Deals. Order tem **`StageId`** (Estágio) e um campo embutido **`AgentId`** (Agente/Vendedor) — forte
+  candidato pra marcar o coletor. **Limitações da API de Orders:** `$expand=Stage` e `$expand=Tags` dão **HTTP
+  400** → Vendas provavelmente **não usa marcador (tag)**, e o **nome** da etapa não vem no expand (resolver o
+  mapa StageId→nome ainda). **A confirmar com o Marcio:** os coletores são **usuários do Ploomes**? (se sim →
+  usar `AgentId`; se não → campo/lista de agentes própria). Mockup visual das 3 telas do app **aprovado**.
+- **2026-07-22** — **✅ ITEM 3 (QR de validação no CDF) — SISTEMA CONSTRUÍDO E PROVADO; falta só o
+  passo da Débora.** Novo módulo `worker/src/validacao.js` + dep `qrcode-generator` (v9): **`GET /qr?n=NÚMERO`**
+  gera a imagem do QR (GIF, mais compatível com PDF; `?fmt=svg|txt` também) apontando para
+  **`GET /validar?n=NÚMERO&c=CÓDIGO`** — página pública que **confere o CDF AO VIVO contra o Ploomes** e
+  mostra ✅ autêntico + nº + empresa + data (ou ❌). **Código assinado (HMAC-SHA256, chave derivada do
+  `PORTAL_SESSION_SECRET`)** — não dá pra forjar nem varrer números; validação **sem estado** (recalcula e
+  compara). Só valida documentos do **modelo do CDF (224095 "CERTIFICADO DE DESTINAÇÃO")** — nunca outro
+  doc; sem CNPJ/dados internos (só o que já está no papel). **PROVADO ponta a ponta contra CDF real nº 20010**
+  (sonda `valida-cdf`): `/validar` código certo → HTTP 200 "Documento autêntico" + empresa; código errado →
+  HTTP 400 "Código inválido"; `/qr` → GIF 3 KB. **Achado importante:** a API do Ploomes **NÃO expõe o HTML
+  do modelo** (`BodySourceCode` etc. vêm null mesmo com `$select`) — então **não dá pra pré-configurar nem
+  entregar o trecho exato pronto**: a Débora precisa, no **editor de modelo do Ploomes**, inserir a imagem do
+  QR com URL dinâmica `…/qr?n=<campo do número do certificado>`. **Plano A** (editor aceita URL de imagem com
+  campo) → colar o `<img>`. **Plano B** (só imagem estática) → QR fixo + página que pede o número (troca:
+  validação menos automática). **Depende da Débora + capacidade do editor.**
+- **2026-07-22** — **✅ ITEM 2 (aviso por e-mail) CONCLUÍDO, VERIFICADO E NO AR PARA TODOS.** E-mail
+  "Coleta agendada" **chegou na caixa de entrada do Marcio** (não spam), com a cara da Ecobraz Emigre,
+  remetente `acesso@ecobraz.org.br`, `resultado:enviado` + id do Resend nos logs. Modo-teste (canário)
+  **desligado** → passou a ser opt-in via `NOTIF_MODO_TESTE=1` (v8) → o aviso vale para **todos os
+  clientes**. Os **3 gatilhos foram conferidos contra os nomes REAIS do funil 44259** (sonda `etapas`,
+  cobertura completa por `Deals?$orderby=StageId`; as entidades raiz `Stages`/`Pipelines`/... dão 404):
+  **[199543] "📄 Ordem de Serviço" → coleta agendada; [209749] "✅ Coleta Finalizada" → coleta realizada;
+  [208578] "🔰 Certificado Liberado" → certificado liberado**. Cada aviso casa com **exatamente uma** etapa
+  (sem lacuna, sem ambiguidade). Demais etapas do funil (OS Finalizada 3120, Cancelado 452, Aguardando
+  pesagem 47, Proposta Comercial 25, Previsto Descarte 3) **não disparam** — correto. Mecanismo provado de
+  ponta a ponta uma vez (coleta agendada, entrega real); os outros 2 usam o MESMO caminho e etapas
+  confirmadas. De-dup por KV evita repetição. Comprovante de cada envio em `notif:ultimo`
+  (GET `/api/ploomes/webhook?t=SEGREDO`). **Falta (opcional):** limpar o secret `NOTIF_TESTE_CONTACT_ID`
+  (ignorado hoje); e, se o Marcio quiser, um teste forçado de "coleta realizada" e "certificado liberado".
+- **2026-07-22** — **Aviso por e-mail: causa real achada e corrigida + prova de envio.** O diagnóstico com
+  registro de resultado (`notif:ultimo`, no ar na v6/v7) mostrou nos logs o **formato REAL do payload do
+  webhook**: `{Action:"Update", Entity:"Deals", SecondaryEntityId, AccountId, ..., Old:{ Id:<negócio>, ... }}`
+  — **NÃO tem `EntityId` no topo; o Id do negócio vem em `Old.Id`**. O parser lia `EntityId` (que não existe)
+  → devolvia `null` → **nunca chamava o envio** (por isso nada chegava, mesmo com o webhook disparando certo).
+  **Corrigido:** `extrairDealId` agora lê `Old.Id`/`New.Id`. Adicionado **comprovante de envio**: o Worker
+  grava o resultado de cada aviso (enviado + id do Resend, ou o motivo exato de não enviar — sem e-mail,
+  falha no Resend, etc.), visível no GET `/api/ploomes/webhook?t=SEGREDO`. `/health` v7. **Reteste em curso.**
+- **2026-07-22** — **E-mail de aviso LIGADO em modo teste (item 2).** Via API (o Marcio pediu "faça
+  tudo"): webhook do Ploomes criado (**Id 27000, Active, EntityId=2/Negócio, ActionId=2/editado** → chama o
+  Worker); segredo `PLOOMES_WEBHOOK_SECRET` gravado no Cloudflare via `wrangler@3`; **canário**
+  `NOTIF_TESTE_CONTACT_ID=24038683` (só o Marcio recebe). Disparei um teste de ponta a ponta (criar/mover/
+  apagar um negócio de teste sob o contato do Marcio). **Pendente de confirmação do Marcio:** se o e-mail
+  chegou. **Risco honesto:** o webhook pode só disparar em edições pela TELA do Ploomes (não pela API) — se
+  o teste não chegar, validar com a Débora movendo uma OS. Ao confirmar, remover o canário → vale para todos.
+- **2026-07-22** — **E-mail de aviso na mudança de etapa (item 2 dos 3) — parte do sistema pronta.**
+  Webhook `POST /api/ploomes/webhook?t=SEGREDO` (o Ploomes chama na automação), protegido por
+  `PLOOMES_WEBHOOK_SECRET` (desabilitado/503 até configurar → deploy seguro). 3 gatilhos por etapa:
+  **Ordem de Serviço → "coleta agendada"; Coleta Finalizada → "coleta realizada"; Certificado Liberado →
+  "certificado liberado"**. E-mail com a cara da Ecobraz Emigre (Resend, `acesso@ecobraz.org.br`), de-dup por
+  KV (`notif:{deal}:{tipo}`), remetente confirmado pelo Marcio. Lógica (etapa→aviso, parse do payload)
+  testada localmente. `/health` v5 mostra `avisoEmail`; rota GET guarda o último payload p/ ajustar formato.
+  **Falta LIGAR:** criar `PLOOMES_WEBHOOK_SECRET` no Cloudflare + a automação no Ploomes (guiar o Marcio);
+  teste real com o cadastro dele.
+- **2026-07-22** — **NF no download (fecha o item 1 dos 3 pedidos).** A NF vem dos **anexos**
+  (`Attachments`): campo `Url` verificado (baixa PDF 109 KB) e `FileName`/`ContentType`/`IsSensitiveData`/
+  `Listable` no próprio registro. `classificaAnexo` = **allowlist ESTRITO (só NF)**; fotos WhatsApp/termo
+  **nunca** aparecem. **Provado na OS real da ENEL: 1 mostrado (NF), 11 escondidos.** Download por
+  `fonte=anexo` (`Attachments(id).Url`), mesma trava de dono. Restam os itens 2 (e-mail de aviso) e 3 (QR
+  no CDF).
+- **2026-07-22** — **Documento da OS no download + OS/NF mapeados.** Confirmado com a Débora: **CDF/laudo
+  liberam na etapa "Certificado Liberado"** (valida a trava). **Documento da OS** agora entra no download
+  (entidade `Orders`; `DocumentUrl` verificado = PDF 60 KB), classificado **pelo nome do modelo** (só "OS";
+  **proposta/orçamento nunca vaza**, mesmo com "serviço" no nome — reforçado). Download unificado por
+  `fonte` (document|order), mesma trava de dono + liberação. **NF (anexos):** localizada (`NF_000019709.pdf`
+  entre 12 anexos — os outros são fotos WhatsApp + Termo, **internos → escondidos**); **falta só o caminho
+  de download do anexo** (a verificar) pra incluir a NF. Próximo: NF; e-mail nas 3 mudanças; QR no CDF.
+- **2026-07-22** — **Regras de documento da Débora (segurança no download):** cliente pode ver **OS, NF,
+  MTR, Carta de Descarte, CDF, laudo**; **CDF e laudo só quando liberados**; **nunca** contrato/imagens de
+  controle interno. Sonda dos tipos (400 docs): a entidade `Documents` traz **MTR, Carta de Descarte,
+  CDF/Certificado**; o flag **`Shared` do Ploomes NÃO é usado (0 de 400)** — então "liberado" é detectado
+  pela **etapa "Certificado Liberado"** (a **confirmar com a Débora**). Implementado `classificaDoc` +
+  trava por etapa **na lista E no download direto**; tipo desconhecido = escondido (padrão seguro). **Achado
+  do processo (Débora):** o **número da OS é automático (sequencial)**, mas o **documento da OS é gerado
+  MANUALMENTE** (cadastro → status "Ordem de Serviço" → "vendas" → preenche endereço/responsável/material →
+  salvar); os demais documentos idem, conforme a coleta anda. → o Portal **alimenta** esse passo (não
+  substitui a validação humana). **Pendente:** incluir no download a **OS (entidade `Orders`)** e a **NF
+  (anexos)**; confirmar a etapa de liberação; mapear responsável/material nos campos do "vendas".
+- **2026-07-22** — **3 pedidos do Marcio no teste ao vivo:** (1) **Baixar documentos** — descoberto e
+  **verificado** como os documentos ligam à OS (`Documents?$filter=DealId`) e como baixar (o `DocumentUrl`
+  devolve o PDF, 140 KB). Implementado: `/api/os/docs` (lista) e `/api/os/doc` (download **proxy pelo
+  Worker**, URL de storage nunca exposta), ambos **só para OS do próprio cliente** (confere ContactId).
+  Painel: botão "📄 Documentos" por OS. (2) **CEP** — novo `/api/cep` (BrasilAPI) autopreenche
+  rua/bairro/cidade/UF; seção "Local da coleta" reorganizada (CEP, número, rua, bairro, cidade/UF,
+  complemento) — reduz erro de digitação. **Confirmado ao vivo pelo Marcio.** (3) **Documentos preenchidos corretos** — achado o **campo real
+  do endereço de coleta** (`deal_F4BF490C-...`) e o Portal agora **grava nele** (não só na nota) — gravação
+  **verificada por sonda** (gravou e leu de volta idêntico). **Pendente:** anexos NF/MTR (sistema
+  `Attachments`, 12 itens por OS — download é um passo a mais) e confirmar com a Débora como o Nº/documentos
+  são gerados hoje.
+- **2026-07-22** — **Abrir OS vira OS de verdade (não mais lead):** o teste do Marcio mostrou que a
+  solicitação caía na 1ª etapa ("Em contato") = um lead, sem virar OS. **Corrigido:** a solicitação agora
+  é criada já no funil **[PJ] VENDAS (44259)**, etapa **"📄 Ordem de Serviço" (StageId 199543)** — IDs e o
+  comportamento **verificados por sonda** (criou negócio de teste → caiu na etapa certa → apagado; nada
+  ficou). Cliente vê "Em atendimento" na hora; Débora recebe na coluna de OS. **Achado honesto:** o **Nº da
+  OS e os documentos NÃO saem ao entrar na etapa** — das 49 OS reais nessa etapa, **0 têm número**; o número
+  aparece mais à frente (pesagem/finalização). **Pendente com a Débora:** como o Nº/documentos são gerados
+  hoje (automação do Ploomes ou clique?), pra decidir se dá pra sair automático já na solicitação.
+- **2026-07-22** — **Abrir OS elaborado (fotos):** formulário reorganizado em seções (empresa, local da
+  coleta, equipamentos, fotos), pré-preenchido do cadastro; anexo de fotos com arrastar-e-soltar, redução
+  no navegador e miniaturas; o Worker envia as fotos ao negócio no Ploomes (`Deals/{id}/UploadFile`, campo
+  `file`). **Publicado no endereço de teste** (workers.dev). **Falta o teste ao vivo do Marcio** (criar uma
+  solicitação de verdade e conferir a foto anexada no Ploomes) — ainda NÃO verificado ponta a ponta com ele.

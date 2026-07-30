@@ -10,6 +10,15 @@ name: Portal — Diagnóstico do Ploomes (somente leitura)
 
 on:
   workflow_dispatch:
+    inputs:
+      cnpj:
+        description: 'CNPJ de um cliente-exemplo para inspeção focada (vazio = diagnóstico geral)'
+        required: false
+        default: ''
+      sonda:
+        description: 'Sonda específica: "upload" / "upload-live" (upload de fotos) ou "solicitacao" (o que a Solicitação de coleta virou + IDs das etapas). Vazio = ignora.'
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -22,11 +31,261 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Rodar diagnóstico (somente leitura, sem dados pessoais)
+      - name: Diagnóstico geral (somente leitura) — quando SEM cnpj e SEM sonda
+        if: ${{ github.event.inputs.cnpj == '' && github.event.inputs.sonda == '' }}
         env:
           PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
           PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }} # opcional; padrão public-api2.ploomes.com
         run: node portal-cliente/diagnostico/diagnostico-ploomes.mjs
+      - name: Sonda de upload (Abrir OS) — quando sonda = upload / upload-live
+        if: ${{ github.event.inputs.sonda == 'upload' || github.event.inputs.sonda == 'upload-live' }}
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+          LIVE: ${{ github.event.inputs.sonda == 'upload-live' && '1' || '0' }}
+        run: node portal-cliente/diagnostico/sonda-upload.mjs
+      - name: Sonda da Solicitação de coleta (somente leitura) — quando sonda = solicitacao
+        if: ${{ github.event.inputs.sonda == 'solicitacao' }}
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+        run: node portal-cliente/diagnostico/inspeciona-solicitacao.mjs
+      - name: Sonda criar OS na etapa certa (cria e apaga um teste) — quando sonda = os-live
+        if: ${{ github.event.inputs.sonda == 'os-live' }}
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+        run: node portal-cliente/diagnostico/sonda-cria-os.mjs
+      - name: Sonda de DOCUMENTOS e campos da OS (somente leitura) — quando sonda = documentos
+        if: ${{ github.event.inputs.sonda == 'documentos' }}
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+          CNPJ_ALVO: ${{ github.event.inputs.cnpj }}
+        run: node portal-cliente/diagnostico/inspeciona-documentos.mjs
+      - name: Sonda gravar-campo + baixar-documento — quando sonda = download
+        if: ${{ github.event.inputs.sonda == 'download' }}
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+          CNPJ_ALVO: ${{ github.event.inputs.cnpj }}
+        run: node portal-cliente/diagnostico/sonda-download-e-campo.mjs
+      - name: Sonda endpoints de documentos (lógica + segurança) — quando sonda = docs-endpoint
+        if: ${{ github.event.inputs.sonda == 'docs-endpoint' }}
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+          CNPJ_ALVO: ${{ github.event.inputs.cnpj }}
+        run: node portal-cliente/diagnostico/sonda-docs-endpoint.mjs
+      - name: Sonda tipos de documento + flag liberado — quando sonda = tipos-doc
+        if: ${{ github.event.inputs.sonda == 'tipos-doc' }}
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+        run: node portal-cliente/diagnostico/inspeciona-tipos-doc.mjs
+      - name: Sonda OS (Orders) + NF (anexos) — quando sonda = os-nf
+        if: ${{ github.event.inputs.sonda == 'os-nf' }}
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+          CNPJ_ALVO: ${{ github.event.inputs.cnpj }}
+        run: node portal-cliente/diagnostico/inspeciona-os-nf.mjs
+      - name: Sonda baixar OS (Orders) + NF (anexo) — quando sonda = baixar-anexo
+        if: ${{ github.event.inputs.sonda == 'baixar-anexo' }}
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+          CNPJ_ALVO: ${{ github.event.inputs.cnpj }}
+        run: node portal-cliente/diagnostico/sonda-baixar-anexo.mjs
+      - name: Sonda caminho de download do anexo (NF) — quando sonda = anexo-download
+        if: ${{ github.event.inputs.sonda == 'anexo-download' }}
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+          CNPJ_ALVO: ${{ github.event.inputs.cnpj }}
+        run: node portal-cliente/diagnostico/sonda-anexo-download.mjs
+      - name: Sonda prova lista de anexos (só NF) — quando sonda = nf-lista
+        if: ${{ github.event.inputs.sonda == 'nf-lista' }}
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+          CNPJ_ALVO: ${{ github.event.inputs.cnpj }}
+        run: node portal-cliente/diagnostico/sonda-nf-lista.mjs
+      - name: Sonda Webhooks/Automations do Ploomes (pode ligar o aviso pela API?) — quando sonda = webhooks
+        if: ${{ github.event.inputs.sonda == 'webhooks' }}
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+        run: node portal-cliente/diagnostico/inspeciona-webhooks.mjs
+      - name: Sonda IDs (Negócio + cadastro do Marcio) — quando sonda = ids
+        if: ${{ github.event.inputs.sonda == 'ids' }}
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+          EMAIL_TESTE: ${{ github.event.inputs.cnpj }}
+        run: node portal-cliente/diagnostico/inspeciona-ids.mjs
+      - name: Sonda etapas do funil (confere os 3 gatilhos do aviso) — quando sonda = etapas
+        if: ${{ github.event.inputs.sonda == 'etapas' }}
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+        run: node portal-cliente/diagnostico/inspeciona-etapas.mjs
+      - name: Sonda modelo do CDF (como embutir o QR) — quando sonda = modelo-cdf
+        if: ${{ github.event.inputs.sonda == 'modelo-cdf' }}
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+        run: node portal-cliente/diagnostico/inspeciona-modelo-cdf.mjs
+      - name: Valida QR do CDF ponta a ponta (Ploomes + Worker) — quando sonda = valida-cdf
+        if: ${{ github.event.inputs.sonda == 'valida-cdf' }}
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+        run: node portal-cliente/diagnostico/valida-cdf.mjs
+      - name: Sonda funil de coleta (IDs + campo do agente) — quando sonda = coleta
+        if: ${{ github.event.inputs.sonda == 'coleta' }}
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+        run: node portal-cliente/diagnostico/inspeciona-coleta.mjs
+      - name: Sonda Orders/Vendas (funil de coleta real + estágios + tags) — quando sonda = orders
+        if: ${{ github.event.inputs.sonda == 'orders' }}
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+        run: node portal-cliente/diagnostico/inspeciona-orders.mjs
+      - name: Raio-X da migração (somente leitura do Ploomes) — quando sonda = raiox-migracao
+        if: ${{ github.event.inputs.sonda == 'raiox-migracao' }}
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+        run: node portal-cliente/diagnostico/raiox-migracao.mjs
+      - name: Migração de clientes — SIMULAÇÃO (dry, só leitura, não grava) — quando sonda = migra-dry
+        if: ${{ github.event.inputs.sonda == 'migra-dry' }}
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+        run: node portal-cliente/diagnostico/migra-clientes.mjs
+      - name: Migração de clientes — CARGA REAL no KV (grava na base nova) — quando sonda = migra-live
+        if: ${{ github.event.inputs.sonda == 'migra-live' }}
+        working-directory: portal-cliente/worker
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MIGRA_LIVE: '1'
+        run: |
+          npm install --no-audit --no-fund
+          node ../diagnostico/migra-clientes.mjs
+          npx wrangler@3 kv:bulk put ../diagnostico/migracao-bulk.json --namespace-id=edd3746ffe5a49d585c60d99c18a25c7
+      - name: Conta clientes migrados no KV (verificação) — quando sonda = conta-clientes
+        if: ${{ github.event.inputs.sonda == 'conta-clientes' }}
+        working-directory: portal-cliente/worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          npm install --no-audit --no-fund
+          npx wrangler@3 kv:key get "cli:index" --namespace-id=edd3746ffe5a49d585c60d99c18a25c7 > /tmp/cli-index.json || echo "[]" > /tmp/cli-index.json
+          node -e "const a=JSON.parse(require('fs').readFileSync('/tmp/cli-index.json','utf8')||'[]');const pj=a.filter(x=>x.tipo==='PJ').length,pf=a.filter(x=>x.tipo==='PF').length;console.log('CLIENTES NO KV:',a.length,'| PJ:',pj,'| PF:',pf);console.log('amostra:',a.slice(0,3).map(x=>x.nome).join(' | '))"
+      - name: Cadastra agente de teste (AGENTE_EMAILS) — quando sonda = cadastra-agente
+        if: ${{ github.event.inputs.sonda == 'cadastra-agente' }}
+        working-directory: portal-cliente/worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          npm install --no-audit --no-fund
+          printf '%s' "marcio@ecobraz.org.br|Marcio (teste)" | npx wrangler@3 secret put AGENTE_EMAILS
+      - name: Lê o último acesso ao /qr (diagnóstico do QR do CDF) — quando sonda = le-qr
+        if: ${{ github.event.inputs.sonda == 'le-qr' }}
+        working-directory: portal-cliente/worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          echo "=== qr:ultimo (o que o Ploomes mandou no /qr) ==="
+          npx wrangler@3 kv:key get "qr:ultimo" --namespace-id=edd3746ffe5a49d585c60d99c18a25c7 || echo "(sem valor / erro na leitura)"
+          echo ""
+      - name: Cadastra operador de teste (OPERACAO_EMAILS) — quando sonda = cadastra-operador
+        if: ${{ github.event.inputs.sonda == 'cadastra-operador' }}
+        working-directory: portal-cliente/worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          npm install --no-audit --no-fund
+          printf '%s' "marcio@ecobraz.org.br|Marcio (operação)" | npx wrangler@3 secret put OPERACAO_EMAILS
+      - name: Cadastra engenheiro de teste (ENG_EMAILS) — quando sonda = cadastra-engenheiro
+        if: ${{ github.event.inputs.sonda == 'cadastra-engenheiro' }}
+        working-directory: portal-cliente/worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          npm install --no-audit --no-fund
+          printf '%s' "marcio@ecobraz.org.br|Marcio (eng. teste)" | npx wrangler@3 secret put ENG_EMAILS
+      - name: Cadastra diretoria de teste (DIRETORIA_EMAILS) — quando sonda = cadastra-diretoria
+        if: ${{ github.event.inputs.sonda == 'cadastra-diretoria' }}
+        working-directory: portal-cliente/worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          npm install --no-audit --no-fund
+          printf '%s' "marcio@ecobraz.org.br|Marcio" | npx wrangler@3 secret put DIRETORIA_EMAILS
+      - name: Cadastra escritório/comercial (ESCRITORIO_EMAILS) — quando sonda = cadastra-escritorio
+        if: ${{ github.event.inputs.sonda == 'cadastra-escritorio' }}
+        working-directory: portal-cliente/worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          LISTA: ${{ github.event.inputs.cnpj }}
+        run: |
+          npm install --no-audit --no-fund
+          VAL="${LISTA:-marcio@ecobraz.org.br|Marcio}"
+          printf '%s' "$VAL" | npx wrangler@3 secret put ESCRITORIO_EMAILS
+      - name: Ligar aviso por e-mail (provisiona webhook + segredo) — quando sonda = provisiona-aviso
+        if: ${{ github.event.inputs.sonda == 'provisiona-aviso' }}
+        working-directory: portal-cliente/worker
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          S=$(openssl rand -hex 24); echo "::add-mask::$S"
+          npm install --no-audit --no-fund
+          printf '%s' "$S" | npx wrangler@3 secret put PLOOMES_WEBHOOK_SECRET
+          printf '%s' "24038683" | npx wrangler@3 secret put NOTIF_TESTE_CONTACT_ID
+          PLOOMES_WEBHOOK_SECRET="$S" node ../setup/provisiona-aviso.mjs
+      - name: Diagnóstico do aviso por e-mail — quando sonda = diagnostica-aviso
+        if: ${{ github.event.inputs.sonda == 'diagnostica-aviso' }}
+        working-directory: portal-cliente/worker
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          S=$(openssl rand -hex 24); echo "::add-mask::$S"
+          npm install --no-audit --no-fund
+          printf '%s' "$S" | npx wrangler@3 secret put PLOOMES_WEBHOOK_SECRET
+          PLOOMES_WEBHOOK_SECRET="$S" node ../setup/diagnostica-aviso.mjs
+      - name: Testar aviso por e-mail (cadeia real, canário) — quando sonda = testa-aviso
+        if: ${{ github.event.inputs.sonda == 'testa-aviso' }}
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+        run: node portal-cliente/setup/testa-aviso.mjs
+      - name: Inspeção de cliente-exemplo (somente leitura) — quando informado cnpj e SEM sonda
+        if: ${{ github.event.inputs.cnpj != '' && github.event.inputs.sonda == '' }}
+        env:
+          PLOOMES_USER_KEY: ${{ secrets.PLOOMES_USER_KEY }}
+          PLOOMES_API_URL: ${{ secrets.PLOOMES_API_URL }}
+          CNPJ_ALVO: ${{ github.event.inputs.cnpj }}
+        run: node portal-cliente/diagnostico/inspeciona-cliente.mjs
       - name: Guardar resultado como artefato
         if: always()
         uses: actions/upload-artifact@v4

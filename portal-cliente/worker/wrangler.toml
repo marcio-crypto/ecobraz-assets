@@ -17,6 +17,26 @@ enabled = true
 binding = "PORTAL_KV"
 id = "edd3746ffe5a49d585c60d99c18a25c7"
 
+# D1 (banco SQL) — base de contatos migrada do Ploomes (~27 mil). Escala melhor
+# que o índice único em KV. Binding acessível no Worker como env.DB_PLOOMES.
+[[d1_databases]]
+binding = "DB_PLOOMES"
+database_name = "ecobraz-ploomes"
+database_id = "acd75607-389c-42c3-b50b-24f607350dd9"
+
+# R2 (depósito de arquivos) — arquivos migrados do Ploomes (anexos: NF/certificados/
+# MTR/fotos; documentos: propostas). Saída de dados grátis. Binding: env.R2_ARQUIVOS.
+[[r2_buckets]]
+binding = "R2_ARQUIVOS"
+bucket_name = "ecobraz-arquivos"
+
+# Endereço OFICIAL do sistema (domínio próprio na Cloudflare: Worker "ecobraz-portal").
+# Fixa todos os links (login por e-mail, retorno do Google, QR de validação) neste domínio.
+# Se um dia mudar o domínio, basta trocar aqui. Não é segredo — é uma URL pública.
+[vars]
+PORTAL_BASE_URL = "https://sistema.ecobraz.org"
+PORTAL_URL = "https://sistema.ecobraz.org"
+
 # ---------------------------------------------------------------------------
 # Segredos e variáveis (definidos NA CLOUDFLARE, nunca no repositório):
 #
