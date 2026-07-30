@@ -3,10 +3,14 @@
    libera o download dos materiais após um mini-formulário. Progressivo:
    sem JS o formulário reporta o e-mail de contato. */
 (function () {
-  var isPT = document.documentElement.lang === 'pt-BR';
-  var T = isPT
-    ? { sending: 'Enviando…', ok: 'Obrigado. Sua solicitação foi enviada — respondemos em 1 dia útil.', err: 'Algo deu errado. Escreva para contato@villanovaesg.com.', big: 'O anexo passa de 8 MB — reduza o arquivo ou envie sem anexo.', mok: 'Pronto! Seu material está abrindo — também deixamos o link abaixo.', open: 'Abrir o material →' }
-    : { sending: 'Sending…', ok: 'Thank you. Your request was sent — we reply within 1 business day.', err: 'Something went wrong. Please email contact@villanovaesg.com.', big: 'The attachment exceeds 8 MB — reduce the file or send without it.', mok: 'Done! Your material is opening — the link is also below.', open: 'Open the material →' };
+  var lang = document.documentElement.lang === 'pt-BR' ? 'pt' : (document.documentElement.lang === 'it' ? 'it' : 'en');
+  var isPT = lang === 'pt';
+  var TT = {
+    pt: { sending: 'Enviando…', ok: 'Obrigado. Sua solicitação foi enviada — respondemos em 1 dia útil.', err: 'Algo deu errado. Escreva para contato@villanovaesg.com.', big: 'O anexo passa de 8 MB — reduza o arquivo ou envie sem anexo.', mok: 'Pronto! Seu material está abrindo — também deixamos o link abaixo.', open: 'Abrir o material →' },
+    it: { sending: 'Invio in corso…', ok: 'Grazie. La sua richiesta è stata inviata — rispondiamo entro 1 giorno lavorativo.', err: 'Qualcosa è andato storto. Scriva a contact@villanovaesg.com.', big: "L'allegato supera gli 8 MB — riduca il file o invii senza allegato.", mok: 'Fatto! Il materiale si sta aprendo — il link è anche qui sotto.', open: 'Apri il materiale →' },
+    en: { sending: 'Sending…', ok: 'Thank you. Your request was sent — we reply within 1 business day.', err: 'Something went wrong. Please email contact@villanovaesg.com.', big: 'The attachment exceeds 8 MB — reduce the file or send without it.', mok: 'Done! Your material is opening — the link is also below.', open: 'Open the material →' }
+  };
+  var T = TT[lang];
 
   function ga(nome, origem) {
     try { if (window.gtag) window.gtag('event', nome, { method: origem }); } catch (e) {}
@@ -14,7 +18,7 @@
 
   function prepara(form) {
     var idioma = form.querySelector('input[name="idioma"]');
-    if (idioma) idioma.value = isPT ? 'pt' : 'en';
+    if (idioma) idioma.value = lang;
     // Só o seletor do idioma da página entra no envio.
     form.querySelectorAll('select[data-tipo-lang]').forEach(function (s) {
       s.disabled = s.getAttribute('data-tipo-lang') !== (isPT ? 'pt' : 'en');
@@ -81,7 +85,7 @@
       if (!ep || ep.indexOf('http') !== 0) { libera(); return; }
       if (bt) bt.disabled = true;
       if (st) { st.hidden = false; st.className = 'vn-form-status'; st.textContent = T.sending; }
-      var extra = { lead_source: origem, idioma: isPT ? 'pt' : 'en' };
+      var extra = { lead_source: origem, idioma: lang };
       // Falha no registro do lead não bloqueia o download — o material abre igual.
       envia(mf, ep, extra, libera, libera);
     });
