@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ecobraz v2 — VERSÃO B "Abraço Verde" (calor humano)</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --verde:#8DC63F; --verde-escuro:#6FA82B; --petrol:#0E3B43;
+    --ink:#1E3A34; --cinza:#5E7268; --creme:#FBF8F1; --sage:#F0F5E6;
+    --line:#E7E3D8; --r:22px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',Arial,sans-serif;color:var(--ink);background:var(--creme);font-size:16px;line-height:1.65}
+  h1,h2,h3{font-family:'Nunito',sans-serif;color:var(--petrol);font-weight:900;line-height:1.12}
+  .container{max-width:1120px;margin:0 auto;padding:0 24px}
+  p{color:var(--cinza)}
+  .tag{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--verde-escuro);background:var(--sage);border-radius:99px;padding:8px 18px;margin-bottom:18px}
+  .tag::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--verde)}
+  .btn{display:inline-flex;align-items:center;gap:8px;background:var(--verde);color:#fff;font-family:'Nunito';font-weight:800;font-size:16.5px;padding:16px 30px;border-radius:99px;text-decoration:none;transition:.18s;box-shadow:0 8px 22px rgba(141,198,63,.4)}
+  .btn:hover{background:var(--verde-escuro);transform:translateY(-2px) scale(1.02)}
+  .btn-suave{background:#fff;color:var(--petrol);border:2px solid var(--line);box-shadow:none}
+  .btn-suave:hover{background:var(--sage);border-color:var(--verde)}
+  .preview-note{background:#8DC63F;color:#0E3B43;padding:10px 0;font-size:13px;text-align:center;font-weight:700}
+
+  header{background:rgba(251,248,241,.95);backdrop-filter:blur(8px);position:sticky;top:0;z-index:50;border-bottom:1px solid var(--line)}
+  .nav{display:flex;align-items:center;gap:26px;padding:15px 0}
+  .logo{font-family:'Nunito';font-weight:900;font-size:26px;letter-spacing:-.02em;text-decoration:none;margin-right:auto}
+  .logo .eco{color:var(--verde)} .logo .braz{color:var(--petrol)}
+  .logo small{font-size:11px;color:var(--petrol);font-weight:800;letter-spacing:.06em;margin-left:6px}
+  .logo small i{font-style:normal;color:var(--verde)}
+  .nav a.l{color:var(--ink);text-decoration:none;font-weight:600;font-size:14.5px}
+  .nav a.l:hover{color:var(--verde-escuro)}
+  .nav .btn{padding:11px 22px;font-size:14.5px}
+
+  /* HERO orgânico */
+  .hero{padding:76px 0 70px;position:relative;overflow:hidden}
+  .hero::before{content:'';position:absolute;right:-180px;top:-120px;width:560px;height:560px;background:var(--sage);border-radius:47% 53% 61% 39%/44% 59% 41% 56%}
+  .hero .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:56px;align-items:center;position:relative}
+  .hero h1{font-size:clamp(38px,5.4vw,62px)}
+  .hero h1 em{font-style:normal;color:var(--verde-escuro);position:relative}
+  .hero .sub{font-size:18.5px;margin:20px 0 32px;max-width:480px}
+  .hero-foto{position:relative}
+  .hero-foto .img{aspect-ratio:4/3.4;border-radius:44% 56% 52% 48%/48% 44% 56% 52%;background:linear-gradient(135deg,#CDE3AC,#A9CD73 60%,#8DC63F);display:grid;place-items:center;color:#2E4A1D;font-weight:600;font-size:13.5px;text-align:center;padding:36px;box-shadow:0 30px 70px rgba(141,198,63,.35)}
+  .hero-selo{position:absolute;bottom:18px;left:-24px;background:#fff;border-radius:18px;box-shadow:0 14px 40px rgba(14,59,67,.14);padding:14px 20px;font-size:13px;font-weight:700;color:var(--petrol)}
+  .hero-selo b{color:#E8A13C;font-size:16px}
+
+  /* Prova em pílulas */
+  .prova{display:flex;gap:12px;flex-wrap:wrap;margin-top:34px}
+  .pill{background:#fff;border:1px solid var(--line);border-radius:99px;padding:9px 18px;font-size:13px;font-weight:700;color:var(--petrol)}
+  .pill i{font-style:normal;color:var(--verde-escuro)}
+
+  /* PORTAS: tiles suaves */
+  section.b{padding:84px 0}
+  .b.branco{background:#fff;border-radius:56px 56px 0 0}
+  .b.sage{background:var(--sage)}
+  .b.dark{background:var(--petrol);color:#fff;border-radius:56px 56px 0 0}
+  .b.dark h2{color:#fff} .b.dark p{color:#AECAC6}
+  h2{font-size:clamp(28px,3.6vw,42px)}
+  .portas{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:44px}
+  .porta{background:var(--creme);border-radius:var(--r);padding:28px 24px;text-decoration:none;transition:.18s;border:2px solid transparent}
+  .porta:hover{transform:translateY(-6px);border-color:var(--verde);background:#fff;box-shadow:0 18px 44px rgba(141,198,63,.22)}
+  .porta .ic{width:56px;height:56px;border-radius:18px;background:var(--sage);display:grid;place-items:center;margin-bottom:16px;font-size:24px}
+  .porta .ic svg{width:28px;height:28px;stroke:var(--verde-escuro);fill:none;stroke-width:1.9}
+  .porta h3{font-size:18px;margin-bottom:8px}
+  .porta p{font-size:13.5px;line-height:1.55;margin-bottom:14px}
+  .porta span{font-family:'Nunito';font-weight:800;color:var(--verde-escuro);font-size:14px}
+
+  /* Sistema */
+  .sist{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center}
+  .gratis{display:inline-flex;gap:10px;align-items:center;background:rgba(141,198,63,.18);color:#C8E89C;font-family:'Nunito';font-weight:800;font-size:14px;border-radius:99px;padding:10px 20px;margin-bottom:20px}
+  .check{display:flex;gap:14px;margin:16px 0;align-items:flex-start}
+  .check .c{flex:0 0 26px;height:26px;border-radius:50%;background:var(--verde);display:grid;place-items:center;color:#fff;font-weight:800;font-size:13px;margin-top:2px}
+  .check div b{color:#fff;font-size:16px}
+  .check div p{font-size:14px}
+  .tela{background:#fff;border-radius:26px;padding:16px;box-shadow:0 30px 80px rgba(0,0,0,.35);transform:rotate(2deg)}
+  .tela .scr{aspect-ratio:16/11;border-radius:16px;background:linear-gradient(135deg,#F2F7EA,#DFEDCB);display:grid;place-items:center;color:var(--cinza);font-size:13px;font-weight:600;text-align:center;padding:22px}
+
+  /* Passos: trilha com dots (motivo do logo "emigre") */
+  .trilha{display:grid;grid-template-columns:repeat(4,1fr);gap:30px;margin-top:48px}
+  .tp{background:#fff;border-radius:var(--r);padding:26px 24px;position:relative;box-shadow:0 10px 30px rgba(14,59,67,.06)}
+  .tp .dot{width:38px;height:38px;border-radius:50%;background:var(--verde);color:#fff;font-family:'Nunito';font-weight:900;display:grid;place-items:center;font-size:16px;margin-bottom:14px}
+  .tp h3{font-size:16.5px;margin-bottom:6px}
+  .tp p{font-size:13.5px}
+
+  /* B2B humano */
+  .conta{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}
+  .cartas{display:grid;gap:14px;margin-top:26px}
+  .carta{background:#fff;border-radius:18px;padding:18px 22px;font-weight:600;color:var(--ink);font-size:15.5px;box-shadow:0 8px 24px rgba(14,59,67,.06);border-left:5px solid var(--verde)}
+  .foto{border-radius:30px;overflow:hidden;box-shadow:0 24px 60px rgba(14,59,67,.14)}
+  .foto .img{aspect-ratio:4/3;background:linear-gradient(120deg,#DCE9C5,#BBD794 55%,#9FCB60);display:grid;place-items:center;color:#33501B;font-weight:600;font-size:13.5px;text-align:center;padding:24px}
+  .foto figcaption{background:#fff;font-size:12px;color:var(--cinza);padding:10px 16px}
+
+  .depo{background:#fff;border-radius:30px;box-shadow:0 16px 50px rgba(14,59,67,.08);padding:44px;max-width:720px;margin:0 auto;text-align:center;position:relative}
+  .depo::before{content:'“';font-family:'Nunito';font-size:110px;font-weight:900;color:var(--sage);position:absolute;top:-12px;left:28px;line-height:1}
+  .depo .stars{color:#E8A13C;font-size:20px;letter-spacing:3px;margin-bottom:16px}
+  .depo blockquote{font-family:'Nunito';font-weight:700;font-size:20px;color:var(--petrol);line-height:1.5}
+  .depo cite{display:block;margin-top:16px;font-style:normal;font-size:13.5px;color:var(--cinza)}
+
+  .cta-final{text-align:center;padding:96px 0;position:relative;overflow:hidden}
+  .cta-final::before{content:'';position:absolute;left:-140px;bottom:-180px;width:420px;height:420px;background:var(--sage);border-radius:53% 47% 39% 61%/56% 41% 59% 44%}
+  .cta-final h2{font-size:clamp(32px,4.6vw,54px);position:relative}
+  .cta-final p{margin:16px auto 32px;max-width:460px;position:relative}
+
+  footer{background:var(--petrol);color:#9DB8B4;padding:48px 0;font-size:13.5px;border-radius:56px 56px 0 0}
+  footer .cols{display:flex;gap:36px;justify-content:space-between;flex-wrap:wrap}
+  footer b{color:#fff;display:block;margin-bottom:10px;font-family:'Nunito';font-weight:800}
+  footer a{color:#9DB8B4;display:block;text-decoration:none;margin-bottom:7px}
+
+  .painel{background:#fff;border-top:3px dashed var(--line);padding:64px 0}
+  .painel h2{font-size:24px}
+  .sw{display:flex;gap:12px;flex-wrap:wrap;margin:20px 0}
+  .sw div{width:128px;border-radius:12px;border:1px solid var(--line);overflow:hidden;font-size:11px}
+  .sw .c{height:58px} .sw span{display:block;padding:7px 10px;color:var(--cinza)}
+  .eng{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:22px}
+  .eng div{background:var(--creme);border-radius:14px;padding:16px 18px;font-size:13.5px}
+  .eng b{color:var(--petrol)}
+
+  @media(max-width:920px){
+    .hero .grid,.sist,.conta{grid-template-columns:1fr}
+    .portas,.trilha{grid-template-columns:1fr 1fr}
+    .eng{grid-template-columns:1fr}
+    .hero-selo{left:8px}
+  }
+</style>
+</head>
+<body>
+
+<div class="preview-note">VERSÃO B — "ABRAÇO VERDE" · calor humano · prévia, nada publicado</div>
+
+<header>
+  <div class="container nav">
+    <a class="logo" href="#"><span class="eco">eco</span><span class="braz">braz</span><small>em<i>i</i>gre</small></a>
+    <a class="l" href="#">Para você</a>
+    <a class="l" href="#">Para empresas</a>
+    <a class="l" href="#">Governo</a>
+    <a class="l" href="#">Sistema</a>
+    <a class="l" href="#">EN</a>
+    <a class="btn" href="#">Agendar coleta</a>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="container grid">
+    <div>
+      <span class="tag">Coleta gratuita na Grande São Paulo · desde 2011</span>
+      <h1>Aquilo parado aí na sua casa pode virar <em>orgulho</em>.</h1>
+      <p class="sub">A gente busca, dá o destino certo e te entrega o certificado — de graça, em 1 a 7 dias úteis. Você só precisa dizer o que tem.</p>
+      <a class="btn" href="#">Agendar minha coleta</a>
+      <a class="btn btn-suave" href="#" style="margin-left:10px">Sou empresa</a>
+      <div class="prova">
+        <span class="pill"><i>★ 4,9</i> · 354 avaliações no Google</span>
+        <span class="pill">Resposta em <i>24h úteis</i></span>
+        <span class="pill">Listada por <i>ONU e UE</i></span>
+      </div>
+    </div>
+    <div class="hero-foto">
+      <div class="img">[ imagem IA: mãos entregando um notebook antigo na porta de casa, luz quente de manhã — sem rosto em primeiro plano ]</div>
+      <div class="hero-selo"><b>★ 4,9</b> · "Super atenciosos, buscaram no mesmo horário combinado."</div>
+    </div>
+  </div>
+</section>
+
+<!-- PORTAS -->
+<section class="b branco">
+  <div class="container">
+    <span class="tag">Cada um tem o seu caminho</span>
+    <h2>Por onde você quer entrar?</h2>
+    <div class="portas">
+      <a class="porta" href="#">
+        <span class="ic"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg></span>
+        <h3>Minha casa</h3><p>Geladeira, TV, computador… A coleta é grátis e o certificado também.</p><span>Agendar grátis →</span>
+      </a>
+      <a class="porta" href="#">
+        <span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2"/></svg></span>
+        <h3>Minha empresa</h3><p>Do lote avulso ao programa recorrente, com documento de auditoria.</p><span>Pedir avaliação →</span>
+      </a>
+      <a class="porta" href="#">
+        <span class="ic"><svg viewBox="0 0 24 24"><path d="M12 3l9 5H3l9-5z"/><path d="M5 8v9M12 8v9M19 8v9M3 20h18"/></svg></span>
+        <h3>Órgão público</h3><p>Parceria ou contratação, com habilitação documentada e custo zero.</p><span>Ver documentação →</span>
+      </a>
+      <a class="porta" href="#">
+        <span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14 0 18M12 3c-3 3.5-3 14 0 18"/></svg></span>
+        <h3>Global teams</h3><p>Brazilian operations, world-grade documentation. In English.</p><span>English version →</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- SISTEMA -->
+<section class="b dark">
+  <div class="container sist">
+    <div>
+      <span class="gratis">🎁 De graça para todo cliente — até pessoa física</span>
+      <h2>Seu histórico de boas escolhas, guardado para sempre</h2>
+      <p style="margin:16px 0 8px;font-size:16.5px">Entrou com seu e-mail, está dentro. Sem contrato, sem pegadinha, sem letra miúda:</p>
+      <div class="check"><span class="c">✓</span><div><b>Certificado com QR</b><p>Mostre para quem quiser — valida na hora, com a câmera.</p></div></div>
+      <div class="check"><span class="c">✓</span><div><b>Fotos, pesos e documentos de cada coleta</b><p>Tudo organizado, sem você guardar papel nenhum.</p></div></div>
+      <div class="check"><span class="c">✓</span><div><b>Nova coleta em um clique</b><p>Seu histórico completo, sempre à mão.</p></div></div>
+      <div style="margin-top:26px"><a class="btn" href="#">Conhecer o sistema</a></div>
+    </div>
+    <div class="tela"><div class="scr">[ tela real do portal — 1 visão geral + 1 certificado QR.<br>O resto fica para a demonstração. ]</div></div>
+  </div>
+</section>
+
+<!-- PASSOS -->
+<section class="b">
+  <div class="container">
+    <span class="tag">Simples assim</span>
+    <h2>Do "quero me livrar disso" ao certificado</h2>
+    <div class="trilha">
+      <div class="tp"><span class="dot">1</span><h3>Conta pra gente</h3><p>2 minutinhos no formulário ou uma mensagem no WhatsApp.</p></div>
+      <div class="tp"><span class="dot">2</span><h3>A gente responde</h3><p>Em até 24h úteis, com dia e horário combinados.</p></div>
+      <div class="tp"><span class="dot">3</span><h3>Buscamos aí</h3><p>Equipe própria pesa, fotografa e registra tudo.</p></div>
+      <div class="tp"><span class="dot">4</span><h3>Certificado é seu</h3><p>No portal, com QR, para sempre. Pode se orgulhar.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- B2B -->
+<section class="b sage">
+  <div class="container conta">
+    <div>
+      <span class="tag">Para quem decide na empresa</span>
+      <h2>Vender o lote parece receita. É risco com troco.</h2>
+      <p style="margin-top:14px;font-size:16px">Três perguntas que valem mais que a proposta do leilão:</p>
+      <div class="cartas">
+        <div class="carta">Quanto custa provar o destino de cada ativo que sai da empresa?</div>
+        <div class="carta">Quem responde se um HD com dados aparecer onde não devia?</div>
+        <div class="carta">O papel que você recebe hoje sobreviveria a uma auditoria?</div>
+      </div>
+      <a class="btn" href="#" style="margin-top:28px">Agendar demonstração</a>
+    </div>
+    <figure class="foto">
+      <div class="img">[ imagem IA: caminhão da coleta chegando a um prédio corporativo, luz de fim de tarde — sem rostos identificáveis ]</div>
+      <figcaption>Imagem ilustrativa gerada por IA.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- DEPOIMENTO -->
+<section class="b">
+  <div class="container">
+    <div class="depo">
+      <div class="stars">★★★★★</div>
+      <blockquote>[ Depoimento real, palavra por palavra, da base verificada de 354 avaliações públicas do Google ]</blockquote>
+      <cite>Nome real · avaliação pública no Google</cite>
+    </div>
+  </div>
+</section>
+
+<section class="cta-final">
+  <div class="container">
+    <h2>Bora tirar esse peso daí?</h2>
+    <p>Dois minutinhos para contar o que você tem. A gente cuida do resto.</p>
+    <a class="btn" href="#">Agendar coleta gratuita</a>
+    <a class="btn btn-suave" href="#" style="margin-left:10px">Chamar no WhatsApp</a>
+  </div>
+</section>
+
+<footer>
+  <div class="container cols">
+    <div style="max-width:270px"><b>ecobraz emigre</b>Coleta e destinação de eletrônicos com rastreabilidade e documentação. São Paulo, desde 2011.</div>
+    <div><b>Coleta</b><a href="#">Para você</a><a href="#">Para empresas</a><a href="#">Para governo</a></div>
+    <div><b>Sistema</b><a href="#">Como funciona</a><a href="#">Entrar no portal</a></div>
+    <div><b>Institucional</b><a href="#">Evidências</a><a href="#">Blog</a><a href="#">Privacidade</a></div>
+  </div>
+</footer>
+
+<section class="painel">
+  <div class="container">
+    <span class="tag">Painel técnico — Versão B "Abraço Verde"</span>
+    <h2>Cores do logo novo + engenharia comportamental</h2>
+    <div class="sw">
+      <div><div class="c" style="background:#8DC63F"></div><span>Verde #8DC63F (do logo) — ação e alegria</span></div>
+      <div><div class="c" style="background:#0E3B43"></div><span>Petrol #0E3B43 (do logo) — âncora</span></div>
+      <div><div class="c" style="background:#FBF8F1"></div><span>Creme #FBF8F1 — fundo quente</span></div>
+      <div><div class="c" style="background:#F0F5E6"></div><span>Sage #F0F5E6 — apoio</span></div>
+    </div>
+    <p style="font-size:14px;margin-bottom:8px"><strong>Tipografia:</strong> Nunito (títulos — arredondada como as letras do logo) + Inter (texto). Formas orgânicas (blobs), cantos generosos (22–56px), pílulas em tudo — o site inteiro "fala" a forma do logo.</p>
+    <div class="eng">
+      <div><b>Dona Marli sem medo de letra miúda</b> (pesquisa 22): promessa direta no hero ("grátis, 1 a 7 dias úteis"), pílulas de prova coladas no CTA, e tom "a gente busca / pode se orgulhar" — culpa vira orgulho (motivador nº 1 do B2C).</div>
+      <div><b>Reciprocidade e posse</b>: "o certificado é SEU, para sempre" — dar antes de pedir; pessoa física também ganha o sistema (nenhum concorrente dá).</div>
+      <div><b>Depoimento no lugar da dúvida</b>: selo flutuante com avaliação real colado NA FOTO do hero — prova social no exato momento do julgamento de 50ms.</div>
+      <div><b>B2B sem frieza</b>: as mesmas 3 perguntas do auditor (aversão à perda), mas em cartas suaves — o comitê elimina risco, o tom mantém a marca humana.</div>
+      <div><b>Zero jargão no B2C</b>: "do 'quero me livrar disso' ao certificado" — linguagem falada, plain language ≈ 2× conversão (doc 19).</div>
+      <div><b>Um só verde = uma só ação</b>: verde é botão. Sempre. Em qualquer página, inclusive no blog.</div>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>
