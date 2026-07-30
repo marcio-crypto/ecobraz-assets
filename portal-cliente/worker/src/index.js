@@ -1888,7 +1888,8 @@ fetch('/api/diretoria/teste-whatsapp',{method:'POST',headers:{'content-type':'ap
         if (!operacao) return new Response(null, { status: 302, headers: { Location: '/operacao', 'cache-control': 'no-store' } });
         const op = await lerOperacao(env, url.searchParams.get('id') || '');
         if (!op) return html(paginaMensagem('Operação não encontrada', 'Volte e receba o lote de novo.'), 404);
-        return html(paginaLoteDetalhe(operacao, op));
+        let regDoca = null; try { const e = await lerEstadoColeta(env, op.osId); regDoca = { checkin: e && e.checkin, foto: e && e.foto, encerramento: e && e.encerramento }; } catch { regDoca = null; }
+        return html(paginaLoteDetalhe(operacao, op, regDoca));
       }
       if (pathname === '/operacao/foto' && request.method === 'GET') {
         if (!operacao) return json({ ok: false, error: 'nao_autenticado' }, 401);

@@ -10,7 +10,7 @@
 
 import { tagsPWA } from './pwa.js';
 import { botaoGoogle } from './google-auth.js';
-import { listarColetasOS, lerColetaOS, atualizarStatusOS } from './coletas.js';
+import { listarColetasOS, lerColetaOS, atualizarStatusOS, blocoRegistroMotorista } from './coletas.js';
 import { debitarPatrocinio } from './adote.js';
 import { METODOLOGIA } from './carbono-metodologia.js';
 
@@ -317,7 +317,7 @@ export function paginaReceberLote(coletas) {
 </div></body></html>`;
 }
 
-export function paginaLoteDetalhe(operador, op) {
+export function paginaLoteDetalhe(operador, op, registro) {
   const entrada = op.entrada;
   const fs = (op.fotos && op.fotos.inicio) || {};
   const okInicio = inicioCompleto(op);
@@ -333,7 +333,7 @@ export function paginaLoteDetalhe(operador, op) {
   <div style="color:#fff;font-size:19px;font-weight:800;margin-top:8px">${esc(op.cliente || 'Cliente')}</div>
   <div style="color:#9FC6C1;font-size:12px;margin-top:4px">Recepção na doca · Fase 1 (Início)</div></div>
 <div class="wrap">
-
+  ${blocoRegistroMotorista(registro, '/coletas/foto-motorista?id=' + esc(op.osId))}
   <div class="card">
     <div class="eyebrow">Tipo de atendimento</div>
     <div style="display:flex;gap:10px">
