@@ -38,7 +38,7 @@ import { criarPreferencia, consultarPagamento, criarPixDireto, consultarMeiosPag
 import { criarCheckoutStripe, consultarCheckoutStripe, verificarEventoStripe, stripeConfigurado } from './stripe.js';
 import { gerarPixCopiaECola, pixConfig, paginaPix } from './pix.js';
 import { registrarFalha, receberErroCliente, listarFalhas } from './monitor.js';
-import { segmentoDoCliente, definirSegmento, SEGMENTOS, fluxoDeVendas } from './premium.js';
+import { segmentoDoCliente, definirSegmento, SEGMENTOS, fluxoDeVendas, ultimosPedidos, paginaPagamentos } from './premium.js';
 import { MANUAL_CLIENTE_PDF_B64 } from './manual-pdf.js';
 import { sondaMTR, consultarMtrSigor, baixarPdfManifesto } from './mtr.js';
 import { acharPacote, precoPacote, acharModuloAdote, precoModuloAdote, paginaLojaAdote, paginaObrigadoAdote, paginaDiagnostico, lerCredito, salvarCredito, novoCredito, aplicarCompra, aplicarRecarga, precisaRecarga, listarPatrocinadores, resumoPatrocinio, lerCreditoPorDoc } from './adote.js';
@@ -815,6 +815,7 @@ export default {
         const cfg = pixConfig(env);
         try {
           const copiaECola = gerarPixCopiaECola({ chave: cfg.chave, nome: cfg.nome, cidade: cfg.cidade, valor, txid: ref });
+          if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${ref}`, JSON.stringify({ produto: 'teste', gateway: 'pix-manual', valor, status: 'pendente', criadoEm: nowS() }), { expirationTtl: 3 * 86400 });
           console.log('teste_pix_nosso_gerado', { ref, valor });
           return html(paginaPix({
             titulo: 'Teste — Pix Ecobraz',
@@ -847,6 +848,12 @@ export default {
         return json({ received: true });
       }
       // Diagnóstico definitivo: quais meios de pagamento a conta MP aceita (tem Pix?).
+      // Log de pagamentos: prova visível do status registrado de cada pedido.
+      if (pathname === '/diretoria/pagamentos' && request.method === 'GET') {
+        if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
+        const dados = await ultimosPedidos(env, 60);
+        return html(paginaPagamentos(dados));
+      }
       if (pathname === '/diretoria/mp-diagnostico' && request.method === 'GET') {
         if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
         const d = await consultarMeiosPagamento(env);
