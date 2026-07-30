@@ -2,6 +2,7 @@
 .only-en{display:none !important}
 body.tag-hash-en .only-pt,
 body.page-en .only-pt,
+body.page-request-a-collection .only-pt,
 body.page-electronic-waste-collection .only-pt,
 body.page-corporate-it-disposal .only-pt,
 body.page-data-destruction .only-pt,
@@ -50,6 +51,7 @@ body.page-retail-pos-equipment-disposal .only-pt,
 body.page-how-to-dispose-old-fridge-sao-paulo .only-pt{display:none !important}
 body.tag-hash-en .only-en,
 body.page-en .only-en,
+body.page-request-a-collection .only-en,
 body.page-electronic-waste-collection .only-en,
 body.page-corporate-it-disposal .only-en,
 body.page-data-destruction .only-en,
@@ -100,6 +102,7 @@ body.page-how-to-dispose-old-fridge-sao-paulo .only-en{display:revert !important
 /* Correção de layout no idioma EN (ver comentário no gerador). */
 body.tag-hash-en .button.only-en:not(.header-cta),
 body.page-en .button.only-en:not(.header-cta),
+body.page-request-a-collection .button.only-en:not(.header-cta),
 body.page-electronic-waste-collection .button.only-en:not(.header-cta),
 body.page-corporate-it-disposal .button.only-en:not(.header-cta),
 body.page-data-destruction .button.only-en:not(.header-cta),
@@ -149,6 +152,7 @@ body.page-how-to-dispose-old-fridge-sao-paulo .button.only-en:not(.header-cta){d
 @media(min-width:901px){
 body.tag-hash-en .primary-nav ul.only-en,
 body.page-en .primary-nav ul.only-en,
+body.page-request-a-collection .primary-nav ul.only-en,
 body.page-electronic-waste-collection .primary-nav ul.only-en,
 body.page-corporate-it-disposal .primary-nav ul.only-en,
 body.page-data-destruction .primary-nav ul.only-en,
@@ -197,6 +201,7 @@ body.page-retail-pos-equipment-disposal .primary-nav ul.only-en,
 body.page-how-to-dispose-old-fridge-sao-paulo .primary-nav ul.only-en{display:flex !important}
 body.tag-hash-en .header-cta.only-en,
 body.page-en .header-cta.only-en,
+body.page-request-a-collection .header-cta.only-en,
 body.page-electronic-waste-collection .header-cta.only-en,
 body.page-corporate-it-disposal .header-cta.only-en,
 body.page-data-destruction .header-cta.only-en,
@@ -247,6 +252,7 @@ body.page-how-to-dispose-old-fridge-sao-paulo .header-cta.only-en{display:inline
 @media(max-width:900px){
 body.tag-hash-en .header-cta.only-en,
 body.page-en .header-cta.only-en,
+body.page-request-a-collection .header-cta.only-en,
 body.page-electronic-waste-collection .header-cta.only-en,
 body.page-corporate-it-disposal .header-cta.only-en,
 body.page-data-destruction .header-cta.only-en,
@@ -297,6 +303,7 @@ body.page-how-to-dispose-old-fridge-sao-paulo .header-cta.only-en{display:none !
 @media(min-width:621px){
 body.tag-hash-en .article-cta.only-en,
 body.page-en .article-cta.only-en,
+body.page-request-a-collection .article-cta.only-en,
 body.page-electronic-waste-collection .article-cta.only-en,
 body.page-corporate-it-disposal .article-cta.only-en,
 body.page-data-destruction .article-cta.only-en,
@@ -345,6 +352,7 @@ body.page-retail-pos-equipment-disposal .article-cta.only-en,
 body.page-how-to-dispose-old-fridge-sao-paulo .article-cta.only-en{display:flex !important}
 body.tag-hash-en .page-conversion.only-en,
 body.page-en .page-conversion.only-en,
+body.page-request-a-collection .page-conversion.only-en,
 body.page-electronic-waste-collection .page-conversion.only-en,
 body.page-corporate-it-disposal .page-conversion.only-en,
 body.page-data-destruction .page-conversion.only-en,

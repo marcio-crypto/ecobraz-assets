@@ -1,0 +1,29 @@
+{{!-- Erros que não são 404 (ex.: 500): template autossuficiente de propósito —
+     não usa o layout default para nunca depender de nada que possa estar
+     quebrado no momento do erro. --}}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{statusCode}} — Ecobraz</title>
+  <meta name="robots" content="noindex">
+  <style>
+    body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#F7F9F8;color:#10262B;display:flex;min-height:100vh;align-items:center;justify-content:center}
+    .box{max-width:560px;padding:40px 28px;text-align:center}
+    .brand{color:#00333B;font-weight:bold;font-size:20px;margin-bottom:18px}
+    h1{font-size:22px;color:#00333B;margin:0 0 12px}
+    p{font-size:15px;line-height:1.6;color:#4F6469}
+    a.btn{display:inline-block;margin-top:18px;background:#00333B;color:#fff;text-decoration:none;padding:12px 22px;border-radius:10px;font-size:15px}
+  </style>
+</head>
+<body>
+  <div class="box">
+    <div class="brand">Ecobraz</div>
+    <h1>Algo deu errado por aqui ({{statusCode}})</h1>
+    <p>{{message}}</p>
+    <p>Tente novamente em instantes. Se precisar agendar uma coleta agora, a página inicial tem todos os caminhos.</p>
+    <a class="btn" href="/">Voltar ao site</a>
+  </div>
+</body>
+</html>

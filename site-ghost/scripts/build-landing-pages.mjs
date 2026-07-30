@@ -82,6 +82,9 @@ const depoimentosHtml = (p) => !p.depoimentos ? '' : `<hr><h2>Avaliações públ
 
 function renderTemplate(p) {
   const slug = p.slug;
+  // Perfil do mini-formulário: 'empresa' por padrão; landings B2C declaram
+  // form.perfil = 'pessoa_fisica' em landing-pages.json.
+  const perfil = (p.form && p.form.perfil) || 'empresa';
   const formAction = '{{@site.url}}/agendamento/';
   const hiddenMaterial = p.form.material ? `<input type="hidden" name="material" value="${esc(p.form.material)}">` : '';
   const heroBand = p.hero.band.map((b) => `<span><strong>${esc(b.title)}</strong>${esc(b.text)}</span>`).join('\n        ');
@@ -112,7 +115,7 @@ function renderTemplate(p) {
       <h1>${esc(p.title)}</h1>
       <p class="hx-sub">${esc(p.hero.sub)}</p>
       <div class="hx-hero-ctas">
-        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=${slug}${p.form.material ? `&amp;material=${encodeURIComponent(p.form.material)}` : ''}" data-track="${slug}_hero_cta">${esc(p.hero.cta)}</a>
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=${perfil}&amp;origem=${slug}${p.form.material ? `&amp;material=${encodeURIComponent(p.form.material)}` : ''}" data-track="${slug}_hero_cta">${esc(p.hero.cta)}</a>
         <a class="button hx-btn-outline-dark" href="#como-funciona" data-track="${slug}_hero_como">Como funciona</a>
       </div>
       <div class="hx-hero-band">
@@ -123,7 +126,7 @@ function renderTemplate(p) {
       <span class="hx-label">Avaliação técnica</span>
       <h2>${esc(p.form.title)}</h2>
       <p class="hx-hint">${esc(p.form.hint)}</p>
-      <input type="hidden" name="perfil" value="empresa">
+      <input type="hidden" name="perfil" value="${perfil}">
       <input type="hidden" name="origem" value="${slug}">
       ${hiddenMaterial}
       <div class="hx-field">
@@ -282,7 +285,7 @@ ${referenciaSection(p, slug)}<section class="hx-block" style="padding-top:0">
         <p>${esc(p.final.text)}</p>
       </div>
       <div class="hx-actions">
-        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=${slug}${p.form.material ? `&amp;material=${encodeURIComponent(p.form.material)}` : ''}" data-track="${slug}_final_cta">${esc(p.hero.cta)}</a>
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=${perfil}&amp;origem=${slug}${p.form.material ? `&amp;material=${encodeURIComponent(p.form.material)}` : ''}" data-track="${slug}_final_cta">${esc(p.hero.cta)}</a>
         <a class="button hx-btn-wa" href="{{@custom.whatsapp_url}}" rel="noopener" data-track="${slug}_final_whatsapp">${wa} WhatsApp</a>
       </div>
     </div>
@@ -294,6 +297,7 @@ ${referenciaSection(p, slug)}<section class="hx-block" style="padding-top:0">
 
 function renderHubTemplate(p) {
   const slug = p.slug;
+  const perfil = (p.form && p.form.perfil) || 'empresa';
   const groups = p.groups.map((g) => `<section class="hx-block${g.alt ? ' alt' : ''}">
   <div class="container">
     <div class="hx-head-split">
@@ -320,7 +324,7 @@ function renderHubTemplate(p) {
       <h1>${esc(p.title)}</h1>
       <p class="hx-sub">${esc(p.hero.sub)}</p>
       <div class="hx-hero-ctas">
-        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=${slug}" data-track="${slug}_hero_cta">${esc(p.hero.cta)}</a>
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=${perfil}&amp;origem=${slug}" data-track="${slug}_hero_cta">${esc(p.hero.cta)}</a>
         <a class="button hx-btn-outline-dark" href="{{@custom.whatsapp_url}}" rel="noopener" data-track="${slug}_hero_whatsapp">Falar no WhatsApp</a>
       </div>
     </div>
@@ -351,7 +355,7 @@ ${referenciaSection(p, slug)}<section class="hx-block alt">
         <p>${esc(p.final.text)}</p>
       </div>
       <div class="hx-actions">
-        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=${slug}" data-track="${slug}_final_cta">${esc(p.hero.cta)}</a>
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=${perfil}&amp;origem=${slug}" data-track="${slug}_final_cta">${esc(p.hero.cta)}</a>
         <a class="button hx-btn-wa" href="{{@custom.whatsapp_url}}" rel="noopener" data-track="${slug}_final_whatsapp">${wa} WhatsApp</a>
       </div>
     </div>
@@ -390,7 +394,7 @@ function renderHubSyncEntry(p) {
     `<p>${esc(p.hero.sub)}</p>`,
     ...p.groups.map((g) => `<h2>${esc(g.title)}</h2><ul>${g.items.map((i) => `<li><a href="${i.href}">${esc(i.title)}</a> — ${esc(i.text)}</li>`).join('')}</ul>`),
     `<p>${esc(p.note.text)} <a href="${p.note.href}">${esc(p.note.linkLabel)}</a>.</p>`,
-    `<p><a href="/agendamento/?perfil=empresa&amp;origem=${p.slug}">${esc(p.hero.cta)}</a>.</p>`
+    `<p><a href="/agendamento/?perfil=${p.form && p.form.perfil ? p.form.perfil : 'empresa'}&amp;origem=${p.slug}">${esc(p.hero.cta)}</a>.</p>`
   ].join('') + referenciaHtml(p);
   return {
     title: p.title,
@@ -438,7 +442,7 @@ function renderSyncEntry(p) {
     p.painsSub ? `<p>${esc(p.painsSub)}</p>` : '',
     `<h2>Escopo</h2><p>${esc(p.scope.conditions)}</p>`,
     `<p>Solução do hub <a href="${p.hub.href}">${esc(p.hub.title)}</a>. Relacionadas: ${p.related.map((r) => `<a href="${r.href}">${esc(r.title)}</a>`).join(', ')}. Comprovação: <a href="/documentacao-e-rastreabilidade/">documentação e rastreabilidade</a> e <a href="/evidencias/">evidências públicas</a>.</p>`,
-    `<p><a href="/agendamento/?perfil=empresa&amp;origem=${p.slug}">Solicitar avaliação técnica</a>.</p>`
+    `<p><a href="/agendamento/?perfil=${p.form && p.form.perfil ? p.form.perfil : 'empresa'}&amp;origem=${p.slug}">Solicitar avaliação técnica</a>.</p>`
   ].join('') + depoimentosHtml(p) + referenciaHtml(p);
   return {
     title: p.title,
