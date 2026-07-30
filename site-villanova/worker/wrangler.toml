@@ -11,8 +11,9 @@ send_email = [
   { name = "SEB" }
 ]
 
-# Configuração (não são segredos — apenas endereços). Ajuste DEST_EMAIL para o
-# inbox que deve receber os leads, se diferente.
+# Configuração (não são segredos — apenas endereços). DEST_EMAIL precisa ser
+# um "destination address" VERIFICADO no Email Routing da zona villanovaesg.com
+# (caixa real externa) — endereços de roteamento como contato@ não valem.
 [vars]
 FROM_EMAIL = "contato@villanovaesg.com"
-DEST_EMAIL = "contato@villanovaesg.com"
+DEST_EMAIL = "marcio@ecobraz.org.br"
