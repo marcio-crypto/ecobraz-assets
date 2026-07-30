@@ -328,7 +328,7 @@ function gerar(){var ag=g('agente').split('|');
 export function paginaColetaOSDetalhe(user, os, acomp) {
   const linha = (l, v) => v ? `<tr><td style="padding:8px 0;border-top:1px solid #EEF1F0;color:#6B7B78;width:38%">${esc(l)}</td><td style="padding:8px 0;border-top:1px solid #EEF1F0;font-weight:600;white-space:pre-wrap;word-break:break-word">${esc(v)}</td></tr>` : '';
   const hhmm = (x) => String(x || '').slice(11, 16);
-  const canalAviso = (a) => (a && a.via === 'sms') ? ' (SMS)' : ((a && a.via === 'email') ? ' (e-mail)' : '');
+  const canalAviso = (a) => (a && a.via === 'whatsapp') ? ' (WhatsApp)' : ((a && a.via === 'sms') ? ' (SMS)' : ((a && a.via === 'email') ? ' (e-mail)' : ''));
   const acompHTML = (() => {
     const a = acomp || {};
     if (!a.saiu && !a.chegou) return '';

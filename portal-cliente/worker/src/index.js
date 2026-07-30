@@ -39,6 +39,7 @@ import { criarCheckoutStripe, consultarCheckoutStripe, verificarEventoStripe, st
 import { gerarPixCopiaECola, pixConfig, paginaPix } from './pix.js';
 import { paginaColetaExpressa } from './coleta-expressa.js';
 import { enviarSMS, smsConfigurado } from './sms.js';
+import { whatsappConfigurado, templateColeta, enviarWhatsAppTemplate } from './whatsapp.js';
 import { registrarFalha, receberErroCliente, listarFalhas } from './monitor.js';
 import { segmentoDoCliente, definirSegmento, SEGMENTOS, fluxoDeVendas, ultimosPedidos, paginaPagamentos } from './premium.js';
 import { MANUAL_CLIENTE_PDF_B64 } from './manual-pdf.js';
@@ -3535,6 +3536,14 @@ async function avisarColeta(env, alvo, tipo) {
   const email = (alvo && alvo.email) || '';
   const telefone = (alvo && alvo.telefone) || '';
   const nome = (alvo && alvo.nome) || '';
+  // 1) WhatsApp (preferido) — mensagem iniciada pela empresa exige template aprovado (Gupshup).
+  if (whatsappConfigurado(env) && telefone) {
+    const tpl = templateColeta(env, tipo);
+    if (tpl) {
+      const params = [String(nome || '').split(/\s+/)[0] || 'cliente'];
+      try { const r = await enviarWhatsAppTemplate(env, telefone, tpl, params); if (r && r.ok) return { via: 'whatsapp' }; } catch { /* cai em SMS/e-mail */ }
+    }
+  }
   if (smsConfigurado(env) && telefone && SMS_COLETA[tipo]) {
     try { const r = await enviarSMS(env, telefone, SMS_COLETA[tipo]); if (r && r.ok) return { via: 'sms' }; } catch { /* cai no e-mail */ }
   }
