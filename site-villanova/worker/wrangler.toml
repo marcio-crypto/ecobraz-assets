@@ -11,6 +11,12 @@ send_email = [
   { name = "SEB" }
 ]
 
+# Cofre de leads: todo envio é gravado aqui ANTES do e-mail. Nada se perde
+# mesmo se o Email Routing estiver pendente de verificação.
+[[kv_namespaces]]
+binding = "LEADS"
+id = "dbcea79a0fee420d873c313a7a2acf50"
+
 # Configuração (não são segredos — apenas endereços). DEST_EMAIL precisa ser
 # um "destination address" VERIFICADO no Email Routing da zona villanovaesg.com
 # (caixa real externa) — endereços de roteamento como contato@ não valem.

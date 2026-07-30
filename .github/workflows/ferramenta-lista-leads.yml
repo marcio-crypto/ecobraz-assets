@@ -1,0 +1,34 @@
+name: Ferramenta — listar leads da Villanova (cofre KV)
+
+on:
+  workflow_dispatch:
+    inputs:
+      limite:
+        description: 'Quantos leads mostrar (mais recentes primeiro)'
+        required: false
+        default: '20'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  listar:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      NS: dbcea79a0fee420d873c313a7a2acf50
+    steps:
+      - name: Listar chaves e valores (sem expor segredos)
+        run: |
+          npx wrangler@latest kv key list --namespace-id="$NS" > /tmp/chaves.json
+          echo "Total de leads no cofre: $(python3 -c 'import json;print(len(json.load(open("/tmp/chaves.json"))))')"
+          python3 - <<'EOF'
+          import json, subprocess
+          chaves = sorted((k['name'] for k in json.load(open('/tmp/chaves.json'))), reverse=True)
+          limite = int('${{ inputs.limite }}' or '20')
+          for nome in chaves[:limite]:
+              valor = subprocess.run(['npx','wrangler@latest','kv','key','get',nome,'--namespace-id','dbcea79a0fee420d873c313a7a2acf50'],capture_output=True,text=True).stdout.strip()
+              print('='*60); print(nome); print(valor)
+          EOF
