@@ -842,6 +842,54 @@ export default {
         }
       }
       // TESTE STRIPE: cria um Checkout (Pix + cartão) de R$ 1 e redireciona.
+      if (pathname === '/diretoria/teste-whatsapp' && request.method === 'GET') {
+        if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
+        const cfg = whatsappConfigurado(env);
+        const tA = !!templateColeta(env, 'a_caminho'), tC = !!templateColeta(env, 'chegou');
+        const chk = (b) => b ? '✅' : '❌';
+        const okTudo = cfg && tA && tC;
+        const page = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Testar WhatsApp — Ecobraz</title>
+<style>body{margin:0;font-family:Montserrat,'Segoe UI',Arial,Helvetica,sans-serif;background:#F2F6F4;color:#10262B}.wrap{max-width:520px;margin:0 auto;padding:22px 18px 48px}.card{background:#fff;border:1px solid #E4EBE9;border-radius:14px;padding:20px;margin-bottom:14px}input,select{width:100%;box-sizing:border-box;border:1px solid #DDE1E6;border-radius:10px;padding:12px;font-size:15px;margin-top:6px;font-family:inherit}label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#7c8a87}.btn{background:#25D366;color:#083b23;border:none;border-radius:11px;padding:14px 18px;font-size:15px;font-weight:800;cursor:pointer;width:100%;margin-top:16px}.st{font-size:14px;line-height:2}</style></head>
+<body><div class="wrap">
+  <a href="/diretoria" style="color:#0B5B66;font-weight:800;text-decoration:none;font-size:13px">← Diretoria</a>
+  <h1 style="font-size:21px;margin:10px 0 4px">Testar WhatsApp</h1>
+  <p style="font-size:12.5px;color:#8fa39f;margin:0 0 14px">Manda um aviso de teste no seu próprio WhatsApp para confirmar a integração (Gupshup).</p>
+  <div class="card">
+    <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#7c8a87;margin-bottom:8px">Configuração</div>
+    <div class="st">${chk(cfg)} Conta (chave + número + app)<br>${chk(tA)} Template “a caminho”<br>${chk(tC)} Template “chegou”</div>
+    <div style="color:${okTudo ? '#1E7A1E' : '#8A4B00'};font-weight:800;margin-top:10px;font-size:13.5px">${okTudo ? 'Tudo configurado — pode testar 👇' : 'Falta algum segredo no cofre da Cloudflare. Envie mesmo assim para ver o erro exato.'}</div>
+  </div>
+  <div class="card">
+    <label>Seu número de WhatsApp (com DDD)</label>
+    <input id="tel" inputmode="tel" placeholder="11 91272-8412">
+    <label style="margin-top:14px;display:block">Qual aviso testar</label>
+    <select id="tipo"><option value="a_caminho">🚛 A caminho (com link do mapa)</option><option value="chegou">📍 Chegou</option></select>
+    <button class="btn" onclick="enviar(this)">Enviar teste no meu WhatsApp</button>
+    <div id="msg" style="font-size:14px;margin-top:12px;font-weight:700"></div>
+  </div>
+</div>
+<script>
+function enviar(b){b.disabled=true;var m=document.getElementById('msg');m.textContent='Enviando…';m.style.color='#4F6469';
+fetch('/api/diretoria/teste-whatsapp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({tel:document.getElementById('tel').value,tipo:document.getElementById('tipo').value})}).then(function(r){return r.json();}).then(function(j){if(j.ok){m.textContent='✅ Enviado! Confira o seu WhatsApp (pode levar alguns segundos).';m.style.color='#1E7A1E';}else{m.innerHTML='❌ Não enviou. Motivo: '+((j.motivo||j.error||'desconhecido'))+(j.detalhe?('<br><span style=\\'font-weight:400;color:#7a5f1c\\'>'+j.detalhe+'</span>'):'');m.style.color='#B23A2E';}b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.';m.style.color='#B23A2E';b.disabled=false;});}
+</script></body></html>`;
+        return html(page);
+      }
+      if (pathname === '/api/diretoria/teste-whatsapp' && request.method === 'POST') {
+        if (!diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = null; }
+        const tel = b && b.tel; const tipo = (b && b.tipo) === 'chegou' ? 'chegou' : 'a_caminho';
+        if (!tel) return json({ ok: false, motivo: 'informe o seu número' }, 400);
+        if (!whatsappConfigurado(env)) return json({ ok: false, motivo: 'WhatsApp não configurado', detalhe: 'Faltam os segredos GUPSHUP_API_KEY / GUPSHUP_SOURCE / GUPSHUP_APP no cofre da Cloudflare.' });
+        const tpl = templateColeta(env, tipo);
+        if (!tpl) return json({ ok: false, motivo: 'template sem ID', detalhe: `Falta o segredo GUPSHUP_TEMPLATE_${tipo === 'chegou' ? 'CHEGOU' : 'ACAMINHO'} (o ID do Gupshup, com hífens).` });
+        const base = String(env.PORTAL_BASE_URL || env.PORTAL_URL || url.origin).replace(/\/+$/, '');
+        const params = tipo === 'a_caminho' ? ['Teste', `${base}/acompanhar?c=teste&t=demo`] : ['Teste'];
+        try {
+          const r = await enviarWhatsAppTemplate(env, tel, tpl, params);
+          if (r && r.ok) return json({ ok: true });
+          return json({ ok: false, motivo: (r && r.motivo) || 'falha', detalhe: (r && r.detalhe) || 'O Gupshup recusou. Confira: número com DDD, ID do template (o do Gupshup, com hífens) e template APROVADO.' });
+        } catch (e) { return json({ ok: false, motivo: 'excecao', detalhe: String((e && e.name) || 'erro') }); }
+      }
       if (pathname === '/diretoria/teste-stripe' && request.method === 'GET') {
         if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
         if (!stripeConfigurado(env)) return html(paginaMensagem('Stripe não configurada', 'Falta a chave STRIPE_SECRET_KEY no cofre do Cloudflare. Cadastre e tente de novo.', '/diretoria'), 503);

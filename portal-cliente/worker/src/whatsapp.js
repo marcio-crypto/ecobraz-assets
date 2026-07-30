@@ -62,7 +62,8 @@ export async function enviarWhatsAppTemplate(env, telefone, templateId, params) 
       signal: AbortSignal.timeout(8000),
     });
     if (r.ok) return { ok: true };
+    let detalhe = ''; try { detalhe = String(await r.text() || '').slice(0, 220); } catch { detalhe = ''; }
     console.error('gupshup_wa_status', r.status); // só o status — nunca telefone/chave
-    return { ok: false, motivo: 'http_' + r.status };
+    return { ok: false, motivo: 'http_' + r.status, detalhe };
   } catch (e) { console.error('gupshup_wa_erro', String((e && e.name) || 'erro')); return { ok: false, motivo: 'excecao' }; }
 }
