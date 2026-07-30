@@ -61,7 +61,9 @@ async function tratar(request, env) {
 
     const url = new URL(request.url);
     if (request.method === 'GET' && url.pathname === '/health') {
-      return json({ ok: true, service: 'villanova-contato', version: 2 }, 200, origin);
+      let leads = null;
+      try { if (env.LEADS) leads = (await env.LEADS.list({ limit: 1000 })).keys.length; } catch (e) {}
+      return json({ ok: true, service: 'villanova-contato', version: 3, leads_no_cofre: leads }, 200, origin);
     }
     if (request.method !== 'POST') return json({ ok: false, erro: 'metodo' }, 405, origin);
 
