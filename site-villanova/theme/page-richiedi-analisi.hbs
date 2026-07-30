@@ -1,0 +1,120 @@
+{{!< default}}
+{{#contentFor "htmlLang"}}it{{/contentFor}}
+
+{{#page}}
+<article class="article page-article">
+  <section class="hero page-hero">
+    <svg class="mark" width="460" height="520" viewBox="0 0 60 68" aria-hidden="true"><path d="M30 2 56 12v26c0 14-12 22-26 28C16 60 4 52 4 38V12Z" fill="none" stroke="#8FA8CC" stroke-width="1.4"/><path d="M30 2v64" stroke="#8FA8CC" stroke-width="1.1"/><path d="M30 40l7 8-7 8-7-8Z" fill="#C9A24B"/></svg>
+    <div class="wrap">
+      <div class="eyebrow">Inizia &middot; Villanova ESG</div>
+      <h1>Portate la richiesta.<br>Uscite con un <em class="gold-em">passo successivo chiaro</em>.</h1>
+      <p class="lead">Un questionario, una clausola, una richiesta dati o una scadenza — su CBAM, EUDR, CSDDD o prontezza dei fornitori brasiliani. Inviatela cos&igrave; come vi &egrave; arrivata; rispondiamo con i rischi prioritari e il passo successivo raccomandato, entro 1 giorno lavorativo.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="#formulario">Invia la richiesta &rarr;</a>
+        <a class="btn btn-ghost" href="https://calendar.app.google/WLhHEikU7BGCyGAr8" target="_blank" rel="noopener">Prenota una conversazione</a>
+      </div>
+      <p class="boundary">L&rsquo;invio avvia una valutazione di perimetro. Non crea incarico, parere legale, certificazione n&eacute; garanzia di accettazione.</p>
+    </div>
+  </section>
+
+  <section class="steps-band">
+    <div class="wrap">
+      <div class="sband">
+        <div class="snode"><span class="snum">1</span><b>Contesto</b><p>Chi chiede, che cosa chiede e la decisione in gioco.</p></div>
+        <div class="snode"><span class="snum">2</span><b>Evidenza</b><p>Che cosa esiste, che cosa manca e chi risponde di ogni voce.</p></div>
+        <div class="snode"><span class="snum">3</span><b>Direzione</b><p>Rischi prioritari e passo successivo raccomandato — entro 1 giorno lavorativo.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap">
+    <section class="intake" id="formulario">
+      <div class="intake-grid">
+        <div class="intake-main">
+          <h2>Inviate la richiesta</h2>
+          <p class="intake-lead">Pi&ugrave; contesto c&rsquo;&egrave;, pi&ugrave; utile sar&agrave; la prima risposta — chi ha chiesto, che cosa e per quando. Allegate il documento, se lo avete.</p>
+          <form class="vn-form" data-intake-form data-endpoint="https://villanova-contato.ti-0ab.workers.dev" novalidate>
+            <div class="vn-fields2">
+              <div class="vn-field">
+                <label for="if-nome">Nome</label>
+                <input id="if-nome" name="nome" type="text" autocomplete="name" required maxlength="120">
+              </div>
+              <div class="vn-field">
+                <label for="if-email">E-mail aziendale</label>
+                <input id="if-email" name="email" type="email" autocomplete="email" required maxlength="160">
+              </div>
+              <div class="vn-field">
+                <label for="if-empresa">Azienda</label>
+                <input id="if-empresa" name="empresa" type="text" autocomplete="organization" required maxlength="160">
+              </div>
+              <div class="vn-field">
+                <label for="if-cargo">Ruolo <em>(facoltativo)</em></label>
+                <input id="if-cargo" name="cargo" type="text" autocomplete="organization-title" maxlength="120">
+              </div>
+              <div class="vn-field">
+                <label for="if-tipo-it">Che cosa avete ricevuto?</label>
+                <select id="if-tipo-it" name="tipo">
+                  <option value="">&mdash;</option>
+                  <option>Questionario per il fornitore</option>
+                  <option>Clausola contrattuale</option>
+                  <option>Richiesta dati (CBAM/EUDR)</option>
+                  <option>Rinnovo o audit</option>
+                  <option>Ancora nulla &mdash; vogliamo prepararci</option>
+                  <option>Altro</option>
+                </select>
+              </div>
+              <div class="vn-field">
+                <label for="if-prazo">Scadenza <em>(facoltativa)</em></label>
+                <input id="if-prazo" name="prazo" type="text" maxlength="120">
+              </div>
+            </div>
+            <div class="vn-field">
+              <label for="if-msg">Contesto della richiesta</label>
+              <textarea id="if-msg" name="mensagem" rows="5" required maxlength="4000"></textarea>
+            </div>
+            <div class="vn-field vn-field-file">
+              <label for="if-anexo">Allegare la richiesta <em>(facoltativo, fino a 8&nbsp;MB — PDF, immagine, Word, Excel)</em></label>
+              <input id="if-anexo" name="anexo" type="file" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx">
+            </div>
+            <input type="hidden" name="lead_source" value="intake">
+            <input type="hidden" name="idioma" value="it">
+            <input type="text" name="_gotcha" tabindex="-1" autocomplete="off" aria-hidden="true" class="vn-hp">
+            <label class="vn-form-consent">
+              <input type="checkbox" name="consent" required>
+              Acconsento all&rsquo;uso dei miei dati per valutare e rispondere a questa richiesta.
+            </label>
+            <button class="btn btn-ink" type="submit" data-intake-submit>
+              Invia — risposta entro 1 giorno lavorativo
+            </button>
+            <p class="vn-form-status" data-intake-status hidden role="status" aria-live="polite"></p>
+          </form>
+        </div>
+        <aside class="intake-side">
+          <div class="side-card">
+            <h4>Preferite parlarne?</h4>
+            <p>30 minuti, direttamente in agenda — senza impegno.</p>
+            <a class="btn btn-cal" href="https://calendar.app.google/WLhHEikU7BGCyGAr8" target="_blank" rel="noopener">Prenota &rarr;</a>
+          </div>
+          <div class="side-card">
+            <h4>Che cosa succede dopo</h4>
+            <div class="side-trust">1 &middot; Leggiamo la richiesta e il contesto<br>2 &middot; Classifichiamo esposizione e lacune<br>3 &middot; Rispondiamo con il passo successivo — entro 1 giorno lavorativo</div>
+          </div>
+          <div class="side-card">
+            <h4>Perch&eacute; fidarsi</h4>
+            <div class="side-trust">&#10003; 18 rapporti tecnici con DOI<br>&#10003; ECESP &middot; Commissione europea<br>&#10003; Operativit&agrave; reale in Brasile dal 2011</div>
+          </div>
+        </aside>
+      </div>
+      <p class="vn-note">Le informazioni sono usate solo per valutare e rispondere alla richiesta. L&rsquo;invio avvia una valutazione di perimetro — non crea incarico, parere legale, certificazione n&eacute; garanzia di accettazione. I materiali tecnici (checklist, matrice, whitepaper SEMM) sono disponibili in inglese nella <a href="{{@site.url}}/supplier-evidence-risk-intake/#formulario" style="color:var(--gold-l)">pagina EN</a>.</p>
+    </section>
+
+    {{#if content}}
+    <details class="page-more">
+      <summary>Sulla valutazione — perimetro, limiti e che cosa non &egrave;</summary>
+      <div class="article-body">{{content}}</div>
+    </details>
+    {{/if}}
+  </div>
+</article>
+{{/page}}
+<script src="{{asset "js/form-intake.js"}}" defer></script>

@@ -273,3 +273,13 @@ details[open] summary::after{content:"–"}
 .page-more[open] summary::before{content:'▾ '}
 .page-more .article-body{padding:0 22px 20px}
 @media(max-width:900px){.sband{grid-template-columns:1fr}.intake-grid{flex-direction:column}.intake-side{width:100%;position:static}.magnet-cards{grid-template-columns:1fr}.vn-fields2{grid-template-columns:1fr}}
+
+/* ===== Lote 5 — idioma italiano (páginas com tag interna #it) ===== */
+.only-it{display:none !important}
+body.tag-hash-it .only-en,body.tag-hash-it .only-pt,
+body.page-it .only-en,body.page-it .only-pt,
+body.page-richiedi-analisi .only-en,body.page-richiedi-analisi .only-pt{display:none !important}
+body.tag-hash-it .only-it,body.page-it .only-it,body.page-richiedi-analisi .only-it{display:inline !important}
+body.tag-hash-it nav.only-it,body.page-it nav.only-it,body.page-richiedi-analisi nav.only-it,
+body.tag-hash-it div.only-it,body.page-it div.only-it,body.page-richiedi-analisi div.only-it{display:flex !important}
+body.tag-hash-it .cols.only-it,body.page-it .cols.only-it,body.page-richiedi-analisi .cols.only-it{display:grid !important}
