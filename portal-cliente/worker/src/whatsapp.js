@@ -82,3 +82,29 @@ export async function enviarWhatsAppTemplate(env, telefone, templateId, params) 
     return { ok: false, motivo: 'http_' + r.status, detalhe, enviado: `URL: ${urlPartner}  ||  ${body.toString()}` };
   } catch (e) { console.error('gupshup_wa_erro', String((e && e.name) || 'erro')); return { ok: false, motivo: 'excecao' }; }
 }
+
+// Diagnóstico: lista os templates reais do app no Gupshup (nome + id + status), para
+// conferir se os IDs configurados batem com os templates aprovados.
+export async function listarTemplatesGupshup(env) {
+  const key = chaveGupshup(env);
+  const appIdRaw = String(env.GUPSHUP_APP_ID || '').trim();
+  const appId = /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(appIdRaw) ? appIdRaw : APP_ID_PADRAO;
+  if (!key || !appId) return { ok: false, motivo: 'nao_configurado' };
+  try {
+    const r = await fetch(`https://partner.gupshup.io/partner/app/${encodeURIComponent(appId)}/templates`, {
+      method: 'GET',
+      headers: { token: key, accept: 'application/json' },
+      signal: AbortSignal.timeout(8000),
+    });
+    const txt = await r.text();
+    if (!r.ok) return { ok: false, motivo: 'http_' + r.status, detalhe: txt.slice(0, 200) };
+    let data = null; try { data = JSON.parse(txt); } catch { data = null; }
+    const arr = (data && (data.templates || data.data || data.templateList)) || [];
+    const tpls = (Array.isArray(arr) ? arr : []).map((t) => ({
+      id: t.id || t.templateId || '',
+      nome: t.elementName || t.templateName || t.name || '',
+      status: t.status || t.templateStatus || '',
+    })).filter((t) => t.id || t.nome);
+    return { ok: true, templates: tpls };
+  } catch (e) { console.error('gupshup_tpls_erro', String((e && e.name) || 'erro')); return { ok: false, motivo: 'excecao' }; }
+}

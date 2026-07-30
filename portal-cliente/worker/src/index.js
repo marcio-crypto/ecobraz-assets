@@ -39,7 +39,7 @@ import { criarCheckoutStripe, consultarCheckoutStripe, verificarEventoStripe, st
 import { gerarPixCopiaECola, pixConfig, paginaPix } from './pix.js';
 import { paginaColetaExpressa } from './coleta-expressa.js';
 import { enviarSMS, smsConfigurado } from './sms.js';
-import { whatsappConfigurado, templateColeta, enviarWhatsAppTemplate } from './whatsapp.js';
+import { whatsappConfigurado, templateColeta, enviarWhatsAppTemplate, listarTemplatesGupshup } from './whatsapp.js';
 import { paginaAcompanhar, paginaAcompanharErro } from './acompanhar.js';
 import { registrarFalha, receberErroCliente, listarFalhas } from './monitor.js';
 import { segmentoDoCliente, definirSegmento, SEGMENTOS, fluxoDeVendas, ultimosPedidos, paginaPagamentos } from './premium.js';
@@ -851,6 +851,18 @@ export default {
         const keyLen = String(env.GUPSHUP_API_KEY || '').trim().length;
         const srcNum = String(env.GUPSHUP_SOURCE || '').replace(/\D/g, '');
         const appNm = String(env.GUPSHUP_APP || '').trim();
+        const cfgTpl = String(env.GUPSHUP_TEMPLATE_ACAMINHO || '').trim();
+        const cfgTplC = String(env.GUPSHUP_TEMPLATE_CHEGOU || '').trim();
+        let listaTpl = '<div style="font-size:11.5px;color:#8fa39f">—</div>';
+        try {
+          const tpls = await listarTemplatesGupshup(env);
+          if (tpls.ok) {
+            listaTpl = tpls.templates.length ? tpls.templates.map((t) => {
+              const usado = t.id === cfgTpl ? ' ← config. A CAMINHO' : (t.id === cfgTplC ? ' ← config. CHEGOU' : '');
+              return `<div style="font-size:11px;color:#4F6469;margin-top:3px"><b>${esc(t.nome || '(sem nome)')}</b> · ${esc(String(t.id).slice(0, 13))}… · ${esc(t.status)}${usado ? `<span style="color:#0B5B66;font-weight:800">${esc(usado)}</span>` : ''}</div>`;
+            }).join('') : '<div style="font-size:11.5px;color:#8fa39f">Nenhum template retornado pelo Gupshup.</div>';
+          } else { listaTpl = `<div style="font-size:11.5px;color:#B23A2E">Não listou os templates (${esc(tpls.motivo || 'erro')}${tpls.detalhe ? ': ' + esc(tpls.detalhe) : ''})</div>`; }
+        } catch { listaTpl = '<div style="font-size:11.5px;color:#B23A2E">Falha ao listar templates.</div>'; }
         const page = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Testar WhatsApp — Ecobraz</title>
 <style>body{margin:0;font-family:Montserrat,'Segoe UI',Arial,Helvetica,sans-serif;background:#F2F6F4;color:#10262B}.wrap{max-width:520px;margin:0 auto;padding:22px 18px 48px}.card{background:#fff;border:1px solid #E4EBE9;border-radius:14px;padding:20px;margin-bottom:14px}input,select{width:100%;box-sizing:border-box;border:1px solid #DDE1E6;border-radius:10px;padding:12px;font-size:15px;margin-top:6px;font-family:inherit}label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#7c8a87}.btn{background:#25D366;color:#083b23;border:none;border-radius:11px;padding:14px 18px;font-size:15px;font-weight:800;cursor:pointer;width:100%;margin-top:16px}.st{font-size:14px;line-height:2}</style></head>
 <body><div class="wrap">
@@ -861,6 +873,12 @@ export default {
     <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#7c8a87;margin-bottom:8px">Configuração</div>
     <div class="st">${chk(cfg)} Conta (chave + número + app)<br>${chk(tA)} Template “a caminho”<br>${chk(tC)} Template “chegou”</div>
     <div style="color:${okTudo ? '#1E7A1E' : '#8A4B00'};font-weight:800;margin-top:10px;font-size:13.5px">${okTudo ? 'Tudo configurado — pode testar 👇' : 'Falta algum segredo no cofre da Cloudflare. Envie mesmo assim para ver o erro exato.'}</div>
+    <div style="font-size:11.5px;color:#8fa39f;margin-top:10px">Chave: <b>${keyLen}</b> caracteres · Nº: <b>${esc(srcNum)}</b> · App: <b>${esc(appNm)}</b></div>
+    <div style="margin-top:10px;border-top:1px solid #EEF1F0;padding-top:10px">
+      <div style="font-size:10px;font-weight:800;text-transform:uppercase;color:#7c8a87;margin-bottom:4px">Templates reais no Gupshup</div>
+      ${listaTpl}
+      <div style="font-size:10px;color:#9aa7a4;margin-top:8px">IDs configurados no cofre — a caminho: ${esc(cfgTpl.slice(0, 13))}… · chegou: ${esc(cfgTplC.slice(0, 13))}…</div>
+    </div>
   </div>
   <div class="card">
     <label>Seu número de WhatsApp (com DDD)</label>
