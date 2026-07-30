@@ -338,9 +338,9 @@ export function paginaLojaAdote(faixaIni, pre) {
     <div id="msg" style="font-size:13px;color:#4F6469;margin-top:12px;text-align:center"></div>
   </div>
   <div style="margin-top:16px;text-align:center">
-    <span class="badge">🛡️ Destinação licenciada</span><span class="badge">📄 Certificado com RT (CREA)</span><span class="badge">🌡️ Baixa o seu termômetro</span><span class="badge">🔒 Pagamento seguro (Mercado Pago)</span>
+    <span class="badge">🛡️ Destinação licenciada</span><span class="badge">📄 Certificado com RT (CREA)</span><span class="badge">🌡️ Baixa o seu termômetro</span><span class="badge">🔒 Pagamento seguro (Stripe)</span>
   </div>
-  <div style="font-size:11px;color:#9aa7a4;text-align:center;margin-top:12px">Pagamento seguro via Mercado Pago. Ao contratar, você concorda com os termos de coleta e destinação da Ecobraz.</div>
+  <div style="font-size:11px;color:#9aa7a4;text-align:center;margin-top:12px">Pagamento seguro via Stripe. Ao contratar, você concorda com os termos de coleta e destinação da Ecobraz.</div>
 </div>
 
 <div class="sec" style="padding-top:0">
@@ -487,6 +487,6 @@ export function paginaObrigadoAdote(pedido, cred) {
   <h1 style="font-size:20px;margin:8px 0 6px;color:#00333B">${pago ? 'Pagamento confirmado!' : 'Recebemos seu pedido'}</h1>
   ${pago
     ? `<p style="font-size:14px;color:#4F6469;line-height:1.6">Seu crédito foi liberado. Saldo atual:</p><div style="font-size:30px;font-weight:800;color:#00333B;margin:6px 0">${kgBR(kg)}</div><p style="font-size:13px;color:#7c8a87">(${tonBR(kg)}) — nossa equipe entrará em contato para agendar as coletas.</p>`
-    : `<p style="font-size:14px;color:#4F6469;line-height:1.6">Assim que o Mercado Pago confirmar o pagamento, seu crédito é liberado automaticamente. Isso costuma levar alguns instantes.</p><button class="btn" style="max-width:240px;margin:10px auto 0" onclick="location.reload()">Atualizar</button>`}
+    : `<p style="font-size:14px;color:#4F6469;line-height:1.6">Assim que o pagamento for confirmado, seu crédito é liberado automaticamente (no cartão é na hora; no boleto, após a compensação).</p><button class="btn" style="max-width:240px;margin:10px auto 0" onclick="location.reload()">Atualizar</button>`}
 </div></div></body></html>`;
 }

@@ -481,7 +481,7 @@ async function solicitar(e){e.preventDefault();
       if(d.pagamento&&d.pagamento.link){
         m.innerHTML=escapeHtml(d.message||'Falta só o pagamento.')+extra
           +'<a href="'+d.pagamento.link+'" target="_blank" rel="noopener" style="display:block;background:#92C430;color:#10262B;text-decoration:none;border-radius:10px;padding:13px;text-align:center;font-weight:800;font-size:15px;margin-top:12px">💳 Pagar R$ '+d.pagamento.valor+' agora →</a>'
-          +'<div style="font-size:12px;color:#7c8a87;margin-top:8px">Pagamento seguro pelo Mercado Pago (Pix, cartão e boleto). Assim que aprovar, sua coleta é liberada automaticamente.</div>';
+          +'<div style="font-size:12px;color:#7c8a87;margin-top:8px">Pagamento seguro pela Stripe (cartão, Apple/Google Pay e boleto). Assim que aprovar, sua coleta é liberada automaticamente.</div>';
       } else {
         m.innerHTML=escapeHtml(d.message||'Coleta solicitada!')+extra;
       }

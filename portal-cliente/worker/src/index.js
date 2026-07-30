@@ -3212,7 +3212,7 @@ async function enviarEmailNF(pedido, pagamento, env) {
   const linhas = [
     'Produto: Cálculo detalhado de pegada de carbono — GHG Protocol',
     `Valor pago: R$ ${Number(pagamento.valor || 0).toFixed(2)}`,
-    `Pagamento (Mercado Pago) ID: ${pagamento.id}`,
+    `Pagamento ID: ${pagamento.id}`,
     empresa.razaoSocial ? `Empresa: ${empresa.razaoSocial}` : null,
     empresa.cnpj ? `CNPJ: ${empresa.cnpj}` : null,
     `Pedido: ${pagamento.externalReference}`,

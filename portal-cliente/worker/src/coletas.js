@@ -430,7 +430,7 @@ export function paginaEditarColeta(user, os, contatos, agentes, veiculos) {
       ${os.cobranca.status !== 'pago' && os.cobranca.link ? `<div style="margin-top:8px"><input readonly value="${esc(os.cobranca.link)}" onclick="this.select()" style="font-size:12px"><div style="font-size:11.5px;color:#8a6a16;margin-top:4px">O cliente também vê o botão “Pagar” no portal dele. Você pode copiar o link e mandar por WhatsApp/e-mail.</div></div>` : ''}
       ${os.cobranca.status !== 'pago' ? `<div style="margin-top:9px"><button type="button" class="btn btn-g" style="padding:8px 12px;font-size:12px" onclick="removerCobranca()">Remover cobrança</button></div>` : ''}
     </div>` : `
-    <div style="font-size:11px;color:#9aa7a4;margin:-4px 0 8px">Se esta coleta for cobrada, informe o valor e gere o link — ele fica anexado à OS e aparece para o cliente no portal (Pix, cartão e boleto). O pagamento marca “PAGO” sozinho e não trava a operação.</div>
+    <div style="font-size:11px;color:#9aa7a4;margin:-4px 0 8px">Se esta coleta for cobrada, informe o valor e gere o link — ele fica anexado à OS e aparece para o cliente no portal (cartão, Apple/Google Pay e boleto). O pagamento marca “PAGO” sozinho e não trava a operação.</div>
     <div class="g2">
       <div><label>Valor (R$)</label><input id="cobValor" inputmode="decimal" placeholder="ex.: 150,00"></div>
       <div><label>Descrição (aparece para o cliente)</label><input id="cobDesc" maxlength="200" placeholder="ex.: Taxa de coleta — itens perigosos"></div>
