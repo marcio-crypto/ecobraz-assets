@@ -18,7 +18,11 @@ export default {
     const cors = corsHeaders(origin, allowed);
     if (request.method === 'OPTIONS') return new Response(null, {status:204, headers:cors});
     const url = new URL(request.url);
-    if (url.pathname === '/health') return json({ok:true, service:'ecobraz-coletas', version:6}, 200, cors);
+    if (url.pathname === '/health') {
+      let cofre = null;
+      try { if (env.LEADS_COFRE) cofre = (await env.LEADS_COFRE.list({limit:1000})).keys.length; } catch {}
+      return json({ok:true, service:'ecobraz-coletas', version:7, leads_no_cofre:cofre}, 200, cors);
+    }
     if (url.pathname !== '/api/coletas' || request.method !== 'POST') return json({ok:false, error:'not_found'}, 404, cors);
     if (!allowed.has(origin)) return json({ok:false, error:'origin_not_allowed'}, 403, cors);
     let input;
@@ -31,9 +35,24 @@ export default {
       if (!passed) return json({ok:false,error:'challenge_failed'},403,cors);
     }
     const lead = normalize(input, request);
-    let ploomes;
+    // Cofre primeiro: o lead é gravado no KV antes de qualquer integração.
+    // Assim, mesmo com CRM fora do ar, nenhuma solicitação se perde.
+    const requestId = crypto.randomUUID();
+    let backedUp = false;
+    try {
+      if (env.LEADS_COFRE) {
+        await env.LEADS_COFRE.put(`${lead.submitted_at}_${requestId}`, JSON.stringify(lead));
+        backedUp = true;
+      }
+    } catch (error) { console.error('cofre_failure', safeError(error)); }
+    let ploomes = null;
     try { ploomes = await sendToPloomes(lead, env); }
-    catch (error) { console.error('ploomes_failure', safeError(error)); return json({ok:false,error:'crm_unavailable'},502,cors); }
+    catch (error) {
+      console.error('ploomes_failure', safeError(error));
+      // Com o lead salvo no cofre, o visitante recebe confirmação normal; sem
+      // cofre disponível, mantém o erro para o front oferecer o WhatsApp.
+      if (!backedUp) return json({ok:false,error:'crm_unavailable'},502,cors);
+    }
     let egoi = {ok:false, skipped:true, existing:false};
     if (lead.marketing_consent) {
       try { egoi = await sendToEgoi(lead, env); }
@@ -44,7 +63,7 @@ export default {
     let confirmation = {ok:false, skipped:true};
     try { confirmation = await sendConfirmationEmail(lead, env); }
     catch (error) { console.error('confirmation_email_failure', safeError(error)); confirmation = {ok:false, skipped:false, detail:safeError(error).message}; }
-    return json({ok:true, request_id:crypto.randomUUID(), crm:{ok:true,contact_id:ploomes.contactId,deal_id:ploomes.dealId}, marketing:{ok:Boolean(egoi.ok),skipped:Boolean(egoi.skipped)}, confirmation:{ok:Boolean(confirmation.ok),skipped:Boolean(confirmation.skipped),detail:confirmation.detail||''}},201,cors);
+    return json({ok:true, request_id:requestId, backed_up:backedUp, crm:ploomes?{ok:true,contact_id:ploomes.contactId,deal_id:ploomes.dealId}:{ok:false,recovered_from_backup:false}, marketing:{ok:Boolean(egoi.ok),skipped:Boolean(egoi.skipped)}, confirmation:{ok:Boolean(confirmation.ok),skipped:Boolean(confirmation.skipped),detail:confirmation.detail||''}},201,cors);
   }
 };
 

@@ -135,9 +135,25 @@
             payload.material_description = `${payload.material_description || ''}\n[Gerador declara ausência de contaminação química, biológica ou radioativa e retirada prévia de fontes/controlados por responsável habilitado.]`;
         }
         button.disabled = true; button.textContent = 'Enviando…'; status.textContent = '';
+        // Nomes amigáveis dos campos para mensagens de erro específicas — o
+        // Worker devolve {error, fields[]} e o visitante precisa saber o que corrigir.
+        const fieldLabels = {profile:'perfil (empresa ou pessoa física)', name:'nome', email:'e-mail', phone:'telefone', material_category:'categoria do material', volume:'volume estimado', material_description:'descrição dos materiais', postal_code:'CEP', city:'cidade', state:'estado (UF)', service_consent:'autorização de uso dos dados'};
         try {
             const response = await fetch(endpoint, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-            if (!response.ok) throw new Error('submission_failed');
+            if (!response.ok) {
+                let detail = null;
+                try { detail = await response.json(); } catch (_) {}
+                if (detail && detail.error === 'validation_failed' && Array.isArray(detail.fields) && detail.fields.length) {
+                    const nomes = detail.fields.map((f) => fieldLabels[f] || f).join(', ');
+                    status.textContent = `Confira os seguintes campos e envie novamente: ${nomes}.`;
+                    status.className = 'form-status is-error';
+                    const first = form.querySelector(`[name="${detail.fields[0]}"]`);
+                    if (first) { const stepEl = first.closest('[data-form-step]'); if (stepEl) showStep(steps.indexOf(stepEl)); first.focus(); }
+                    track('form_error_coleta', {page_path: window.location.pathname, error_type: 'validation', fields: detail.fields.join(',')});
+                    return;
+                }
+                throw new Error((detail && detail.error) || 'submission_failed');
+            }
             // Conversões otimizadas (Google Ads), autorizado pelo Marcio em 15/07/2026
             // (opção A): entrega e-mail/telefone à tag do Google, que aplica hash antes
             // de qualquer envio; o Modo de Consentimento v2 governa o uso conforme a

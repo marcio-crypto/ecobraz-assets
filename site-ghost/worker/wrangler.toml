@@ -9,6 +9,13 @@ account_id = "0ab0573840927669f3bb3666d63cc023"
 # atualiza o CÓDIGO — não apaga nenhuma configuração existente.
 keep_vars = true
 
+# Cofre de leads (KV): toda solicitação recebida é gravada aqui ANTES de ir ao
+# CRM. Se o Ploomes estiver fora do ar, o lead fica preservado no cofre e o
+# visitante recebe confirmação normal — nenhum lead se perde.
+[[kv_namespaces]]
+binding = "LEADS_COFRE"
+id = "5b56276238f8492fb78d7a4d7d215f85"
+
 # Segredos usados pelo Worker (definidos na Cloudflare, nunca no repositório):
 #   PLOOMES_USER_KEY, PLOOMES_PIPELINE_ID, PLOOMES_STAGE_ID, PLOOMES_OWNER_ID
 #   EGOI_API_KEY, EGOI_LIST_ID
