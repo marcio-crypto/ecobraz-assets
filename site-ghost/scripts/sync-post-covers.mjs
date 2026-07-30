@@ -11,15 +11,18 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {createCanvas, GlobalFonts, Path2D} from '@napi-rs/canvas';
 
-const DESIGN_VERSION = 1;
+// v2: paleta "Abraço Verde" (padrão v2B aprovado em 30/07/2026) — fundo petrol,
+// acentos verde #8DC63F, texto creme, títulos Nunito 800. Composição inalterada.
+const DESIGN_VERSION = 2;
 const W = 1200, H = 675;
 const file = process.argv[2] || 'site-ghost/content/priority-posts.json';
 const renderOnly = process.argv.includes('--render-only');
 const outDir = renderOnly ? (process.argv[process.argv.indexOf('--render-only') + 1] || 'post-covers') : null;
 
 const assets = path.resolve(import.meta.dirname, 'assets');
-GlobalFonts.registerFromPath(path.join(assets, 'Montserrat-Bold.ttf'), 'MontserratBold');
-GlobalFonts.registerFromPath(path.join(assets, 'Montserrat-Medium.ttf'), 'MontserratMedium');
+// Tipografia do padrão v2B: Nunito 800 nos títulos/marca, Nunito 600 no kicker.
+GlobalFonts.registerFromPath(path.join(assets, 'Nunito-ExtraBold.ttf'), 'NunitoExtraBold');
+GlobalFonts.registerFromPath(path.join(assets, 'Nunito-SemiBold.ttf'), 'NunitoSemiBold');
 
 // Ícones em traço (viewBox 24x24), estilo consistente com os das landings.
 const ICONS = {
@@ -163,11 +166,12 @@ const SLUG_ICON = {
 const hashInt = (value) => parseInt(crypto.createHash('sha1').update(value).digest('hex').slice(0, 8), 16);
 const coverRef = (post, icon) => `capa-${post.slug.slice(0, 60)}-v${DESIGN_VERSION}-${crypto.createHash('sha1').update(`${DESIGN_VERSION}|${post.title}|${icon}`).digest('hex').slice(0, 8)}`;
 
+// Tons de petrol (#0E3B43) do padrão v2B.
 const GRADIENTS = [
-  {from: [0, 0], to: [W, H], stops: [['#013A44', 0], ['#001F26', 1]]},
-  {from: [0, H], to: [W, 0], stops: [['#00333B', 0], ['#04434B', 1]]},
-  {from: [0, 0], to: [0, H], stops: [['#012F36', 0], ['#00434E', 1]]},
-  {from: [W, 0], to: [0, H], stops: [['#003840', 0], ['#001B21', 1]]},
+  {from: [0, 0], to: [W, H], stops: [['#12464F', 0], ['#082228', 1]]},
+  {from: [0, H], to: [W, 0], stops: [['#0E3B43', 0], ['#155059', 1]]},
+  {from: [0, 0], to: [0, H], stops: [['#0C343C', 0], ['#124C55', 1]]},
+  {from: [W, 0], to: [0, H], stops: [['#103F48', 0], ['#07191E', 1]]},
 ];
 const RINGS = [[1120, 90], [1140, 590], [930, -30], [1180, 345]];
 
@@ -196,13 +200,13 @@ function renderCover(post, icon) {
   ctx.fillRect(0, 0, W, H);
 
   const [ringX, ringY] = RINGS[(seed >>> 3) % RINGS.length];
-  ctx.strokeStyle = 'rgba(146,196,48,0.10)';
+  ctx.strokeStyle = 'rgba(141,198,63,0.10)';
   ctx.lineWidth = 42;
   ctx.beginPath(); ctx.arc(ringX, ringY, 215, 0, Math.PI * 2); ctx.stroke();
-  ctx.fillStyle = 'rgba(146,196,48,0.05)';
+  ctx.fillStyle = 'rgba(141,198,63,0.05)';
   ctx.beginPath(); ctx.arc(ringX, ringY, 128, 0, Math.PI * 2); ctx.fill();
 
-  ctx.fillStyle = 'rgba(255,255,255,0.12)';
+  ctx.fillStyle = 'rgba(251,248,241,0.14)';
   const dotsBaseY = 560 + ((seed >>> 5) % 2) * 24;
   for (let col = 0; col < 8; col += 1) for (let row = 0; row < 3; row += 1) {
     ctx.beginPath(); ctx.arc(806 + col * 22, dotsBaseY + row * 22, 2, 0, Math.PI * 2); ctx.fill();
@@ -210,15 +214,15 @@ function renderCover(post, icon) {
 
   // Cartão do ícone temático (lado direito)
   const tile = {x: 846, y: 187, size: 300, radius: 34};
-  ctx.fillStyle = 'rgba(146,196,48,0.12)';
-  ctx.strokeStyle = 'rgba(146,196,48,0.38)';
+  ctx.fillStyle = 'rgba(141,198,63,0.12)';
+  ctx.strokeStyle = 'rgba(141,198,63,0.38)';
   ctx.lineWidth = 2;
   ctx.beginPath(); ctx.roundRect(tile.x, tile.y, tile.size, tile.size, tile.radius); ctx.fill(); ctx.stroke();
   const scale = 7.6;
   ctx.save();
   ctx.translate(tile.x + (tile.size - 24 * scale) / 2, tile.y + (tile.size - 24 * scale) / 2);
   ctx.scale(scale, scale);
-  ctx.strokeStyle = '#C7E77E';
+  ctx.strokeStyle = '#C8E89C';
   ctx.lineWidth = 1.7;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
@@ -227,36 +231,36 @@ function renderCover(post, icon) {
 
   // Bloco de texto (lado esquerdo)
   const left = 84;
-  ctx.fillStyle = '#92C430';
+  ctx.fillStyle = '#8DC63F';
   ctx.beginPath(); ctx.roundRect(left, 128, 64, 8, 4); ctx.fill();
-  ctx.fillStyle = '#A8D84E';
-  ctx.font = '26px MontserratMedium';
+  ctx.fillStyle = '#C8E89C';
+  ctx.font = '26px NunitoSemiBold';
   ctx.fillText(KICKERS[icon].toUpperCase(), left, 176);
 
   let fontSize = 56, lineHeight = 68, maxLines = 4;
-  ctx.font = `${fontSize}px MontserratBold`;
+  ctx.font = `${fontSize}px NunitoExtraBold`;
   let lines = wrapLines(ctx, post.title, 656);
   if (lines.length > maxLines) {
     fontSize = 46; lineHeight = 57; maxLines = 5;
-    ctx.font = `${fontSize}px MontserratBold`;
+    ctx.font = `${fontSize}px NunitoExtraBold`;
     lines = wrapLines(ctx, post.title, 656);
     if (lines.length > maxLines) { lines = lines.slice(0, maxLines); lines[maxLines - 1] += '…'; }
   }
-  ctx.fillStyle = '#FFFFFF';
+  ctx.fillStyle = '#FBF8F1';
   const titleTop = 246;
   lines.forEach((line, i) => ctx.fillText(line, left, titleTop + i * lineHeight));
 
   // Marca no rodapé
   const brandY = H - 58;
-  ctx.font = '34px MontserratBold';
-  ctx.fillStyle = '#FFFFFF';
+  ctx.font = '34px NunitoExtraBold';
+  ctx.fillStyle = '#FBF8F1';
   ctx.fillText('eco', left, brandY);
   const ecoWidth = ctx.measureText('eco').width;
-  ctx.fillStyle = '#92C430';
+  ctx.fillStyle = '#8DC63F';
   ctx.fillText('braz', left + ecoWidth, brandY);
   const brazWidth = ctx.measureText('braz').width;
-  ctx.font = '22px MontserratMedium';
-  ctx.fillStyle = 'rgba(255,255,255,0.62)';
+  ctx.font = '22px NunitoSemiBold';
+  ctx.fillStyle = 'rgba(251,248,241,0.62)';
   ctx.fillText('emigre', left + ecoWidth + brazWidth + 14, brandY);
 
   return canvas;

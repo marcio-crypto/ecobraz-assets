@@ -6,6 +6,6 @@
         {{#if primary_tag}}<span class="post-tag">{{primary_tag.name}}</span>{{/if}}
         <h3><a href="{{url}}">{{title}}</a></h3>
         <p>{{excerpt words="24"}}</p>
-        <span class="post-meta">{{date published_at format="DD MMM YYYY"}}</span>
+        <span class="post-meta">{{date published_at format="DD MMM YYYY"}} · {{reading_time minute="1 min" minutes="% min"}}</span>
     </div>
 </article>
