@@ -903,9 +903,16 @@ export default {
             }
           } catch (error) { console.error('stripe_retorno_falhou', safeError(error)); await registrarFalha(env, 'stripe-retorno', safeError(error), { ref: s.ref }); }
         }
-        if (s.pago) return new Response(null, { status: 302, headers: { Location: destinoObrigado(ped, s.ref), 'cache-control': 'no-store' } });
+        if (s.pago) {
+          const prod = ped && ped.produto;
+          // 'coleta'/'oscobranca' iriam para /painel (que exige login) — quem paga anônimo
+          // (Coleta Expressa do site) caía na tela de login. Mostramos confirmação pública.
+          if (prod === 'coleta') return html(paginaMensagem('✅ Pagamento aprovado — Coleta Expressa confirmada!', 'Recebemos seu pagamento. Sua coleta entra na fila EXPRESSA (até 24h) e nossa equipe entra em contato para confirmar o horário. Obrigado!', 'https://ecobraz.org'));
+          if (prod === 'oscobranca') return html(paginaMensagem('✅ Pagamento aprovado!', 'Recebemos o pagamento da sua ordem de serviço. Obrigado — nossa equipe já foi avisada.', 'https://ecobraz.org'));
+          return new Response(null, { status: 302, headers: { Location: destinoObrigado(ped, s.ref), 'cache-control': 'no-store' } });
+        }
         // Boleto: gerado, mas ainda não pago — a baixa é automática pelo webhook quando pagar.
-        return html(paginaMensagem('Boleto gerado', 'Seu boleto foi gerado. Pague pelo app ou site do seu banco até o vencimento — a confirmação é automática (costuma levar de 1 a 2 dias úteis após o pagamento). Assim que cair, seu pedido é liberado sozinho.', '/painel'));
+        return html(paginaMensagem('Boleto gerado', 'Seu boleto foi gerado. Pague pelo app ou site do seu banco até o vencimento — a confirmação é automática (costuma levar de 1 a 2 dias úteis após o pagamento). Assim que cair, seu pedido é liberado sozinho.', 'https://ecobraz.org'));
       }
       // Abrir este endereço no navegador (GET) NÃO é erro: o webhook funciona por
       // POST (a Stripe chama sozinha). Respondemos algo claro para não assustar.
