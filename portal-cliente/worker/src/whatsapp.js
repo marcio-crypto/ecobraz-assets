@@ -51,13 +51,16 @@ export async function enviarWhatsAppTemplate(env, telefone, templateId, params) 
   const key = chaveGupshup(env);
   const appId = String(env.GUPSHUP_APP_ID || APP_ID_PADRAO).trim();
   const source = String(env.GUPSHUP_SOURCE || '').replace(/\D/g, '');
+  const appName = String(env.GUPSHUP_APP || '').trim();
   const to = telWhatsApp(telefone);
   if (!key || !appId) return { ok: false, motivo: 'nao_configurado' };
   if (!templateId) return { ok: false, motivo: 'sem_template' };
   if (!to) return { ok: false, motivo: 'telefone_invalido' };
   const body = new URLSearchParams();
-  body.set('destination', to);
+  body.set('channel', 'whatsapp');
   if (source) body.set('source', source);
+  body.set('destination', to);
+  if (appName) body.set('src.name', appName);
   body.set('template', JSON.stringify({ id: templateId, params: (params || []).map((p) => String(p == null ? '' : p)) }));
   try {
     const r = await fetch(`https://partner.gupshup.io/partner/app/${encodeURIComponent(appId)}/template/msg`, {
