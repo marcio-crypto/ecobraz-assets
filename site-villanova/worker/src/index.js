@@ -109,7 +109,8 @@ async function tratar(request, env) {
     msg.setSubject(ehMagnet
       ? `Download de material (${leadSource.replace('magnet-', '')}) — ${empresa}`
       : `Nova solicitação de análise — ${empresa}`);
-    msg.setHeader('Reply-To', `${nome} <${email}>`);
+    // Só o endereço: mimetext rejeita "Nome <email>" com acentos no nome.
+    msg.setHeader('Reply-To', email);
 
     const linhas = [
       ['Origem', ehMagnet ? `Material gateado: ${leadSource}` : 'Formulário de solicitação'],
