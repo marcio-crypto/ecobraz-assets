@@ -14,3 +14,11 @@ Leia isto no início de toda sessão. É um compromisso permanente, não uma pre
 ## Segurança (regra rígida)
 
 - Nunca exponha, imprima ou grave chaves de API no repositório, em logs ou na conversa. Use apenas GitHub Actions Secrets, Ghost Integration Keys e Cloudflare Secrets já configurados. Nunca peça ao Marcio para colar segredos no chat.
+
+## Padrão visual da Villanova ESG (aprovado em 30/07/2026)
+
+Toda página, template ou material novo da Villanova ESG DEVE seguir o
+padrão de design v2 aprovado pelo Marcio: tokens, componentes, ícones e
+regras em `site-villanova/design/PADRAO.md` (referências renderizadas na
+mesma pasta). Antes de publicar página nova, renderizar prévia e conferir
+visualmente contra as referências.

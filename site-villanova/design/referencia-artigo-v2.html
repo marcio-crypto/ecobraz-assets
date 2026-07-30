@@ -1,0 +1,130 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{margin:0;padding:0;box-sizing:border-box}
+:root{--navy:#061426;--navy2:#0b2a52;--gold:#b88a3d;--gold-l:#d9b573;--paper:#faf8f4;--ink:#1a2634;--mut:#5b6b7c;--line:#e6e0d4}
+body{font-family:'Inter','Segoe UI',system-ui,sans-serif;color:var(--ink);background:var(--paper);line-height:1.7}
+.serif{font-family:Georgia,serif}
+.wrap{max-width:1140px;margin:0 auto;padding:0 40px}
+.topbar{background:#061426;padding:15px 0}
+.topbar .wrap{display:flex;align-items:center;justify-content:space-between}
+.brand{color:#fff;font-weight:800;letter-spacing:.16em;font-size:14px}
+.brand span{color:#d9b573}
+.nav{display:flex;gap:22px;align-items:center}
+.nav a{color:#b9c6d8;text-decoration:none;font-size:13px}
+.btn{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#b88a3d,#a2762c);color:#fff;font-weight:700;padding:11px 22px;border-radius:6px;text-decoration:none;font-size:13.5px}
+.ahero{background:radial-gradient(900px 420px at 90% -20%,#123a6b 0%,transparent 55%),linear-gradient(160deg,#061426 60%,#0b2a52);color:#fff;padding:58px 0 46px;position:relative;overflow:hidden}
+.bcrumb{color:#7d90a8;font-size:12px;margin-bottom:18px}
+.bcrumb b{color:#d9b573}
+.chips{display:flex;gap:10px;margin-bottom:18px}
+.chip{display:inline-flex;align-items:center;gap:7px;background:rgba(184,138,61,.15);border:1px solid rgba(217,181,115,.4);color:#d9b573;font-size:11px;font-weight:700;letter-spacing:.1em;padding:6px 13px;border-radius:20px;text-transform:uppercase}
+.chip.ver{background:rgba(127,212,154,.12);border-color:rgba(127,212,154,.4);color:#7fd49a}
+.ahero h1{font-size:38px;line-height:1.18;max-width:760px;font-weight:700;margin-bottom:16px}
+.ahero .std{color:#c6d2e0;font-size:16px;max-width:640px;margin-bottom:22px}
+.ameta{display:flex;gap:22px;color:#93a7bf;font-size:12.5px;align-items:center}
+.ameta span{display:flex;gap:7px;align-items:center}
+.aicon{position:absolute;right:40px;bottom:-30px;opacity:.14}
+.layout{display:flex;gap:48px;padding:52px 0}
+.artigo{flex:1;max-width:700px}
+.artigo p{font-size:16.5px;margin-bottom:22px;color:#2a3846}
+.artigo h2{font-family:Georgia,serif;font-size:26px;margin:38px 0 14px;padding-left:16px;border-left:4px solid var(--gold);line-height:1.25}
+.kbox{background:linear-gradient(160deg,#061426,#0b2a52);color:#fff;border-radius:12px;padding:24px 26px;margin:28px 0;display:flex;gap:18px;align-items:flex-start}
+.kbox b{color:#d9b573;display:block;font-size:13px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px}
+.kbox p{color:#c6d2e0;font-size:14.5px;margin:0}
+.pull{font-family:Georgia,serif;font-style:italic;font-size:22px;line-height:1.45;color:var(--navy);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:22px 8px;margin:30px 0;text-align:center}
+.pull b{color:var(--gold)}
+.lista{list-style:none;margin:0 0 22px}
+.lista li{padding:9px 0 9px 34px;position:relative;font-size:15.5px;border-bottom:1px dashed var(--line)}
+.lista li svg{position:absolute;left:0;top:11px}
+.tabela{width:100%;border-collapse:collapse;margin:26px 0;font-size:14px;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 8px 22px rgba(20,32,46,.06)}
+.tabela th{background:var(--navy);color:#fff;text-align:left;padding:12px 16px;font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+.tabela td{padding:12px 16px;border-bottom:1px solid var(--line)}
+.tabela tr:last-child td{border:none}
+.tabela td:last-child{color:var(--gold);font-weight:700}
+.ctaband{background:linear-gradient(135deg,var(--gold),#a2762c);border-radius:12px;padding:24px 28px;margin:34px 0;display:flex;justify-content:space-between;align-items:center;gap:20px;color:#fff;box-shadow:0 14px 34px rgba(184,138,61,.3)}
+.ctaband b{font-size:17px;display:block}
+.ctaband small{font-size:13px;opacity:.9}
+.ctaband a{background:#061426;color:#fff;font-weight:700;padding:12px 22px;border-radius:6px;text-decoration:none;font-size:13.5px;white-space:nowrap}
+.fontes{background:#fff;border:1px solid var(--line);border-radius:12px;padding:22px 26px;margin:30px 0}
+.fontes h3{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);margin-bottom:14px;display:flex;gap:8px;align-items:center}
+.fontes a{display:block;color:#2b5f9e;font-size:13.5px;text-decoration:none;padding:7px 0;border-bottom:1px dashed var(--line)}
+.autor{display:flex;gap:20px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:12px;padding:22px 26px;margin:30px 0}
+.autor .av{width:74px;height:74px;border-radius:50%;background:linear-gradient(160deg,#061426,#0b2a52);flex-shrink:0;outline:2px solid var(--gold);outline-offset:3px;display:flex;align-items:center;justify-content:center;color:#c6d2e0;font-size:9px;text-align:center}
+.autor b{font-size:15.5px}
+.autor p{font-size:13px;color:var(--mut);margin:2px 0 0}
+.side{width:320px;flex-shrink:0}
+.scard{background:#fff;border:1px solid var(--line);border-radius:12px;padding:22px;margin-bottom:20px;box-shadow:0 8px 22px rgba(20,32,46,.05)}
+.scard h4{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);margin-bottom:14px;display:flex;gap:8px;align-items:center}
+.toc a{display:block;color:#2a3846;font-size:13.5px;text-decoration:none;padding:7px 0 7px 14px;border-left:2px solid var(--line)}
+.toc a.on{border-color:var(--gold);color:var(--gold);font-weight:700}
+.scta{background:linear-gradient(160deg,#061426,#0b2a52);color:#fff;border-radius:12px;padding:24px;margin-bottom:20px}
+.scta b{font-size:16px;display:block;margin-bottom:8px;font-family:Georgia,serif}
+.scta p{font-size:13px;color:#c6d2e0;margin-bottom:16px}
+.rel{padding:56px 0;background:linear-gradient(180deg,#f2eee6,#faf8f4)}
+.label{color:var(--gold);letter-spacing:.2em;font-size:11px;font-weight:700;text-transform:uppercase;display:flex;align-items:center;gap:10px}
+.label::before{content:"";width:26px;height:1px;background:var(--gold)}
+h2.sec{font-family:Georgia,serif;font-size:28px;margin:12px 0 28px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.rcard{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 8px 22px rgba(20,32,46,.05)}
+.rcap{height:110px;display:flex;align-items:center;justify-content:center;position:relative}
+.rcap.c1{background:linear-gradient(135deg,#0b2a52,#061426)}
+.rcap.c2{background:linear-gradient(135deg,#143c2a,#061426)}
+.rcap.c3{background:linear-gradient(135deg,#4a3413,#061426)}
+.rbody{padding:18px 20px 20px}
+.rtag{font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--gold);text-transform:uppercase}
+.rbody h3{font-size:15.5px;line-height:1.4;margin:6px 0 10px}
+.rbody a{color:var(--gold);font-weight:700;font-size:12.5px;text-decoration:none}
+footer{background:#04101f;color:#8fa0b5;font-size:12px;padding:24px 0;text-align:center}
+</style></head><body>
+<div class="topbar"><div class="wrap"><div class="brand">VILLANOVA <span>ESG</span></div><div class="nav"><a href="#">Serviços</a><a href="#">SEMM</a><a href="#">Biblioteca</a><a href="#">A firma</a><a class="btn" href="#">Começar →</a></div></div></div>
+
+<div class="ahero"><div class="aicon"><svg width="260" height="260" viewBox="0 0 24 24" fill="none" stroke="#d9b573" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M6 21V10l4-2v13"/><path d="M14 21V6l4-2v17"/><circle cx="8" cy="5" r="1.6"/><path d="M8 5c0-2 3-2 3-4"/></svg></div><div class="wrap">
+<div class="bcrumb">Biblioteca › <b>CBAM &amp; Carbono</b></div>
+<div class="chips"><span class="chip"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d9b573" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M6 21V10l4-2v13"/><path d="M14 21V6l4-2v17"/><circle cx="8" cy="5" r="1.6"/><path d="M8 5c0-2 3-2 3-4"/></svg> CBAM</span><span class="chip ver"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7fd49a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.5l2.5 2.5 5-5.5"/></svg> Status legal verificado · 10/07/2026</span></div>
+<h1 class="serif">CBAM 2026: o imposto de carbono na fronteira virou uma variável do seu fluxo de caixa</h1>
+<p class="std">Desde 1º de janeiro, cada tonelada exportada de aço, alumínio, cimento ou fertilizante carrega um número — e quem não prova o seu, paga pelo pior número possível.</p>
+<div class="ameta"><span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#93a7bf" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg> 9 min de leitura</span><span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#93a7bf" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg> Marcio Villanova</span><span>PT · <a href="#" style="color:#d9b573;text-decoration:none">EN</a> · <a href="#" style="color:#d9b573;text-decoration:none">IT</a></span></div>
+</div></div>
+
+<div class="wrap"><div class="layout"><div class="artigo">
+<p><b>O comprador europeu não pergunta mais "você é sustentável?"</b> — ele pergunta quanto carbono está embutido em cada tonelada que você embarca, com que metodologia foi calculado, e quem assina o número. Se a resposta demora, ele preenche a lacuna com o valor padrão. E o valor padrão nunca está a seu favor.</p>
+<div class="kbox"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#d9b573" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4L2.5 20h19z"/><path d="M12 10v4.5M12 17.6v.1"/></svg><div><b>O que mudou em 2026</b><p>O período definitivo do CBAM começou em 1º de janeiro. O preço do certificado acompanha a média trimestral do ETS em 2026 — e passa a ser semanal em 2027. A conta ficou viva.</p></div></div>
+<h2>De relatório anual a variável de caixa</h2>
+<p>No período transitório, errar o dado de emissões custava retrabalho. Agora custa dinheiro na fronteira: o importador compra certificados sobre o número declarado — e repassa a incerteza para o seu preço. É por isso que os questionários chegaram mais cedo e mais duros.</p>
+<div class="pull">“Sem lastro, o comprador assume o pior número — e a diferença <b>sai do seu preço</b>.”</div>
+<h2>O que o seu dossiê CBAM precisa conter</h2>
+<ul class="lista">
+<li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3d8a41" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.5l2.5 2.5 5-5.5"/></svg> Classificação dos produtos nos códigos aduaneiros cobertos</li>
+<li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3d8a41" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.5l2.5 2.5 5-5.5"/></svg> Cálculo das emissões incorporadas, com metodologia declarada</li>
+<li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3d8a41" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.5l2.5 2.5 5-5.5"/></svg> Rastreabilidade da fonte de cada número (medição ≠ estimativa)</li>
+<li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3d8a41" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.5l2.5 2.5 5-5.5"/></svg> Mapa de exposição comercial: quais contratos dependem de qual dado</li>
+</ul>
+<h2>Quanto está em jogo, por setor</h2>
+<table class="tabela"><tr><th>Setor</th><th>Cobertura CBAM</th><th>Risco sem lastro</th></tr>
+<tr><td>Aço e ferro-ligas</td><td>Total</td><td>Alto</td></tr>
+<tr><td>Alumínio</td><td>Total</td><td>Alto</td></tr>
+<tr><td>Cimento</td><td>Total</td><td>Médio-alto</td></tr>
+<tr><td>Fertilizantes</td><td>Total</td><td>Alto</td></tr></table>
+<div class="ctaband"><div><b>Recebeu um pedido de dados CBAM?</b><small>Envie o pedido — dizemos o que o seu dossiê já defende. Resposta em 1 dia útil.</small></div><a href="#">Começar a triagem →</a></div>
+<div class="fontes"><h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5b6b7c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1.5 1.5"/><path d="M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1.5-1.5"/></svg> Trilha de fontes — verificada em 10/07/2026</h3>
+<a href="#">Regulamento (UE) 2023/956 — texto consolidado · EUR-Lex</a>
+<a href="#">Comissão Europeia, DG TAXUD — CBAM definitive regime</a>
+<a href="#">Regulamento de Execução — metodologia de cálculo</a></div>
+<div class="autor"><div class="av">[ FOTO ]</div><div><b>Marcio Villanova</b><p>Fundador da Villanova ESG · CEO da Ecobraz desde 2011 · autor do modelo SEMM (DOI/Zenodo) · ORCID</p></div></div>
+</div>
+
+<div class="side">
+<div class="scard"><h4><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5b6b7c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg> Neste artigo</h4><div class="toc">
+<a class="on" href="#">De relatório a variável de caixa</a>
+<a href="#">O que o dossiê precisa conter</a>
+<a href="#">Quanto está em jogo, por setor</a>
+<a href="#">Trilha de fontes</a></div></div>
+<div class="scta"><b>Revisão CBAM</b><p>Seus dados de emissões contra o pedido real do importador: fontes, metodologia, lacunas e responsáveis.</p><a class="btn" href="#">Ver o serviço →</a></div>
+<div class="scard"><h4><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5b6b7c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6z"/><path d="M9 12l2 2 4-4.5"/></svg> Por que confiar</h4><div style="font-size:13px;color:#5b6b7c;line-height:1.8">✓ 18 relatórios técnicos com DOI<br>✓ Listada na ECESP (Comissão Europeia)<br>✓ Operação real no Brasil desde 2011<br>✓ Status legal verificado e datado</div></div>
+</div></div></div>
+
+<div class="rel"><div class="wrap"><div class="label">Continue no tema</div><h2 class="sec">Quem leu este, precisa destes</h2>
+<div class="grid3">
+<div class="rcard"><div class="rcap c1"><svg width="54" height="54" viewBox="0 0 24 24" fill="none" stroke="#d9b573" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5l6 6M11 2l6 6M5 8l6 6M13 10l7 7a1.5 1.5 0 0 1-2 2l-7-7"/><path d="M3 21h9"/></svg></div><div class="rbody"><div class="rtag">Contratos</div><h3>A cláusula que expõe a sua documentação ESG fraca</h3><a href="#">Ler artigo →</a></div></div>
+<div class="rcard"><div class="rcap c2"><svg width="54" height="54" viewBox="0 0 24 24" fill="none" stroke="#d9b573" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11z"/><circle cx="12" cy="10" r="2.6"/></svg></div><div class="rbody"><div class="rtag">EUDR</div><h3>Rastreabilidade EUDR: o que o comprador vai pedir antes da lei</h3><a href="#">Ler artigo →</a></div></div>
+<div class="rcard"><div class="rcap c3"><svg width="54" height="54" viewBox="0 0 24 24" fill="none" stroke="#d9b573" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a1.5 1.5 0 0 0-1.5 1.5v15A1.5 1.5 0 0 0 5 21h14a1.5 1.5 0 0 0 1.5-1.5V8L15 3z"/><path d="M15 3v5h5.5"/><path d="M8 13h8M8 16.5h8"/></svg></div><div class="rbody"><div class="rtag">Diagnóstico</div><h3>A revisão de 30 dias: o que corrigir primeiro no seu dossiê</h3><a href="#">Ler artigo →</a></div></div>
+</div></div></div>
+<footer><div class="wrap">Villanova ESG · São Paulo, Brazil · contact@villanovaesg.com · Consultoria — não é certificação, auditoria nem aconselhamento jurídico</div></footer>
+</body></html>
