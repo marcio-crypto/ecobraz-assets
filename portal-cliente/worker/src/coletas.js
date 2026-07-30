@@ -248,8 +248,13 @@ export function paginaColetasLista(user, coletas, q, cliCtx, negocios) {
 }
 
 export function paginaGerarColeta(user, cliente, agentes, patrocinadores, veiculos) {
+  const fmtEnd = (x) => [[x.logradouro, x.numero].filter(Boolean).join(', '), x.complemento, x.bairro, [x.cidade, x.uf].filter(Boolean).join('/'), x.cep].filter(Boolean).join(' · ');
+  const rotEnd = (x, n) => x.rotulo || x.bairro || x.cidade || ('Endereço ' + n);
   const e = cliente.endereco || {};
-  const endPadrao = [[e.logradouro, e.numero].filter(Boolean).join(', '), e.complemento, e.bairro, [e.cidade, e.uf].filter(Boolean).join('/'), e.cep].filter(Boolean).join(' · ');
+  const e2 = cliente.endereco2 || {};
+  const endPadrao = fmtEnd(e);
+  const endPadrao2 = fmtEnd(e2);
+  const temEnd2 = !!(e2.logradouro || e2.cep || e2.bairro);
   const nome = cliente.tipo === 'PJ' ? (cliente.razaoSocial || cliente.nomeFantasia || '') : (cliente.nome || '');
   const contatoPadrao = cliente.tipo === 'PJ' ? ((cliente.contatos || [])[0] || {}) : { nome: cliente.nome, fone: cliente.fone, email: cliente.email };
   const contatoStr = [contatoPadrao.nome, contatoPadrao.fone].filter(Boolean).join(' · ');
@@ -267,7 +272,13 @@ export function paginaGerarColeta(user, cliente, agentes, patrocinadores, veicul
   <p style="font-size:12.5px;color:#8fa39f;margin:0 0 14px">Gerando a Ordem de Coleta para <b>${esc(nome)}</b>.</p>
   <div class="card">
     <div class="sec">Local &amp; agendamento</div>
-    <label>Endereço da coleta</label><textarea id="endereco" rows="2">${esc(endPadrao)}</textarea>
+    <label>Endereço da coleta</label>
+    ${temEnd2 ? `<div style="font-size:11.5px;color:#0B5B66;font-weight:700;margin:-2px 0 6px">Este cliente tem 2 endereços — escolha o correto:</div>
+    <select id="endSel" onchange="if(this.value)document.getElementById('endereco').value=this.value" style="margin-bottom:8px">
+      <option value="${esc(endPadrao)}">📍 ${esc(rotEnd(e, '1'))} — ${esc(endPadrao)}</option>
+      <option value="${esc(endPadrao2)}">📍 ${esc(rotEnd(e2, '2'))} — ${esc(endPadrao2)}</option>
+    </select>` : ''}
+    <textarea id="endereco" rows="2">${esc(endPadrao)}</textarea>
     <div class="g2"><div><label>Data</label><input id="data" type="date"></div><div><label>Janela (opcional)</label><input id="janela" placeholder="ex.: 09h–12h"></div></div>
     <label>Contato no local</label>${optContatos ? `<select id="contatoSel" onchange="if(this.value)document.getElementById('contato').value=this.value" style="margin-bottom:8px">${optContatos}</select>` : ''}<input id="contato" value="${esc(contatoStr)}">
     <div class="sec">Material &amp; motorista</div>

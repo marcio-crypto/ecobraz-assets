@@ -713,11 +713,16 @@ export function paginaFormCliente(user, tipo, cli, leadId) {
   const editando = !!(cli && cli.id);
   tipo = (cli && cli.tipo) || (tipo === 'PF' ? 'PF' : 'PJ');
   const e = (cli && cli.endereco) || {};
+  const e2 = (cli && cli.endereco2) || {};
   const contatos = (cli && Array.isArray(cli.contatos) && cli.contatos.length) ? cli.contatos : [{}];
-  const enderecoBloco = `<div class="sec">Endereço</div>
-    <div class="g3"><div><label>CEP</label><input id="cep" inputmode="numeric" placeholder="00000-000" value="${esc(e.cep || '')}" onblur="buscarCEP()"></div><div style="grid-column:span 2"><label>Logradouro</label><input id="logradouro" value="${esc(e.logradouro || '')}"></div></div>
-    <div class="g3"><div><label>Número</label><input id="numero" value="${esc(e.numero || '')}"></div><div><label>Complemento</label><input id="complemento" value="${esc(e.complemento || '')}"></div><div><label>Bairro</label><input id="bairro" value="${esc(e.bairro || '')}"></div></div>
-    <div class="g2"><div><label>Cidade</label><input id="cidade" value="${esc(e.cidade || '')}"></div><div><label>UF</label><input id="uf" maxlength="2" value="${esc(e.uf || '')}"></div></div>`;
+  const blocoEnd = (titulo, x, sfx, aviso) => `<div class="sec">${titulo}</div>
+    ${aviso || ''}
+    <label>Rótulo <span style="color:#9aa7a4;font-weight:400">(opcional — ex.: Matriz, Depósito, Loja)</span></label><input id="rotulo${sfx}" value="${esc(x.rotulo || '')}" placeholder="ex.: Matriz">
+    <div class="g3"><div><label>CEP</label><input id="cep${sfx}" inputmode="numeric" placeholder="00000-000" value="${esc(x.cep || '')}" onblur="buscarCEP('${sfx}')"></div><div style="grid-column:span 2"><label>Logradouro</label><input id="logradouro${sfx}" value="${esc(x.logradouro || '')}"></div></div>
+    <div class="g3"><div><label>Número</label><input id="numero${sfx}" value="${esc(x.numero || '')}"></div><div><label>Complemento</label><input id="complemento${sfx}" value="${esc(x.complemento || '')}"></div><div><label>Bairro</label><input id="bairro${sfx}" value="${esc(x.bairro || '')}"></div></div>
+    <div class="g2"><div><label>Cidade</label><input id="cidade${sfx}" value="${esc(x.cidade || '')}"></div><div><label>UF</label><input id="uf${sfx}" maxlength="2" value="${esc(x.uf || '')}"></div></div>`;
+  const enderecoBloco = blocoEnd('Endereço principal', e, '', '')
+    + blocoEnd('Endereço 2 (opcional)', e2, '2', '<div style="font-size:11.5px;color:#8fa39f;margin:-2px 0 8px">Preencha só se o cliente tiver <b>dois locais</b> (mesmo CNPJ). Na Ordem de Coleta você escolhe qual usar.</div>');
 
   const corpo = tipo === 'PJ' ? `
     <div class="sec">Empresa</div>
@@ -764,12 +769,15 @@ function addContato(){var w=document.getElementById('contatos');var d=document.c
 document.addEventListener('click',function(ev){if(ev.target&&ev.target.classList.contains('rm-contato')){var c=ev.target.closest('.contato');if(c)c.remove();}});
 function buscarCNPJ(){var n=(document.getElementById('cnpj').value||'').replace(/\\D/g,'');if(n.length!==14){msg('CNPJ deve ter 14 dígitos.');return;}msg('Buscando dados do CNPJ…');
   fetch('/api/cadastro/cnpj?n='+n).then(r=>r.json()).then(d=>{if(!d||!d.ok){msg('Não encontrei esse CNPJ — preencha manualmente.');return;}var s=function(id,v){if(v&&document.getElementById(id)&&!document.getElementById(id).value)document.getElementById(id).value=v;};s('razaoSocial',d.razaoSocial);s('nomeFantasia',d.nomeFantasia);s('cep',d.cep);s('logradouro',d.logradouro);s('numero',d.numero);s('complemento',d.complemento);s('bairro',d.bairro);s('cidade',d.cidade);s('uf',d.uf);msg('Dados preenchidos ✓ confira e complete.');}).catch(()=>msg('Sem conexão — preencha manualmente.'));}
-function buscarCEP(){var c=document.getElementById('cep');if(!c)return;var n=(c.value||'').replace(/\\D/g,'');if(n.length!==8)return;
-  fetch('https://viacep.com.br/ws/'+n+'/json/').then(function(r){return r.json();}).then(function(d){if(!d||d.erro)return;var s=function(id,v){var el=document.getElementById(id);if(el&&v)el.value=v;};s('logradouro',d.logradouro);s('bairro',d.bairro);s('cidade',d.localidade);s('uf',d.uf);var comp=document.getElementById('complemento');if(comp&&!comp.value&&d.complemento)comp.value=d.complemento;var num=document.getElementById('numero');if(num&&!num.value)num.focus();}).catch(function(){});}
+function buscarCEP(sfx){sfx=sfx||'';var c=document.getElementById('cep'+sfx);if(!c)return;var n=(c.value||'').replace(/\\D/g,'');if(n.length!==8)return;
+  fetch('https://viacep.com.br/ws/'+n+'/json/').then(function(r){return r.json();}).then(function(d){if(!d||d.erro)return;var s=function(id,v){var el=document.getElementById(id+sfx);if(el&&v)el.value=v;};s('logradouro',d.logradouro);s('bairro',d.bairro);s('cidade',d.localidade);s('uf',d.uf);var comp=document.getElementById('complemento'+sfx);if(comp&&!comp.value&&d.complemento)comp.value=d.complemento;var num=document.getElementById('numero'+sfx);if(num&&!num.value)num.focus();}).catch(function(){});}
 function cpfValido(v){var s=0,r,i;for(i=0;i<9;i++)s+=parseInt(v.charAt(i),10)*(10-i);r=(s*10)%11;if(r===10)r=0;if(r!==parseInt(v.charAt(9),10))return false;s=0;for(i=0;i<10;i++)s+=parseInt(v.charAt(i),10)*(11-i);r=(s*10)%11;if(r===10)r=0;return r===parseInt(v.charAt(10),10);}
 function validarCPF(){var el=document.getElementById('cpf'),m=document.getElementById('cpfMsg');if(!el||!m)return;var v=(el.value||'').replace(/\\D/g,'');if(!v){m.textContent='';return;}
   if(v.length!==11||/^(\\d)\\1{10}$/.test(v)||!cpfValido(v)){m.textContent='⚠ CPF inválido — confira os números.';m.style.color='#B23A2E';}else{m.textContent='✓ CPF válido';m.style.color='#3f7a2e';}}
-function salvar(){var tipo=g('tipo');var rec={tipo:tipo,endereco:{cep:g('cep'),logradouro:g('logradouro'),numero:g('numero'),complemento:g('complemento'),bairro:g('bairro'),cidade:g('cidade'),uf:g('uf')},obsColeta:g('obsColeta')};
+function salvar(){var tipo=g('tipo');
+  var end2={rotulo:g('rotulo2'),cep:g('cep2'),logradouro:g('logradouro2'),numero:g('numero2'),complemento:g('complemento2'),bairro:g('bairro2'),cidade:g('cidade2'),uf:g('uf2')};
+  var temEnd2=!!(end2.logradouro||end2.cep||end2.bairro);
+  var rec={tipo:tipo,endereco:{rotulo:g('rotulo'),cep:g('cep'),logradouro:g('logradouro'),numero:g('numero'),complemento:g('complemento'),bairro:g('bairro'),cidade:g('cidade'),uf:g('uf')},endereco2:temEnd2?end2:null,obsColeta:g('obsColeta')};
   var id=g('id');if(id)rec.id=id;
   if(tipo==='PJ'){rec.razaoSocial=g('razaoSocial');rec.nomeFantasia=g('nomeFantasia');rec.cnpj=g('cnpj');rec.ie=g('ie');rec.contrato=g('contrato');rec.pagamento=g('pagamento');rec.status=g('statusEmpresa');
     rec.contatos=Array.prototype.map.call(document.querySelectorAll('.contato'),function(c){var st=c.querySelector('.c-status');return{nome:c.querySelector('.c-nome').value.trim(),cargo:c.querySelector('.c-cargo').value.trim(),fone:c.querySelector('.c-fone').value.trim(),email:c.querySelector('.c-email').value.trim(),status:st?st.value.trim():''};}).filter(function(x){return x.nome||x.fone||x.email;});
@@ -829,6 +837,10 @@ export function paginaClienteDetalhe(user, cli, arquivos, negocios, segmento) {
     </div>` : `<div style="font-size:12px;color:#a06a62;margin-top:10px">Cadastre o ${cli.tipo === 'PJ' ? 'CNPJ' : 'CPF'} para poder anexar documentos a este cliente.</div>`;
   const e = cli.endereco || {};
   const endereco = [[e.logradouro, e.numero].filter(Boolean).join(', '), e.complemento, e.bairro, [e.cidade, e.uf].filter(Boolean).join('/'), e.cep].filter(Boolean).join(' · ') || limpar(cli.enderecoTexto || '');
+  const e2 = cli.endereco2 || {};
+  const endereco2 = [[e2.logradouro, e2.numero].filter(Boolean).join(', '), e2.complemento, e2.bairro, [e2.cidade, e2.uf].filter(Boolean).join('/'), e2.cep].filter(Boolean).join(' · ');
+  const rotuloE1 = e.rotulo ? ` (${e.rotulo})` : '';
+  const rotuloE2 = e2.rotulo ? ` (${e2.rotulo})` : '';
   const linha = (l, v) => v ? `<tr><td style="padding:8px 0;border-top:1px solid #EEF1F0;color:#6B7B78;width:38%">${esc(l)}</td><td style="padding:8px 0;border-top:1px solid #EEF1F0;font-weight:600">${esc(v)}</td></tr>` : '';
   const fmtTam = (n) => { n = Number(n || 0); if (!n) return ''; return n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; };
   const iconArq = (ct, nome) => { const s = (String(ct || '') + ' ' + String(nome || '')).toLowerCase(); if (/pdf/.test(s)) return '📕'; if (/image|jpg|jpeg|png|gif|webp/.test(s)) return '🖼️'; if (/zip|rar/.test(s)) return '🗜️'; if (/xml/.test(s)) return '📑'; if (/sheet|excel|xls|csv/.test(s)) return '📊'; if (/word|\bdoc/.test(s)) return '📘'; return '📄'; };
@@ -853,7 +865,8 @@ export function paginaClienteDetalhe(user, cli, arquivos, negocios, segmento) {
       ${cli.tipo === 'PJ'
         ? linha('CNPJ', fmtCNPJ(cli.cnpj)) + linha('Inscrição estadual', cli.ie) + linha('Telefone', cli.telefone || cli.fone) + linha('E-mail', cli.email)
         : linha('CPF', fmtCPF(cli.cpf)) + linha('Telefone', cli.fone) + linha('E-mail', cli.email)}
-      ${linha('Endereço', endereco)}
+      ${linha(endereco2 ? 'Endereço 1' + rotuloE1 : 'Endereço', endereco)}
+      ${endereco2 ? linha('Endereço 2' + rotuloE2, endereco2) : ''}
       ${linha('Responsável (Ploomes)', cli.responsavel)}
       ${linha('Status', cli.status)}
       ${cli.tipo === 'PJ' ? linha('Nº de contrato', cli.contrato) + linha('Pagamento', cli.pagamento) : ''}
