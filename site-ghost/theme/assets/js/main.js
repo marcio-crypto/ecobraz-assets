@@ -120,6 +120,21 @@
     };
     if (materialInput) { materialInput.addEventListener('change', syncHospitalDeclaration); syncHospitalDeclaration(); }
 
+    // Formulário adaptativo (Lote 4): pessoa física responde só o essencial.
+    // Esconde os campos .only-empresa e relaxa os required correspondentes;
+    // o Worker (v10) valida com a mesma régua por perfil no servidor.
+    const syncPerfil = () => {
+        const marcado = form.querySelector('[name="profile"]:checked');
+        const pf = Boolean(marcado && marcado.value === 'pessoa_fisica');
+        form.classList.toggle('is-pf', pf);
+        ['volume', 'material_description', 'postal_code', 'state'].forEach((nome) => {
+            const campo = form.querySelector(`[name="${nome}"]`);
+            if (campo) campo.required = !pf;
+        });
+    };
+    form.querySelectorAll('[name="profile"]').forEach((radio) => radio.addEventListener('change', syncPerfil));
+    syncPerfil();
+
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
         if (!form.reportValidity()) return;

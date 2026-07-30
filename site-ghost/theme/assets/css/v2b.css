@@ -239,3 +239,6 @@ a.v2-pill:hover{border-color:var(--verde)}
 .post-conversion{background:var(--petrol);border-radius:22px}
 .post-conversion a{border-radius:99px;background:var(--verde);color:#fff}
 .article-cta{border-radius:18px;border-left:5px solid var(--verde);background:var(--sage)}
+
+/* Formulário adaptativo (Lote 4): pessoa física vê só o essencial. */
+.collection-form.is-pf .only-empresa{display:none !important}
