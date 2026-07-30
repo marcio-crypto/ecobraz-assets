@@ -36,9 +36,11 @@ export function agentesDe(env) {
 export function agentePermitido(email, env) { return agentesDe(env).has(String(email || '').trim().toLowerCase()); }
 export function nomeAgente(email, env) { return agentesDe(env).get(String(email || '').trim().toLowerCase()) || String(email || '').split('@')[0]; }
 
-// Lê as coletas ATIVAS (agendada / em transporte) da NOSSA base — atribuídas ao motorista
-// (ou ainda sem motorista definido). Substitui a leitura do Ploomes.
-const COLETAS_ATIVAS = new Set(['agendada', 'em_transporte']);
+// Lê as coletas que o escritório JÁ LIBEROU para a rua ("Em transporte") — atribuídas a
+// ESTE motorista (ou ainda sem motorista definido). Uma OS recém-criada fica "Agendada" e
+// só entra aqui quando o comercial a coloca "Em transporte". Assim o motorista vê apenas a
+// sua rota do dia, não todas as OS cadastradas. Substitui a leitura do Ploomes.
+const COLETAS_ATIVAS = new Set(['em_transporte']);
 export async function listarColetas(env, agenteEmail) {
   const todas = await listarColetasOS(env);
   const email = String(agenteEmail || '').trim().toLowerCase();

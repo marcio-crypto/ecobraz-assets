@@ -378,10 +378,15 @@ export function paginaColetaOSDetalhe(user, os, seloUrl) {
       <span id="anexoMsg" style="font-size:12px;color:#4F6469"></span>
     </div>
     <div class="sec">Situação</div>
+    ${os.status === 'agendada' ? `<div style="background:#EAF2E6;border:1px solid #cfe6b8;border-radius:12px;padding:14px 16px;margin-bottom:10px">
+      <div style="font-size:13.5px;font-weight:800;color:#28413f">🚚 Liberar para o motorista</div>
+      <div style="font-size:12.5px;color:#4F6469;margin:5px 0 11px">Enquanto está <b>Agendada</b>, esta coleta <b>não aparece</b> no app do motorista${os.agenteNome ? ` (${esc(os.agenteNome)})` : ''}. Coloque <b>Em transporte</b> para ela entrar na tela dele.</div>
+      <button class="btn btn-p" style="padding:11px 16px" onclick="setStatus('em_transporte')">Colocar em transporte →</button>
+    </div>` : ''}
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       ${Object.keys(STATUS).filter((s) => s !== 'na_unidade').map((s) => `<button class="btn ${s === os.status ? 'btn-d' : 'btn-g'}" style="padding:8px 12px;font-size:12.5px" onclick="setStatus('${s}')" ${s === os.status ? 'disabled' : ''}>${esc(STATUS[s])}</button>`).join('')}
     </div>
-    <div style="font-size:11.5px;color:#9aa7a4;margin-top:6px">O normal é o <b>motorista</b> tocar o fluxo pelo app (a caminho → chegou → <b>Concluída</b>). Ao ficar <b>Concluída</b>, a coleta vai <b>automaticamente para a doca</b> receber. Use estes botões só para ajuste manual.</div>
+    <div style="font-size:11.5px;color:#9aa7a4;margin-top:6px">Fluxo normal: a OS nasce <b>Agendada</b> → o comercial coloca <b>Em transporte</b> (aí ela aparece no app do motorista) → o <b>motorista</b> toca a caminho → chegou → <b>Concluída</b>. Ao ficar <b>Concluída</b>, vai <b>automaticamente para a doca</b>. Os outros botões são só para ajuste manual.</div>
     <div id="m" style="font-size:12.5px;color:#4F6469;margin-top:10px"></div>
   </div>
 </div>
