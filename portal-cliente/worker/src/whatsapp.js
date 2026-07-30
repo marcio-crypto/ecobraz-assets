@@ -56,8 +56,9 @@ export async function enviarWhatsAppTemplate(env, telefone, templateId, params) 
   if (!key || !appId) return { ok: false, motivo: 'nao_configurado' };
   if (!templateId) return { ok: false, motivo: 'sem_template' };
   if (!to) return { ok: false, motivo: 'telefone_invalido' };
+  // Partner API: header 'token' (não Authorization) e corpo SEM 'channel' — igual ao
+  // exemplo oficial: source + destination + src.name + template.
   const body = new URLSearchParams();
-  body.set('channel', 'whatsapp');
   if (source) body.set('source', source);
   body.set('destination', to);
   if (appName) body.set('src.name', appName);
@@ -65,13 +66,13 @@ export async function enviarWhatsAppTemplate(env, telefone, templateId, params) 
   try {
     const r = await fetch(`https://partner.gupshup.io/partner/app/${encodeURIComponent(appId)}/template/msg`, {
       method: 'POST',
-      headers: { Authorization: key, 'Content-Type': 'application/x-www-form-urlencoded', accept: 'application/json' },
+      headers: { token: key, 'Content-Type': 'application/x-www-form-urlencoded', accept: 'application/json' },
       body: body.toString(),
       signal: AbortSignal.timeout(8000),
     });
     if (r.ok) return { ok: true };
     let detalhe = ''; try { detalhe = String(await r.text() || '').slice(0, 260); } catch { detalhe = ''; }
     console.error('gupshup_wa_status', r.status); // só o status — nunca telefone/chave
-    return { ok: false, motivo: 'http_' + r.status, detalhe };
+    return { ok: false, motivo: 'http_' + r.status, detalhe, enviado: body.toString() };
   } catch (e) { console.error('gupshup_wa_erro', String((e && e.name) || 'erro')); return { ok: false, motivo: 'excecao' }; }
 }

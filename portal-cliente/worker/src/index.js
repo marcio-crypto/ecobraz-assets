@@ -873,7 +873,7 @@ export default {
 </div>
 <script>
 function enviar(b){b.disabled=true;var m=document.getElementById('msg');m.textContent='Enviando…';m.style.color='#4F6469';
-fetch('/api/diretoria/teste-whatsapp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({tel:document.getElementById('tel').value,tipo:document.getElementById('tipo').value})}).then(function(r){return r.json();}).then(function(j){if(j.ok){m.textContent='✅ Enviado! Confira o seu WhatsApp (pode levar alguns segundos).';m.style.color='#1E7A1E';}else{m.innerHTML='❌ Não enviou. Motivo: '+((j.motivo||j.error||'desconhecido'))+(j.detalhe?('<br><span style=\\'font-weight:400;color:#7a5f1c\\'>'+j.detalhe+'</span>'):'');m.style.color='#B23A2E';}b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.';m.style.color='#B23A2E';b.disabled=false;});}
+fetch('/api/diretoria/teste-whatsapp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({tel:document.getElementById('tel').value,tipo:document.getElementById('tipo').value})}).then(function(r){return r.json();}).then(function(j){if(j.ok){m.textContent='✅ Enviado! Confira o seu WhatsApp (pode levar alguns segundos).';m.style.color='#1E7A1E';}else{m.innerHTML='❌ Não enviou. Motivo: '+((j.motivo||j.error||'desconhecido'))+(j.detalhe?('<br><span style=\\'font-weight:400;color:#7a5f1c\\'>'+j.detalhe+'</span>'):'')+(j.enviado?('<br><span style=\\'font-weight:400;color:#9aa7a4;font-size:11px\\'>corpo: '+String(j.enviado).replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</span>'):'');m.style.color='#B23A2E';}b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.';m.style.color='#B23A2E';b.disabled=false;});}
 </script></body></html>`;
         return html(page);
       }
@@ -890,7 +890,7 @@ fetch('/api/diretoria/teste-whatsapp',{method:'POST',headers:{'content-type':'ap
         try {
           const r = await enviarWhatsAppTemplate(env, tel, tpl, params);
           if (r && r.ok) return json({ ok: true });
-          return json({ ok: false, motivo: (r && r.motivo) || 'falha', detalhe: (r && r.detalhe) || 'O Gupshup recusou. Confira: número com DDD, ID do template (o do Gupshup, com hífens) e template APROVADO.' });
+          return json({ ok: false, motivo: (r && r.motivo) || 'falha', detalhe: (r && r.detalhe) || 'O Gupshup recusou. Confira: número com DDD, ID do template (o do Gupshup, com hífens) e template APROVADO.', enviado: (r && r.enviado) || '' });
         } catch (e) { return json({ ok: false, motivo: 'excecao', detalhe: String((e && e.name) || 'erro') }); }
       }
       if (pathname === '/diretoria/teste-stripe' && request.method === 'GET') {
