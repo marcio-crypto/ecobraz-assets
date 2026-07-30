@@ -49,7 +49,9 @@ export function telWhatsApp(tel) {
 const APP_ID_PADRAO = '01a39217-d054-491f-8f3a-553fb4f74ce4';
 export async function enviarWhatsAppTemplate(env, telefone, templateId, params) {
   const key = chaveGupshup(env);
-  const appId = String(env.GUPSHUP_APP_ID || APP_ID_PADRAO).trim();
+  // App ID tem que ser um UUID; se GUPSHUP_APP_ID vier vazio/errado, usa o padrão certo.
+  const appIdRaw = String(env.GUPSHUP_APP_ID || '').trim();
+  const appId = /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(appIdRaw) ? appIdRaw : APP_ID_PADRAO;
   const source = String(env.GUPSHUP_SOURCE || '').replace(/\D/g, '');
   // src.name é o NOME do app (ex.: ECOBRAZAPP). Se GUPSHUP_APP vier vazio ou com o App ID
   // (UUID) por engano, cai para o nome padrão — evita o 400 por src.name inválido.
@@ -66,8 +68,9 @@ export async function enviarWhatsAppTemplate(env, telefone, templateId, params) 
   body.set('destination', to);
   if (appName) body.set('src.name', appName);
   body.set('template', JSON.stringify({ id: templateId, params: (params || []).map((p) => String(p == null ? '' : p)) }));
+  const urlPartner = `https://partner.gupshup.io/partner/app/${encodeURIComponent(appId)}/template/msg`;
   try {
-    const r = await fetch(`https://partner.gupshup.io/partner/app/${encodeURIComponent(appId)}/template/msg`, {
+    const r = await fetch(urlPartner, {
       method: 'POST',
       headers: { token: key, 'Content-Type': 'application/x-www-form-urlencoded', accept: 'application/json' },
       body: body.toString(),
@@ -76,6 +79,6 @@ export async function enviarWhatsAppTemplate(env, telefone, templateId, params) 
     if (r.ok) return { ok: true };
     let detalhe = ''; try { detalhe = String(await r.text() || '').slice(0, 260); } catch { detalhe = ''; }
     console.error('gupshup_wa_status', r.status); // só o status — nunca telefone/chave
-    return { ok: false, motivo: 'http_' + r.status, detalhe, enviado: body.toString() };
+    return { ok: false, motivo: 'http_' + r.status, detalhe, enviado: `URL: ${urlPartner}  ||  ${body.toString()}` };
   } catch (e) { console.error('gupshup_wa_erro', String((e && e.name) || 'erro')); return { ok: false, motivo: 'excecao' }; }
 }
