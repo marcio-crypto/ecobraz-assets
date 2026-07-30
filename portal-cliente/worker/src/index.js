@@ -37,6 +37,7 @@ import { paginaCalculadora, estimativaCarbono, paginaCalculoDetalhado, calculoDe
 import { criarPreferencia, consultarPagamento, criarPixDireto, consultarMeiosPagamento } from './mercadopago.js';
 import { criarCheckoutStripe, consultarCheckoutStripe, verificarEventoStripe, stripeConfigurado } from './stripe.js';
 import { gerarPixCopiaECola, pixConfig, paginaPix } from './pix.js';
+import { paginaColetaExpressa } from './coleta-expressa.js';
 import { registrarFalha, receberErroCliente, listarFalhas } from './monitor.js';
 import { segmentoDoCliente, definirSegmento, SEGMENTOS, fluxoDeVendas, ultimosPedidos, paginaPagamentos } from './premium.js';
 import { MANUAL_CLIENTE_PDF_B64 } from './manual-pdf.js';
@@ -297,6 +298,54 @@ export default {
         return json({ ok: true });
       }
       // Webhook do Mercado Pago: confirma o pagamento consultando a API (fonte da verdade).
+      // COLETA EXPRESSA PÚBLICA (do site, sem login): paga R$ 55 e entra como ⚡ 24h.
+      if (pathname === '/coleta-expressa' && request.method === 'GET') {
+        return html(paginaColetaExpressa(env));
+      }
+      if (pathname === '/api/coleta-expressa' && request.method === 'POST') {
+        let b; try { b = await request.json(); } catch { b = {}; }
+        const nome = String(b.nome || '').trim().slice(0, 120);
+        const email = String(b.email || '').trim().slice(0, 120);
+        const telefone = String(b.telefone || '').trim().slice(0, 30);
+        const empresa = String(b.empresa || '').trim().slice(0, 120);
+        const cep = String(b.cep || '').trim().slice(0, 12);
+        const cidade = String(b.cidade || '').trim().slice(0, 80);
+        const endereco = String(b.endereco || '').trim().slice(0, 200);
+        const itens = Math.max(0, Math.min(100000, Number(String(b.itens || '').replace(/\D/g, '')) || 0));
+        const equipamentos = String(b.equipamentos || '').trim().slice(0, 2000);
+        if (!nome || !email || !telefone || !endereco || !equipamentos) return json({ ok: false, message: 'Preencha nome, e-mail, telefone, endereço e o que precisa ser coletado.' }, 400);
+        const triagem = classificarPedido(`${equipamentos} ${itens ? itens + ' itens' : ''}`);
+        if (triagem.tipo === 'barrado') return json({ ok: false, tipo: 'barrado', message: `Infelizmente não coletamos: ${triagem.itens.join(', ')}. Se houver equipamentos eletrônicos junto, descreva só eles ou fale com a equipe.` }, 422);
+        if (triagem.tipo === 'so_perigosos') return json({ ok: false, tipo: 'so_perigosos', message: `Itens como ${triagem.itens.join(' · ')} só são coletados junto com outros equipamentos eletrônicos. Inclua os equipamentos ou fale com a equipe.` }, 422);
+        if (triagem.tipo === 'orcamento') {
+          try { await ingestLead(env, { name: nome, company: empresa, email, phone: telefone, material_category: 'Coleta expressa (site) — precisa de orçamento', material_description: `Pedido de coleta expressa pelo site, mas o material precisa de orçamento.\nEndereço: ${endereco} · ${cidade} · CEP ${cep}\nItens: ${itens || '?'}\nEquipamentos: ${equipamentos}`, postal_code: cep, city: cidade, source: 'site-expressa' }); } catch { /* segue */ }
+          return json({ ok: false, tipo: 'orcamento', message: 'Esse material precisa de orçamento antes da coleta — não dá para cobrar a taxa fixa. Recebemos seus dados e nossa equipe entra em contato.' }, 200);
+        }
+        const valorTaxa = Math.max(1, Number(env.TAXA_COLETA_REAIS) || 55);
+        const base = String(env.PORTAL_BASE_URL || env.PORTAL_URL || url.origin).replace(/\/+$/, '');
+        const descricao = [
+          'Coleta EXPRESSA solicitada pelo site (pagamento na hora).',
+          empresa ? `Empresa: ${empresa}` : '',
+          `Contato: ${nome} · ${telefone} · ${email}`,
+          `Endereço: ${endereco} · ${cidade} · CEP ${cep}`,
+          `Itens: ${itens || '(não informado)'}`,
+          `Equipamentos:\n${equipamentos}`,
+        ].filter(Boolean).join('\n');
+        try {
+          const r = await ingestLead(env, { name: nome, company: empresa || nome, email, phone: telefone, material_category: '⚡ Coleta Expressa (site)', material_description: descricao, postal_code: cep, city: cidade, source: 'site-expressa', volume: itens ? `${itens} itens` : '' });
+          if (!r || !r.ok) return json({ ok: false, message: 'Não foi possível registrar agora. Tente novamente.' }, 502);
+          const ref = `coleta-${r.id}`;
+          const s = await criarCheckoutStripe({ valor: valorTaxa, descricao: 'Coleta Expressa Ecobraz — até 24h', externalReference: ref, baseUrl: base, backPath: '/pagamento/ok', clienteEmail: email, metodos: ['card', 'boleto'] }, env);
+          if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${ref}`, JSON.stringify({ produto: 'coleta', leadId: r.id, expressa: true, itens, valor: valorTaxa, status: 'pendente', gateway: 'stripe', clienteEmail: email, clienteNome: nome, criadoEm: nowS() }), { expirationTtl: 30 * 86400 });
+          try { const lead = await lerLead(env, r.id); if (lead) { lead.cobranca = { valor: valorTaxa, motivo: 'coleta expressa (site)', ref, link: s.url, status: 'aguardando', criadoEm: nowS() }; lead.expressa = true; lead.status = 'aguardando-pagamento'; lead.descricao = `💳 EXPRESSA (site) — TAXA R$ ${valorTaxa} AGUARDANDO PAGAMENTO. Coletar em até 24h após pago.\n\n${lead.descricao}`; await salvarLead(env, lead); await atualizarIndexLead(env, r.id, { pagamento: 'aguardando', status: lead.status, prioridade: 'alta' }); } } catch (error) { console.error('expressa_site_lead', safeError(error)); }
+          console.log('coleta_expressa_site_gerada', { ref, valor: valorTaxa });
+          return json({ ok: true, link: s.url, valor: valorTaxa });
+        } catch (error) {
+          console.error('coleta_expressa_site_erro', safeError(error));
+          await registrarFalha(env, 'coleta-expressa-site', safeError(error).message, {});
+          return json({ ok: false, message: 'Não foi possível gerar o pagamento agora. Tente novamente em instantes.' }, 502);
+        }
+      }
       if (pathname === '/api/mp/webhook') {
         let paymentId = url.searchParams.get('data.id') || url.searchParams.get('id') || null;
         if (!paymentId && request.method === 'POST') {
