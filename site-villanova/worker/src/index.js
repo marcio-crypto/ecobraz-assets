@@ -8,7 +8,7 @@
 // opcional do pedido do comprador, até 8 MB).
 // Anti-spam: honeypot _gotcha/botcheck. GET /health para diagnóstico.
 import { EmailMessage } from 'cloudflare:email';
-import { createMimeMessage } from 'mimetext';
+import { createMimeMessage, Mailbox } from 'mimetext';
 
 const ORIGENS = new Set([
   'https://www.villanovaesg.com',
@@ -109,8 +109,9 @@ async function tratar(request, env) {
     msg.setSubject(ehMagnet
       ? `Download de material (${leadSource.replace('magnet-', '')}) — ${empresa}`
       : `Nova solicitação de análise — ${empresa}`);
-    // Só o endereço: mimetext rejeita "Nome <email>" com acentos no nome.
-    msg.setHeader('Reply-To', email);
+    // Cabeçalhos de endereço no mimetext exigem Mailbox. Se ainda assim
+    // falhar, seguimos sem Reply-To — o e-mail do lead já está no corpo.
+    try { msg.setHeader('Reply-To', new Mailbox(email)); } catch (e) {}
 
     const linhas = [
       ['Origem', ehMagnet ? `Material gateado: ${leadSource}` : 'Formulário de solicitação'],
