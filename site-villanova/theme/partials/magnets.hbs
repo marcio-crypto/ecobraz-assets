@@ -1,0 +1,75 @@
+{{!-- Materiais gateados (Lote 2): mini-formulário libera o PDF e registra o
+      lead com lead_source=magnet-*. Endpoint herdado do formulário principal. --}}
+<section class="magnets">
+  <div class="eyebrow"><span class="only-pt">Materiais executivos</span><span class="only-en">Executive materials</span></div>
+  <h2><span class="only-pt">Ainda não tem um pedido na mesa? Comece por aqui.</span><span class="only-en">No request on the table yet? Start here.</span></h2>
+  <div class="magnet-cards">
+
+    <div class="magnet-card">
+      <span class="magnet-tag">PDF</span>
+      <h3><span class="only-pt">Checklist do CFO</span><span class="only-en">The CFO Checklist</span></h3>
+      <p><span class="only-pt">O diagnóstico de conselho: as evidências dos seus fornecedores sobrevivem ao escrutínio europeu?</span><span class="only-en">The board-level diagnostic: will your suppliers’ evidence survive European scrutiny?</span></p>
+      <form data-magnet-form data-source="magnet-cfo" class="only-pt" data-file="{{asset "pdf/checklist-cfo-evidencias-ue-brasil.pdf"}}">
+        <input name="nome" type="text" required maxlength="120" placeholder="Nome">
+        <input name="email" type="email" required maxlength="160" placeholder="E-mail profissional">
+        <input name="empresa" type="text" required maxlength="160" placeholder="Empresa">
+        <input type="text" name="_gotcha" tabindex="-1" autocomplete="off" aria-hidden="true" class="vn-hp">
+        <button class="btn" type="submit" data-magnet-submit>Baixar o checklist →</button>
+        <p class="vn-form-status" data-magnet-status hidden role="status"></p>
+      </form>
+      <form data-magnet-form data-source="magnet-cfo" class="only-en" data-file="{{asset "pdf/cfo-checklist-eu-brazil-supplier-evidence.pdf"}}">
+        <input name="nome" type="text" required maxlength="120" placeholder="Name">
+        <input name="email" type="email" required maxlength="160" placeholder="Work email">
+        <input name="empresa" type="text" required maxlength="160" placeholder="Company">
+        <input type="text" name="_gotcha" tabindex="-1" autocomplete="off" aria-hidden="true" class="vn-hp">
+        <button class="btn" type="submit" data-magnet-submit>Download the checklist →</button>
+        <p class="vn-form-status" data-magnet-status hidden role="status"></p>
+      </form>
+    </div>
+
+    <div class="magnet-card">
+      <span class="magnet-tag">PDF</span>
+      <h3><span class="only-pt">Matriz de Prontidão</span><span class="only-en">Readiness Matrix</span></h3>
+      <p><span class="only-pt">Posicione cada fornecedor — de evidência inexistente a dossiê pronto para decisão.</span><span class="only-en">Place every supplier — from no evidence at all to a decision-ready file.</span></p>
+      <form data-magnet-form data-source="magnet-matriz" class="only-pt" data-file="{{asset "pdf/matriz-prontidao-evidencias-ue-brasil.pdf"}}">
+        <input name="nome" type="text" required maxlength="120" placeholder="Nome">
+        <input name="email" type="email" required maxlength="160" placeholder="E-mail profissional">
+        <input name="empresa" type="text" required maxlength="160" placeholder="Empresa">
+        <input type="text" name="_gotcha" tabindex="-1" autocomplete="off" aria-hidden="true" class="vn-hp">
+        <button class="btn" type="submit" data-magnet-submit>Baixar a matriz →</button>
+        <p class="vn-form-status" data-magnet-status hidden role="status"></p>
+      </form>
+      <form data-magnet-form data-source="magnet-matriz" class="only-en" data-file="{{asset "pdf/eu-brazil-evidence-readiness-matrix.pdf"}}">
+        <input name="nome" type="text" required maxlength="120" placeholder="Name">
+        <input name="email" type="email" required maxlength="160" placeholder="Work email">
+        <input name="empresa" type="text" required maxlength="160" placeholder="Company">
+        <input type="text" name="_gotcha" tabindex="-1" autocomplete="off" aria-hidden="true" class="vn-hp">
+        <button class="btn" type="submit" data-magnet-submit>Download the matrix →</button>
+        <p class="vn-form-status" data-magnet-status hidden role="status"></p>
+      </form>
+    </div>
+
+    <div class="magnet-card">
+      <span class="magnet-tag">WHITEPAPER</span>
+      <h3><span class="only-pt">SEMM — o framework</span><span class="only-en">SEMM — the framework</span></h3>
+      <p><span class="only-pt">O modelo de maturidade de evidências, público e citável (DOI). Em inglês.</span><span class="only-en">The published, citable evidence-maturity model (DOI).</span></p>
+      <form data-magnet-form data-source="magnet-semm" class="only-pt" data-file="{{asset "pdf/villanova-semm-whitepaper.pdf"}}">
+        <input name="nome" type="text" required maxlength="120" placeholder="Nome">
+        <input name="email" type="email" required maxlength="160" placeholder="E-mail profissional">
+        <input name="empresa" type="text" required maxlength="160" placeholder="Empresa">
+        <input type="text" name="_gotcha" tabindex="-1" autocomplete="off" aria-hidden="true" class="vn-hp">
+        <button class="btn" type="submit" data-magnet-submit>Baixar o whitepaper →</button>
+        <p class="vn-form-status" data-magnet-status hidden role="status"></p>
+      </form>
+      <form data-magnet-form data-source="magnet-semm" class="only-en" data-file="{{asset "pdf/villanova-semm-whitepaper.pdf"}}">
+        <input name="nome" type="text" required maxlength="120" placeholder="Name">
+        <input name="email" type="email" required maxlength="160" placeholder="Work email">
+        <input name="empresa" type="text" required maxlength="160" placeholder="Company">
+        <input type="text" name="_gotcha" tabindex="-1" autocomplete="off" aria-hidden="true" class="vn-hp">
+        <button class="btn" type="submit" data-magnet-submit>Download the whitepaper →</button>
+        <p class="vn-form-status" data-magnet-status hidden role="status"></p>
+      </form>
+    </div>
+
+  </div>
+</section>
