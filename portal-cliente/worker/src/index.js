@@ -55,7 +55,7 @@ import { sondaRotaExata, paginaSondaRotaExata, paginaRastreio, posicaoDoVeiculo,
 import { lerValidacao, registrarValidacao, paginaAreaValidacao, qrMetodologia, validarMetodologiaPublico, homologarFatorAcao } from './validacao-metodologia.js';
 import { paginaPainelCarbono } from './carbono-painel.js';
 import { clientesComOperacoes, carbonoDoCliente, paginaCarbonoAnalista, paginaCarbonoAuditor } from './carbono-motor.js';
-import { agentePermitido, nomeAgente, listarColetasComStatus, enriquecerProximidade, paginaLoginAgente, paginaAppAgente, detalheColeta, lerEstadoColeta, registrarCheckin, registrarACaminho, registrarFoto, servirFotoColeta, paginaColetaDetalhe, registrarEncerramento, registrarReagendamento, qrColeta, validarColetaPublico, paginaComprovante } from './agente.js';
+import { agentePermitido, nomeAgente, listarColetasComStatus, enriquecerProximidade, coordDoEndereco, paginaLoginAgente, paginaAppAgente, detalheColeta, lerEstadoColeta, registrarCheckin, registrarACaminho, registrarFoto, servirFotoColeta, paginaColetaDetalhe, registrarEncerramento, registrarReagendamento, qrColeta, validarColetaPublico, paginaComprovante } from './agente.js';
 import { operadorPermitido, nomeOperador, listarOperacoes, listarColetasRecebiveis, iniciarOperacao, lerOperacao, definirTipoOperacao, registrarPesoEntrada, registrarFotoOperacao, servirFotoOperacao, paginaLoginOperacao, paginaAppOperacao, paginaReceberLote, paginaLoteDetalhe, adicionarMaterial, removerMaterial, concluirTriagem, paginaTriagem, paginaProcessamento, concluirProcessamento, paginaSaida, registrarSaida, concluirSaida } from './operacional.js';
 import { engenheiroPermitido, nomeEngenheiro, filaValidacao, operacoesValidadas, lerValidacaoOp, registrarValidacaoOp, paginaLoginEng, paginaFilaEng, paginaDossie, qrOperacao, validarOperacaoPublico, listarDestinos, lerDestino, salvarDestino, paginaDestinos, paginaDestinoForm, paginaRelatorio, paginaCDF } from './engenharia.js';
 import { diretorPermitido, nomeDiretor, reunirDados, paginaLoginDiretoria, paginaPainelDiretoria } from './diretoria.js';
@@ -1352,7 +1352,30 @@ export default {
         if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
         const os = await lerColetaOS(env, url.searchParams.get('id') || '');
         if (!os) return html(paginaMensagem('Coleta não encontrada', 'Volte e tente de novo.'), 404);
-        return html(paginaColetaOSDetalhe(escritorio, os));
+        // Acompanhamento (best-effort): cliente avisado? distância do rastreador ao destino?
+        let acomp = {};
+        try {
+          const est = await lerEstadoColeta(env, os.id);
+          const parseAviso = (v) => { if (!v) return null; try { const o = JSON.parse(v); return (o && typeof o === 'object') ? o : { via: '' }; } catch { return { via: '' }; } };
+          acomp = {
+            saiu: !!(est && est.acaminho), saiuEm: est && est.acaminho && est.acaminho.em,
+            chegou: !!(est && est.checkin), chegouEm: est && est.checkin && est.checkin.em,
+            avisoACaminho: parseAviso(env.PORTAL_KV ? await env.PORTAL_KV.get(`notif:coleta:${os.id}:a_caminho`) : null),
+            avisoChegou: parseAviso(env.PORTAL_KV ? await env.PORTAL_KV.get(`notif:coleta:${os.id}:chegou`) : null),
+          };
+          const tel = Array.isArray(os.telemetria) ? os.telemetria : [];
+          const ult = tel.length ? tel[tel.length - 1] : null;
+          if (ult && ult.lat != null && ult.lng != null && !acomp.chegou) {
+            const dest = await coordDoEndereco(env, os.endereco);
+            if (dest) {
+              const rad = Math.PI / 180, la1 = Number(ult.lat) * rad, la2 = dest.lat * rad, dLa = (dest.lat - Number(ult.lat)) * rad, dLo = (dest.lon - Number(ult.lng)) * rad;
+              const x = Math.sin(dLa / 2) ** 2 + Math.cos(la1) * Math.cos(la2) * Math.sin(dLo / 2) ** 2;
+              const km = 6371 * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+              if (isFinite(km)) { acomp.km = km; acomp.kmEm = ult.em; }
+            }
+          }
+        } catch { /* acompanhamento é best-effort */ }
+        return html(paginaColetaOSDetalhe(escritorio, os, acomp));
       }
       if (pathname === '/coletas/editar' && request.method === 'GET') {
         if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
@@ -1702,7 +1725,7 @@ export default {
               const cli = col.clienteId ? await lerCliente(env, col.clienteId) : null;
               const emailCli = (cli && (cli.email || (Array.isArray(cli.contatos) && cli.contatos[0] && cli.contatos[0].email))) || '';
               const foneCli = (cli && (cli.fone || cli.telefone || cli.celular || (Array.isArray(cli.contatos) && cli.contatos[0] && (cli.contatos[0].fone || cli.contatos[0].telefone)))) || col.clienteFone || col.telefone || '';
-              if (emailCli || foneCli) { const av = await avisarColeta(env, { email: emailCli, telefone: foneCli, nome: col.clienteNome }, 'a_caminho'); if (av.via !== 'nenhum' && env.PORTAL_KV) await env.PORTAL_KV.put(chave, '1', { expirationTtl: 60 * 60 * 24 * 90 }); }
+              if (emailCli || foneCli) { const av = await avisarColeta(env, { email: emailCli, telefone: foneCli, nome: col.clienteNome }, 'a_caminho'); if (av.via !== 'nenhum' && env.PORTAL_KV) await env.PORTAL_KV.put(chave, JSON.stringify({ via: av.via, em: new Date().toISOString() }), { expirationTtl: 60 * 60 * 24 * 90 }); }
             }
           }
         } catch (error) { console.error('acaminho_email_falhou', safeError(error)); }
@@ -1725,7 +1748,7 @@ export default {
               const cli = col.clienteId ? await lerCliente(env, col.clienteId) : null;
               const emailCli = (cli && (cli.email || (Array.isArray(cli.contatos) && cli.contatos[0] && cli.contatos[0].email))) || '';
               const foneCli = (cli && (cli.fone || cli.telefone || cli.celular || (Array.isArray(cli.contatos) && cli.contatos[0] && (cli.contatos[0].fone || cli.contatos[0].telefone)))) || col.clienteFone || col.telefone || '';
-              if (emailCli || foneCli) { const av = await avisarColeta(env, { email: emailCli, telefone: foneCli, nome: col.clienteNome }, 'chegou'); if (av.via !== 'nenhum' && env.PORTAL_KV) await env.PORTAL_KV.put(chave, '1', { expirationTtl: 60 * 60 * 24 * 90 }); }
+              if (emailCli || foneCli) { const av = await avisarColeta(env, { email: emailCli, telefone: foneCli, nome: col.clienteNome }, 'chegou'); if (av.via !== 'nenhum' && env.PORTAL_KV) await env.PORTAL_KV.put(chave, JSON.stringify({ via: av.via, em: new Date().toISOString() }), { expirationTtl: 60 * 60 * 24 * 90 }); }
             }
           }
         } catch (error) { console.error('chegou_aviso_falhou', safeError(error)); }

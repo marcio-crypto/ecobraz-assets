@@ -325,8 +325,28 @@ function gerar(){var ag=g('agente').split('|');
 </script></body></html>`;
 }
 
-export function paginaColetaOSDetalhe(user, os, seloUrl) {
+export function paginaColetaOSDetalhe(user, os, acomp) {
   const linha = (l, v) => v ? `<tr><td style="padding:8px 0;border-top:1px solid #EEF1F0;color:#6B7B78;width:38%">${esc(l)}</td><td style="padding:8px 0;border-top:1px solid #EEF1F0;font-weight:600;white-space:pre-wrap;word-break:break-word">${esc(v)}</td></tr>` : '';
+  const hhmm = (x) => String(x || '').slice(11, 16);
+  const canalAviso = (a) => (a && a.via === 'sms') ? ' (SMS)' : ((a && a.via === 'email') ? ' (e-mail)' : '');
+  const acompHTML = (() => {
+    const a = acomp || {};
+    if (!a.saiu && !a.chegou) return '';
+    const rows = [];
+    if (a.saiu) rows.push(a.avisoACaminho
+      ? `<div style="font-size:12.5px;font-weight:700;color:#1E5B31;margin-top:4px">🔔 Cliente avisado que está a caminho${canalAviso(a.avisoACaminho)}${a.saiuEm ? ` · ${hhmm(a.saiuEm)}` : ''}</div>`
+      : `<div style="font-size:12.5px;font-weight:700;color:#8A4B00;margin-top:4px">⚠️ Motorista saiu${a.saiuEm ? ` (${hhmm(a.saiuEm)})` : ''} — cliente NÃO avisado (confira e-mail/telefone no cadastro)</div>`);
+    if (a.chegou) rows.push(a.avisoChegou
+      ? `<div style="font-size:12.5px;font-weight:700;color:#1E5B31;margin-top:4px">🔔 Cliente avisado que o motorista chegou${canalAviso(a.avisoChegou)}${a.chegouEm ? ` · ${hhmm(a.chegouEm)}` : ''}</div>`
+      : `<div style="font-size:12.5px;font-weight:700;color:#8A4B00;margin-top:4px">⚠️ Motorista chegou${a.chegouEm ? ` (${hhmm(a.chegouEm)})` : ''} — cliente NÃO avisado</div>`);
+    if (a.chegou) rows.push(`<div style="font-size:12.5px;color:#0B5B66;font-weight:700;margin-top:6px">📍 Motorista no local do cliente</div>`);
+    else if (a.km != null) rows.push(`<div style="font-size:12.5px;color:#0B5B66;font-weight:700;margin-top:6px">🚚 ~${Number(a.km).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} km do local · última posição do rastreador${a.kmEm ? ' às ' + hhmm(a.kmEm) : ''} (linha reta)</div>`);
+    else if (a.saiu) rows.push(`<div style="font-size:12px;color:#8fa39f;margin-top:6px">Distância indisponível (sem posição do rastreador ou sem CEP no endereço).</div>`);
+    return `<div class="card" style="margin-bottom:14px;border-left:4px solid #92C430">
+      <div class="sec" style="margin-top:0">🚚 Acompanhamento da coleta</div>
+      ${rows.join('')}
+    </div>`;
+  })();
   const anexosArr = Array.isArray(os.anexos) ? os.anexos : [];
   const anexosHTML = anexosArr.length ? anexosArr.map((a) => `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid #EEF1F0;border-radius:10px;padding:9px 12px;margin-bottom:7px;background:#FBFDFC">
       <a href="/coletas/anexo?key=${encodeURIComponent(a.key)}" target="_blank" rel="noopener" style="text-decoration:none;color:#10262B;font-weight:600;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">${/image/.test(a.content_type || '') ? '🖼️' : '📄'} ${esc(a.nome || 'arquivo')} ↗</a>
@@ -347,6 +367,7 @@ export function paginaColetaOSDetalhe(user, os, seloUrl) {
       <a href="/coletas/os/comprovante?id=${esc(os.id)}" class="btn btn-d" style="padding:9px 12px;font-size:12.5px">✅ Comprovante (QR)</a>
     </div>
   </div>
+  ${acompHTML}
   <div class="card">
     <table role="presentation" style="width:100%;border-collapse:collapse;font-size:13.5px">
       ${linha('Cliente', os.clienteNome)}${linha('Documento', os.clienteDoc)}

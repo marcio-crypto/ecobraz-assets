@@ -238,6 +238,12 @@ export async function enriquecerProximidade(env, coletas) {
   }));
 }
 
+// Geocodifica um texto de endereço (pelo CEP embutido) para { lat, lon } | null.
+export async function coordDoEndereco(env, texto) {
+  const cep = extrairCEP(texto);
+  return cep ? await geocodeCEP(env, cep) : null;
+}
+
 // QR público do comprovante (aponta para /validar-coleta com o selo assinado).
 export async function qrColeta(request, env, url) {
   const id = (url.searchParams.get('id') || '').replace(/[^a-zA-Z0-9_]/g, '').slice(0, 40);
