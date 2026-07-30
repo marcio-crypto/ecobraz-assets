@@ -1,4 +1,5 @@
 {{!< default}}
+{{! Home v2 — Design aprovado 30/07/2026 (site-villanova/design/PADRAO.md) }}
 
 {{#contentFor "hreflang"}}
 <link rel="alternate" hreflang="en" href="{{@site.url}}/">
@@ -6,196 +7,148 @@
 <link rel="alternate" hreflang="x-default" href="{{@site.url}}/">
 {{/contentFor}}
 
-<section class="hero">
-  <svg class="mark" width="460" height="520" viewBox="0 0 60 68" aria-hidden="true"><path d="M30 2 56 12v26c0 14-12 22-26 28C16 60 4 52 4 38V12Z" fill="none" stroke="#8FA8CC" stroke-width="1.4"/><path d="M30 2v64" stroke="#8FA8CC" stroke-width="1.1"/><path d="M30 40l7 8-7 8-7-8Z" fill="#C9A24B"/></svg>
-  <div class="wrap">
-    <div class="eyebrow">EU&ndash;Brazil supplier evidence advisory</div>
-    <h1>European buyers decide on evidence.<br>We make yours <em class="gold-em">decision&#8209;ready</em>.</h1>
-    <p class="lead">Whether you are a European company with suppliers in Brazil or a Brazilian supplier facing a buyer's request &mdash; CBAM data, EUDR traceability, CSDDD questionnaires &mdash; the problem is rarely a missing operation. It is scattered evidence. We review it at origin, in Portuguese, against one published framework, and return files a committee can actually use.</p>
-    <div class="cta-row">
-      <a class="btn btn-primary" href="{{@site.url}}/for-european-buyers/">I&rsquo;m a European buyer with Brazilian suppliers</a>
-      <a class="btn btn-ghost" href="{{@site.url}}/supplier-evidence-risk-intake/">I&rsquo;m a Brazilian supplier &mdash; submit the buyer request</a>
+<section class="hero h2hero">
+  <svg class="h2arc" width="560" height="420" viewBox="0 0 560 420" fill="none" aria-hidden="true">
+    <circle cx="430" cy="210" r="180" stroke="rgba(255,255,255,.07)" stroke-width="1.5"/>
+    <circle cx="430" cy="210" r="120" stroke="rgba(255,255,255,.05)" stroke-width="1.5"/>
+    <path d="M120 340 Q 300 60 520 140" stroke="#b88a3d" stroke-width="2" stroke-dasharray="1 7" stroke-linecap="round"/>
+    <circle cx="120" cy="340" r="6" fill="#b88a3d"/><circle cx="520" cy="140" r="6" fill="#d9b573"/>
+    <text x="96" y="368" fill="#93a7bf" font-size="11" letter-spacing="2">BRAZIL</text>
+    <text x="492" y="120" fill="#93a7bf" font-size="11" letter-spacing="2">EUROPE</text>
+  </svg>
+  <div class="wrap cols">
+    <div class="hcopy">
+      <div class="eyebrow">EU&ndash;Brazil Supplier Evidence Advisory</div>
+      <h1>European buyers decide on evidence. We make yours <em class="gold-em">decision&#8209;ready</em>.</h1>
+      <p class="lead">The law is European, but the request lands in your inbox — with a deadline. The problem is rarely the operation. It is scattered evidence. We review it at origin, in Portuguese, against one published framework.</p>
+      <div class="cta-row">
+        <a class="btn" href="{{@site.url}}/supplier-evidence-risk-intake/">I&rsquo;m a Brazilian supplier</a>
+        <a class="btn btn-ghost" href="{{@site.url}}/for-european-buyers/">I&rsquo;m a European buyer</a>
+      </div>
     </div>
-    <p class="boundary">Either path starts a scope assessment. It does not create an engagement, legal opinion, certification or guarantee of buyer acceptance.</p>
+    <div class="hvis">
+      <div class="dossier" aria-hidden="true">
+        <div class="dh"><span>SUPPLIER EVIDENCE FILE</span><b>SEMM &middot; LEVEL 3</b></div>
+        <div class="drow"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d9b573" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg><div><b>Buyer questionnaire</b><small>2026 renewal &middot; Munich</small></div><span class="ok">ANSWERED</span></div>
+        <div class="drow"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d9b573" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M6 21V10l4-2v13"/><path d="M14 21V6l4-2v17"/><circle cx="8" cy="5" r="1.6"/><path d="M8 5c0-2 3-2 3-4"/></svg><div><b>CBAM data</b><small>embedded emissions &middot; steel</small></div><span class="ok">EVIDENCED</span></div>
+        <div class="drow"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d9b573" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11z"/><circle cx="12" cy="10" r="2.6"/></svg><div><b>EUDR traceability</b><small>origin + geolocation</small></div><span class="ok">MAPPED</span></div>
+        <div class="drow"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d9b573" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5l6 6M11 2l6 6M5 8l6 6M13 10l7 7a1.5 1.5 0 0 1-2 2l-7-7"/><path d="M3 21h9"/></svg><div><b>Contract clauses</b><small>what you can prove</small></div><span class="pend">IN REVIEW</span></div>
+        <div class="dfoot"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#93a7bf" stroke-width="1.8"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z"/><path d="M14 14h2.5v2.5H14zM17.5 17.5H20V20h-2.5z"/></svg> verifiable at origin &middot; advisory, not certification</div>
+      </div>
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="estrip">
+      <div><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d9b573" stroke-width="1.8" stroke-linecap="round"><path d="M9 3H5a1.5 1.5 0 0 0-1.5 1.5v15A1.5 1.5 0 0 0 5 21h14a1.5 1.5 0 0 0 1.5-1.5V8L15 3z"/><path d="M15 3v5h5.5"/><path d="M8 13h8M8 16.5h8"/></svg><div><b>18 technical reports</b>with DOIs on Zenodo</div></div>
+      <div><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d9b573" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c3 3 3 14 0 17-3-3-3-14 0-17z"/></svg><div><b>Listed on ECESP</b>EU Circular Economy Platform</div></div>
+      <div><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d9b573" stroke-width="1.8"><path d="M3 21V10l6 4v-4l6 4v-4l6 4v7z"/><path d="M7 21v-3M12 21v-3M17 21v-3"/></svg><div><b>Since 2011</b>operational lineage in Brazil</div></div>
+      <div><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d9b573" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg><div><b>1 business day</b>to a first reply</div></div>
+    </div>
   </div>
 </section>
 
-<section class="decisions">
+<section class="sec-pad">
   <div class="wrap">
-    <div class="eyebrow">Where it starts</div>
+    <div class="eyebrow" style="color:var(--gold)!important">Where it starts</div>
     <h2>Three requests that put revenue on the table</h2>
-    <div class="dec-grid">
-      <div class="dec">
-        <span class="tag">Contract renewal</span>
-        <h3>&ldquo;Complete this supplier questionnaire before we renew.&rdquo;</h3>
-        <p>A buyer questionnaire is no longer administrative &mdash; it is a filter. Weak answers reprice or replace suppliers before price is even discussed.</p>
-        <a href="{{@site.url}}/contract-clause-risk-review-eu-facing-suppliers/">Contract Clause Risk Review &rarr;</a>
-      </div>
-      <div class="dec">
-        <span class="tag">CBAM data request</span>
-        <h3>&ldquo;Your EU importer needs embedded-emissions data by Q3.&rdquo;</h3>
-        <p>Under the definitive CBAM regime, carbon data became a cash-flow variable. The importer holds the legal duty &mdash; the supplier holds the data risk.</p>
-        <a href="{{@site.url}}/cbam-evidence-review-brazilian-suppliers/">CBAM Evidence Review &rarr;</a>
-      </div>
-      <div class="dec">
-        <span class="tag">EUDR traceability</span>
+    <p class="sub" style="color:var(--mut);max-width:640px">Steel, aluminium, coffee, soy, beef, leather, textiles: if you export to Europe, one of these e-mails is coming — if it has not already.</p>
+    <div class="grid3">
+      <div class="vn-card" style="position:relative"><div class="cic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#b88a3d" stroke-width="1.8" stroke-linecap="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></div><span class="card-tag">Renewal</span>
+        <h3>&ldquo;Complete this questionnaire before we renew.&rdquo;</h3>
+        <p>Weak answers reprice or replace suppliers before price is even discussed.</p>
+        <a class="go" href="{{@site.url}}/contract-clause-risk-review-eu-facing-suppliers/">See the answer &rarr;</a></div>
+      <div class="vn-card" style="position:relative"><div class="cic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#b88a3d" stroke-width="1.8" stroke-linecap="round"><path d="M3 21h18"/><path d="M6 21V10l4-2v13"/><path d="M14 21V6l4-2v17"/><circle cx="8" cy="5" r="1.6"/><path d="M8 5c0-2 3-2 3-4"/></svg></div><span class="card-tag">CBAM</span>
+        <h3>&ldquo;Your EU importer needs embedded-emissions data.&rdquo;</h3>
+        <p>Steel, aluminium, cement, fertilisers. Without evidence, the buyer assumes the worst number — and the difference comes out of your price.</p>
+        <a class="go" href="{{@site.url}}/cbam-evidence-review-brazilian-suppliers/">See the answer &rarr;</a></div>
+      <div class="vn-card" style="position:relative"><div class="cic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#b88a3d" stroke-width="1.8" stroke-linecap="round"><path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11z"/><circle cx="12" cy="10" r="2.6"/></svg></div><span class="card-tag">EUDR</span>
         <h3>&ldquo;Prove origin and geolocation for every shipment.&rdquo;</h3>
-        <p>Application starts 30 December 2026 for large and medium operators. Buyers are requesting evidence files ahead of the law.</p>
-        <a href="{{@site.url}}/eudr-evidence-readiness-review/">EUDR Evidence Readiness Review &rarr;</a>
-      </div>
+        <p>Coffee, cocoa, soy, beef, leather, wood and rubber — from 30 December 2026. Buyers are asking ahead of the law.</p>
+        <a class="go" href="{{@site.url}}/eudr-evidence-readiness-review/">See the answer &rarr;</a></div>
     </div>
   </div>
 </section>
 
-<div class="lux-divider" aria-hidden="true"><span></span><svg width="14" height="14" viewBox="0 0 14 14"><path d="M7 0l4.5 7L7 14 2.5 7Z" fill="#C9A24B"/></svg><span></span></div>
-
-<section class="method">
-  <div class="wrap">
-    <div class="eyebrow">Method</div>
-    <h2>From scattered records to a board-usable file &mdash; in four steps</h2>
-    <div class="steps">
-      <div class="step">
-        <div class="n">I</div>
-        <h3>Define the decision</h3>
-        <p>Who will read the file, which request it answers, and the deadline that matters.</p>
-      </div>
-      <div class="step">
-        <div class="n">II</div>
-        <h3>Map request to evidence</h3>
-        <p>Every buyer question linked to the record that answers it &mdash; owner, date, scope, source.</p>
-      </div>
-      <div class="step">
-        <div class="n">III</div>
-        <h3>Register the gaps</h3>
-        <p>What is missing, expired or inconsistent &mdash; classified, prioritised and assigned.</p>
-      </div>
-      <div class="step">
-        <div class="n">IV</div>
-        <h3>Deliver the file</h3>
-        <p>A buyer-readable evidence structure your CFO can defend in one meeting.</p>
-      </div>
+<section class="alt sec-pad">
+  <div class="wrap semm2">
+    <div class="txt">
+      <div class="eyebrow" style="color:var(--gold)!important">One published yardstick</div>
+      <h2>The Supplier Evidence Maturity Model</h2>
+      <p class="sub" style="color:var(--mut)">Five levels, from evidence that does not exist to a file that maintains itself. Public, citable, with DOI — supplier, buyer and advisor talk about the same file with the same words.</p>
+      <a class="btn btn-ink" href="{{@site.url}}/supplier-evidence-maturity-model/">Read the SEMM framework &rarr;</a>
     </div>
-    <p class="note">The work is advisory. It does not replace legal advice, customs representation, accredited certification, independent assurance &mdash; or the legally responsible operator. That boundary is stated on every deliverable.</p>
-  </div>
-</section>
-
-<section class="method">
-  <div class="wrap">
-    <div class="eyebrow">The framework</div>
-    <h2>One published yardstick: the Supplier Evidence Maturity Model</h2>
-    <p class="lead">Every review is graded against SEMM &mdash; five levels, from evidence that does not exist to a file that maintains itself. The methodology is public and citable, so a supplier, a buyer and an advisor can talk about the same file with the same words.</p>
-    <div class="cta-row">
-      <a class="btn btn-ghost" href="{{@site.url}}/supplier-evidence-maturity-model/">Read the SEMM framework &rarr;</a>
+    <div class="dia">
+      <div class="sstep"><div class="n">0</div><div><b>Absent</b><small>no file exists</small></div></div>
+      <div class="sstep"><div class="n">1</div><div><b>Reactive</b><small>every request is a project</small></div></div>
+      <div class="sstep"><div class="n">2</div><div><b>Organised</b><small>records exist, gaps unknown</small></div></div>
+      <div class="sstep"><div class="n">3</div><div><b>Decision-ready</b><small>a buyer can act on the file</small></div></div>
+      <div class="sstep on"><div class="n">4</div><div><b>Continuously managed</b><small>the next request is an export, not an emergency</small></div></div>
     </div>
   </div>
 </section>
 
-<section class="registry">
+<section class="sec-pad">
   <div class="wrap">
-    <div class="eyebrow">Verifiable record</div>
-    <h2>Authority you can check, not claim</h2>
-    <div class="reg-list">
-      <div class="reg">
-        <div class="big num">17</div>
-        <h3>Technical reports with DOIs</h3>
-        <p>Public records on Zenodo covering supplier evidence, chain of custody and buyer-readiness. Persistent identifiers &mdash; not peer review, and we say so.</p>
-        <a href="{{@site.url}}/publications/">Publications &rarr;</a>
-      </div>
-      <div class="reg">
-        <div class="big num">3</div>
-        <h3>ECESP catalogue listings</h3>
-        <p>Items listed on the European Circular Economy Stakeholder Platform &mdash; a joint initiative of the European Commission and the EESC. Listing is visibility, not endorsement.</p>
-        <a href="{{@site.url}}/reference-villanova-esg-source-trail/">Source trail &rarr;</a>
-      </div>
-      <div class="reg">
-        <div class="big num">2011</div>
-        <h3>Operational lineage</h3>
-        <p>Founded by Marcio Villanova, CEO of Ecobraz &mdash; a documented Brazilian reverse-logistics operation. Distinct organisations; shared discipline for evidence.</p>
-        <a href="{{@site.url}}/marcio-villanova/">Marcio Villanova &rarr;</a>
-      </div>
+    <div class="eyebrow" style="color:var(--gold)!important">Why us</div>
+    <h2>The person grading your chain of custody has actually run one</h2>
+    <div class="bridge">
+      <div class="bnode"><div class="bic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#b88a3d" stroke-width="1.8"><path d="M3 21V10l6 4v-4l6 4v-4l6 4v7z"/><path d="M7 21v-3M12 21v-3M17 21v-3"/></svg></div><div class="who">Ecobraz</div><b>Operates</b><p>Documented reverse-logistics operation in Brazil since 2011.</p></div>
+      <div class="barrow">&rarr;</div>
+      <div class="bnode mid"><div class="bic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#d9b573" stroke-width="1.8"><path d="M12 3l7 3v5c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6z"/><path d="M9 12l2 2 4-4.5"/></svg></div><div class="who">Villanova ESG</div><b>Documents</b><p>Reviews the file at origin against the buyer&rsquo;s actual request — advisory, not certification.</p></div>
+      <div class="barrow">&rarr;</div>
+      <div class="bnode"><div class="bic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#b88a3d" stroke-width="1.8"><path d="M8 5l6 6M11 2l6 6M5 8l6 6M13 10l7 7a1.5 1.5 0 0 1-2 2l-7-7"/><path d="M3 21h9"/></svg></div><div class="who">Your buyer</div><b>Decides</b><p>Receives evidence a committee can actually use.</p></div>
     </div>
-    <p class="small">Every claim above links to its primary source on our public source trail. If a statement cannot be verified, we do not publish it &mdash; the same standard we apply to your evidence file.</p>
   </div>
 </section>
 
-<section class="services">
+<div class="stats2">
   <div class="wrap">
-    <div class="eyebrow">Services</div>
+    <div class="stat"><div class="big">18</div><small>technical reports with DOIs</small></div>
+    <div class="stat"><div class="big">5</div><small>levels in the SEMM framework</small></div>
+    <div class="stat"><div class="big">2011</div><small>operations began in Brazil</small></div>
+    <div class="stat"><div class="big">3</div><small>languages: PT &middot; EN &middot; IT</small></div>
+  </div>
+</div>
+
+<section class="alt sec-pad">
+  <div class="wrap">
+    <div class="eyebrow" style="color:var(--gold)!important">Services</div>
     <h2>One discipline, applied to the request in front of you</h2>
-    <div class="svc-grid">
-      <div class="svc">
-        <h3>Supplier Evidence File Assessment</h3><a class="go" href="{{@site.url}}/supplier-evidence-file-assessment/">Details &rarr;</a>
-        <p>The core review: your records against the buyer's request, gap register and prioritised action plan.</p>
-        <p class="isnot"><b>Is not:</b> an audit, certification or legal opinion.</p>
-      </div>
-      <div class="svc">
-        <h3>EU Buyer Readiness Review</h3><a class="go" href="{{@site.url}}/eu-buyer-readiness-review-brazilian-suppliers/">Details &rarr;</a>
-        <p>Before the questionnaire arrives: how your file reads to a European procurement team.</p>
-        <p class="isnot"><b>Is not:</b> buyer approval or market-access guarantee.</p>
-      </div>
-      <div class="svc">
-        <h3>CBAM Evidence Review</h3><a class="go" href="{{@site.url}}/cbam-evidence-review-brazilian-suppliers/">Details &rarr;</a>
-        <p>Supplier-side data request organised: sources, methodology references, gaps and owners.</p>
-        <p class="isnot"><b>Is not:</b> a customs declaration or verified calculation.</p>
-      </div>
-      <div class="svc">
-        <h3>EUDR Evidence Readiness Review</h3><a class="go" href="{{@site.url}}/eudr-evidence-readiness-review/">Details &rarr;</a>
-        <p>Origin, geolocation and document readiness mapped before the buyer or operator asks.</p>
-        <p class="isnot"><b>Is not:</b> a due-diligence statement filing or legality determination.</p>
-      </div>
-      <div class="svc">
-        <h3>Contract Clause Risk Review</h3><a class="go" href="{{@site.url}}/contract-clause-risk-review-eu-facing-suppliers/">Details &rarr;</a>
-        <p>What each evidence clause actually requests &mdash; and which operational team must answer it.</p>
-        <p class="isnot"><b>Is not:</b> legal advice or contract drafting.</p>
-      </div>
-      <div class="svc">
-        <h3>Board-Usable Evidence Review</h3><a class="go" href="{{@site.url}}/board-usable-evidence-review-eu-facing-suppliers/">Details &rarr;</a>
-        <p>The complex file compressed into decision questions, exposure and actions for directors.</p>
-        <p class="isnot"><b>Is not:</b> an audit opinion or a substitute for directors' judgement.</p>
-      </div>
-      <div class="svc">
-        <h3>Continuous Evidence Management</h3><a class="go" href="{{@site.url}}/continuous-evidence-management/">Details &rarr;</a>
-        <p>The retainer: expiry control, update calendar and request support &mdash; the file kept decision-ready.</p>
-        <p class="isnot"><b>Is not:</b> an outsourced compliance department or a legal watch service.</p>
-      </div>
-      <div class="svc">
-        <h3>Scope 3 Brazil Programme</h3><a class="go" href="{{@site.url}}/scope-3-brazil-programme/">Details &rarr;</a>
-        <p>The Brazilian end of a European value chain documented at source &mdash; with declared operational execution by Ecobraz.</p>
-        <p class="isnot"><b>Is not:</b> carbon credits, offsets or any neutrality claim.</p>
-      </div>
-      <div class="svc">
-        <h3>Buyer-Side Supplier Assessments</h3><a class="go" href="{{@site.url}}/for-european-buyers/">Details &rarr;</a>
-        <p>For European buyers: your Brazilian supplier base graded against SEMM &mdash; comparable, at origin, in Portuguese.</p>
-        <p class="isnot"><b>Is not:</b> a certification of your suppliers.</p>
+    <p class="sub" style="color:var(--mut)">No price list — every engagement is scoped case by case, on the shape of your operation, with a written proposal.</p>
+    <div class="grid3">
+      <div class="svcflag"><div><h3><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d9b573" stroke-width="1.8" stroke-linecap="round"><path d="M9 3H5a1.5 1.5 0 0 0-1.5 1.5v15A1.5 1.5 0 0 0 5 21h14a1.5 1.5 0 0 0 1.5-1.5V8L15 3z"/><path d="M15 3v5h5.5"/><path d="M8 13h8M8 16.5h8"/></svg> Supplier Evidence Review</h3><p>The core engagement: your records against the buyer&rsquo;s request — gap register, prioritised plan, board-readable file. From a 30-day diagnostic to a full review.</p></div><a class="btn" href="{{@site.url}}/supplier-evidence-file-assessment/">Start here &rarr;</a></div>
+      <div class="vn-card"><div class="cic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#b88a3d" stroke-width="1.8" stroke-linecap="round"><path d="M3 21h18"/><path d="M6 21V10l4-2v13"/><path d="M14 21V6l4-2v17"/><circle cx="8" cy="5" r="1.6"/><path d="M8 5c0-2 3-2 3-4"/></svg></div><h3>CBAM Evidence Review</h3><p>Embedded-emissions data organised: sources, methodology, gaps and owners.</p><a class="go" href="{{@site.url}}/cbam-evidence-review-brazilian-suppliers/">Details &rarr;</a></div>
+      <div class="vn-card"><div class="cic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#b88a3d" stroke-width="1.8" stroke-linecap="round"><path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11z"/><circle cx="12" cy="10" r="2.6"/></svg></div><h3>EUDR Evidence Review</h3><p>Origin, geolocation and legality mapped before the buyer asks.</p><a class="go" href="{{@site.url}}/eudr-evidence-readiness-review/">Details &rarr;</a></div>
+      <div class="vn-card"><div class="cic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#b88a3d" stroke-width="1.8" stroke-linecap="round"><path d="M8 5l6 6M11 2l6 6M5 8l6 6M13 10l7 7a1.5 1.5 0 0 1-2 2l-7-7"/><path d="M3 21h9"/></svg></div><h3>CSDDD &amp; Contract Clauses</h3><p>What each clause really requests — and what you can prove before signing.</p><a class="go" href="{{@site.url}}/contract-clause-risk-review-eu-facing-suppliers/">Details &rarr;</a></div>
+      <div class="vn-card"><div class="cic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#b88a3d" stroke-width="1.8"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z"/><path d="M14 14h2.5v2.5H14zM17.5 17.5H20V20h-2.5z"/></svg></div><h3>Product Data / DPP</h3><p>The data burden of the Digital Product Passport, structured at source.</p><a class="go" href="{{@site.url}}/european-product-passport/">Details &rarr;</a></div>
+      <div class="vn-card"><div class="cic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#b88a3d" stroke-width="1.8" stroke-linecap="round"><path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14z"/><path d="M5 19c3-5 7-8 10-9"/></svg></div><h3>Scope 3 Brazil Programme</h3><p>The Brazilian end of your value chain documented for 12 months.</p><a class="go" href="{{@site.url}}/scope-3-brazil-programme/">Details &rarr;</a></div>
+      <div class="vn-card"><div class="cic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#b88a3d" stroke-width="1.8" stroke-linecap="round"><path d="M4 12a8 8 0 0 1 14-5l2 2M20 12a8 8 0 0 1-14 5l-2-2"/><path d="M18 3v4h-4M6 21v-4h4"/></svg></div><h3>Continuous Evidence Management</h3><p>The retainer that keeps the file decision-ready all year round.</p><a class="go" href="{{@site.url}}/continuous-evidence-management/">Details &rarr;</a></div>
+    </div>
+  </div>
+</section>
+
+<section class="sec-pad">
+  <div class="wrap founder">
+    <img class="retrato" src="{{asset "images/marcio-retrato.jpg"}}" alt="Marcio Villanova, founder of Villanova ESG" loading="lazy">
+    <div>
+      <div class="eyebrow" style="color:var(--gold)!important">The founder</div>
+      <blockquote>&ldquo;Compliance without operational evidence is only a narrative.&rdquo;</blockquote>
+      <div class="who"><b>Marcio Villanova</b>Founder, Villanova ESG &middot; CEO of Ecobraz since 2011 &middot; author of the SEMM framework</div>
+      <div class="selos">
+        <span class="selo">Zenodo &middot; DOI</span>
+        <span class="selo">ECESP &middot; European Commission</span>
+        <span class="selo">ORCID</span>
       </div>
     </div>
   </div>
 </section>
 
-<section class="boutique">
+<section class="final finalv2">
   <div class="wrap">
-    <div class="cols">
-      <div>
-        <div class="eyebrow eyebrow-light">Why a boutique</div>
-        <h2>Big-firm discipline. None of the big-firm machinery.</h2>
-        <p>Villanova ESG is a senior-led advisory boutique. The person who signs the methodology is the person who reviews your file &mdash; the same author of the published technical framework, with operational lineage in Brazilian reverse logistics. No leverage pyramid, no junior rediscovery of your business at your expense.</p>
-      </div>
-      <ul>
-        <li><b>Senior-only review</b>Every file is worked by the founder's methodology, published and citable.</li>
-        <li><b>Evidence-first, claims-never</b>Deliverables state what each record proves &mdash; and what it does not.</li>
-        <li><b>Built for the deadline</b>Scoped engagements around the buyer's date, not the calendar of a big firm.</li>
-      </ul>
-    </div>
-  </div>
-</section>
-
-<div class="lux-divider" aria-hidden="true"><span></span><svg width="14" height="14" viewBox="0 0 14 14"><path d="M7 0l4.5 7L7 14 2.5 7Z" fill="#C9A24B"/></svg><span></span></div>
-
-<section class="final">
-  <div class="wrap">
-    <h2>The buyer has a deadline. Your evidence should meet it.</h2>
-    <p>Send the questionnaire, clause or data request you received &mdash; and the date it is due. The scope assessment tells you what exists, what is missing and what can realistically be organised in time.</p>
-    <a class="btn btn-ink" href="{{@site.url}}/supplier-evidence-risk-intake/">Submit the buyer request</a>
-    <p class="boundary">Submission starts a scope assessment. It does not create an engagement, legal opinion, certification or guarantee of buyer acceptance.</p>
+    <div class="eyebrow" style="justify-content:center">The buyer has a deadline</div>
+    <h2>Send the request you received. We&rsquo;ll tell you what your file can already defend.</h2>
+    <p>Attach the questionnaire, clause or data request. Scope assessment first — a written proposal only if a review is worth your money. Reply within one business day.</p>
+    <a class="btn" href="{{@site.url}}/supplier-evidence-risk-intake/">Start the scope assessment &rarr;</a>
+    <p class="boundary" style="margin-top:24px">Advisory review — not an audit, certification or legal opinion. A submission does not create an engagement.</p>
   </div>
 </section>
