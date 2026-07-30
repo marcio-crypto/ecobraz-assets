@@ -1,0 +1,184 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{margin:0;padding:0;box-sizing:border-box}
+:root{--navy:#061426;--navy2:#0b2a52;--gold:#b88a3d;--gold-l:#d9b573;--paper:#faf8f4;--ink:#14202e;--mut:#5b6b7c;--line:#e6e0d4}
+body{font-family:'Inter','Segoe UI',system-ui,sans-serif;color:var(--ink);background:var(--paper);line-height:1.55}
+.serif{font-family:Georgia,serif}
+.wrap{max-width:1140px;margin:0 auto;padding:0 40px}
+.topbar{background:rgba(6,20,38,.98);padding:16px 0;position:relative;z-index:5}
+.topbar .wrap{display:flex;align-items:center;justify-content:space-between}
+.brand{color:#fff;font-weight:800;letter-spacing:.16em;font-size:15px}
+.brand span{color:var(--gold-l)}
+.brand small{display:block;font-size:9px;letter-spacing:.28em;color:#7d90a8;font-weight:600}
+.nav{display:flex;gap:24px;align-items:center}
+.nav a{color:#b9c6d8;text-decoration:none;font-size:13.5px}
+.lang{color:#7d90a8;font-size:12px;letter-spacing:.1em}
+.lang b{color:#fff}
+.btn{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,var(--gold),#a2762c);color:#fff;font-weight:700;padding:13px 26px;border-radius:6px;text-decoration:none;font-size:14.5px;box-shadow:0 6px 18px rgba(184,138,61,.35)}
+.btn.ghost{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.35);box-shadow:none}
+.btn.navy{background:var(--navy);box-shadow:0 6px 18px rgba(6,20,38,.25)}
+.hero{background:radial-gradient(1100px 600px at 85% -10%,#123a6b 0%,transparent 55%),linear-gradient(160deg,var(--navy) 55%,var(--navy2));color:#fff;padding:74px 0 0;position:relative;overflow:hidden}
+.hero .wrap{display:flex;gap:48px;align-items:center}
+.hcopy{flex:1.15;position:relative;z-index:2}
+.hvis{flex:1;position:relative;z-index:2}
+.eyebrow{color:var(--gold-l);letter-spacing:.22em;font-size:11px;font-weight:700;text-transform:uppercase;display:flex;align-items:center;gap:10px}
+.eyebrow::before{content:"";width:34px;height:1px;background:var(--gold)}
+.hero h1{font-size:46px;line-height:1.12;margin:20px 0 18px;font-weight:700}
+.hero h1 em{font-style:italic;color:var(--gold-l)}
+.hero p.lead{color:#c6d2e0;font-size:16.5px;max-width:540px;margin-bottom:30px}
+.cta-row{display:flex;gap:14px;margin-bottom:44px;flex-wrap:wrap}
+.dossier{background:linear-gradient(160deg,#0e2b50,#0a1f3c);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:22px;box-shadow:0 30px 70px rgba(0,0,0,.45);transform:rotate(1.5deg)}
+.dossier .dh{display:flex;justify-content:space-between;align-items:center;color:#c6d2e0;font-size:11px;letter-spacing:.14em;margin-bottom:14px}
+.dossier .dh b{color:var(--gold-l)}
+.drow{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:9px;padding:11px 14px;margin-bottom:9px;font-size:13px}
+.drow b{display:block;font-size:13.5px}
+.drow small{color:#93a7bf;font-size:11.5px}
+.drow .ok{margin-left:auto;color:#7fd49a;font-weight:800;font-size:12px;letter-spacing:.06em}
+.drow .pend{margin-left:auto;color:var(--gold-l);font-weight:800;font-size:12px;letter-spacing:.06em}
+.dfoot{display:flex;align-items:center;gap:10px;color:#93a7bf;font-size:11px;margin-top:12px}
+.arc{position:absolute;right:-60px;top:-40px;opacity:.5;z-index:1}
+.estrip{border-top:1px solid rgba(255,255,255,.14);display:flex;padding:20px 0;color:#c6d2e0;font-size:12.5px;position:relative;z-index:2}
+.estrip>div{flex:1;display:flex;gap:12px;align-items:center;padding-right:20px}
+.estrip b{display:block;color:#fff;font-size:14.5px}
+section{padding:72px 0}
+.label{color:var(--gold);letter-spacing:.2em;font-size:11px;font-weight:700;text-transform:uppercase;display:flex;align-items:center;gap:10px}
+.label::before{content:"";width:26px;height:1px;background:var(--gold)}
+h2{font-size:32px;line-height:1.2;margin:14px 0 12px;font-weight:700}
+.sub{color:var(--mut);max-width:620px;margin-bottom:38px;font-size:15px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+.card{background:#fff;border:1px solid var(--line);padding:26px;border-radius:12px;box-shadow:0 10px 26px rgba(20,32,46,.06);position:relative}
+.card .cic{width:52px;height:52px;border-radius:12px;background:linear-gradient(135deg,#f6efe2,#efe2c8);display:flex;align-items:center;justify-content:center;margin-bottom:16px}
+.card .tag{position:absolute;top:26px;right:24px;background:#f4ecdd;color:#7a5a1e;font-size:10px;font-weight:700;letter-spacing:.08em;padding:4px 9px;border-radius:20px;text-transform:uppercase}
+.card h3{font-size:17.5px;margin-bottom:8px;line-height:1.35}
+.card p{font-size:14px;color:var(--mut)}
+.card .go{color:var(--gold);font-weight:700;font-size:13px;text-decoration:none;display:inline-flex;gap:6px;margin-top:14px}
+.alt{background:linear-gradient(180deg,#f2eee6,#faf8f4)}
+.semm{display:flex;gap:54px;align-items:center}
+.semm .txt{flex:1}.semm .dia{flex:1.15;position:relative}
+.dia::before{content:"";position:absolute;left:26px;top:20px;bottom:20px;width:2px;background:linear-gradient(180deg,var(--line),var(--gold))}
+.step{display:flex;align-items:center;gap:16px;margin:12px 0;background:#fff;border:1px solid var(--line);padding:14px 18px;border-radius:10px;position:relative;box-shadow:0 6px 16px rgba(20,32,46,.05)}
+.step .n{width:34px;height:34px;border-radius:50%;background:#e9e2d2;color:#6b5b36;display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0;font-size:14px}
+.step.on{border-color:var(--gold);box-shadow:0 10px 24px rgba(184,138,61,.18)}
+.step.on .n{background:linear-gradient(135deg,var(--gold),#a2762c);color:#fff}
+.step b{font-size:14px}.step small{color:var(--mut);display:block;font-size:12px}
+.bridge{display:flex;align-items:stretch;margin-top:40px}
+.bnode{flex:1;background:#fff;border:1px solid var(--line);padding:26px;border-radius:12px;text-align:center;box-shadow:0 10px 26px rgba(20,32,46,.06)}
+.bnode.mid{background:linear-gradient(160deg,var(--navy),var(--navy2));color:#fff;border:none}
+.bnode .bic{width:56px;height:56px;margin:0 auto 12px;border-radius:50%;background:#f6efe2;display:flex;align-items:center;justify-content:center}
+.bnode.mid .bic{background:rgba(255,255,255,.1)}
+.bnode .who{font-weight:800;letter-spacing:.1em;font-size:11px;text-transform:uppercase;color:var(--gold)}
+.bnode.mid .who{color:var(--gold-l)}
+.bnode b{font-size:17px;display:block;margin-top:4px}
+.bnode p{font-size:13px;color:var(--mut);margin-top:8px}
+.bnode.mid p{color:#c6d2e0}
+.barrow{display:flex;align-items:center;padding:0 8px;color:var(--gold);font-size:24px;font-weight:800}
+.stats{background:linear-gradient(160deg,var(--navy),var(--navy2));color:#fff;padding:52px 0}
+.stats .wrap{display:flex;text-align:center}
+.stats>div{}
+.stat{flex:1}
+.stat .big{font-size:44px;font-weight:800;color:var(--gold-l);font-family:Georgia,serif}
+.stat small{color:#c6d2e0;font-size:13px}
+.svc-flag{background:linear-gradient(160deg,var(--navy),var(--navy2));color:#fff;padding:32px;border-radius:14px;grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:30px;box-shadow:0 18px 44px rgba(6,20,38,.3)}
+.svc-flag h3{font-size:23px;display:flex;align-items:center;gap:12px}
+.svc-flag p{color:#c6d2e0;max-width:560px;font-size:14.5px;margin-top:8px}
+.founder{display:flex;gap:56px;align-items:center}
+.foto{width:300px;height:360px;border-radius:14px;background:linear-gradient(160deg,var(--navy),var(--navy2));display:flex;align-items:center;justify-content:center;color:#c6d2e0;font-size:12px;letter-spacing:.1em;text-align:center;flex-shrink:0;box-shadow:0 24px 54px rgba(6,20,38,.35);outline:3px solid var(--gold);outline-offset:6px}
+.founder blockquote{font-size:25px;line-height:1.4;font-style:italic;margin-bottom:18px}
+.founder .who b{display:block;font-size:16px}
+.founder .who{color:var(--mut);font-size:13.5px}
+.selos{display:flex;gap:12px;margin-top:20px;flex-wrap:wrap}
+.selo{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:#fff;border-radius:30px;padding:8px 16px;font-size:12px;font-weight:700;color:#3d4f63}
+.final{background:radial-gradient(900px 500px at 50% -20%,#123a6b 0%,transparent 60%),linear-gradient(160deg,var(--navy),var(--navy2));color:#fff;text-align:center;padding:84px 0}
+.final h2{font-size:36px;max-width:720px;margin:14px auto 14px}
+.final p{color:#c6d2e0;max-width:540px;margin:0 auto 28px;font-size:15px}
+.disc{color:#8fa0b5;font-size:12px;margin-top:24px}
+footer{background:#04101f;color:#8fa0b5;font-size:12.5px;padding:26px 0;text-align:center}
+</style></head><body>
+<div class="topbar"><div class="wrap"><div class="brand">VILLANOVA <span>ESG</span><small>EU–BRAZIL EVIDENCE</small></div><div class="nav"><a href="#">Serviços</a><a href="#">SEMM</a><a href="#">Para compradores</a><a href="#">Biblioteca</a><a href="#">A firma</a><span class="lang"><b>PT</b> · EN · IT</span><a class="btn" href="#">Começar →</a></div></div></div>
+
+<div class="hero"><svg class="arc" width="560" height="420" viewBox="0 0 560 420" fill="none">
+<circle cx="430" cy="210" r="180" stroke="rgba(255,255,255,.07)" stroke-width="1.5"/>
+<circle cx="430" cy="210" r="120" stroke="rgba(255,255,255,.05)" stroke-width="1.5"/>
+<path d="M120 340 Q 300 60 520 140" stroke="#b88a3d" stroke-width="2" stroke-dasharray="1 7" stroke-linecap="round"/>
+<circle cx="120" cy="340" r="6" fill="#b88a3d"/><circle cx="520" cy="140" r="6" fill="#d9b573"/>
+<text x="96" y="368" fill="#93a7bf" font-size="11" letter-spacing="2">BRASIL</text>
+<text x="492" y="120" fill="#93a7bf" font-size="11" letter-spacing="2">EUROPA</text></svg><div class="wrap"><div class="hcopy">
+<div class="eyebrow">Consultoria de evidências UE–Brasil</div>
+<h1 class="serif">O comprador europeu decide pela evidência. Nós deixamos a sua <em>pronta para a decisão</em>.</h1>
+<p class="lead">A lei é europeia, mas a cobrança chega no seu e-mail, com prazo. O problema raramente é a sua operação — é a prova espalhada.</p>
+<div class="cta-row"><a class="btn" href="#"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 3L10 14"/><path d="M21 3l-7 18-4-7-7-4z"/></svg> Sou fornecedor brasileiro</a><a class="btn ghost" href="#">Sou comprador europeu</a></div>
+</div><div class="hvis"><div class="dossier">
+<div class="dh"><span>DOSSIÊ DE EVIDÊNCIAS</span><b>SEMM · NÍVEL 3</b></div>
+<div class="drow"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d9b573" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg><div><b>Questionário do comprador</b><small>renovação 2026 · Munique</small></div><span class="ok">RESPONDIDO</span></div>
+<div class="drow"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d9b573" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M6 21V10l4-2v13"/><path d="M14 21V6l4-2v17"/><circle cx="8" cy="5" r="1.6"/><path d="M8 5c0-2 3-2 3-4"/></svg><div><b>Dados CBAM</b><small>emissões incorporadas · aço</small></div><span class="ok">COM LASTRO</span></div>
+<div class="drow"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d9b573" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11z"/><circle cx="12" cy="10" r="2.6"/></svg><div><b>Rastreabilidade EUDR</b><small>origem + geolocalização</small></div><span class="ok">MAPEADA</span></div>
+<div class="drow"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d9b573" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5l6 6M11 2l6 6M5 8l6 6M13 10l7 7a1.5 1.5 0 0 1-2 2l-7-7"/><path d="M3 21h9"/></svg><div><b>Cláusulas contratuais</b><small>o que você consegue provar</small></div><span class="pend">EM REVISÃO</span></div>
+<div class="dfoot"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#93a7bf" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z"/><path d="M14 14h2.5v2.5H14zM17.5 17.5H20V20h-2.5z"/></svg> verificável na origem · consultoria, não certificação</div>
+</div></div></div>
+<div class="wrap"><div class="estrip">
+<div><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d9b573" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a1.5 1.5 0 0 0-1.5 1.5v15A1.5 1.5 0 0 0 5 21h14a1.5 1.5 0 0 0 1.5-1.5V8L15 3z"/><path d="M15 3v5h5.5"/><path d="M8 13h8M8 16.5h8"/></svg><div><b>18 relatórios</b>técnicos com DOI</div></div>
+<div><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d9b573" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c3 3 3 14 0 17-3-3-3-14 0-17z"/></svg><div><b>Listada na ECESP</b>Comissão Europeia</div></div>
+<div><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d9b573" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V10l6 4v-4l6 4v-4l6 4v7z"/><path d="M7 21v-3M12 21v-3M17 21v-3"/></svg><div><b>Desde 2011</b>operação real no Brasil</div></div>
+<div><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d9b573" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg><div><b>1 dia útil</b>para a primeira resposta</div></div>
+</div></div></div>
+
+<section><div class="wrap"><div class="label">Onde começa</div><h2 class="serif">Três pedidos que colocam o seu faturamento na mesa</h2>
+<p class="sub">Aço, alumínio, café, soja, carne, couro, têxtil: se você exporta para a Europa, um destes e-mails vai chegar — se já não chegou.</p>
+<div class="grid3">
+<div class="card"><div class="cic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#b88a3d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></div><span class="tag">Renovação</span><h3>“Preencha este questionário antes de renovarmos.”</h3><p>Resposta fraca vira desconto no preço ou troca de fornecedor — antes de qualquer negociação.</p><a class="go" href="#">Ver a solução →</a></div>
+<div class="card"><div class="cic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#b88a3d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M6 21V10l4-2v13"/><path d="M14 21V6l4-2v17"/><circle cx="8" cy="5" r="1.6"/><path d="M8 5c0-2 3-2 3-4"/></svg></div><span class="tag">CBAM</span><h3>“Seu importador precisa dos dados de emissões.”</h3><p>Aço, alumínio, cimento e fertilizantes. Sem lastro, o comprador assume o pior número — e a diferença sai do seu preço.</p><a class="go" href="#">Ver a solução →</a></div>
+<div class="card"><div class="cic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#b88a3d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11z"/><circle cx="12" cy="10" r="2.6"/></svg></div><span class="tag">EUDR</span><h3>“Comprove origem e geolocalização de cada embarque.”</h3><p>Café, cacau, soja, carne, couro, madeira e borracha — a partir de 30/12/2026. Faltam 5 meses.</p><a class="go" href="#">Ver a solução →</a></div>
+</div></div></section>
+
+<section class="alt"><div class="wrap"><div class="semm"><div class="txt">
+<div class="label">Uma régua publicada</div><h2 class="serif">O Modelo de Maturidade de Evidências</h2>
+<p class="sub">Cinco níveis, do dossiê que não existe ao que se mantém sozinho. Público, citável, com DOI — todo mundo falando do mesmo arquivo com as mesmas palavras.</p>
+<a class="btn navy" href="#">Conhecer o SEMM →</a></div>
+<div class="dia">
+<div class="step"><div class="n">0</div><div><b>Ausente</b><small>o dossiê não existe</small></div></div>
+<div class="step"><div class="n">1</div><div><b>Reativo</b><small>cada pedido vira um projeto</small></div></div>
+<div class="step"><div class="n">2</div><div><b>Organizado</b><small>documentos existem, lacunas não se conhecem</small></div></div>
+<div class="step"><div class="n">3</div><div><b>Pronto para decisão</b><small>o comprador consegue agir sobre o arquivo</small></div></div>
+<div class="step on"><div class="n">4</div><div><b>Gerido continuamente</b><small>a próxima solicitação é uma exportação, não uma emergência</small></div></div>
+</div></div></div></section>
+
+<section><div class="wrap"><div class="label">Por que nós</div><h2 class="serif">Quem avalia a sua cadeia de custódia já operou uma</h2>
+<div class="bridge">
+<div class="bnode"><div class="bic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#b88a3d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V10l6 4v-4l6 4v-4l6 4v7z"/><path d="M7 21v-3M12 21v-3M17 21v-3"/></svg></div><div class="who">Ecobraz</div><b>Opera</b><p>Logística reversa documentada no Brasil desde 2011.</p></div>
+<div class="barrow">→</div>
+<div class="bnode mid"><div class="bic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#d9b573" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6z"/><path d="M9 12l2 2 4-4.5"/></svg></div><div class="who">Villanova ESG</div><b>Documenta</b><p>Revisa o dossiê na origem, contra o pedido real do comprador.</p></div>
+<div class="barrow">→</div>
+<div class="bnode"><div class="bic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#b88a3d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5l6 6M11 2l6 6M5 8l6 6M13 10l7 7a1.5 1.5 0 0 1-2 2l-7-7"/><path d="M3 21h9"/></svg></div><div class="who">Seu comprador</div><b>Decide</b><p>Recebe evidência que o comitê dele consegue usar.</p></div>
+</div></div></section>
+
+<div class="stats"><div class="wrap">
+<div class="stat"><div class="big">18</div><small>relatórios técnicos com DOI</small></div>
+<div class="stat"><div class="big">5</div><small>níveis no modelo SEMM</small></div>
+<div class="stat"><div class="big">2011</div><small>início da operação no Brasil</small></div>
+<div class="stat"><div class="big">3</div><small>idiomas: PT · EN · IT</small></div>
+</div></div>
+
+<section class="alt"><div class="wrap"><div class="label">Serviços</div><h2 class="serif">Uma disciplina, aplicada ao pedido que está na sua mesa</h2>
+<p class="sub">Sem tabela de preços: cada caso é desenhado sobre a SUA operação, com proposta por escrito.</p>
+<div class="grid3">
+<div class="svc-flag"><div><h3 class="serif"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#d9b573" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a1.5 1.5 0 0 0-1.5 1.5v15A1.5 1.5 0 0 0 5 21h14a1.5 1.5 0 0 0 1.5-1.5V8L15 3z"/><path d="M15 3v5h5.5"/><path d="M8 13h8M8 16.5h8"/></svg> Revisão do Dossiê de Evidências</h3><p>O serviço central: seus documentos contra o pedido do comprador — lacunas, plano priorizado, arquivo legível para a diretoria. Do diagnóstico de 30 dias à revisão completa.</p></div><a class="btn" href="#">Começar por aqui →</a></div>
+<div class="card"><div class="cic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#b88a3d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M6 21V10l4-2v13"/><path d="M14 21V6l4-2v17"/><circle cx="8" cy="5" r="1.6"/><path d="M8 5c0-2 3-2 3-4"/></svg></div><h3>Revisão CBAM</h3><p>Dados de emissões organizados: fontes, metodologia, lacunas e responsáveis.</p><a class="go" href="#">Detalhes →</a></div>
+<div class="card"><div class="cic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#b88a3d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11z"/><circle cx="12" cy="10" r="2.6"/></svg></div><h3>Revisão EUDR</h3><p>Origem, geolocalização e legalidade mapeadas antes de o comprador pedir.</p><a class="go" href="#">Detalhes →</a></div>
+<div class="card"><div class="cic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#b88a3d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5l6 6M11 2l6 6M5 8l6 6M13 10l7 7a1.5 1.5 0 0 1-2 2l-7-7"/><path d="M3 21h9"/></svg></div><h3>CSDDD e Cláusulas</h3><p>O que cada cláusula exige — e o que você consegue provar antes de assinar.</p><a class="go" href="#">Detalhes →</a></div>
+<div class="card"><div class="cic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#b88a3d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z"/><path d="M14 14h2.5v2.5H14zM17.5 17.5H20V20h-2.5z"/></svg></div><h3>Dados de Produto / DPP</h3><p>A carga de dados do Passaporte Digital estruturada na origem.</p><a class="go" href="#">Detalhes →</a></div>
+<div class="card"><div class="cic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#b88a3d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14z"/><path d="M5 19c3-5 7-8 10-9"/></svg></div><h3>Programa Escopo 3 Brasil</h3><p>A ponta brasileira da sua cadeia documentada por 12 meses.</p><a class="go" href="#">Detalhes →</a></div>
+<div class="card"><div class="cic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#b88a3d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 14-5l2 2M20 12a8 8 0 0 1-14 5l-2-2"/><path d="M18 3v4h-4M6 21v-4h4"/></svg></div><h3>Gestão Contínua</h3><p>O dossiê pronto o ano inteiro — licença vencida nunca mais pega você de surpresa.</p><a class="go" href="#">Detalhes →</a></div>
+</div></div></section>
+
+<section><div class="wrap"><div class="founder"><div class="foto">[ FOTO PROFISSIONAL<br>DO MARCIO ]</div><div>
+<div class="label">O fundador</div>
+<blockquote class="serif">“Conformidade sem evidência operacional é só narrativa.”</blockquote>
+<div class="who"><b>Marcio Villanova</b>Fundador da Villanova ESG · CEO da Ecobraz desde 2011 · autor do modelo SEMM</div>
+<div class="selos"><span class="selo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b88a3d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a1.5 1.5 0 0 0-1.5 1.5v15A1.5 1.5 0 0 0 5 21h14a1.5 1.5 0 0 0 1.5-1.5V8L15 3z"/><path d="M15 3v5h5.5"/><path d="M8 13h8M8 16.5h8"/></svg> Zenodo · DOI</span><span class="selo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b88a3d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c3 3 3 14 0 17-3-3-3-14 0-17z"/></svg> ECESP · Comissão Europeia</span><span class="selo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b88a3d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6z"/><path d="M9 12l2 2 4-4.5"/></svg> ORCID</span></div>
+</div></div></div></section>
+
+<div class="final"><div class="wrap"><div class="eyebrow" style="justify-content:center">O comprador tem prazo</div>
+<h2 class="serif">Envie o pedido que você recebeu. Dizemos o que o seu dossiê já defende.</h2>
+<p>Anexe o questionário, a cláusula ou o pedido de dados. Primeiro a triagem — proposta por escrito só se a revisão valer o seu dinheiro.</p>
+<a class="btn" href="#"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 3L10 14"/><path d="M21 3l-7 18-4-7-7-4z"/></svg> Começar a triagem</a>
+<div class="disc">Revisão consultiva — não é auditoria, certificação nem parecer jurídico. O envio não cria contratação.</div></div></div>
+<footer><div class="wrap">Villanova ESG · São Paulo, Brazil · contact@villanovaesg.com · Consultoria — não é certificação, auditoria nem aconselhamento jurídico</div></footer>
+</body></html>
