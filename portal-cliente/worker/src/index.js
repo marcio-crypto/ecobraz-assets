@@ -39,7 +39,7 @@ import { criarCheckoutStripe, consultarCheckoutStripe, verificarEventoStripe, st
 import { gerarPixCopiaECola, pixConfig, paginaPix } from './pix.js';
 import { paginaColetaExpressa } from './coleta-expressa.js';
 import { enviarSMS, smsConfigurado } from './sms.js';
-import { whatsappConfigurado, templateColeta, enviarWhatsAppTemplate, listarTemplatesGupshup } from './whatsapp.js';
+import { whatsappConfigurado, templateColeta, enviarWhatsAppTemplate, enviarWhatsAppDiag, listarTemplatesGupshup } from './whatsapp.js';
 import { paginaAcompanhar, paginaAcompanharErro } from './acompanhar.js';
 import { registrarFalha, receberErroCliente, listarFalhas } from './monitor.js';
 import { segmentoDoCliente, definirSegmento, SEGMENTOS, fluxoDeVendas, ultimosPedidos, paginaPagamentos } from './premium.js';
@@ -891,7 +891,12 @@ export default {
 </div>
 <script>
 function enviar(b){b.disabled=true;var m=document.getElementById('msg');m.textContent='Enviando…';m.style.color='#4F6469';
-fetch('/api/diretoria/teste-whatsapp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({tel:document.getElementById('tel').value,tipo:document.getElementById('tipo').value})}).then(function(r){return r.json();}).then(function(j){if(j.ok){m.textContent='✅ Enviado! Confira o seu WhatsApp (pode levar alguns segundos).';m.style.color='#1E7A1E';}else{m.innerHTML='❌ Não enviou. Motivo: '+((j.motivo||j.error||'desconhecido'))+(j.detalhe?('<br><span style=\\'font-weight:400;color:#7a5f1c\\'>'+j.detalhe+'</span>'):'')+(j.enviado?('<br><span style=\\'font-weight:400;color:#9aa7a4;font-size:11px\\'>corpo: '+String(j.enviado).replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</span>'):'');m.style.color='#B23A2E';}b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.';m.style.color='#B23A2E';b.disabled=false;});}
+fetch('/api/diretoria/teste-whatsapp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({tel:document.getElementById('tel').value,tipo:document.getElementById('tipo').value})}).then(function(r){return r.json();}).then(function(j){
+var linhas='';
+if(j.tentativas&&j.tentativas.length){linhas='<div style="margin-top:10px;text-align:left">'+j.tentativas.map(function(t){var cor=t.ok?'#1E7A1E':'#B23A2E';var corpo=String(t.corpo||'').replace(/&/g,'&amp;').replace(/</g,'&lt;');return '<div style="font-size:11px;color:'+cor+';margin-top:6px;border-top:1px solid #eef1f0;padding-top:6px"><b>'+String(t.estrategia||'').replace(/</g,'&lt;')+'</b> · HTTP '+t.status+(t.ok?' ✅':' ❌')+(corpo?('<br><span style=\\'color:#7a5f1c;font-weight:400\\'>'+corpo+'</span>'):'')+'</div>';}).join('')+'</div>';}
+if(j.ok){m.innerHTML='✅ Enviado pelo caminho <b>'+String(j.vencedor||'').replace(/</g,'&lt;')+'</b>! Confira o seu WhatsApp (pode levar alguns segundos).'+linhas;m.style.color='#1E7A1E';}
+else{m.innerHTML='❌ Nenhum caminho funcionou'+(j.motivo?(' ('+String(j.motivo).replace(/</g,'&lt;')+')'):'')+'. Veja o erro de cada um abaixo:'+linhas;m.style.color='#B23A2E';}
+b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.';m.style.color='#B23A2E';b.disabled=false;});}
 </script></body></html>`;
         return html(page);
       }
@@ -901,15 +906,13 @@ fetch('/api/diretoria/teste-whatsapp',{method:'POST',headers:{'content-type':'ap
         const tel = b && b.tel; const tipo = (b && b.tipo) === 'chegou' ? 'chegou' : 'a_caminho';
         if (!tel) return json({ ok: false, motivo: 'informe o seu número' }, 400);
         if (!whatsappConfigurado(env)) return json({ ok: false, motivo: 'WhatsApp não configurado', detalhe: 'Faltam os segredos GUPSHUP_API_KEY / GUPSHUP_SOURCE / GUPSHUP_APP no cofre da Cloudflare.' });
-        const tpl = templateColeta(env, tipo);
-        if (!tpl) return json({ ok: false, motivo: 'template sem ID', detalhe: `Falta o segredo GUPSHUP_TEMPLATE_${tipo === 'chegou' ? 'CHEGOU' : 'ACAMINHO'} (o ID do Gupshup, com hífens).` });
         const base = String(env.PORTAL_BASE_URL || env.PORTAL_URL || url.origin).replace(/\/+$/, '');
         const params = tipo === 'a_caminho' ? ['Teste', `${base}/acompanhar?c=teste&t=demo`] : ['Teste'];
         try {
-          const r = await enviarWhatsAppTemplate(env, tel, tpl, params);
-          if (r && r.ok) return json({ ok: true });
-          return json({ ok: false, motivo: (r && r.motivo) || 'falha', detalhe: (r && r.detalhe) || 'O Gupshup recusou. Confira: número com DDD, ID do template (o do Gupshup, com hífens) e template APROVADO.', enviado: (r && r.enviado) || '' });
-        } catch (e) { return json({ ok: false, motivo: 'excecao', detalhe: String((e && e.name) || 'erro') }); }
+          // Cascata com diagnóstico: tenta todos os caminhos e devolve o resultado de cada um.
+          const r = await enviarWhatsAppDiag(env, tel, tipo, params);
+          return json({ ok: !!(r && r.ok), vencedor: (r && r.vencedor) || '', motivo: (r && r.motivo) || '', tentativas: (r && r.tentativas) || [] });
+        } catch (e) { return json({ ok: false, motivo: 'excecao', detalhe: String((e && e.name) || 'erro'), tentativas: [] }); }
       }
       if (pathname === '/diretoria/teste-stripe' && request.method === 'GET') {
         if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
@@ -3663,7 +3666,7 @@ async function avisarColeta(env, alvo, tipo) {
     const podeWA = tipo !== 'a_caminho' || !!link; // o template "a caminho" tem 2 variáveis (nome + link)
     if (tpl && podeWA) {
       const params = tipo === 'a_caminho' ? [primeiro, link] : [primeiro];
-      try { const r = await enviarWhatsAppTemplate(env, telefone, tpl, params); if (r && r.ok) return { via: 'whatsapp' }; } catch { /* cai em SMS/e-mail */ }
+      try { const r = await enviarWhatsAppTemplate(env, telefone, tipo, params); if (r && r.ok) return { via: 'whatsapp' }; } catch { /* cai em SMS/e-mail */ }
     }
   }
   if (smsConfigurado(env) && telefone && SMS_COLETA[tipo]) {
