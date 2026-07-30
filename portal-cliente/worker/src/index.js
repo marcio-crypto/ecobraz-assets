@@ -36,6 +36,7 @@ import { LOGO_ESCURO_B64, LOGO_CLARO_B64 } from './logos.js';
 import { paginaCalculadora, estimativaCarbono, paginaCalculoDetalhado, calculoDetalhadoGHG, paginaLojaCarbono, paginaCarbonoContato, paginaCarbonoObrigado, nivelCarbono, faixaValida, precoNivel } from './carbono.js';
 import { criarPreferencia, consultarPagamento, criarPixDireto, consultarMeiosPagamento } from './mercadopago.js';
 import { criarCheckoutStripe, consultarCheckoutStripe, verificarEventoStripe, stripeConfigurado } from './stripe.js';
+import { gerarPixCopiaECola, pixConfig, paginaPix } from './pix.js';
 import { registrarFalha, receberErroCliente, listarFalhas } from './monitor.js';
 import { segmentoDoCliente, definirSegmento, SEGMENTOS, fluxoDeVendas } from './premium.js';
 import { MANUAL_CLIENTE_PDF_B64 } from './manual-pdf.js';
@@ -781,7 +782,7 @@ export default {
         const ref = 'teste-' + novoId();
         const base = String(env.PORTAL_BASE_URL || env.PORTAL_URL || url.origin).replace(/\/+$/, '');
         try {
-          const s = await criarCheckoutStripe({ valor, descricao: `Teste Stripe Ecobraz (R$ ${valor})`, externalReference: ref, baseUrl: base, backPath: '/diretoria/teste-stripe-ok', clienteEmail: diretoria.email }, env);
+          const s = await criarCheckoutStripe({ valor, descricao: `Teste Stripe Ecobraz (R$ ${valor})`, externalReference: ref, baseUrl: base, backPath: '/diretoria/teste-stripe-ok', clienteEmail: diretoria.email, metodos: ['card'] }, env);
           if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${ref}`, JSON.stringify({ produto: 'teste', gateway: 'stripe', valor, status: 'pendente', sessionId: s.id, criadoEm: nowS() }), { expirationTtl: 3 * 86400 });
           if (!s.url) return html(paginaMensagem('Não gerou o checkout', 'A Stripe não devolveu a URL de pagamento.', '/diretoria'), 502);
           console.log('teste_stripe_gerado', { ref, valor });
@@ -802,7 +803,30 @@ export default {
           try { const raw = await env.PORTAL_KV.get(`pedido:${s.ref}`); const ped = raw ? JSON.parse(raw) : { status: 'pendente' }; if (ped.status !== 'pago') { ped.status = 'pago'; ped.pagoEm = nowS(); await env.PORTAL_KV.put(`pedido:${s.ref}`, JSON.stringify(ped), { expirationTtl: 3 * 86400 }); } } catch { /* segue */ }
         }
         const pago = !!(s && s.pago);
-        return html(paginaMensagem(pago ? '✅ Pagamento aprovado na Stripe!' : '⏳ Aguardando confirmação', pago ? 'A Stripe confirmou o pagamento — o sistema de pagamentos com Stripe está funcionando (inclusive o Pix, se foi assim que você pagou).' : 'Se você concluiu o pagamento, a confirmação leva alguns segundos. Atualize esta página em instantes.', '/diretoria'));
+        return html(paginaMensagem(pago ? '✅ Pagamento aprovado na Stripe!' : '⏳ Aguardando confirmação', pago ? 'A Stripe confirmou o pagamento — o pagamento por cartão (e Apple Pay / Google Pay) está funcionando.' : 'Se você concluiu o pagamento, a confirmação leva alguns segundos. Atualize esta página em instantes.', '/diretoria'));
+      }
+      // TESTE do NOSSO Pix (copia e cola apontando para a chave da Ecobraz).
+      // Não depende de gateway: gera o BR Code na hora. Serve para conferir, num
+      // app de banco de verdade, que resolve para a conta certa e o valor certo.
+      if (pathname === '/diretoria/teste-pix-nosso' && request.method === 'GET') {
+        if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
+        const valor = Math.min(Math.max(Number(url.searchParams.get('valor')) || 1, 0.01), 5000);
+        const ref = 'teste-' + novoId();
+        const cfg = pixConfig(env);
+        try {
+          const copiaECola = gerarPixCopiaECola({ chave: cfg.chave, nome: cfg.nome, cidade: cfg.cidade, valor, txid: ref });
+          console.log('teste_pix_nosso_gerado', { ref, valor });
+          return html(paginaPix({
+            titulo: 'Teste — Pix Ecobraz',
+            valor, copiaECola, chave: cfg.chave, nome: cfg.nome, ref,
+            voltarUrl: '/diretoria',
+            aviso: 'TESTE: abra o app do seu banco e cole este código. Confira se aparece o nome da conta da Ecobraz e o valor. Você pode confirmar (cai na conta) ou só verificar e cancelar.',
+          }));
+        } catch (error) {
+          console.error('teste_pix_nosso_erro', safeError(error));
+          await registrarFalha(env, 'teste-pix-nosso', safeError(error).message, { ref });
+          return html(paginaMensagem('Não deu para gerar o Pix', 'Erro ao montar o código Pix. Já registrei a falha para eu investigar.', '/diretoria'), 500);
+        }
       }
       // Webhook da Stripe: confirma o pagamento (assinatura + consulta à API) e libera.
       if (pathname === '/api/stripe/webhook' && request.method === 'POST') {
