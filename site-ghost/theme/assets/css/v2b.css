@@ -228,17 +228,83 @@ a.v2-pill:hover{border-color:var(--verde)}
 .hx-btn-wa:hover{background:#128C46;color:#fff}
 
 /* ============================================================
-   Lote 3b — Blog/arquivo: só polimento genérico seguro.
-   O restante do blog fica para o lote próprio.
+   Lote 5 — Blog completo na pele v2B (arquivo + artigo).
+   Arquivos (blog, tags, noticias-esg, museu): cabeçalho petrol com
+   blob, cards brancos 22px sobre creme, pílula de data/leitura,
+   hover verde. Artigo: leitura sobre creme, meta em pílulas sage,
+   conteúdo (blockquote/tabela/código) na paleta, caixas de conversão
+   e CTA iguais aos componentes da home. Apenas apresentação.
    ============================================================ */
-.archive-header{background:var(--petrol)}
+
+/* ---- Cabeçalho dos arquivos (mesma pele do form-hero) ---- */
+.archive-header{background:var(--petrol);position:relative;overflow:hidden;padding:96px 0 68px}
+.archive-header::after{content:'';position:absolute;right:-200px;top:-140px;width:520px;height:520px;background:rgba(141,198,63,.1);border-radius:47% 53% 61% 39%/44% 59% 41% 56%}
+.archive-header .container{position:relative;z-index:1}
 .archive-header h1{letter-spacing:0;font-weight:800}
-.post-card h3{color:var(--petrol)}
+.archive-header p{color:#AECAC6}
+.archive-header .eyebrow{display:inline-flex;align-items:center;gap:8px;background:rgba(141,198,63,.16);color:#C8E89C;border-radius:99px;padding:7px 16px;font-size:13px;font-weight:700;letter-spacing:0;text-transform:none;margin-bottom:16px}
+.archive-header .eyebrow::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--verde)}
+/* Toda seção que segue um cabeçalho de arquivo assenta sobre creme. */
+.archive-header ~ .section{background:var(--creme);padding:64px 0}
+
+/* ---- Cards de post ---- */
+.post-grid{gap:24px}
+.post-card{display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:var(--v2-r);box-shadow:0 10px 30px rgba(14,59,67,.05);transition:.18s}
+.post-card:hover{transform:translateY(-5px);border-color:var(--verde);box-shadow:0 18px 44px rgba(141,198,63,.2)}
+.post-card-image{background:var(--sage)}
+.post-card-body{display:flex;flex-direction:column;flex:1;padding:24px}
+.post-tag{font-size:12px;letter-spacing:.04em;color:var(--verde-escuro)}
+.post-card h3{color:var(--petrol);font-size:19px;line-height:1.3}
+.post-card h3 a:hover{color:var(--verde-escuro)}
+.post-card p{font-size:13.5px;line-height:1.55;color:var(--cinza);margin-bottom:16px}
+.post-meta{align-self:flex-start;margin-top:auto;background:var(--sage);border-radius:99px;padding:6px 14px;font-size:12px;font-weight:700;color:var(--petrol)}
+@media (prefers-reduced-motion:reduce){.post-card{transition:none!important;transform:none!important}}
+
+/* ---- Paginação em pílulas ---- */
+.pagination{display:flex;justify-content:space-between;align-items:center;gap:14px;font-size:14px;color:var(--cinza)}
+.pagination a{background:#fff;border:1.5px solid var(--line);border-radius:99px;padding:9px 20px;font-weight:700;color:var(--petrol)}
+.pagination a:hover{border-color:var(--verde);color:var(--verde-escuro)}
+
+/* ---- Artigo: leitura sobre creme ---- */
+.article{background:var(--creme);padding:76px 0 90px}
+.article-header .post-tag{display:inline-flex;align-items:center;gap:8px;background:var(--sage);border-radius:99px;padding:7px 16px;font-size:12.5px;font-weight:700;color:var(--verde-escuro);letter-spacing:.02em;margin-bottom:6px}
 .article-header h1{color:var(--petrol);letter-spacing:0}
-.gh-content h2,.gh-content h3{color:var(--petrol)}
-.post-conversion{background:var(--petrol);border-radius:22px}
-.post-conversion a{border-radius:99px;background:var(--verde);color:#fff}
-.article-cta{border-radius:18px;border-left:5px solid var(--verde);background:var(--sage)}
+.article-excerpt{color:var(--cinza)}
+.article-meta{display:flex;flex-wrap:wrap;gap:10px}
+.article-meta span{background:var(--sage);border-radius:99px;padding:6px 14px;font-size:12.5px;font-weight:700;color:var(--petrol)}
+.article-image img{border-radius:var(--v2-r);box-shadow:0 18px 44px rgba(14,59,67,.1)}
+.article-image figcaption{font-size:12px;color:var(--cinza);margin-top:10px}
+
+/* ---- Conteúdo do artigo ---- */
+.gh-content{font-size:17px;color:var(--ink)}
+.gh-content h2,.gh-content h3,.gh-content h4{color:var(--petrol)}
+.gh-content a{color:var(--petrol);text-decoration:underline;text-decoration-color:var(--verde);text-underline-offset:3px}
+.gh-content a:hover{color:var(--verde-escuro)}
+.gh-content img{border-radius:16px}
+.gh-content figcaption{font-size:13px;color:var(--cinza);text-align:center;margin-top:8px}
+.gh-content li::marker{color:var(--verde-escuro)}
+.gh-content hr{border:0;height:1px;background:var(--line);margin:44px 0}
+.gh-content blockquote{margin:32px 0;padding:20px 26px;background:var(--sage);border-left:5px solid var(--verde);border-radius:0 18px 18px 0;font-family:'Nunito','Inter',Arial,sans-serif;font-weight:700;font-size:18px;line-height:1.5;color:var(--petrol)}
+.gh-content blockquote p{margin:0;font:inherit;color:inherit}
+.gh-content table{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;font-size:15px}
+.gh-content th{background:var(--petrol);color:#fff;font-family:'Nunito','Inter',Arial,sans-serif;font-weight:800;font-size:13.5px;text-align:left;padding:12px 16px}
+.gh-content td{padding:12px 16px;border-top:1px solid var(--line);vertical-align:top}
+.gh-content code{background:var(--sage);color:var(--petrol);border-radius:6px;padding:2px 7px;font-size:.88em}
+.gh-content pre{background:var(--petrol);color:#DCE9E6;border-radius:16px;padding:20px 24px;overflow-x:auto}
+.gh-content pre code{background:transparent;color:inherit;padding:0;font-size:14px}
+.gh-content .kg-bookmark-container{border:1px solid var(--line);border-radius:16px;box-shadow:none}
+
+/* ---- Caixa de conversão dentro do post (elemento "artigo") ---- */
+.post-conversion{margin:52px 0 26px;padding:34px;border-radius:var(--v2-r);background:var(--petrol);color:#fff}
+.post-conversion h2,.post-conversion h3{color:#fff}
+.post-conversion p{color:#AECAC6}
+.post-conversion a{display:inline-flex;align-items:center;min-height:48px;margin-top:10px;padding:0 26px;border-radius:99px;background:var(--verde);color:#fff;font-family:'Nunito','Inter',Arial,sans-serif;font-weight:800;text-decoration:none;box-shadow:0 8px 22px rgba(141,198,63,.35);transition:.18s}
+.post-conversion a:hover{background:var(--verde-escuro)}
+
+/* ---- CTA de fim de artigo/arquivo (caixa sage, botão-pílula) ---- */
+.article-cta{padding:28px 30px;background:var(--sage);border-left:5px solid var(--verde);border-radius:18px}
+.article-cta strong{font-family:'Nunito','Inter',Arial,sans-serif;font-weight:800;font-size:17px;color:var(--petrol)}
+.article-cta p{margin:4px 0 0;color:var(--cinza)}
 
 /* Formulário adaptativo (Lote 4): pessoa física vê só o essencial. */
 .collection-form.is-pf .only-empresa{display:none !important}
