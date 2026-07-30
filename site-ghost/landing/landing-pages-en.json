@@ -13,7 +13,7 @@
   },
   "hero": {
    "eyebrow": "Sponsors · Municipalities · Institutions",
-   "sub": "Adopt a Neighbourhood brings electronic waste collection and digital inclusion to a defined territory — with the sponsor's brand tied to real, documented delivery rather than a generic seal. The programme is listed as good practice on the European Union's circular economy platform.",
+   "sub": "Adopt a Neighbourhood brings electronic waste collection and digital inclusion to a defined territory in São Paulo — with the sponsor's brand tied to documented delivery that a group sustainability report can actually cite, rather than a purchased seal. The programme is listed as good practice on the European Union's circular economy platform; the listing is public, verifiable and declared with its exact scope.",
    "cta": "Discuss a partnership",
    "band": [
     {
@@ -102,7 +102,7 @@
     {
      "icon": "chart",
      "title": "An ESG case with data",
-     "text": "Figures from the adopted territory for reporting and communication — with a source."
+     "text": "Figures from the adopted territory, with a source — usable in group sustainability reporting and stakeholder communication."
     },
     {
      "icon": "shield",
@@ -282,7 +282,7 @@
   },
   "hero": {
    "eyebrow": "ATMs · Terminals · Branch infrastructure",
-   "sub": "Closed branches with ATMs still on the floor, compliance requiring a destruction record per disk and a deadline to hand back the premises? Ecobraz collects financial-sector equipment with end-to-end custody, recorded media destruction and consolidated documentation per branch — within your security team's windows and rules.",
+   "sub": "Closed branches with ATMs still on the floor, compliance requiring destruction evidence per disk and a deadline to hand back the premises? Ecobraz collects financial-sector equipment with an unbroken chain of custody, recorded media destruction and documentation consolidated per branch — evidence built to survive internal audit, external audit and the group's security review, within your security team's windows and rules.",
    "cta": "Request a technical assessment",
    "band": [
     {
@@ -393,7 +393,7 @@
     "text": "Conditions, exclusions and responsibilities defined before collection."
    }
   ],
-  "authority": "Activity recorded on public platforms of international reference. Every claim on the site has a source, date and scope stated on the evidence page.",
+  "authority": "A Brazilian non-profit association in operation since 2011, rated 4.9 stars across 354 public Google reviews, with activity listed in public United Nations and European Union databases. Every claim on this site carries its source, date and scope on the public evidence page.",
   "faqTitle": "What security, asset management and facilities ask",
   "faq": [
    {
@@ -415,6 +415,10 @@
    {
     "q": "What are the timescale and the cost?",
     "a": "They depend on the number of units, locations, windows and requirements. The technical assessment returns with a timescale and conditions before any confirmation."
+   },
+   {
+    "q": "Can our head office verify the documentation from outside Brazil?",
+    "a": "Yes. The final destination certificate carries a QR code that any auditor, anywhere, can validate in seconds — the system itself confirms its authenticity, with no calls to Brazil and no translation needed. Every client also uses the Ecobraz evidence portal free of charge, with no contract: the records of each collection are organised under your company registration and can be exported to feed the compliance or ESG system your group already uses."
    }
   ],
   "related": [
@@ -539,8 +543,8 @@
   "meta_description": "IT decommissioning, data handling, returns and recurring flows: Ecobraz corporate solutions organised by operational event.",
   "hero": {
    "eyebrow": "For organisations and institutions",
-   "sub": "The corporate buyer isn't looking for 'e-waste disposal' — they're looking to resolve an event: a decommissioning, a data risk, a backlog of returns, an audit on the way. Each solution below tackles one of those events, with its own scope, process and documentation.",
-   "cta": "Request a technical assessment"
+   "sub": "Your auditor will ask three questions: can you prove the destination of each asset, who answers if a data-bearing drive surfaces where it should not, and would the paperwork you hold survive scrutiny? Each solution below answers them for a specific event — a decommissioning, a data risk, a backlog of returns, an audit on the way — with its own scope, process and documentation. And every client uses the full evidence portal free of charge, with no contract.",
+   "cta": "Book a demonstration"
   },
   "groups": [
    {
@@ -639,9 +643,9 @@
    "linkLabel": "See public evidence"
   },
   "final": {
-   "eyebrow": "Didn't find your case?",
-   "title": "Describe the event — the technical assessment points to the solution.",
-   "text": "Material, volume, location and documentary requirements: with that, the team comes back with the applicable scope, in writing."
+   "eyebrow": "No commitment",
+   "title": "Book a demonstration — and watch the certificate being validated in front of you.",
+   "text": "Online, around 30 minutes: the QR-validated certificate checked live by camera and the portal with sample data. Reply within 24 business hours — no contract and no obligation."
   },
   "referencia": {
    "doi": "10.5281/zenodo.21398926",
@@ -662,7 +666,7 @@
   },
   "hero": {
    "eyebrow": "Damaged units · Returns · After-sales",
-   "sub": "Damaged-goods quarantine taking over the DC, rejected product reappearing for sale under your brand, and the tax inspector asking for backing for the write-off? Ecobraz disposes of what cannot return to the market — with recorded de-identification, per-batch inventory and the documentary evidence that supports the stock write-off.",
+   "sub": "Damaged-goods quarantine taking over the DC, rejected product reappearing for sale under your brand, and auditors asking for backing for the write-off? Ecobraz disposes of what cannot return to the market — with recorded de-identification, per-batch inventory and a documentary trail that supports the stock write-off in front of tax inspectors and group auditors alike.",
    "cta": "Request a technical assessment",
    "band": [
     {
@@ -773,7 +777,7 @@
     "text": "A flow designed so that the disposed item does not reappear on the market."
    }
   ],
-  "authority": "Activity recorded on public platforms of international reference. Every claim on this site has a source, date and scope declared on the evidence page.",
+  "authority": "A Brazilian non-profit association in operation since 2011, rated 4.9 stars across 354 public Google reviews, with activity listed in public United Nations and European Union databases. Every claim on this site carries its source, date and scope on the public evidence page.",
   "faqTitle": "What manufacturers, importers and retailers ask",
   "faq": [
    {
@@ -795,6 +799,10 @@
    {
     "q": "How does cost work?",
     "a": "Terms depend on categories, volume, location and level of de-identification. The technical assessment defines the model — with no promise of a free service."
+   },
+   {
+    "q": "Can our head office verify the documentation from outside Brazil?",
+    "a": "Yes. The final destination certificate carries a QR code that any auditor, anywhere, can validate in seconds — the system itself confirms its authenticity, with no calls to Brazil and no translation needed. Every client also uses the Ecobraz evidence portal free of charge, with no contract: the records of each collection are organised under your company registration and can be exported to feed the compliance or ESG system your group already uses."
    }
   ],
   "related": [
@@ -923,7 +931,7 @@
   },
   "hero": {
    "eyebrow": "Cloud migration · Site closure · Colocation",
-   "sub": "The migration is over, but the room is still there: energised racks, storage arrays with live data and a running property lease. Ecobraz decommissions data centres with per-rack inventory, recorded media treatment and removal within planned windows — until the room becomes a handed-over space.",
+   "sub": "The migration is over, but the room is still there: energised racks, storage arrays with live data and a running property lease. Ecobraz decommissions data centres with per-rack inventory, recorded media treatment and removal within planned windows — closing the project with a dossier that your information-security team and your group auditor can both sign off.",
    "cta": "Request a technical assessment",
    "band": [
     {
@@ -1120,7 +1128,7 @@
     }
    ]
   },
-  "authority": "Activity registered on public platforms of international reference. Every claim on the site has its source, date and scope declared on the evidence page.",
+  "authority": "A Brazilian non-profit association in operation since 2011, rated 4.9 stars across 354 public Google reviews, with activity listed in public United Nations and European Union databases. Every claim on this site carries its source, date and scope on the public evidence page.",
   "faqTitle": "What infrastructure and facilities teams ask",
   "faq": [
    {
@@ -1142,6 +1150,10 @@
    {
     "q": "And if part of the estate is still in production?",
     "a": "The scope separates what leaves from what stays: the shutdown is done in phases, with a clear inventory of what belongs to each one."
+   },
+   {
+    "q": "Can our head office verify the documentation from outside Brazil?",
+    "a": "Yes. The final destination certificate carries a QR code that any auditor, anywhere, can validate in seconds — the system itself confirms its authenticity, with no calls to Brazil and no translation needed. Every client also uses the Ecobraz evidence portal free of charge, with no contract: the records of each collection are organised under your company registration and can be exported to feed the compliance or ESG system your group already uses."
    }
   ],
   "related": [
@@ -1181,14 +1193,14 @@
   "serviceType": "Collection, inventory, custody and disposal of decommissioned IT assets",
   "custom_excerpt": "Planned collection of IT assets that have gone out of operation — with inventory, chain of custody and data handling where applicable, subject to a technical assessment of the batch.",
   "meta_title": "Decommissioned IT asset disposal | Ecobraz",
-  "meta_description": "Collection, inventory, custody and disposal of decommissioned IT assets — with data handling and documentation, subject to a technical assessment of the batch.",
+  "meta_description": "Collection, inventory, custody and disposal of decommissioned IT assets — with data handling and audit-ready documentation after a technical assessment.",
   "hub": {
    "title": "Corporate solutions",
    "href": "/corporate-solutions/"
   },
   "hero": {
    "eyebrow": "Fleet refresh · End of contract · Site closure",
-   "sub": "Laptops piled up in the warehouse, servers with nowhere to go and finance chasing the write-off? Ecobraz collects, inventories and disposes of each asset — and you receive the documentation that closes the matter: inventory, recorded data handling, MTR and CDF where applicable.",
+   "sub": "Laptops piled up in the storeroom, servers with nowhere to go and finance chasing the write-off? Ecobraz collects, inventories and disposes of each asset — and you receive the documentation that closes the matter for finance, information security and audit: inventory, recorded data handling, transport manifest (MTR) and destination certificate (CDF) where applicable.",
    "cta": "Request a technical assessment",
    "band": [
     {
@@ -1219,7 +1231,7 @@
     "icon": "lock",
     "title": "The forgotten hard drive is a scheduled data breach",
     "text": "Every laptop sitting in the warehouse carries emails, contracts and customer data. If it leaves through the wrong door, it becomes a security incident with your organisation's name and company registration on it.",
-    "consequence": "Real cost: LGPD penalties reach 2% of revenue (capped at R$ 50 million per infringement) — in addition to public disclosure of the incident."
+    "consequence": "Real cost: penalties under the LGPD — Brazil's data protection law, the local counterpart to the GDPR — reach 2% of Brazilian revenue (capped at R$ 50 million per infringement), plus public disclosure of the incident."
    },
    {
     "icon": "alert",
@@ -1299,7 +1311,7 @@
     "text": "Institutional claims with a public record and a declared limit."
    }
   ],
-  "authority": "Activity recorded on public platforms of international reference. Every claim on this site has a source, date and scope declared on the evidence page.",
+  "authority": "A Brazilian non-profit association in operation since 2011, rated 4.9 stars across 354 public Google reviews, with activity listed in public United Nations and European Union databases. Every claim on this site carries its source, date and scope on the public evidence page.",
   "faqTitle": "What IT and facilities managers ask",
   "faq": [
    {
@@ -1321,6 +1333,10 @@
    {
     "q": "Is there a charge for collection?",
     "a": "Commercial terms depend on the type of asset, volume, location and logistics. The technical assessment defines the model — with no promise of a free service and no surprises later."
+   },
+   {
+    "q": "Can our head office verify the documentation from outside Brazil?",
+    "a": "Yes. The final destination certificate carries a QR code that any auditor, anywhere, can validate in seconds — the system itself confirms its authenticity, with no calls to Brazil and no translation needed. Every client also uses the Ecobraz evidence portal free of charge, with no contract: the records of each collection are organised under your company registration and can be exported to feed the compliance or ESG system your group already uses."
    }
   ],
   "related": [
@@ -1453,7 +1469,7 @@
   },
   "hero": {
    "eyebrow": "Execution in Brazil · Evidence readable in Europe",
-   "sub": "Did the European head office ask for evidence of disposal and the reply turned into an email task force? Ecobraz carries out and records the operation in Brazil; Villanova ESG turns those records into a dossier that procurement, compliance and the board can read - before the questionnaire deadline runs out.",
+   "sub": "Did the European head office ask for evidence of disposal and the reply turned into an email task force? Ecobraz carries out and records the operation in Brazil; Villanova ESG turns those records into a dossier that procurement, compliance and the board can read — for CSRD value-chain data points, CSDDD and supplier due diligence questionnaires — before the deadline runs out.",
    "cta": "Request an assessment",
    "band": [
     {
@@ -1781,7 +1797,7 @@
   "final": {
    "eyebrow": "Talk to someone who understands your sector",
    "title": "Describe the operation in your market's own terms.",
-   "text": "An insurance claim, a branch, a store, a hospital, a telecoms site or an industrial plant — the team responds with your sector's evidence standard."
+   "text": "An insurance claim, a branch, a store, a hospital, a telecoms site or an industrial plant — the team responds with your sector's evidence standard. Every client uses the evidence portal free of charge, with no contract."
   }
  },
  {
@@ -1909,7 +1925,7 @@
     "text": "Consolidation of the operation to attach to the claim file."
    }
   ],
-  "authority": "Activity recorded on public platforms of international reference. The offer is presented to the insurance market in a generic and defensible way — each claim has its source and scope declared on the evidence page.",
+  "authority": "A Brazilian non-profit association in operation since 2011, rated 4.9 stars across 354 public Google reviews, with activity listed in public United Nations and European Union databases. Every claim on this site carries its source, date and scope on the public evidence page. The offer is presented to the insurance market in generic, defensible terms.",
   "faqTitle": "What claims and salvage teams ask",
   "faq": [
    {
@@ -2059,7 +2075,7 @@
   },
   "hero": {
    "eyebrow": "Post-consumer · Warranty · Legal obligation",
-   "sub": "Whoever manufactures or imports electronics carries the reverse-logistics obligation — along with a permanent flow of warranty exchanges, recalls and non-resaleable product. Ecobraz runs the operational link: it receives, de-characterises when required and disposes, with the documentation that supports your figures.",
+   "sub": "Whoever manufactures or imports electronics carries Brazil's reverse-logistics obligation — along with a permanent flow of warranty exchanges, recalls and non-resaleable product. Ecobraz runs the operational link: it receives, de-characterises when required and disposes, with the documentation that supports your figures in the format group reporting, audits and Scope 3 questionnaires ask for.",
    "cta": "Request a technical assessment",
    "band": [
     {
@@ -2099,7 +2115,7 @@
    {
     "icon": "alert",
     "title": "The reverse-logistics obligation is yours — by law",
-    "text": "The National Solid Waste Policy assigns manufacturers and importers responsibility for the reverse logistics of electronics. Without a structured operation and without proof, the obligation becomes a regulatory liability.",
+    "text": "The National Solid Waste Policy — Brazil's framework waste law (Law 12.305/2010) — assigns manufacturers and importers responsibility for the reverse logistics of electronics. Without a structured operation and without proof, the obligation becomes a regulatory liability.",
     "consequence": "Real cost: exposure in enforcement and reverse-logistics figures reported without backing — indefensible when challenged."
    },
    {
@@ -2256,7 +2272,7 @@
     }
    ]
   },
-  "authority": "Activity registered on public platforms of international reference. Every claim on the site has a source, date and scope declared on the evidence page.",
+  "authority": "A Brazilian non-profit association in operation since 2011, rated 4.9 stars across 354 public Google reviews, with activity listed in public United Nations and European Union databases. Every claim on this site carries its source, date and scope on the public evidence page.",
   "faqTitle": "What after-sales, compliance and supply ask",
   "faq": [
    {
@@ -2278,6 +2294,10 @@
    {
     "q": "How does the cost work?",
     "a": "Conditions depend on categories, volume, origins and the level of de-characterisation and proof. The technical assessment defines the model — with no promise of a free service."
+   },
+   {
+    "q": "Can our head office verify the documentation from outside Brazil?",
+    "a": "Yes. The final destination certificate carries a QR code that any auditor, anywhere, can validate in seconds — the system itself confirms its authenticity, with no calls to Brazil and no translation needed. Every client also uses the Ecobraz evidence portal free of charge, with no contract: the records of each collection are organised under your company registration and can be exported to feed the compliance or ESG system your group already uses."
    }
   ],
   "related": [
@@ -2435,7 +2455,7 @@
     "text": "A flow designed so the disposed item does not reappear on the market."
    }
   ],
-  "authority": "Activity registered on public platforms of international reference. Every claim on the site has a source, date and scope stated on the evidence page.",
+  "authority": "A Brazilian non-profit association in operation since 2011, rated 4.9 stars across 354 public Google reviews, with activity listed in public United Nations and European Union databases. Every claim on this site carries its source, date and scope on the public evidence page.",
   "faqTitle": "What e-commerce operations ask",
   "faq": [
    {
@@ -2457,6 +2477,10 @@
    {
     "q": "How does the cost work?",
     "a": "Commercial terms depend on categories, volume per cycle, locations and product destruction requirements. The technical assessment defines the model — with no promise of it being free and no surprises later."
+   },
+   {
+    "q": "Can our head office verify the documentation from outside Brazil?",
+    "a": "Yes. The final destination certificate carries a QR code that any auditor, anywhere, can validate in seconds — the system itself confirms its authenticity, with no calls to Brazil and no translation needed. Every client also uses the Ecobraz evidence portal free of charge, with no contract: the records of each collection are organised under your company registration and can be exported to feed the compliance or ESG system your group already uses."
    }
   ],
   "related": [
@@ -2689,7 +2713,7 @@
    "eyebrow": "Negative scope — always declared",
    "title": "What we do NOT collect, under any circumstances",
    "text": "Loose household batteries (AA, AAA and similar), toner and cartridges, lamps, oil, polystyrene, packaging and chemical, biological, radioactive or contaminated waste. These materials require specific chains and are not part of our services.",
-   "href": "/agendamento/",
+   "href": "/request-a-collection/",
    "linkLabel": "Request collection of what we collect"
   },
   "final": {
@@ -2753,7 +2777,7 @@
     "icon": "lock",
     "title": "The safe that became a liability",
     "text": "Years of accumulated disks are years of sensitive data in a single point of failure. A loss there is not an incident — it is an entire history exposed.",
-    "consequence": "Real cost: an event with the potential to affect data from every accumulated year — and the LGPD does not expire with shelf time."
+    "consequence": "Real cost: an event with the potential to affect data from every accumulated year — and liability under the LGPD, Brazil's data protection law, does not expire with shelf time."
    },
    {
     "icon": "truck",
@@ -2910,7 +2934,7 @@
     }
    ]
   },
-  "authority": "Activity registered on public platforms of international reference. Every claim on the site has a source, date and scope declared on the public evidence page.",
+  "authority": "A Brazilian non-profit association in operation since 2011, rated 4.9 stars across 354 public Google reviews, with activity listed in public United Nations and European Union databases. Every claim on this site carries its source, date and scope on the public evidence page.",
   "faqTitle": "What security and compliance ask",
   "faq": [
    {
@@ -2932,6 +2956,10 @@
    {
     "q": "Do you handle small volumes?",
     "a": "From a safe with dozens of disks to collections with thousands of media items — the assessment defines the logistics and the conditions for each case."
+   },
+   {
+    "q": "Can our head office verify the documentation from outside Brazil?",
+    "a": "Yes. The final destination certificate carries a QR code that any auditor, anywhere, can validate in seconds — the system itself confirms its authenticity, with no calls to Brazil and no translation needed. Every client also uses the Ecobraz evidence portal free of charge, with no contract: the records of each collection are organised under your company registration and can be exported to feed the compliance or ESG system your group already uses."
    }
   ],
   "related": [
@@ -3175,7 +3203,7 @@
     }
    ]
   },
-  "authority": "Activity recorded on public platforms of international reference. Every claim on the site has its source, date and scope declared on the evidence page.",
+  "authority": "A Brazilian non-profit association in operation since 2011, rated 4.9 stars across 354 public Google reviews, with activity listed in public United Nations and European Union databases. Every claim on this site carries its source, date and scope on the public evidence page.",
   "faqTitle": "What operations and expansion teams ask",
   "faq": [
    {
@@ -3197,6 +3225,10 @@
    {
     "q": "How does the cost work?",
     "a": "Conditions depend on the number of stores, locations, volume and requirements. The technical assessment sets the model for each operation, with no promise of a free service."
+   },
+   {
+    "q": "Can our head office verify the documentation from outside Brazil?",
+    "a": "Yes. The final destination certificate carries a QR code that any auditor, anywhere, can validate in seconds — the system itself confirms its authenticity, with no calls to Brazil and no translation needed. Every client also uses the Ecobraz evidence portal free of charge, with no contract: the records of each collection are organised under your company registration and can be exported to feed the compliance or ESG system your group already uses."
    }
   ],
   "related": [
@@ -3280,7 +3312,7 @@
     "icon": "lock",
     "title": "The formatted disk that keeps talking",
     "text": "A simple format does not remove data: it removes the index. Whoever receives the machine — leasing company, buyer or recipient — can recover files with free software.",
-    "consequence": "Real cost: an LGPD incident with a penalty of up to 2% of turnover (capped at R$ 50 million) — born from a piece of equipment that left 'clean'."
+    "consequence": "Real cost: an incident under the LGPD — Brazil's data protection law — with penalties of up to 2% of Brazilian turnover (capped at R$ 50 million), born from equipment that left 'clean'."
    },
    {
     "icon": "building",
@@ -3437,7 +3469,7 @@
     }
    ]
   },
-  "authority": "Activity registered on public platforms of international reference. Every claim on the site has a stated source, date and scope on the evidence page.",
+  "authority": "A Brazilian non-profit association in operation since 2011, rated 4.9 stars across 354 public Google reviews, with activity listed in public United Nations and European Union databases. Every claim on this site carries its source, date and scope on the public evidence page.",
   "faqTitle": "What IT, security and the DPO ask",
   "faq": [
    {
@@ -3459,6 +3491,10 @@
    {
     "q": "Do you also collect and dispose of the equipment?",
     "a": "Yes. Sanitisation can be contracted on its own or integrated with collection, disposal and documentation for the batch — inventory, MTR and CDF where applicable."
+   },
+   {
+    "q": "Can our head office verify the documentation from outside Brazil?",
+    "a": "Yes. The final destination certificate carries a QR code that any auditor, anywhere, can validate in seconds — the system itself confirms its authenticity, with no calls to Brazil and no translation needed. Every client also uses the Ecobraz evidence portal free of charge, with no contract: the records of each collection are organised under your company registration and can be exported to feed the compliance or ESG system your group already uses."
    }
   ],
   "related": [
