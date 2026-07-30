@@ -360,6 +360,10 @@ export function paginaColetaOSDetalhe(user, os, seloUrl) {
       ${linha('Certificados solicitados', (os.certificados || []).join(' · '))}
       ${linha('Aberta em', dataBR(os.criadoEm))}
     </table>
+    ${os.endereco ? `<div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+      <a href="https://waze.com/ul?q=${encodeURIComponent(os.endereco)}&navigate=yes" target="_blank" rel="noopener" class="btn" style="flex:1;min-width:150px;background:#33ccff;color:#083b47;padding:11px 12px;font-size:13px">🧭 Abrir no Waze</a>
+      <a href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(os.endereco)}" target="_blank" rel="noopener" class="btn btn-g" style="flex:1;min-width:150px;padding:11px 12px;font-size:13px">📍 Google Maps (rota)</a>
+    </div>` : ''}
     ${os.cobranca ? `<div style="margin-top:14px;border:1px solid ${os.cobranca.status === 'pago' ? '#CBE7CB;background:#F0FAF0' : '#F2C173;background:#FFF9EE'};border-radius:12px;padding:13px 15px">
       <div style="font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:${os.cobranca.status === 'pago' ? '#1E7A1E' : '#8A4B00'}">💰 Cobrança: R$ ${esc(String(os.cobranca.valor).replace('.', ','))} — ${os.cobranca.status === 'pago' ? '✅ PAGA' : 'aguardando pagamento'}</div>
       <div style="font-size:13px;color:#4F6469;margin-top:5px">${esc(os.cobranca.descricao || '')}${os.cobranca.status === 'pago' && os.cobranca.pagoEm ? ` · paga em ${esc(dataBR(os.cobranca.pagoEm))}` : ''}</div>
