@@ -337,8 +337,9 @@ export function paginaColetaOSDetalhe(user, os, seloUrl) {
   <a href="/coletas" style="font-size:13px;font-weight:800;text-decoration:none;color:#4F6469">← Todas as coletas</a>
   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin:12px 0 16px">
     <div>${pill(os.status)}<h1 style="font-size:22px;margin:8px 0 0">${esc(os.numero)}</h1>
-    <div style="font-size:13px;color:#7c8a87;margin-top:2px">${esc(os.clienteNome || '')}</div></div>
+    <div style="font-size:13px;color:#7c8a87;margin-top:2px">${os.clienteId ? `<a href="/cadastro/cliente?id=${esc(os.clienteId)}" style="color:#0B5B66;font-weight:700;text-decoration:none">${esc(os.clienteNome || 'Cliente')} ↗</a>` : esc(os.clienteNome || '')}</div></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;flex:none;justify-content:flex-end">
+      ${os.clienteId ? `<a href="/cadastro/cliente?id=${esc(os.clienteId)}" class="btn btn-g" style="padding:9px 12px;font-size:12.5px">👤 Abrir cliente</a>` : ''}
       <a href="/coletas/editar?id=${esc(os.id)}" class="btn btn-g" style="padding:9px 12px;font-size:12.5px">✏️ Editar</a>
       <a href="/coletas/os/carta?id=${esc(os.id)}" class="btn btn-g" style="padding:9px 12px;font-size:12.5px">📄 Carta de Descarte</a>
       <a href="/coletas/os/manifesto?id=${esc(os.id)}" class="btn btn-g" style="padding:9px 12px;font-size:12.5px">📄 Manifesto de Carga</a>
