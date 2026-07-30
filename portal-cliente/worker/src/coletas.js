@@ -663,14 +663,24 @@ function docHTML(titulo, os, seloUrl, corpo) {
 // liberado ao cliente (regra definida com o Marcio/Débora).
 const avisoRascunho = (os) => (!os.status || os.status === 'agendada') ? `<div style="background:#FFF4DE;border:1px solid #f0dca6;border-radius:10px;padding:11px 14px;margin-bottom:10px;font-size:12px;color:#7a5a12;line-height:1.5"><b>⚠ Rascunho — não liberar ao cliente.</b> Este documento só deve ser entregue ao cliente quando a coleta estiver <b>“Em transporte”</b>.</div>` : '';
 
-export function paginaCartaDescarte(os, seloUrl) {
+export function paginaCartaDescarte(os, seloUrl, registro, fotoUrl) {
   const veic = `Placa: ${esc(os.veiculoPlaca || '________________')}   ·   Motorista: ${esc(os.agenteNome || '________________')}`;
+  const r = registro || {};
+  const hhd = (x) => String(x || '').slice(11, 16);
+  const evidencias = (r.checkin || r.foto || r.encerramento) ? `${eyebrowDoc('Evidências da coleta')}
+    <div style="font-size:12.5px;color:#28413f;line-height:1.7">
+      ${r.encerramento ? `<div><b>Coleta realizada por:</b> ${esc(r.encerramento.agenteNome || os.agenteNome || '—')}${r.encerramento.em ? ` — ${hhd(r.encerramento.em)} de ${esc(dataBR(r.encerramento.em))}` : ''}</div>` : ''}
+      ${r.encerramento && r.encerramento.volumes ? `<div><b>Volume/quantidade coletada:</b> ${esc(r.encerramento.volumes)}</div>` : ''}
+      ${r.checkin && r.checkin.lat != null ? `<div><b>Confirmação de presença (GPS):</b> ${Number(r.checkin.lat).toFixed(5)}, ${Number(r.checkin.lon).toFixed(5)}${r.checkin.em ? ` às ${hhd(r.checkin.em)}` : ''}</div>` : ''}
+    </div>
+    ${r.foto && fotoUrl ? `<div style="margin-top:10px"><img src="${esc(fotoUrl)}" alt="Foto do material coletado" style="width:100%;max-width:360px;border-radius:8px;border:1px solid #E4EBE9"><div style="font-size:10.5px;color:#93a6a2;margin-top:4px">Foto do material registrada no momento da coleta.</div></div>` : ''}` : '';
   const corpo = `${avisoRascunho(os)}${blocoGerador(os)}
     <div style="margin-top:16px;font-size:12.5px;color:#28413f;line-height:1.55"><b>Recebido por:</b> ${esc(EMPRESA.razao)}, inscrita no CNPJ ${esc(EMPRESA.cnpj)}, LO ${esc(EMPRESA.lo)}, com sede na Rua Dona Maria Quedas, 230.</div>
     <div style="margin-top:10px;font-size:12.5px;color:#28413f"><b>Dados do veículo:</b> ${veic}</div>
     ${eyebrowDoc('Declaração')}
     <div style="font-size:12px;color:#4F6469;line-height:1.65;text-align:justify;background:#FBFDFC;border:1px solid #EEF1F0;border-radius:10px;padding:12px 14px">${esc(DECLARACAO_CARTA)}</div>
     ${eyebrowDoc('Mercadorias')}${tabelaItens(os)}
+    ${evidencias}
     ${os.patrocinadorNome ? blocoPatrocinioDoc(os) : ''}
     ${assinaturasDoc(os, [{ label: 'Doador', slug: 'doador' }, { label: 'Coletor', slug: 'coletor' }, { label: 'Responsável Comercial', slug: 'resp-comercial' }])}`;
   return docHTML('Carta de Descarte', os, seloUrl, corpo);

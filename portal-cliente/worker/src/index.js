@@ -1575,7 +1575,8 @@ fetch('/api/diretoria/teste-whatsapp',{method:'POST',headers:{'content-type':'ap
         const os = await lerColetaOS(env, url.searchParams.get('id') || '');
         if (!os) return html(paginaMensagem('Coleta não encontrada', 'Volte e tente de novo.'), 404);
         if (!os.veiculoPlaca) { try { os.veiculoPlaca = await placaDaColeta(env, os); } catch { /* ok */ } }
-        return html(paginaCartaDescarte(os, `/qr-os?id=${encodeURIComponent(os.id)}`));
+        let regC = null, fotoC = ''; try { const e = await lerEstadoColeta(env, os.id); regC = { checkin: e && e.checkin, foto: e && e.foto, encerramento: e && e.encerramento }; fotoC = `/coletas/foto-motorista?id=${encodeURIComponent(os.id)}&t=${await seloOS(os.id, env)}`; } catch { regC = null; }
+        return html(paginaCartaDescarte(os, `/qr-os?id=${encodeURIComponent(os.id)}`, regC, fotoC));
       }
       if (pathname === '/coletas/os/manifesto' && request.method === 'GET') {
         if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
@@ -2956,7 +2957,8 @@ async function baixarDocOS(url, sessao, env) {
     }
     const selo = `/qr-os?id=${encodeURIComponent(os.id)}`;
     if (fonte !== 'os-comprovante' && !os.veiculoPlaca) { try { os.veiculoPlaca = await placaDaColeta(env, os); } catch { /* ok */ } }
-    return html(fonte === 'os-comprovante' ? paginaComprovanteOS(os, selo) : (fonte === 'os-carta' ? paginaCartaDescarte(os, selo) : paginaManifestoCarga(os, selo)));
+    let regCli = null, fotoCli = ''; if (fonte === 'os-carta') { try { const e = await lerEstadoColeta(env, os.id); regCli = { checkin: e && e.checkin, foto: e && e.foto, encerramento: e && e.encerramento }; fotoCli = `/coletas/foto-motorista?id=${encodeURIComponent(os.id)}&t=${await seloOS(os.id, env)}`; } catch { regCli = null; } }
+    return html(fonte === 'os-comprovante' ? paginaComprovanteOS(os, selo) : (fonte === 'os-carta' ? paginaCartaDescarte(os, selo, regCli, fotoCli) : paginaManifestoCarga(os, selo)));
   }
   const key = String(url.searchParams.get('docId') || '').replace(/[^a-zA-Z0-9/_.-]/g, '').slice(0, 200);
   if (fonte !== 'r2' || !key) return json({ ok: false, error: 'sem_id' }, 400);
