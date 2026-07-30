@@ -3,12 +3,12 @@
 // E-goi (marketing, se houver consentimento) e envia ao lead um e-mail
 // transacional de confirmação ("recebemos sua solicitação").
 //
-// LEADS (ordem de resiliência, nada se perde):
+// LEADS (decisão do Marcio, 30/07: Ploomes DESATIVADO — tudo no sistema novo):
 //   1. COFRE (KV ecobraz-leads-cofre): todo lead é gravado aqui primeiro.
-//   2. PORTAL (sistema próprio, cutover 2026-07): destino principal.
-//   3. PLOOMES: reserva automática — só é acionado se o portal falhar.
-// Se portal E Ploomes falharem mas o cofre tiver gravado, o visitante ainda
-// recebe confirmação (201) e o lead fica recuperável no cofre.
+//   2. PORTAL (sistema próprio): destino único.
+// Se o portal falhar mas o cofre tiver gravado, o visitante ainda recebe
+// confirmação (201) e o lead fica recuperável no cofre. sendToPloomes fica
+// apenas preservada no arquivo (não é chamada), como rede de emergência.
 //
 // SEGURANÇA/COMPATIBILIDADE:
 // - Segredos e variáveis vivem na Cloudflare; o deploy usa keep_vars=true e NÃO
@@ -29,7 +29,7 @@ export default {
     if (url.pathname === '/health') {
       let cofre = null;
       try { if (env.LEADS_COFRE) cofre = (await env.LEADS_COFRE.list({limit:1000})).keys.length; } catch {}
-      return json({ok:true, service:'ecobraz-coletas', version:8, destino:'portal', leads_no_cofre:cofre}, 200, cors);
+      return json({ok:true, service:'ecobraz-coletas', version:9, destino:'portal', ploomes:'desativado', leads_no_cofre:cofre}, 200, cors);
     }
     if (url.pathname !== '/api/coletas' || request.method !== 'POST') return json({ok:false, error:'not_found'}, 404, cors);
     if (!allowed.has(origin)) return json({ok:false, error:'origin_not_allowed'}, 403, cors);
@@ -53,17 +53,12 @@ export default {
         backedUp = true;
       }
     } catch (error) { console.error('cofre_failure', safeError(error)); }
-    // Destino principal: PORTAL (sistema próprio). Reserva: Ploomes. Última
-    // linha: cofre já gravado acima.
+    // Destino único: PORTAL (sistema próprio). Última linha: cofre já gravado acima.
     let destino = null;
     try { const saved = await sendToPortal(lead, env); destino = {via:'portal', id:saved.id}; }
     catch (portalError) {
       console.error('portal_failure', safeError(portalError));
-      try { const p = await sendToPloomes(lead, env); destino = {via:'ploomes', id:p.dealId}; }
-      catch (ploomesError) {
-        console.error('ploomes_failure', safeError(ploomesError));
-        if (!backedUp) return json({ok:false,error:'crm_unavailable'},502,cors);
-      }
+      if (!backedUp) return json({ok:false,error:'crm_unavailable'},502,cors);
     }
     let egoi = {ok:false, skipped:true, existing:false};
     if (lead.marketing_consent) {
@@ -113,7 +108,8 @@ async function sendToPortal(lead, env) {
   if (!data.ok) throw new Error(`portal_rejected_${data.error || 'desconhecido'}`);
   return { id: data.id };
 }
-// Reserva automática: acionada apenas se o portal falhar.
+// PRESERVADA (não é chamada — Ploomes desativado por decisão do Marcio em
+// 30/07/2026). Fica no arquivo apenas como rede de emergência para reversão.
 async function sendToPloomes(lead, env) {
   requireEnv(env,['PLOOMES_USER_KEY','PLOOMES_PIPELINE_ID']);
   const base=env.PLOOMES_API_URL || 'https://public-api2.ploomes.com';
