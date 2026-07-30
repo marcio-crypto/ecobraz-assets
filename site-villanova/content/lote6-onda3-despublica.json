@@ -1,0 +1,554 @@
+[
+ {
+  "slug": "audit-grade-mindset-eu-supply-chains",
+  "status": "draft"
+ },
+ {
+  "slug": "mentalidade-nivel-auditoria-cadeias-suprimentos-ue",
+  "status": "draft"
+ },
+ {
+  "slug": "brazilian-execution-european-regulatory-defensibility-cfo-playbook",
+  "status": "draft"
+ },
+ {
+  "slug": "execucao-brasileira-defensabilidade-regulatoria-europeia-playbook-cfo",
+  "status": "draft"
+ },
+ {
+  "slug": "brazilian-trust-discount-eu-supply-chains",
+  "status": "draft"
+ },
+ {
+  "slug": "desconto-de-confianca-brasileiro-cadeias-suprimento-ue",
+  "status": "draft"
+ },
+ {
+  "slug": "cbam-2026-2034-financial-impact-supply-chain",
+  "status": "draft"
+ },
+ {
+  "slug": "cbam-2026-2034-exposicao-financeira-cadeia-de-suprimentos",
+  "status": "draft"
+ },
+ {
+  "slug": "cbam-calculation-methodology-carbon-cost-steel-cement-aluminium",
+  "status": "draft"
+ },
+ {
+  "slug": "metodologia-calculo-cbam-custo-carbono-aco-cimento-aluminio",
+  "status": "draft"
+ },
+ {
+  "slug": "cbam-is-turning-carbon-data-into-a-financial-exposure-map",
+  "status": "draft"
+ },
+ {
+  "slug": "cbam-transforma-dados-de-carbono-em-mapa-de-exposicao-financeira",
+  "status": "draft"
+ },
+ {
+  "slug": "the-evidence-clause-what-eu-buyers-may-start-expecting-from-suppliers",
+  "status": "draft"
+ },
+ {
+  "slug": "clausula-de-evidencia-o-que-compradores-ue-podem-exigir-de-fornecedores",
+  "status": "draft"
+ },
+ {
+  "slug": "contract-clauses-eu-supply-chain-risk-brazilian-suppliers-evidence",
+  "status": "draft"
+ },
+ {
+  "slug": "clausulas-contratuais-risco-cadeia-suprimentos-ue-fornecedores-brasileiros-evidencia",
+  "status": "draft"
+ },
+ {
+  "slug": "when-eu-contract-clauses-transfer-regulatory-risk-to-brazilian-suppliers",
+  "status": "draft"
+ },
+ {
+  "slug": "quando-clausulas-contratuais-da-ue-transferem-risco-regulatorio-a-fornecedores-brasileiros",
+  "status": "draft"
+ },
+ {
+  "slug": "how-european-buyers-should-classify-brazilian-supplier-risk",
+  "status": "draft"
+ },
+ {
+  "slug": "como-compradores-europeus-classificam-risco-fornecedores-brasileiros",
+  "status": "draft"
+ },
+ {
+  "slug": "how-to-estimate-financial-exposure-from-weak-supplier-evidence",
+  "status": "draft"
+ },
+ {
+  "slug": "como-estimar-exposicao-financeira-evidencias-fracas-fornecedor",
+  "status": "draft"
+ },
+ {
+  "slug": "how-weak-supply-chain-evidence-can-affect-valuation-and-deal-risk",
+  "status": "draft"
+ },
+ {
+  "slug": "como-evidencia-fraca-cadeia-suprimentos-afeta-valuation-e-risco-da-transacao",
+  "status": "draft"
+ },
+ {
+  "slug": "how-regulatory-evidence-protects-margin-in-cross-border-supply-chains",
+  "status": "draft"
+ },
+ {
+  "slug": "como-evidencia-regulatoria-protege-margem-cadeias-transfronteiricas",
+  "status": "draft"
+ },
+ {
+  "slug": "compliance-as-pl-protection",
+  "status": "draft"
+ },
+ {
+  "slug": "compliance-como-protecao-do-resultado",
+  "status": "draft"
+ },
+ {
+  "slug": "european-buyers-do-not-buy-intentions",
+  "status": "draft"
+ },
+ {
+  "slug": "compradores-europeus-nao-compram-intencoes",
+  "status": "draft"
+ },
+ {
+  "slug": "corporate-defensive-strategy-shielding-revenue-international-regulatory-shocks",
+  "status": "draft"
+ },
+ {
+  "slug": "estrategia-defensiva-corporativa-proteger-receita-choques-regulatorios-internacionais",
+  "status": "draft"
+ },
+ {
+  "slug": "from-brazilian-operational-proof-to-european-procurement-confidence",
+  "status": "draft"
+ },
+ {
+  "slug": "da-prova-operacional-brasileira-a-confianca-em-compras-europeias",
+  "status": "draft"
+ },
+ {
+  "slug": "from-compliance-cost-to-financing-signal-how-evidence-changes-the-cfo-conversation",
+  "status": "draft"
+ },
+ {
+  "slug": "de-custo-de-compliance-a-sinal-de-financiamento-cfo",
+  "status": "draft"
+ },
+ {
+  "slug": "from-supplier-to-verified-counterparty",
+  "status": "draft"
+ },
+ {
+  "slug": "de-fornecedor-a-contraparte-verificada",
+  "status": "draft"
+ },
+ {
+  "slug": "strategic-divestment-abandonment-commercial-routes-unviable-compliance-costs",
+  "status": "draft"
+ },
+ {
+  "slug": "desinvestimento-estrategico-rotas-comerciais-inviaveis-custo-conformidade",
+  "status": "draft"
+ },
+ {
+  "slug": "engineering-discipline-beats-esg-storytelling",
+  "status": "draft"
+ },
+ {
+  "slug": "disciplina-de-engenharia-supera-narrativa-esg",
+  "status": "draft"
+ },
+ {
+  "slug": "trust-engineering-eu-brazil-supply-chains",
+  "status": "draft"
+ },
+ {
+  "slug": "engenharia-confianca-cadeias-ue-brasil",
+  "status": "draft"
+ },
+ {
+  "slug": "evidence-based-esg-strategic-infrastructure",
+  "status": "draft"
+ },
+ {
+  "slug": "esg-baseado-em-evidencias-infraestrutura-estrategica",
+  "status": "draft"
+ },
+ {
+  "slug": "eu-brazil-evidence-gap-buyer-readable-proof",
+  "status": "draft"
+ },
+ {
+  "slug": "lacuna-de-evidencia-ue-brasil-prova-legivel-pelo-comprador",
+  "status": "draft"
+ },
+ {
+  "slug": "new-brazil-europe-standard",
+  "status": "draft"
+ },
+ {
+  "slug": "novo-padrao-brasil-europa",
+  "status": "draft"
+ },
+ {
+  "slug": "no-evidence-no-leverage-eu-supply-chains",
+  "status": "draft"
+ },
+ {
+  "slug": "sem-evidencia-sem-poder-de-negociacao-cadeias-ue",
+  "status": "draft"
+ },
+ {
+  "slug": "the-hidden-cost-of-being-an-unreadable-supplier",
+  "status": "draft"
+ },
+ {
+  "slug": "o-custo-oculto-de-ser-um-fornecedor-ilegivel",
+  "status": "draft"
+ },
+ {
+  "slug": "the-hidden-cost-of-supplier-non-readiness-under-eu-regulation",
+  "status": "draft"
+ },
+ {
+  "slug": "custo-oculto-do-despreparo-de-fornecedores-regulacao-ue",
+  "status": "draft"
+ },
+ {
+  "slug": "regulatory-cost-to-serve-eu-linked-customers-margin-risk-review",
+  "status": "draft"
+ },
+ {
+  "slug": "custo-regulatorio-de-atendimento-clientes-ligados-ue-risco-de-margem",
+  "status": "draft"
+ },
+ {
+  "slug": "supplier-remediation-costs-evidence-gaps-budget-exposure",
+  "status": "draft"
+ },
+ {
+  "slug": "custos-remediacao-fornecedores-lacunas-evidencia-exposicao-orcamentaria",
+  "status": "draft"
+ },
+ {
+  "slug": "when-europe-regulates-proof-market-access-evidence-test",
+  "status": "draft"
+ },
+ {
+  "slug": "quando-europa-regula-a-prova-acesso-ao-mercado-vira-teste-de-evidencia",
+  "status": "draft"
+ },
+ {
+  "slug": "when-a-supplier-becomes-a-regulatory-liability-not-a-cost-center",
+  "status": "draft"
+ },
+ {
+  "slug": "quando-fornecedor-vira-passivo-regulatorio-nao-centro-de-custo",
+  "status": "draft"
+ },
+ {
+  "slug": "the-supplier-questionnaire-is-no-longer-administrative-it-is-a-risk-filter",
+  "status": "draft"
+ },
+ {
+  "slug": "questionario-de-fornecedor-nao-e-mais-administrativo-e-um-filtro-de-risco",
+  "status": "draft"
+ },
+ {
+  "slug": "why-boards-should-ask-for-evidence-before-asking-for-esg-claims",
+  "status": "draft"
+ },
+ {
+  "slug": "por-que-conselhos-devem-pedir-evidencias-antes-de-alegacoes-esg",
+  "status": "draft"
+ },
+ {
+  "slug": "when-procurement-needs-legal-esg-and-finance-in-the-same-room",
+  "status": "draft"
+ },
+ {
+  "slug": "quando-compras-precisam-de-juridico-esg-e-financas-na-mesma-sala",
+  "status": "draft"
+ },
+ {
+  "slug": "supplier-evidence-failure-contaminate-eu-buyer-relationships",
+  "status": "draft"
+ },
+ {
+  "slug": "falha-evidencia-fornecedor-contamina-relacoes-compradores-ue",
+  "status": "draft"
+ },
+ {
+  "slug": "board-duties-csddd-fiduciary-accountability-supply-chain-compliance",
+  "status": "draft"
+ },
+ {
+  "slug": "deveres-do-conselho-csddd-responsabilidade-fiduciaria-cadeia-de-suprimentos",
+  "status": "draft"
+ },
+ {
+  "slug": "board-liability-supply-chain-evidence-regulatory-defensibility",
+  "status": "draft"
+ },
+ {
+  "slug": "responsabilidade-conselho-evidencias-cadeia-suprimentos-defensabilidade-regulatoria",
+  "status": "draft"
+ },
+ {
+  "slug": "board-restructuring-statutory-necessity-climate-risk-expertise-seats",
+  "status": "draft"
+ },
+ {
+  "slug": "conselho-risco-climatico-supervisao-defensavel-deveres-legais",
+  "status": "draft"
+ },
+ {
+  "slug": "compliance-automation-financial-imperative-replacing-manual-audits",
+  "status": "draft"
+ },
+ {
+  "slug": "automacao-compliance-cadeias-suprimentos-risco-controle",
+  "status": "draft"
+ },
+ {
+  "slug": "european-capital-allocation-flight-institutional-investors-untracked-operations",
+  "status": "draft"
+ },
+ {
+  "slug": "alocacao-capital-europeu-fuga-investidores-institucionais",
+  "status": "draft"
+ },
+ {
+  "slug": "european-auditing-brazil-risk-ideological-falsehood-sustainability-reporting",
+  "status": "draft"
+ },
+ {
+  "slug": "asseguracao-sustentabilidade-ue-evidencias-fornecedores-brasileiros",
+  "status": "draft"
+ },
+ {
+  "slug": "compliance-domino-effect-subcontractor-blockades-paralyze-main-operation",
+  "status": "draft"
+ },
+ {
+  "slug": "efeito-domino-conformidade-bloqueios-subcontratados-operacao-principal",
+  "status": "draft"
+ },
+ {
+  "slug": "cross-regulatory-risk-impact-brazilian-energy-transition-legislation-fdi",
+  "status": "draft"
+ },
+ {
+  "slug": "risco-regulatorio-cruzado-transicao-energetica-brasil-investimento-estrangeiro",
+  "status": "draft"
+ },
+ {
+  "slug": "csddd-risk-scenarios-for-cfos",
+  "status": "draft"
+ },
+ {
+  "slug": "csddd-cenarios-de-risco-para-cfos",
+  "status": "draft"
+ },
+ {
+  "slug": "csddd-civil-liability-3-percent-sanctions-cap",
+  "status": "draft"
+ },
+ {
+  "slug": "csddd-responsabilidade-civil-teto-sancoes-3-por-cento",
+  "status": "draft"
+ },
+ {
+  "slug": "csddd-contractual-assurances-are-becoming-supplier-evidence-triggers",
+  "status": "draft"
+ },
+ {
+  "slug": "csddd-garantias-contratuais-gatilhos-de-evidencia-de-fornecedores",
+  "status": "draft"
+ },
+ {
+  "slug": "regulatory-shield-csddd-supply-chain-risk",
+  "status": "draft"
+ },
+ {
+  "slug": "csddd-reforma-2026-arquivo-controle-cadeias-suprimentos",
+  "status": "draft"
+ },
+ {
+  "slug": "eudr-simplification-does-not-remove-supplier-evidence-risk",
+  "status": "draft"
+ },
+ {
+  "slug": "evidencia-fornecedor-eudr-apos-simplificacao",
+  "status": "draft"
+ },
+ {
+  "slug": "omnibus-i-mandatory-esg-data-b2b-procurement",
+  "status": "draft"
+ },
+ {
+  "slug": "omnibus-i-dados-esg-compras-b2b",
+  "status": "draft"
+ },
+ {
+  "slug": "regulatory-risk-scoring-brazilian-suppliers-quantified-exposure-model",
+  "status": "draft"
+ },
+ {
+  "slug": "pontuacao-risco-regulatorio-fornecedores-brasileiros-modelo-exposicao-quantificado",
+  "status": "draft"
+ },
+ {
+  "slug": "eu-regulatory-defensibility-index-rank-brazilian-supplier-exposure",
+  "status": "draft"
+ },
+ {
+  "slug": "indice-defensabilidade-regulatoria-ue-ranquear-exposicao-fornecedores-brasileiros",
+  "status": "draft"
+ },
+ {
+  "slug": "supplier-due-diligence-brazilian-operations-procurement-control-point",
+  "status": "draft"
+ },
+ {
+  "slug": "due-diligence-fornecedores-operacoes-brasileiras-ponto-controle-regulatorio",
+  "status": "draft"
+ },
+ {
+  "slug": "packaging-claims-without-evidence-are-becoming-a-compliance-liability",
+  "status": "draft"
+ },
+ {
+  "slug": "alegacoes-de-embalagem-sem-evidencia-viram-passivo-de-conformidade",
+  "status": "draft"
+ },
+ {
+  "slug": "lksg-risk-analysis-tools-quantitative-supply-chain-audits",
+  "status": "draft"
+ },
+ {
+  "slug": "lksg-ferramentas-analise-risco-modelos-quantitativos-auditoria-fornecedores",
+  "status": "draft"
+ },
+ {
+  "slug": "csrd-audit-pitfalls-legal-exposure",
+  "status": "draft"
+ },
+ {
+  "slug": "csrd-armadilhas-auditoria-exposicao-juridica",
+  "status": "draft"
+ },
+ {
+  "slug": "csrd-materiality-mapping-double-materiality-governance",
+  "status": "draft"
+ },
+ {
+  "slug": "mapeamento-materialidade-csrd-dupla-materialidade-governanca",
+  "status": "draft"
+ },
+ {
+  "slug": "sustainability-linked-finance-compliance-capital-advantage",
+  "status": "draft"
+ },
+ {
+  "slug": "financiamento-vinculado-sustentabilidade-vantagem-de-capital",
+  "status": "draft"
+ },
+ {
+  "slug": "esrs-simplification-and-supplier-evidence-risk",
+  "status": "draft"
+ },
+ {
+  "slug": "simplificacao-esrs-risco-evidencia-fornecedores",
+  "status": "draft"
+ },
+ {
+  "slug": "eu-ecodesign-regulation-circular-economy-electronics",
+  "status": "draft"
+ },
+ {
+  "slug": "regulamento-ecodesign-ue-economia-circular-eletronicos",
+  "status": "draft"
+ },
+ {
+  "slug": "eudr-country-risk-assessment-supply-chain-controls",
+  "status": "draft"
+ },
+ {
+  "slug": "eudr-avaliacao-risco-pais-controles-cadeia-suprimentos",
+  "status": "draft"
+ },
+ {
+  "slug": "forced-labour-due-diligence-shield",
+  "status": "draft"
+ },
+ {
+  "slug": "escudo-due-diligence-trabalho-forcado",
+  "status": "draft"
+ },
+ {
+  "slug": "the-cfo-framework-for-pricing-regulatory-exposure-into-supplier-contracts",
+  "status": "draft"
+ },
+ {
+  "slug": "framework-cfo-precificar-exposicao-regulatoria-contratos-fornecedores",
+  "status": "draft"
+ },
+ {
+  "slug": "industrial-inputs-the-hidden-compliance-risk-in-eu-brazil-trade",
+  "status": "draft"
+ },
+ {
+  "slug": "insumos-industriais-risco-compliance-oculto-comercio-ue-brasil",
+  "status": "draft"
+ },
+ {
+  "slug": "the-procurement-playbook-for-eu-buyers-sourcing-from-brazil",
+  "status": "draft"
+ },
+ {
+  "slug": "manual-de-compras-para-compradores-ue-fornecedores-brasil",
+  "status": "draft"
+ },
+ {
+  "slug": "recycling-is-not-a-claim-it-is-an-evidence-architecture",
+  "status": "draft"
+ },
+ {
+  "slug": "reciclagem-nao-e-alegacao-e-arquitetura-de-evidencias",
+  "status": "draft"
+ },
+ {
+  "slug": "shadow-it-supply-chain-pl-risk-unauditable-data-eu-compliance",
+  "status": "draft"
+ },
+ {
+  "slug": "shadow-it-dados-fornecedores-risco-resultado-trilhas-auditoria",
+  "status": "draft"
+ },
+ {
+  "slug": "textiles-and-the-eu-traceability-shift",
+  "status": "draft"
+ },
+ {
+  "slug": "texteis-e-a-mudanca-de-rastreabilidade-da-ue",
+  "status": "draft"
+ },
+ {
+  "slug": "joint-liability-agricultural-chains-risk-mapped-european-institutional-investors",
+  "status": "draft"
+ },
+ {
+  "slug": "responsabilidade-solidaria-cadeias-agricolas-risco-investidores-europeus",
+  "status": "draft"
+ }
+]
