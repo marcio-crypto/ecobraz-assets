@@ -29,7 +29,7 @@ export default {
     if (url.pathname === '/health') {
       let cofre = null;
       try { if (env.LEADS_COFRE) cofre = (await env.LEADS_COFRE.list({limit:1000})).keys.length; } catch {}
-      return json({ok:true, service:'ecobraz-coletas', version:9, destino:'portal', ploomes:'desativado', leads_no_cofre:cofre}, 200, cors);
+      return json({ok:true, service:'ecobraz-coletas', version:10, destino:'portal', ploomes:'desativado', form:'adaptativo', leads_no_cofre:cofre}, 200, cors);
     }
     if (url.pathname !== '/api/coletas' || request.method !== 'POST') return json({ok:false, error:'not_found'}, 404, cors);
     if (!allowed.has(origin)) return json({ok:false, error:'origin_not_allowed'}, 403, cors);
@@ -80,7 +80,12 @@ function json(body,status,headers={}) { return new Response(JSON.stringify(body)
 function validate(v) {
   const fields=[];
   if (!['empresa','pessoa_fisica'].includes(v.profile)) fields.push('profile');
-  for (const key of ['name','email','phone','material_category','volume','material_description','postal_code','city','state']) if (!String(v[key]||'').trim()) fields.push(key);
+  // Formulário adaptativo (Lote 4): pessoa física responde só o essencial;
+  // empresa mantém a régua completa (documentação exige contexto).
+  const obrigatorios = v.profile === 'pessoa_fisica'
+    ? ['name','email','phone','material_category','city']
+    : ['name','email','phone','material_category','volume','material_description','postal_code','city','state'];
+  for (const key of obrigatorios) if (!String(v[key]||'').trim()) fields.push(key);
   if (!/^\S+@\S+\.\S+$/.test(String(v.email||''))) fields.push('email');
   if (String(v.material_description||'').length > 4000) fields.push('material_description');
   if (v.service_consent !== 'yes') fields.push('service_consent');
