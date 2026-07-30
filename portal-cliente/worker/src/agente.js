@@ -234,7 +234,9 @@ export function paginaColetaDetalhe(agente, coleta, estado) {
   const foto = estado && estado.foto;
   const enc = estado && estado.encerramento;
   const rea = estado && estado.reagendar;
-  const mapa = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(coleta.endereco || coleta.cliente)}`;
+  const destino = encodeURIComponent(coleta.endereco || coleta.cliente || '');
+  const waze = `https://waze.com/ul?q=${destino}&navigate=yes`;
+  const mapa = `https://www.google.com/maps/dir/?api=1&destination=${destino}`;
   const acam = estado && estado.acaminho;
   const linhaAcam = acam ? `<div style="font-size:12.5px;color:#1E5B31;font-weight:700;">✓ A caminho — cliente avisado às ${hhmm(acam.em)}</div>` : '';
   const linhaChk = chk ? `<div style="font-size:12.5px;color:#1E5B31;font-weight:700;${acam ? 'margin-top:6px;' : ''}">✓ Check-in no local — ${hhmm(chk.em)}</div><div style="font-size:10.5px;color:#8fa39f;margin-top:2px;">GPS registrado · precisão ${chk.acc} m</div>` : `<div style="font-size:12.5px;color:#8fa39f;${acam ? 'margin-top:6px;' : ''}">Aguardando check-in…</div>`;
@@ -252,7 +254,10 @@ export function paginaColetaDetalhe(agente, coleta, estado) {
   <div style="color:#9FC6C1;font-size:12px;margin-top:4px;">${esc(coleta.endereco || 'Endereço no cadastro')}</div>
 </div>
 <div style="max-width:520px;margin:0 auto;padding:16px;">
-  <a href="${esc(mapa)}" target="_blank" rel="noopener" class="btn ghost" style="margin-bottom:14px;">📍 Abrir no mapa</a>
+  <div style="display:flex;gap:8px;margin-bottom:14px;">
+    <a href="${esc(waze)}" target="_blank" rel="noopener" class="btn" style="flex:1;margin-bottom:0;background:#33ccff;color:#083b47;">🧭 Abrir no Waze</a>
+    <a href="${esc(mapa)}" target="_blank" rel="noopener" class="btn ghost" style="flex:1;margin-bottom:0;">📍 Google Maps</a>
+  </div>
   <div style="background:#fff;border:1px solid #E4EBE9;border-radius:14px;padding:14px 16px;margin-bottom:14px;">
     <div style="font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#7c8a87;margin-bottom:8px;">Linha do tempo</div>
     ${linhaAcam}${linhaChk}${linhaFoto}
