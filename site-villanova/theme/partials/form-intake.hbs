@@ -1,36 +1,94 @@
 <section class="intake" id="formulario">
-  <h2><span class="only-pt">Formulário de solicitação</span><span class="only-en">Request form</span></h2>
-  <p class="intake-lead"><span class="only-pt">Forneça contexto suficiente para uma primeira resposta útil — use um e-mail profissional, identifique o comprador ou o mercado-alvo e descreva as evidências e o prazo.</span><span class="only-en">Give enough context for a useful first reply — use a work email, identify the buyer or target market, and describe the evidence and the deadline.</span></p>
-  <form class="vn-form" data-intake-form data-endpoint="{{#if @custom.contact_endpoint}}{{@custom.contact_endpoint}}{{else}}https://api.web3forms.com/submit{{/if}}" novalidate>
-    <input type="hidden" name="access_key" value="e92c1709-3b84-4b64-b4e9-7c9ddb1be472">
-    <input type="hidden" name="subject" value="Nova solicitação — Villanova ESG (site)">
-    <input type="hidden" name="from_name" value="Villanova ESG — Site">
-    <div class="vn-field">
-      <label for="if-nome"><span class="only-pt">Nome</span><span class="only-en">Name</span></label>
-      <input id="if-nome" name="nome" type="text" autocomplete="name" required maxlength="120">
+  <div class="intake-grid">
+    <div class="intake-main">
+      <h2><span class="only-pt">Envie o pedido do comprador</span><span class="only-en">Send the buyer request</span></h2>
+      <p class="intake-lead"><span class="only-pt">Quanto mais contexto, mais útil a primeira resposta — quem pediu, o que pediu e para quando. Anexe o documento se tiver.</span><span class="only-en">The more context, the more useful the first reply — who asked, what they asked for, and by when. Attach the document if you have it.</span></p>
+      <form class="vn-form" data-intake-form data-endpoint="{{#if @custom.contact_endpoint}}{{@custom.contact_endpoint}}{{else}}https://villanova-contato.ti-0ab.workers.dev{{/if}}" novalidate>
+        <div class="vn-fields2">
+          <div class="vn-field">
+            <label for="if-nome"><span class="only-pt">Nome</span><span class="only-en">Name</span></label>
+            <input id="if-nome" name="nome" type="text" autocomplete="name" required maxlength="120">
+          </div>
+          <div class="vn-field">
+            <label for="if-email"><span class="only-pt">E-mail profissional</span><span class="only-en">Work email</span></label>
+            <input id="if-email" name="email" type="email" autocomplete="email" required maxlength="160">
+          </div>
+          <div class="vn-field">
+            <label for="if-empresa"><span class="only-pt">Empresa</span><span class="only-en">Company</span></label>
+            <input id="if-empresa" name="empresa" type="text" autocomplete="organization" required maxlength="160">
+          </div>
+          <div class="vn-field">
+            <label for="if-cargo"><span class="only-pt">Cargo <em>(opcional)</em></span><span class="only-en">Role <em>(optional)</em></span></label>
+            <input id="if-cargo" name="cargo" type="text" autocomplete="organization-title" maxlength="120">
+          </div>
+          <div class="vn-field only-pt">
+            <label for="if-tipo-pt">O que você recebeu?</label>
+            <select id="if-tipo-pt" name="tipo" data-tipo-lang="pt">
+              <option value="">—</option>
+              <option>Questionário do comprador</option>
+              <option>Cláusula contratual</option>
+              <option>Pedido de dados (CBAM/EUDR)</option>
+              <option>Renovação ou auditoria</option>
+              <option>Ainda nada — quero me antecipar</option>
+              <option>Outro</option>
+            </select>
+          </div>
+          <div class="vn-field only-en">
+            <label for="if-tipo-en">What did you receive?</label>
+            <select id="if-tipo-en" name="tipo" data-tipo-lang="en">
+              <option value="">—</option>
+              <option>Buyer questionnaire</option>
+              <option>Contract clause</option>
+              <option>Data request (CBAM/EUDR)</option>
+              <option>Renewal or audit</option>
+              <option>Nothing yet — getting ahead</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="vn-field">
+            <label for="if-prazo"><span class="only-pt">Prazo <em>(opcional)</em></span><span class="only-en">Deadline <em>(optional)</em></span></label>
+            <input id="if-prazo" name="prazo" type="text" maxlength="120">
+          </div>
+        </div>
+        <div class="vn-field">
+          <label for="if-msg"><span class="only-pt">Contexto do pedido</span><span class="only-en">Context of the request</span></label>
+          <textarea id="if-msg" name="mensagem" rows="5" required maxlength="4000"></textarea>
+        </div>
+        <div class="vn-field vn-field-file">
+          <label for="if-anexo"><span class="only-pt">Anexar o pedido <em>(opcional, até 8&nbsp;MB — PDF, imagem, Word, Excel)</em></span><span class="only-en">Attach the request <em>(optional, up to 8&nbsp;MB — PDF, image, Word, Excel)</em></span></label>
+          <input id="if-anexo" name="anexo" type="file" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx">
+        </div>
+        <input type="hidden" name="lead_source" value="intake">
+        <input type="hidden" name="idioma" value="">
+        <input type="text" name="_gotcha" tabindex="-1" autocomplete="off" aria-hidden="true" class="vn-hp">
+        <label class="vn-form-consent">
+          <input type="checkbox" name="consent" required>
+          <span class="only-pt">Concordo que meus dados sejam usados para avaliar e responder a esta solicitação.</span><span class="only-en">I agree that my data may be used to assess and respond to this request.</span>
+        </label>
+        <button class="btn btn-ink" type="submit" data-intake-submit>
+          <span class="only-pt">Enviar — resposta em 1 dia útil</span><span class="only-en">Send — reply within 1 business day</span>
+        </button>
+        <p class="vn-form-status" data-intake-status hidden role="status" aria-live="polite"></p>
+      </form>
     </div>
-    <div class="vn-field">
-      <label for="if-email"><span class="only-pt">E-mail profissional</span><span class="only-en">Work email</span></label>
-      <input id="if-email" name="email" type="email" autocomplete="email" required maxlength="160">
-    </div>
-    <div class="vn-field">
-      <label for="if-empresa"><span class="only-pt">Empresa</span><span class="only-en">Company</span></label>
-      <input id="if-empresa" name="empresa" type="text" autocomplete="organization" required maxlength="160">
-    </div>
-    <div class="vn-field">
-      <label for="if-msg"><span class="only-pt">Mensagem</span><span class="only-en">Message</span></label>
-      <textarea id="if-msg" name="mensagem" rows="5" required maxlength="4000"></textarea>
-    </div>
-    <input type="text" name="_gotcha" tabindex="-1" autocomplete="off" aria-hidden="true" class="vn-hp">
-    <input type="checkbox" name="botcheck" class="vn-hp" tabindex="-1" autocomplete="off" aria-hidden="true">
-    <label class="vn-form-consent">
-      <input type="checkbox" name="consent" required>
-      <span class="only-pt">Concordo que meus dados sejam usados para avaliar e responder a esta solicitação.</span><span class="only-en">I agree that my data may be used to assess and respond to this request.</span>
-    </label>
-    <button class="btn btn-ink" type="submit" data-intake-submit>
-      <span class="only-pt">Enviar solicitação</span><span class="only-en">Send request</span>
-    </button>
-    <p class="vn-form-status" data-intake-status hidden role="status" aria-live="polite"></p>
-  </form>
-  <p class="vn-note"><span class="only-pt">As informações são usadas apenas para avaliar e responder à solicitação. A análise não substitui aconselhamento jurídico, auditoria, certificação nem decisão de autoridade ou comprador.</span><span class="only-en">Your information is used only to assess and respond to this request. The review does not replace legal advice, audit, certification, or any authority or buyer decision.</span></p>
+    <aside class="intake-side">
+      <div class="side-card">
+        <h4><span class="only-pt">Prefere conversar?</span><span class="only-en">Prefer to talk?</span></h4>
+        <p><span class="only-pt">30 minutos, direto no calendário — sem compromisso.</span><span class="only-en">30 minutes, straight into the calendar — no obligation.</span></p>
+        <a class="btn btn-cal" href="https://calendar.app.google/WLhHEikU7BGCyGAr8" target="_blank" rel="noopener"><span class="only-pt">Agendar conversa →</span><span class="only-en">Book a conversation →</span></a>
+      </div>
+      <div class="side-card">
+        <h4><span class="only-pt">O que acontece depois</span><span class="only-en">What happens next</span></h4>
+        <div class="side-trust">
+          <span class="only-pt">1 · Lemos o pedido e o seu contexto<br>2 · Classificamos a exposição e as lacunas<br>3 · Respondemos com o próximo passo — em 1 dia útil</span>
+          <span class="only-en">1 · We read the request and your context<br>2 · We classify exposure and gaps<br>3 · We reply with the next step — within 1 business day</span>
+        </div>
+      </div>
+      <div class="side-card">
+        <h4><span class="only-pt">Por que confiar</span><span class="only-en">Why trust this</span></h4>
+        <div class="side-trust">✓ <span class="only-pt">18 relatórios técnicos com DOI</span><span class="only-en">18 technical reports with DOIs</span><br>✓ ECESP · <span class="only-pt">Comissão Europeia</span><span class="only-en">European Commission</span><br>✓ <span class="only-pt">Operação real no Brasil desde 2011</span><span class="only-en">Real operations in Brazil since 2011</span></div>
+      </div>
+    </aside>
+  </div>
+  <p class="vn-note"><span class="only-pt">As informações são usadas apenas para avaliar e responder à solicitação. O envio inicia uma avaliação de escopo — não cria contrato, parecer jurídico, certificação nem garantia de aceitação pelo comprador.</span><span class="only-en">Your information is used only to assess and respond to this request. Submission starts a scope assessment — it does not create an engagement, legal opinion, certification or guarantee of buyer acceptance.</span></p>
 </section>

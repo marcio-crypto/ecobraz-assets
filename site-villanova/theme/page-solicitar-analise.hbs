@@ -6,22 +6,37 @@
   <section class="hero page-hero">
     <svg class="mark" width="460" height="520" viewBox="0 0 60 68" aria-hidden="true"><path d="M30 2 56 12v26c0 14-12 22-26 28C16 60 4 52 4 38V12Z" fill="none" stroke="#8FA8CC" stroke-width="1.4"/><path d="M30 2v64" stroke="#8FA8CC" stroke-width="1.1"/><path d="M30 40l7 8-7 8-7-8Z" fill="#C9A24B"/></svg>
     <div class="wrap">
-      <div class="eyebrow">Análise inicial de evidências · Villanova ESG</div>
+      <div class="eyebrow">Começar · Villanova ESG</div>
       <h1>Traga o pedido do comprador.<br>Saia com o <em class="gold-em">próximo passo claro</em>.</h1>
-      <p class="lead">Questionário, cláusula contratual, pedido de evidências ou lacuna de documentação — sobre CBAM, EUDR, CSDDD ou prontidão para o comprador. A triagem inicial aponta os riscos prioritários e a direção recomendada.</p>
+      <p class="lead">Questionário, cláusula contratual, pedido de dados ou prazo apertado — sobre CBAM, EUDR, CSDDD ou prontidão para o comprador. Envie como chegou; respondemos com os riscos prioritários e a direção recomendada, em 1 dia útil.</p>
       <div class="cta-row">
-        <a class="btn btn-primary" href="#formulario">Enviar solicitação</a>
+        <a class="btn btn-primary" href="#formulario">Enviar o pedido →</a>
         <a class="btn btn-ghost" href="https://calendar.app.google/WLhHEikU7BGCyGAr8" target="_blank" rel="noopener">Agendar conversa</a>
       </div>
       <p class="boundary">O envio inicia uma avaliação de escopo. Não cria contrato, parecer jurídico, certificação nem garantia de aceitação pelo comprador.</p>
     </div>
   </section>
 
-  <div class="wrap">
-    <div class="article-body">
-      {{content}}
-      {{> form-intake}}
+  <section class="steps-band">
+    <div class="wrap">
+      <div class="sband">
+        <div class="snode"><span class="snum">1</span><b>Contexto</b><p>Quem pediu, o que pediu e a decisão em jogo.</p></div>
+        <div class="snode"><span class="snum">2</span><b>Evidência</b><p>O que existe, o que falta e quem responde por cada item.</p></div>
+        <div class="snode"><span class="snum">3</span><b>Direção</b><p>Riscos prioritários e o próximo passo recomendado — em 1 dia útil.</p></div>
+      </div>
     </div>
+  </section>
+
+  <div class="wrap">
+    {{> form-intake}}
+    {{> magnets}}
+
+    {{#if content}}
+    <details class="page-more">
+      <summary>Sobre a triagem — escopo, limites e o que ela não é</summary>
+      <div class="article-body">{{content}}</div>
+    </details>
+    {{/if}}
   </div>
 </article>
 {{/page}}

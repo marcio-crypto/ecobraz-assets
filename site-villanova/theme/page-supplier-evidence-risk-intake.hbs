@@ -5,22 +5,37 @@
   <section class="hero page-hero">
     <svg class="mark" width="460" height="520" viewBox="0 0 60 68" aria-hidden="true"><path d="M30 2 56 12v26c0 14-12 22-26 28C16 60 4 52 4 38V12Z" fill="none" stroke="#8FA8CC" stroke-width="1.4"/><path d="M30 2v64" stroke="#8FA8CC" stroke-width="1.1"/><path d="M30 40l7 8-7 8-7-8Z" fill="#C9A24B"/></svg>
     <div class="wrap">
-      <div class="eyebrow">Supplier evidence risk intake · Villanova ESG</div>
+      <div class="eyebrow">Start · Villanova ESG</div>
       <h1>Bring the buyer request.<br>Leave with a <em class="gold-em">clear next step</em>.</h1>
-      <p class="lead">A questionnaire, a contract clause, an evidence request or a documentation gap — on CBAM, EUDR, CSDDD or buyer readiness. The initial triage flags the priority risks and the recommended next step.</p>
+      <p class="lead">A questionnaire, a contract clause, a data request or a deadline — on CBAM, EUDR, CSDDD or buyer readiness. Send it as it arrived; we reply with the priority risks and the recommended next step, within 1 business day.</p>
       <div class="cta-row">
-        <a class="btn btn-primary" href="#formulario">Send request</a>
+        <a class="btn btn-primary" href="#formulario">Send the request →</a>
         <a class="btn btn-ghost" href="https://calendar.app.google/WLhHEikU7BGCyGAr8" target="_blank" rel="noopener">Book a conversation</a>
       </div>
       <p class="boundary">Submission starts a scope assessment. It does not create an engagement, legal opinion, certification or guarantee of buyer acceptance.</p>
     </div>
   </section>
 
-  <div class="wrap">
-    <div class="article-body">
-      {{content}}
-      {{> form-intake}}
+  <section class="steps-band">
+    <div class="wrap">
+      <div class="sband">
+        <div class="snode"><span class="snum">1</span><b>Context</b><p>Who asked, what they asked for, and the decision at stake.</p></div>
+        <div class="snode"><span class="snum">2</span><b>Evidence</b><p>What exists, what is missing, and who owns each item.</p></div>
+        <div class="snode"><span class="snum">3</span><b>Direction</b><p>Priority risks and the recommended next step — in 1 business day.</p></div>
+      </div>
     </div>
+  </section>
+
+  <div class="wrap">
+    {{> form-intake}}
+    {{> magnets}}
+
+    {{#if content}}
+    <details class="page-more">
+      <summary>About the intake — scope, boundaries and what it is not</summary>
+      <div class="article-body">{{content}}</div>
+    </details>
+    {{/if}}
   </div>
 </article>
 {{/page}}

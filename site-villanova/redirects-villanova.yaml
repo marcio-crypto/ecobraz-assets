@@ -34,3 +34,7 @@
   "^\\/regulatory-source-trail-3\\/?$": "/regulatory-source-trail/"
   "^\\/eu-forced-labour-regulation-import-restrictions-due-diligence-2\\/?$": "/eu-forced-labour-regulation-import-restrictions-due-diligence/"
   "^\\/eu-critical-raw-materials-act-rare-earth-supply-chain-risk-2\\/?$": "/eu-critical-raw-materials-act-rare-earth-supply-chain-risk/"
+  "^\\/start\\/?$": "/supplier-evidence-risk-intake/"
+  "^\\/comecar\\/?$": "/solicitar-analise/"
+  "^\\/contact\\/?$": "/supplier-evidence-risk-intake/"
+  "^\\/contato\\/?$": "/solicitar-analise/"
