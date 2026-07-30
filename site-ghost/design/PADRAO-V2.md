@@ -1,20 +1,28 @@
-# Padrão visual Ecobraz v2 — referência permanente
+# Padrão visual Ecobraz v2 — "ABRAÇO VERDE" (APROVADO)
 
-Status: PRÉVIA enviada ao Marcio em 30/07/2026 (aguardando aprovação visual).
-Referência renderizada: `previa-v2.html` (nesta pasta). Nenhuma página do site
-muda antes da aprovação.
+Status: **APROVADO pelo Marcio em 30/07/2026 — versão B ("Abraço Verde")**.
+Referência renderizada OFICIAL: `previa-v2B.html` (nesta pasta).
+(`previa-v2.html` e `previa-v2A.html` ficam como histórico do processo.)
+Escopo: PADRÃO ÚNICO E ABSOLUTO — todas as páginas, blog inteiro (templates e
+capas), formulários, EN, e-mails e página 404 seguem este padrão.
 
-## Tokens
+## Tokens OFICIAIS (cores do logo)
 
-- **Teal `#00333B`** (+ `#0A454E` em gradiente): títulos, faixas escuras, footer.
-- **Verde `#92C430`** (hover `#74A21F`): USO EXCLUSIVO em ação — botões e CTAs.
-  Nunca como decoração. Quem quer converter acha o botão em qualquer tela.
-- **Folha `#A2C444`**: detalhes/eyebrows sobre fundo escuro (cor do logo).
-- **Areia `#F6F3EC`** (NOVO): seções quentes — humaniza o B2C.
-- **Soft `#F7F9F8`**: seções frias. **Ink `#10262B`** texto. **Line `#E3E8E6`**.
-- Raio único **14px** · sombras suaves (`0 10px 30px rgba(0,51,59,.08)`).
-- Tipografia: **Montserrat** 400/600/700/800 (mantida; fallback Arial).
-  h1 clamp(32–52px) · h2 clamp(25–35px) · corpo 16px/1.65.
+- **Verde `#8DC63F`** (hover `#6FA82B`): cor do logo — USO EXCLUSIVO em ação
+  (botões-pílula, links de avanço) e detalhes de alegria (dots).
+- **Petrol `#0E3B43`**: cor do logo — títulos, faixa do sistema, footer.
+- **Creme `#FBF8F1`**: fundo-base quente do site. **Sage `#F0F5E6`**: apoio.
+- Ink `#1E3A34` · Cinza `#5E7268` · Line `#E7E3D8`.
+- Tipografia: **Nunito 800/900 nos títulos** (arredondada como o logo) +
+  **Inter 400/500/600 no texto**.
+- Raio generoso: cards 22px · seções com topo arredondado 56px · botões
+  SEMPRE pílula (99px). Formas orgânicas (blobs) como fundo decorativo.
+- Sombras coloridas suaves (verde a 20–40% sob botões e fotos do hero).
+- Tom de voz (ajuste do Marcio 30/07 — "linha da B, um pouco mais séria"):
+  caloroso porém profissional. Sem gírias ("bora"), sem diminutivos
+  ("minutinhos"), sem emojis em badges (usar ✓). Calor vem das formas, das
+  cores e de frases humanas dignas ("pode virar orgulho", "sem letra miúda");
+  B2B direto e sem jargão (as 3 perguntas do auditor). Títulos peso 800.
 
 ## Regras de composição (o que mata a "cara de PDF")
 
