@@ -51,7 +51,10 @@ export async function enviarWhatsAppTemplate(env, telefone, templateId, params) 
   const key = chaveGupshup(env);
   const appId = String(env.GUPSHUP_APP_ID || APP_ID_PADRAO).trim();
   const source = String(env.GUPSHUP_SOURCE || '').replace(/\D/g, '');
-  const appName = String(env.GUPSHUP_APP || '').trim();
+  // src.name é o NOME do app (ex.: ECOBRAZAPP). Se GUPSHUP_APP vier vazio ou com o App ID
+  // (UUID) por engano, cai para o nome padrão — evita o 400 por src.name inválido.
+  const appRaw = String(env.GUPSHUP_APP || '').trim();
+  const appName = (!appRaw || /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(appRaw)) ? 'ECOBRAZAPP' : appRaw;
   const to = telWhatsApp(telefone);
   if (!key || !appId) return { ok: false, motivo: 'nao_configurado' };
   if (!templateId) return { ok: false, motivo: 'sem_template' };
