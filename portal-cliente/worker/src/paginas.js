@@ -1,5 +1,6 @@
 // Telas do Portal do Cliente — identidade Ecobraz Emigre (Montserrat, verde+teal),
 // renderizadas no servidor (Worker), sem build. Logo servida em /assets/.
+import { tagsPWA, botaoInstalarPWA } from './pwa.js';
 
 const CSS = `
 @font-face{font-family:"Montserrat Fallback";src:local("Arial");size-adjust:112.5%;ascent-override:86%;descent-override:22.3%;line-gap-override:0%}
@@ -127,6 +128,7 @@ function head(titulo) {
 <meta name="robots" content="noindex,nofollow">
 <title>${titulo} — Portal Ecobraz</title>
 <link rel="icon" href="/assets/logo.png">
+${tagsPWA('cliente')}
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>${CSS}</style></head><body>`;
@@ -232,6 +234,8 @@ export function paginaPainel({ nome, email, dataFim, whatsapp, segmento }) {
   </section>
 
   ${faixaPremium}
+
+  ${botaoInstalarPWA()}
 
   <section class="kpis">
     <div class="kpi"><span class="kpi-label">Ordens de serviço</span><strong class="kpi-num" id="kpiOs">—</strong><span class="kpi-hint">registradas no seu histórico</span></div>

@@ -13,6 +13,7 @@ export function servirIcone(qual){
 const APPS = {
   operacao: { name: 'Ecobraz Operação', short: 'Operação', start: '/operacao' },
   agente:   { name: 'Ecobraz Coletas',  short: 'Coletas',  start: '/agente' },
+  cliente:  { name: 'Ecobraz — Portal do Cliente', short: 'Ecobraz', start: '/painel' },
 };
 export function servirManifest(url){
   const app = APPS[url.searchParams.get('app')] || APPS.operacao;
@@ -43,4 +44,21 @@ export function tagsPWA(app){
     '<meta name="apple-mobile-web-app-title" content="Ecobraz">' +
     '<link rel="apple-touch-icon" href="/assets/icon-192.png">' +
     '<script>if("serviceWorker"in navigator){addEventListener("load",()=>navigator.serviceWorker.register("/sw.js").catch(()=>{}))}</script>';
+}
+
+// Botão "Instalar app" reutilizável (cliente e equipe). No Android/Chrome usa o
+// prompt nativo (beforeinstallprompt); no iPhone (Safari não tem prompt) mostra a
+// instrução de "Adicionar à Tela de Início". Some sozinho se já estiver instalado.
+export function botaoInstalarPWA() {
+  return '<div id="pwaInstall" style="display:none;text-align:center;margin:12px 0">'
+    + '<button id="pwaBtn" type="button" style="background:#8CC63F;color:#123;border:none;border-radius:10px;padding:11px 18px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit">📲 Instalar o app</button>'
+    + '<div id="pwaIos" style="display:none;font-size:12.5px;color:#5b716e;margin-top:8px;line-height:1.5">Para instalar no iPhone: toque em <b>Compartilhar</b> ⬆️ e depois em <b>“Adicionar à Tela de Início”</b>.</div>'
+    + '</div>'
+    + '<script>(function(){try{var w=document.getElementById("pwaInstall"),b=document.getElementById("pwaBtn"),ios=document.getElementById("pwaIos");if(!w)return;'
+    + 'var standalone=(window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches)||window.navigator.standalone;if(standalone)return;'
+    + 'var isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent||"");var deferred=null;'
+    + 'window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();deferred=e;w.style.display="block";b.style.display="inline-block";});'
+    + 'if(isIOS){w.style.display="block";b.style.display="none";ios.style.display="block";}'
+    + 'if(b)b.addEventListener("click",function(){if(deferred){deferred.prompt();deferred=null;}});'
+    + '}catch(_){}})();</script>';
 }

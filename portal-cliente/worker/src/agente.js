@@ -3,7 +3,7 @@
 // (env AGENTE_EMAILS = "email|Nome,email2|Nome2"). O app lê as Vendas (Orders) na etapa "Em Transporte"
 // (StageId 35313, configurável). Câmera/GPS/offline/encerrar/PDF vêm nas próximas fatias.
 
-import { tagsPWA } from './pwa.js';
+import { tagsPWA, botaoInstalarPWA } from './pwa.js';
 import qrcode from 'qrcode-generator';
 import { listarColetasOS, lerColetaOS, atualizarStatusOS } from './coletas.js';
 import { botaoGoogle } from './google-auth.js';
@@ -99,6 +99,7 @@ export function paginaAppAgente(agente, coletas, banner) {
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="font-size:13px;font-weight:800;">Coletas em transporte</div><span style="font-size:11px;background:#E3F0F3;color:#0B5B66;font-weight:800;padding:3px 9px;border-radius:20px;">${coletas.length}</span></div>
   ${itens}
   <div style="font-size:10.5px;color:#9aa7a4;text-align:center;margin-top:14px;">Toque numa coleta para fazer o check-in por GPS e a foto da carga.</div>
+  ${botaoInstalarPWA()}
 </div>
 </body></html>`;
 }
