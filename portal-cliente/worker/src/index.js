@@ -778,20 +778,25 @@ export default {
       if (pathname === '/diretoria/teste-stripe' && request.method === 'GET') {
         if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
         if (!stripeConfigurado(env)) return html(paginaMensagem('Stripe não configurada', 'Falta a chave STRIPE_SECRET_KEY no cofre do Cloudflare. Cadastre e tente de novo.', '/diretoria'), 503);
-        const valor = Math.min(Math.max(Number(url.searchParams.get('valor')) || 1, 1), 55);
+        const metodo = (url.searchParams.get('metodo') || 'card').toLowerCase();
+        const metValido = ['card', 'boleto', 'pix'].includes(metodo) ? metodo : 'card';
+        const padrao = metValido === 'boleto' ? 10 : 1; // boleto tem valor mínimo maior que R$1
+        const valor = Math.min(Math.max(Number(url.searchParams.get('valor')) || padrao, 1), 55);
         const ref = 'teste-' + novoId();
         const base = String(env.PORTAL_BASE_URL || env.PORTAL_URL || url.origin).replace(/\/+$/, '');
         try {
-          const s = await criarCheckoutStripe({ valor, descricao: `Teste Stripe Ecobraz (R$ ${valor})`, externalReference: ref, baseUrl: base, backPath: '/diretoria/teste-stripe-ok', clienteEmail: diretoria.email, metodos: ['card'] }, env);
+          const s = await criarCheckoutStripe({ valor, descricao: `Teste Stripe Ecobraz — ${metValido} (R$ ${valor})`, externalReference: ref, baseUrl: base, backPath: '/diretoria/teste-stripe-ok', clienteEmail: diretoria.email, metodos: [metValido] }, env);
           if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${ref}`, JSON.stringify({ produto: 'teste', gateway: 'stripe', valor, status: 'pendente', sessionId: s.id, criadoEm: nowS() }), { expirationTtl: 3 * 86400 });
           if (!s.url) return html(paginaMensagem('Não gerou o checkout', 'A Stripe não devolveu a URL de pagamento.', '/diretoria'), 502);
-          console.log('teste_stripe_gerado', { ref, valor });
+          console.log('teste_stripe_gerado', { ref, valor, metodo: metValido });
           return new Response(null, { status: 302, headers: { Location: s.url, 'cache-control': 'no-store' } });
         } catch (error) {
           const det = (error && error.detalhe) || safeError(error).message;
           console.error('teste_stripe_erro', safeError(error));
-          await registrarFalha(env, 'teste-stripe', det, { ref });
-          const dica = /pix/i.test(det) ? ' Pode ser que o Pix precise ser ativado na conta Stripe (Configurações → Métodos de pagamento).' : ' Tente de novo em instantes.';
+          await registrarFalha(env, 'teste-stripe', det, { ref, metodo: metValido });
+          const dica = new RegExp(metValido, 'i').test(det)
+            ? ` Pode ser que o método "${metValido}" precise ser ativado na conta Stripe (Configurações → Métodos de pagamento) — ou não esteja disponível para este tipo de conta (ONG).`
+            : ' Tente de novo em instantes.';
           return html(paginaMensagem('Stripe: não deu para gerar', `A Stripe respondeu: ${det}.${dica}`, '/diretoria'), 502);
         }
       }
