@@ -858,6 +858,11 @@ export default {
         // Boleto: gerado, mas ainda não pago — a baixa é automática pelo webhook quando pagar.
         return html(paginaMensagem('Boleto gerado', 'Seu boleto foi gerado. Pague pelo app ou site do seu banco até o vencimento — a confirmação é automática (costuma levar de 1 a 2 dias úteis após o pagamento). Assim que cair, seu pedido é liberado sozinho.', '/painel'));
       }
+      // Abrir este endereço no navegador (GET) NÃO é erro: o webhook funciona por
+      // POST (a Stripe chama sozinha). Respondemos algo claro para não assustar.
+      if (pathname === '/api/stripe/webhook' && request.method === 'GET') {
+        return json({ ok: true, webhook: 'stripe', ativo: !!env.STRIPE_WEBHOOK_SECRET, dica: 'Este é o webhook da Stripe. Ele funciona via POST (a Stripe chama automaticamente) — não pelo navegador. Se você está vendo isto, o endereço existe e está no ar.' });
+      }
       // Webhook da Stripe: confirma o pagamento (assinatura + consulta à API) e libera.
       if (pathname === '/api/stripe/webhook' && request.method === 'POST') {
         const raw = await request.text();
