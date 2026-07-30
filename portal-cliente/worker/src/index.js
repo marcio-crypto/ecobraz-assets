@@ -1398,6 +1398,17 @@ fetch('/api/diretoria/teste-whatsapp',{method:'POST',headers:{'content-type':'ap
         let veiculos = []; try { veiculos = await listarVeiculos(env); } catch { /* ok */ }
         return html(paginaGerarColeta(escritorio, cli, agentes, patrocinadores, veiculos));
       }
+      // Foto da carga registrada pelo motorista — visível para a EQUIPE (comercial/doca/
+      // diretoria/motorista) ou via TOKEN (para o documento do cliente). Reaproveita o
+      // servidor de foto do agente, mas com autorização mais ampla.
+      if (pathname === '/coletas/foto-motorista' && request.method === 'GET') {
+        const fid = String(url.searchParams.get('id') || '');
+        const ftok = String(url.searchParams.get('t') || '');
+        let ok = !!(escritorio || diretoria || agente || operacao);
+        if (!ok && fid && ftok) { try { ok = ftok === await seloOS(fid.replace(/[^a-zA-Z0-9_-]/g, ''), env); } catch { ok = false; } }
+        if (!ok) return json({ ok: false, error: 'nao_autorizado' }, 403);
+        return await servirFotoColeta(env, fid);
+      }
       // Página PÚBLICA de acompanhamento (link do WhatsApp): token = selo HMAC da OS.
       if (pathname === '/acompanhar' && request.method === 'GET') {
         const cid = String(url.searchParams.get('c') || '').replace(/[^a-zA-Z0-9_-]/g, '');
@@ -1442,6 +1453,7 @@ fetch('/api/diretoria/teste-whatsapp',{method:'POST',headers:{'content-type':'ap
             avisoACaminho: parseAviso(env.PORTAL_KV ? await env.PORTAL_KV.get(`notif:coleta:${os.id}:a_caminho`) : null),
             avisoChegou: parseAviso(env.PORTAL_KV ? await env.PORTAL_KV.get(`notif:coleta:${os.id}:chegou`) : null),
           };
+          acomp.registro = { checkin: est && est.checkin, foto: est && est.foto, encerramento: est && est.encerramento };
           const tel = Array.isArray(os.telemetria) ? os.telemetria : [];
           const ult = tel.length ? tel[tel.length - 1] : null;
           if (ult && ult.lat != null && ult.lng != null && !acomp.chegou) {
