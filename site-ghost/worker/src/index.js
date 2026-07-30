@@ -1,6 +1,14 @@
-// Worker ecobraz-coletas — recebe o formulário de /agendamento/, cria o lead no
-// Ploomes (CRM) e no E-goi (marketing, se houver consentimento) e envia ao lead
-// um e-mail transacional de confirmação ("recebemos sua solicitação").
+// Worker ecobraz-coletas — recebe o formulário de /agendamento/, registra o lead
+// no SISTEMA PRÓPRIO da Ecobraz (portal — caixa de entrada do escritório), no
+// E-goi (marketing, se houver consentimento) e envia ao lead um e-mail
+// transacional de confirmação ("recebemos sua solicitação").
+//
+// LEADS (ordem de resiliência, nada se perde):
+//   1. COFRE (KV ecobraz-leads-cofre): todo lead é gravado aqui primeiro.
+//   2. PORTAL (sistema próprio, cutover 2026-07): destino principal.
+//   3. PLOOMES: reserva automática — só é acionado se o portal falhar.
+// Se portal E Ploomes falharem mas o cofre tiver gravado, o visitante ainda
+// recebe confirmação (201) e o lead fica recuperável no cofre.
 //
 // SEGURANÇA/COMPATIBILIDADE:
 // - Segredos e variáveis vivem na Cloudflare; o deploy usa keep_vars=true e NÃO
@@ -21,7 +29,7 @@ export default {
     if (url.pathname === '/health') {
       let cofre = null;
       try { if (env.LEADS_COFRE) cofre = (await env.LEADS_COFRE.list({limit:1000})).keys.length; } catch {}
-      return json({ok:true, service:'ecobraz-coletas', version:7, leads_no_cofre:cofre}, 200, cors);
+      return json({ok:true, service:'ecobraz-coletas', version:8, destino:'portal', leads_no_cofre:cofre}, 200, cors);
     }
     if (url.pathname !== '/api/coletas' || request.method !== 'POST') return json({ok:false, error:'not_found'}, 404, cors);
     if (!allowed.has(origin)) return json({ok:false, error:'origin_not_allowed'}, 403, cors);
@@ -45,13 +53,17 @@ export default {
         backedUp = true;
       }
     } catch (error) { console.error('cofre_failure', safeError(error)); }
-    let ploomes = null;
-    try { ploomes = await sendToPloomes(lead, env); }
-    catch (error) {
-      console.error('ploomes_failure', safeError(error));
-      // Com o lead salvo no cofre, o visitante recebe confirmação normal; sem
-      // cofre disponível, mantém o erro para o front oferecer o WhatsApp.
-      if (!backedUp) return json({ok:false,error:'crm_unavailable'},502,cors);
+    // Destino principal: PORTAL (sistema próprio). Reserva: Ploomes. Última
+    // linha: cofre já gravado acima.
+    let destino = null;
+    try { const saved = await sendToPortal(lead, env); destino = {via:'portal', id:saved.id}; }
+    catch (portalError) {
+      console.error('portal_failure', safeError(portalError));
+      try { const p = await sendToPloomes(lead, env); destino = {via:'ploomes', id:p.dealId}; }
+      catch (ploomesError) {
+        console.error('ploomes_failure', safeError(ploomesError));
+        if (!backedUp) return json({ok:false,error:'crm_unavailable'},502,cors);
+      }
     }
     let egoi = {ok:false, skipped:true, existing:false};
     if (lead.marketing_consent) {
@@ -63,7 +75,7 @@ export default {
     let confirmation = {ok:false, skipped:true};
     try { confirmation = await sendConfirmationEmail(lead, env); }
     catch (error) { console.error('confirmation_email_failure', safeError(error)); confirmation = {ok:false, skipped:false, detail:safeError(error).message}; }
-    return json({ok:true, request_id:requestId, backed_up:backedUp, crm:ploomes?{ok:true,contact_id:ploomes.contactId,deal_id:ploomes.dealId}:{ok:false,recovered_from_backup:false}, marketing:{ok:Boolean(egoi.ok),skipped:Boolean(egoi.skipped)}, confirmation:{ok:Boolean(confirmation.ok),skipped:Boolean(confirmation.skipped),detail:confirmation.detail||''}},201,cors);
+    return json({ok:true, request_id:requestId, backed_up:backedUp, crm:destino?{ok:true,via:destino.via,saved_id:destino.id}:{ok:false,no_cofre:true}, marketing:{ok:Boolean(egoi.ok),skipped:Boolean(egoi.skipped)}, confirmation:{ok:Boolean(confirmation.ok),skipped:Boolean(confirmation.skipped),detail:confirmation.detail||''}},201,cors);
   }
 };
 
@@ -83,6 +95,25 @@ function normalize(v, request) {
   const clean=(x,max=500)=>String(x||'').trim().slice(0,max);
   return {profile:clean(v.profile),name:clean(v.name,200),company:clean(v.company,200),email:clean(v.email,320).toLowerCase(),phone:clean(v.phone,50),material_category:clean(v.material_category,200),volume:clean(v.volume,100),material_description:clean(v.material_description,4000),postal_code:clean(v.postal_code,20),city:clean(v.city,150),state:clean(v.state,20),documentation:clean(v.documentation,250),urgency:clean(v.urgency,100),page_url:clean(v.page_url,1000),source:'website',utm_source:clean(v.utm_source,200),utm_medium:clean(v.utm_medium,200),utm_campaign:clean(v.utm_campaign,200),utm_content:clean(v.utm_content,200),utm_term:clean(v.utm_term,200),marketing_consent:v.marketing_consent==='yes',submitted_at:new Date().toISOString(),country:request.cf?.country || ''};
 }
+// Registra o lead na caixa de entrada do escritório, no sistema próprio (portal).
+// Servidor-a-servidor, autenticado pelo segredo compartilhado LEAD_INGEST_SECRET
+// (o MESMO valor precisa estar no worker do portal). O corpo já sai com os nomes
+// de campo que o /api/lead espera (name, email, company, profile, material_category…).
+async function sendToPortal(lead, env) {
+  requireEnv(env, ['LEAD_INGEST_SECRET']);
+  const target = env.PORTAL_LEAD_URL || 'https://sistema.ecobraz.org/api/lead';
+  const r = await fetch(target, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-lead-secret': env.LEAD_INGEST_SECRET },
+    body: JSON.stringify(lead),
+  });
+  const body = await r.text();
+  if (!r.ok) throw new Error(`portal_${r.status}_${body.slice(0, 180)}`);
+  let data; try { data = JSON.parse(body); } catch { data = {}; }
+  if (!data.ok) throw new Error(`portal_rejected_${data.error || 'desconhecido'}`);
+  return { id: data.id };
+}
+// Reserva automática: acionada apenas se o portal falhar.
 async function sendToPloomes(lead, env) {
   requireEnv(env,['PLOOMES_USER_KEY','PLOOMES_PIPELINE_ID']);
   const base=env.PLOOMES_API_URL || 'https://public-api2.ploomes.com';
