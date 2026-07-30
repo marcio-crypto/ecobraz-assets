@@ -3,15 +3,15 @@
      entregar a tela padrão do Ghost sem menu nem CTA. --}}
 <section class="section" style="padding:72px 0 88px">
   <div class="container" style="max-width:720px;text-align:center">
-    <span class="eyebrow">Erro 404</span>
-    <h1 style="margin:10px 0 14px">Esta página não existe mais — mas a coleta continua de pé</h1>
-    <p style="font-size:17px;line-height:1.65;color:var(--muted,#4F6469)">O endereço pode ter mudado na reorganização do site. Escolha um caminho abaixo e siga em frente — leva menos de um minuto.</p>
-    <p lang="en" style="font-size:14px;color:var(--muted,#4F6469)">This page no longer exists. Use the links below to continue.</p>
+    <span class="eyebrow" style="color:var(--verde-escuro,#6FA82B)">Erro 404</span>
+    <h1 style="margin:10px 0 14px;color:var(--petrol,#0E3B43)">Esta página não existe mais — mas a coleta continua de pé</h1>
+    <p style="font-size:17px;line-height:1.65;color:var(--cinza,#5E7268)">O endereço pode ter mudado na reorganização do site. Escolha um caminho abaixo e siga em frente — leva menos de um minuto.</p>
+    <p lang="en" style="font-size:14px;color:var(--cinza,#5E7268)">This page no longer exists. Use the links below to continue.</p>
     <div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-top:26px">
       <a class="button" href="{{@site.url}}/agendamento/" data-track="404_agendar">Agendar uma coleta</a>
-      <a class="button" href="{{@site.url}}/coleta-gratuita/" data-track="404_coleta_gratuita" style="background:#fff;color:var(--teal,#00333B);border:1px solid var(--line,#DFE7E6)">Coleta gratuita (pessoa física)</a>
-      <a class="button" href="{{@site.url}}/para-empresas/" data-track="404_empresas" style="background:#fff;color:var(--teal,#00333B);border:1px solid var(--line,#DFE7E6)">Para empresas</a>
-      <a class="button" href="{{@site.url}}/" data-track="404_home" style="background:#fff;color:var(--teal,#00333B);border:1px solid var(--line,#DFE7E6)">Página inicial</a>
+      <a class="button" href="{{@site.url}}/coleta-gratuita/" data-track="404_coleta_gratuita" style="background:#fff;color:var(--petrol,#0E3B43);border:2px solid var(--line,#E7E3D8);box-shadow:none">Coleta gratuita (pessoa física)</a>
+      <a class="button" href="{{@site.url}}/para-empresas/" data-track="404_empresas" style="background:#fff;color:var(--petrol,#0E3B43);border:2px solid var(--line,#E7E3D8);box-shadow:none">Para empresas</a>
+      <a class="button" href="{{@site.url}}/" data-track="404_home" style="background:#fff;color:var(--petrol,#0E3B43);border:2px solid var(--line,#E7E3D8);box-shadow:none">Página inicial</a>
     </div>
     {{#if @custom.whatsapp_url}}
     <p style="margin-top:22px;font-size:15px"><a href="{{@custom.whatsapp_url}}" rel="noopener" data-track="404_whatsapp">Ou fale com a equipe no WhatsApp →</a></p>
