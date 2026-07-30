@@ -47,11 +47,32 @@ Clusters EN identificados originalmente (espelhar PT):
 - Cada fusão: pilar reescrito 2.500+ palavras absorvendo o melhor dos satélites,
   satélites → 301 para o pilar.
 
-## Onda 3 — Poda final com dados (após 2)
+## Onda 3 — EXECUTADA 30/07 (poda final com dados: 69 pares, 138 posts)
 
-- Reavaliar cauda longa restante contra GSC/Ahrefs atualizados; meta ~100/idioma.
-- Selo "Legal status checked + data" nos mantidos (em lote, por cluster).
-- Auditoria completa (sitemap, hreflang pares de posts, redirects ao vivo).
+- Critérios de manutenção (por par EN↔PT, nunca meio-par): pilar das ondas 1–2 ·
+  presença no top-100 do GSC (dados atualizados no dia) · alvo de redirect ou
+  twin de alvo (para não criar cadeias de 301) · par cujo twin mais ANTIGO é
+  ≥ 06/2026 (idade do par = mínimo entre os dois twins — o lote de julho é
+  majoritariamente tradução PT de posts antigos EN).
+- 101 pares avaliados manualmente → 69 podados / 32 mantidos.
+- 138 regras novas de 301 (total do bloco do painel: **315**); todos os alvos
+  verificados ao vivo antes da colagem; amostra de 8 redirects testada ao vivo
+  após a colagem — todos caindo no alvo correto (incl. twins PT).
+- Despublicação gateada na colagem, como sempre: 138/138 → rascunho
+  (run com sucesso; o script falha na primeira ocorrência de erro).
+- Blog: 326 → **188 posts (~94/idioma)**. pares-idioma.json: 213 → 96 pares.
+- Selo "Legal status checked + data" em lote: **adiado deliberadamente** —
+  carimbar data nova sem reverificar de fato o status legal violaria a regra
+  de transparência. Selos existentes (10 July 2026) preservados intactos.
+  Fica como tarefa futura com verificação legal real, cluster a cluster.
+
+## Lote 7 — Auditoria final EXECUTADA 30/07
+
+- Sitemap: 238 URLs únicas, 238/238 checadas ao vivo — 0 não-200, 0 noindex,
+  0 slugs mortos, 0 sem canonical, 0 sem hreflang, 0 pares descasados.
+  Distribuição de lang: en 120 · pt-BR 112 · it 6. RESULTADO: sitemap limpo.
+- Pipeline de leads: /health ok + 2 POSTs de teste (JSON intake e FormData
+  magnet) com {"ok":true,"email":"enviado"} — leads chegam marcados TESTE.
 
 ## Réguas
 
