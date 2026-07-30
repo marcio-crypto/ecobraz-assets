@@ -145,10 +145,33 @@ async function tratar(request, env) {
 
     msg.addMessage({ contentType: 'text/html', data: html });
 
+    // 1) Cofre primeiro: o lead é gravado no KV antes de qualquer envio.
+    //    Se o KV falhar E o e-mail falhar, aí sim reportamos erro.
+    let guardado = false;
+    if (env.LEADS) {
+      try {
+        const chave = `lead:${new Date().toISOString()}:${crypto.randomUUID().slice(0, 8)}`;
+        await env.LEADS.put(chave, JSON.stringify({
+          lead_source: leadSource, idioma, nome, email, empresa, cargo, pais, tipo, prazo, mensagem,
+          anexo: anexo ? { nome: anexo.name, kb: Math.round(anexo.size / 1024) } : null,
+          quando: new Date().toISOString(),
+        }));
+        guardado = true;
+      } catch (e) {}
+    }
+
+    // 2) Notificação por e-mail (Email Routing). Não-fatal se o lead já está no cofre.
+    let emailOk = false;
+    let emailErro = '';
     try {
       await env.SEB.send(new EmailMessage(de, para, msg.asRaw()));
+      emailOk = true;
     } catch (e) {
-      return json({ ok: false, erro: 'envio', detalhe: String(e && e.message || e).slice(0, 300) }, 502, origin);
+      emailErro = String(e && e.message || e).slice(0, 300);
     }
-    return json({ ok: true }, 200, origin);
+
+    if (!guardado && !emailOk) {
+      return json({ ok: false, erro: 'envio', detalhe: emailErro }, 502, origin);
+    }
+    return json({ ok: true, email: emailOk ? 'enviado' : 'pendente' }, 200, origin);
 }
