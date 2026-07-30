@@ -1,0 +1,38 @@
+name: Ferramenta — testar formulário (POST no Worker)
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'URL do Worker (ex.: https://villanova-contato.xxx.workers.dev)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  testar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: GET /health
+        run: |
+          curl -sS --max-time 20 "${{ inputs.url }}/health" || echo "FALHA de conexão"
+          echo
+      - name: POST de teste (JSON, marcado como TESTE)
+        run: |
+          curl -sS --max-time 30 -X POST "${{ inputs.url }}" \
+            -H 'Content-Type: application/json' \
+            -H 'Origin: https://www.villanovaesg.com' \
+            -d '{"nome":"Teste Automático","email":"marcio@ecobraz.org.br","empresa":"TESTE — ignorar","cargo":"QA","pais":"Brasil","tipo":"Teste do formulário","prazo":"n/a","mensagem":"Envio de teste do worker villanova-contato. Pode ignorar este e-mail.","idioma":"pt","lead_source":"intake"}'
+          echo
+      - name: POST de teste (FormData, simulando magnet)
+        run: |
+          curl -sS --max-time 30 -X POST "${{ inputs.url }}" \
+            -H 'Origin: https://www.villanovaesg.com' \
+            -F 'nome=Teste Automático' \
+            -F 'email=marcio@ecobraz.org.br' \
+            -F 'empresa=TESTE — ignorar' \
+            -F 'lead_source=magnet-semm' \
+            -F 'idioma=pt'
+          echo
