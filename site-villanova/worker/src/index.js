@@ -43,6 +43,19 @@ const campo = (v, max) => String(v || '').trim().slice(0, max);
 
 export default {
   async fetch(request, env) {
+    try {
+      return await tratar(request, env);
+    } catch (e) {
+      // Nunca estoura 1101 para o usuário — devolve o erro de forma legível.
+      return new Response(JSON.stringify({ ok: false, erro: 'excecao', detalhe: String(e && e.message || e).slice(0, 300) }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json', ...cors(request.headers.get('Origin') || '') },
+      });
+    }
+  },
+};
+
+async function tratar(request, env) {
     const origin = request.headers.get('Origin') || '';
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(origin) });
 
@@ -136,5 +149,4 @@ export default {
       return json({ ok: false, erro: 'envio' }, 502, origin);
     }
     return json({ ok: true }, 200, origin);
-  },
-};
+}
