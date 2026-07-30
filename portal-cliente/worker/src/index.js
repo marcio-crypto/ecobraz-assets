@@ -40,6 +40,7 @@ import { gerarPixCopiaECola, pixConfig, paginaPix } from './pix.js';
 import { paginaColetaExpressa } from './coleta-expressa.js';
 import { enviarSMS, smsConfigurado } from './sms.js';
 import { whatsappConfigurado, templateColeta, enviarWhatsAppTemplate } from './whatsapp.js';
+import { paginaAcompanhar, paginaAcompanharErro } from './acompanhar.js';
 import { registrarFalha, receberErroCliente, listarFalhas } from './monitor.js';
 import { segmentoDoCliente, definirSegmento, SEGMENTOS, fluxoDeVendas, ultimosPedidos, paginaPagamentos } from './premium.js';
 import { MANUAL_CLIENTE_PDF_B64 } from './manual-pdf.js';
@@ -66,7 +67,7 @@ import { amostraContatosPloomes, paginaAmostraContatos, importarLoteContatos, es
 import { importarLoteAnexos, importarLoteAnexosContatos, completarAnexos, importarAnexosJanela, reprocessarFalhas, importarLoteDocumentos, recuperarDocumentos, estatisticasArquivos, paginaMigrarArquivos, diagnosticoAnexos, paginaDiagAnexos } from './ploomes-arquivos.js';
 import { fiscalPermitido, nomeFiscal, listarNotas, lerNota, importarLote, vincularNota, sugerirVinculoSync, paginaFiscalLogin, paginaFiscalHome, paginaFiscalResultado, paginaFiscalNota } from './fiscal.js';
 import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, emailsDoCliente, reindexarEmailsClientes, backfillEnderecos, paginaManutencao, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, clienteDeLead, arquivosDoCliente, paginaLeads, paginaLeadDetalhe, paginaInicio, listarClientesD1, contagensClientesD1, lerClienteD1, negociosDoCliente, espelharClienteD1, sincronizarKVparaD1, lerNegocioDetalheD1, paginaOSDetalhe, curarContatosKV, classificarPedido, atualizarIndexLead } from './cadastro.js';
-import { listarColetasOS, lerColetaOS, criarColetaOS, atualizarStatusOS, atualizarColetaOS, anexarTelemetriaOS, registrarAnexoColeta, removerAnexoColeta, paginaColetasLista, paginaGerarColeta, paginaEditarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga, definirCobrancaOS, marcarCobrancaPagaOS, definirMtrOS } from './coletas.js';
+import { listarColetasOS, lerColetaOS, seloOS, criarColetaOS, atualizarStatusOS, atualizarColetaOS, anexarTelemetriaOS, registrarAnexoColeta, removerAnexoColeta, paginaColetasLista, paginaGerarColeta, paginaEditarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga, definirCobrancaOS, marcarCobrancaPagaOS, definirMtrOS } from './coletas.js';
 import { listarVeiculos, lerVeiculo, salvarVeiculo, paginaFrota, paginaVeiculoForm, lerJornadaAtiva, abrirJornada, fecharJornada, registrarAbastecimento, tagColetaComVeiculo, servirFotoJornada, bannerJornada, paginaAbrirDia, paginaFecharDia, paginaAbastecer, placaDaColeta } from './frota.js';
 import { carregarEquipeNoEnv, listarUsuarios, lerUsuario, salvarUsuario, importarUsuarios, paginaEquipe, paginaUsuarioForm, paginaEquipeImportar } from './equipe.js';
 import { agentesDe } from './agente.js';
@@ -1349,6 +1350,35 @@ export default {
         let veiculos = []; try { veiculos = await listarVeiculos(env); } catch { /* ok */ }
         return html(paginaGerarColeta(escritorio, cli, agentes, patrocinadores, veiculos));
       }
+      // Página PÚBLICA de acompanhamento (link do WhatsApp): token = selo HMAC da OS.
+      if (pathname === '/acompanhar' && request.method === 'GET') {
+        const cid = String(url.searchParams.get('c') || '').replace(/[^a-zA-Z0-9_-]/g, '');
+        const tok = String(url.searchParams.get('t') || '');
+        const osA = cid ? await lerColetaOS(env, cid) : null;
+        if (!osA) return html(paginaAcompanharErro('Coleta não encontrada'), 404);
+        if (!tok || tok !== await seloOS(cid, env)) return html(paginaAcompanharErro('Link inválido'), 403);
+        const concluida = osA.status === 'concluida' || osA.status === 'cancelada';
+        let estadoA = {}; try { estadoA = await lerEstadoColeta(env, cid); } catch { estadoA = {}; }
+        const chegou = !!(estadoA && estadoA.checkin);
+        let pos = null;
+        if (!concluida && osA.veiculoPlaca) {
+          try {
+            const ck = `rastreio:poswa:${String(osA.veiculoPlaca).replace(/[^A-Za-z0-9]/g, '')}`;
+            const cache = env.PORTAL_KV ? await env.PORTAL_KV.get(ck) : null;
+            if (cache) pos = JSON.parse(cache);
+            else { const p = await posicaoDoVeiculo(env, osA.veiculoPlaca); if (p && p.ok && p.lat != null && p.lng != null) { pos = { lat: p.lat, lng: p.lng, em: p.atualizadoEm || null }; if (env.PORTAL_KV) await env.PORTAL_KV.put(ck, JSON.stringify(pos), { expirationTtl: 30 }); } }
+          } catch { pos = null; }
+        }
+        let km = null;
+        if (pos && !chegou) {
+          try {
+            const dest = await coordDoEndereco(env, osA.endereco);
+            if (dest) { const rad = Math.PI / 180, la1 = Number(pos.lat) * rad, la2 = dest.lat * rad, dLa = (dest.lat - Number(pos.lat)) * rad, dLo = (dest.lon - Number(pos.lng)) * rad; const x = Math.sin(dLa / 2) ** 2 + Math.cos(la1) * Math.cos(la2) * Math.sin(dLo / 2) ** 2; const kmv = 6371 * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x)); if (isFinite(kmv)) km = kmv; }
+          } catch { km = null; }
+        }
+        const statusA = concluida ? 'concluida' : (chegou ? 'chegou' : (pos ? 'a_caminho' : 'sem_posicao'));
+        return html(paginaAcompanhar({ numero: osA.numero, cliente: osA.clienteNome, status: statusA, pos, km, atualizadoEm: pos && pos.em }));
+      }
       if (pathname === '/coletas/os' && request.method === 'GET') {
         if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
         const os = await lerColetaOS(env, url.searchParams.get('id') || '');
@@ -1726,7 +1756,12 @@ export default {
               const cli = col.clienteId ? await lerCliente(env, col.clienteId) : null;
               const emailCli = (cli && (cli.email || (Array.isArray(cli.contatos) && cli.contatos[0] && cli.contatos[0].email))) || '';
               const foneCli = (cli && (cli.fone || cli.telefone || cli.celular || (Array.isArray(cli.contatos) && cli.contatos[0] && (cli.contatos[0].fone || cli.contatos[0].telefone)))) || col.clienteFone || col.telefone || '';
-              if (emailCli || foneCli) { const av = await avisarColeta(env, { email: emailCli, telefone: foneCli, nome: col.clienteNome }, 'a_caminho'); if (av.via !== 'nenhum' && env.PORTAL_KV) await env.PORTAL_KV.put(chave, JSON.stringify({ via: av.via, em: new Date().toISOString() }), { expirationTtl: 60 * 60 * 24 * 90 }); }
+              if (emailCli || foneCli) {
+                const baseWA = String(env.PORTAL_BASE_URL || env.PORTAL_URL || url.origin).replace(/\/+$/, '');
+                const linkRota = `${baseWA}/acompanhar?c=${encodeURIComponent(col.id)}&t=${await seloOS(col.id, env)}`;
+                const av = await avisarColeta(env, { email: emailCli, telefone: foneCli, nome: col.clienteNome, linkRota }, 'a_caminho');
+                if (av.via !== 'nenhum' && env.PORTAL_KV) await env.PORTAL_KV.put(chave, JSON.stringify({ via: av.via, em: new Date().toISOString() }), { expirationTtl: 60 * 60 * 24 * 90 });
+              }
             }
           }
         } catch (error) { console.error('acaminho_email_falhou', safeError(error)); }
@@ -3539,8 +3574,11 @@ async function avisarColeta(env, alvo, tipo) {
   // 1) WhatsApp (preferido) — mensagem iniciada pela empresa exige template aprovado (Gupshup).
   if (whatsappConfigurado(env) && telefone) {
     const tpl = templateColeta(env, tipo);
-    if (tpl) {
-      const params = [String(nome || '').split(/\s+/)[0] || 'cliente'];
+    const primeiro = String(nome || '').split(/\s+/)[0] || 'cliente';
+    const link = (alvo && alvo.linkRota) || '';
+    const podeWA = tipo !== 'a_caminho' || !!link; // o template "a caminho" tem 2 variáveis (nome + link)
+    if (tpl && podeWA) {
+      const params = tipo === 'a_caminho' ? [primeiro, link] : [primeiro];
       try { const r = await enviarWhatsAppTemplate(env, telefone, tpl, params); if (r && r.ok) return { via: 'whatsapp' }; } catch { /* cai em SMS/e-mail */ }
     }
   }
