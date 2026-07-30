@@ -848,6 +848,9 @@ export default {
         const tA = !!templateColeta(env, 'a_caminho'), tC = !!templateColeta(env, 'chegou');
         const chk = (b) => b ? '✅' : '❌';
         const okTudo = cfg && tA && tC;
+        const keyLen = String(env.GUPSHUP_API_KEY || '').trim().length;
+        const srcNum = String(env.GUPSHUP_SOURCE || '').replace(/\D/g, '');
+        const appNm = String(env.GUPSHUP_APP || '').trim();
         const page = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Testar WhatsApp — Ecobraz</title>
 <style>body{margin:0;font-family:Montserrat,'Segoe UI',Arial,Helvetica,sans-serif;background:#F2F6F4;color:#10262B}.wrap{max-width:520px;margin:0 auto;padding:22px 18px 48px}.card{background:#fff;border:1px solid #E4EBE9;border-radius:14px;padding:20px;margin-bottom:14px}input,select{width:100%;box-sizing:border-box;border:1px solid #DDE1E6;border-radius:10px;padding:12px;font-size:15px;margin-top:6px;font-family:inherit}label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#7c8a87}.btn{background:#25D366;color:#083b23;border:none;border-radius:11px;padding:14px 18px;font-size:15px;font-weight:800;cursor:pointer;width:100%;margin-top:16px}.st{font-size:14px;line-height:2}</style></head>
 <body><div class="wrap">

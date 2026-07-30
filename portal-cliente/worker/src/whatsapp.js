@@ -15,7 +15,9 @@
 //
 // SEGURANÇA: nunca loga telefone nem chave — só o status HTTP.
 
-const chaveGupshup = (env) => env.GUPSHUP_API_KEY || '';
+// .trim() remove espaços/quebras de linha invisíveis que às vezes entram ao colar a
+// chave no cofre — causa comum de 401 "Portal User Not Found With APIKey".
+const chaveGupshup = (env) => String(env.GUPSHUP_API_KEY || '').trim();
 
 // WhatsApp só é considerado ligado com chave + número de origem + nome do app.
 export const whatsappConfigurado = (env) => !!(chaveGupshup(env) && env.GUPSHUP_SOURCE && env.GUPSHUP_APP);
@@ -40,29 +42,32 @@ export function telWhatsApp(tel) {
 
 // Envia um template aprovado pelo Gupshup. params = array de strings (variáveis {{1}}, {{2}}...).
 // Devolve { ok, motivo }. Nunca lança — o chamador decide o fallback (SMS/e-mail).
+// O ECOBRAZAPP é gerenciado por um PARCEIRO (ISV Sona Telecom / SONAX). Para app com
+// parceiro, o envio é pela PARTNER API do Gupshup: endpoint por App ID + header
+// Authorization com a chave (não o header apikey do self-serve). O App ID não é segredo
+// (é um identificador); fica com um padrão embutido e pode ser trocado por GUPSHUP_APP_ID.
+const APP_ID_PADRAO = '01a39217-d054-491f-8f3a-553fb4f74ce4';
 export async function enviarWhatsAppTemplate(env, telefone, templateId, params) {
   const key = chaveGupshup(env);
+  const appId = String(env.GUPSHUP_APP_ID || APP_ID_PADRAO).trim();
   const source = String(env.GUPSHUP_SOURCE || '').replace(/\D/g, '');
-  const appName = String(env.GUPSHUP_APP || '').trim();
   const to = telWhatsApp(telefone);
-  if (!key || !source || !appName) return { ok: false, motivo: 'nao_configurado' };
+  if (!key || !appId) return { ok: false, motivo: 'nao_configurado' };
   if (!templateId) return { ok: false, motivo: 'sem_template' };
   if (!to) return { ok: false, motivo: 'telefone_invalido' };
   const body = new URLSearchParams();
-  body.set('channel', 'whatsapp');
-  body.set('source', source);
   body.set('destination', to);
-  body.set('src.name', appName);
+  if (source) body.set('source', source);
   body.set('template', JSON.stringify({ id: templateId, params: (params || []).map((p) => String(p == null ? '' : p)) }));
   try {
-    const r = await fetch('https://api.gupshup.io/sm/api/v1/template/msg', {
+    const r = await fetch(`https://partner.gupshup.io/partner/app/${encodeURIComponent(appId)}/template/msg`, {
       method: 'POST',
-      headers: { apikey: key, 'Content-Type': 'application/x-www-form-urlencoded', accept: 'application/json' },
+      headers: { Authorization: key, 'Content-Type': 'application/x-www-form-urlencoded', accept: 'application/json' },
       body: body.toString(),
       signal: AbortSignal.timeout(8000),
     });
     if (r.ok) return { ok: true };
-    let detalhe = ''; try { detalhe = String(await r.text() || '').slice(0, 220); } catch { detalhe = ''; }
+    let detalhe = ''; try { detalhe = String(await r.text() || '').slice(0, 260); } catch { detalhe = ''; }
     console.error('gupshup_wa_status', r.status); // só o status — nunca telefone/chave
     return { ok: false, motivo: 'http_' + r.status, detalhe };
   } catch (e) { console.error('gupshup_wa_erro', String((e && e.name) || 'erro')); return { ok: false, motivo: 'excecao' }; }
