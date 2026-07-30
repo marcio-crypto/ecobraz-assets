@@ -24,10 +24,11 @@ const api = async (method, path, body) => {
 };
 const espera = (ms) => new Promise((res) => setTimeout(res, ms));
 
-const bloco = (en, pt) => {
+const bloco = (en, pt, it) => {
   const urlEn = en === '' ? `${BASE}/` : `${BASE}/${en}/`;
   const urlPt = `${BASE}/${pt}/`;
-  return `${INI}\n<link rel="alternate" hreflang="en" href="${urlEn}">\n<link rel="alternate" hreflang="pt-BR" href="${urlPt}">\n<link rel="alternate" hreflang="x-default" href="${urlEn}">\n${FIM}`;
+  const linhaIt = it ? `\n<link rel="alternate" hreflang="it" href="${BASE}/${it}/">` : '';
+  return `${INI}\n<link rel="alternate" hreflang="en" href="${urlEn}">\n<link rel="alternate" hreflang="pt-BR" href="${urlPt}">${linhaIt}\n<link rel="alternate" hreflang="x-default" href="${urlEn}">\n${FIM}`;
 };
 
 const aplicar = async (tipo, slug, blocoNovo) => {
@@ -77,9 +78,10 @@ const limparHreflang = async (slug) => {
 const pares = JSON.parse(await fs.readFile('site-villanova/content/pares-idioma.json', 'utf8'));
 let aplicados = 0;
 for (const par of pares.pages) {
-  const b = bloco(par.en, par.pt);
+  const b = bloco(par.en, par.pt, par.it);
   if (par.en !== '') aplicados += (await aplicar('pages', par.en, b)) ? 1 : 0;
   aplicados += (await aplicar('pages', par.pt, b)) ? 1 : 0;
+  if (par.it) aplicados += (await aplicar('pages', par.it, b)) ? 1 : 0;
 }
 for (const par of pares.posts || []) {
   const b = bloco(par.en, par.pt);
