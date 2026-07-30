@@ -44,9 +44,23 @@ tema no código (47 templates, 36 landings, formulário, worker), dados reais
 4. **Sistema grátis para TODOS os clientes, sem contrato, sem exclusividade,
    sem condição — incluindo pessoa física.** Login com o e-mail cadastrado.
    "Sem pegadinhas, sem segredos." Vira o coração da mensagem: nenhum
-   concorrente oferece isso. Premissa de texto (a confirmar com o Marcio):
-   a PROVA é grátis para todos; o TRABALHO PRONTO (relatórios ESG emitidos,
-   módulos de carbono, consultoria Villanova) continua pago.
+   concorrente oferece isso.
+
+### Modelo comercial confirmado (Marcio, 30/07)
+
+- **Grátis**: coleta padrão (prazo de 1 a 7 dias úteis) · sistema/portal
+  completo para todo cliente (login com e-mail cadastrado) · todo o resto
+  que não estiver listado abaixo.
+- **Pago, à parte**: coleta expressa em até 24h (R$ 55) · laudos
+  específicos · sanitização de dados com laudo · descarte de equipamentos
+  médicos e laboratoriais · programa Adote um Bairro (para quem contratar) ·
+  relatórios ESG.
+- **Não retiramos**: existe lista de materiais fora do escopo (manter
+  visível e clara no site, como já é hoje).
+- Exibição de preços no site: regra geral segue "sem preço público"
+  (régua 1). Único caso possível de exceção, a decidir pelo Marcio: o
+  valor da coleta expressa (taxa operacional B2C, tipo frete). Sem decisão,
+  fica fora do site.
 5. **EN por transcriação, não tradução literal.** Narrativa: "operação no
    Brasil, serviço vendido e realizado no Brasil, documentação válida para
    auditoria no mundo todo" — na língua de CSRD/Scope 3/due diligence de
