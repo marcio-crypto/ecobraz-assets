@@ -1,0 +1,188 @@
+/* ============================================================
+   Ecobraz v2 — "Abraço Verde" (VERSÃO B, aprovada em 30/07/2026)
+   Fonte da verdade: site-ghost/design/previa-v2B.html + PADRAO-V2.md
+   Este arquivo carrega POR ÚLTIMO no default.hbs e vence a cascata:
+   tokens, tipografia (Nunito títulos / Inter texto), botões-pílula,
+   chrome global (header/footer) e todas as classes da nova home.
+   Lote 2: chrome global + home. Landings/blog vêm nos próximos lotes.
+   ============================================================ */
+
+:root{
+  --verde:#8DC63F;
+  --verde-escuro:#6FA82B;
+  --petrol:#0E3B43;
+  --ink:#1E3A34;
+  --cinza:#5E7268;
+  --creme:#FBF8F1;
+  --sage:#F0F5E6;
+  --line:#E7E3D8;
+  --v2-r:22px;
+}
+
+/* ---------- Tipografia global ----------
+   Montserrat saiu do carregamento; onde o CSS antigo ainda a cita,
+   o fallback cai em Inter/Arial sem quebrar nada. */
+body{font-family:'Inter','Segoe UI',Arial,sans-serif;color:var(--ink)}
+h1,h2,h3,h4,h5,h6{font-family:'Nunito','Inter',Arial,sans-serif;font-weight:800}
+.home-template{background:var(--creme)}
+
+/* ---------- Botões: SEMPRE pílula (regra do padrão) ---------- */
+.button{
+  border-radius:99px;
+  background:var(--verde);
+  color:#fff;
+  font-family:'Nunito','Inter',Arial,sans-serif;
+  font-weight:800;
+  padding:0 28px;
+  box-shadow:0 8px 22px rgba(141,198,63,.35);
+  transition:.18s;
+}
+.button:hover{background:var(--verde-escuro);color:#fff;transform:translateY(-2px)}
+.button-small{padding:0 22px}
+/* Variantes que o pill verde não pode engolir (vêm depois na cascata): */
+.button-secondary{background:transparent;color:#fff;border:2px solid rgba(255,255,255,.55);box-shadow:none}
+.button-secondary:hover{background:#fff;color:var(--petrol);transform:none}
+.button-light{background:#fff;color:var(--petrol);box-shadow:none}
+.button-light:hover{background:var(--sage);color:var(--petrol)}
+.consent-decline{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.4);box-shadow:none}
+.consent-decline:hover{background:transparent;color:var(--verde);border-color:var(--verde);transform:none}
+/* Botão "suave" (secundário claro) do padrão v2B: */
+.button.v2-suave{background:#fff;color:var(--petrol);border:2px solid var(--line);box-shadow:none}
+.button.v2-suave:hover{background:var(--sage);border-color:var(--verde);color:var(--petrol)}
+
+/* ---------- Header (barra creme translúcida) ---------- */
+.site-header{background:rgba(251,248,241,.95);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.header-cta{white-space:nowrap}
+.primary-nav a{font-size:14.5px;font-weight:600;color:var(--ink);white-space:nowrap}
+.primary-nav a:hover{color:var(--verde-escuro)}
+.nav-toggle span:not(.sr-only){background:var(--petrol)}
+.lang-switch{border-radius:99px;border:1.5px solid var(--line);color:var(--petrol);opacity:1;padding:5px 11px}
+.lang-switch:hover{border-color:var(--verde);color:var(--verde-escuro)}
+.portal-link{border-radius:99px;border:1.5px solid var(--line);color:var(--petrol)}
+.portal-link:hover{border-color:var(--verde);color:var(--verde-escuro)}
+@media (max-width:900px){
+  .primary-nav{background:var(--creme);border-bottom:1px solid var(--line)}
+}
+
+/* ---------- Footer (petrol, topo arredondado 56px) ---------- */
+.site-footer{background:var(--petrol);color:#9DB8B4;border-radius:56px 56px 0 0;padding:64px 0 26px}
+.footer-grid h2{font-family:'Nunito','Inter',Arial,sans-serif;font-weight:800;font-size:14.5px;letter-spacing:0;text-transform:none;color:#fff}
+.footer-grid a{color:#9DB8B4}
+.footer-grid a:hover{color:#fff}
+.footer-grid p{color:#9DB8B4}
+.footer-bottom{border-top:1px solid rgba(255,255,255,.12);color:#8FA9A5}
+
+/* ============================================================
+   HOME v2B
+   ============================================================ */
+
+.v2-tag{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--verde-escuro);background:var(--sage);border-radius:99px;padding:8px 18px;margin-bottom:18px}
+.v2-tag::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--verde)}
+.v2-dark .v2-tag{background:rgba(141,198,63,.16);color:#C8E89C}
+
+/* HERO orgânico */
+.v2-hero{padding:76px 0 70px;position:relative;overflow:hidden}
+.v2-hero::before{content:'';position:absolute;right:-200px;top:-140px;width:520px;height:520px;background:var(--sage);opacity:.8;border-radius:47% 53% 61% 39%/44% 59% 41% 56%}
+.v2-hero-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:56px;align-items:center;position:relative}
+.v2-hero h1{font-size:clamp(38px,5.4vw,60px);line-height:1.12;color:var(--petrol);margin:0}
+.v2-hero h1 em{font-style:normal;color:var(--verde-escuro)}
+.v2-sub{font-size:18.5px;line-height:1.6;color:var(--cinza);margin:20px 0 32px;max-width:480px}
+.v2-hero-ctas{display:flex;gap:12px;flex-wrap:wrap}
+.v2-hero-foto{position:relative}
+.v2-blob{aspect-ratio:4/3.4;border-radius:44% 56% 52% 48%/48% 44% 56% 52%;background:linear-gradient(135deg,#CDE3AC,#A9CD73 60%,#8DC63F);box-shadow:0 24px 56px rgba(141,198,63,.28)}
+.v2-selo{position:absolute;bottom:18px;left:-24px;max-width:320px;background:#fff;border-radius:18px;box-shadow:0 14px 40px rgba(14,59,67,.14);padding:14px 20px;font-size:13px;font-weight:700;color:var(--petrol);line-height:1.5}
+.v2-selo b{color:#E8A13C;font-size:16px}
+.v2-selo span{display:block;font-weight:600;color:var(--cinza);margin-top:2px}
+
+/* Prova em pílulas */
+.v2-prova{display:flex;gap:12px;flex-wrap:wrap;margin-top:34px}
+.v2-pill{background:#fff;border:1px solid var(--line);border-radius:99px;padding:9px 18px;font-size:13px;font-weight:700;color:var(--petrol);text-decoration:none}
+.v2-pill i{font-style:normal;color:var(--verde-escuro)}
+a.v2-pill:hover{border-color:var(--verde)}
+
+/* Seções */
+.v2-sec{padding:84px 0}
+.v2-branco{background:#fff;border-radius:56px 56px 0 0}
+.v2-sage{background:var(--sage)}
+.v2-sec h2{font-size:clamp(28px,3.6vw,40px);line-height:1.15;color:var(--petrol);margin:0}
+.v2-sec p{color:var(--cinza)}
+/* Faixa escura (reservada ao sistema) — DEPOIS das regras genéricas de .v2-sec,
+   para vencer o empate de especificidade na cascata: */
+.v2-dark{background:var(--petrol);color:#fff;border-radius:56px 56px 0 0}
+.v2-dark h2{color:#fff}
+.v2-dark p{color:#AECAC6}
+
+/* Portas */
+.v2-portas{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:44px}
+.v2-porta{display:block;background:var(--creme);border-radius:var(--v2-r);padding:28px 24px;text-decoration:none;transition:.18s;border:2px solid transparent}
+.v2-porta:hover{transform:translateY(-6px);border-color:var(--verde);background:#fff;box-shadow:0 18px 44px rgba(141,198,63,.2)}
+.v2-porta .ic{width:56px;height:56px;border-radius:18px;background:var(--sage);display:grid;place-items:center;margin-bottom:16px}
+.v2-porta .ic svg{width:28px;height:28px;stroke:var(--verde-escuro);fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.v2-porta h3{font-size:18px;margin:0 0 8px;color:var(--petrol)}
+.v2-porta p{font-size:13.5px;line-height:1.55;margin:0 0 14px}
+.v2-porta em{font-style:normal;font-family:'Nunito','Inter',Arial,sans-serif;font-weight:800;color:var(--verde-escuro);font-size:14px}
+
+/* Sistema (faixa escura reservada ao produto-estrela) */
+.v2-sist{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center}
+.v2-gratis{display:inline-flex;gap:10px;align-items:center;background:rgba(141,198,63,.18);color:#C8E89C;font-family:'Nunito','Inter',Arial,sans-serif;font-weight:800;font-size:14px;border-radius:99px;padding:10px 20px;margin-bottom:20px}
+.v2-gratis::before{content:'✓';color:var(--verde);font-weight:800}
+.v2-check{display:flex;gap:14px;margin:16px 0;align-items:flex-start}
+.v2-check .c{flex:0 0 26px;height:26px;border-radius:50%;background:var(--verde);display:grid;place-items:center;color:#fff;font-weight:800;font-size:13px;margin-top:2px}
+.v2-check b{color:#fff;font-size:16px}
+.v2-check p{font-size:14px;margin:2px 0 0}
+.v2-tela{background:#fff;border-radius:26px;padding:14px;box-shadow:0 24px 64px rgba(0,0,0,.3);transform:rotate(1deg)}
+.v2-tela img{display:block;width:100%;height:auto;border-radius:16px}
+.v2-tela figcaption{font-size:12px;color:var(--cinza);padding:10px 6px 2px;text-align:center}
+
+/* Trilha em 4 passos */
+.v2-trilha{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;margin-top:48px}
+.v2-tp{background:#fff;border-radius:var(--v2-r);padding:26px 24px;box-shadow:0 10px 30px rgba(14,59,67,.06)}
+.v2-tp .dot{width:38px;height:38px;border-radius:50%;background:var(--verde);color:#fff;font-family:'Nunito','Inter',Arial,sans-serif;font-weight:800;display:grid;place-items:center;font-size:16px;margin-bottom:14px}
+.v2-tp h3{font-size:16.5px;margin:0 0 6px;color:var(--petrol)}
+.v2-tp p{font-size:13.5px;margin:0}
+
+/* B2B (as 3 perguntas do auditor) */
+.v2-conta{max-width:760px}
+.v2-cartas{display:grid;gap:14px;margin-top:26px}
+.v2-carta{background:#fff;border-radius:18px;padding:18px 22px;font-weight:600;color:var(--ink);font-size:15.5px;box-shadow:0 8px 24px rgba(14,59,67,.06);border-left:5px solid var(--verde)}
+
+/* Depoimento */
+.v2-depo{background:#fff;border-radius:30px;box-shadow:0 16px 50px rgba(14,59,67,.08);padding:44px;max-width:720px;margin:0 auto;text-align:center;position:relative}
+.v2-depo::before{content:'\201C';font-family:'Nunito','Inter',Arial,sans-serif;font-size:110px;font-weight:800;color:var(--sage);position:absolute;top:-12px;left:28px;line-height:1}
+.v2-depo .stars{color:#E8A13C;font-size:20px;letter-spacing:3px;margin-bottom:16px}
+.v2-depo blockquote{font-family:'Nunito','Inter',Arial,sans-serif;font-weight:700;font-size:20px;color:var(--petrol);line-height:1.5;margin:0}
+.v2-depo cite{display:block;margin-top:16px;font-style:normal;font-size:13.5px;color:var(--cinza)}
+
+/* FAQ — "sem letra miúda" */
+.v2-faq{max-width:760px;margin:26px auto 0}
+.v2-faq details{background:#fff;border:1px solid var(--line);border-radius:var(--v2-r);padding:20px 24px;margin-bottom:12px}
+.v2-faq summary{font-family:'Nunito','Inter',Arial,sans-serif;font-weight:800;color:var(--petrol);cursor:pointer;font-size:16px;list-style:none;display:flex;justify-content:space-between;gap:16px;align-items:baseline}
+.v2-faq summary::-webkit-details-marker{display:none}
+.v2-faq summary::after{content:'+';font-size:20px;color:var(--verde-escuro);font-weight:600}
+.v2-faq details[open] summary::after{content:'–'}
+.v2-faq details p{margin:12px 0 0;font-size:15px}
+.v2-faq a{color:var(--verde-escuro);text-decoration:underline}
+
+/* CTA final */
+.v2-cta-final{text-align:center;padding:96px 0;position:relative;overflow:hidden}
+.v2-cta-final::before{content:'';position:absolute;left:-160px;bottom:-200px;width:380px;height:380px;background:var(--sage);opacity:.8;border-radius:53% 47% 39% 61%/56% 41% 59% 44%}
+.v2-cta-final h2{font-size:clamp(32px,4.6vw,50px);color:var(--petrol);position:relative;margin:0}
+.v2-cta-final p{color:var(--cinza);margin:16px auto 32px;max-width:460px;position:relative}
+.v2-cta-final .v2-hero-ctas{justify-content:center;position:relative}
+
+/* Responsivo */
+@media (max-width:920px){
+  .v2-hero-grid,.v2-sist{grid-template-columns:1fr}
+  .v2-portas,.v2-trilha{grid-template-columns:1fr 1fr}
+  .v2-selo{left:8px}
+  .v2-tela{transform:none}
+}
+@media (max-width:560px){
+  .v2-hero{padding:52px 0 56px}
+  .v2-sec{padding:64px 0}
+  .v2-portas,.v2-trilha{grid-template-columns:1fr}
+  .v2-depo{padding:32px 22px}
+}
+@media (prefers-reduced-motion:reduce){
+  .button,.v2-porta{transition:none!important;transform:none!important}
+}

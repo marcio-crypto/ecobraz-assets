@@ -3,17 +3,19 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#00333B">
+    <meta name="theme-color" content="#0E3B43">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    {{! CSS das fontes fora do caminho crítico: com display=swap o texto aparece na fonte de sistema e troca quando a Montserrat chega. }}
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-    <noscript><link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet"></noscript>
+    {{! CSS das fontes fora do caminho crítico: com display=swap o texto aparece na fonte de sistema e troca quando Nunito/Inter chegam. Padrão v2B "Abraço Verde": Nunito nos títulos, Inter no texto. }}
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
     <link rel="stylesheet" href="{{asset "css/screen.css"}}">
     <link rel="stylesheet" href="{{asset "css/lang.css"}}">
     <link rel="stylesheet" href="{{asset "css/materials.css"}}">
     <link rel="stylesheet" href="{{asset "css/flow.css"}}">
     <link rel="stylesheet" href="{{asset "css/post.css"}}">
+    {{! v2b.css SEMPRE por último: implementa o padrão aprovado e vence a cascata. }}
+    <link rel="stylesheet" href="{{asset "css/v2b.css"}}">
     {{#is "home"}}
     <title>Coleta e descarte de lixo eletrônico | Ecobraz</title>
     {{else}}
