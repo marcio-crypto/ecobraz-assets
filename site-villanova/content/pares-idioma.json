@@ -28,19 +28,23 @@
   },
   {
    "en": "supplier-evidence-risk-intake",
-   "pt": "solicitar-analise"
+   "pt": "solicitar-analise",
+   "it": "richiedi-analisi"
   },
   {
    "en": "cbam-evidence-review-brazilian-suppliers",
-   "pt": "revisao-evidencias-cbam"
+   "pt": "revisao-evidencias-cbam",
+   "it": "revisione-evidenze-cbam"
   },
   {
    "en": "eudr-evidence-readiness-review",
-   "pt": "revisao-prontidao-evidencias-eudr"
+   "pt": "revisao-prontidao-evidencias-eudr",
+   "it": "revisione-evidenze-eudr"
   },
   {
    "en": "contract-clause-risk-review-eu-facing-suppliers",
-   "pt": "revisao-risco-clausulas-contratuais"
+   "pt": "revisao-risco-clausulas-contratuais",
+   "it": "revisione-clausole-due-diligence"
   },
   {
    "en": "board-usable-evidence-review-eu-facing-suppliers",
@@ -136,7 +140,8 @@
   },
   {
    "en": "for-european-buyers",
-   "pt": "para-compradores-europeus"
+   "pt": "para-compradores-europeus",
+   "it": "analisi-evidenze-fornitori-brasiliani"
   },
   {
    "en": "continuous-evidence-management",
