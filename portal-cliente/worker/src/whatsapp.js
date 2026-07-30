@@ -146,10 +146,13 @@ export async function enviarWhatsAppDiag(env, telefone, tipo, params) {
   const lang = idiomaTpl(env);
   const langAlt = lang === 'pt_BR' ? 'pt' : (lang === 'pt' ? 'pt_BR' : '');
   const plano = [];
+  // Caminho CONFIRMADO em 2026-07-30 (HTTP 202 + mensagem entregue no WhatsApp do Marcio):
+  // self-serve por ID. Vai primeiro para o envio de produção ser uma chamada só.
+  if (info.id) plano.push(() => viaSelfServe(env, to, info, params));
+  // Fallbacks (só rodam se o self-serve falhar) — Partner API, caso a chave/config mude.
   if (info.nome) plano.push(() => viaV3(env, to, info, params, lang));
   if (info.nome && langAlt) plano.push(() => viaV3(env, to, info, params, langAlt));
   if (info.id) plano.push(() => viaTemplateMsg(env, to, info, params));
-  if (info.id) plano.push(() => viaSelfServe(env, to, info, params));
   const tentativas = [];
   for (const passo of plano) {
     let t;
