@@ -148,7 +148,7 @@ async function tratar(request, env) {
     try {
       await env.SEB.send(new EmailMessage(de, para, msg.asRaw()));
     } catch (e) {
-      return json({ ok: false, erro: 'envio' }, 502, origin);
+      return json({ ok: false, erro: 'envio', detalhe: String(e && e.message || e).slice(0, 300) }, 502, origin);
     }
     return json({ ok: true }, 200, origin);
 }
