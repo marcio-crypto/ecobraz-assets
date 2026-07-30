@@ -55,7 +55,7 @@ import { sondaRotaExata, paginaSondaRotaExata, paginaRastreio, posicaoDoVeiculo,
 import { lerValidacao, registrarValidacao, paginaAreaValidacao, qrMetodologia, validarMetodologiaPublico, homologarFatorAcao } from './validacao-metodologia.js';
 import { paginaPainelCarbono } from './carbono-painel.js';
 import { clientesComOperacoes, carbonoDoCliente, paginaCarbonoAnalista, paginaCarbonoAuditor } from './carbono-motor.js';
-import { agentePermitido, nomeAgente, listarColetasComStatus, paginaLoginAgente, paginaAppAgente, detalheColeta, lerEstadoColeta, registrarCheckin, registrarACaminho, registrarFoto, servirFotoColeta, paginaColetaDetalhe, registrarEncerramento, registrarReagendamento, qrColeta, validarColetaPublico, paginaComprovante } from './agente.js';
+import { agentePermitido, nomeAgente, listarColetasComStatus, enriquecerProximidade, paginaLoginAgente, paginaAppAgente, detalheColeta, lerEstadoColeta, registrarCheckin, registrarACaminho, registrarFoto, servirFotoColeta, paginaColetaDetalhe, registrarEncerramento, registrarReagendamento, qrColeta, validarColetaPublico, paginaComprovante } from './agente.js';
 import { operadorPermitido, nomeOperador, listarOperacoes, listarColetasRecebiveis, iniciarOperacao, lerOperacao, definirTipoOperacao, registrarPesoEntrada, registrarFotoOperacao, servirFotoOperacao, paginaLoginOperacao, paginaAppOperacao, paginaReceberLote, paginaLoteDetalhe, adicionarMaterial, removerMaterial, concluirTriagem, paginaTriagem, paginaProcessamento, concluirProcessamento, paginaSaida, registrarSaida, concluirSaida } from './operacional.js';
 import { engenheiroPermitido, nomeEngenheiro, filaValidacao, operacoesValidadas, lerValidacaoOp, registrarValidacaoOp, paginaLoginEng, paginaFilaEng, paginaDossie, qrOperacao, validarOperacaoPublico, listarDestinos, lerDestino, salvarDestino, paginaDestinos, paginaDestinoForm, paginaRelatorio, paginaCDF } from './engenharia.js';
 import { diretorPermitido, nomeDiretor, reunirDados, paginaLoginDiretoria, paginaPainelDiretoria } from './diretoria.js';
@@ -1622,7 +1622,8 @@ export default {
         // Abrir o dia é OBRIGATÓRIO: sem jornada aberta, mostra o checklist do veículo.
         const jornada = await lerJornadaAtiva(env, agente.email);
         if (!jornada) return html(paginaAbrirDia(agente, await listarVeiculos(env), ''));
-        return html(paginaAppAgente(agente, await listarColetasComStatus(env, agente.email), bannerJornada(jornada)));
+        const coletasAgente = await enriquecerProximidade(env, await listarColetasComStatus(env, agente.email));
+        return html(paginaAppAgente(agente, coletasAgente, bannerJornada(jornada)));
       }
       if (pathname === '/agente/dia/fechar' && request.method === 'GET') {
         if (!agente) return new Response(null, { status: 302, headers: { Location: '/agente', 'cache-control': 'no-store' } });

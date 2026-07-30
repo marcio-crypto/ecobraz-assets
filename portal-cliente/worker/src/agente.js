@@ -83,9 +83,10 @@ export function paginaAppAgente(agente, coletas, banner) {
   const itens = coletas.length ? coletas.map((c) => {
     const href = c.encerrada ? `/agente/coleta/comprovante?id=${c.id}` : `/agente/coleta?id=${c.id}`;
     const cta = c.encerrada ? 'Ver comprovante →' : 'Abrir coleta →';
-    return `<a href="${href}" style="display:block;text-decoration:none;background:#fff;border:1px solid #E4EBE9;border-radius:16px;padding:15px 16px;margin-bottom:12px;">
+    return `<a href="${href}" class="coleta-card" data-lat="${c.lat != null ? c.lat : ''}" data-lon="${c.lon != null ? c.lon : ''}" style="display:block;text-decoration:none;background:#fff;border:1px solid #E4EBE9;border-radius:16px;padding:15px 16px;margin-bottom:12px;">
       <div style="display:flex;justify-content:space-between;align-items:center;"><div style="font-size:14px;font-weight:800;color:#10262B;">${esc(c.numero)}</div>${badgeDe(c)}</div>
       <div style="font-size:13px;color:#4F6469;margin-top:7px;">${esc(c.cliente || 'Cliente')}</div>
+      <div class="km" style="font-size:11.5px;color:#0B5B66;font-weight:700;margin-top:4px;display:none;"></div>
       <div style="font-size:12px;color:#3f8f3a;font-weight:700;margin-top:10px;">${cta}</div>
     </a>`;
   }).join('') : `<div style="background:#fff;border:1px solid #E4EBE9;border-radius:16px;padding:26px 18px;text-align:center;color:#8fa39f;font-size:13.5px;">Nenhuma coleta em transporte agora.<br>Quando a Débora liberar uma coleta, ela aparece aqui.</div>`;
@@ -100,11 +101,31 @@ export function paginaAppAgente(agente, coletas, banner) {
 <div style="max-width:520px;margin:0 auto;padding:16px 16px 40px;">
   ${banner || ''}
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="font-size:13px;font-weight:800;">Coletas em transporte</div><span style="font-size:11px;background:#E3F0F3;color:#0B5B66;font-weight:800;padding:3px 9px;border-radius:20px;">${coletas.length}</span></div>
-  ${itens}
+  <div id="prox-hint" style="display:none;font-size:10.5px;color:#8fa39f;margin:-4px 0 10px;">📍 Ordenado por proximidade (linha reta, sugestão). Você escolhe a ordem que quiser.</div>
+  <div id="lista-coletas">${itens}</div>
   <div style="font-size:10.5px;color:#9aa7a4;text-align:center;margin-top:14px;">Toque numa coleta para fazer o check-in por GPS e a foto da carga.</div>
   ${botaoInstalarPWA()}
   <div style="text-align:center;margin-top:10px"><a href="/manual-motorista.pdf" target="_blank" rel="noopener" style="color:#0B5B66;font-size:12px;font-weight:700;text-decoration:none">📄 Manual do motorista (PDF)</a></div>
 </div>
+<script>
+(function(){
+  var box=document.getElementById('lista-coletas'); if(!box||!navigator.geolocation) return;
+  var cards=[].slice.call(box.querySelectorAll('.coleta-card'));
+  var temGeo=cards.some(function(c){return c.getAttribute('data-lat')&&c.getAttribute('data-lon');});
+  if(!temGeo) return;
+  navigator.geolocation.getCurrentPosition(function(pos){
+    var la=pos.coords.latitude, lo=pos.coords.longitude, rad=Math.PI/180;
+    function dist(a,b,c,d){var dLa=(c-a)*rad,dLo=(d-b)*rad;var x=Math.sin(dLa/2)*Math.sin(dLa/2)+Math.cos(a*rad)*Math.cos(c*rad)*Math.sin(dLo/2)*Math.sin(dLo/2);return 6371*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));}
+    cards.forEach(function(c){
+      var lat=parseFloat(c.getAttribute('data-lat')),lon=parseFloat(c.getAttribute('data-lon'));
+      if(isFinite(lat)&&isFinite(lon)){var km=dist(la,lo,lat,lon);c._km=km;var el=c.querySelector('.km');if(el){el.textContent='📍 ~'+km.toLocaleString('pt-BR',{maximumFractionDigits:1})+' km de você';el.style.display='block';}}
+      else{c._km=Infinity;}
+    });
+    cards.slice().sort(function(a,b){return a._km-b._km;}).forEach(function(c){box.appendChild(c);});
+    var h=document.getElementById('prox-hint'); if(h) h.style.display='block';
+  }, function(){}, {enableHighAccuracy:false,timeout:8000,maximumAge:300000});
+})();
+</script>
 </body></html>`;
 }
 
@@ -178,6 +199,43 @@ export async function listarColetasComStatus(env, agenteEmail) {
     out.push({ ...c, status, encerrada: e.status === 'encerrada', reagendar: e.status === 'reagendar' });
   }
   return out;
+}
+
+// --- Sugestão de proximidade (opcional, best-effort) ---------------------------
+// Extrai o CEP (8 dígitos) de um texto de endereço.
+function extrairCEP(txt) { const m = String(txt || '').match(/(\d{5})-?(\d{3})/); return m ? m[1] + m[2] : ''; }
+
+// Geocodifica um CEP para { lat, lon } via BrasilAPI (v2), com cache no KV (guarda
+// inclusive o "não achou", para não repetir a chamada). Devolve null sem coordenada.
+async function geocodeCEP(env, cep) {
+  cep = String(cep || '').replace(/\D/g, '');
+  if (cep.length !== 8) return null;
+  const chave = `geocep:${cep}`;
+  if (env.PORTAL_KV) { try { const cache = await env.PORTAL_KV.get(chave); if (cache != null) { const v = JSON.parse(cache); return (v && v.lat && v.lon) ? v : null; } } catch { /* segue */ } }
+  let coord = null;
+  try {
+    const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 2500);
+    const r = await fetch(`https://brasilapi.com.br/api/cep/v2/${cep}`, { signal: ctrl.signal, headers: { Accept: 'application/json' } });
+    clearTimeout(t);
+    if (r.ok) { const d = await r.json(); const c = d && d.location && d.location.coordinates; const lat = c && parseFloat(c.latitude); const lon = c && parseFloat(c.longitude); if (lat && lon && isFinite(lat) && isFinite(lon)) coord = { lat, lon }; }
+  } catch { coord = null; }
+  if (env.PORTAL_KV) { try { await env.PORTAL_KV.put(chave, JSON.stringify(coord), { expirationTtl: 60 * 60 * 24 * 180 }); } catch { /* ok */ } }
+  return coord;
+}
+
+// Anexa { lat, lon } a cada coleta (pela coordenada do CEP do endereço), para a sugestão
+// de proximidade no app. Best-effort: nunca quebra a lista; coleta sem coordenada fica
+// sem lat/lon (e vai para o fim da ordenação, feita no navegador com o GPS do motorista).
+export async function enriquecerProximidade(env, coletas) {
+  const arr = Array.isArray(coletas) ? coletas : [];
+  return Promise.all(arr.map(async (c) => {
+    try {
+      const os = await lerColetaOS(env, c.id);
+      const cep = extrairCEP(os && os.endereco);
+      const geo = cep ? await geocodeCEP(env, cep) : null;
+      return geo ? { ...c, lat: geo.lat, lon: geo.lon } : { ...c };
+    } catch { return { ...c }; }
+  }));
 }
 
 // QR público do comprovante (aponta para /validar-coleta com o selo assinado).
