@@ -186,3 +186,56 @@ a.v2-pill:hover{border-color:var(--verde)}
 @media (prefers-reduced-motion:reduce){
   .button,.v2-porta{transition:none!important;transform:none!important}
 }
+
+/* ============================================================
+   Lote 3a — Formulários de coleta (custom-agendamento.hbs e
+   page-request-a-collection.hbs) na pele v2B: hero petrol com blob,
+   cartões brancos 22px sobre creme, pílulas, rótulos de etapa em
+   Nunito petrol. Apresentação apenas — campos e lógica intactos.
+   ============================================================ */
+.form-hero{background:var(--petrol);position:relative;overflow:hidden}
+.form-hero::after{content:'';position:absolute;right:-200px;top:-140px;width:520px;height:520px;background:rgba(141,198,63,.1);border-radius:47% 53% 61% 39%/44% 59% 41% 56%}
+.form-hero .container{position:relative;z-index:1}
+.form-hero h1{letter-spacing:0;font-weight:800}
+.form-hero p{color:#AECAC6}
+.form-hero .eyebrow{display:inline-flex;align-items:center;gap:8px;background:rgba(141,198,63,.16);color:#C8E89C;border-radius:99px;padding:7px 16px;font-size:13px;font-weight:700;letter-spacing:0;text-transform:none}
+.form-hero .eyebrow::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--verde)}
+.form-trust{background:#fff;border:0;border-radius:var(--v2-r);box-shadow:0 24px 56px rgba(0,0,0,.22);color:var(--ink);padding:28px}
+.form-trust strong{color:var(--petrol)}
+.form-trust ol{color:var(--cinza)}
+.form-section{background:var(--creme)}
+.collection-form{background:#fff;border:0;border-radius:var(--v2-r);box-shadow:0 14px 40px rgba(14,59,67,.08);overflow:hidden}
+.form-step{border-bottom:1px solid var(--line)}
+.form-step-label{font-family:'Nunito','Inter',Arial,sans-serif;font-weight:800;color:var(--petrol);font-size:12px;letter-spacing:.06em}
+.form-step h2{color:var(--petrol);letter-spacing:0}
+.collection-form input,.collection-form select,.collection-form textarea{border:1.5px solid var(--line);border-radius:12px}
+.collection-form input:focus,.collection-form select:focus,.collection-form textarea:focus{outline:3px solid rgba(141,198,63,.28);border-color:var(--verde)}
+.choice span{border:1.5px solid var(--line);border-radius:16px}
+.choice input:checked+span{border-color:var(--verde);background:var(--sage);box-shadow:0 0 0 2px rgba(141,198,63,.25)}
+.choice input:focus-visible+span{outline:3px solid rgba(141,198,63,.28)}
+.button-back{background:transparent;color:var(--petrol);border:2px solid var(--line);box-shadow:none}
+.button-back:hover{background:var(--sage);color:var(--petrol);border-color:var(--verde);transform:none}
+.form-aside{background:#fff;border-radius:var(--v2-r);box-shadow:0 10px 30px rgba(14,59,67,.06)}
+.form-aside h2{color:var(--petrol);font-size:20px}
+.form-aside ul{color:var(--cinza)}
+.aside-contact{border-top:1px solid var(--line)}
+.aside-contact a{color:var(--verde-escuro)}
+.form-done{border:0;border-radius:var(--v2-r);box-shadow:0 14px 40px rgba(14,59,67,.08)}
+.form-done-icon{background:var(--verde);color:#fff}
+.form-done h2{color:var(--petrol);letter-spacing:0}
+/* WhatsApp: verde próprio do canal; sombra coerente (o pill vem do .button) */
+.hx-btn-wa{background:#0B6B38;color:#fff;box-shadow:0 8px 22px rgba(11,107,56,.3)}
+.hx-btn-wa:hover{background:#128C46;color:#fff}
+
+/* ============================================================
+   Lote 3b — Blog/arquivo: só polimento genérico seguro.
+   O restante do blog fica para o lote próprio.
+   ============================================================ */
+.archive-header{background:var(--petrol)}
+.archive-header h1{letter-spacing:0;font-weight:800}
+.post-card h3{color:var(--petrol)}
+.article-header h1{color:var(--petrol);letter-spacing:0}
+.gh-content h2,.gh-content h3{color:var(--petrol)}
+.post-conversion{background:var(--petrol);border-radius:22px}
+.post-conversion a{border-radius:99px;background:var(--verde);color:#fff}
+.article-cta{border-radius:18px;border-left:5px solid var(--verde);background:var(--sage)}
