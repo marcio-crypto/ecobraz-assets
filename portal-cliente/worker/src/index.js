@@ -42,6 +42,7 @@ import { enviarSMS, smsConfigurado } from './sms.js';
 import { registrarFalha, receberErroCliente, listarFalhas } from './monitor.js';
 import { segmentoDoCliente, definirSegmento, SEGMENTOS, fluxoDeVendas, ultimosPedidos, paginaPagamentos } from './premium.js';
 import { MANUAL_CLIENTE_PDF_B64 } from './manual-pdf.js';
+import { MANUAL_COMERCIAL_B64, MANUAL_MOTORISTA_B64, MANUAL_DOCA_B64, MANUAL_ENGENHARIA_B64 } from './manuais-pdf.js';
 import { sondaMTR, consultarMtrSigor, baixarPdfManifesto } from './mtr.js';
 import { acharPacote, precoPacote, acharModuloAdote, precoModuloAdote, paginaLojaAdote, paginaObrigadoAdote, paginaDiagnostico, lerCredito, salvarCredito, novoCredito, aplicarCompra, aplicarRecarga, precisaRecarga, listarPatrocinadores, resumoPatrocinio, lerCreditoPorDoc } from './adote.js';
 import { paginaLojaESG, paginaESGContato, paginaESGObrigado, relatorioESG, precoRelatorioESG } from './esg.js';
@@ -144,6 +145,20 @@ export default {
       if (pathname === '/manual-cliente.pdf') {
         const bytes = Uint8Array.from(atob(MANUAL_CLIENTE_PDF_B64), (c) => c.charCodeAt(0));
         return new Response(bytes, { headers: { 'content-type': 'application/pdf', 'content-disposition': 'inline; filename="Manual-Portal-Ecobraz.pdf"', 'cache-control': 'public, max-age=86400' } });
+      }
+      // Manuais de uso por função (PDF). Servidos direto do worker (base64 embutido).
+      {
+        const MANUAIS_PDF = {
+          '/manual-comercial.pdf': [MANUAL_COMERCIAL_B64, 'Manual-Comercial-Ecobraz.pdf'],
+          '/manual-motorista.pdf': [MANUAL_MOTORISTA_B64, 'Manual-Motorista-Ecobraz.pdf'],
+          '/manual-doca.pdf': [MANUAL_DOCA_B64, 'Manual-Doca-Operacional-Ecobraz.pdf'],
+          '/manual-engenharia.pdf': [MANUAL_ENGENHARIA_B64, 'Manual-Engenharia-Ecobraz.pdf'],
+        };
+        if (MANUAIS_PDF[pathname]) {
+          const [b64, fn] = MANUAIS_PDF[pathname];
+          const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+          return new Response(bytes, { headers: { 'content-type': 'application/pdf', 'content-disposition': `inline; filename="${fn}"`, 'cache-control': 'public, max-age=86400' } });
+        }
       }
       // PWA (app instalável): ícones, manifesto e service worker.
       if (pathname === '/assets/icon-192.png') return servirIcone('192');

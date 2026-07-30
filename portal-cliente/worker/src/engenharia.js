@@ -115,6 +115,7 @@ export function paginaFilaEng(eng, fila, validadas) {
   <div style="font-size:13px;font-weight:800;margin-bottom:12px">Aguardando validação <span class="pill" style="background:#FFF4DE;color:#8A6A16">${fila.length}</span></div>
   ${filaHtml}
   ${validHtml ? `<div style="font-size:13px;font-weight:800;margin:22px 0 12px">Validadas recentemente</div>${validHtml}` : ''}
+  <div style="text-align:center;margin-top:16px"><a href="/manual-engenharia.pdf" target="_blank" rel="noopener" style="color:#0B5B66;font-size:12px;font-weight:700;text-decoration:none">📄 Manual da engenharia (PDF)</a></div>
 </div></body></html>`;
 }
 

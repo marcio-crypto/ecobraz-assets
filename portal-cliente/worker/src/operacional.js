@@ -298,6 +298,7 @@ export function paginaAppOperacao(operador, operacoes) {
   <a href="/operacao/receber" class="btn dark" style="margin-bottom:16px">➕ Receber novo lote</a>
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div style="font-size:13px;font-weight:800">Operações em andamento</div><span class="pill" style="background:#E3F0F3;color:#0B5B66">${operacoes.length}</span></div>
   ${itens}
+  <div style="text-align:center;margin-top:16px"><a href="/manual-doca.pdf" target="_blank" rel="noopener" style="color:#0B5B66;font-size:12px;font-weight:700;text-decoration:none">📄 Manual da doca (PDF)</a></div>
 </div></body></html>`;
 }
 

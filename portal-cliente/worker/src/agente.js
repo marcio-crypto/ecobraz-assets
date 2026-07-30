@@ -100,6 +100,7 @@ export function paginaAppAgente(agente, coletas, banner) {
   ${itens}
   <div style="font-size:10.5px;color:#9aa7a4;text-align:center;margin-top:14px;">Toque numa coleta para fazer o check-in por GPS e a foto da carga.</div>
   ${botaoInstalarPWA()}
+  <div style="text-align:center;margin-top:10px"><a href="/manual-motorista.pdf" target="_blank" rel="noopener" style="color:#0B5B66;font-size:12px;font-weight:700;text-decoration:none">📄 Manual do motorista (PDF)</a></div>
 </div>
 </body></html>`;
 }

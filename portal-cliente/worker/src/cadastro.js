@@ -1188,6 +1188,16 @@ export function paginaInicio(user, stats) {
     <div><div style="font-size:14px;font-weight:800">🚚 App do Motorista</div><div style="font-size:12.5px;color:#7c8a87;margin-top:3px">O motorista usa no celular pra fazer as coletas em campo.</div></div>
     <a href="/agente" class="btn btn-g" style="padding:10px 16px">Abrir app do motorista →</a>
   </div>
+  <div style="margin-top:14px;background:#fff;border:1px solid #E4EBE9;border-radius:16px;padding:18px 20px">
+    <div style="font-size:14px;font-weight:800;margin-bottom:4px">📚 Manuais de uso (PDF)</div>
+    <div style="font-size:12.5px;color:#7c8a87;margin-bottom:10px">Guias por função — para baixar e enviar à equipe.</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <a href="/manual-comercial.pdf" target="_blank" rel="noopener" class="btn btn-g" style="padding:8px 13px;font-size:12.5px">📗 Comercial</a>
+      <a href="/manual-motorista.pdf" target="_blank" rel="noopener" class="btn btn-g" style="padding:8px 13px;font-size:12.5px">📘 Motorista</a>
+      <a href="/manual-doca.pdf" target="_blank" rel="noopener" class="btn btn-g" style="padding:8px 13px;font-size:12.5px">📙 Doca</a>
+      <a href="/manual-engenharia.pdf" target="_blank" rel="noopener" class="btn btn-g" style="padding:8px 13px;font-size:12.5px">📕 Engenharia</a>
+    </div>
+  </div>
   <div style="font-size:11px;color:#9aa7a4;text-align:center;margin-top:20px">Cada área tem seu acesso. Se pedir login, é porque seu e-mail ainda não foi liberado para aquela área.</div>
 </div>
 <style>@media(max-width:720px){.grid{grid-template-columns:1fr 1fr!important}}@media(max-width:460px){.grid{grid-template-columns:1fr!important}}</style>
