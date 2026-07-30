@@ -177,8 +177,8 @@ export default {
         const baseUrl = env.PORTAL_BASE_URL || url.origin;
         if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${pedidoId}`, JSON.stringify({ produto: 'carbono', status: 'pendente', nivel: nv.id, faixa: fx, valor: preco.valor, criadoEm: nowS() }), { expirationTtl: 7 * 86400 });
         try {
-          const pref = await criarPreferencia({ valor: preco.valor, descricao: `Inventário de carbono — nível ${nv.nome} (anual)`, externalReference: pedidoId, baseUrl, backPath: `/carbono/obrigado?pedido=${pedidoId}` }, env);
-          return new Response(null, { status: 302, headers: { Location: pref.initPoint, 'cache-control': 'no-store' } });
+          const s = await criarCheckoutStripe({ valor: preco.valor, descricao: `Inventário de carbono — nível ${nv.nome} (anual)`, externalReference: pedidoId, baseUrl, backPath: '/pagamento/ok', metodos: ['card', 'boleto'] }, env);
+          return new Response(null, { status: 302, headers: { Location: s.url, 'cache-control': 'no-store' } });
         } catch (error) { console.error('carbono_assinar_falhou', safeError(error)); return html(paginaMensagem('Pagamento indisponível', 'Não consegui gerar a cobrança agora. Tente de novo em instantes.', '/carbono/planos'), 502); }
       }
       if (pathname === '/carbono/obrigado' && request.method === 'GET') return html(paginaCarbonoObrigado(url.searchParams.get('pedido') || ''));
@@ -232,8 +232,8 @@ export default {
         const baseUrl = env.PORTAL_BASE_URL || url.origin;
         if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${pedidoId}`, JSON.stringify({ status: 'pendente', valor, criadoEm: nowS() }), { expirationTtl: 86400 });
         try {
-          const pref = await criarPreferencia({ valor, descricao: 'Cálculo detalhado de pegada de carbono (teste)', externalReference: pedidoId, baseUrl }, env);
-          return json({ ok: true, pedido: pedidoId, init_point: pref.initPoint });
+          const s = await criarCheckoutStripe({ valor, descricao: 'Cálculo detalhado de pegada de carbono — GHG Protocol', externalReference: pedidoId, baseUrl, backPath: '/pagamento/ok', metodos: ['card', 'boleto'] }, env);
+          return json({ ok: true, pedido: pedidoId, init_point: s.url });
         } catch (error) {
           console.error('mp_criar_falhou', safeError(error));
           return json({ ok: false, error: 'nao_foi_possivel_cobrar', detalhe: String(error?.message || '').slice(0, 220) }, 502);
@@ -281,8 +281,8 @@ export default {
         const baseUrl = env.PORTAL_BASE_URL || url.origin;
         if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${ref}`, JSON.stringify({ produto: 'adote', status: 'pendente', clienteId: cliente.id, clienteNome: razaoSocial, doc: cnpj, pacoteId: pac.id, faixa, tipo: 'avulso', valor, kg: pac.kg, coletas: pac.coletas, email, criadoEm: nowS() }), { expirationTtl: 7 * 86400 });
         try {
-          const pref = await criarPreferencia({ valor, descricao: `Adote um Bairro — módulo ${pac.ton}t (${pac.coletas} coletas patrocinadas)`, externalReference: ref, baseUrl, backPath: '/adote/obrigado' }, env);
-          return json({ ok: true, pedido: ref, init_point: pref.initPoint });
+          const s = await criarCheckoutStripe({ valor, descricao: `Adote um Bairro — módulo ${pac.ton}t (${pac.coletas} coletas patrocinadas)`, externalReference: ref, baseUrl, backPath: '/pagamento/ok', clienteEmail: email, metodos: ['card', 'boleto'] }, env);
+          return json({ ok: true, pedido: ref, init_point: s.url });
         } catch (e) { console.error('adote_mp_falhou', safeError(e)); return json({ ok: false, erro: 'Não foi possível gerar o pagamento agora.' }, 502); }
       }
       // Pedido de proposta do Adote (faixa > R$ 300 mi ou botão "Pedir proposta").
@@ -426,8 +426,8 @@ export default {
         const baseUrl = env.PORTAL_BASE_URL || url.origin;
         if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${pedidoId}`, JSON.stringify({ produto: 'esg', status: 'pendente', relatorio: rel.id, faixa: fx, valor: preco.valor, criadoEm: nowS() }), { expirationTtl: 7 * 86400 });
         try {
-          const pref = await criarPreferencia({ valor: preco.valor, descricao: `Relatório de ESG — ${rel.nome} (anual)`, externalReference: pedidoId, baseUrl, backPath: `/esg/obrigado?pedido=${pedidoId}` }, env);
-          return new Response(null, { status: 302, headers: { Location: pref.initPoint, 'cache-control': 'no-store' } });
+          const s = await criarCheckoutStripe({ valor: preco.valor, descricao: `Relatório de ESG — ${rel.nome} (anual)`, externalReference: pedidoId, baseUrl, backPath: '/pagamento/ok', metodos: ['card', 'boleto'] }, env);
+          return new Response(null, { status: 302, headers: { Location: s.url, 'cache-control': 'no-store' } });
         } catch (error) { console.error('esg_assinar_falhou', safeError(error)); return html(paginaMensagem('Pagamento indisponível', 'Não consegui gerar a cobrança agora. Tente de novo em instantes.', '/esg/planos'), 502); }
       }
       if (pathname === '/esg/obrigado' && request.method === 'GET') return html(paginaESGObrigado(url.searchParams.get('pedido') || ''));
@@ -834,6 +834,30 @@ export default {
           return html(paginaMensagem('Não deu para gerar o Pix', 'Erro ao montar o código Pix. Já registrei a falha para eu investigar.', '/diretoria'), 500);
         }
       }
+      // Retorno da Stripe após o checkout (cartão = confirma na hora; boleto = gerado,
+      // aguarda pagamento). Confere pela API (fonte da verdade), libera o serviço e
+      // leva o cliente à página certa conforme o produto.
+      if (pathname === '/pagamento/ok' && request.method === 'GET') {
+        if (url.searchParams.get('stripe_cancel')) return html(paginaMensagem('Pagamento não concluído', 'Você saiu sem concluir o pagamento. Sem problema — quando quiser, é só gerar a cobrança de novo.', '/painel'));
+        const sid = url.searchParams.get('stripe') || '';
+        const s = sid ? await consultarCheckoutStripe(sid, env) : null;
+        if (!s) return html(paginaMensagem('Pagamento', 'Não consegui confirmar este pagamento agora. Se você concluiu, a confirmação chega em instantes — atualize a página.', '/painel'));
+        let ped = null;
+        if (s.ref && env.PORTAL_KV) {
+          try {
+            const chave = `pedido:${s.ref}`; const rawp = await env.PORTAL_KV.get(chave); ped = rawp ? JSON.parse(rawp) : null;
+            if (ped && s.pago && ped.status !== 'pago') {
+              ped.status = 'pago'; ped.pagoEm = nowS(); ped.gateway = 'stripe';
+              await env.PORTAL_KV.put(chave, JSON.stringify(ped), { expirationTtl: 30 * 86400 });
+              await fulfillPedidoPago(env, ped, { id: s.paymentIntent || s.id, valor: s.valor, externalReference: s.ref, payerEmail: s.email });
+              console.log('stripe_retorno_pago', { ref: s.ref, valor: s.valor });
+            }
+          } catch (error) { console.error('stripe_retorno_falhou', safeError(error)); await registrarFalha(env, 'stripe-retorno', safeError(error), { ref: s.ref }); }
+        }
+        if (s.pago) return new Response(null, { status: 302, headers: { Location: destinoObrigado(ped, s.ref), 'cache-control': 'no-store' } });
+        // Boleto: gerado, mas ainda não pago — a baixa é automática pelo webhook quando pagar.
+        return html(paginaMensagem('Boleto gerado', 'Seu boleto foi gerado. Pague pelo app ou site do seu banco até o vencimento — a confirmação é automática (costuma levar de 1 a 2 dias úteis após o pagamento). Assim que cair, seu pedido é liberado sozinho.', '/painel'));
+      }
       // Webhook da Stripe: confirma o pagamento (assinatura + consulta à API) e libera.
       if (pathname === '/api/stripe/webhook' && request.method === 'POST') {
         const raw = await request.text();
@@ -846,7 +870,14 @@ export default {
           if (s && s.pago && s.ref && env.PORTAL_KV) {
             try {
               const chave = `pedido:${s.ref}`; const rawp = await env.PORTAL_KV.get(chave); const ped = rawp ? JSON.parse(rawp) : { status: 'pendente' };
-              if (ped.status !== 'pago') { ped.status = 'pago'; ped.pagoEm = nowS(); ped.gateway = 'stripe'; await env.PORTAL_KV.put(chave, JSON.stringify(ped), { expirationTtl: 30 * 86400 }); console.log('stripe_pago', { ref: s.ref, valor: s.valor, verificado }); }
+              if (ped.status !== 'pago') {
+                ped.status = 'pago'; ped.pagoEm = nowS(); ped.gateway = 'stripe';
+                await env.PORTAL_KV.put(chave, JSON.stringify(ped), { expirationTtl: 30 * 86400 });
+                console.log('stripe_pago', { ref: s.ref, valor: s.valor, verificado });
+                // Libera o serviço (mesma lógica do MP): Adote credita, Carbono/ESG abrem
+                // tarefa, Coleta libera o lead, OS marca paga. Vale p/ cartão e boleto.
+                await fulfillPedidoPago(env, ped, { id: s.paymentIntent || s.id, valor: s.valor, externalReference: s.ref, payerEmail: s.email });
+              }
             } catch (error) { console.error('stripe_webhook_falhou', safeError(error)); await registrarFalha(env, 'stripe-webhook', safeError(error), { ref: s.ref }); }
           }
         }
@@ -1280,12 +1311,12 @@ export default {
         const ref = `oscobranca-${id}`;
         try {
           const base = String(env.PORTAL_BASE_URL || env.PORTAL_URL || url.origin).replace(/\/+$/, '');
-          const pref = await criarPreferencia({ valor, descricao, externalReference: ref, baseUrl: base, backPath: '/painel' }, env);
           let clienteEmail = '';
           try { const cli = os.clienteId ? await lerCliente(env, os.clienteId) : null; clienteEmail = (cli && (cli.email || (Array.isArray(cli.contatos) && cli.contatos[0] && cli.contatos[0].email))) || ''; } catch { /* segue sem e-mail */ }
-          if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${ref}`, JSON.stringify({ produto: 'oscobranca', osId: id, numero: os.numero || '', valor, clienteEmail, clienteNome: os.clienteNome || '', criadoEm: nowS() }), { expirationTtl: 90 * 86400 });
-          await definirCobrancaOS(env, id, { valor, descricao, ref, link: pref.initPoint, criadoPor: escritorio.email || '' });
-          return json({ ok: true, link: pref.initPoint, valor });
+          const s = await criarCheckoutStripe({ valor, descricao, externalReference: ref, baseUrl: base, backPath: '/pagamento/ok', clienteEmail, metodos: ['card', 'boleto'] }, env);
+          if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${ref}`, JSON.stringify({ produto: 'oscobranca', osId: id, numero: os.numero || '', valor, clienteEmail, clienteNome: os.clienteNome || '', status: 'pendente', gateway: 'stripe', criadoEm: nowS() }), { expirationTtl: 90 * 86400 });
+          await definirCobrancaOS(env, id, { valor, descricao, ref, link: s.url, criadoPor: escritorio.email || '' });
+          return json({ ok: true, link: s.url, valor });
         } catch (error) {
           console.error('oscobranca_mp', safeError(error));
           await registrarFalha(env, 'cobranca-os', safeError(error), { os: id });
@@ -2902,11 +2933,11 @@ async function solicitarOS(request, sessao, env) {
     const ref = `coleta-${r.id}`;
     try {
       const base = String(env.PORTAL_BASE_URL || env.PORTAL_URL || new URL(request.url).origin).replace(/\/+$/, '');
-      const pref = await criarPreferencia({ valor: valorTaxa, descricao: expressa ? 'Coleta Expressa Ecobraz — até 24h' : 'Taxa de coleta Ecobraz — pequeno volume', externalReference: ref, baseUrl: base, backPath: '/painel' }, env);
+      const s = await criarCheckoutStripe({ valor: valorTaxa, descricao: expressa ? 'Coleta Expressa Ecobraz — até 24h' : 'Taxa de coleta Ecobraz — pequeno volume', externalReference: ref, baseUrl: base, backPath: '/pagamento/ok', clienteEmail: (email || sessao.email || ''), metodos: ['card', 'boleto'] }, env);
       if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${ref}`, JSON.stringify({ produto: 'coleta', leadId: r.id, expressa, itens, valor: valorTaxa, status: 'pendente', clienteEmail: email || sessao.email || '', clienteNome: responsavel || sessao.nome || '', criadoEm: nowS() }), { expirationTtl: 30 * 86400 });
       const lead = await lerLead(env, r.id);
       if (lead) {
-        lead.cobranca = { valor: valorTaxa, motivo, ref, link: pref.initPoint, status: 'aguardando', criadoEm: nowS() };
+        lead.cobranca = { valor: valorTaxa, motivo, ref, link: s.url, status: 'aguardando', criadoEm: nowS() };
         lead.expressa = expressa;
         // Menos de 20 itens: só agenda depois de pago. Expressa com 20+: se não
         // pagar, a coleta segue valendo como tradicional gratuita.
@@ -2915,7 +2946,7 @@ async function solicitarOS(request, sessao, env) {
         await salvarLead(env, lead);
         await atualizarIndexLead(env, r.id, { pagamento: 'aguardando', status: lead.status });
       }
-      pagamento = { valor: valorTaxa, link: pref.initPoint, motivo };
+      pagamento = { valor: valorTaxa, link: s.url, motivo };
     } catch (error) {
       // Mercado Pago fora do ar / sem chave: NUNCA cobra às cegas nem trava o
       // pedido — registra para a equipe combinar a cobrança manualmente.
@@ -3128,10 +3159,10 @@ async function verificarRecargaAdote(env, clienteId, baseUrl) {
   const ref = novoId();
   const base = String(baseUrl || '').replace(/\/+$/, '');
   await env.PORTAL_KV.put(`pedido:${ref}`, JSON.stringify({ produto: 'adote', evento: 'recarga', status: 'pendente', clienteId, clienteNome: cred.clienteNome, doc: cred.doc || '', pacoteId: pac.id, faixa: cred.faixa || '', tipo: 'recorrente', valor, kg: pac.kg, email, criadoEm: nowS() }), { expirationTtl: 14 * 86400 });
-  const pref = await criarPreferencia({ valor, descricao: `Adote um Bairro — renovação ${pac.ton}t (recorrente)`, externalReference: ref, baseUrl: base, backPath: '/adote/obrigado' }, env);
+  const s = await criarCheckoutStripe({ valor, descricao: `Adote um Bairro — renovação ${pac.ton}t (recorrente)`, externalReference: ref, baseUrl: base, backPath: '/pagamento/ok', clienteEmail: email, metodos: ['card', 'boleto'] }, env);
   cred.recargaPendente = { ref, em: nowS() };
   await salvarCredito(env, cred);
-  if (email) { try { await enviarEmailRecarga({ nome: cred.clienteNome, email }, pref.initPoint, pac.ton, env); console.log('adote_recarga_email_ok', { cliente: clienteId }); } catch (e) { console.error('adote_recarga_email_falhou', safeError(e)); } }
+  if (email) { try { await enviarEmailRecarga({ nome: cred.clienteNome, email }, s.url, pac.ton, env); console.log('adote_recarga_email_ok', { cliente: clienteId }); } catch (e) { console.error('adote_recarga_email_falhou', safeError(e)); } }
   console.log('adote_recarga_gerada', { cliente: clienteId, saldo: cred.saldoKg, ref });
 }
 
@@ -3188,6 +3219,85 @@ async function enviarEmailNF(pedido, pagamento, env) {
     headers: { 'content-type': 'application/json', authorization: `Bearer ${env.RESEND_API_KEY}` },
     body: JSON.stringify({ from, to: [to], subject: 'Nova venda — Cálculo de pegada de carbono (emitir NF)', html, text: texto }),
   });
+}
+
+// ---------------------------------------------------------------------------
+// LIBERAÇÃO de um pedido PAGO (fulfillment). Mesma lógica do webhook do Mercado
+// Pago, mas reaproveitável pela Stripe (webhook + página de retorno). O chamador
+// só chama quando marca como pago pela 1ª vez (idempotência é dele). pg = objeto
+// normalizado { id, valor, externalReference, payerEmail } — igual ao do MP.
+// (Duplicado de propósito por ora: não mexo no fluxo do MP que já vende, para
+// não arriscar. Quando a Stripe estiver 100%, unifico os dois.)
+async function fulfillPedidoPago(env, ped, pg) {
+  const chave = `pedido:${pg.externalReference}`;
+  if (ped.produto === 'adote') {
+    try {
+      const pac = acharPacote(ped.pacoteId);
+      if (pac) {
+        let cred = (await lerCredito(env, ped.clienteId)) || novoCredito(ped.clienteId, ped.clienteNome, ped.doc);
+        if (!cred.doc && ped.doc) cred.doc = String(ped.doc).replace(/\D/g, '');
+        if (ped.evento === 'recarga') {
+          cred = aplicarRecarga(cred, pac, ped.valor, pg.externalReference, nowS());
+          if (cred.recargaPendente && cred.recargaPendente.ref === pg.externalReference) cred.recargaPendente = null;
+        } else {
+          cred = aplicarCompra(cred, pac, ped.tipo, ped.valor, pg.externalReference, nowS(), ped.faixa);
+        }
+        await salvarCredito(env, cred);
+        console.log('adote_credito', { cliente: ped.clienteId, saldo: cred.saldoKg, evento: ped.evento || 'compra' });
+      }
+    } catch (error) { console.error('adote_credito_falhou', safeError(error)); await registrarFalha(env, 'compra-adote-credito', safeError(error), { pedido: pg.externalReference }); }
+  } else if (ped.produto === 'carbono') {
+    try {
+      ped.validade = new Date(Date.now() + 365 * 86400 * 1000).toISOString();
+      if (pg.payerEmail) ped.email = pg.payerEmail;
+      await env.PORTAL_KV.put(chave, JSON.stringify(ped), { expirationTtl: 400 * 86400 });
+      if (ped.nivel === 'contratado') {
+        await ingestLead(env, { email: pg.payerEmail || '', company: '', material_category: 'Carbono — Contratado (PAGO)', material_description: `Cliente CONTRATOU e PAGOU o inventário nível Contratado. A Villanova coleta os dados e faz o inventário.\nFaturamento: ${ped.faixa}\nValor: R$ ${ped.valor}\nPedido: ${pg.externalReference}\nE-mail do pagador: ${pg.payerEmail || '(não informado)'}`, source: 'carbono-contratado-pago' });
+      }
+    } catch (error) { console.error('carbono_pago_falhou', safeError(error)); await registrarFalha(env, 'compra-carbono', safeError(error), { pedido: pg.externalReference }); }
+  } else if (ped.produto === 'esg') {
+    try {
+      ped.validade = new Date(Date.now() + 365 * 86400 * 1000).toISOString();
+      if (pg.payerEmail) ped.email = pg.payerEmail;
+      await env.PORTAL_KV.put(chave, JSON.stringify(ped), { expirationTtl: 400 * 86400 });
+      const rel = relatorioESG(ped.relatorio || '');
+      await ingestLead(env, { email: pg.payerEmail || ped.email || '', company: ped.clienteNome || '', material_category: `ESG — ${rel ? rel.nome : 'relatório'} (PAGO)`, material_description: `Cliente CONTRATOU e PAGOU um relatório de ESG. A Villanova ESG produz a partir dos dados do sistema.\nRelatório: ${rel ? rel.nome : ped.relatorio}\nFaturamento: ${ped.faixa}\nValor: R$ ${ped.valor}\nPedido: ${pg.externalReference}\nE-mail do pagador: ${pg.payerEmail || '(não informado)'}`, source: 'esg-pago' });
+    } catch (error) { console.error('esg_pago_falhou', safeError(error)); await registrarFalha(env, 'compra-esg', safeError(error), { pedido: pg.externalReference }); }
+  } else if (ped.produto === 'coleta') {
+    try {
+      const lead = await lerLead(env, ped.leadId);
+      if (lead) {
+        lead.cobranca = { ...(lead.cobranca || {}), status: 'pago', paymentId: pg.id, pagoEm: nowS() };
+        if (lead.status === 'aguardando-pagamento') lead.status = 'novo';
+        lead.descricao = `💳 TAXA PAGA (R$ ${ped.valor})${ped.expressa ? ' — ⚡ EXPRESSA: COLETAR EM ATÉ 24H' : ''} ✔ LIBERADA\n\n${lead.descricao}`;
+        await salvarLead(env, lead);
+        await atualizarIndexLead(env, ped.leadId, { pagamento: 'pago', status: lead.status, prioridade: ped.expressa ? 'alta' : (lead.prioridade || '') });
+      }
+      if (ped.clienteEmail) { try { await enviarEmailColetaPaga(ped, env); } catch (error) { console.error('email_coleta_paga', safeError(error)); } }
+      console.log('coleta_taxa_paga', { lead: ped.leadId, valor: pg.valor, expressa: !!ped.expressa });
+    } catch (error) { console.error('coleta_paga_falhou', safeError(error)); await registrarFalha(env, 'compra-coleta-liberacao', safeError(error), { lead: ped.leadId }); }
+  } else if (ped.produto === 'oscobranca') {
+    try {
+      await marcarCobrancaPagaOS(env, ped.osId, pg);
+      if (ped.clienteEmail) { try { await enviarEmailCobrancaOSPaga(ped, env); } catch (error) { console.error('email_oscobranca', safeError(error)); } }
+      console.log('oscobranca_paga', { os: ped.osId, valor: pg.valor });
+    } catch (error) { console.error('oscobranca_falhou', safeError(error)); await registrarFalha(env, 'compra-oscobranca', safeError(error), { os: ped.osId }); }
+  } else if (ped.produto === 'teste') {
+    console.log('teste_pagamento_ok', { pedido: pg.externalReference, valor: pg.valor });
+  } else {
+    try { await enviarEmailNF(ped, pg, env); } catch (error) { console.error('nf_email_falhou', safeError(error)); }
+  }
+}
+
+// Para onde mandar o cliente depois de pagar na Stripe, conforme o produto.
+function destinoObrigado(ped, ref) {
+  const p = ped && ped.produto;
+  const r = encodeURIComponent(ref || '');
+  if (p === 'carbono') return `/carbono/obrigado?pedido=${r}`;
+  if (p === 'esg') return `/esg/obrigado?pedido=${r}`;
+  if (p === 'adote') return '/adote/obrigado';
+  if (p === 'coleta' || p === 'oscobranca') return '/painel';
+  return '/painel';
 }
 
 // ---------------------------------------------------------------------------
