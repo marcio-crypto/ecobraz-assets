@@ -36,16 +36,17 @@ export function agentesDe(env) {
 export function agentePermitido(email, env) { return agentesDe(env).has(String(email || '').trim().toLowerCase()); }
 export function nomeAgente(email, env) { return agentesDe(env).get(String(email || '').trim().toLowerCase()) || String(email || '').split('@')[0]; }
 
-// Lê as coletas que o escritório JÁ LIBEROU para a rua ("Em transporte") — atribuídas a
-// ESTE motorista (ou ainda sem motorista definido). Uma OS recém-criada fica "Agendada" e
-// só entra aqui quando o comercial a coloca "Em transporte". Assim o motorista vê apenas a
-// sua rota do dia, não todas as OS cadastradas. Substitui a leitura do Ploomes.
+// Lê as coletas que o escritório JÁ LIBEROU para a rua ("Em transporte") e que estão
+// ATRIBUÍDAS a ESTE motorista. Uma OS recém-criada fica "Agendada" e só entra aqui quando o
+// comercial escolhe o motorista e a coloca "Em transporte" — assim cada motorista vê apenas
+// a SUA rota do dia (nunca a de outro, nem coletas sem motorista). Substitui o Ploomes.
 const COLETAS_ATIVAS = new Set(['em_transporte']);
 export async function listarColetas(env, agenteEmail) {
-  const todas = await listarColetasOS(env);
   const email = String(agenteEmail || '').trim().toLowerCase();
+  if (!email) return [];
+  const todas = await listarColetasOS(env);
   return todas
-    .filter((c) => COLETAS_ATIVAS.has(c.status) && (!email || !c.agenteEmail || c.agenteEmail === email))
+    .filter((c) => COLETAS_ATIVAS.has(c.status) && String(c.agenteEmail || '').trim().toLowerCase() === email)
     .map((c) => ({ id: c.id, numero: c.numero, cliente: c.clienteNome || '' }));
 }
 
