@@ -22,9 +22,18 @@ que já é global via artigo.js (sidebar, CTA no meio, selo, autor em TODOS os p
 - Regras adicionadas ao bloco do painel (total 121). Despublicação gateada na
   colagem, como sempre. 421 → 382.
 
-## Onda 2 — Fusões por cluster (próxima sessão; exige reescrita)
+## Onda 2 — EXECUTADA 30/07 (fusões por cluster: 30 pilares, 56 satélites)
 
-Clusters EN identificados (espelhar PT):
+11 clusters fundidos em 4 blocos (A: CBAM caixa 5→1, CBAM aduana 3→1,
+antes-do-preço 3→1 · B: renovação 3→1, saída 2→1, memo conselho 3→1 ·
+C: salas 2→1, WEEE 3→1, green claims 2→1, escopo 3 3→1 · D: DPP →3
+pilares, manifestos →2), sempre EN+PT. 30 pilares reescritos (2.500+
+palavras, CTAs→intake, disclaimers 1×, trilha de fontes) e publicados;
+56 satélites → rascunho após colagem do bloco (total 177 regras);
+amostra de 301 testada ao vivo; auditoria verde (376 URLs, 0 erros).
+Blog: 382 → 326 posts. PRs #239–#242.
+
+Clusters EN identificados originalmente (espelhar PT):
 - **CBAM cash-flow** (5→1): cbam-2026-carbon-border-tax-cash-flow-impact (pilar)
   ← cbam-2026-carbon-data-cash-flow-variable · cbam-2026-why-carbon-data-became-a-cash-flow-file
   · cbam-2026-turns-emissions-data-into-financial-risk · cbam-brazilian-exporters-embedded-emissions-cash-flow-risk
