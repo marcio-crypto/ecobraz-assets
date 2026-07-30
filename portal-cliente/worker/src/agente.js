@@ -147,7 +147,9 @@ export async function registrarEncerramento(env, id, agente, dados) {
   e.status = 'encerrada';
   delete e.reagendar;
   await salvarEstadoColeta(env, id, e);
-  try { await atualizarStatusOS(env, id, 'na_unidade'); } catch { /* ok */ }
+  // O motorista concluiu a coleta no cliente → a OS fica CONCLUÍDA e, com isso, entra
+  // automaticamente na fila da doca (listarColetasRecebiveis lê status 'concluida').
+  try { await atualizarStatusOS(env, id, 'concluida'); } catch { /* ok */ }
   return e;
 }
 export async function registrarReagendamento(env, id, agente, dados) {

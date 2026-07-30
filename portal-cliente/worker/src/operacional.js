@@ -90,13 +90,20 @@ export async function atualizarEtapaOperacao(env, osId, etapa, patch) {
   await salvarOperacao(env, op); return op;
 }
 
-// Coletas que podem ser recebidas na doca: OS que o motorista JÁ ENTREGOU na unidade
-// (status "na_unidade"). Lê a NOSSA base (KV), não o Ploomes.
+// Coletas que podem ser recebidas na doca: OS que o motorista JÁ CONCLUIU no cliente
+// (status "concluida") e que a doca ainda NÃO recebeu (sem registro de operação).
+// Assim, ao motorista encerrar a coleta, ela entra sozinha na fila da doca; ao a doca
+// receber (cria a operação), ela sai da fila. Lê a NOSSA base (KV), não o Ploomes.
 export async function listarColetasRecebiveis(env) {
   const todas = await listarColetasOS(env);
-  return todas
-    .filter((c) => c.status === 'na_unidade')
-    .map((c) => ({ osId: c.id, numero: c.numero, cliente: c.clienteNome || '' }));
+  const concluidas = todas.filter((c) => c.status === 'concluida');
+  const out = [];
+  for (const c of concluidas) {
+    let jaNaDoca = false;
+    try { jaNaDoca = !!(await lerOperacao(env, c.id)); } catch { jaNaDoca = false; }
+    if (!jaNaDoca) out.push({ osId: c.id, numero: c.numero, cliente: c.clienteNome || '' });
+  }
+  return out;
 }
 
 async function buscarColeta(env, osId) {

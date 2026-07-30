@@ -38,6 +38,7 @@ import { criarPreferencia, consultarPagamento, criarPixDireto, consultarMeiosPag
 import { criarCheckoutStripe, consultarCheckoutStripe, verificarEventoStripe, stripeConfigurado } from './stripe.js';
 import { gerarPixCopiaECola, pixConfig, paginaPix } from './pix.js';
 import { paginaColetaExpressa } from './coleta-expressa.js';
+import { enviarSMS, smsConfigurado } from './sms.js';
 import { registrarFalha, receberErroCliente, listarFalhas } from './monitor.js';
 import { segmentoDoCliente, definirSegmento, SEGMENTOS, fluxoDeVendas, ultimosPedidos, paginaPagamentos } from './premium.js';
 import { MANUAL_CLIENTE_PDF_B64 } from './manual-pdf.js';
@@ -1068,7 +1069,7 @@ export default {
           stats = {
             clientes: clientes.length,
             coletasAbertas: coletas.filter((c) => c.status !== 'concluida' && c.status !== 'cancelada').length,
-            aReceber: coletas.filter((c) => c.status === 'na_unidade').length,
+            aReceber: coletas.filter((c) => c.status === 'concluida').length,
             leadsNovos: leads.filter((l) => l.status !== 'tratado').length,
             veiculos: veiculos.filter((v) => v.ativo !== false).length,
             equipe: usuarios.filter((u) => u.ativo !== false).length,
@@ -1683,8 +1684,9 @@ export default {
             const ja = env.PORTAL_KV ? await env.PORTAL_KV.get(chave) : null;
             if (!ja) {
               const cli = col.clienteId ? await lerCliente(env, col.clienteId) : null;
-              const emailCli = cli && (cli.email || (Array.isArray(cli.contatos) && cli.contatos[0] && cli.contatos[0].email) || '');
-              if (emailCli && env.RESEND_API_KEY) { await enviarEmailStatus(emailCli, col.clienteNome, 'a_caminho', env); if (env.PORTAL_KV) await env.PORTAL_KV.put(chave, '1', { expirationTtl: 60 * 60 * 24 * 90 }); }
+              const emailCli = (cli && (cli.email || (Array.isArray(cli.contatos) && cli.contatos[0] && cli.contatos[0].email))) || '';
+              const foneCli = (cli && (cli.fone || cli.telefone || cli.celular || (Array.isArray(cli.contatos) && cli.contatos[0] && (cli.contatos[0].fone || cli.contatos[0].telefone)))) || col.clienteFone || col.telefone || '';
+              if (emailCli || foneCli) { const av = await avisarColeta(env, { email: emailCli, telefone: foneCli, nome: col.clienteNome }, 'a_caminho'); if (av.via !== 'nenhum' && env.PORTAL_KV) await env.PORTAL_KV.put(chave, '1', { expirationTtl: 60 * 60 * 24 * 90 }); }
             }
           }
         } catch (error) { console.error('acaminho_email_falhou', safeError(error)); }
@@ -1697,6 +1699,20 @@ export default {
         await registrarCheckin(env, b.id, agente, { lat: b.lat, lon: b.lon, acc: b.acc });
         try { await tagColetaComVeiculo(env, agente.email, b.id); } catch { /* jornada opcional no vínculo */ }
         try { const c0 = await lerColetaOS(env, b.id); if (c0 && c0.veiculoPlaca) { const t = await capturarTelemetria(env, c0.veiculoPlaca, 'checkin'); if (t) await anexarTelemetriaOS(env, b.id, t); } } catch { /* telemetria é best-effort */ }
+        // Cliente é avisado que o coletor CHEGOU (SMS preferido, e-mail de reserva) — uma vez só.
+        try {
+          const col = await lerColetaOS(env, b.id);
+          if (col) {
+            const chave = `notif:coleta:${col.id}:chegou`;
+            const ja = env.PORTAL_KV ? await env.PORTAL_KV.get(chave) : null;
+            if (!ja) {
+              const cli = col.clienteId ? await lerCliente(env, col.clienteId) : null;
+              const emailCli = (cli && (cli.email || (Array.isArray(cli.contatos) && cli.contatos[0] && cli.contatos[0].email))) || '';
+              const foneCli = (cli && (cli.fone || cli.telefone || cli.celular || (Array.isArray(cli.contatos) && cli.contatos[0] && (cli.contatos[0].fone || cli.contatos[0].telefone)))) || col.clienteFone || col.telefone || '';
+              if (emailCli || foneCli) { const av = await avisarColeta(env, { email: emailCli, telefone: foneCli, nome: col.clienteNome }, 'chegou'); if (av.via !== 'nenhum' && env.PORTAL_KV) await env.PORTAL_KV.put(chave, '1', { expirationTtl: 60 * 60 * 24 * 90 }); }
+            }
+          }
+        } catch (error) { console.error('chegou_aviso_falhou', safeError(error)); }
         return json({ ok: true });
       }
       if (pathname === '/api/agente/foto' && request.method === 'POST') {
@@ -3370,6 +3386,7 @@ function destinoObrigado(ped, ref) {
 const MSGS_STATUS = {
   coleta_agendada: { assunto: 'Sua coleta foi agendada — Ecobraz', titulo: 'Coleta agendada', corpo: 'Recebemos sua solicitação e sua coleta já está <strong>agendada</strong>. Você acompanha cada passo por aqui, no seu portal.' },
   a_caminho: { assunto: 'Seu coletor está a caminho! Acompanhe ao vivo — Ecobraz', titulo: 'Coletor a caminho 🚚', corpo: 'O agente de coleta da Ecobraz está <strong>a caminho</strong> da sua coleta. Entre no seu portal e toque em <strong>“Acompanhar o caminhão”</strong> para ver a chegada em tempo real.' },
+  chegou: { assunto: 'Seu coletor chegou! — Ecobraz', titulo: 'Coletor chegou 📍', corpo: 'O agente de coleta da Ecobraz <strong>chegou ao local</strong> para a sua coleta.' },
   coleta_realizada: { assunto: 'Coleta realizada — Ecobraz', titulo: 'Coleta realizada', corpo: 'Sua coleta foi <strong>realizada com sucesso</strong>. Em breve os documentos ficam disponíveis para você no portal.' },
   certificado_liberado: { assunto: 'Seu certificado está disponível — Ecobraz', titulo: 'Certificado liberado', corpo: 'Seu <strong>Certificado de Destinação Final</strong> já está disponível para baixar no seu portal.' },
 };
@@ -3468,6 +3485,22 @@ async function enviarEmailStatus(to, nome, tipo, env) {
   const r = await fetch(`${base}/v2/email/messages/action/send`, { method: 'POST', headers: { 'content-type': 'application/json', ApiKey: apiKey }, body: JSON.stringify(payload) });
   if (!r.ok) { const b = await r.text().catch(() => ''); throw new Error(`egoi_tx_${r.status}:${b.slice(0, 140)}`); }
   return null;
+}
+// Avisa o cliente de um momento da coleta preferindo SMS (e-Goi) e caindo no e-mail
+// quando o SMS não está ativado ou falha. Pedido do Marcio (2026-07-30). Nunca lança.
+const SMS_COLETA = {
+  a_caminho: 'Ecobraz: seu coletor esta a caminho da coleta. Acompanhe em sistema.ecobraz.org',
+  chegou: 'Ecobraz: seu coletor chegou ao local para a sua coleta.',
+};
+async function avisarColeta(env, alvo, tipo) {
+  const email = (alvo && alvo.email) || '';
+  const telefone = (alvo && alvo.telefone) || '';
+  const nome = (alvo && alvo.nome) || '';
+  if (smsConfigurado(env) && telefone && SMS_COLETA[tipo]) {
+    try { const r = await enviarSMS(env, telefone, SMS_COLETA[tipo]); if (r && r.ok) return { via: 'sms' }; } catch { /* cai no e-mail */ }
+  }
+  if (email) { try { await enviarEmailStatus(email, nome, tipo, env); return { via: 'email' }; } catch (e) { console.error('avisar_coleta_email', safeError(e)); } }
+  return { via: 'nenhum' };
 }
 function emailStatusHtml(nome, m, portalUrl) {
   const primeiro = esc((nome || '').split(/\s+/)[0] || '');

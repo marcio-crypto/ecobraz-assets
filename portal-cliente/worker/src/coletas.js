@@ -379,8 +379,9 @@ export function paginaColetaOSDetalhe(user, os, seloUrl) {
     </div>
     <div class="sec">Situação</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      ${Object.keys(STATUS).map((s) => `<button class="btn ${s === os.status ? 'btn-d' : 'btn-g'}" style="padding:8px 12px;font-size:12.5px" onclick="setStatus('${s}')" ${s === os.status ? 'disabled' : ''}>${esc(STATUS[s])}</button>`).join('')}
+      ${Object.keys(STATUS).filter((s) => s !== 'na_unidade').map((s) => `<button class="btn ${s === os.status ? 'btn-d' : 'btn-g'}" style="padding:8px 12px;font-size:12.5px" onclick="setStatus('${s}')" ${s === os.status ? 'disabled' : ''}>${esc(STATUS[s])}</button>`).join('')}
     </div>
+    <div style="font-size:11.5px;color:#9aa7a4;margin-top:6px">O normal é o <b>motorista</b> tocar o fluxo pelo app (a caminho → chegou → <b>Concluída</b>). Ao ficar <b>Concluída</b>, a coleta vai <b>automaticamente para a doca</b> receber. Use estes botões só para ajuste manual.</div>
     <div id="m" style="font-size:12.5px;color:#4F6469;margin-top:10px"></div>
   </div>
 </div>
