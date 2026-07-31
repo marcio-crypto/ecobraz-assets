@@ -486,3 +486,7 @@ body.is-empresa .copy-pf{display:none}
 .v2c-foto img{display:block;width:100%;border-radius:22px;box-shadow:0 14px 40px rgba(14,59,67,.10)}
 .v2c-foto figcaption{margin-top:8px;font-size:12.5px;color:var(--cinza)}
 .form-nota-expressa{margin:10px 0 0;font-size:13.5px;color:var(--cinza);background:var(--sage);border-radius:12px;padding:10px 14px}
+.form-pix{margin-top:22px;padding:18px 20px;background:var(--sage);border:1.5px solid var(--verde);border-radius:16px;text-align:left}
+.form-pix h3{margin:0 0 8px;font-size:17px;color:var(--petrol)}
+.form-pix-chave{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0}
+.form-pix-chave code{background:#fff;border-radius:10px;padding:8px 14px;font-size:15px;font-weight:700;color:var(--ink);word-break:break-all}
