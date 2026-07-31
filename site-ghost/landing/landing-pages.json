@@ -2226,7 +2226,9 @@
       "eyebrow": "Material misto ou fora da lista?",
       "title": "Descreva o lote — a avaliação separa o que entra do que não entra.",
       "text": "Tipo, volume e localidade: com isso a equipe retorna com o escopo aplicável e as condições, por escrito."
-    }
+    },
+    "foto": "ilustrativa-materiais-variados.jpg",
+    "fotoAlt": "Bancada de triagem com notebooks, monitores, celulares, cabos e placas organizados por grupo"
   },
   {
     "slug": "logistica-reversa-para-fabricantes-e-importadores",
