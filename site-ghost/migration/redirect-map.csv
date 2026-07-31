@@ -1,7 +1,7 @@
 prioridade,url_antiga,destino_novo,cliques_90d,impressoes_90d,acao,motivo
 P0,https://ecobraz.org/,/,125,3198,manter,Homepage principal
 P0,http://www.ecobraz.org/,https://ecobraz.org/,31,2772,canonicalizar,Consolidar protocolo e host
-P0,https://ecobraz.org/contato,/agendamento/,9,1304,301,Intenção de contato direcionada ao agendamento
+P0,https://ecobraz.org/contato,/contato/,9,1304,301,Página de contato própria (decisão 31/07)
 P0,https://ecobraz.org/eletronicos,/coleta-de-lixo-eletronico/,2,1070,301,Landing geral equivalente
 P0,https://ecobraz.org/como-funciona,/como-funciona/,14,961,manter,URL de autoridade já posicionada
 P0,https://ecobraz.org/agendamento,/agendamento/,7,770,manter,Conversão principal
@@ -30,7 +30,7 @@ P1,https://ecobraz.org/pt_BR/eletronicos,/coleta-de-lixo-eletronico/,38,5221,301
 P1,https://ecobraz.org/de/blog/o-valor-de-um-quilo-de-lixo-eletronico-por-que-ele-nao-paga-o-trabalho-que-fazemos,/coleta-de-lixo-eletronico/,34,3454,301,URL com cliques no GSC 16m (cobertura complementar)
 P1,https://ecobraz.org/blog/maquina-de-lavar-quebrada-saiba-como-descartar-com-seguranca-e-sem-custo-com-a-ecobraz,/descarte-de-maquina-de-lavar/,32,2899,301,URL com cliques no GSC 16m (cobertura complementar)
 P1,https://ecobraz.org/pt_BR/descarte/ar-condicionado,/descarte-de-ar-condicionado/,31,1674,301,URL com cliques no GSC 16m (cobertura complementar)
-P1,https://ecobraz.org/contato,/agendamento/,27,3189,301,URL com cliques no GSC 16m (cobertura complementar)
+P1,https://ecobraz.org/contato,/contato/,27,3189,301,Página de contato própria (decisão 31/07)
 P1,https://ecobraz.org/pt_BR/ecobraz_carbon,/sobre/,26,3724,301,URL com cliques no GSC 16m (cobertura complementar)
 P1,https://ecobraz.org/blog/guia-completo-dos-documentos-do-descarte-certificado-de-lixo-eletronico,/documentacao-e-rastreabilidade/,26,918,301,URL com cliques no GSC 16m (cobertura complementar)
 P1,https://ecobraz.org/pt_BR/blog/mercado-de-carbono-e-blockchain-como-a-tecnologia-esta-revolucionando-a-sustentabilidade,/sobre/,26,816,301,URL com cliques no GSC 16m (cobertura complementar)
