@@ -68,7 +68,7 @@ import { sondarAnexosPloomes, paginaSondaAnexos } from './ploomes-docs.js';
 import { amostraContatosPloomes, paginaAmostraContatos, importarLoteContatos, estatisticasMigracao, buscarContatos, paginaMigrarPloomes, detalheContato, paginaContatoDetalhe, importarLoteNegocios, estatisticasNegocios, paginaMigrarNegocios } from './ploomes-migracao.js';
 import { importarLoteAnexos, importarLoteAnexosContatos, completarAnexos, importarAnexosJanela, reprocessarFalhas, importarLoteDocumentos, recuperarDocumentos, estatisticasArquivos, paginaMigrarArquivos, diagnosticoAnexos, paginaDiagAnexos } from './ploomes-arquivos.js';
 import { fiscalPermitido, nomeFiscal, listarNotas, lerNota, importarLote, vincularNota, sugerirVinculoSync, paginaFiscalLogin, paginaFiscalHome, paginaFiscalResultado, paginaFiscalNota } from './fiscal.js';
-import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, emailsDoCliente, reindexarEmailsClientes, backfillEnderecos, paginaManutencao, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, clienteDeLead, arquivosDoCliente, paginaLeads, paginaLeadDetalhe, paginaInicio, listarClientesD1, contagensClientesD1, lerClienteD1, negociosDoCliente, espelharClienteD1, sincronizarKVparaD1, lerNegocioDetalheD1, paginaOSDetalhe, curarContatosKV, classificarPedido, atualizarIndexLead, excluirLead } from './cadastro.js';
+import { escritorioPermitido, escritoriosDe, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, emailsDoCliente, reindexarEmailsClientes, backfillEnderecos, paginaManutencao, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, clienteDeLead, arquivosDoCliente, paginaLeads, paginaLeadDetalhe, paginaInicio, listarClientesD1, contagensClientesD1, lerClienteD1, negociosDoCliente, espelharClienteD1, sincronizarKVparaD1, lerNegocioDetalheD1, paginaOSDetalhe, curarContatosKV, classificarPedido, atualizarIndexLead, excluirLead } from './cadastro.js';
 import { listarColetasOS, lerColetaOS, seloOS, criarColetaOS, atualizarStatusOS, atualizarColetaOS, anexarTelemetriaOS, registrarAnexoColeta, removerAnexoColeta, paginaColetasLista, paginaGerarColeta, paginaEditarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga, definirCobrancaOS, marcarCobrancaPagaOS, definirMtrOS } from './coletas.js';
 import { listarVeiculos, lerVeiculo, salvarVeiculo, paginaFrota, paginaVeiculoForm, lerJornadaAtiva, abrirJornada, fecharJornada, registrarAbastecimento, tagColetaComVeiculo, servirFotoJornada, bannerJornada, paginaAbrirDia, paginaFecharDia, paginaAbastecer, placaDaColeta } from './frota.js';
 import { carregarEquipeNoEnv, listarUsuarios, lerUsuario, salvarUsuario, importarUsuarios, paginaEquipe, paginaUsuarioForm, paginaEquipeImportar } from './equipe.js';
@@ -440,8 +440,9 @@ export default {
                 // Cobrança de uma OS paga → marca PAGO na OS (e no índice) sozinho
                 // e confirma por e-mail ao cliente. Nunca trava a operação.
                 try {
-                  await marcarCobrancaPagaOS(env, ped.osId, pg);
+                  const osPaga = await marcarCobrancaPagaOS(env, ped.osId, pg);
                   if (ped.clienteEmail) { try { await enviarEmailCobrancaOSPaga(ped, env); } catch (error) { console.error('email_oscobranca', safeError(error)); } }
+                  try { await avisarEquipeCobrancaPaga(env, osPaga, pg); } catch (error) { console.error('email_equipe_oscobranca', safeError(error)); }
                   console.log('oscobranca_paga', { os: ped.osId, valor: pg.valor });
                 } catch (error) { console.error('oscobranca_falhou', safeError(error)); await registrarFalha(env, 'compra-oscobranca', safeError(error), { os: ped.osId }); }
               } else if (ped.produto === 'teste') {
@@ -3431,6 +3432,39 @@ async function enviarEmailCobrancaOSPaga(ped, env) {
   if (!r.ok) throw new Error('resend_oscobranca_' + r.status);
 }
 
+// Avisa a EQUIPE (Débora/comercial) quando uma OS é paga, e informa se a coleta foi
+// liberada pro motorista ou se ainda falta escolher um. Destinatários: env
+// COBRANCA_NOTIFY_EMAILS (se definido) ou a lista do escritório (ESCRITORIO_EMAILS).
+// De-dup por KV para não repetir em reenvio de webhook. Best-effort — nunca bloqueia.
+async function avisarEquipeCobrancaPaga(env, os, pg) {
+  if (!env.RESEND_API_KEY || !os) return;
+  const listaEnv = env.COBRANCA_NOTIFY_EMAILS
+    ? String(env.COBRANCA_NOTIFY_EMAILS).split(/[,;]+/).map((s) => s.split('|')[0].trim().toLowerCase()).filter(Boolean)
+    : [...escritoriosDe(env).keys()];
+  const dest = [...new Set(listaEnv)].filter((e) => /^\S+@\S+\.\S+$/.test(e)).slice(0, 25);
+  if (!dest.length) return;
+  const chave = `notif:oscobranca:equipe:${os.id}`;
+  if (env.PORTAL_KV && await env.PORTAL_KV.get(chave)) return;
+  const num = os.numero || '';
+  const valor = os.cobranca ? String(os.cobranca.valor).replace('.', ',') : String((pg && pg.valor) || '');
+  const liberou = !!(os.cobranca && os.cobranca.liberouEmTransporte);
+  const semMotorista = os.status === 'agendada' && !os.agenteEmail;
+  const situacao = liberou
+    ? '✅ A coleta foi liberada automaticamente para o motorista (Em transporte).'
+    : (semMotorista
+      ? '⚠️ Falta escolher o motorista — a coleta está Agendada. Escolha o motorista para liberar no app do motorista.'
+      : `A coleta está marcada como paga e liberada. Status atual: ${os.status}.`);
+  const link = `https://sistema.ecobraz.org/coletas/os?id=${encodeURIComponent(os.id)}`;
+  const assunto = `💰 OS ${num} PAGA — ${os.clienteNome || 'cliente'}`.slice(0, 120);
+  const texto = `A OS ${num} (${os.clienteNome || 'cliente'}) foi PAGA — R$ ${valor}.\n\n${situacao}\n\nAbrir a OS: ${link}\n\nEcobraz · sistema`;
+  const html = `<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;color:#10262B"><div style="background:#00333B;border-radius:14px 14px 0 0;padding:18px 22px"><span style="color:#fff;font-size:18px;font-weight:800">ecobraz</span><span style="color:#92C430;font-size:10px;font-weight:800;letter-spacing:.14em;margin-left:8px">COBRANÇA PAGA</span></div><div style="border:1px solid #E4EBE9;border-top:none;border-radius:0 0 14px 14px;padding:24px 22px"><h1 style="font-size:19px;margin:0 0 10px">💰 OS ${esc(num)} paga</h1><p style="font-size:14px;line-height:1.6;color:#4F6469"><b>${esc(os.clienteNome || 'Cliente')}</b> pagou <b>R$ ${esc(valor)}</b>.</p><p style="font-size:14px;line-height:1.6;color:#10262B;background:#F2F6F4;border-radius:10px;padding:12px 14px">${esc(situacao)}</p><a href="${esc(link)}" style="display:block;background:#92C430;color:#10262B;text-decoration:none;border-radius:10px;padding:14px;text-align:center;font-weight:800;font-size:15px;margin:16px 0">Abrir a OS →</a></div></div>`;
+  const payload = { from: env.RESEND_FROM || 'Portal Ecobraz <acesso@ecobraz.org.br>', to: dest, subject: assunto, html, text: texto };
+  if (env.RESEND_REPLY_TO) payload.reply_to = env.RESEND_REPLY_TO;
+  const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${env.RESEND_API_KEY}` }, body: JSON.stringify(payload) });
+  if (!r.ok) throw new Error('resend_equipe_oscobranca_' + r.status);
+  if (env.PORTAL_KV) await env.PORTAL_KV.put(chave, '1', { expirationTtl: 60 * 60 * 24 * 90 });
+}
+
 async function enviarEmailLogin(cliente, link, env) {
   // Preferimos o Resend (API simples e compatível com Cloudflare Workers). O E-goi
   // fica como reserva enquanto o envio transacional dele não estiver resolvido.
@@ -3670,8 +3704,9 @@ async function fulfillPedidoPago(env, ped, pg) {
     } catch (error) { console.error('coleta_paga_falhou', safeError(error)); await registrarFalha(env, 'compra-coleta-liberacao', safeError(error), { lead: ped.leadId }); }
   } else if (ped.produto === 'oscobranca') {
     try {
-      await marcarCobrancaPagaOS(env, ped.osId, pg);
+      const osPaga = await marcarCobrancaPagaOS(env, ped.osId, pg);
       if (ped.clienteEmail) { try { await enviarEmailCobrancaOSPaga(ped, env); } catch (error) { console.error('email_oscobranca', safeError(error)); } }
+      try { await avisarEquipeCobrancaPaga(env, osPaga, pg); } catch (error) { console.error('email_equipe_oscobranca', safeError(error)); }
       console.log('oscobranca_paga', { os: ped.osId, valor: pg.valor });
     } catch (error) { console.error('oscobranca_falhou', safeError(error)); await registrarFalha(env, 'compra-oscobranca', safeError(error), { os: ped.osId }); }
   } else if (ped.produto === 'teste') {

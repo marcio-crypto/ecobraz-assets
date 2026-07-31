@@ -168,11 +168,19 @@ export async function definirCobrancaOS(env, id, cobranca) {
 export async function marcarCobrancaPagaOS(env, id, pagamento) {
   const rec = await lerColetaOS(env, id); if (!rec || !rec.cobranca) return null;
   rec.cobranca.status = 'pago'; rec.cobranca.paymentId = String((pagamento && pagamento.id) || ''); rec.cobranca.pagoEm = agora();
+  // Liberar a OS como paga (pedido do Marcio, 2026-07-31): marca LIBERADA e, se ela
+  // estava "agendada" E já tem motorista, coloca "em transporte" (libera para o app
+  // do motorista). SEM motorista, mantém "agendada" de propósito — senão a coleta
+  // sumiria do app de todos os motoristas; o aviso à equipe pede para escolher.
+  rec.liberada = true; rec.liberadaEm = agora(); rec.liberadaPor = 'pagamento';
+  let liberouEmTransporte = false;
+  if (rec.status === 'agendada' && rec.agenteEmail) { rec.status = 'em_transporte'; liberouEmTransporte = true; }
+  rec.cobranca.liberouEmTransporte = liberouEmTransporte;
   rec.atualizadoEm = agora();
   if (env.PORTAL_KV) {
     await env.PORTAL_KV.put(`os:${rec.id}`, JSON.stringify(rec));
     const idx = await listarColetasOS(env); const i = idx.findIndex((x) => x.id === rec.id);
-    if (i >= 0 && idx[i].cobranca) { idx[i].cobranca.status = 'pago'; await env.PORTAL_KV.put('os:index', JSON.stringify(idx).slice(0, 900000)); }
+    if (i >= 0) { if (idx[i].cobranca) idx[i].cobranca.status = 'pago'; idx[i].status = rec.status; await env.PORTAL_KV.put('os:index', JSON.stringify(idx).slice(0, 900000)); }
   }
   return rec;
 }
@@ -473,6 +481,7 @@ export function paginaColetaOSDetalhe(user, os, acomp) {
     ${os.cobranca ? `<div style="margin-top:14px;border:1px solid ${os.cobranca.status === 'pago' ? '#CBE7CB;background:#F0FAF0' : '#F2C173;background:#FFF9EE'};border-radius:12px;padding:13px 15px">
       <div style="font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:${os.cobranca.status === 'pago' ? '#1E7A1E' : '#8A4B00'}">💰 Cobrança: R$ ${esc(String(os.cobranca.valor).replace('.', ','))} — ${os.cobranca.status === 'pago' ? '✅ PAGA' : 'aguardando pagamento'}</div>
       <div style="font-size:13px;color:#4F6469;margin-top:5px">${esc(os.cobranca.descricao || '')}${os.cobranca.status === 'pago' && os.cobranca.pagoEm ? ` · paga em ${esc(dataBR(os.cobranca.pagoEm))}` : ''}</div>
+      ${os.cobranca.status === 'pago' && os.liberada ? `<div style="font-size:12.5px;color:#1E7A1E;font-weight:700;margin-top:5px">🔓 OS liberada${os.cobranca.liberouEmTransporte ? ' — colocada em transporte automaticamente' : (os.status === 'agendada' && !os.agenteEmail ? ' — escolha o motorista para liberar no app' : '')}</div>` : ''}
       ${os.cobranca.status !== 'pago' && os.cobranca.link ? `<input readonly value="${esc(os.cobranca.link)}" onclick="this.select()" style="width:100%;font-size:12px;margin-top:8px;border:1px solid #DDE1E6;border-radius:8px;padding:8px 10px">
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
         <a href="https://wa.me/?text=${encodeURIComponent('Olá! Segue o link para pagamento da sua coleta Ecobraz (OS ' + os.numero + ') — R$ ' + String(os.cobranca.valor).replace('.', ',') + ': ' + os.cobranca.link)}" target="_blank" rel="noopener" class="btn" style="background:#25D366;color:#0b3d1e;padding:8px 12px;font-size:12.5px">📱 Enviar por WhatsApp</a>
