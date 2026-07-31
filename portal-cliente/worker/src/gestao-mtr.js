@@ -259,10 +259,13 @@ td,th{padding:8px 10px;border:1px solid #E9EEEC}.tabs{display:flex;gap:8px;flex-
 function head(t) {
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${esc(t)} — Ecobraz</title><style>${CSS}</style></head><body>`;
 }
-function topo(sub) {
+function topo(sub, user) {
+  const eng = user && user.role === 'engenharia';
+  const home = eng ? '/eng' : '/inicio';
+  const sair = eng ? '/api/eng/sair' : '/api/cadastro/sair';
   return `<div class="noprint" style="background:#00333B;padding:15px 20px"><div style="max-width:920px;margin:0 auto;display:flex;justify-content:space-between;align-items:center">
-    <a href="/inicio" style="text-decoration:none"><span style="color:#fff;font-size:16px;font-weight:800">ecobraz</span><span style="color:#92C430;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin-left:8px">${esc(sub || 'MTR & DMR')}</span></a>
-    <form method="post" action="/api/cadastro/sair" style="margin:0"><button class="btn" style="background:#0e4651;color:#cfe3e0;border:1px solid #1c5b66;padding:8px 12px;font-size:12px">Sair</button></form>
+    <a href="${home}" style="text-decoration:none"><span style="color:#fff;font-size:16px;font-weight:800">ecobraz</span><span style="color:#92C430;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin-left:8px">${esc(sub || 'MTR & DMR')}</span></a>
+    <form method="post" action="${sair}" style="margin:0"><button class="btn" style="background:#0e4651;color:#cfe3e0;border:1px solid #1c5b66;padding:8px 12px;font-size:12px">Sair</button></form>
   </div></div>`;
 }
 const pillStatus = (st) => { const s = STATUS_MTR[st] || STATUS_MTR.pendente; return `<span class="pill" style="background:${s.bg};color:${s.cor}">${esc(s.rotulo)}</span>`; };
@@ -283,7 +286,7 @@ export function paginaMtrLista(user, mtrs, aba, q) {
       <div style="font-size:12px;color:#7c8a87;margin-top:3px">${m.data ? '📅 ' + esc(dataBR(m.data)) : 'sem data'}${m.residuo ? ' · ' + esc(m.residuo) : ''} · <b>${esc(kg(m.quantidade))}</b>${m.temPdf ? ' · 📎 PDF' : ''}</div></div>
       <div style="flex:none">${pillStatus(m.status)}</div>
     </a>`).join('') : `<div class="card" style="text-align:center;color:#8fa39f;font-size:13.5px">Nenhuma MTR de ${abaAtiva === 'saida' ? 'saída' : 'entrada'}${q ? ' para “' + esc(q) + '”' : ''} ainda.</div>`;
-  return `${head('MTR & DMR')}${topo('MTR & DMR')}
+  return `${head('MTR & DMR')}${topo('MTR & DMR', user)}
 <div class="wrap">
   <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:6px">
     <div><h1 style="font-size:22px;margin:0">MTR — Manifestos de Resíduos</h1>
@@ -316,7 +319,7 @@ export function paginaMtrForm(user, mtr, destinos, entradas) {
   const optDest = ['<option value="">— escolher destinador cadastrado —</option>'].concat((destinos || []).map((d) => `<option value="${esc(d.id)}|${esc(d.razaoSocial || d.cnpj)}|${esc(d.cnpj)}"${m.destinadorId && soNum(m.destinadorId) === soNum(d.id) ? ' selected' : ''}>${esc(d.razaoSocial || d.cnpj)}</option>`)).join('');
   const optEnt = ['<option value="">— vincular à MTR de entrada (opcional) —</option>'].concat((entradas || []).map((e) => `<option value="${esc(e.id)}"${m.mtrEntradaId === e.id ? ' selected' : ''}>MTR ${esc(e.numero || e.id)} · ${esc(e.contraparte || '')} · ${esc(kg(e.quantidade))}</option>`)).join('');
   const optStatus = Object.entries(STATUS_MTR).map(([k, v]) => `<option value="${k}"${(m.status || 'pendente') === k ? ' selected' : ''}>${esc(v.rotulo)}</option>`).join('');
-  return `${head(novo ? 'Nova MTR' : 'Editar MTR')}${topo('MTR & DMR')}
+  return `${head(novo ? 'Nova MTR' : 'Editar MTR')}${topo('MTR & DMR', user)}
 <div class="wrap">
   <a href="/mtr?aba=${tipo}" style="font-size:13px;font-weight:800;text-decoration:none;color:#4F6469">← Voltar</a>
   <h1 style="font-size:21px;margin:12px 0 2px">${novo ? 'Nova' : 'Editar'} MTR de ${tipo === 'saida' ? 'saída' : 'entrada'}</h1>
@@ -384,7 +387,7 @@ export function paginaMtrDetalhe(user, m, entradaVinc) {
   const tipo = normalizarTipo(m.tipo);
   const linha = (r, v) => v ? `<tr><td style="width:38%;color:#5c6f6b;font-weight:700">${esc(r)}</td><td style="font-weight:600">${esc(v)}</td></tr>` : '';
   const btnStatus = (k) => { const s = STATUS_MTR[k]; const ativo = m.status === k; return `<button class="btn" style="flex:1;min-width:120px;background:${ativo ? s.cor : '#fff'};color:${ativo ? '#fff' : s.cor};border:1.5px solid ${s.cor}" onclick="setStatus('${k}')">${ativo ? '✓ ' : ''}${esc(s.rotulo)}</button>`; };
-  return `${head('MTR ' + (m.numero || ''))}${topo('MTR & DMR')}
+  return `${head('MTR ' + (m.numero || ''))}${topo('MTR & DMR', user)}
 <div class="wrap">
   <a href="/mtr?aba=${tipo}" style="font-size:13px;font-weight:800;text-decoration:none;color:#4F6469">← Todas as MTRs</a>
   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin:12px 0 16px">
@@ -451,7 +454,7 @@ export function paginaDMR(user, dmr) {
   const resumoGer = dmr.porGerador.length ? dmr.porGerador.map((g) => `<tr><td>${esc(g.nome)}</td><td style="text-align:center">${g.n}</td><td style="text-align:right">${esc(kg(g.qtd))}</td></tr>`).join('') : `<tr><td colspan="3" style="color:#8fa39f;text-align:center">—</td></tr>`;
   const resumoDest = dmr.porDestinador.length ? dmr.porDestinador.map((g) => `<tr><td>${esc(g.nome)}</td><td style="text-align:center">${g.n}</td><td style="text-align:right">${esc(kg(g.qtd))}</td></tr>`).join('') : `<tr><td colspan="3" style="color:#8fa39f;text-align:center">—</td></tr>`;
   const saldoCor = dmr.saldo > 0 ? '#8A6A16' : (dmr.saldo < 0 ? '#B23A2E' : '#1E5B31');
-  return `${head('DMR')}${topo('MTR & DMR')}
+  return `${head('DMR')}${topo('MTR & DMR', user)}
 <div class="wrap">
   <a href="/mtr" class="noprint" style="font-size:13px;font-weight:800;text-decoration:none;color:#4F6469">← MTRs</a>
   <div class="card noprint" style="margin-top:12px">

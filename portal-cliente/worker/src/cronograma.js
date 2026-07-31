@@ -98,10 +98,13 @@ a{color:#0B5B66}.wrap{max-width:1180px;margin:0 auto;padding:20px 18px 56px}
 function head(t) {
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${esc(t)} — Ecobraz</title><style>${CSS}</style></head><body>`;
 }
-function topo(sub) {
+function topo(sub, user) {
+  const eng = user && user.role === 'engenharia';
+  const home = eng ? '/eng' : '/inicio';
+  const sair = eng ? '/api/eng/sair' : '/api/cadastro/sair';
   return `<div style="background:#00333B;padding:15px 20px"><div style="max-width:1180px;margin:0 auto;display:flex;justify-content:space-between;align-items:center">
-    <a href="/inicio" style="text-decoration:none"><span style="color:#fff;font-size:16px;font-weight:800">ecobraz</span><span style="color:#92C430;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin-left:8px">${esc(sub || 'cronograma')}</span></a>
-    <form method="post" action="/api/cadastro/sair" style="margin:0"><button style="background:#0e4651;color:#cfe3e0;border:1px solid #1c5b66;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700">Sair</button></form>
+    <a href="${home}" style="text-decoration:none"><span style="color:#fff;font-size:16px;font-weight:800">ecobraz</span><span style="color:#92C430;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin-left:8px">${esc(sub || 'cronograma')}</span></a>
+    <form method="post" action="${sair}" style="margin:0"><button style="background:#0e4651;color:#cfe3e0;border:1px solid #1c5b66;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700">Sair</button></form>
   </div></div>`;
 }
 const etapaRotulo = (e) => ({ recepcao: 'Recepção', triagem: 'Triagem', processamento: 'Processamento', saida: 'Saída', validacao: 'Validação (Eng.)', concluida: 'Concluída' }[e] || e);
@@ -134,7 +137,7 @@ export function paginaCronograma(user, dados) {
         <div style="font-size:11.5px;color:#8fa39f;margin-top:2px">${esc(etapaRotulo(c.etapa))} · recebido ${c.criadoEm ? 'em ' + esc(dataBR(c.criadoEm)) : '—'} · ${c.dias != null ? c.dias + ' dias' : 's/ data'}</div></div>
       <span class="pill" style="flex:none;background:${c.alerta.cor}1A;color:${c.alerta.cor}">${c.alerta.dot} ${esc(c.alerta.rotulo)}</span>
     </div>`).join('') : `<div style="font-size:13px;color:#9aa7a4;text-align:center;padding:16px">Nenhum lote em andamento no momento.</div>`;
-  return `${head('Cronograma')}${topo('Cronograma')}
+  return `${head('Cronograma')}${topo('Cronograma', user)}
 <div class="wrap">
   <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px;margin-bottom:16px">
     <div><h1 style="font-size:22px;margin:0">Cronograma & Kanban</h1>
