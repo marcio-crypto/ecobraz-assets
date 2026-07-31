@@ -18,6 +18,10 @@ function origemPortal(env, url) { return String(env.PORTAL_BASE_URL || env.PORTA
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const agora = () => { try { return new Date().toISOString(); } catch { return ''; } };
 const anoAtual = () => { try { return new Date().getFullYear(); } catch { return 2026; } };
+// Valor em BRL: lê "1.234,56"/"1234.56"/"120,00" → número; formata número → "1.234,56".
+// Pedido da Débora (2026-07-31): valor cobrado por item, discriminado no documento.
+const numValor = (v) => { let s = String(v == null ? '' : v).trim().replace(/[^0-9.,-]/g, ''); if (!s) return 0; if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.'); else if ((s.match(/\./g) || []).length > 1) s = s.replace(/\./g, ''); const n = Number(s); return Number.isFinite(n) && n > 0 ? n : 0; };
+const brl = (n) => (Number(n) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 // Tipos de certificado/laudo que o cliente pode solicitar na Ordem de Coleta
 // (pedido da Débora). Lista fechada — o que a Ecobraz emite hoje.
@@ -82,7 +86,9 @@ async function proximoNumero(env) {
 export function parseItensColeta(texto) {
   return String(texto || '').split(/\r?\n/).map((l) => l.trim()).filter(Boolean).slice(0, 80).map((l) => {
     const p = l.split(/\s*[;|\t]\s*/);
-    return { nome: String(p[0] || '').slice(0, 140), qtd: String(p[1] || '1').replace(/[^0-9.,]/g, '').slice(0, 12) || '1' };
+    const it = { nome: String(p[0] || '').slice(0, 140), qtd: String(p[1] || '1').replace(/[^0-9.,]/g, '').slice(0, 12) || '1' };
+    const v = numValor(p[2]); if (v > 0) it.valor = v; // 3º campo opcional = valor cobrado do item
+    return it;
   }).filter((it) => it.nome);
 }
 
@@ -99,7 +105,7 @@ export async function criarColetaOS(env, dados, criadoPor) {
     agenteEmail: String(d.agenteEmail || '').trim().toLowerCase(), agenteNome: d.agenteNome || '',
     veiculoPlaca: String(d.veiculoPlaca || '').slice(0, 12),
     material: String(d.material || '').slice(0, 500), quantidade: String(d.quantidade || '').slice(0, 100),
-    itens: Array.isArray(d.itens) ? d.itens.slice(0, 80).map((it) => ({ nome: String(it.nome || '').slice(0, 140), qtd: String(it.qtd || '1').slice(0, 12) })).filter((it) => it.nome) : parseItensColeta(d.itensTexto),
+    itens: Array.isArray(d.itens) ? d.itens.slice(0, 80).map((it) => { const o = { nome: String(it.nome || '').slice(0, 140), qtd: String(it.qtd || '1').slice(0, 12) }; const v = numValor(it.valor); if (v > 0) o.valor = v; return o; }).filter((it) => it.nome) : parseItensColeta(d.itensTexto),
     acondicionamento: String(d.acondicionamento || '').slice(0, 120), obs: String(d.obs || '').slice(0, 4000),
     obsInterna: String(d.obsInterna || '').slice(0, 4000), // só equipe — NUNCA vai para o cliente nem para o documento da OS
     contato: String(d.contato || '').slice(0, 200),
@@ -335,8 +341,8 @@ export function paginaGerarColeta(user, cliente, agentes, patrocinadores, veicul
     <label>Contato no local</label>${optContatos ? `<select id="contatoSel" onchange="if(this.value)document.getElementById('contato').value=this.value" style="margin-bottom:8px">${optContatos}</select>` : ''}<input id="contato" value="${esc(contatoStr)}">
     <div class="sec">Material &amp; motorista</div>
     <label>Material declarado</label><textarea id="material" rows="2" placeholder="ex.: CPUs, monitores, cabos e placas (REEE)"></textarea>
-    <label>Equipamentos item a item <span style="color:#9aa7a4;font-weight:400">(um por linha — ex.: Monitor LCD ; 5)</span></label><textarea id="itens" rows="4" placeholder="Monitor LCD ; 5&#10;CPU Dell ; 12&#10;No-break ; 3"></textarea>
-    <div style="font-size:11px;color:#9aa7a4;margin:-4px 0 4px">Aparece item a item na Carta de Descarte e no Manifesto. Se deixar em branco, usa o material declarado.</div>
+    <label>Equipamentos item a item <span style="color:#9aa7a4;font-weight:400">(um por linha — ex.: Monitor LCD ; 5 ; 120,00)</span></label><textarea id="itens" rows="4" placeholder="Monitor LCD ; 5 ; 120,00&#10;CPU Dell ; 12&#10;No-break ; 3"></textarea>
+    <div style="font-size:11px;color:#9aa7a4;margin:-4px 0 4px">Aparece item a item na Carta de Descarte e no Manifesto. Formato: <b>nome ; quantidade ; valor</b> — o <b>valor (R$) é opcional</b> e sai discriminado no documento (ex.: <i>Pilhas ; 50 ; 120,00</i>). Se deixar em branco, usa o material declarado.</div>
     <div class="g2"><div><label>Quantidade estimada</label><input id="quantidade" placeholder="ex.: ~500 kg (3 pallets)"></div>
     <div><label>Acondicionamento</label><input id="acondicionamento" placeholder="ex.: paletizado / caixas"></div></div>
     <div class="g2"><div><label>Motorista</label><select id="agente">${optAgentes}</select></div><div><label>Veículo</label><select id="veiculo">${optVeiculos}</select></div></div>
@@ -454,7 +460,7 @@ export function paginaColetaOSDetalhe(user, os, acomp) {
       ${linha('Data da coleta', [dataBR(os.dataAgendada), os.janela].filter(Boolean).join(' · '))}
       ${linha('Contato no local', os.contato)}
       ${linha('Motorista', os.agenteNome)}
-      ${linha('Material', os.material)}${(os.itens && os.itens.length) ? linha('Equipamentos', os.itens.map((i) => `${i.nome} (${i.qtd})`).join(' · ')) : ''}${linha('Quantidade', os.quantidade)}${linha('Acondicionamento', os.acondicionamento)}
+      ${linha('Material', os.material)}${(os.itens && os.itens.length) ? linha('Equipamentos', os.itens.map((i) => `${i.nome} (${i.qtd})${Number(i.valor) > 0 ? ' — R$ ' + brl(i.valor) : ''}`).join(' · ')) : ''}${linha('Quantidade', os.quantidade)}${linha('Acondicionamento', os.acondicionamento)}
       ${linha('Observações', os.obs)}
       ${os.obsInterna ? `<tr><td style="padding:8px 0;border-top:1px solid #EEF1F0;color:#8a6a16;width:38%;font-weight:700">🔒 Interna (equipe)</td><td style="padding:8px 0;border-top:1px solid #EEF1F0;font-weight:600;white-space:pre-wrap;word-break:break-word;color:#7a5f13">${esc(os.obsInterna)}</td></tr>` : ''}
       ${linha('Certificados solicitados', (os.certificados || []).join(' · '))}
@@ -467,7 +473,11 @@ export function paginaColetaOSDetalhe(user, os, acomp) {
     ${os.cobranca ? `<div style="margin-top:14px;border:1px solid ${os.cobranca.status === 'pago' ? '#CBE7CB;background:#F0FAF0' : '#F2C173;background:#FFF9EE'};border-radius:12px;padding:13px 15px">
       <div style="font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:${os.cobranca.status === 'pago' ? '#1E7A1E' : '#8A4B00'}">💰 Cobrança: R$ ${esc(String(os.cobranca.valor).replace('.', ','))} — ${os.cobranca.status === 'pago' ? '✅ PAGA' : 'aguardando pagamento'}</div>
       <div style="font-size:13px;color:#4F6469;margin-top:5px">${esc(os.cobranca.descricao || '')}${os.cobranca.status === 'pago' && os.cobranca.pagoEm ? ` · paga em ${esc(dataBR(os.cobranca.pagoEm))}` : ''}</div>
-      ${os.cobranca.status !== 'pago' && os.cobranca.link ? `<input readonly value="${esc(os.cobranca.link)}" onclick="this.select()" style="width:100%;font-size:12px;margin-top:8px;border:1px solid #DDE1E6;border-radius:8px;padding:8px 10px">` : ''}
+      ${os.cobranca.status !== 'pago' && os.cobranca.link ? `<input readonly value="${esc(os.cobranca.link)}" onclick="this.select()" style="width:100%;font-size:12px;margin-top:8px;border:1px solid #DDE1E6;border-radius:8px;padding:8px 10px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+        <a href="https://wa.me/?text=${encodeURIComponent('Olá! Segue o link para pagamento da sua coleta Ecobraz (OS ' + os.numero + ') — R$ ' + String(os.cobranca.valor).replace('.', ',') + ': ' + os.cobranca.link)}" target="_blank" rel="noopener" class="btn" style="background:#25D366;color:#0b3d1e;padding:8px 12px;font-size:12.5px">📱 Enviar por WhatsApp</a>
+        <a href="mailto:?subject=${encodeURIComponent('Link de pagamento — Coleta Ecobraz ' + os.numero)}&body=${encodeURIComponent('Olá!\n\nSegue o link para pagamento da sua coleta Ecobraz (OS ' + os.numero + ') — R$ ' + String(os.cobranca.valor).replace('.', ',') + (os.cobranca.descricao ? ' (' + os.cobranca.descricao + ')' : '') + ':\n' + os.cobranca.link + '\n\nQualquer dúvida, estamos à disposição.\nEquipe Ecobraz')}" class="btn btn-g" style="padding:8px 12px;font-size:12.5px">✉️ Enviar por e-mail</a>
+      </div>` : ''}
     </div>` : ''}
     ${os.mtr && os.mtr.numero ? `<div style="margin-top:14px;border:1px solid #CBE7E3;background:#F0FAF9;border-radius:12px;padding:13px 15px">
       <div style="font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#1F4348">🏛️ MTR ${esc(os.mtr.numero)} · ${esc(os.mtr.situacao || '—')}${os.mtr.cdf ? ' · CDF ' + esc(String(os.mtr.cdf)) : ''}</div>
@@ -528,7 +538,7 @@ export function paginaEditarColeta(user, os, contatos, agentes, veiculos) {
   const optVeiculos = ['<option value="">— escolher veículo —</option>'].concat(veics.map((v) => `<option value="${esc(v.placa)}" ${v.placa === os.veiculoPlaca ? 'selected' : ''}>${esc(v.placa)}${v.apelido ? ' — ' + esc(v.apelido) : ''}</option>`)).join('');
   const cts = (contatos || []).filter((c) => c && (c.nome || c.fone || c.email));
   const optContatos = cts.length ? ['<option value="">— escolher um contato do cliente —</option>'].concat(cts.map((c) => `<option value="${esc([c.nome, c.fone].filter(Boolean).join(' · '))}">${esc(c.nome || '(sem nome)')}${c.cargo ? ' — ' + esc(c.cargo) : ''}</option>`)).join('') : '';
-  const itensTxt = (os.itens || []).map((i) => `${i.nome} ; ${i.qtd}`).join('\n');
+  const itensTxt = (os.itens || []).map((i) => `${i.nome} ; ${i.qtd}${Number(i.valor) > 0 ? ' ; ' + brl(i.valor) : ''}`).join('\n');
   return `${head('Editar coleta')}<body>${topo('coletas')}
 <div class="wrap">
   <a href="/coletas/os?id=${esc(os.id)}" style="font-size:13px;font-weight:800;text-decoration:none;color:#4F6469">← Voltar para a coleta</a>
@@ -543,7 +553,7 @@ export function paginaEditarColeta(user, os, contatos, agentes, veiculos) {
     <input id="contato" value="${esc(os.contato || '')}" placeholder="nome · telefone">
     <div class="sec">Material &amp; motorista</div>
     <label>Material declarado</label><textarea id="material" rows="2">${esc(os.material || '')}</textarea>
-    <label>Equipamentos item a item <span style="color:#9aa7a4;font-weight:400">(um por linha — ex.: Monitor LCD ; 5)</span></label><textarea id="itens" rows="4">${esc(itensTxt)}</textarea>
+    <label>Equipamentos item a item <span style="color:#9aa7a4;font-weight:400">(um por linha — ex.: Monitor LCD ; 5 ; 120,00)</span></label><textarea id="itens" rows="4">${esc(itensTxt)}</textarea>
     <div class="g2"><div><label>Quantidade estimada</label><input id="quantidade" value="${esc(os.quantidade || '')}"></div><div><label>Acondicionamento</label><input id="acondicionamento" value="${esc(os.acondicionamento || '')}"></div></div>
     <div class="g2"><div><label>Motorista</label><select id="agente">${optAgentes}</select></div><div><label>Veículo</label><select id="veiculo">${optVeiculos}</select></div></div>
     <label>Observações / instruções de acesso</label><textarea id="obs" rows="5">${esc(os.obs || '')}</textarea>
@@ -558,7 +568,12 @@ export function paginaEditarColeta(user, os, contatos, agentes, veiculos) {
     <div style="border:1px solid ${os.cobranca.status === 'pago' ? '#CBE7CB;background:#F0FAF0' : '#F2C173;background:#FFF9EE'};border-radius:10px;padding:12px 14px;font-size:13.5px">
       <b>R$ ${esc(String(os.cobranca.valor).replace('.', ','))}</b> — ${esc(os.cobranca.descricao || 'cobrança da coleta')} ·
       <b>${os.cobranca.status === 'pago' ? '✅ PAGO' : '💳 aguardando pagamento'}</b>
-      ${os.cobranca.status !== 'pago' && os.cobranca.link ? `<div style="margin-top:8px"><input readonly value="${esc(os.cobranca.link)}" onclick="this.select()" style="font-size:12px"><div style="font-size:11.5px;color:#8a6a16;margin-top:4px">O cliente também vê o botão “Pagar” no portal dele. Você pode copiar o link e mandar por WhatsApp/e-mail.</div></div>` : ''}
+      ${os.cobranca.status !== 'pago' && os.cobranca.link ? `<div style="margin-top:8px"><input readonly value="${esc(os.cobranca.link)}" onclick="this.select()" style="font-size:12px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+          <a href="https://wa.me/?text=${encodeURIComponent('Olá! Segue o link para pagamento da sua coleta Ecobraz (OS ' + os.numero + ') — R$ ' + String(os.cobranca.valor).replace('.', ',') + ': ' + os.cobranca.link)}" target="_blank" rel="noopener" class="btn" style="background:#25D366;color:#0b3d1e;padding:8px 12px;font-size:12.5px">📱 Enviar por WhatsApp</a>
+          <a href="mailto:?subject=${encodeURIComponent('Link de pagamento — Coleta Ecobraz ' + os.numero)}&body=${encodeURIComponent('Olá!\n\nSegue o link para pagamento da sua coleta Ecobraz (OS ' + os.numero + ') — R$ ' + String(os.cobranca.valor).replace('.', ',') + (os.cobranca.descricao ? ' (' + os.cobranca.descricao + ')' : '') + ':\n' + os.cobranca.link + '\n\nQualquer dúvida, estamos à disposição.\nEquipe Ecobraz')}" class="btn btn-g" style="padding:8px 12px;font-size:12.5px">✉️ Enviar por e-mail</a>
+        </div>
+        <div style="font-size:11.5px;color:#8a6a16;margin-top:6px">Abre o WhatsApp/e-mail com a mensagem e o link prontos — é só escolher o cliente e enviar. O cliente também vê o botão “Pagar” no portal dele.</div></div>` : ''}
       ${os.cobranca.status !== 'pago' ? `<div style="margin-top:9px"><button type="button" class="btn btn-g" style="padding:8px 12px;font-size:12px" onclick="removerCobranca()">Remover cobrança</button></div>` : ''}
     </div>` : `
     <div style="font-size:11px;color:#9aa7a4;margin:-4px 0 8px">Se esta coleta for cobrada, informe o valor e gere o link — ele fica anexado à OS e aparece para o cliente no portal (cartão, Apple/Google Pay e boleto). O pagamento marca “PAGO” sozinho e não trava a operação.</div>
@@ -652,15 +667,16 @@ const DECLARACAO_CARTA = 'A Ecobraz declara que está dispensada de emissão de 
 const tdDoc = 'padding:9px 10px;border:1px solid #E4EBE9';
 function tabelaItens(os) {
   const itens = (os.itens && os.itens.length) ? os.itens : [{ nome: os.material || 'Sucata Eletrônica — Diversa', qtd: os.quantidade || '1,000' }];
-  const linhas = itens.map((it, i) => `<tr><td style="${tdDoc}">${i + 1}</td><td style="${tdDoc}">${esc(it.nome)}</td><td style="${tdDoc};text-align:right">${esc(it.qtd)}</td><td style="${tdDoc};text-align:right">R$ 0,00</td><td style="${tdDoc};text-align:right">R$ 0,00</td></tr>`).join('');
+  const total = itens.reduce((s, it) => s + (Number(it.valor) || 0), 0);
+  const linhas = itens.map((it, i) => `<tr><td style="${tdDoc}">${i + 1}</td><td style="${tdDoc}">${esc(it.nome)}</td><td style="${tdDoc};text-align:right">${esc(it.qtd)}</td><td style="${tdDoc};text-align:right">${Number(it.valor) > 0 ? 'R$ ' + brl(it.valor) : '—'}</td></tr>`).join('');
   return `<table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-top:6px">
     <thead><tr style="background:#F2F6F4;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#5c6f6b">
       <th style="${tdDoc};text-align:left;width:40px">Item</th><th style="${tdDoc};text-align:left">Nome</th>
-      <th style="${tdDoc};text-align:right">Quantidade</th><th style="${tdDoc};text-align:right">Valor Unit.</th><th style="${tdDoc};text-align:right">Total</th>
+      <th style="${tdDoc};text-align:right">Quantidade</th><th style="${tdDoc};text-align:right">Valor (R$)</th>
     </tr></thead>
     <tbody>
       ${linhas}
-      <tr><td colspan="4" style="${tdDoc};text-align:right;font-weight:800">Total</td><td style="${tdDoc};text-align:right;font-weight:800">R$ 0,00</td></tr>
+      <tr><td colspan="3" style="${tdDoc};text-align:right;font-weight:800">Total</td><td style="${tdDoc};text-align:right;font-weight:800">R$ ${brl(total)}</td></tr>
     </tbody></table>`;
 }
 const eyebrowDoc = (t) => `<div style="display:flex;align-items:center;gap:9px;margin:22px 0 8px"><span style="width:4px;height:16px;background:#92C430;border-radius:2px"></span><span style="font-size:12px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:#00333B">${esc(t)}</span></div>`;
@@ -817,6 +833,8 @@ export function paginaComprovanteOS(os, seloUrl) {
   // Tabela de equipamentos item a item (pedido da Débora, 2026-07-28: "igual tem
   // na carta de descarte e na MTR" — dá noção de volume no próprio documento).
   const tdOS = 'padding:7px 10px;border:1px solid #E4EBE9;font-size:12px;color:#10262B';
+  const cartaTemValor = (os.itens || []).some((it) => Number(it.valor) > 0);
+  const cartaTotal = (os.itens || []).reduce((s, it) => s + (Number(it.valor) || 0), 0);
   const equipsHTML = (os.itens && os.itens.length) ? `<div style="margin-top:16px">
       <div style="font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#93a6a2;margin-bottom:6px">Equipamentos — item a item</div>
       <table style="width:100%;border-collapse:collapse">
@@ -824,8 +842,9 @@ export function paginaComprovanteOS(os, seloUrl) {
           <th style="${tdOS};background:#F2F6F4;text-align:left;width:34px;font-size:10px;text-transform:uppercase;color:#5B6570">#</th>
           <th style="${tdOS};background:#F2F6F4;text-align:left;font-size:10px;text-transform:uppercase;color:#5B6570">Equipamento / material</th>
           <th style="${tdOS};background:#F2F6F4;text-align:right;width:90px;font-size:10px;text-transform:uppercase;color:#5B6570">Qtde</th>
+          ${cartaTemValor ? `<th style="${tdOS};background:#F2F6F4;text-align:right;width:110px;font-size:10px;text-transform:uppercase;color:#5B6570">Valor (R$)</th>` : ''}
         </tr></thead>
-        <tbody>${os.itens.map((it, i) => `<tr><td style="${tdOS}">${i + 1}</td><td style="${tdOS};font-weight:600">${esc(it.nome)}</td><td style="${tdOS};text-align:right;font-weight:700">${esc(it.qtd)}</td></tr>`).join('')}</tbody>
+        <tbody>${os.itens.map((it, i) => `<tr><td style="${tdOS}">${i + 1}</td><td style="${tdOS};font-weight:600">${esc(it.nome)}</td><td style="${tdOS};text-align:right;font-weight:700">${esc(it.qtd)}</td>${cartaTemValor ? `<td style="${tdOS};text-align:right;font-weight:700">${Number(it.valor) > 0 ? 'R$ ' + brl(it.valor) : '—'}</td>` : ''}</tr>`).join('')}${cartaTemValor ? `<tr><td style="${tdOS};text-align:right;font-weight:800" colspan="3">Total</td><td style="${tdOS};text-align:right;font-weight:800">R$ ${brl(cartaTotal)}</td></tr>` : ''}</tbody>
       </table></div>` : '';
   // Anexos NÃO-imagem (planilha do cliente, PDF etc.) — exigência de clientes
   // corporativos: o arquivo precisa constar NO documento da OS, não só na edição.
