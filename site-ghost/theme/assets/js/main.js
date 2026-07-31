@@ -184,13 +184,46 @@
             });
             window.dataLayer = window.dataLayer || []; window.dataLayer.push({event:'collection_request_submitted',profile:payload.profile,material_category:payload.material_category,state:payload.state});
             // A tela de confirmação substitui o formulário: evita reenvios em duplicidade.
+            const isEn = (document.documentElement.lang || '').toLowerCase().indexOf('en') === 0;
             const done = document.createElement('div');
             done.className = 'form-done';
             done.setAttribute('role', 'status');
             done.innerHTML = '<span class="form-done-icon" aria-hidden="true">✓</span>' +
-                '<h2>Solicitação recebida!</h2>' +
-                '<p>Obrigado. Nossa equipe vai analisar as informações e entrar em contato pelo e-mail ou telefone que você informou.</p>' +
-                '<p class="form-done-note">Não é necessário enviar novamente. Se preferir adiantar a conversa, chame a equipe no WhatsApp.</p>';
+                (isEn ? '<h2>Request received!</h2>' +
+                    '<p>Thank you. Our team will review the details and contact you by the e-mail or phone you provided.</p>' +
+                    '<p class="form-done-note">No need to send it again. If you prefer to speed things up, message the team on WhatsApp.</p>'
+                : '<h2>Solicitação recebida!</h2>' +
+                    '<p>Obrigado. Nossa equipe vai analisar as informações e entrar em contato pelo e-mail ou telefone que você informou.</p>' +
+                    '<p class="form-done-note">Não é necessário enviar novamente. Se preferir adiantar a conversa, chame a equipe no WhatsApp.</p>');
+            // Expressa (R$ 55): pagamento por Pix direto na confirmação.
+            // A chave vem de data-pix-chave no <form>; sem chave, instruções vêm por escrito.
+            if (/EXPRESSA/.test(String(payload.urgency || ''))) {
+                const pixKey = form.dataset.pixChave || '';
+                const pix = document.createElement('div');
+                pix.className = 'form-pix';
+                if (pixKey) {
+                    pix.innerHTML = (isEn
+                        ? '<h3>Express collection — R$ 55 via Pix</h3>' +
+                          '<p>Pay now to speed up scheduling. Pix key:</p>' +
+                          '<p class="form-pix-chave"><code></code> <button type="button" class="button button-small" data-pix-copiar>Copy key</button></p>' +
+                          '<p class="form-done-note">Send the receipt on WhatsApp. The express slot is confirmed in writing after payment. Ecobraz client? You can also pay in the <a href="https://sistema.ecobraz.org/" rel="noopener">client portal</a>.</p>'
+                        : '<h3>Coleta expressa — R$ 55 por Pix</h3>' +
+                          '<p>Pague agora para agilizar o agendamento. Chave Pix:</p>' +
+                          '<p class="form-pix-chave"><code></code> <button type="button" class="button button-small" data-pix-copiar>Copiar chave</button></p>' +
+                          '<p class="form-done-note">Envie o comprovante no WhatsApp. A expressa é confirmada por escrito após o pagamento. Cliente Ecobraz? Também dá para pagar pelo <a href="https://sistema.ecobraz.org/" rel="noopener">sistema</a>.</p>');
+                    pix.querySelector('code').textContent = pixKey;
+                    pix.querySelector('[data-pix-copiar]').addEventListener('click', function () {
+                        navigator.clipboard && navigator.clipboard.writeText(pixKey);
+                        this.textContent = isEn ? 'Copied!' : 'Copiada!';
+                    });
+                } else {
+                    pix.innerHTML = isEn
+                        ? '<h3>Express collection — R$ 55</h3><p>Payment is via Pix — the instructions arrive in the written confirmation. Want to speed it up? Message us on WhatsApp.</p>'
+                        : '<h3>Coleta expressa — R$ 55</h3><p>O pagamento é por Pix — as instruções chegam na confirmação por escrito. Quer adiantar? Chame no WhatsApp.</p>';
+                }
+                done.appendChild(pix);
+                track('express_pix_shown', {page_path: window.location.pathname});
+            }
             form.replaceWith(done);
             done.scrollIntoView({behavior:'smooth', block:'center'});
             return;
