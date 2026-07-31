@@ -1243,7 +1243,7 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
           if (baixado && baixado.bytes && env.R2_ARQUIVOS) {
             const key = `coleta-anexo/mtr/${os.id}-${String(resumo.numero).replace(/[^0-9A-Za-z]/g, '')}.pdf`;
             await env.R2_ARQUIVOS.put(key, baixado.bytes, { httpMetadata: { contentType: 'application/pdf' } });
-            await registrarAnexoColeta(env, os.id, { key, nome: `MTR-${resumo.numero}.pdf`, content_type: 'application/pdf', tamanho: baixado.bytes.length });
+            await registrarAnexoColeta(env, os.id, { key, nome: `MTR-${resumo.numero}.pdf`, tipo: 'MTR (PDF)', content_type: 'application/pdf', tamanho: baixado.bytes.length });
             pdf = { anexado: true };
           } else { pdf = { anexado: false, motivo: (baixado && baixado.erro) || 'sem_pdf' }; }
         } catch (error) { console.error('mtr_pdf', safeError(error)); pdf = { anexado: false, motivo: 'erro' }; }
@@ -1591,9 +1591,10 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         const rand = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
         const key = `coleta-anexo/${id}/${rand}`;
         const ct = file.type || 'application/octet-stream';
+        const tipoAnexo = (url.searchParams.get('tipo') || '').slice(0, 60);
         try { await env.R2_ARQUIVOS.put(key, file.stream(), { httpMetadata: { contentType: ct } }); }
         catch (e) { return json({ ok: false, error: 'Falha ao guardar: ' + String((e && e.message) || e).slice(0, 80) }, 502); }
-        const meta = { key, nome: String(file.name || 'arquivo').slice(0, 140), content_type: ct, tamanho: file.size || 0 };
+        const meta = { key, nome: String(file.name || 'arquivo').slice(0, 140), tipo: tipoAnexo, content_type: ct, tamanho: file.size || 0 };
         await registrarAnexoColeta(env, id, meta);
         return json({ ok: true, anexo: meta });
       }

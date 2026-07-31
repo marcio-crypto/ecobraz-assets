@@ -23,6 +23,34 @@ const anoAtual = () => { try { return new Date().getFullYear(); } catch { return
 // (pedido da Débora). Lista fechada — o que a Ecobraz emite hoje.
 const CERTIFICADOS_OS = ['Laudo fotográfico', 'Laudo de Sanitização', 'Certificado de Destinação', 'Certificado Detalhado'];
 const normalizarCertificados = (v) => (Array.isArray(v) ? CERTIFICADOS_OS.filter((c) => v.includes(c)) : []);
+// Tipos de laudo/documento que podem ser ANEXADOS a uma OS (pedido do Marcelo).
+// Tipar o anexo organiza os documentos por natureza e deixa claro, na auditoria,
+// o que cada arquivo comprova. Lista fechada + "Outro" para o que não se enquadra.
+export const TIPOS_ANEXO = [
+  'Foto do material / local',
+  'Laudo de Descaracterização',
+  'Laudo de Destruição de Dados',
+  'Laudo de Análise Química',
+  'Laudo fotográfico',
+  'Laudo de Sanitização',
+  'Certificado de Destinação',
+  'Nota Fiscal',
+  'MTR (PDF)',
+  'Outro documento',
+];
+const normalizarTipoAnexo = (v) => (TIPOS_ANEXO.includes(v) ? v : '');
+// Ícone por natureza do anexo — ajuda o olho a achar o documento certo na lista.
+const iconeTipoAnexo = (tipo, ct) => {
+  if (/Destruição de Dados/i.test(tipo)) return '🔒';
+  if (/Descaracterização/i.test(tipo)) return '🧰';
+  if (/Análise Química/i.test(tipo)) return '🧪';
+  if (/Sanitização/i.test(tipo)) return '🧼';
+  if (/Certificado/i.test(tipo)) return '🏅';
+  if (/Nota Fiscal/i.test(tipo)) return '🧾';
+  if (/MTR/i.test(tipo)) return '🏛️';
+  if (/Laudo/i.test(tipo)) return '📋';
+  return /image/.test(ct || '') ? '🖼️' : '📄';
+};
 // Fuso de Brasília (UTC-3, sem horário de verão). Datas com hora (ISO em UTC) são
 // convertidas; datas só-dia (sem "T") ficam como estão.
 const dataBR = (iso) => { const d = new Date(iso); if (!iso || isNaN(d.getTime())) return ''; if (String(iso).includes('T')) d.setUTCHours(d.getUTCHours() - 3); const p = (n) => String(n).padStart(2, '0'); return `${p(d.getUTCDate())}/${p(d.getUTCMonth() + 1)}/${d.getUTCFullYear()}`; };
@@ -191,7 +219,7 @@ function cidadeDoEndereco(e) { const m = String(e || '').match(/·\s*([^·]+?)\/
 export async function registrarAnexoColeta(env, id, meta) {
   const rec = await lerColetaOS(env, id); if (!rec) return null;
   if (!Array.isArray(rec.anexos)) rec.anexos = [];
-  rec.anexos.push({ key: meta.key, nome: String(meta.nome || 'arquivo').slice(0, 140), content_type: String(meta.content_type || '').slice(0, 100), tamanho: Number(meta.tamanho || 0), quando: agora() });
+  rec.anexos.push({ key: meta.key, nome: String(meta.nome || 'arquivo').slice(0, 140), tipo: normalizarTipoAnexo(meta.tipo), content_type: String(meta.content_type || '').slice(0, 100), tamanho: Number(meta.tamanho || 0), quando: agora() });
   rec.atualizadoEm = agora();
   if (env.PORTAL_KV) await env.PORTAL_KV.put(`os:${id}`, JSON.stringify(rec));
   return rec;
@@ -397,9 +425,10 @@ export function paginaColetaOSDetalhe(user, os, acomp) {
   })();
   const registroHTML = blocoRegistroMotorista(acomp && acomp.registro, `/coletas/foto-motorista?id=${esc(os.id)}`, `/coletas/assinatura-motorista?id=${esc(os.id)}`);
   const anexosArr = Array.isArray(os.anexos) ? os.anexos : [];
+  const badgeTipo = (t) => t ? `<span style="flex:none;font-size:9px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;padding:2px 8px;border-radius:20px;background:#E8F0EE;color:#3B5B57;white-space:nowrap">${esc(t)}</span>` : `<span style="flex:none;font-size:9px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:2px 8px;border-radius:20px;background:#FFF4DE;color:#8A6A16;white-space:nowrap">sem tipo</span>`;
   const anexosHTML = anexosArr.length ? anexosArr.map((a) => `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid #EEF1F0;border-radius:10px;padding:9px 12px;margin-bottom:7px;background:#FBFDFC">
-      <a href="/coletas/anexo?key=${encodeURIComponent(a.key)}" target="_blank" rel="noopener" style="text-decoration:none;color:#10262B;font-weight:600;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">${/image/.test(a.content_type || '') ? '🖼️' : '📄'} ${esc(a.nome || 'arquivo')} ↗</a>
-      <button onclick="removerAnexo('${esc(a.key)}')" style="flex:none;background:none;border:none;color:#B23A2E;font-size:11.5px;font-weight:700;cursor:pointer">remover</button>
+      <a href="/coletas/anexo?key=${encodeURIComponent(a.key)}" target="_blank" rel="noopener" style="text-decoration:none;color:#10262B;font-weight:600;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">${iconeTipoAnexo(a.tipo, a.content_type)} ${esc(a.nome || 'arquivo')} ↗</a>
+      <div style="display:flex;align-items:center;gap:9px;flex:none">${badgeTipo(a.tipo)}<button onclick="removerAnexo('${esc(a.key)}')" style="flex:none;background:none;border:none;color:#B23A2E;font-size:11.5px;font-weight:700;cursor:pointer">remover</button></div>
     </div>`).join('') : '<div style="font-size:12.5px;color:#8fa39f">Nenhum anexo ainda.</div>';
   return `${head(os.numero)}<body>${topo('coletas')}
 <div class="wrap">
@@ -459,11 +488,16 @@ export function paginaColetaOSDetalhe(user, os, acomp) {
     <div class="sec">📎 Anexos da coleta</div>
     <div style="font-size:11.5px;color:#9aa7a4;margin:-2px 0 8px">Fotos do material/local e arquivos (PDF) desta coleta — guardados no depósito próprio.</div>
     <div id="anexosLista">${anexosHTML}</div>
-    <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap">
+    <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
+      <select id="arqTipo" style="font-size:12.5px;max-width:230px;border:1px solid #DDE1E6;border-radius:9px;padding:9px 10px;background:#fff;color:#10262B">
+        <option value="">— tipo do documento —</option>
+        ${TIPOS_ANEXO.map((t) => `<option value="${esc(t)}">${esc(t)}</option>`).join('')}
+      </select>
       <input type="file" id="arqFile" accept="image/*,application/pdf,.pdf" style="font-size:12.5px;max-width:230px">
       <button class="btn btn-g" style="padding:8px 12px;font-size:12.5px" onclick="enviarAnexo()">⬆ Anexar</button>
       <span id="anexoMsg" style="font-size:12px;color:#4F6469"></span>
     </div>
+    <div style="font-size:11px;color:#9aa7a4;margin-top:5px">Escolha o <b>tipo</b> (laudo de descaracterização, destruição de dados, análise química…) antes de anexar — assim o documento fica identificado na auditoria.</div>
     <div class="sec">Situação</div>
     ${os.status === 'agendada' ? (os.agenteEmail ? `<div style="background:#EAF2E6;border:1px solid #cfe6b8;border-radius:12px;padding:14px 16px;margin-bottom:10px">
       <div style="font-size:13.5px;font-weight:800;color:#28413f">🚚 Liberar para o motorista${os.agenteNome ? ` — ${esc(os.agenteNome)}` : ''}</div>
@@ -482,7 +516,7 @@ export function paginaColetaOSDetalhe(user, os, acomp) {
   </div>
 </div>
 <script>var TEM_MOTORISTA=${os.agenteEmail ? 'true' : 'false'};function setStatus(s){if(s==='em_transporte'&&!TEM_MOTORISTA&&!confirm('Esta coleta não tem motorista escolhido. Se colocar em transporte assim, ela NÃO vai aparecer para nenhum motorista. O ideal é Editar e escolher o motorista antes. Continuar mesmo assim?'))return;if(s==='cancelada'&&!confirm('Cancelar esta coleta? Ela sai da lista principal, mas fica guardada no histórico (dá pra reativar depois).'))return;document.getElementById('m').textContent='Salvando…';fetch('/api/coletas/status',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:'${esc(os.id)}',status:s})}).then(r=>r.json()).then(j=>{if(j.ok){location.reload();}else{document.getElementById('m').textContent='Falha.';}}).catch(()=>document.getElementById('m').textContent='Sem conexão.');}
-function enviarAnexo(){var f=document.getElementById('arqFile'),msg=document.getElementById('anexoMsg');if(!f.files||!f.files[0]){msg.textContent='Escolha um arquivo.';return;}if(f.files[0].size>15728640){msg.textContent='Arquivo muito grande (máx. 15 MB).';return;}var fd=new FormData();fd.append('arquivo',f.files[0]);msg.textContent='Enviando…';fetch('/api/coletas/anexo?id=${esc(os.id)}',{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(j){if(j.ok){location.reload();}else{msg.textContent=j.error||'Falha ao enviar.';}}).catch(function(){msg.textContent='Sem conexão.';});}
+function enviarAnexo(){var f=document.getElementById('arqFile'),tp=document.getElementById('arqTipo'),msg=document.getElementById('anexoMsg');if(!f.files||!f.files[0]){msg.textContent='Escolha um arquivo.';return;}if(f.files[0].size>15728640){msg.textContent='Arquivo muito grande (máx. 15 MB).';return;}if(!tp.value){msg.textContent='Escolha o tipo do documento.';return;}var fd=new FormData();fd.append('arquivo',f.files[0]);msg.textContent='Enviando…';fetch('/api/coletas/anexo?id=${esc(os.id)}&tipo='+encodeURIComponent(tp.value),{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(j){if(j.ok){location.reload();}else{msg.textContent=j.error||'Falha ao enviar.';}}).catch(function(){msg.textContent='Sem conexão.';});}
 function removerAnexo(k){if(!confirm('Remover este anexo?'))return;fetch('/api/coletas/anexo-remover',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:'${esc(os.id)}',key:k})}).then(function(r){return r.json();}).then(function(j){if(j.ok)location.reload();}).catch(function(){});}</script>
 </body></html>`;
 }
