@@ -11,8 +11,12 @@
 <link rel="alternate" hreflang="x-default" href="{{@site.url}}/">
 {{/contentFor}}
 
-<section class="v2-hero">
-  <div class="container v2-hero-grid">
+{{!-- Hero em carrossel por público (decisão do Marcio 31/07): 4 vitrines.
+     A vitrine inicial é escolhida pelo main.js com sinais reais (?perfil=,
+     UTM de campanha, memória de navegação B2B/governo no localStorage);
+     sem sinal — e sem JS — vale a vitrine universal "casa". --}}
+<section class="v2-hero v2-carrossel" data-hero-carrossel>
+  <div class="container v2-hero-grid v2-slide is-active" data-slide="casa">
     <div>
       <span class="v2-tag">Coleta e destinação de eletrônicos · desde 2011</span>
       <h1>De uma geladeira a um <em>data center</em>: coletamos, destinamos certo e entregamos a prova.</h1>
@@ -32,6 +36,75 @@
       <div class="v2-selo"><b>★ 4,9</b> · “Super recomendo, sempre pontuais nas retiradas.”<span>Sueli · avaliação pública no Google</span></div>
       <span class="v2-foto-legenda">Imagem ilustrativa</span>
     </div>
+  </div>
+
+  <div class="container v2-hero-grid v2-slide" data-slide="empresa" hidden>
+    <div>
+      <span class="v2-tag">Para empresas e instituições</span>
+      <h1>Desmobilizou TI? Cada ativo sai com <em>evidência auditável</em>.</h1>
+      <p class="v2-sub">Coleta com equipe própria, certificado com QR que valida em segundos e portal com histórico exportável — sem contrato e sem exclusividade. Documentos conforme o serviço contratado e executado.</p>
+      <div class="v2-hero-ctas">
+        <a class="button" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=home-hero-empresa" data-track="home_hero_empresa_agendar">Pedir avaliação</a>
+        <a class="button v2-suave" href="{{@site.url}}/para-empresas/" data-track="home_hero_empresa_solucoes">Ver soluções</a>
+      </div>
+      <div class="v2-prova">
+        <span class="v2-pill">Resposta em <i>24h úteis</i></span>
+        <span class="v2-pill">Portal <i>gratuito</i>, sem contrato</span>
+        <span class="v2-pill">Listada por <i>ONU e UE</i></span>
+      </div>
+    </div>
+    <div class="v2-hero-foto">
+      <img class="v2-foto" src="{{asset "images/ilustrativa-hero-empresa.jpg"}}" alt="Técnicos organizando notebooks e desktops desativados em carrinho de transporte num escritório corporativo" width="688" height="585" loading="lazy">
+      <span class="v2-foto-legenda">Imagem ilustrativa</span>
+    </div>
+  </div>
+
+  <div class="container v2-hero-grid v2-slide" data-slide="grandes" hidden>
+    <div>
+      <span class="v2-tag">Grandes empresas &amp; multinacionais</span>
+      <h1>Multissite e recorrente, em escala — com <em>documentação por coleta</em>.</h1>
+      <p class="v2-sub">Operações distribuídas, coletas recorrentes e histórico exportável no portal — a base para Escopo 3 e documentação ESG que a matriz consegue ler.</p>
+      <div class="v2-hero-ctas">
+        <a class="button" href="{{@site.url}}/grandes-empresas-e-multinacionais/" data-track="home_hero_grandes">Grandes empresas</a>
+        <a class="button v2-suave" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=home-hero-grandes" data-track="home_hero_grandes_agendar">Agendar demonstração</a>
+      </div>
+      <div class="v2-prova">
+        <span class="v2-pill">Coletas <i>recorrentes</i></span>
+        <span class="v2-pill">Escopo 3 · <i>CSRD</i></span>
+        <span class="v2-pill">Relatórios técnicos com <i>DOI</i></span>
+      </div>
+    </div>
+    <div class="v2-hero-foto">
+      <img class="v2-foto" src="{{asset "images/ilustrativa-hero-logistica.jpg"}}" alt="Empilhadeira movendo palete com equipamentos eletrônicos envelopados em centro de distribuição" width="688" height="585" loading="lazy">
+      <span class="v2-foto-legenda">Imagem ilustrativa</span>
+    </div>
+  </div>
+
+  <div class="container v2-hero-grid v2-slide" data-slide="governo" hidden>
+    <div>
+      <span class="v2-tag">Órgãos públicos</span>
+      <h1>Patrimônio público com destinação <em>documentada</em> — e custo zero.</h1>
+      <p class="v2-sub">Parceria ou contratação, com habilitação documentada. A Ecobraz se remunera com a destinação do material: o órgão não paga pelo serviço.</p>
+      <div class="v2-hero-ctas">
+        <a class="button" href="{{@site.url}}/para-governo/" data-track="home_hero_governo">Ver documentação</a>
+        <a class="button v2-suave" href="{{@site.url}}/agendamento/?perfil=empresa&amp;origem=home-hero-governo" data-track="home_hero_governo_agendar">Falar com a equipe</a>
+      </div>
+      <div class="v2-prova">
+        <span class="v2-pill">Lei 13.019/2014 · <i>MROSC</i></span>
+        <span class="v2-pill">Documentos <i>mediante solicitação</i></span>
+      </div>
+    </div>
+    <div class="v2-hero-foto">
+      <img class="v2-foto" src="{{asset "images/ilustrativa-hero-governo.jpg"}}" alt="Carrinhos com computadores antigos etiquetados para retirada em pátio de prédio institucional" width="688" height="585" loading="lazy">
+      <span class="v2-foto-legenda">Imagem ilustrativa</span>
+    </div>
+  </div>
+
+  <div class="container v2-carrossel-pontos" role="tablist" aria-label="Escolher vitrine">
+    <button type="button" class="v2-ponto is-active" data-ponto="casa" aria-label="Para sua casa"></button>
+    <button type="button" class="v2-ponto" data-ponto="empresa" aria-label="Para empresas"></button>
+    <button type="button" class="v2-ponto" data-ponto="grandes" aria-label="Grandes empresas e multinacionais"></button>
+    <button type="button" class="v2-ponto" data-ponto="governo" aria-label="Governo"></button>
   </div>
 </section>
 

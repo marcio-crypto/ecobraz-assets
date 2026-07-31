@@ -490,3 +490,15 @@ body.is-empresa .copy-pf{display:none}
 .form-pix h3{margin:0 0 8px;font-size:17px;color:var(--petrol)}
 .form-pix-chave{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0}
 .form-pix-chave code{background:#fff;border-radius:10px;padding:8px 14px;font-size:15px;font-weight:700;color:var(--ink);word-break:break-all}
+
+/* ===== Carrossel do hero por público (31/07) ===== */
+.v2-carrossel .v2-slide{transition:opacity .5s ease}
+.v2-carrossel .v2-slide[hidden]{display:none}
+.v2-carrossel.is-enhanced .v2-slide{display:grid;position:absolute;inset:0;opacity:0;pointer-events:none}
+.v2-carrossel.is-enhanced{position:relative}
+.v2-carrossel.is-enhanced .v2-slide.is-active{position:relative;opacity:1;pointer-events:auto}
+.v2-carrossel-pontos{display:flex;gap:10px;justify-content:center;padding:18px 0 4px}
+.v2-ponto{width:11px;height:11px;border-radius:99px;border:0;background:#D5DECB;cursor:pointer;padding:0;transition:.25s}
+.v2-ponto.is-active{background:var(--verde);width:30px}
+.v2-ponto:hover{background:var(--hover, #6FA82B)}
+@media (prefers-reduced-motion: reduce){.v2-carrossel .v2-slide{transition:none}}
