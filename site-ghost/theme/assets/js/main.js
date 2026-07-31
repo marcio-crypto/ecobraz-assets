@@ -195,34 +195,36 @@
                 : '<h2>Solicitação recebida!</h2>' +
                     '<p>Obrigado. Nossa equipe vai analisar as informações e entrar em contato pelo e-mail ou telefone que você informou.</p>' +
                     '<p class="form-done-note">Não é necessário enviar novamente. Se preferir adiantar a conversa, chame a equipe no WhatsApp.</p>');
-            // Expressa (R$ 55): pagamento por Pix direto na confirmação.
-            // A chave vem de data-pix-chave no <form>; sem chave, instruções vêm por escrito.
+            // Expressa (R$ 55): pagamento pelo Stripe direto na confirmação.
+            // O link vem de data-checkout-url no <form> (Payment Link do Stripe);
+            // o Stripe confirma o pagamento e o sistema finaliza a expressa.
             if (/EXPRESSA/.test(String(payload.urgency || ''))) {
-                const pixKey = form.dataset.pixChave || '';
-                const pix = document.createElement('div');
-                pix.className = 'form-pix';
-                if (pixKey) {
-                    pix.innerHTML = (isEn
-                        ? '<h3>Express collection — R$ 55 via Pix</h3>' +
-                          '<p>Pay now to speed up scheduling. Pix key:</p>' +
-                          '<p class="form-pix-chave"><code></code> <button type="button" class="button button-small" data-pix-copiar>Copy key</button></p>' +
-                          '<p class="form-done-note">Send the receipt on WhatsApp. The express slot is confirmed in writing after payment. Ecobraz client? You can also pay in the <a href="https://sistema.ecobraz.org/" rel="noopener">client portal</a>.</p>'
-                        : '<h3>Coleta expressa — R$ 55 por Pix</h3>' +
-                          '<p>Pague agora para agilizar o agendamento. Chave Pix:</p>' +
-                          '<p class="form-pix-chave"><code></code> <button type="button" class="button button-small" data-pix-copiar>Copiar chave</button></p>' +
-                          '<p class="form-done-note">Envie o comprovante no WhatsApp. A expressa é confirmada por escrito após o pagamento. Cliente Ecobraz? Também dá para pagar pelo <a href="https://sistema.ecobraz.org/" rel="noopener">sistema</a>.</p>');
-                    pix.querySelector('code').textContent = pixKey;
-                    pix.querySelector('[data-pix-copiar]').addEventListener('click', function () {
-                        navigator.clipboard && navigator.clipboard.writeText(pixKey);
-                        this.textContent = isEn ? 'Copied!' : 'Copiada!';
-                    });
+                const checkoutUrl = form.dataset.checkoutUrl || '';
+                const pagar = document.createElement('div');
+                pagar.className = 'form-pix';
+                if (checkoutUrl) {
+                    // prefilled_email + client_reference_id: o Stripe devolve a
+                    // referência na confirmação, e o sistema casa pagamento x lead.
+                    const ref = encodeURIComponent(String(payload.email || '').slice(0, 180));
+                    const url = checkoutUrl + (checkoutUrl.indexOf('?') === -1 ? '?' : '&') +
+                        'prefilled_email=' + ref + '&client_reference_id=' + ref;
+                    pagar.innerHTML = (isEn
+                        ? '<h3>Express collection — R$ 55</h3>' +
+                          '<p>Pay now with card or Pix, in a secure checkout. Payment is confirmed automatically and your express collection is finalised.</p>' +
+                          '<p class="form-pix-chave"><a class="button" rel="noopener" data-checkout-link>Pay R$ 55 now</a></p>' +
+                          '<p class="form-done-note">Ecobraz client? You can also pay in the <a href="https://sistema.ecobraz.org/" rel="noopener">client portal</a>.</p>'
+                        : '<h3>Coleta expressa — R$ 55</h3>' +
+                          '<p>Pague agora com cartão ou Pix, em ambiente seguro. O pagamento é confirmado automaticamente e a sua coleta expressa é finalizada.</p>' +
+                          '<p class="form-pix-chave"><a class="button" rel="noopener" data-checkout-link>Pagar R$ 55 agora</a></p>' +
+                          '<p class="form-done-note">Cliente Ecobraz? Também dá para pagar pelo <a href="https://sistema.ecobraz.org/" rel="noopener">sistema</a>.</p>');
+                    pagar.querySelector('[data-checkout-link]').href = url;
                 } else {
-                    pix.innerHTML = isEn
-                        ? '<h3>Express collection — R$ 55</h3><p>Payment is via Pix — the instructions arrive in the written confirmation. Want to speed it up? Message us on WhatsApp.</p>'
-                        : '<h3>Coleta expressa — R$ 55</h3><p>O pagamento é por Pix — as instruções chegam na confirmação por escrito. Quer adiantar? Chame no WhatsApp.</p>';
+                    pagar.innerHTML = isEn
+                        ? '<h3>Express collection — R$ 55</h3><p>The secure payment link arrives in the written confirmation. Want to speed it up? Message us on WhatsApp.</p>'
+                        : '<h3>Coleta expressa — R$ 55</h3><p>O link de pagamento seguro chega na confirmação por escrito. Quer adiantar? Chame no WhatsApp.</p>';
                 }
-                done.appendChild(pix);
-                track('express_pix_shown', {page_path: window.location.pathname});
+                done.appendChild(pagar);
+                track('express_checkout_shown', {page_path: window.location.pathname});
             }
             form.replaceWith(done);
             done.scrollIntoView({behavior:'smooth', block:'center'});
