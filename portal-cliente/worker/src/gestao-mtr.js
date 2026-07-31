@@ -276,7 +276,7 @@ export function paginaMtrForm(user, mtr, destinos, entradas) {
     </div>
     <label>Observações</label><textarea name="obs" rows="2" placeholder="anotações internas">${esc(m.obs || '')}</textarea>
     <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
-      <button class="btn btn-d" onclick="salvar()">💾 Salvar MTR</button>
+      <button type="button" class="btn btn-d" onclick="salvar()">💾 Salvar MTR</button>
       <a href="/mtr?aba=${tipo}" class="btn btn-g">Cancelar</a>
     </div>
     <div id="msg" style="font-size:13px;color:#4F6469;margin-top:10px;min-height:16px"></div>
@@ -416,7 +416,6 @@ export function paginaDMR(user, dmr) {
   <div style="font-size:11px;color:#9aa7a4;text-align:center;margin-top:16px;line-height:1.6">Documento gerado eletronicamente pelo sistema Ecobraz em ${esc(dataBR(hojeISO()))}. Base legal: Lei nº 12.305/2010 (PNRS) · transporte manifestado (SINIR / SIGOR-CETESB). Confira sempre com os manifestos oficiais dos órgãos.</div>
 </div>
 <script>
-  var P=${JSON.stringify(String((dmr.filtros && dmr.periodoPreset) || ''))};
   var sel=document.getElementById('periodo');
   // Reconstitui a seleção do período a partir do rótulo atual.
   (function(){var rot=${JSON.stringify(per.rotulo)};var map={'Mês atual':'mes','Trimestre atual':'trimestre','Semestre atual':'semestre','Ano atual':'ano','Período personalizado':'custom'};if(map[rot])sel.value=map[rot];toggleCustom();})();

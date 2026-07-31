@@ -101,7 +101,7 @@ function cardLote(c) {
   const badge = `<span class="pill" style="background:${c.alerta.cor}1A;color:${c.alerta.cor}">${c.alerta.dot} ${esc(c.alerta.rotulo)}</span>`;
   const diasTxt = c.dias != null ? `${c.dias}d na operação` : 'sem data';
   const paradoTxt = (c.parado != null && c.parado >= 2 && c.alerta.nivel !== 0) ? ` · ⏳ ${c.parado}d parado` : '';
-  return `<a href="/operacao/lote?id=${esc(c.osId)}" class="lote">
+  return `<a href="/coletas/os?id=${esc(c.osId)}" class="lote">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><div style="font-size:13.5px;font-weight:800;color:#10262B">OS ${esc(c.numero)}</div>${badge}</div>
     <div style="font-size:12px;color:#4F6469;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(c.cliente || 'Cliente')}${c.tipo === 'pago' ? ' · <b style="color:#8A6A16">Pago</b>' : ''}</div>
     <div style="font-size:11px;color:#8fa39f;margin-top:6px">${esc(etapaRotulo(c.etapa))} · ${c.entradaKg ? esc(kg(c.entradaKg)) + ' · ' : ''}${esc(diasTxt)}${paradoTxt}</div>
@@ -121,7 +121,7 @@ export function paginaCronograma(user, dados) {
     </div>`;
   }).join('');
   const tl = ativos.length ? ativos.map((c) => `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;border-top:1px solid #EEF1F0;padding:10px 2px">
-      <div style="min-width:0"><a href="/operacao/lote?id=${esc(c.osId)}" style="font-size:13px;font-weight:800;text-decoration:none;color:#10262B">OS ${esc(c.numero)}</a> <span style="font-size:12px;color:#7c8a87">· ${esc(c.cliente || '')}</span>
+      <div style="min-width:0"><a href="/coletas/os?id=${esc(c.osId)}" style="font-size:13px;font-weight:800;text-decoration:none;color:#10262B">OS ${esc(c.numero)}</a> <span style="font-size:12px;color:#7c8a87">· ${esc(c.cliente || '')}</span>
         <div style="font-size:11.5px;color:#8fa39f;margin-top:2px">${esc(etapaRotulo(c.etapa))} · recebido ${c.criadoEm ? 'em ' + esc(dataBR(c.criadoEm)) : '—'} · ${c.dias != null ? c.dias + ' dias' : 's/ data'}</div></div>
       <span class="pill" style="flex:none;background:${c.alerta.cor}1A;color:${c.alerta.cor}">${c.alerta.dot} ${esc(c.alerta.rotulo)}</span>
     </div>`).join('') : `<div style="font-size:13px;color:#9aa7a4;text-align:center;padding:16px">Nenhum lote em andamento no momento.</div>`;
