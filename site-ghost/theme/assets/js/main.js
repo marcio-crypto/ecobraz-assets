@@ -235,3 +235,62 @@
         } finally { button.disabled = false; button.textContent = buttonLabel; }
     });
 })();
+
+// ============ Carrossel do hero por público (home) — 31/07 ============
+// Vitrine inicial por sinais reais: ?perfil= na URL > UTM de campanha >
+// memória de navegação (localStorage) > padrão "casa". Sem JS, só a
+// vitrine "casa" aparece (as demais têm [hidden]).
+(function () {
+    // Memória leve de público: registrada em QUALQUER página, lida na home.
+    const grava = (valor) => { try { localStorage.setItem('ecb_publico', valor); } catch (_) {} };
+    const caminho = window.location.pathname;
+    if (/para-governo|public-evidence\/gov/.test(caminho)) grava('governo');
+    else if (/grandes-empresas|escopo-3|documentacao-esg|logistica-reversa-para|solucoes-corporativas|desmobilizacao|descarte-corporativo/.test(caminho)) grava('grandes');
+    else if (/para-empresas|coletas-recorrentes|sistema-de-rastreabilidade|sanitizacao|destruicao-de-dados/.test(caminho)) grava('empresa');
+    else if (/coleta-gratuita|descarte-de-geladeira|descarte-de-maquina-de-lavar|descarte-de-televisao/.test(caminho)) grava('casa');
+
+    const carrossel = document.querySelector('[data-hero-carrossel]');
+    if (!carrossel) return;
+    const slides = Array.from(carrossel.querySelectorAll('[data-slide]'));
+    const pontos = Array.from(carrossel.querySelectorAll('[data-ponto]'));
+    if (slides.length < 2) return;
+
+    // Sinal 1: ?perfil= na URL. Sinal 2: UTM (atual ou guardada). Sinal 3: memória.
+    const params = new URLSearchParams(window.location.search);
+    const utm = ((params.get('utm_campaign') || '') + ' ' + (function () { try { return sessionStorage.getItem('ecb_utm_campaign') || ''; } catch (_) { return ''; } })()).toLowerCase();
+    let inicial = 'casa';
+    const perfilUrl = (params.get('perfil') || '').replace('pessoa-fisica', 'pessoa_fisica');
+    if (perfilUrl === 'empresa') inicial = 'empresa';
+    else if (perfilUrl === 'pessoa_fisica') inicial = 'casa';
+    else if (/governo|licitac/.test(utm)) inicial = 'governo';
+    else if (/multinacional|grande|escopo|esg/.test(utm)) inicial = 'grandes';
+    else if (/empresa|b2b|corporativ/.test(utm)) inicial = 'empresa';
+    else { try { inicial = localStorage.getItem('ecb_publico') || 'casa'; } catch (_) {} }
+    if (!slides.some((s) => s.dataset.slide === inicial)) inicial = 'casa';
+
+    carrossel.classList.add('is-enhanced');
+    let atual = inicial;
+    const mostra = (nome) => {
+        atual = nome;
+        slides.forEach((s) => { const ativo = s.dataset.slide === nome; s.classList.toggle('is-active', ativo); if (ativo) s.removeAttribute('hidden'); else s.setAttribute('hidden', ''); });
+        pontos.forEach((p) => p.classList.toggle('is-active', p.dataset.ponto === nome));
+    };
+    // No modo aprimorado os slides ficam empilhados: tira o hidden de todos
+    // (a visibilidade passa a ser por opacidade) e ativa o inicial.
+    slides.forEach((s) => s.removeAttribute('hidden'));
+    mostra(inicial);
+    if (inicial !== 'casa') { try { window.gtag && window.gtag('event', 'hero_personalizado', {vitrine: inicial}); } catch (_) {} }
+
+    // Rotação automática: 6,5s; pausa com mouse/foco/aba oculta; respeita
+    // prefers-reduced-motion (sem rotação — só navegação manual).
+    const ordem = slides.map((s) => s.dataset.slide);
+    const reduz = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let pausado = false, timer = null;
+    const proxima = () => { if (pausado || document.hidden) return; mostra(ordem[(ordem.indexOf(atual) + 1) % ordem.length]); };
+    if (!reduz) timer = setInterval(proxima, 6500);
+    carrossel.addEventListener('mouseenter', () => { pausado = true; });
+    carrossel.addEventListener('mouseleave', () => { pausado = false; });
+    carrossel.addEventListener('focusin', () => { pausado = true; });
+    carrossel.addEventListener('focusout', () => { pausado = false; });
+    pontos.forEach((p) => p.addEventListener('click', () => { mostra(p.dataset.ponto); pausado = true; if (timer) { clearInterval(timer); timer = null; } }));
+})();
