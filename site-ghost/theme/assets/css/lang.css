@@ -48,7 +48,9 @@ body.page-materials-we-collect .only-pt,
 body.page-manufacturer-importer-reverse-logistics .only-pt,
 body.page-adopt-a-neighbourhood-programme .only-pt,
 body.page-retail-pos-equipment-disposal .only-pt,
-body.page-how-to-dispose-old-fridge-sao-paulo .only-pt{display:none !important}
+body.page-how-to-dispose-old-fridge-sao-paulo .only-pt,
+body.page-esg-documentation .only-pt,
+body.page-scope-3-global-chain .only-pt{display:none !important}
 body.tag-hash-en .only-en,
 body.page-en .only-en,
 body.page-request-a-collection .only-en,
@@ -97,7 +99,9 @@ body.page-materials-we-collect .only-en,
 body.page-manufacturer-importer-reverse-logistics .only-en,
 body.page-adopt-a-neighbourhood-programme .only-en,
 body.page-retail-pos-equipment-disposal .only-en,
-body.page-how-to-dispose-old-fridge-sao-paulo .only-en{display:revert !important}
+body.page-how-to-dispose-old-fridge-sao-paulo .only-en,
+body.page-esg-documentation .only-en,
+body.page-scope-3-global-chain .only-en{display:revert !important}
 
 /* Correção de layout no idioma EN (ver comentário no gerador). */
 body.tag-hash-en .button.only-en:not(.header-cta),
@@ -148,7 +152,9 @@ body.page-materials-we-collect .button.only-en:not(.header-cta),
 body.page-manufacturer-importer-reverse-logistics .button.only-en:not(.header-cta),
 body.page-adopt-a-neighbourhood-programme .button.only-en:not(.header-cta),
 body.page-retail-pos-equipment-disposal .button.only-en:not(.header-cta),
-body.page-how-to-dispose-old-fridge-sao-paulo .button.only-en:not(.header-cta){display:inline-flex !important}
+body.page-how-to-dispose-old-fridge-sao-paulo .button.only-en:not(.header-cta),
+body.page-esg-documentation .button.only-en:not(.header-cta),
+body.page-scope-3-global-chain .button.only-en:not(.header-cta){display:inline-flex !important}
 @media(min-width:901px){
 body.tag-hash-en .primary-nav ul.only-en,
 body.page-en .primary-nav ul.only-en,
@@ -198,7 +204,9 @@ body.page-materials-we-collect .primary-nav ul.only-en,
 body.page-manufacturer-importer-reverse-logistics .primary-nav ul.only-en,
 body.page-adopt-a-neighbourhood-programme .primary-nav ul.only-en,
 body.page-retail-pos-equipment-disposal .primary-nav ul.only-en,
-body.page-how-to-dispose-old-fridge-sao-paulo .primary-nav ul.only-en{display:flex !important}
+body.page-how-to-dispose-old-fridge-sao-paulo .primary-nav ul.only-en,
+body.page-esg-documentation .primary-nav ul.only-en,
+body.page-scope-3-global-chain .primary-nav ul.only-en{display:flex !important}
 body.tag-hash-en .header-cta.only-en,
 body.page-en .header-cta.only-en,
 body.page-request-a-collection .header-cta.only-en,
@@ -247,7 +255,9 @@ body.page-materials-we-collect .header-cta.only-en,
 body.page-manufacturer-importer-reverse-logistics .header-cta.only-en,
 body.page-adopt-a-neighbourhood-programme .header-cta.only-en,
 body.page-retail-pos-equipment-disposal .header-cta.only-en,
-body.page-how-to-dispose-old-fridge-sao-paulo .header-cta.only-en{display:inline-flex !important}
+body.page-how-to-dispose-old-fridge-sao-paulo .header-cta.only-en,
+body.page-esg-documentation .header-cta.only-en,
+body.page-scope-3-global-chain .header-cta.only-en{display:inline-flex !important}
 }
 @media(max-width:900px){
 body.tag-hash-en .header-cta.only-en,
@@ -298,7 +308,9 @@ body.page-materials-we-collect .header-cta.only-en,
 body.page-manufacturer-importer-reverse-logistics .header-cta.only-en,
 body.page-adopt-a-neighbourhood-programme .header-cta.only-en,
 body.page-retail-pos-equipment-disposal .header-cta.only-en,
-body.page-how-to-dispose-old-fridge-sao-paulo .header-cta.only-en{display:none !important}
+body.page-how-to-dispose-old-fridge-sao-paulo .header-cta.only-en,
+body.page-esg-documentation .header-cta.only-en,
+body.page-scope-3-global-chain .header-cta.only-en{display:none !important}
 }
 @media(min-width:621px){
 body.tag-hash-en .article-cta.only-en,
@@ -349,7 +361,9 @@ body.page-materials-we-collect .article-cta.only-en,
 body.page-manufacturer-importer-reverse-logistics .article-cta.only-en,
 body.page-adopt-a-neighbourhood-programme .article-cta.only-en,
 body.page-retail-pos-equipment-disposal .article-cta.only-en,
-body.page-how-to-dispose-old-fridge-sao-paulo .article-cta.only-en{display:flex !important}
+body.page-how-to-dispose-old-fridge-sao-paulo .article-cta.only-en,
+body.page-esg-documentation .article-cta.only-en,
+body.page-scope-3-global-chain .article-cta.only-en{display:flex !important}
 body.tag-hash-en .page-conversion.only-en,
 body.page-en .page-conversion.only-en,
 body.page-request-a-collection .page-conversion.only-en,
@@ -398,5 +412,7 @@ body.page-materials-we-collect .page-conversion.only-en,
 body.page-manufacturer-importer-reverse-logistics .page-conversion.only-en,
 body.page-adopt-a-neighbourhood-programme .page-conversion.only-en,
 body.page-retail-pos-equipment-disposal .page-conversion.only-en,
-body.page-how-to-dispose-old-fridge-sao-paulo .page-conversion.only-en{display:flex !important}
+body.page-how-to-dispose-old-fridge-sao-paulo .page-conversion.only-en,
+body.page-esg-documentation .page-conversion.only-en,
+body.page-scope-3-global-chain .page-conversion.only-en{display:flex !important}
 }
