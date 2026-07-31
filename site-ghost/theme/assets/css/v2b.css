@@ -84,8 +84,8 @@ h1,h2,h3,h4,h5,h6{font-family:'Nunito','Inter',Arial,sans-serif;font-weight:800}
 .v2-hero{padding:76px 0 70px;position:relative;overflow:hidden}
 .v2-hero::before{content:'';position:absolute;right:-200px;top:-140px;width:520px;height:520px;background:var(--sage);opacity:.8;border-radius:47% 53% 61% 39%/44% 59% 41% 56%}
 .v2-hero-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:56px;align-items:center;position:relative}
-.v2-hero h1{font-size:clamp(38px,5.4vw,60px);line-height:1.12;color:var(--petrol);margin:0}
-.v2-hero h1 em{font-style:normal;color:var(--verde-escuro)}
+.v2-hero h1,.v2-hero .v2-titulo{font-size:clamp(38px,5.4vw,60px);line-height:1.12;color:var(--petrol);margin:0}
+.v2-hero h1 em,.v2-hero .v2-titulo em{font-style:normal;color:var(--verde-escuro)}
 .v2-sub{font-size:18.5px;line-height:1.6;color:var(--cinza);margin:20px 0 32px;max-width:480px}
 .v2-hero-ctas{display:flex;gap:12px;flex-wrap:wrap}
 .v2-hero-foto{position:relative}
