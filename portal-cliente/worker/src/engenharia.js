@@ -8,6 +8,7 @@
 import qrcode from 'qrcode-generator';
 import { lerOperacao, balanco, FASES, DESTINOS, listarOperacoes, atualizarEtapaOperacao } from './operacional.js';
 import { botaoGoogle } from './google-auth.js';
+import { TIPOS_ANEXO } from './coletas.js';
 
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const agora = () => { try { return new Date().toISOString(); } catch { return ''; } };
@@ -128,9 +129,14 @@ export function paginaFilaEng(eng, fila, validadas) {
 
 function kpi(v, s) { return `<div class="kpi"><b>${esc(v)}</b><span>${esc(s)}</span></div>`; }
 
-export function paginaDossie(eng, op, validacao, seloUrl) {
+export function paginaDossie(eng, op, validacao, seloUrl, anexos) {
   const b = balanco(op);
   const validada = op.etapa === 'concluida' && validacao && validacao.decisao === 'validada';
+  const laudosArr = Array.isArray(anexos) ? anexos : [];
+  const laudosHtml = laudosArr.length ? laudosArr.map((a) => `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid #EEF1F0;border-radius:10px;padding:9px 12px;margin-bottom:7px;background:#FBFDFC">
+      <a href="/coletas/anexo?key=${encodeURIComponent(a.key)}" target="_blank" rel="noopener" style="text-decoration:none;color:#10262B;font-weight:600;font-size:12.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${/image/.test(a.content_type || '') ? '🖼️' : '📄'} ${esc(a.nome || 'arquivo')} ↗</a>
+      <div style="display:flex;align-items:center;gap:9px;flex:none">${a.tipo ? `<span class="pill" style="background:#E8F0EE;color:#3B5B57">${esc(a.tipo)}</span>` : '<span class="pill" style="background:#FFF4DE;color:#8A6A16">sem tipo</span>'}<button type="button" onclick="removerLaudo('${esc(a.key)}')" style="background:none;border:none;color:#B23A2E;font-size:11.5px;font-weight:700;cursor:pointer">remover</button></div>
+    </div>`).join('') : '<div style="font-size:12.5px;color:#8fa39f">Nenhum laudo anexado ainda.</div>';
   const fotosHtml = Object.keys(FASES).map((fase) => {
     const fs = (op.fotos && op.fotos[fase]) || {};
     const imgs = FASES[fase].fotos.filter((f) => fs[f.id]).map((f) => `<div><img src="/eng/foto?id=${esc(op.osId)}&fase=${fase}&cat=${f.id}" alt="${esc(f.rotulo)}"><div style="font-size:10px;color:#7c8a87;margin-top:3px">${esc(f.rotulo)} · ${dataHora(fs[f.id].em)}${fs[f.id].geo ? ' · GPS ✓' : ''}</div></div>`).join('');
@@ -191,8 +197,30 @@ export function paginaDossie(eng, op, validacao, seloUrl) {
     ${fotosHtml}
   </div>
 
+  <div class="card">
+    <div class="eyebrow">📋 Laudos e análises</div>
+    <div style="font-size:12px;color:#7c8a87;margin:-6px 0 10px;line-height:1.5">Anexe aqui os laudos técnicos desta operação (descaracterização, destruição de dados, análise química, sanitização…). Ficam guardados na OS e no dossiê.</div>
+    <div id="laudosLista">${laudosHtml}</div>
+    <label class="fld" style="margin-top:12px">Tipo do laudo</label>
+    <select id="laudoTipo" class="txt"><option value="">— escolher tipo —</option>${TIPOS_ANEXO.map((t) => `<option value="${esc(t)}">${esc(t)}</option>`).join('')}</select>
+    <input type="file" id="laudoFile" accept="image/*,application/pdf,.pdf" style="width:100%;margin-top:10px;font-size:13px">
+    <button type="button" class="btn dark" style="margin-top:12px" onclick="enviarLaudo()">⬆ Anexar laudo</button>
+    <div id="laudoMsg" style="font-size:12.5px;color:#4F6469;text-align:center;min-height:16px;margin-top:4px"></div>
+  </div>
+
   ${bloco}
-</div></body></html>`;
+</div>
+<script>
+  var OSID=${JSON.stringify(String(op.osId))};
+  function enviarLaudo(){var f=document.getElementById('laudoFile'),tp=document.getElementById('laudoTipo'),msg=document.getElementById('laudoMsg');
+    if(!f.files||!f.files[0]){msg.textContent='Escolha um arquivo.';return;}
+    if(!tp.value){msg.textContent='Escolha o tipo do laudo.';return;}
+    if(f.files[0].size>15728640){msg.textContent='Arquivo muito grande (máx. 15 MB).';return;}
+    var fd=new FormData();fd.append('arquivo',f.files[0]);msg.textContent='Enviando…';
+    fetch('/api/coletas/anexo?id='+encodeURIComponent(OSID)+'&tipo='+encodeURIComponent(tp.value),{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(j){if(j.ok){location.reload();}else{msg.textContent=j.error||'Falha ao enviar.';}}).catch(function(){msg.textContent='Sem conexão.';});}
+  function removerLaudo(k){if(!confirm('Remover este laudo?'))return;fetch('/api/coletas/anexo-remover',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:OSID,key:k})}).then(function(r){return r.json();}).then(function(j){if(j.ok)location.reload();}).catch(function(){});}
+</script>
+</body></html>`;
 }
 
 // --- Público: QR de verificação da operação validada ---

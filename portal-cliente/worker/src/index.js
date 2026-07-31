@@ -1690,7 +1690,7 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
       }
       // Anexar foto/arquivo a uma coleta (upload para o R2 + registro em os.anexos).
       if (pathname === '/api/coletas/anexo' && request.method === 'POST') {
-        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        if (!escOuEng) return json({ ok: false, error: 'nao_autenticado' }, 401);
         if (!env.R2_ARQUIVOS) return json({ ok: false, error: 'Depósito R2 indisponível.' }, 503);
         const id = (url.searchParams.get('id') || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40);
         const os = await lerColetaOS(env, id);
@@ -1710,7 +1710,7 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         return json({ ok: true, anexo: meta });
       }
       if (pathname === '/api/coletas/anexo-remover' && request.method === 'POST') {
-        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        if (!escOuEng) return json({ ok: false, error: 'nao_autenticado' }, 401);
         let b; try { b = await request.json(); } catch { b = null; }
         if (!b || !b.id || !b.key) return json({ ok: false, error: 'dados' }, 400);
         try { if (env.R2_ARQUIVOS && String(b.key).startsWith('coleta-anexo/')) await env.R2_ARQUIVOS.delete(String(b.key)); } catch { /* segue */ }
@@ -1719,7 +1719,7 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
       }
       // Serve um anexo de coleta do R2 (gated por escritório; só chaves coleta-anexo/).
       if (pathname === '/coletas/anexo' && request.method === 'GET') {
-        if (!escritorio) return new Response('nao_autenticado', { status: 401 });
+        if (!escOuEng) return new Response('nao_autenticado', { status: 401 });
         if (!env.R2_ARQUIVOS) return new Response('indisponível', { status: 503 });
         const key = (url.searchParams.get('key') || '').replace(/[^a-zA-Z0-9/_.-]/g, '').slice(0, 120);
         if (!key.startsWith('coleta-anexo/')) return new Response('chave inválida', { status: 400 });
@@ -2191,7 +2191,8 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         if (!op) return html(paginaMensagem('Operação não encontrada', 'Volte para a fila.'), 404);
         const val = await lerValidacaoOp(env, op.osId);
         const seloUrl = (op.etapa === 'concluida') ? `/qr-operacao?id=${encodeURIComponent(op.osId)}` : null;
-        return html(paginaDossie(eng, op, val, seloUrl));
+        const osRec = await lerColetaOS(env, op.osId);
+        return html(paginaDossie(eng, op, val, seloUrl, (osRec && osRec.anexos) || []));
       }
       if (pathname === '/eng/foto' && request.method === 'GET') {
         if (!eng) return json({ ok: false, error: 'nao_autenticado' }, 401);
