@@ -308,3 +308,134 @@ a.v2-pill:hover{border-color:var(--verde)}
 
 /* Formulário adaptativo (Lote 4): pessoa física vê só o essencial. */
 .collection-form.is-pf .only-empresa{display:none !important}
+
+/* ============================================================
+   Lote 7 — Páginas de conteúdo (page.hbs) na pele v2B.
+   Parte A: pele global segura para as ~50 páginas de texto
+   (hero petrol com blob, leitura sobre creme, h2 com traço verde,
+   h3 em pílula, caixa de conversão petrol). Parte B: componentes
+   opt-in .v2c-* usados pelo conteúdo (passos numerados, grade de
+   cartões, checks, callout, CTA, FAQ, bifurcação de público).
+   ============================================================ */
+
+/* ---- A. Hero das páginas (mesma pele do form-hero/archive-header) ---- */
+.page-hero{background:var(--petrol);position:relative;overflow:hidden;padding:92px 0 66px}
+.page-hero::after{content:'';position:absolute;right:-200px;top:-140px;width:520px;height:520px;border:0;background:rgba(141,198,63,.1);border-radius:47% 53% 61% 39%/44% 59% 41% 56%}
+.page-hero-grid{position:relative;z-index:1}
+.page-hero h1{letter-spacing:0;font-weight:800;font-size:clamp(34px,4.6vw,54px)}
+.page-hero p{color:#AECAC6}
+.page-hero .eyebrow{display:inline-flex;align-items:center;gap:8px;background:rgba(141,198,63,.16);color:#C8E89C;border-radius:99px;padding:7px 16px;font-size:13px;font-weight:700;letter-spacing:0;text-transform:none;margin-bottom:16px}
+.page-hero .eyebrow::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--verde)}
+.page-hero-card{background:#fff;border:0;border-radius:var(--v2-r);box-shadow:0 24px 56px rgba(0,0,0,.22);padding:26px 28px}
+.page-hero-card strong{color:var(--petrol);font-family:'Nunito','Inter',Arial,sans-serif;font-weight:800;font-size:16px}
+.page-hero-card span{color:var(--cinza);font-size:14px}
+
+/* ---- A. Leitura sobre creme, com marcos visuais ---- */
+.page-content-wrap{background:var(--creme);padding:72px 0 90px}
+.page-content-wrap .gh-content{font-size:16.5px;line-height:1.7}
+.page-content-wrap .gh-content>p:first-child{font-size:18.5px;color:var(--cinza)}
+.page-content-wrap .gh-content h2{font-size:clamp(24px,3vw,30px);line-height:1.25;margin-top:56px}
+.page-content-wrap .gh-content h2::after{content:'';display:block;width:44px;height:5px;border-radius:99px;background:var(--verde);margin-top:10px}
+.page-content-wrap .gh-content>h3{display:inline-flex;align-items:center;gap:9px;background:var(--sage);color:var(--petrol);border-radius:99px;padding:8px 18px;font-size:15px;margin:36px 0 10px}
+.page-content-wrap .gh-content>h3::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--verde)}
+.page-content-wrap .gh-content>ul>li,.page-content-wrap .gh-content>ol>li{margin:7px 0}
+.page-content-wrap .gh-content strong{color:var(--petrol)}
+.page-content-wrap .gh-content [id]{scroll-margin-top:100px}
+.gh-content a.button,.gh-content a.button:hover{text-decoration:none;color:#fff}
+
+/* ---- A. Caixa de conversão do rodapé das páginas: petrol arredondado ---- */
+.page-conversion{margin-top:64px;background:var(--petrol);color:#fff;border:0;border-left:0;border-radius:var(--v2-r);padding:36px 34px}
+.page-conversion .eyebrow{display:inline-flex;align-items:center;gap:8px;background:rgba(141,198,63,.16);color:#C8E89C;border-radius:99px;padding:7px 16px;font-size:13px;font-weight:700;letter-spacing:0;text-transform:none;margin-bottom:10px}
+.page-conversion .eyebrow::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--verde)}
+.page-conversion h2{color:#fff;font-size:24px;line-height:1.25}
+.page-conversion p{color:#AECAC6;margin-bottom:0}
+
+/* ---- B. Componentes de conteúdo (opt-in) ---- */
+.v2c-lead{font-size:18.5px;color:var(--cinza)}
+
+/* Bifurcação de público: 1 página, 2 portas (casa × empresa) */
+.v2c-fork{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:26px 0 8px}
+.gh-content .v2c-fork a{display:block;background:#fff;border:2px solid var(--line);border-radius:var(--v2-r);padding:26px 24px;text-decoration:none;color:var(--ink);box-shadow:0 10px 30px rgba(14,59,67,.05);transition:.18s}
+.gh-content .v2c-fork a:hover{border-color:var(--verde);transform:translateY(-4px);box-shadow:0 18px 44px rgba(141,198,63,.2);color:var(--ink)}
+.v2c-fork .ic{width:52px;height:52px;border-radius:16px;background:var(--sage);display:grid;place-items:center;margin-bottom:14px}
+.v2c-fork .ic svg{width:26px;height:26px;stroke:var(--verde-escuro);fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.v2c-fork strong{display:block;font-family:'Nunito','Inter',Arial,sans-serif;font-weight:800;font-size:19px;color:var(--petrol);margin-bottom:6px}
+.v2c-fork span:not(.ic){display:block;font-size:14px;line-height:1.55;color:var(--cinza)}
+.v2c-fork em{display:block;margin-top:12px;font-style:normal;font-family:'Nunito','Inter',Arial,sans-serif;font-weight:800;font-size:14px;color:var(--verde-escuro)}
+
+/* Passos numerados: cartão branco 22px + bolinha verde */
+.gh-content ol.v2c-steps{list-style:none;padding:0;margin:28px 0;counter-reset:v2cs;display:grid;gap:14px}
+.v2c-steps>li{counter-increment:v2cs;position:relative;background:#fff;border:1px solid var(--line);border-radius:var(--v2-r);padding:22px 26px 22px 80px;box-shadow:0 10px 30px rgba(14,59,67,.05);margin:0}
+.v2c-steps>li::before{content:counter(v2cs);position:absolute;left:24px;top:22px;width:38px;height:38px;border-radius:50%;background:var(--verde);color:#fff;font-family:'Nunito','Inter',Arial,sans-serif;font-weight:800;font-size:16px;display:grid;place-items:center}
+.v2c-steps>li>strong{display:block;font-family:'Nunito','Inter',Arial,sans-serif;font-weight:800;font-size:17px;color:var(--petrol);margin:7px 0 4px}
+.v2c-steps>li p{margin:0;font-size:14.5px;line-height:1.6;color:var(--cinza)}
+.v2c-note{display:inline-block;margin-top:10px;background:var(--sage);border-radius:12px;padding:6px 12px;font-size:13px;font-weight:600;color:var(--petrol)}
+
+/* Lista de checks: círculo verde + ✓ branco */
+.gh-content ul.v2c-check{list-style:none;padding:0;margin:22px 0;display:grid;gap:10px}
+.v2c-check>li{position:relative;padding-left:40px;margin:0;font-size:15px;color:var(--ink)}
+.v2c-check>li::before{content:'✓';position:absolute;left:0;top:1px;width:26px;height:26px;border-radius:50%;background:var(--verde);color:#fff;font-weight:800;font-size:13px;display:grid;place-items:center}
+
+/* Grade de cartões (2 col; .cols-3 para 3) */
+.gh-content .v2c-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:26px 0;padding:0;list-style:none}
+.v2c-grid.cols-3{grid-template-columns:repeat(3,1fr)}
+.v2c-grid>*{background:#fff;border:1px solid var(--line);border-radius:var(--v2-r);padding:24px;margin:0;box-shadow:0 10px 30px rgba(14,59,67,.05)}
+.v2c-grid .span-2{grid-column:1/-1}
+.v2c-grid h3{display:flex;align-items:baseline;gap:10px;font-size:16.5px;line-height:1.3;color:var(--petrol);margin:0 0 10px}
+.v2c-grid h3::before{content:'';flex:0 0 10px;width:10px;height:10px;border-radius:50%;background:var(--verde);align-self:center}
+.v2c-grid p{font-size:14px;line-height:1.62;color:var(--cinza);margin:0 0 10px}
+.v2c-grid p:last-child{margin-bottom:0}
+.v2c-nota{background:var(--sage);border-radius:12px;padding:10px 14px}
+.v2c-nota em{font-style:normal;font-size:13px;color:var(--petrol)}
+
+/* Cartão avulso (ex.: lista de publicações) */
+.gh-content .v2c-card{background:#fff;border:1px solid var(--line);border-radius:var(--v2-r);padding:26px 28px;box-shadow:0 10px 30px rgba(14,59,67,.05);margin:22px 0}
+.gh-content .v2c-card ul{margin:0;padding-left:22px}
+.gh-content .v2c-card li{margin:9px 0;font-size:14.5px}
+
+/* Callout sage com borda verde */
+.v2c-callout{background:var(--sage);border-left:5px solid var(--verde);border-radius:0 18px 18px 0;padding:20px 26px;margin:28px 0}
+.v2c-callout strong{font-family:'Nunito','Inter',Arial,sans-serif;font-weight:800;color:var(--petrol)}
+.v2c-callout p{margin:6px 0 0;font-size:15px;color:var(--ink)}
+
+/* CTA petrol centrado com botão-pílula */
+.v2c-cta{background:var(--petrol);color:#fff;border-radius:var(--v2-r);padding:38px 30px;text-align:center;margin:34px 0}
+.v2c-cta strong{display:block;font-family:'Nunito','Inter',Arial,sans-serif;font-weight:800;font-size:24px;line-height:1.25;color:#fff;margin-bottom:8px}
+.v2c-cta p{color:#AECAC6;font-size:15px;max-width:46ch;margin:0 auto 20px}
+.v2c-cta-botoes{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.gh-content .v2c-cta a.button{display:inline-flex}
+.v2c-cta .v2c-prova{display:block;margin-top:16px;font-size:13px;font-weight:700;color:#C8E89C}
+
+/* Faixa sage para a seção de outro público na mesma página */
+.v2c-band{background:var(--sage);border-radius:28px;padding:36px 30px;margin:48px 0}
+.v2c-band .v2-tag{background:#fff}
+.v2c-band h2{margin-top:0}
+.page-content-wrap .gh-content .v2c-band h2{margin-top:0}
+.v2c-band h3{font-family:'Nunito','Inter',Arial,sans-serif;font-weight:800;color:var(--petrol);font-size:17px;margin:26px 0 4px}
+.v2c-band .v2c-callout{background:#fff}
+.v2c-band .v2c-check>li{color:var(--ink)}
+
+/* FAQ genérico (details/summary) fora do template da home */
+.gh-content .v2c-faq details{background:#fff;border:1px solid var(--line);border-radius:var(--v2-r);padding:20px 24px;margin-bottom:12px}
+.gh-content .v2c-faq summary{font-family:'Nunito','Inter',Arial,sans-serif;font-weight:800;color:var(--petrol);cursor:pointer;font-size:16px;list-style:none;display:flex;justify-content:space-between;gap:16px;align-items:baseline}
+.gh-content .v2c-faq summary::-webkit-details-marker{display:none}
+.gh-content .v2c-faq summary::after{content:'+';font-size:20px;color:var(--verde-escuro);font-weight:600}
+.gh-content .v2c-faq details[open] summary::after{content:'–'}
+.gh-content .v2c-faq details p{margin:12px 0 0;font-size:15px}
+
+/* Numeração opcional de h2 (opt-in via wrapper .v2c-numbered no conteúdo) */
+.gh-content .v2c-numbered{counter-reset:v2cn}
+.gh-content .v2c-numbered h2{counter-increment:v2cn;display:flex;align-items:center;gap:14px}
+.gh-content .v2c-numbered h2::before{content:counter(v2cn);flex:0 0 38px;width:38px;height:38px;border-radius:50%;background:var(--verde);color:#fff;font-size:17px;display:grid;place-items:center}
+.gh-content .v2c-numbered h2::after{display:none}
+
+/* Responsivo dos componentes */
+@media (max-width:720px){
+  .v2c-fork,.gh-content .v2c-grid,.v2c-grid.cols-3{grid-template-columns:1fr}
+  .v2c-steps>li{padding:20px 20px 20px 70px}
+  .v2c-steps>li::before{left:18px;top:20px}
+  .v2c-band{padding:28px 18px}
+  .v2c-cta{padding:30px 20px}
+  .page-content-wrap{padding:56px 0 70px}
+}
+@media (prefers-reduced-motion:reduce){.gh-content .v2c-fork a{transition:none!important;transform:none!important}}
