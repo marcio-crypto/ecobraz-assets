@@ -57,7 +57,7 @@ import { sondaRotaExata, paginaSondaRotaExata, paginaRastreio, posicaoDoVeiculo,
 import { lerValidacao, registrarValidacao, paginaAreaValidacao, qrMetodologia, validarMetodologiaPublico, homologarFatorAcao } from './validacao-metodologia.js';
 import { paginaPainelCarbono } from './carbono-painel.js';
 import { clientesComOperacoes, carbonoDoCliente, paginaCarbonoAnalista, paginaCarbonoAuditor } from './carbono-motor.js';
-import { agentePermitido, nomeAgente, listarColetasComStatus, enriquecerProximidade, coordDoEndereco, paginaLoginAgente, paginaAppAgente, detalheColeta, lerEstadoColeta, registrarCheckin, registrarACaminho, registrarFoto, servirFotoColeta, paginaColetaDetalhe, registrarEncerramento, registrarReagendamento, qrColeta, validarColetaPublico, paginaComprovante } from './agente.js';
+import { agentePermitido, nomeAgente, listarColetasComStatus, enriquecerProximidade, coordDoEndereco, paginaLoginAgente, paginaAppAgente, detalheColeta, lerEstadoColeta, registrarCheckin, registrarACaminho, registrarFoto, servirFotoColeta, registrarAssinatura, servirAssinaturaColeta, paginaColetaDetalhe, registrarEncerramento, registrarReagendamento, qrColeta, validarColetaPublico, paginaComprovante } from './agente.js';
 import { operadorPermitido, nomeOperador, listarOperacoes, listarColetasRecebiveis, iniciarOperacao, lerOperacao, definirTipoOperacao, registrarPesoEntrada, registrarFotoOperacao, servirFotoOperacao, paginaLoginOperacao, paginaAppOperacao, paginaReceberLote, paginaLoteDetalhe, adicionarMaterial, removerMaterial, concluirTriagem, paginaTriagem, paginaProcessamento, concluirProcessamento, paginaSaida, registrarSaida, concluirSaida } from './operacional.js';
 import { engenheiroPermitido, nomeEngenheiro, filaValidacao, operacoesValidadas, lerValidacaoOp, registrarValidacaoOp, paginaLoginEng, paginaFilaEng, paginaDossie, qrOperacao, validarOperacaoPublico, listarDestinos, lerDestino, salvarDestino, paginaDestinos, paginaDestinoForm, paginaRelatorio, paginaCDF } from './engenharia.js';
 import { diretorPermitido, nomeDiretor, reunirDados, paginaLoginDiretoria, paginaPainelDiretoria } from './diretoria.js';
@@ -1453,6 +1453,14 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         if (!ok) return json({ ok: false, error: 'nao_autorizado' }, 403);
         return await servirFotoColeta(env, fid);
       }
+      if (pathname === '/coletas/assinatura-motorista' && request.method === 'GET') {
+        const fid = String(url.searchParams.get('id') || '');
+        const ftok = String(url.searchParams.get('t') || '');
+        let ok = !!(escritorio || diretoria || agente || operacao);
+        if (!ok && fid && ftok) { try { ok = ftok === await seloOS(fid.replace(/[^a-zA-Z0-9_-]/g, ''), env); } catch { ok = false; } }
+        if (!ok) return json({ ok: false, error: 'nao_autorizado' }, 403);
+        return await servirAssinaturaColeta(env, fid);
+      }
       // Página PÚBLICA de acompanhamento (link do WhatsApp): token = selo HMAC da OS.
       if (pathname === '/acompanhar' && request.method === 'GET') {
         const cid = String(url.searchParams.get('c') || '').replace(/[^a-zA-Z0-9_-]/g, '');
@@ -1497,7 +1505,7 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
             avisoACaminho: parseAviso(env.PORTAL_KV ? await env.PORTAL_KV.get(`notif:coleta:${os.id}:a_caminho`) : null),
             avisoChegou: parseAviso(env.PORTAL_KV ? await env.PORTAL_KV.get(`notif:coleta:${os.id}:chegou`) : null),
           };
-          acomp.registro = { checkin: est && est.checkin, foto: est && est.foto, encerramento: est && est.encerramento };
+          acomp.registro = { checkin: est && est.checkin, foto: est && est.foto, encerramento: est && est.encerramento, assinatura: est && est.assinatura };
           const tel = Array.isArray(os.telemetria) ? os.telemetria : [];
           const ult = tel.length ? tel[tel.length - 1] : null;
           if (ult && ult.lat != null && ult.lng != null && !acomp.chegou) {
@@ -1619,8 +1627,8 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         const os = await lerColetaOS(env, url.searchParams.get('id') || '');
         if (!os) return html(paginaMensagem('Coleta não encontrada', 'Volte e tente de novo.'), 404);
         if (!os.veiculoPlaca) { try { os.veiculoPlaca = await placaDaColeta(env, os); } catch { /* ok */ } }
-        let regC = null, fotoC = ''; try { const e = await lerEstadoColeta(env, os.id); regC = { checkin: e && e.checkin, foto: e && e.foto, encerramento: e && e.encerramento }; fotoC = `/coletas/foto-motorista?id=${encodeURIComponent(os.id)}&t=${await seloOS(os.id, env)}`; } catch { regC = null; }
-        return html(paginaCartaDescarte(os, `/qr-os?id=${encodeURIComponent(os.id)}`, regC, fotoC));
+        let regC = null, fotoC = '', assC = ''; try { const e = await lerEstadoColeta(env, os.id); regC = { checkin: e && e.checkin, foto: e && e.foto, encerramento: e && e.encerramento, assinatura: e && e.assinatura }; const selo = await seloOS(os.id, env); fotoC = `/coletas/foto-motorista?id=${encodeURIComponent(os.id)}&t=${selo}`; assC = `/coletas/assinatura-motorista?id=${encodeURIComponent(os.id)}&t=${selo}`; } catch { regC = null; }
+        return html(paginaCartaDescarte(os, `/qr-os?id=${encodeURIComponent(os.id)}`, regC, fotoC, assC));
       }
       if (pathname === '/coletas/os/manifesto' && request.method === 'GET') {
         if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
@@ -1843,6 +1851,10 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         if (!agente) return json({ ok: false, error: 'nao_autenticado' }, 401);
         return await servirFotoColeta(env, url.searchParams.get('id') || '');
       }
+      if (pathname === '/agente/coleta/assinatura' && request.method === 'GET') {
+        if (!agente) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        return await servirAssinaturaColeta(env, url.searchParams.get('id') || '');
+      }
       // "Estou indo": marca em transporte, registra telemetria e avisa o cliente por
       // e-mail (1x por coleta) que ele pode acompanhar o caminhão ao vivo pelo portal.
       if (pathname === '/api/agente/acaminho' && request.method === 'POST') {
@@ -1902,6 +1914,14 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         await registrarFoto(env, b.id, agente, b.foto);
         return json({ ok: true });
       }
+      // Assinatura do cliente (desenhada na tela) + RG/CPF — prova da coleta.
+      if (pathname === '/api/agente/assinatura' && request.method === 'POST') {
+        if (!agente) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = null; }
+        if (!b || !b.id || !b.assinatura) return json({ ok: false, error: 'dados' }, 400);
+        await registrarAssinatura(env, b.id, agente, { nome: b.nome, doc: b.doc, assinatura: b.assinatura });
+        return json({ ok: true });
+      }
       if (pathname === '/api/agente/encerrar' && request.method === 'POST') {
         if (!agente) return json({ ok: false, error: 'nao_autenticado' }, 401);
         let b; try { b = await request.json(); } catch { b = null; }
@@ -1933,7 +1953,7 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         if (!operacao) return new Response(null, { status: 302, headers: { Location: '/operacao', 'cache-control': 'no-store' } });
         const op = await lerOperacao(env, url.searchParams.get('id') || '');
         if (!op) return html(paginaMensagem('Operação não encontrada', 'Volte e receba o lote de novo.'), 404);
-        let regDoca = null; try { const e = await lerEstadoColeta(env, op.osId); regDoca = { checkin: e && e.checkin, foto: e && e.foto, encerramento: e && e.encerramento }; } catch { regDoca = null; }
+        let regDoca = null; try { const e = await lerEstadoColeta(env, op.osId); regDoca = { checkin: e && e.checkin, foto: e && e.foto, encerramento: e && e.encerramento, assinatura: e && e.assinatura }; } catch { regDoca = null; }
         return html(paginaLoteDetalhe(operacao, op, regDoca));
       }
       if (pathname === '/operacao/foto' && request.method === 'GET') {
@@ -3001,8 +3021,8 @@ async function baixarDocOS(url, sessao, env) {
     }
     const selo = `/qr-os?id=${encodeURIComponent(os.id)}`;
     if (fonte !== 'os-comprovante' && !os.veiculoPlaca) { try { os.veiculoPlaca = await placaDaColeta(env, os); } catch { /* ok */ } }
-    let regCli = null, fotoCli = ''; if (fonte === 'os-carta') { try { const e = await lerEstadoColeta(env, os.id); regCli = { checkin: e && e.checkin, foto: e && e.foto, encerramento: e && e.encerramento }; fotoCli = `/coletas/foto-motorista?id=${encodeURIComponent(os.id)}&t=${await seloOS(os.id, env)}`; } catch { regCli = null; } }
-    return html(fonte === 'os-comprovante' ? paginaComprovanteOS(os, selo) : (fonte === 'os-carta' ? paginaCartaDescarte(os, selo, regCli, fotoCli) : paginaManifestoCarga(os, selo)));
+    let regCli = null, fotoCli = '', assCli = ''; if (fonte === 'os-carta') { try { const e = await lerEstadoColeta(env, os.id); regCli = { checkin: e && e.checkin, foto: e && e.foto, encerramento: e && e.encerramento, assinatura: e && e.assinatura }; const seloC = await seloOS(os.id, env); fotoCli = `/coletas/foto-motorista?id=${encodeURIComponent(os.id)}&t=${seloC}`; assCli = `/coletas/assinatura-motorista?id=${encodeURIComponent(os.id)}&t=${seloC}`; } catch { regCli = null; } }
+    return html(fonte === 'os-comprovante' ? paginaComprovanteOS(os, selo) : (fonte === 'os-carta' ? paginaCartaDescarte(os, selo, regCli, fotoCli, assCli) : paginaManifestoCarga(os, selo)));
   }
   const key = String(url.searchParams.get('docId') || '').replace(/[^a-zA-Z0-9/_.-]/g, '').slice(0, 200);
   if (fonte !== 'r2' || !key) return json({ ok: false, error: 'sem_id' }, 400);

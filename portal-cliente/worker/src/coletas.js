@@ -352,20 +352,24 @@ function gerar(){var ag=g('agente').split('|');
 // Bloco reutilizável: o que o MOTORISTA registrou na coleta (foto da carga, GPS do
 // check-in, volumes/obs, encerramento). Estilo embutido para servir no comercial, na doca
 // e no documento. reg = { checkin, foto, encerramento }; fotoUrl = src da imagem da carga.
-export function blocoRegistroMotorista(reg, fotoUrl) {
+export function blocoRegistroMotorista(reg, fotoUrl, assinaturaUrl) {
   const r = reg || {};
-  if (!r.checkin && !r.foto && !r.encerramento) return '';
-  const hh = (x) => String(x || '').slice(11, 16);
+  if (!r.checkin && !r.foto && !r.encerramento && !r.assinatura) return '';
+  // Hora no fuso de Brasília (UTC-3, sem horário de verão).
+  const hh = (x) => { const d = new Date(x); if (!x || isNaN(d.getTime())) return ''; d.setUTCHours(d.getUTCHours() - 3); const p = (n) => String(n).padStart(2, '0'); return `${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`; };
   const linhas = [];
   if (r.encerramento) linhas.push(`<div style="font-size:13px;color:#1E5B31;font-weight:700">✓ Coleta concluída pelo motorista${r.encerramento.agenteNome ? ` — ${esc(r.encerramento.agenteNome)}` : ''}${r.encerramento.em ? ` · ${hh(r.encerramento.em)} ${dataBR(r.encerramento.em)}` : ''}</div>`);
   if (r.encerramento && r.encerramento.volumes) linhas.push(`<div style="font-size:13px;color:#4F6469;margin-top:4px"><b>Volumes/quantidade:</b> ${esc(r.encerramento.volumes)}</div>`);
   if (r.encerramento && r.encerramento.obs) linhas.push(`<div style="font-size:13px;color:#4F6469;margin-top:4px"><b>Observações do motorista:</b> ${esc(r.encerramento.obs)}</div>`);
   if (r.checkin) linhas.push(`<div style="font-size:12.5px;color:#4F6469;margin-top:4px">📍 Check-in por GPS no cliente${r.checkin.em ? ` às ${hh(r.checkin.em)}` : ''}${(r.checkin.lat != null && r.checkin.lon != null) ? ` · <a href="https://www.google.com/maps/search/?api=1&query=${r.checkin.lat},${r.checkin.lon}" target="_blank" rel="noopener" style="color:#0B5B66;font-weight:700;text-decoration:none">ver no mapa ↗</a>` : ''}</div>`);
+  if (r.assinatura) linhas.push(`<div style="font-size:12.5px;color:#1E5B31;font-weight:700;margin-top:4px">✍️ Assinatura do cliente${r.assinatura.doc ? ` · RG/CPF ${esc(r.assinatura.doc)}` : ''}${r.assinatura.nome ? ` · ${esc(r.assinatura.nome)}` : ''}${r.assinatura.em ? ` · ${hh(r.assinatura.em)}` : ''}</div>`);
   const img = (r.foto && fotoUrl) ? `<img src="${esc(fotoUrl)}" alt="Foto da carga registrada pelo motorista" style="width:100%;max-width:420px;border-radius:12px;margin-top:10px;border:1px solid #E4EBE9">` : (r.foto ? '' : `<div style="font-size:12.5px;color:#8fa39f;margin-top:6px">Sem foto da carga registrada pelo motorista.</div>`);
+  const assImg = (r.assinatura && assinaturaUrl) ? `<img src="${esc(assinaturaUrl)}" alt="Assinatura do cliente" style="width:100%;max-width:360px;border-radius:10px;margin-top:10px;border:1px solid #E4EBE9;background:#fff">` : '';
   return `<div style="background:#fff;border:1px solid #E4EBE9;border-left:4px solid #0B5B66;border-radius:14px;padding:16px 18px;margin-bottom:14px">
     <div style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#0B5B66;margin-bottom:8px">📸 Registro da coleta (motorista)</div>
     ${linhas.join('')}
     ${img}
+    ${assImg}
   </div>`;
 }
 
@@ -391,7 +395,7 @@ export function paginaColetaOSDetalhe(user, os, acomp) {
       ${rows.join('')}
     </div>`;
   })();
-  const registroHTML = blocoRegistroMotorista(acomp && acomp.registro, `/coletas/foto-motorista?id=${esc(os.id)}`);
+  const registroHTML = blocoRegistroMotorista(acomp && acomp.registro, `/coletas/foto-motorista?id=${esc(os.id)}`, `/coletas/assinatura-motorista?id=${esc(os.id)}`);
   const anexosArr = Array.isArray(os.anexos) ? os.anexos : [];
   const anexosHTML = anexosArr.length ? anexosArr.map((a) => `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid #EEF1F0;border-radius:10px;padding:9px 12px;margin-bottom:7px;background:#FBFDFC">
       <a href="/coletas/anexo?key=${encodeURIComponent(a.key)}" target="_blank" rel="noopener" style="text-decoration:none;color:#10262B;font-weight:600;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">${/image/.test(a.content_type || '') ? '🖼️' : '📄'} ${esc(a.nome || 'arquivo')} ↗</a>
@@ -449,7 +453,7 @@ export function paginaColetaOSDetalhe(user, os, acomp) {
     ${Array.isArray(os.telemetria) && os.telemetria.length ? `<div class="sec">🛰️ Telemetria do veículo (RotaExata) — prova de rastreabilidade</div>
     <div style="font-size:11.5px;color:#9aa7a4;margin:-2px 0 8px">Posição do rastreador do caminhão registrada automaticamente em cada evento da coleta — dado independente e incontestável.</div>
     ${os.telemetria.map((t) => `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid #EEF1F0;border-radius:10px;padding:9px 12px;margin-bottom:6px;background:#FBFDFC">
-      <div style="min-width:0;font-size:12.5px"><b>${esc({ a_caminho: '🚗 A caminho', checkin: '📍 Chegou no cliente', encerramento: '🏭 Encerrou na Ecobraz' }[t.evento] || t.evento)}</b><span style="color:#7c8a87"> · ${esc(String(t.em || '').slice(11, 16))} · ${esc(dataBR(t.em))}${t.velocidade != null ? ` · ${Math.round(Number(t.velocidade) || 0)} km/h` : ''} · ${esc(t.placa || '')}</span></div>
+      <div style="min-width:0;font-size:12.5px"><b>${esc({ a_caminho: '🚗 A caminho', checkin: '📍 Chegou no cliente', encerramento: '🏭 Encerrou na Ecobraz' }[t.evento] || t.evento)}</b><span style="color:#7c8a87"> · ${esc(hhmm(t.em))} · ${esc(dataBR(t.em))}${t.velocidade != null ? ` · ${Math.round(Number(t.velocidade) || 0)} km/h` : ''} · ${esc(t.placa || '')}</span></div>
       <a href="https://www.openstreetmap.org/?mlat=${encodeURIComponent(t.lat)}&mlon=${encodeURIComponent(t.lng)}#map=16/${encodeURIComponent(t.lat)}/${encodeURIComponent(t.lng)}" target="_blank" rel="noopener" style="flex:none;font-size:11.5px;color:#0B5B66;font-weight:700;text-decoration:none">🗺️ ver ponto ↗</a>
     </div>`).join('')}` : ''}
     <div class="sec">📎 Anexos da coleta</div>
@@ -687,17 +691,20 @@ function docHTML(titulo, os, seloUrl, corpo) {
 // liberado ao cliente (regra definida com o Marcio/Débora).
 const avisoRascunho = (os) => (!os.status || os.status === 'agendada') ? `<div style="background:#FFF4DE;border:1px solid #f0dca6;border-radius:10px;padding:11px 14px;margin-bottom:10px;font-size:12px;color:#7a5a12;line-height:1.5"><b>⚠ Rascunho — não liberar ao cliente.</b> Este documento só deve ser entregue ao cliente quando a coleta estiver <b>“Em transporte”</b>.</div>` : '';
 
-export function paginaCartaDescarte(os, seloUrl, registro, fotoUrl) {
+export function paginaCartaDescarte(os, seloUrl, registro, fotoUrl, assinaturaUrl) {
   const veic = `Placa: ${esc(os.veiculoPlaca || '________________')}   ·   Motorista: ${esc(os.agenteNome || '________________')}`;
   const r = registro || {};
-  const hhd = (x) => String(x || '').slice(11, 16);
-  const evidencias = (r.checkin || r.foto || r.encerramento) ? `${eyebrowDoc('Evidências da coleta')}
+  // Hora no fuso de Brasília (UTC-3, sem horário de verão).
+  const hhd = (x) => { const d = new Date(x); if (!x || isNaN(d.getTime())) return ''; d.setUTCHours(d.getUTCHours() - 3); const p = (n) => String(n).padStart(2, '0'); return `${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`; };
+  const evidencias = (r.checkin || r.foto || r.encerramento || r.assinatura) ? `${eyebrowDoc('Evidências da coleta')}
     <div style="font-size:12.5px;color:#28413f;line-height:1.7">
       ${r.encerramento ? `<div><b>Coleta realizada por:</b> ${esc(r.encerramento.agenteNome || os.agenteNome || '—')}${r.encerramento.em ? ` — ${hhd(r.encerramento.em)} de ${esc(dataBR(r.encerramento.em))}` : ''}</div>` : ''}
       ${r.encerramento && r.encerramento.volumes ? `<div><b>Volume/quantidade coletada:</b> ${esc(r.encerramento.volumes)}</div>` : ''}
       ${r.checkin && r.checkin.lat != null ? `<div><b>Confirmação de presença (GPS):</b> ${Number(r.checkin.lat).toFixed(5)}, ${Number(r.checkin.lon).toFixed(5)}${r.checkin.em ? ` às ${hhd(r.checkin.em)}` : ''}</div>` : ''}
     </div>
-    ${r.foto && fotoUrl ? `<div style="margin-top:10px"><img src="${esc(fotoUrl)}" alt="Foto do material coletado" style="width:100%;max-width:360px;border-radius:8px;border:1px solid #E4EBE9"><div style="font-size:10.5px;color:#93a6a2;margin-top:4px">Foto do material registrada no momento da coleta.</div></div>` : ''}` : '';
+    ${r.foto && fotoUrl ? `<div style="margin-top:10px"><img src="${esc(fotoUrl)}" alt="Foto do material coletado" style="width:100%;max-width:360px;border-radius:8px;border:1px solid #E4EBE9"><div style="font-size:10.5px;color:#93a6a2;margin-top:4px">Foto do material registrada no momento da coleta.</div></div>` : ''}
+    ${r.assinatura ? `<div style="margin-top:10px;font-size:12.5px;color:#28413f"><b>Assinatura do cliente:</b> ${esc(r.assinatura.nome || '—')}${r.assinatura.doc ? ` — RG/CPF ${esc(r.assinatura.doc)}` : ''}${r.assinatura.em ? ` · ${hhd(r.assinatura.em)} de ${esc(dataBR(r.assinatura.em))}` : ''}</div>` : ''}
+    ${r.assinatura && assinaturaUrl ? `<div style="margin-top:6px"><img src="${esc(assinaturaUrl)}" alt="Assinatura do cliente" style="width:100%;max-width:320px;border:1px solid #E4EBE9;border-radius:8px;background:#fff"><div style="font-size:10.5px;color:#93a6a2;margin-top:4px">Assinatura colhida no momento da coleta.</div></div>` : ''}` : '';
   const corpo = `${avisoRascunho(os)}${blocoGerador(os)}
     <div style="margin-top:16px;font-size:12.5px;color:#28413f;line-height:1.55"><b>Recebido por:</b> ${esc(EMPRESA.razao)}, inscrita no CNPJ ${esc(EMPRESA.cnpj)}, LO ${esc(EMPRESA.lo)}, com sede na Rua Dona Maria Quedas, 230.</div>
     <div style="margin-top:10px;font-size:12.5px;color:#28413f"><b>Dados do veículo:</b> ${veic}</div>

@@ -162,6 +162,26 @@ export async function servirFotoColeta(env, id) {
   if (!b64) return new Response('sem foto', { status: 404 });
   return new Response(base64ParaBytes(b64), { headers: { 'content-type': 'image/jpeg', 'cache-control': 'private, max-age=3600' } });
 }
+// Assinatura do cliente na coleta (desenhada na tela do celular) + RG/CPF — prova de que
+// o material foi coletado. A imagem (PNG) fica em coletaass:{id} (fora do estado, que é
+// pequeno); nome + documento ficam no estado. Aparece na Carta de Descarte, no comprovante
+// e no registro da coleta (comercial/doca).
+export async function registrarAssinatura(env, id, agente, dados) {
+  const e = await lerEstadoColeta(env, id);
+  const d = dados || {};
+  const img = String(d.assinatura || '');
+  const b64 = img.includes(',') ? img.split(',')[1] : img; // aceita data URL ("data:image/png;base64,...") ou base64 puro
+  if (env.PORTAL_KV && b64) await env.PORTAL_KV.put(`coletaass:${id}`, b64.slice(0, 2000000), { expirationTtl: 60 * 60 * 24 * 120 });
+  e.assinatura = { nome: String(d.nome || '').slice(0, 80), doc: String(d.doc || '').slice(0, 30), em: agora(), agente: agente.email };
+  await salvarEstadoColeta(env, id, e);
+  return e;
+}
+export async function servirAssinaturaColeta(env, id) {
+  if (!env.PORTAL_KV) return new Response('sem assinatura', { status: 404 });
+  const b64 = await env.PORTAL_KV.get(`coletaass:${id}`);
+  if (!b64) return new Response('sem assinatura', { status: 404 });
+  return new Response(base64ParaBytes(b64), { headers: { 'content-type': 'image/png', 'cache-control': 'private, max-age=3600' } });
+}
 
 // ---------------------------------------------------------------------------
 // Fatia 3: encerrar a coleta (entrega na Ecobraz) + comprovante com QR + reagendar
@@ -309,6 +329,22 @@ export function paginaColetaDetalhe(agente, coleta, estado) {
   const linhaFoto = foto ? `<div style="font-size:12.5px;color:#1E5B31;font-weight:700;margin-top:8px;">✓ Foto da carga — ${hhmm(foto.em)}</div><img src="/agente/coleta/foto?id=${coleta.id}" style="width:100%;border-radius:10px;margin-top:8px;border:1px solid #E4EBE9;">` : '';
   const btnChk = chk ? `<button class="btn done" disabled>✓ Cheguei ao local (${hhmm(chk.em)})</button>` : `<button class="btn primary" id="bchk">📍 Cheguei ao local (check-in)</button>`;
   const btnFoto = `<label class="btn ${chk ? 'primary' : 'muted'}" style="${chk ? '' : 'pointer-events:none;'}">${foto ? '📷 Trocar foto da carga' : '📷 Tirar foto da carga'}<input type="file" accept="image/*" capture="environment" id="fp" style="display:none;"></label>`;
+  const ass = estado && estado.assinatura;
+  const linhaAss = ass ? `<div style="font-size:12.5px;color:#1E5B31;font-weight:700;margin-top:8px;">✓ Assinatura do cliente${ass.doc ? ` · RG/CPF ${esc(ass.doc)}` : ''} — ${hhmm(ass.em)}</div>` : '';
+  const btnAss = ass
+    ? `<button class="btn done" id="bass">✓ Cliente assinou${ass.doc ? ' · ' + esc(ass.doc) : ''} — refazer</button>`
+    : `<button class="btn ${chk ? 'primary' : 'muted'}" id="bass" ${chk ? '' : 'disabled'}>✍️ Assinatura do cliente</button>`;
+  const assPane = `<div id="pane-ass" style="display:none;background:#fff;border:1px solid #E4EBE9;border-radius:12px;padding:14px;margin-bottom:10px;">
+    <div style="font-size:12px;font-weight:800;color:#10262B;margin-bottom:8px;">Assinatura do cliente (confirma a coleta)</div>
+    <input id="ass-nome" placeholder="Nome de quem assina" style="width:100%;box-sizing:border-box;border:1px solid #DDE1E6;border-radius:10px;padding:12px;font-size:15px;margin-bottom:8px;">
+    <input id="ass-doc" inputmode="text" placeholder="RG ou CPF" style="width:100%;box-sizing:border-box;border:1px solid #DDE1E6;border-radius:10px;padding:12px;font-size:15px;margin-bottom:8px;">
+    <div style="font-size:11px;color:#7c8a87;margin:2px 0 6px;">Peça o cliente assinar com o dedo no quadro:</div>
+    <canvas id="ass-cv" style="display:block;width:100%;height:180px;border:1.5px dashed #cfe0dd;border-radius:10px;background:#fff;touch-action:none;"></canvas>
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <button class="btn ghost" id="ass-limpar" style="flex:1;margin:0;">Limpar</button>
+      <button class="btn primary" id="ass-salvar" style="flex:2;margin:0;">Salvar assinatura</button>
+    </div>
+  </div>`;
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex">${tagsPWA('agente')}<title>Coleta OS ${esc(coleta.numero)}</title>
 <style>.btn{display:block;width:100%;box-sizing:border-box;border:none;border-radius:12px;padding:15px;font-size:14px;font-weight:800;margin-bottom:10px;text-align:center;cursor:pointer;}
 .primary{background:#92C430;color:#10262B;}.dark{background:#00333B;color:#fff;}.ghost{background:#fff;color:#00333B;border:1.5px solid #cfe0dd;}.done{background:#E4F3E6;color:#1E5B31;}.muted{background:#EEF1F0;color:#9aa7a4;}</style></head>
@@ -325,11 +361,13 @@ export function paginaColetaDetalhe(agente, coleta, estado) {
   </div>
   <div style="background:#fff;border:1px solid #E4EBE9;border-radius:14px;padding:14px 16px;margin-bottom:14px;">
     <div style="font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#7c8a87;margin-bottom:8px;">Linha do tempo</div>
-    ${linhaAcam}${linhaChk}${linhaFoto}
+    ${linhaAcam}${linhaChk}${linhaFoto}${linhaAss}
   </div>
   ${btnAcam}
   ${btnChk}
   ${btnFoto}
+  ${btnAss}
+  ${assPane}
   ${enc ? `
   <div class="btn done">✓ Coleta encerrada — ${hhmm(enc.em)}</div>
   <a href="/agente/coleta/comprovante?id=${esc(coleta.id)}" class="btn dark" style="text-decoration:none;">📄 Ver comprovante (QR)</a>
@@ -340,6 +378,7 @@ export function paginaColetaDetalhe(agente, coleta, estado) {
     <div style="font-size:12px;font-weight:800;color:#10262B;margin-bottom:8px;">Confirmar entrega na Ecobraz</div>
     <input id="vol" inputmode="text" placeholder="Volumes / quantidade (opcional)" style="width:100%;box-sizing:border-box;border:1px solid #DDE1E6;border-radius:10px;padding:12px;font-size:15px;margin-bottom:8px;">
     <textarea id="obs" rows="2" placeholder="Observações (opcional)" style="width:100%;box-sizing:border-box;border:1px solid #DDE1E6;border-radius:10px;padding:12px;font-size:15px;font-family:inherit;"></textarea>
+    ${ass ? '' : `<div style="font-size:11.5px;color:#8A6A16;background:#FFF4DE;border-radius:8px;padding:8px 10px;margin-top:8px;">⚠️ Sem assinatura do cliente. Se possível, colha a assinatura antes de encerrar.</div>`}
     <button class="btn primary" id="benc2" style="margin-top:8px;">✓ Confirmar entrega</button>
   </div>
   <button class="btn ghost" id="brea">↩︎ Não deu pra coletar — reagendar</button>
@@ -396,6 +435,29 @@ export function paginaColetaDetalhe(agente, coleta, estado) {
     try{const r=await fetch('/api/agente/reagendar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:ID,motivo:(document.getElementById('mot').value||'')})});
       if(r.ok){location.reload();}else{msg.textContent='Falha ao enviar. Tente de novo.';brea2.disabled=false;}}
     catch{msg.textContent='Sem conexão. Tente de novo com sinal.';brea2.disabled=false;}};
+  // Assinatura do cliente: quadro de desenho (dedo/mouse) → PNG enviado ao servidor.
+  var bass=document.getElementById('bass'), acv=document.getElementById('ass-cv');
+  var actx=acv?acv.getContext('2d'):null, adraw=false, adirty=false, alast=null;
+  function assResize(){ if(!acv||!actx) return; var r=acv.getBoundingClientRect(); if(!r.width) return; var dpr=window.devicePixelRatio||1; acv.width=Math.round(r.width*dpr); acv.height=Math.round(r.height*dpr); actx.setTransform(dpr,0,0,dpr,0,0); actx.lineWidth=2.2; actx.lineCap='round'; actx.lineJoin='round'; actx.strokeStyle='#10262B'; adirty=false; }
+  function assPos(ev){ var r=acv.getBoundingClientRect(); var t=ev.touches&&ev.touches[0]; var cx=t?t.clientX:ev.clientX, cy=t?t.clientY:ev.clientY; return {x:cx-r.left,y:cy-r.top}; }
+  function assStart(ev){ ev.preventDefault(); adraw=true; alast=assPos(ev); }
+  function assMove(ev){ if(!adraw) return; ev.preventDefault(); var p=assPos(ev); actx.beginPath(); actx.moveTo(alast.x,alast.y); actx.lineTo(p.x,p.y); actx.stroke(); alast=p; adirty=true; }
+  function assEnd(){ adraw=false; }
+  if(acv){ acv.addEventListener('mousedown',assStart); acv.addEventListener('mousemove',assMove); window.addEventListener('mouseup',assEnd); acv.addEventListener('touchstart',assStart,{passive:false}); acv.addEventListener('touchmove',assMove,{passive:false}); acv.addEventListener('touchend',assEnd); }
+  if(bass) bass.onclick=function(){ toggle('pane-ass'); var p=document.getElementById('pane-ass'); if(p&&p.style.display!=='none') assResize(); };
+  var alim=document.getElementById('ass-limpar'); if(alim) alim.onclick=function(e){ e.preventDefault(); if(actx&&acv){ actx.clearRect(0,0,acv.width,acv.height); adirty=false; } };
+  var asv=document.getElementById('ass-salvar');
+  if(asv) asv.onclick=async function(){
+    var docv=(document.getElementById('ass-doc').value||'').trim();
+    if(!adirty){ msg.textContent='Peça o cliente assinar no quadro.'; return; }
+    if(!docv){ msg.textContent='Preencha o RG ou CPF do cliente.'; return; }
+    asv.disabled=true; msg.textContent='Salvando assinatura…';
+    try{
+      var dataUrl=acv.toDataURL('image/png');
+      var r=await fetch('/api/agente/assinatura',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:ID,nome:(document.getElementById('ass-nome').value||''),doc:docv,assinatura:dataUrl})});
+      if(r.ok){ location.reload(); } else { msg.textContent='Falha ao salvar. Tente de novo.'; asv.disabled=false; }
+    }catch(e){ msg.textContent='Sem conexão. Tente de novo com sinal.'; asv.disabled=false; }
+  };
 </script>
 </body></html>`;
 }
@@ -409,6 +471,7 @@ export function paginaComprovante(agente, coleta, estado, seloUrl) {
   const cliente = os.cliente || (coleta && coleta.cliente) || '';
   const endereco = os.endereco || (coleta && coleta.endereco) || '';
   const foto = estado && estado.foto;
+  const ass = estado && estado.assinatura;
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex">${tagsPWA('agente')}<title>Comprovante — Coleta OS ${esc(numero)}</title>
 <style>@media print{.noprint{display:none!important}body{background:#fff!important}}</style></head>
 <body style="margin:0;background:#F2F6F4;font-family:Montserrat,'Segoe UI',Arial,Helvetica,sans-serif;color:#10262B;">
@@ -433,8 +496,10 @@ export function paginaComprovante(agente, coleta, estado, seloUrl) {
       ${enc.volumes ? `<tr><td style="padding:9px 0;border-top:1px solid #E4EBE9;color:#6B7B78;">Volumes / quantidade</td><td style="padding:9px 0;border-top:1px solid #E4EBE9;text-align:right;font-weight:700;">${esc(enc.volumes)}</td></tr>` : ''}
       <tr><td style="padding:9px 0;border-top:1px solid #E4EBE9;color:#6B7B78;">Check-in no local</td><td style="padding:9px 0;border-top:1px solid #E4EBE9;text-align:right;font-weight:700;color:${chk ? '#1E7A3D' : '#8A6A16'};">${chk ? 'confirmado por GPS · ' + hhmm(chk.em) : 'não registrado'}</td></tr>
       <tr><td style="padding:9px 0;border-top:1px solid #E4EBE9;color:#6B7B78;">Registro fotográfico</td><td style="padding:9px 0;border-top:1px solid #E4EBE9;text-align:right;font-weight:700;color:${foto ? '#1E7A3D' : '#8A6A16'};">${foto ? 'anexado' : 'não anexado'}</td></tr>
+      <tr><td style="padding:9px 0;border-top:1px solid #E4EBE9;color:#6B7B78;">Assinatura do cliente</td><td style="padding:9px 0;border-top:1px solid #E4EBE9;text-align:right;font-weight:700;color:${ass ? '#1E7A3D' : '#8A6A16'};">${ass ? 'colhida' + (ass.doc ? ' · ' + esc(ass.doc) : '') : 'não colhida'}</td></tr>
     </table>
     ${enc.obs ? `<div style="margin-top:14px;background:#F7FAF9;border:1px solid #E4EBE9;border-radius:10px;padding:12px 14px;font-size:12.5px;"><b>Observações:</b> ${esc(enc.obs)}</div>` : ''}
+    ${ass ? `<div style="margin-top:16px;border-top:1px solid #E4EBE9;padding-top:14px;"><div style="font-size:10px;color:#7c8a87;text-transform:uppercase;letter-spacing:.08em;font-weight:800;margin-bottom:6px;">Assinatura do cliente${ass.doc ? ' · RG/CPF ' + esc(ass.doc) : ''}${ass.nome ? ' · ' + esc(ass.nome) : ''}</div><img src="/agente/coleta/assinatura?id=${esc(coleta.id)}" alt="Assinatura do cliente" style="max-width:100%;height:auto;border:1px solid #E4EBE9;border-radius:8px;background:#fff;"></div>` : ''}
     <div style="display:flex;gap:16px;align-items:center;margin-top:22px;border-top:1px solid #E4EBE9;padding-top:18px;">
       <img src="${esc(seloUrl)}" alt="QR de validação" style="width:104px;height:104px;flex:none;border:1px solid #E4EBE9;border-radius:8px;">
       <div style="font-size:12px;color:#4F6469;line-height:1.6;">Aponte a câmera para o QR e confirme a autenticidade desta coleta no site da Ecobraz.<br><span style="font-size:10.5px;color:#9aa7a4;">A destinação final e o CDF são emitidos após o processamento na unidade.</span></div>

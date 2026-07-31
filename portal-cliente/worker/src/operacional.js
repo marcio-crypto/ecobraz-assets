@@ -334,7 +334,7 @@ export function paginaLoteDetalhe(operador, op, registro) {
   <div style="color:#fff;font-size:19px;font-weight:800;margin-top:8px">${esc(op.cliente || 'Cliente')}</div>
   <div style="color:#9FC6C1;font-size:12px;margin-top:4px">Recepção na doca · Fase 1 (Início)</div></div>
 <div class="wrap">
-  ${blocoRegistroMotorista(registro, '/coletas/foto-motorista?id=' + esc(op.osId))}
+  ${blocoRegistroMotorista(registro, '/coletas/foto-motorista?id=' + esc(op.osId), '/coletas/assinatura-motorista?id=' + esc(op.osId))}
   <div class="card">
     <div class="eyebrow">Tipo de atendimento</div>
     <div style="display:flex;gap:10px">
