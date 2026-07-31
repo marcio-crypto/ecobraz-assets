@@ -68,7 +68,7 @@ import { sondarAnexosPloomes, paginaSondaAnexos } from './ploomes-docs.js';
 import { amostraContatosPloomes, paginaAmostraContatos, importarLoteContatos, estatisticasMigracao, buscarContatos, paginaMigrarPloomes, detalheContato, paginaContatoDetalhe, importarLoteNegocios, estatisticasNegocios, paginaMigrarNegocios } from './ploomes-migracao.js';
 import { importarLoteAnexos, importarLoteAnexosContatos, completarAnexos, importarAnexosJanela, reprocessarFalhas, importarLoteDocumentos, recuperarDocumentos, estatisticasArquivos, paginaMigrarArquivos, diagnosticoAnexos, paginaDiagAnexos } from './ploomes-arquivos.js';
 import { fiscalPermitido, nomeFiscal, listarNotas, lerNota, importarLote, vincularNota, sugerirVinculoSync, paginaFiscalLogin, paginaFiscalHome, paginaFiscalResultado, paginaFiscalNota } from './fiscal.js';
-import { escritorioPermitido, escritoriosDe, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, emailsDoCliente, reindexarEmailsClientes, backfillEnderecos, paginaManutencao, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, clienteDeLead, arquivosDoCliente, paginaLeads, paginaLeadDetalhe, paginaInicio, listarClientesD1, contagensClientesD1, lerClienteD1, negociosDoCliente, espelharClienteD1, sincronizarKVparaD1, lerNegocioDetalheD1, paginaOSDetalhe, curarContatosKV, classificarPedido, atualizarIndexLead, excluirLead } from './cadastro.js';
+import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, emailsDoCliente, reindexarEmailsClientes, backfillEnderecos, paginaManutencao, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, clienteDeLead, arquivosDoCliente, paginaLeads, paginaLeadDetalhe, paginaInicio, listarClientesD1, contagensClientesD1, lerClienteD1, negociosDoCliente, espelharClienteD1, sincronizarKVparaD1, lerNegocioDetalheD1, paginaOSDetalhe, curarContatosKV, classificarPedido, atualizarIndexLead, excluirLead } from './cadastro.js';
 import { listarColetasOS, lerColetaOS, seloOS, criarColetaOS, atualizarStatusOS, atualizarColetaOS, anexarTelemetriaOS, registrarAnexoColeta, removerAnexoColeta, paginaColetasLista, paginaGerarColeta, paginaEditarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga, definirCobrancaOS, marcarCobrancaPagaOS, definirMtrOS } from './coletas.js';
 import { listarVeiculos, lerVeiculo, salvarVeiculo, paginaFrota, paginaVeiculoForm, lerJornadaAtiva, abrirJornada, fecharJornada, registrarAbastecimento, tagColetaComVeiculo, servirFotoJornada, bannerJornada, paginaAbrirDia, paginaFecharDia, paginaAbastecer, placaDaColeta } from './frota.js';
 import { carregarEquipeNoEnv, listarUsuarios, lerUsuario, salvarUsuario, importarUsuarios, paginaEquipe, paginaUsuarioForm, paginaEquipeImportar } from './equipe.js';
@@ -3438,9 +3438,10 @@ async function enviarEmailCobrancaOSPaga(ped, env) {
 // De-dup por KV para não repetir em reenvio de webhook. Best-effort — nunca bloqueia.
 async function avisarEquipeCobrancaPaga(env, os, pg) {
   if (!env.RESEND_API_KEY || !os) return;
+  // Destinatário do aviso: a Débora (comercial). Sobrescreve por env se um dia mudar.
   const listaEnv = env.COBRANCA_NOTIFY_EMAILS
     ? String(env.COBRANCA_NOTIFY_EMAILS).split(/[,;]+/).map((s) => s.split('|')[0].trim().toLowerCase()).filter(Boolean)
-    : [...escritoriosDe(env).keys()];
+    : ['debora.villanova@ecobraz.org.br'];
   const dest = [...new Set(listaEnv)].filter((e) => /^\S+@\S+\.\S+$/.test(e)).slice(0, 25);
   if (!dest.length) return;
   const chave = `notif:oscobranca:equipe:${os.id}`;

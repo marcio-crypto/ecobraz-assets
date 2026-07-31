@@ -29,6 +29,12 @@ export async function criarCheckoutStripe({ valor, descricao, externalReference,
   p.set('line_items[0][price_data][product_data][name]', String(descricao || 'Cobrança Ecobraz').slice(0, 250));
   const mm = (Array.isArray(metodos) && metodos.length) ? metodos : ['card', 'pix'];
   mm.forEach((m, i) => p.set(`payment_method_types[${i}]`, m));
+  // Vencimento do BOLETO: padrão 10 dias (10 DDL — o que a Débora usa). A Stripe
+  // usa 3 dias se a gente não mandar. Ajustável pelo cofre (env BOLETO_EXPIRES_DAYS).
+  if (mm.includes('boleto')) {
+    const diasBoleto = Math.min(60, Math.max(0, Math.floor(Number(env.BOLETO_EXPIRES_DAYS) || 10)));
+    p.set('payment_method_options[boleto][expires_after_days]', String(diasBoleto));
+  }
   if (clienteEmail) p.set('customer_email', String(clienteEmail).slice(0, 200));
   const r = await fetch(`${STRIPE_API}/checkout/sessions`, {
     method: 'POST',
