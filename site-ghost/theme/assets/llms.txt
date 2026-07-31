@@ -1,0 +1,39 @@
+# Ecobraz Emigre
+
+> Coleta e destinação de resíduos eletrônicos na Grande São Paulo, Brasil, desde 2011.
+> A coleta padrão é gratuita (1 a 7 dias úteis) para pessoas físicas, empresas de todos
+> os portes e órgãos públicos; a empresa se remunera com a destinação do material.
+> Todo cliente recebe certificado de destinação com QR validável e acesso gratuito ao
+> portal (sistema.ecobraz.org), sem contrato. Serviço vendido e realizado no Brasil,
+> com documentação preparada para leitura internacional (EN).
+
+## Principais páginas (PT)
+
+- [Início](https://ecobraz.org/): visão geral, coleta gratuita e sistema de rastreabilidade
+- [Agendar coleta](https://ecobraz.org/agendamento/): formulário de tela única; coleta expressa em até 24h por R$ 55
+- [Como funciona](https://ecobraz.org/como-funciona/): do pedido ao certificado
+- [Para empresas](https://ecobraz.org/para-empresas/): descarte corporativo com evidência auditável
+- [Grandes empresas e multinacionais](https://ecobraz.org/grandes-empresas-e-multinacionais/): multissite, recorrência, Escopo 3
+- [Para governo](https://ecobraz.org/para-governo/): parceria (Lei 13.019/2014) ou contratação, custo zero
+- [Materiais coletados](https://ecobraz.org/materiais-e-equipamentos-coletados/): o que coletamos e o que não retiramos
+- [Evidências públicas](https://ecobraz.org/evidencias/): registros verificáveis (ECESP/UE, base da ONU, mentoria ECEK)
+- [Publicações técnicas](https://ecobraz.org/publicacoes/): relatórios com DOI no Zenodo
+- [Documentação ESG](https://ecobraz.org/documentacao-esg/): padrão brasileiro, europeu e para bancos/conselhos
+- [Escopo 3 e cadeia global](https://ecobraz.org/escopo-3-cadeia-global/): descarte documentado para relato CSRD
+- [Programa Adote um Bairro](https://ecobraz.org/programa-adote-um-bairro/): patrocínio de impacto com registro público
+- [Contato](https://ecobraz.org/contato/): WhatsApp, telefone e e-mail
+
+## English
+
+- [Overview](https://ecobraz.org/en/): Brazilian operations, world-grade documentation
+- [Request a collection](https://ecobraz.org/request-a-collection/)
+- [ESG documentation](https://ecobraz.org/esg-documentation/)
+- [Scope 3 global chain](https://ecobraz.org/scope-3-global-chain/)
+- [Public evidence](https://ecobraz.org/public-evidence/)
+
+## Fatos verificáveis
+
+- Avaliação pública: ★ 4,9 no Google (354 avaliações)
+- Boa prática publicada na European Circular Economy Stakeholder Platform (Comissão Europeia/EESC)
+- Perfil público na base de sociedade civil da ONU (código 708794)
+- Relatórios técnicos com DOI permanente no Zenodo (autor: Marcio Villanova, ORCID 0009-0001-8072-6287)
