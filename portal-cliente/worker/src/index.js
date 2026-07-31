@@ -685,6 +685,9 @@ export default {
       const eng = await lerSessaoEng(request, env);
       const diretoria = await lerSessaoDiretoria(request, env);
       const escritorio = await lerSessaoEscritorio(request, env);
+      // MTR & DMR e Cronograma são ferramentas de conformidade: o escritório E o
+      // engenheiro ambiental (RT) usam. Guard combinado para essas telas/APIs.
+      const escOuEng = escritorio || eng;
       const fiscal = await lerSessaoFiscal(request, env);
 
       // Medição de uso (presença por dia) — alimenta o Painel da Diretoria. Só em GET de
@@ -1264,53 +1267,54 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         return json({ ok: true });
       }
       // --- GESTÃO de MTR + DMR (registro próprio da Ecobraz; pedido do Marcelo) ---
+      // Acesso: escritório OU engenharia ambiental (RT) — é ferramenta de conformidade.
       if (pathname === '/mtr' && request.method === 'GET') {
-        if (!escritorio) return html(paginaLoginEscritorio(googleConfigurado(env)));
+        if (!escOuEng) return html(paginaLoginEscritorio(googleConfigurado(env)));
         const mtrs = await listarMtrs(env);
-        return html(paginaMtrLista(escritorio, mtrs, url.searchParams.get('aba'), url.searchParams.get('q')));
+        return html(paginaMtrLista(escOuEng, mtrs, url.searchParams.get('aba'), url.searchParams.get('q')));
       }
       if (pathname === '/mtr/novo' && request.method === 'GET') {
-        if (!escritorio) return html(paginaLoginEscritorio(googleConfigurado(env)));
+        if (!escOuEng) return html(paginaLoginEscritorio(googleConfigurado(env)));
         const editId = url.searchParams.get('id');
         const m = editId ? await lerMtr(env, editId) : { tipo: url.searchParams.get('tipo') || 'entrada' };
         if (editId && !m) return html(paginaMensagem('MTR não encontrada', 'Volte e tente de novo.'), 404);
         const [destinos, todas] = await Promise.all([listarDestinos(env), listarMtrs(env)]);
         const entradas = todas.filter((x) => x.tipo === 'entrada');
-        return html(paginaMtrForm(escritorio, m, destinos, entradas));
+        return html(paginaMtrForm(escOuEng, m, destinos, entradas));
       }
       if (pathname === '/mtr/item' && request.method === 'GET') {
-        if (!escritorio) return html(paginaLoginEscritorio(googleConfigurado(env)));
+        if (!escOuEng) return html(paginaLoginEscritorio(googleConfigurado(env)));
         const m = await lerMtr(env, url.searchParams.get('id'));
         if (!m) return html(paginaMensagem('MTR não encontrada', 'Volte e tente de novo.'), 404);
         let entradaVinc = null;
         if (m.tipo === 'saida' && m.mtrEntradaId) { const e = await lerMtr(env, m.mtrEntradaId); if (e) entradaVinc = { id: e.id, numero: e.numero, contraparte: e.gerador || '', quantidade: e.quantidade }; }
-        return html(paginaMtrDetalhe(escritorio, m, entradaVinc));
+        return html(paginaMtrDetalhe(escOuEng, m, entradaVinc));
       }
       if (pathname === '/mtr/dmr' && request.method === 'GET') {
-        if (!escritorio) return html(paginaLoginEscritorio(googleConfigurado(env)));
+        if (!escOuEng) return html(paginaLoginEscritorio(googleConfigurado(env)));
         const dmr = await dadosDMR(env, { periodo: url.searchParams.get('periodo'), de: url.searchParams.get('de'), ate: url.searchParams.get('ate'), gerador: url.searchParams.get('gerador'), destinador: url.searchParams.get('destinador') });
-        return html(paginaDMR(escritorio, dmr));
+        return html(paginaDMR(escOuEng, dmr));
       }
       if (pathname === '/api/mtr-gestao/salvar' && request.method === 'POST') {
-        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        if (!escOuEng) return json({ ok: false, error: 'nao_autenticado' }, 401);
         let b; try { b = await request.json(); } catch { b = {}; }
-        const m = await salvarMtr(env, escritorio, b || {});
+        const m = await salvarMtr(env, escOuEng, b || {});
         return json({ ok: !!m, id: m && m.id });
       }
       // Backfill: importa para o registro/DMR todas as MTRs já vinculadas às OSs.
       if (pathname === '/api/mtr-gestao/importar-os' && request.method === 'POST') {
-        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        if (!escOuEng) return json({ ok: false, error: 'nao_autenticado' }, 401);
         const r = await importarMtrsDasOSs(env);
         return json({ ok: true, importadas: r.importadas, erros: r.erros });
       }
       if (pathname === '/api/mtr-gestao/status' && request.method === 'POST') {
-        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        if (!escOuEng) return json({ ok: false, error: 'nao_autenticado' }, 401);
         let b; try { b = await request.json(); } catch { b = {}; }
         const m = await mudarStatusMtr(env, b && b.id, b && b.status);
         return json({ ok: !!m });
       }
       if (pathname === '/api/mtr-gestao/remover' && request.method === 'POST') {
-        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        if (!escOuEng) return json({ ok: false, error: 'nao_autenticado' }, 401);
         let b; try { b = await request.json(); } catch { b = {}; }
         const m = await lerMtr(env, b && b.id);
         if (m && m.pdfKey) { try { if (env.R2_ARQUIVOS && String(m.pdfKey).startsWith('mtr-anexo/')) await env.R2_ARQUIVOS.delete(m.pdfKey); } catch { /* segue */ } }
@@ -1318,7 +1322,7 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         return json({ ok: true });
       }
       if (pathname === '/api/mtr-gestao/pdf' && request.method === 'POST') {
-        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        if (!escOuEng) return json({ ok: false, error: 'nao_autenticado' }, 401);
         if (!env.R2_ARQUIVOS) return json({ ok: false, error: 'Depósito R2 indisponível.' }, 503);
         const id = (url.searchParams.get('id') || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40);
         const m = await lerMtr(env, id);
@@ -1336,7 +1340,7 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         return json({ ok: true });
       }
       if (pathname === '/api/mtr-gestao/pdf-remover' && request.method === 'POST') {
-        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        if (!escOuEng) return json({ ok: false, error: 'nao_autenticado' }, 401);
         let b; try { b = await request.json(); } catch { b = {}; }
         const m = await lerMtr(env, b && b.id);
         if (m && m.pdfKey) { try { if (env.R2_ARQUIVOS && String(m.pdfKey).startsWith('mtr-anexo/')) await env.R2_ARQUIVOS.delete(m.pdfKey); } catch { /* segue */ } }
@@ -1344,7 +1348,7 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         return json({ ok: true });
       }
       if (pathname === '/mtr-gestao/pdf' && request.method === 'GET') {
-        if (!escritorio) return new Response('nao_autenticado', { status: 401 });
+        if (!escOuEng) return new Response('nao_autenticado', { status: 401 });
         if (!env.R2_ARQUIVOS) return new Response('indisponível', { status: 503 });
         const key = (url.searchParams.get('key') || '').replace(/[^a-zA-Z0-9/_.-]/g, '').slice(0, 120);
         if (!key.startsWith('mtr-anexo/')) return new Response('chave inválida', { status: 400 });
@@ -1355,12 +1359,12 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
       }
       // --- CRONOGRAMA / KANBAN (visão do fluxo operacional; pedido do Marcelo) ---
       if (pathname === '/cronograma' && request.method === 'GET') {
-        if (!escritorio) return html(paginaLoginEscritorio(googleConfigurado(env)));
+        if (!escOuEng) return html(paginaLoginEscritorio(googleConfigurado(env)));
         const dados = await dadosCronograma(env);
-        return html(paginaCronograma(escritorio, dados));
+        return html(paginaCronograma(escOuEng, dados));
       }
       if (pathname === '/api/cronograma/sla' && request.method === 'POST') {
-        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        if (!escOuEng) return json({ ok: false, error: 'nao_autenticado' }, 401);
         let b; try { b = await request.json(); } catch { b = {}; }
         const sla = await salvarSla(env, b && b.atencao, b && b.atraso);
         return json({ ok: true, sla });

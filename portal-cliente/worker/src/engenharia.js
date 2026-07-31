@@ -112,7 +112,13 @@ export function paginaFilaEng(eng, fila, validadas) {
   <form method="post" action="/api/eng/sair" style="margin:0"><button style="background:#0e4651;color:#cfe3e0;border:1px solid #1c5b66;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700">Sair</button></form>
 </div></div>
 <div class="wrap">
-  <a href="/eng/destinos" class="btn ghost" style="margin-bottom:16px">🏭 Destinos finais (usinas) →</a>
+  <div style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#00333B;margin:2px 0 10px">Conformidade & órgãos ambientais</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">
+    <a href="/mtr" class="btn ghost" style="margin:0">🏛️ MTR — entrada/saída →</a>
+    <a href="/mtr/dmr" class="btn ghost" style="margin:0">📊 Gerar DMR →</a>
+    <a href="/cronograma" class="btn ghost" style="margin:0">🗂️ Cronograma / Kanban →</a>
+    <a href="/eng/destinos" class="btn ghost" style="margin:0">🏭 Destinos finais (usinas) →</a>
+  </div>
   <div style="font-size:13px;font-weight:800;margin-bottom:12px">Aguardando validação <span class="pill" style="background:#FFF4DE;color:#8A6A16">${fila.length}</span></div>
   ${filaHtml}
   ${validHtml ? `<div style="font-size:13px;font-weight:800;margin:22px 0 12px">Validadas recentemente</div>${validHtml}` : ''}
