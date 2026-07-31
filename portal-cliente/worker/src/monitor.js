@@ -13,7 +13,12 @@
 const criaTabela = (env) => env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS diagnosticos (id INTEGER PRIMARY KEY AUTOINCREMENT, tipo TEXT, criado_em TEXT, dados TEXT)').run();
 
 export async function registrarFalha(env, onde, detalhe, extra) {
-  const rec = { onde: String(onde || '').slice(0, 80), detalhe: String(detalhe || '').slice(0, 800) };
+  // detalhe pode vir como objeto (ex.: safeError = {name, message}); serializa direito
+  // em vez de virar "[object Object]", senão o diagnóstico não serve para nada.
+  const detStr = (detalhe && typeof detalhe === 'object')
+    ? (detalhe.message ? `${detalhe.name || 'Error'}: ${detalhe.message}` : (() => { try { return JSON.stringify(detalhe); } catch { return String(detalhe); } })())
+    : String(detalhe || '');
+  const rec = { onde: String(onde || '').slice(0, 80), detalhe: detStr.slice(0, 800) };
   if (extra && typeof extra === 'object') { try { rec.extra = JSON.stringify(extra).slice(0, 800); } catch { /* segue */ } }
   console.error('falha_monitorada', rec.onde, rec.detalhe.slice(0, 200));
   try {

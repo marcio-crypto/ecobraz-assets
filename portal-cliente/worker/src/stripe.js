@@ -17,32 +17,51 @@ export async function criarCheckoutStripe({ valor, descricao, externalReference,
   const base = String(baseUrl || '').replace(/\/+$/, '');
   const caminho = (backPath || '/painel').replace(/^\/?/, '/');
   const centavos = Math.round(Number(valor) * 100);
-  const p = new URLSearchParams();
-  p.set('mode', 'payment');
-  p.set('success_url', `${base}${caminho}?stripe={CHECKOUT_SESSION_ID}`);
-  p.set('cancel_url', `${base}${caminho}?stripe_cancel=1`);
-  p.set('client_reference_id', externalReference);
-  p.set('metadata[ref]', externalReference);
-  p.set('line_items[0][quantity]', '1');
-  p.set('line_items[0][price_data][currency]', 'brl');
-  p.set('line_items[0][price_data][unit_amount]', String(centavos));
-  p.set('line_items[0][price_data][product_data][name]', String(descricao || 'Cobrança Ecobraz').slice(0, 250));
   const mm = (Array.isArray(metodos) && metodos.length) ? metodos : ['card', 'pix'];
-  mm.forEach((m, i) => p.set(`payment_method_types[${i}]`, m));
-  // Vencimento do BOLETO: padrão 10 dias (10 DDL — o que a Débora usa). A Stripe
-  // usa 3 dias se a gente não mandar. Ajustável pelo cofre (env BOLETO_EXPIRES_DAYS).
-  if (mm.includes('boleto')) {
-    const diasBoleto = Math.min(60, Math.max(0, Math.floor(Number(env.BOLETO_EXPIRES_DAYS) || 10)));
-    p.set('payment_method_options[boleto][expires_after_days]', String(diasBoleto));
+  // Monta os parâmetros do Checkout. `comBoleto` liga o vencimento do boleto (10 DDL),
+  // que é uma OPÇÃO extra — se a Stripe recusar só essa opção, refazemos sem ela.
+  const montar = (comBoleto) => {
+    const p = new URLSearchParams();
+    p.set('mode', 'payment');
+    p.set('success_url', `${base}${caminho}?stripe={CHECKOUT_SESSION_ID}`);
+    p.set('cancel_url', `${base}${caminho}?stripe_cancel=1`);
+    p.set('client_reference_id', externalReference);
+    p.set('metadata[ref]', externalReference);
+    p.set('line_items[0][quantity]', '1');
+    p.set('line_items[0][price_data][currency]', 'brl');
+    p.set('line_items[0][price_data][unit_amount]', String(centavos));
+    p.set('line_items[0][price_data][product_data][name]', String(descricao || 'Cobrança Ecobraz').slice(0, 250));
+    mm.forEach((m, i) => p.set(`payment_method_types[${i}]`, m));
+    if (comBoleto && mm.includes('boleto')) {
+      const diasBoleto = Math.min(60, Math.max(0, Math.floor(Number(env.BOLETO_EXPIRES_DAYS) || 10)));
+      p.set('payment_method_options[boleto][expires_after_days]', String(diasBoleto));
+    }
+    if (clienteEmail) p.set('customer_email', String(clienteEmail).slice(0, 200));
+    return p;
+  };
+  const enviar = async (p) => {
+    const r = await fetch(`${STRIPE_API}/checkout/sessions`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${key}`, 'content-type': 'application/x-www-form-urlencoded' },
+      body: p.toString(),
+    });
+    const txt = await r.text();
+    let d = {}; try { d = JSON.parse(txt); } catch { /* não-JSON */ }
+    return { r, d };
+  };
+  // 1ª tentativa COM o vencimento do boleto; se a Stripe recusar por causa dessa opção,
+  // registra o motivo (D1, para eu corrigir) e refaz SEM ela — o link nunca deixa de sair.
+  let { r, d } = await enviar(montar(true));
+  if (!r.ok && mm.includes('boleto')) {
+    const motivo = (d && d.error && (d.error.message || d.error.code)) || `HTTP ${r.status}`;
+    try {
+      if (env.DB_PLOOMES) {
+        await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS diagnosticos (id INTEGER PRIMARY KEY AUTOINCREMENT, tipo TEXT, criado_em TEXT, dados TEXT)').run();
+        await env.DB_PLOOMES.prepare('INSERT INTO diagnosticos (tipo, criado_em, dados) VALUES (?1, ?2, ?3)').bind('stripe-boleto-opt', new Date().toISOString(), String(motivo).slice(0, 500)).run();
+      }
+    } catch { /* diagnóstico é best-effort */ }
+    ({ r, d } = await enviar(montar(false)));
   }
-  if (clienteEmail) p.set('customer_email', String(clienteEmail).slice(0, 200));
-  const r = await fetch(`${STRIPE_API}/checkout/sessions`, {
-    method: 'POST',
-    headers: { authorization: `Bearer ${key}`, 'content-type': 'application/x-www-form-urlencoded' },
-    body: p.toString(),
-  });
-  const txt = await r.text();
-  let d = {}; try { d = JSON.parse(txt); } catch { /* não-JSON */ }
   if (!r.ok) {
     const msg = (d && d.error && (d.error.message || d.error.code)) || `HTTP ${r.status}`;
     const e = new Error('stripe_' + r.status + ': ' + String(msg).slice(0, 180));
