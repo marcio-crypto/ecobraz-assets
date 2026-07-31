@@ -400,7 +400,7 @@ a.v2-pill:hover{border-color:var(--verde)}
 
 /* CTA petrol centrado com botão-pílula */
 .v2c-cta{background:var(--petrol);color:#fff;border-radius:var(--v2-r);padding:38px 30px;text-align:center;margin:34px 0}
-.v2c-cta strong{display:block;font-family:'Nunito','Inter',Arial,sans-serif;font-weight:800;font-size:24px;line-height:1.25;color:#fff;margin-bottom:8px}
+.v2c-cta strong,.page-content-wrap .gh-content .v2c-cta strong{display:block;font-family:'Nunito','Inter',Arial,sans-serif;font-weight:800;font-size:24px;line-height:1.25;color:#fff;margin-bottom:8px}
 .v2c-cta p{color:#AECAC6;font-size:15px;max-width:46ch;margin:0 auto 20px}
 .v2c-cta-botoes{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
 .gh-content .v2c-cta a.button{display:inline-flex}
