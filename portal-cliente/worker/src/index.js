@@ -1428,8 +1428,9 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
           cliCtx = { id: cliId, nome: nome || 'cliente' };
           try { negociosCli = await negociosDoCliente(env, cli); } catch { /* sem histórico, tudo bem */ }
         } else if (ql) coletas = coletas.filter((c) => `${c.numero || ''} ${c.clienteNome || ''}`.toLowerCase().includes(ql)); // busca cobre canceladas
-        else coletas = coletas.filter((c) => c.status !== 'cancelada'); // sem busca, canceladas somem
-        return html(paginaColetasLista(escritorio, coletas, q, cliCtx, negociosCli));
+        // sem busca: passa todas; a página separa por abas (Agendadas / Concluídas / Canceladas)
+        const aba = (url.searchParams.get('aba') || '').trim();
+        return html(paginaColetasLista(escritorio, coletas, q, cliCtx, negociosCli, aba));
       }
       if (pathname === '/coletas/nova' && request.method === 'GET') {
         if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
