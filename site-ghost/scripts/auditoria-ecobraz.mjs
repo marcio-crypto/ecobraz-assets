@@ -157,8 +157,12 @@ else falha('nenhuma requisição ao Google Analytics após aceitar o consentimen
 zerarGA();
 await ga.goto(`${base}/descarte-de-ativos-de-ti-desmobilizados/`, {waitUntil: 'domcontentloaded'});
 await ga.waitForTimeout(600);
-await ga.evaluate(() => { document.querySelectorAll('a[href*="wa.me"]').forEach((a) => { a.setAttribute('target', '_self'); a.addEventListener('click', (e) => e.preventDefault(), {once: true}); }); });
-await ga.locator('a[href*="wa.me"]').first().click({timeout: 8000}).catch(() => {});
+// Mesmo critério do main.js (wa.me OU api.whatsapp.com) e clique
+// programático — imune a sobreposições (botão flutuante, barras fixas).
+await ga.evaluate(() => {
+  const alvo = document.querySelector('a[href*="wa.me"], a[href*="api.whatsapp.com"]');
+  if (alvo) { alvo.addEventListener('click', (e) => e.preventDefault(), {once: true}); alvo.click(); }
+});
 if (await esperaEvento(ga, 'contact_whatsapp')) ok('evento contact_whatsapp registrado no clique do WhatsApp');
 else falha('clique no WhatsApp NÃO registrou contact_whatsapp no analytics');
 
