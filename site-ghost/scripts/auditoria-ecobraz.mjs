@@ -194,8 +194,10 @@ if (temMail) {
 zerarGA();
 await ga.goto(`${base}/agendamento/`, {waitUntil: 'domcontentloaded'});
 await ga.waitForTimeout(900);
-await ga.locator('label.choice:has(input[value="empresa"])').click({timeout: 8000}).catch(() => {});
-await ga.locator('[data-next-step]').first().click({timeout: 6000}).catch(() => {});
+// Formulário de tela única (31/07): o perfil é um alternador de pílulas no topo
+// e não há mais botão "Continuar". Interagir = alternar perfil + digitar um campo.
+await ga.locator('.perfil-switch label:has(input[value="empresa"])').click({timeout: 8000}).catch(() => {});
+await ga.locator('[name="material_description"]').fill('Teste do pente fino').catch(() => {});
 if (await esperaEvento(ga, 'form_start_coleta')) ok('evento form_start_coleta registrado ao iniciar o formulário');
 else falha('iniciar o formulário NÃO registrou form_start_coleta');
 
@@ -208,7 +210,6 @@ if (ENVIAR_LEAD) {
     await ga.locator('[name="postal_code"]').fill('02175-010');
     await ga.locator('[name="city"]').fill('São Paulo');
     await ga.locator('[name="state"]').selectOption('SP');
-    await ga.locator('.form-step.is-active [data-next-step]').click();
     await ga.locator('[name="name"]').fill(`TESTE AUTOMATIZADO ${stamp} — pode excluir`);
     await ga.locator('[name="company"]').fill('Auditoria Ecobraz');
     await ga.locator('[name="email"]').fill(`contato+pente-fino-${stamp}@ecobraz.org.br`);
