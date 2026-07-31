@@ -46,8 +46,8 @@ import { segmentoDoCliente, definirSegmento, SEGMENTOS, fluxoDeVendas, ultimosPe
 import { MANUAL_CLIENTE_PDF_B64 } from './manual-pdf.js';
 import { MANUAL_COMERCIAL_B64, MANUAL_MOTORISTA_B64, MANUAL_DOCA_B64, MANUAL_ENGENHARIA_B64 } from './manuais-pdf.js';
 import { sondaMTR, consultarMtrSigor, baixarPdfManifesto } from './mtr.js';
-import { listarMtrs, lerMtr, salvarMtr, mudarStatusMtr, definirPdfMtr, removerMtr, dadosDMR, paginaMtrLista, paginaMtrForm, paginaMtrDetalhe, paginaDMR } from './gestao-mtr.js';
-import { dadosCronograma, paginaCronograma } from './cronograma.js';
+import { listarMtrs, lerMtr, salvarMtr, mudarStatusMtr, definirPdfMtr, removerMtr, dadosDMR, paginaMtrLista, paginaMtrForm, paginaMtrDetalhe, paginaDMR, sincronizarMtrDaOS, removerMtrDaOS, importarMtrsDasOSs } from './gestao-mtr.js';
+import { dadosCronograma, paginaCronograma, salvarSla } from './cronograma.js';
 import { acharPacote, precoPacote, acharModuloAdote, precoModuloAdote, paginaLojaAdote, paginaObrigadoAdote, paginaDiagnostico, lerCredito, salvarCredito, novoCredito, aplicarCompra, aplicarRecarga, precisaRecarga, listarPatrocinadores, resumoPatrocinio, lerCreditoPorDoc } from './adote.js';
 import { paginaLojaESG, paginaESGContato, paginaESGObrigado, relatorioESG, precoRelatorioESG } from './esg.js';
 import { statusDaEtapa, valorProp, CAMPOS_OS } from './os-utils.js';
@@ -1249,7 +1249,9 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
             pdf = { anexado: true };
           } else { pdf = { anexado: false, motivo: (baixado && baixado.erro) || 'sem_pdf' }; }
         } catch (error) { console.error('mtr_pdf', safeError(error)); pdf = { anexado: false, motivo: 'erro' }; }
-        await definirMtrOS(env, os.id, { ...resumo, divergenciaGerador: !!diverge, pdfAnexado: !!(pdf && pdf.anexado), vinculadoEm: nowS(), vinculadoPor: escritorio.email || '' });
+        const recAtualizado = await definirMtrOS(env, os.id, { ...resumo, divergenciaGerador: !!diverge, pdfAnexado: !!(pdf && pdf.anexado), vinculadoEm: nowS(), vinculadoPor: escritorio.email || '' });
+        // Ponte: a MTR vinculada à OS entra no registro/DMR automaticamente (best-effort).
+        try { if (recAtualizado) await sincronizarMtrDaOS(env, recAtualizado); } catch (error) { console.error('mtr_ponte', safeError(error)); }
         return json({ ok: true, resumo, diverge: !!diverge, pdf });
       }
       if (pathname === '/api/mtr/desvincular' && request.method === 'POST') {
@@ -1258,6 +1260,7 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         const os = await lerColetaOS(env, String((b && b.osId) || '').replace(/[^a-zA-Z0-9_-]/g, ''));
         if (!os) return json({ ok: false, error: 'nao_encontrada' }, 404);
         await definirMtrOS(env, os.id, null);
+        try { await removerMtrDaOS(env, os.id); } catch (error) { console.error('mtr_ponte_rm', safeError(error)); }
         return json({ ok: true });
       }
       // --- GESTÃO de MTR + DMR (registro próprio da Ecobraz; pedido do Marcelo) ---
@@ -1293,6 +1296,12 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         let b; try { b = await request.json(); } catch { b = {}; }
         const m = await salvarMtr(env, escritorio, b || {});
         return json({ ok: !!m, id: m && m.id });
+      }
+      // Backfill: importa para o registro/DMR todas as MTRs já vinculadas às OSs.
+      if (pathname === '/api/mtr-gestao/importar-os' && request.method === 'POST') {
+        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        const r = await importarMtrsDasOSs(env);
+        return json({ ok: true, importadas: r.importadas, erros: r.erros });
       }
       if (pathname === '/api/mtr-gestao/status' && request.method === 'POST') {
         if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
@@ -1349,6 +1358,12 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         if (!escritorio) return html(paginaLoginEscritorio(googleConfigurado(env)));
         const dados = await dadosCronograma(env);
         return html(paginaCronograma(escritorio, dados));
+      }
+      if (pathname === '/api/cronograma/sla' && request.method === 'POST') {
+        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = {}; }
+        const sla = await salvarSla(env, b && b.atencao, b && b.atraso);
+        return json({ ok: true, sla });
       }
       // Prova de gravação: 1 escrita de teste no KV para saber NA HORA se o
       // limite diário está bloqueando (usado após o upgrade do plano).

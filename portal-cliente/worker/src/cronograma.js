@@ -26,10 +26,19 @@ export const COLUNAS = [
 const COLUNA_DE = {};
 for (const c of COLUNAS) for (const e of c.etapas) COLUNA_DE[e] = c.id;
 
-function slaDe(env) {
-  const at = Number(env && env.SLA_DIAS_ATENCAO) || 7;
-  const atr = Number(env && env.SLA_DIAS_ATRASO) || 15;
-  return { atencao: at, atraso: Math.max(atr, at + 1) };
+// Prazos (SLA) ajustáveis pela própria tela → KV (cfg:sla). Fallback: env, depois 7/15.
+export async function lerSla(env) {
+  let cfg = null;
+  try { if (env.PORTAL_KV) { const raw = await env.PORTAL_KV.get('cfg:sla'); cfg = raw ? JSON.parse(raw) : null; } } catch { cfg = null; }
+  const at = Math.max(1, Math.floor(Number(cfg && cfg.atencao) || Number(env && env.SLA_DIAS_ATENCAO) || 7));
+  const atr = Math.max(at + 1, Math.floor(Number(cfg && cfg.atraso) || Number(env && env.SLA_DIAS_ATRASO) || 15));
+  return { atencao: at, atraso: atr };
+}
+export async function salvarSla(env, atencao, atraso) {
+  const at = Math.max(1, Math.floor(Number(atencao) || 7));
+  const atr = Math.max(at + 1, Math.floor(Number(atraso) || 15));
+  if (env.PORTAL_KV) await env.PORTAL_KV.put('cfg:sla', JSON.stringify({ atencao: at, atraso: atr }));
+  return { atencao: at, atraso: atr };
 }
 export function alertaPrazo(dias, sla) {
   if (dias == null) return { dot: '⚪', cor: '#9aa7a4', rotulo: 'sem data', nivel: 0 };
@@ -40,7 +49,7 @@ export function alertaPrazo(dias, sla) {
 
 // Monta os dados do cronograma: operações agrupadas por coluna + resumo de prazos.
 export async function dadosCronograma(env) {
-  const sla = slaDe(env);
+  const sla = await lerSla(env);
   const [ops, coletas] = await Promise.all([listarOperacoes(env), listarColetasOS(env)]);
   const cols = {}; for (const c of COLUNAS) cols[c.id] = [];
   const ativos = []; // tudo que não está concluído — para a linha do tempo por prazo
@@ -146,12 +155,18 @@ export function paginaCronograma(user, dados) {
   <div class="card" style="margin-top:18px">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:6px">
       <div style="font-size:13px;font-weight:800;color:#00333B">⏱️ Linha do tempo por prazo (mais urgente primeiro)</div>
-      <div style="font-size:11px;color:#9aa7a4">Prazo padrão: 🟡 acima de ${sla.atencao} dias · 🔴 acima de ${sla.atraso} dias</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#7c8a87;flex-wrap:wrap">Alerta: 🟡 acima de <input id="slaAt" type="number" min="1" value="${sla.atencao}" style="width:52px;border:1px solid #DDE1E6;border-radius:8px;padding:4px 6px;font-size:12px"> 🔴 acima de <input id="slaAtr" type="number" min="2" value="${sla.atraso}" style="width:52px;border:1px solid #DDE1E6;border-radius:8px;padding:4px 6px;font-size:12px"> dias <button type="button" onclick="salvarSla()" style="background:#00333B;color:#fff;border:none;border-radius:8px;padding:5px 11px;font-size:11px;font-weight:800;cursor:pointer">salvar</button> <span id="slaMsg" style="color:#3f8f3a;font-weight:700"></span></div>
     </div>
     ${tl}
   </div>
-  <div style="font-size:11px;color:#9aa7a4;text-align:center;margin-top:14px;line-height:1.6">Os prazos são um <b>padrão do sistema</b> (ajustável), contados da recepção na doca — servem de alerta, não de garantia contratual. “Parado” = dias sem nenhuma atualização no lote.</div>
+  <div style="font-size:11px;color:#9aa7a4;text-align:center;margin-top:14px;line-height:1.6">Os prazos são um <b>alerta operacional ajustável</b> (edite acima), contados da recepção na doca — servem de aviso, não de garantia contratual. “Parado” = dias sem nenhuma atualização no lote.</div>
 </div>
+<script>
+  function salvarSla(){var at=document.getElementById('slaAt').value,atr=document.getElementById('slaAtr').value,m=document.getElementById('slaMsg');if(m)m.textContent='salvando…';
+    fetch('/api/cronograma/sla',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({atencao:at,atraso:atr})}).then(function(r){return r.json();}).then(function(j){
+      if(j.ok){if(m)m.textContent='✓ salvo';setTimeout(function(){location.reload();},700);}else if(m){m.textContent='falha';}
+    }).catch(function(){if(m)m.textContent='sem conexão';});}
+</script>
 <style>@media(max-width:920px){.tiles{grid-template-columns:repeat(3,1fr)!important}}@media(max-width:560px){.tiles{grid-template-columns:1fr 1fr!important}}</style>
 </body></html>`;
 }

@@ -15,12 +15,21 @@
 // operação — é registro/evidência. Sem segredos aqui.
 
 import { listarDestinos } from './engenharia.js';
+import { listarColetasOS, lerColetaOS } from './coletas.js';
+import { lerOperacao } from './operacional.js';
 
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const agora = () => { try { return new Date().toISOString(); } catch { return ''; } };
 const hojeISO = () => { try { return new Date().toISOString().slice(0, 10); } catch { return ''; } };
 // data (YYYY-MM-DD ou ISO) → dd/mm/aaaa
 const dataBR = (v) => { const s = String(v || ''); if (!s) return ''; const d = new Date(s.includes('T') ? s : s + 'T00:00:00'); if (isNaN(d.getTime())) return ''; const p = (n) => String(n).padStart(2, '0'); return `${p(d.getUTCDate())}/${p(d.getUTCMonth() + 1)}/${d.getUTCFullYear()}`; };
+// dd/mm/aaaa (ou já ISO) → aaaa-mm-dd. A MTR do órgão devolve a emissão em dd/mm/aaaa.
+function brParaISO(v) {
+  const s = String(v || '').trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : '';
+}
 // Lê número no padrão BR (1.500 = 1500; 1.234,56 = 1234.56). Mesmo tratamento do operacional.
 function numBR(v) {
   let s = String(v == null ? '' : v).trim().replace(/[^0-9.,-]/g, '');
@@ -54,7 +63,7 @@ function resumoDe(m) {
   return {
     id: m.id, tipo: m.tipo, numero: m.numero, data: m.data, status: m.status,
     contraparte: m.tipo === 'saida' ? (m.destinador || '') : (m.gerador || ''),
-    residuo: m.residuo || '', quantidade: Number(m.quantidade) || 0, osId: m.osId || '', temPdf: !!m.pdfKey,
+    residuo: m.residuo || '', quantidade: Number(m.quantidade) || 0, osId: m.osId || '', temPdf: !!m.pdfKey, origem: m.origem || '',
   };
 }
 
@@ -79,6 +88,7 @@ export async function salvarMtr(env, user, d) {
     osId: limpaId(d.osId),
     status: normalizarStatus(d.status),
     obs: String(d.obs || '').slice(0, 1000),
+    origem: anterior ? (anterior.origem || '') : (d.origem || ''),
     pdfKey: anterior ? (anterior.pdfKey || '') : '', pdfNome: anterior ? (anterior.pdfNome || '') : '',
     criadoEm: anterior ? anterior.criadoEm : agora(), criadoPor: anterior ? anterior.criadoPor : (user && user.email || ''),
     atualizadoEm: agora(), atualizadoPor: (user && user.email || ''),
@@ -125,6 +135,63 @@ export async function removerMtr(env, id) {
     await salvarIndice(env, idx);
   }
   return m;
+}
+
+// --- PONTE OS → registro/DMR ---
+// Cria/atualiza no registro uma MTR de ENTRADA a partir da MTR vinculada a uma OS
+// (fluxo "puxar do órgão pelo número" na ficha da OS). Assim as MTRs vinculadas às
+// OSs entram no DMR sem redigitação. É idempotente (id fixo por OS) e PRESERVA o que
+// foi ajustado à mão (quantidade, status, resíduo, PDF). A quantidade, quando não
+// informada, usa o PESO DE ENTRADA pesado na doca (dado auditável), se houver.
+const idPonte = (osId) => ('mtrg_os_' + String(osId || '').replace(/[^a-zA-Z0-9_-]/g, '')).slice(0, 40);
+export async function sincronizarMtrDaOS(env, os) {
+  if (!os || !os.mtr || !os.mtr.numero) return null;
+  const id = idPonte(os.id);
+  const ant = await lerMtr(env, id);
+  const r = os.mtr;
+  let qtd = ant && Number(ant.quantidade) ? Number(ant.quantidade) : 0;
+  if (!qtd) { try { const op = await lerOperacao(env, os.id); if (op && op.entrada && Number(op.entrada.pesoKg) > 0) qtd = Number(op.entrada.pesoKg); } catch { /* best-effort */ } }
+  const m = {
+    id, tipo: 'entrada',
+    numero: String(r.numero || '').replace(/[^0-9A-Za-z/.-]/g, '').slice(0, 40),
+    data: brParaISO(r.emissao) || (ant && ant.data) || hojeISO(),
+    residuo: (ant && ant.residuo) || 'REEE — resíduo eletroeletrônico',
+    classe: (ant && ant.classe) || '',
+    quantidade: qtd, unidade: 'kg',
+    gerador: r.gerador || (ant && ant.gerador) || os.clienteNome || '',
+    geradorCnpj: soNum(r.geradorCnpj) || (ant && ant.geradorCnpj) || soNum(os.clienteDoc),
+    destinadorId: '', destinador: '', destinadorCnpj: '',
+    transportador: r.transportador || (ant && ant.transportador) || '',
+    mtrEntradaId: '', osId: String(os.id || ''), origem: 'os',
+    status: (ant && ant.status) || (r.cdf ? 'finalizado' : 'processado'),
+    obs: (ant && ant.obs) || (r.situacao ? ('Situação no órgão: ' + r.situacao) : ''),
+    pdfKey: ant ? (ant.pdfKey || '') : '', pdfNome: ant ? (ant.pdfNome || '') : '',
+    criadoEm: ant ? ant.criadoEm : agora(), criadoPor: ant ? ant.criadoPor : 'ponte-os',
+    atualizadoEm: agora(),
+  };
+  if (env.PORTAL_KV) {
+    await env.PORTAL_KV.put(`mtrg:${id}`, JSON.stringify(m), { expirationTtl: 60 * 60 * 24 * 1825 });
+    const idx = await lerIndice(env);
+    const res = resumoDe(m);
+    const i = idx.findIndex((x) => x.id === id);
+    if (i >= 0) idx[i] = res; else idx.unshift(res);
+    await salvarIndice(env, idx);
+  }
+  return m;
+}
+export async function removerMtrDaOS(env, osId) { return await removerMtr(env, idPonte(osId)); }
+
+// Backfill: varre as OSs com MTR vinculada e sincroniza todas para o registro.
+export async function importarMtrsDasOSs(env) {
+  let n = 0, erros = 0;
+  try {
+    const idx = await listarColetasOS(env);
+    for (const o of idx.filter((x) => x.mtr)) {
+      try { const os = await lerColetaOS(env, o.id); if (os && os.mtr && os.mtr.numero) { await sincronizarMtrDaOS(env, os); n++; } }
+      catch { erros++; }
+    }
+  } catch { /* best-effort */ }
+  return { importadas: n, erros };
 }
 
 // --- DMR: cruzamento entrada × saída por período ---
@@ -210,8 +277,9 @@ export function paginaMtrLista(user, mtrs, aba, q) {
   const qs = q ? '&q=' + encodeURIComponent(q) : '';
   const tab = (id, rot, n) => `<a href="/mtr?aba=${id}${qs}" style="flex:1 1 auto;white-space:nowrap;text-align:center;text-decoration:none;font-size:13px;font-weight:800;padding:10px 12px;border-radius:10px;border:1px solid ${id === abaAtiva ? '#0B5B66' : '#E4EBE9'};background:${id === abaAtiva ? '#0B5B66' : '#fff'};color:${id === abaAtiva ? '#fff' : '#4F6469'}">${rot}<span style="display:inline-block;margin-left:6px;font-size:11px;padding:1px 8px;border-radius:20px;background:${id === abaAtiva ? 'rgba(255,255,255,.22)' : '#EEF1F0'};color:${id === abaAtiva ? '#fff' : '#7c8a87'}">${n}</span></a>`;
   const rotContraparte = abaAtiva === 'saida' ? 'Destinador' : 'Gerador';
+  const tagOS = `<span class="pill" style="background:#EFE7FA;color:#6B3FA0;margin-left:6px">via OS</span>`;
   const linhas = lista.length ? lista.map((m) => `<a href="/mtr/item?id=${esc(m.id)}" style="display:flex;justify-content:space-between;align-items:center;gap:12px;text-decoration:none;background:#fff;border:1px solid #E4EBE9;border-radius:12px;padding:13px 15px;margin-bottom:9px">
-      <div style="min-width:0"><div style="font-size:14px;font-weight:800;color:#10262B">MTR ${esc(m.numero || '—')} <span style="font-weight:600;color:#7c8a87">· ${esc(m.contraparte || '(sem ' + rotContraparte.toLowerCase() + ')')}</span></div>
+      <div style="min-width:0"><div style="font-size:14px;font-weight:800;color:#10262B">MTR ${esc(m.numero || '—')} <span style="font-weight:600;color:#7c8a87">· ${esc(m.contraparte || '(sem ' + rotContraparte.toLowerCase() + ')')}</span>${m.origem === 'os' ? tagOS : ''}</div>
       <div style="font-size:12px;color:#7c8a87;margin-top:3px">${m.data ? '📅 ' + esc(dataBR(m.data)) : 'sem data'}${m.residuo ? ' · ' + esc(m.residuo) : ''} · <b>${esc(kg(m.quantidade))}</b>${m.temPdf ? ' · 📎 PDF' : ''}</div></div>
       <div style="flex:none">${pillStatus(m.status)}</div>
     </a>`).join('') : `<div class="card" style="text-align:center;color:#8fa39f;font-size:13.5px">Nenhuma MTR de ${abaAtiva === 'saida' ? 'saída' : 'entrada'}${q ? ' para “' + esc(q) + '”' : ''} ainda.</div>`;
@@ -226,9 +294,19 @@ export function paginaMtrLista(user, mtrs, aba, q) {
   <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
     <form method="get" action="/mtr" style="display:flex;gap:8px;flex:1;min-width:220px;margin:0"><input type="hidden" name="aba" value="${abaAtiva}"><input name="q" value="${esc(q)}" placeholder="buscar por número, ${rotContraparte.toLowerCase()} ou resíduo" style="flex:1"><button class="btn btn-g">Buscar</button></form>
     <a href="/mtr/novo?tipo=${abaAtiva}" class="btn btn-p">➕ Nova MTR de ${abaAtiva === 'saida' ? 'saída' : 'entrada'}</a>
+    ${abaAtiva === 'entrada' ? `<button type="button" class="btn btn-g" onclick="importarOS()">🔄 Importar MTRs das OSs</button>` : ''}
   </div>
+  ${abaAtiva === 'entrada' ? `<div id="impMsg" style="font-size:12px;color:#4F6469;margin:-6px 0 12px;min-height:14px"></div>` : ''}
   ${linhas}
-</div></body></html>`;
+</div>
+<script>
+  function importarOS(){var m=document.getElementById('impMsg');if(m)m.textContent='Importando as MTRs vinculadas às OSs…';
+    fetch('/api/mtr-gestao/importar-os',{method:'POST'}).then(function(r){return r.json();}).then(function(j){
+      if(j.ok){if(m)m.textContent='✓ '+(j.importadas||0)+' MTR(s) importada(s) das OSs.';setTimeout(function(){location.reload();},900);}
+      else if(m){m.textContent=j.error||'Falha ao importar.';}
+    }).catch(function(){if(m)m.textContent='Sem conexão.';});}
+</script>
+</body></html>`;
 }
 
 export function paginaMtrForm(user, mtr, destinos, entradas) {
