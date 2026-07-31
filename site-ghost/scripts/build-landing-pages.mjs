@@ -349,6 +349,7 @@ function renderHubTemplate(p) {
     </div>
   </div>
 </section>
+${p.foto ? `<div class="container"><figure class="v2c-foto" style="margin-top:26px"><img src="{{asset \"images/${p.foto}\"}}" alt="${esc(p.fotoAlt || '')}" loading="lazy" width="1376" height="768"><figcaption>Imagem ilustrativa</figcaption></figure></div>` : ''}
 
 ${groups}
 
