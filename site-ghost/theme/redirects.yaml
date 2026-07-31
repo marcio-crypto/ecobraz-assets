@@ -7894,7 +7894,6 @@
   "^/en_BR/faq/?$": "/coleta-de-lixo-eletronico/"
   "^/es_BR/faq/?$": "/coleta-de-lixo-eletronico/"
   "^/sobre-nos/?$": "/sobre/"
-  "^/contato/?$": "/agendamento/"
   "^/de/blog/?$": "/blog/"
   "^/de/lgpd/?$": "/destruicao-de-dados/"
   "^/en/blog/?$": "/blog/"
