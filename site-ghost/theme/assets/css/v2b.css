@@ -478,3 +478,11 @@ body.is-empresa .copy-pf{display:none}
 .site-header .brand{flex-shrink:0 !important}
 .site-header .brand-logo{width:170px !important;min-width:150px !important;max-height:60px}
 @media (max-width:1200px){.site-header .brand-logo{width:150px !important;min-width:130px !important}}
+
+/* ===== Fotos ilustrativas (IA, aprovadas 31/07) — legenda obrigatória ===== */
+.v2-hero-foto .v2-foto{display:block;width:100%;aspect-ratio:4/3.4;object-fit:cover;border-radius:44% 56% 52% 48%/48% 44% 56% 52%;box-shadow:0 24px 56px rgba(14,59,67,.18)}
+.v2-foto-legenda{display:block;margin-top:10px;font-size:12px;color:var(--cinza);text-align:right}
+.v2c-foto{margin:26px 0}
+.v2c-foto img{display:block;width:100%;border-radius:22px;box-shadow:0 14px 40px rgba(14,59,67,.10)}
+.v2c-foto figcaption{margin-top:8px;font-size:12.5px;color:var(--cinza)}
+.form-nota-expressa{margin:10px 0 0;font-size:13.5px;color:var(--cinza);background:var(--sage);border-radius:12px;padding:10px 14px}
