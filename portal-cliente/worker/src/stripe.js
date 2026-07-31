@@ -36,7 +36,12 @@ export async function criarCheckoutStripe({ valor, descricao, externalReference,
       const diasBoleto = Math.min(60, Math.max(0, Math.floor(Number(env.BOLETO_EXPIRES_DAYS) || 10)));
       p.set('payment_method_options[boleto][expires_after_days]', String(diasBoleto));
     }
-    if (clienteEmail) p.set('customer_email', String(clienteEmail).slice(0, 200));
+    // O campo de e-mail do cliente pode ter VÁRIOS e-mails (ex.: "a@x.com, b@y.com").
+    // A Stripe recusa isso. Usa só o PRIMEIRO e-mail válido; se não houver, omite.
+    if (clienteEmail) {
+      const em = String(clienteEmail).split(/[,;\s]+/).map((s) => s.trim()).find((s) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s));
+      if (em) p.set('customer_email', em.slice(0, 200));
+    }
     return p;
   };
   const enviar = async (p) => {

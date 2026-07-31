@@ -1668,6 +1668,8 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
           const base = String(env.PORTAL_BASE_URL || env.PORTAL_URL || url.origin).replace(/\/+$/, '');
           let clienteEmail = '';
           try { const cli = os.clienteId ? await lerCliente(env, os.clienteId) : null; clienteEmail = (cli && (cli.email || (Array.isArray(cli.contatos) && cli.contatos[0] && cli.contatos[0].email))) || ''; } catch { /* segue sem e-mail */ }
+          // O cadastro pode ter mais de um e-mail no campo — usa só o 1º válido (a Stripe e o Resend recusam lista).
+          clienteEmail = String(clienteEmail).split(/[,;\s]+/).map((s) => s.trim()).find((s) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s)) || '';
           const s = await criarCheckoutStripe({ valor, descricao, externalReference: ref, baseUrl: base, backPath: '/pagamento/ok', clienteEmail, metodos: ['card', 'boleto'] }, env);
           if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${ref}`, JSON.stringify({ produto: 'oscobranca', osId: id, numero: os.numero || '', valor, clienteEmail, clienteNome: os.clienteNome || '', status: 'pendente', gateway: 'stripe', criadoEm: nowS() }), { expirationTtl: 90 * 86400 });
           await definirCobrancaOS(env, id, { valor, descricao, ref, link: s.url, criadoPor: escritorio.email || '' });
