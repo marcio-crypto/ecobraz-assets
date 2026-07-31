@@ -57,21 +57,9 @@
     const form = document.querySelector('[data-collection-form]');
     if (!form) return;
     const status = form.querySelector('[data-form-status]');
-    const steps = Array.from(form.querySelectorAll('[data-form-step]'));
-    let activeStep = 0;
+    // Tela única (feedback do Marcio 31/07): sem etapas, sem "Continuar" — todos
+    // os campos visíveis de uma vez, agrupados; o perfil é um alternador no topo.
     form.classList.add('is-enhanced');
-    const showStep = (index) => {
-        activeStep = Math.max(0, Math.min(index, steps.length - 1));
-        steps.forEach((step, i) => step.classList.toggle('is-active', i === activeStep));
-        form.scrollIntoView({behavior:'smooth', block:'start'});
-    };
-    const validateStep = () => {
-        const fields = Array.from(steps[activeStep].querySelectorAll('input,select,textarea'));
-        for (const field of fields) if (!field.checkValidity()) { field.reportValidity(); return false; }
-        return true;
-    };
-    form.querySelectorAll('[data-next-step]').forEach((button) => button.addEventListener('click', () => { if (validateStep()) showStep(activeStep + 1); }));
-    form.querySelectorAll('[data-prev-step]').forEach((button) => button.addEventListener('click', () => showStep(activeStep - 1)));
     const params = new URLSearchParams(window.location.search);
     form.querySelector('[data-page-url]').value = window.location.href;
     form.querySelectorAll('[data-utm]').forEach((input) => { input.value = params.get(input.dataset.utm) || storedUtm(input.dataset.utm); });
@@ -123,10 +111,13 @@
     // Formulário adaptativo (Lote 4): pessoa física responde só o essencial.
     // Esconde os campos .only-empresa e relaxa os required correspondentes;
     // o Worker (v10) valida com a mesma régua por perfil no servidor.
+    // A classe is-empresa no <body> também alterna os textos .copy-pf/.copy-empresa
+    // do hero — a página inteira fala a língua do perfil selecionado.
     const syncPerfil = () => {
         const marcado = form.querySelector('[name="profile"]:checked');
         const pf = Boolean(marcado && marcado.value === 'pessoa_fisica');
         form.classList.toggle('is-pf', pf);
+        document.body.classList.toggle('is-empresa', !pf);
         ['volume', 'material_description', 'postal_code', 'state'].forEach((nome) => {
             const campo = form.querySelector(`[name="${nome}"]`);
             if (campo) campo.required = !pf;
@@ -144,6 +135,9 @@
             status.className = 'form-status is-error'; return;
         }
         const button = form.querySelector('[type="submit"]');
+        // O rótulo do botão é restaurado no finally — capturado aqui para valer
+        // também na versão em inglês do formulário (mesmo script para os dois).
+        const buttonLabel = button.textContent;
         const payload = Object.fromEntries(new FormData(form).entries());
         // Registra a declaração hospitalar na descrição, para constar no CRM.
         if (payload.hospital_declaration === 'yes') {
@@ -163,7 +157,7 @@
                     status.textContent = `Confira os seguintes campos e envie novamente: ${nomes}.`;
                     status.className = 'form-status is-error';
                     const first = form.querySelector(`[name="${detail.fields[0]}"]`);
-                    if (first) { const stepEl = first.closest('[data-form-step]'); if (stepEl) showStep(steps.indexOf(stepEl)); first.focus(); }
+                    if (first) { first.scrollIntoView({behavior: 'smooth', block: 'center'}); first.focus({preventScroll: true}); }
                     track('form_error_coleta', {page_path: window.location.pathname, error_type: 'validation', fields: detail.fields.join(',')});
                     return;
                 }
@@ -203,6 +197,6 @@
         } catch (_) {
             status.textContent = 'Não foi possível enviar agora. Tente novamente ou fale com a equipe pelo WhatsApp.'; status.className = 'form-status is-error';
             track('form_error_coleta', {page_path: window.location.pathname});
-        } finally { button.disabled = false; button.textContent = 'Enviar solicitação de coleta'; }
+        } finally { button.disabled = false; button.textContent = buttonLabel; }
     });
 })();

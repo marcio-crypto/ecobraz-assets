@@ -188,10 +188,11 @@ a.v2-pill:hover{border-color:var(--verde)}
 }
 
 /* ============================================================
-   Lote 3a — Formulários de coleta (custom-agendamento.hbs e
+   Lote 3a/8 — Formulários de coleta (custom-agendamento.hbs e
    page-request-a-collection.hbs) na pele v2B: hero petrol com blob,
-   cartões brancos 22px sobre creme, pílulas, rótulos de etapa em
-   Nunito petrol. Apresentação apenas — campos e lógica intactos.
+   cartão branco 22px sobre creme, pílulas. Em 31/07/2026 o assistente
+   de 3 passos virou TELA ÚNICA: perfil como alternador-pílula no topo,
+   grupos de campos com legenda, botão de envio grande.
    ============================================================ */
 .form-hero{background:var(--petrol);position:relative;overflow:hidden}
 .form-hero::after{content:'';position:absolute;right:-200px;top:-140px;width:520px;height:520px;background:rgba(141,198,63,.1);border-radius:47% 53% 61% 39%/44% 59% 41% 56%}
@@ -205,27 +206,55 @@ a.v2-pill:hover{border-color:var(--verde)}
 .form-trust ol{color:var(--cinza)}
 .form-section{background:var(--creme)}
 .collection-form{background:#fff;border:0;border-radius:var(--v2-r);box-shadow:0 14px 40px rgba(14,59,67,.08);overflow:hidden}
-.form-step{border-bottom:1px solid var(--line)}
-.form-step-label{font-family:'Nunito','Inter',Arial,sans-serif;font-weight:800;color:var(--petrol);font-size:12px;letter-spacing:.06em}
-.form-step h2{color:var(--petrol);letter-spacing:0}
 .collection-form input,.collection-form select,.collection-form textarea{border:1.5px solid var(--line);border-radius:12px}
 .collection-form input:focus,.collection-form select:focus,.collection-form textarea:focus{outline:3px solid rgba(141,198,63,.28);border-color:var(--verde)}
-.choice span{border:1.5px solid var(--line);border-radius:16px}
-.choice input:checked+span{border-color:var(--verde);background:var(--sage);box-shadow:0 0 0 2px rgba(141,198,63,.25)}
-.choice input:focus-visible+span{outline:3px solid rgba(141,198,63,.28)}
-.button-back{background:transparent;color:var(--petrol);border:2px solid var(--line);box-shadow:none}
-.button-back:hover{background:var(--sage);color:var(--petrol);border-color:var(--verde);transform:none}
+
+/* Alternador de perfil (pílula discreta no topo — não é mais uma "etapa") */
+.form-perfil{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:26px 36px 22px;border-bottom:1px solid var(--line);background:var(--creme)}
+.form-perfil-label{font-family:'Nunito','Inter',Arial,sans-serif;font-weight:800;color:var(--petrol);font-size:14.5px}
+.perfil-switch{display:inline-flex;background:var(--sage);border-radius:99px;padding:4px;gap:4px}
+.perfil-opt{position:relative;margin:0}
+.perfil-opt input{position:absolute;opacity:0;width:1px;height:1px;margin:0}
+.perfil-opt span{display:inline-flex;align-items:center;border-radius:99px;padding:9px 20px;font-size:14px;font-weight:700;color:var(--cinza);cursor:pointer;transition:.15s;white-space:nowrap}
+.perfil-opt input:checked+span{background:#fff;color:var(--petrol);box-shadow:0 2px 10px rgba(14,59,67,.14)}
+.perfil-opt input:focus-visible+span{outline:3px solid rgba(141,198,63,.35)}
+
+/* Grupos de campos ("O que coletar" / "Onde" / "Seus dados") */
+.form-group{border:0;margin:0;padding:26px 36px 30px;border-bottom:1px solid var(--line)}
+.form-group:last-of-type{border-bottom:0}
+.form-group legend{font-family:'Nunito','Inter',Arial,sans-serif;font-weight:800;color:var(--petrol);font-size:19px;padding:0;margin-bottom:18px}
+.field-opcional{font-weight:600;color:var(--cinza)}
+/* Pessoa física: grades que contêm campos de empresa colapsam para 1 coluna,
+   para o campo restante não flutuar sozinho numa grade de 3 faixas. */
+.collection-form.is-pf .field-grid:has(> .only-empresa){grid-template-columns:1fr}
+
+/* Botão de envio grande, largura total do cartão */
+.collection-form .form-submit{width:100%;justify-content:center;min-height:58px;font-size:16.5px}
+
+/* Aside "Antes de enviar": cartão v2B com checks, prova e canais em pílula */
 .form-aside{background:#fff;border-radius:var(--v2-r);box-shadow:0 10px 30px rgba(14,59,67,.06)}
 .form-aside h2{color:var(--petrol);font-size:20px}
-.form-aside ul{color:var(--cinza)}
+.form-aside ul.v2c-check{list-style:none;padding:0;margin:18px 0 0;display:grid;gap:12px}
+.form-aside ul.v2c-check>li{position:relative;padding-left:38px;margin:0;font-size:13.5px;line-height:1.55;color:var(--ink)}
+.form-aside ul.v2c-check>li::before{content:'✓';position:absolute;left:0;top:1px;width:24px;height:24px;border-radius:50%;background:var(--verde);color:#fff;font-weight:800;font-size:12px;display:grid;place-items:center}
+.aside-prova{display:inline-flex;align-items:center;gap:5px;margin-top:18px}
+.aside-prova .stars{color:#E8A13C}
 .aside-contact{border-top:1px solid var(--line)}
-.aside-contact a{color:var(--verde-escuro)}
+.aside-contact .button{display:inline-flex;gap:8px;width:100%;justify-content:center;margin-top:10px;font-size:14px;text-decoration:none}
+.aside-contact .button.hx-btn-wa{color:#fff}
+.aside-contact .button.v2-suave{color:var(--petrol)}
 .form-done{border:0;border-radius:var(--v2-r);box-shadow:0 14px 40px rgba(14,59,67,.08)}
 .form-done-icon{background:var(--verde);color:#fff}
 .form-done h2{color:var(--petrol);letter-spacing:0}
 /* WhatsApp: verde próprio do canal; sombra coerente (o pill vem do .button) */
 .hx-btn-wa{background:#0B6B38;color:#fff;box-shadow:0 8px 22px rgba(11,107,56,.3)}
 .hx-btn-wa:hover{background:#128C46;color:#fff}
+
+/* Texto adaptativo por perfil (hero e caixa de confiança do formulário):
+   sem JS vale a versão de casa — o mesmo padrão do perfil pré-selecionado. */
+.copy-empresa{display:none}
+body.is-empresa .copy-empresa{display:inline}
+body.is-empresa .copy-pf{display:none}
 
 /* ============================================================
    Lote 5 — Blog completo na pele v2B (arquivo + artigo).
@@ -376,6 +405,10 @@ a.v2-pill:hover{border-color:var(--verde)}
 .v2c-check>li{position:relative;padding-left:40px;margin:0;font-size:15px;color:var(--ink)}
 .v2c-check>li::before{content:'✓';position:absolute;left:0;top:1px;width:26px;height:26px;border-radius:50%;background:var(--verde);color:#fff;font-weight:800;font-size:13px;display:grid;place-items:center}
 
+/* Cartão-link dentro da grade (hubs de navegação): título sem sublinhado */
+.gh-content .v2c-grid h3 a{text-decoration:none;color:var(--petrol)}
+.gh-content .v2c-grid h3 a:hover{color:var(--verde-escuro)}
+
 /* Grade de cartões (2 col; .cols-3 para 3) */
 .gh-content .v2c-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:26px 0;padding:0;list-style:none}
 .v2c-grid.cols-3{grid-template-columns:repeat(3,1fr)}
@@ -439,3 +472,9 @@ a.v2-pill:hover{border-color:var(--verde)}
   .page-content-wrap{padding:56px 0 70px}
 }
 @media (prefers-reduced-motion:reduce){.gh-content .v2c-fork a{transition:none!important;transform:none!important}}
+
+/* Logo do header: a barra lotada (flex) estava ESMAGANDO a imagem — o logo
+   nunca encolhe; quem cede espaço é o menu. */
+.site-header .brand{flex-shrink:0 !important}
+.site-header .brand-logo{width:170px !important;min-width:150px !important;max-height:60px}
+@media (max-width:1200px){.site-header .brand-logo{width:150px !important;min-width:130px !important}}

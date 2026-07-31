@@ -3696,7 +3696,7 @@
   },
   "gains": {
    "title": "Grátis para todo cliente — sem contrato, sem pegadinha",
-   "sub": "Não é amostra nem período de teste: é o pacote completo, liberado com o e-mail cadastrado.",
+   "sub": "Não é amostra nem período de teste: é o pacote completo, liberado com o e-mail cadastrado. A Ecobraz se remunera com a destinação e valorização do material — por isso não cobra a coleta.",
    "items": [
     {
      "icon": "truck",
@@ -4355,7 +4355,7 @@
    "describeLabel": "O que você quer descartar?",
    "describePlaceholder": "Ex.: 1 geladeira e 2 monitores",
    "button": "Agendar coleta gratuita",
-   "micro": "A gratuidade é confirmada na avaliação do endereço e do material — sem pegadinha."
+   "micro": "A Ecobraz se remunera com a destinação do material — por isso não cobra a coleta. E se no seu caso houver algum custo, a gente avisa antes, com o valor."
   },
   "recognize": {
    "title": "Isso parece com a sua casa?",
