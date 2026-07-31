@@ -232,20 +232,28 @@ export function paginaColetasLista(user, coletas, q, cliCtx, negocios, aba) {
   const filtroCli = cliCtx && cliCtx.nome ? cliCtx : null;
   const negs = (filtroCli && Array.isArray(negocios)) ? negocios : [];
   const histBlock = negs.length ? `<div style="margin-top:20px"><div style="font-size:12px;font-weight:800;color:#7c8a87;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Histórico anterior — migrado do Ploomes · ${negs.length}</div>${negs.map((n) => { const docs = n.arquivos || []; return `<a href="/cadastro/os-ploomes?id=${esc(String(n.id))}" style="display:flex;justify-content:space-between;align-items:center;gap:10px;text-decoration:none;border:1px solid #E4EBE9;border-radius:12px;padding:12px 15px;margin-bottom:8px;background:#FBFDFC"><span style="min-width:0"><span style="font-size:13px;font-weight:700;color:#10262B">${esc(n.titulo)}</span><span style="display:block;font-size:11.5px;color:#8fa39f">${esc(dataBR(n.data))}${docs.length ? ` · ${docs.length} documento(s)` : ''}</span></span><span style="flex:none;text-align:right"><span style="display:block;font-size:10px;font-weight:800;color:${n.cor || '#8A6A16'}">${esc(String(n.status || '').toUpperCase())}</span><span style="font-size:10.5px;color:#0B5B66;font-weight:700">abrir OS ↗</span></span></a>`; }).join('')}</div>` : '';
-  // Abas por status (pedido do Marcio): separa Agendadas / Concluídas / Canceladas para
-  // não misturar tudo quando o volume crescer. As abas aparecem só na lista principal
-  // (sem cliente e sem busca); na busca e na ficha do cliente mostramos tudo junto.
-  const grupoDe = (c) => c.status === 'concluida' ? 'concluida' : (c.status === 'cancelada' ? 'cancelada' : 'agendada');
-  const comAbas = !filtroCli && !q;
+  // Abas por status (pedido do Marcio): separa Agendadas / Em transporte / Concluídas /
+  // Canceladas para não misturar tudo quando o volume crescer. Aparecem na lista geral
+  // (com ou sem busca); na ficha do cliente mostramos tudo junto. A busca respeita a aba.
+  const grupoDe = (c) => {
+    if (c.status === 'concluida') return 'concluida';
+    if (c.status === 'cancelada') return 'cancelada';
+    if (c.status === 'em_transporte' || c.status === 'na_unidade') return 'em_transporte';
+    return 'agendada';
+  };
+  const comAbas = !filtroCli;
   const nAg = coletas.filter((c) => grupoDe(c) === 'agendada').length;
+  const nEt = coletas.filter((c) => grupoDe(c) === 'em_transporte').length;
   const nCo = coletas.filter((c) => grupoDe(c) === 'concluida').length;
   const nCa = coletas.filter((c) => grupoDe(c) === 'cancelada').length;
-  const abaAtiva = ['agendada', 'concluida', 'cancelada'].includes(aba) ? aba : 'agendada';
-  const abertas = nAg;
+  const abaAtiva = ['agendada', 'em_transporte', 'concluida', 'cancelada'].includes(aba) ? aba : 'agendada';
+  const abertas = nAg + nEt;
   const lista = comAbas ? coletas.filter((c) => grupoDe(c) === abaAtiva) : coletas;
-  const tabBtn = (id, rotulo, n) => `<a href="/coletas?aba=${id}" style="flex:1;text-align:center;text-decoration:none;font-size:12.5px;font-weight:800;padding:9px 6px;border-radius:10px;border:1px solid ${id === abaAtiva ? '#0B5B66' : '#E4EBE9'};background:${id === abaAtiva ? '#0B5B66' : '#fff'};color:${id === abaAtiva ? '#fff' : '#4F6469'}">${rotulo}<span style="display:inline-block;margin-left:5px;font-size:11px;padding:1px 7px;border-radius:20px;background:${id === abaAtiva ? 'rgba(255,255,255,.22)' : '#EEF1F0'};color:${id === abaAtiva ? '#fff' : '#7c8a87'}">${n}</span></a>`;
-  const abasHTML = comAbas ? `<div style="display:flex;gap:8px;margin-bottom:14px">${tabBtn('agendada', 'Agendadas', nAg)}${tabBtn('concluida', 'Concluídas', nCo)}${tabBtn('cancelada', 'Canceladas', nCa)}</div>` : '';
-  const vazioMsg = q ? 'Nenhuma coleta encontrada para essa busca.' : (comAbas ? `Nenhuma coleta ${abaAtiva === 'concluida' ? 'concluída' : abaAtiva === 'cancelada' ? 'cancelada' : 'agendada'} no momento.` : 'Nenhuma coleta ainda.<br>Abra uma coleta a partir de um cliente no Cadastro.');
+  const qs = q ? '&q=' + encodeURIComponent(q) : '';
+  const tabBtn = (id, rotulo, n) => `<a href="/coletas?aba=${id}${qs}" style="flex:1 1 auto;white-space:nowrap;text-align:center;text-decoration:none;font-size:12.5px;font-weight:800;padding:9px 10px;border-radius:10px;border:1px solid ${id === abaAtiva ? '#0B5B66' : '#E4EBE9'};background:${id === abaAtiva ? '#0B5B66' : '#fff'};color:${id === abaAtiva ? '#fff' : '#4F6469'}">${rotulo}<span style="display:inline-block;margin-left:5px;font-size:11px;padding:1px 7px;border-radius:20px;background:${id === abaAtiva ? 'rgba(255,255,255,.22)' : '#EEF1F0'};color:${id === abaAtiva ? '#fff' : '#7c8a87'}">${n}</span></a>`;
+  const abasHTML = comAbas ? `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">${tabBtn('agendada', 'Agendadas', nAg)}${tabBtn('em_transporte', 'Em transporte', nEt)}${tabBtn('concluida', 'Concluídas', nCo)}${tabBtn('cancelada', 'Canceladas', nCa)}</div>` : '';
+  const rotuloAba = abaAtiva === 'concluida' ? 'concluída' : abaAtiva === 'cancelada' ? 'cancelada' : abaAtiva === 'em_transporte' ? 'em transporte' : 'agendada';
+  const vazioMsg = comAbas ? (q ? `Nenhuma coleta ${rotuloAba} encontrada para “${esc(q)}”.` : `Nenhuma coleta ${rotuloAba} no momento.`) : (q ? 'Nenhuma coleta encontrada para essa busca.' : 'Nenhuma coleta ainda.<br>Abra uma coleta a partir de um cliente no Cadastro.');
   const linhas = lista.length ? lista.map((c) => `<a href="/coletas/os?id=${esc(c.id)}" style="display:flex;justify-content:space-between;align-items:center;gap:12px;text-decoration:none;background:#fff;border:1px solid #E4EBE9;border-radius:12px;padding:13px 15px;margin-bottom:9px">
       <div style="min-width:0"><div style="font-size:14px;font-weight:800;color:#10262B">${esc(c.numero)} <span style="font-weight:600;color:#7c8a87">· ${esc(c.clienteNome || '')}</span></div>
       <div style="font-size:12px;color:#7c8a87;margin-top:3px">${c.dataAgendada ? '📅 ' + esc(dataBR(c.dataAgendada)) : 'sem data'}${c.agenteNome ? ' · 🚚 ' + esc(c.agenteNome) : ''}${c.cidade ? ' · ' + esc(c.cidade) : ''}</div></div>
@@ -255,7 +263,7 @@ export function paginaColetasLista(user, coletas, q, cliCtx, negocios, aba) {
 <div class="wrap">
   <div style="display:flex;justify-content:space-between;align-items:center;margin:0 0 12px"><h1 style="font-size:20px;margin:0">${filtroCli ? 'Coletas do cliente' : 'Ordens de Coleta'}</h1>${comAbas ? '' : `<span style="font-size:11px;background:#FFF4DE;color:#8A6A16;font-weight:800;padding:3px 9px;border-radius:20px">${abertas} em aberto</span>`}</div>
   ${filtroCli ? `<div style="background:#EAF2E6;border:1px solid #cfe6b8;border-radius:10px;padding:10px 13px;margin-bottom:12px;font-size:12.5px;color:#28413f;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><span>Mostrando as coletas de <b>${esc(filtroCli.nome)}</b></span><a href="/coletas" style="color:#0B5B66;font-weight:800;text-decoration:none;white-space:nowrap">ver todas as coletas →</a></div>
-  <a href="/coletas/nova?cliente=${esc(filtroCli.id)}" class="btn btn-p" style="margin-bottom:14px">＋ Nova coleta para este cliente</a>` : `<form method="get" action="/coletas" style="margin:0 0 12px"><input name="q" value="${esc(q)}" placeholder="🔎 Buscar por número (ex.: OS-2026-0001) ou cliente… e aperte Enter" autocomplete="off" style="width:100%;border:1px solid #DDE1E6;border-radius:10px;padding:11px 12px;font-size:14px;font-family:inherit"></form>
+  <a href="/coletas/nova?cliente=${esc(filtroCli.id)}" class="btn btn-p" style="margin-bottom:14px">＋ Nova coleta para este cliente</a>` : `<form method="get" action="/coletas" style="margin:0 0 12px"><input type="hidden" name="aba" value="${esc(abaAtiva)}"><input name="q" value="${esc(q)}" placeholder="🔎 Buscar por número (ex.: OS-2026-0001) ou cliente… e aperte Enter" autocomplete="off" style="width:100%;border:1px solid #DDE1E6;border-radius:10px;padding:11px 12px;font-size:14px;font-family:inherit"></form>
   <a href="/cadastro" class="btn btn-g" style="margin-bottom:14px">Abrir coleta a partir de um cliente →</a>`}
   ${abasHTML}
   <div>${linhas}</div>
