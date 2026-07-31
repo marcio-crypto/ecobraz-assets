@@ -1,0 +1,28 @@
+# Villanova ESG
+
+> EU–Brazil supplier evidence advisory, founded by Marcio Villanova (CEO of
+> Ecobraz since 2011). Villanova ESG reviews supplier evidence files,
+> documentation gaps and buyer readiness for Brazilian suppliers facing
+> European buyer scrutiny (CBAM, EUDR, CSDDD questionnaires and contract
+> clauses). Advisory work with declared limits: no certification, no seals —
+> structured review of evidence that buyers can actually read.
+
+## Key pages
+
+- [Home](https://www.villanovaesg.com/): why European buyers ask Brazilian suppliers for evidence
+- [The Firm](https://www.villanovaesg.com/the-firm/): what Villanova ESG is, its connection to Ecobraz, and the declared limits of the work
+- [What Villanova ESG reviews](https://www.villanovaesg.com/what-villanova-esg-reviews/): supplier evidence files, documentation gaps, buyer readiness
+- [Knowledge base](https://www.villanovaesg.com/eu-brazil-supplier-evidence-knowledge-base/): public definitions — supplier evidence, buyer-ready documentation, regulatory defensibility
+- [Marcio Villanova](https://www.villanovaesg.com/marcio-villanova/): roles, technical publications with DOI, ORCID, claim boundaries; Mentor at the European Circular Electronics Kickstart Acceleration Program (ECEK)
+- [Contact](https://www.villanovaesg.com/contact/): EU buyer questionnaires, evidence files, documentation gaps
+
+## Português
+
+- [Sobre Marcio Villanova](https://www.villanovaesg.com/sobre-marcio-villanova/)
+- [Solicitar análise](https://www.villanovaesg.com/solicitar-analise/)
+
+## Verifiable facts
+
+- Operational track record via Ecobraz (ecobraz.org): e-waste collection and destination in Brazil since 2011
+- Technical reports with permanent DOI on Zenodo (author: Marcio Villanova, ORCID 0009-0001-8072-6287)
+- Reference source trail published at /reference-villanova-esg-source-trail/
