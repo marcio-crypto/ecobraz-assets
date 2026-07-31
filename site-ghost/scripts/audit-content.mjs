@@ -96,7 +96,10 @@ for (const line of redirectsText.split(/\r?\n/)) {
   if (redirectSources.has(source)) errors.push(`Duplicate redirect source: ${source}`);
   redirectSources.add(source);
   const targetRoute = target.split(/[?#]/)[0].replace(/^\/+|\/+$/g, '');
-  if (targetRoute && !knownRoutes.has(targetRoute)) errors.push(`Redirect target does not exist: ${source} -> ${target}`);
+  // Alvos /assets/... apontam para arquivos do tema (ex.: llms.txt): valida no disco.
+  if (targetRoute.startsWith('assets/')) {
+    if (!fs.existsSync(path.join(root, targetRoute))) errors.push(`Redirect asset target missing on disk: ${source} -> ${target}`);
+  } else if (targetRoute && !knownRoutes.has(targetRoute)) errors.push(`Redirect target does not exist: ${source} -> ${target}`);
 }
 
 const exactRedirectSource = (value) => `^${value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\/$/, '') || '/'}\/?$`;

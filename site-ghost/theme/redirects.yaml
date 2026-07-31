@@ -1,4 +1,5 @@
 301:
+  "^/llms\\.txt$": "/assets/llms.txt"
   "^/es/blog/integracao-de-iot-e-blockchain-na-rastreabilidade-da-logistica-reversa-de-eletronicos-tecnologias-emergentes-ja-identificadas-como-tendencia-hummingbird-international-llc-1/?$": "/documentacao-e-rastreabilidade/"
   "^/blog/integracao-de-iot-e-blockchain-na-rastreabilidade-da-logistica-reversa-de-eletronicos-tecnologias-emergentes-ja-identificadas-como-tendencia-hummingbird-international-llc-1/?$": "/documentacao-e-rastreabilidade/"
   "^/de/blog/como-empresas-b2b-do-setor-de-eletronicos-podem-aproveitar-a-cop30-para-integrar-logistica-reversa-e-reciclagem-com-resultados-comerciais-e-ambientais/?$": "/logistica-reversa/"
