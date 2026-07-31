@@ -14,7 +14,8 @@ function b64url(bytes) { let s = ''; for (const b of bytes) s += String.fromChar
 function base64ParaBytes(b64) { const bin = atob(b64); const out = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i); return out; }
 function agoraISO() { try { return new Date().toISOString(); } catch { return ''; } }
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-function dataBR(iso) { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : ''; }
+// Fuso de Brasília (UTC-3, sem horário de verão).
+function dataBR(iso) { const d = new Date(iso); if (!iso || isNaN(d.getTime())) return ''; if (String(iso).includes('T')) d.setUTCHours(d.getUTCHours() - 3); const p = (n) => String(n).padStart(2, '0'); return `${p(d.getUTCDate())}/${p(d.getUTCMonth() + 1)}/${d.getUTCFullYear()}`; }
 async function hmac(secret, data) {
   const key = await crypto.subtle.importKey('raw', TE.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
   const sig = await crypto.subtle.sign('HMAC', key, TE.encode(data));

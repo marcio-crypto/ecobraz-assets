@@ -21,7 +21,8 @@ export async function seloColeta(id, env) {
   return (await hmacSHA(`${base}|coleta-selo-v1`, `coleta:${id}`)).slice(0, 12);
 }
 function origemPortal(env, url) { return String(env.PORTAL_BASE_URL || env.PORTAL_URL || `${url.origin}/`).replace(/\/+$/, ''); }
-const dataHoraBR = (iso) => { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}:\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]} ${m[4]}` : ''; };
+// Fuso de Brasília (UTC-3, sem horário de verão) a partir do instante ISO (UTC).
+const dataHoraBR = (iso) => { const d = new Date(iso); if (!iso || isNaN(d.getTime())) return ''; d.setUTCHours(d.getUTCHours() - 3); const p = (n) => String(n).padStart(2, '0'); return `${p(d.getUTCDate())}/${p(d.getUTCMonth() + 1)}/${d.getUTCFullYear()} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`; };
 
 // Registro de agentes (nome por e-mail). Fonte única: env AGENTE_EMAILS.
 export function agentesDe(env) {
@@ -135,7 +136,7 @@ export function paginaAppAgente(agente, coletas, banner) {
 function ploomesCfg(env) { return { base: env.PLOOMES_API_URL || 'https://public-api2.ploomes.com', headers: { 'User-Key': env.PLOOMES_USER_KEY, Accept: 'application/json' } }; }
 function base64ParaBytes(b64) { const bin = atob(b64); const out = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i); return out; }
 function agora() { try { return new Date().toISOString(); } catch { return ''; } }
-function hhmm(iso) { const m = String(iso || '').match(/T(\d{2}:\d{2})/); return m ? m[1] : ''; }
+function hhmm(iso) { const d = new Date(iso); if (!iso || isNaN(d.getTime())) return ''; d.setUTCHours(d.getUTCHours() - 3); const p = (n) => String(n).padStart(2, '0'); return `${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`; }
 
 export async function detalheColeta(env, id) {
   const os = await lerColetaOS(env, id);

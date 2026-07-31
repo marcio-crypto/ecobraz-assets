@@ -5,7 +5,8 @@
 // usa o embed do OpenStreetMap (sem chave de API).
 
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-const hhmm = (x) => { const m = String(x || '').match(/T(\d{2}:\d{2})/); return m ? m[1] : ''; };
+// Hora de Brasília (UTC-3, sem horário de verão) a partir do instante ISO (UTC).
+const hhmm = (x) => { const d = new Date(x); if (!x || isNaN(d.getTime())) return ''; d.setUTCHours(d.getUTCHours() - 3); const p = (n) => String(n).padStart(2, '0'); return `${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`; };
 
 function moldura(titulo, conteudo, autorefresh) {
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex">${autorefresh ? '<meta http-equiv="refresh" content="30">' : ''}<title>${esc(titulo)} — Ecobraz</title>

@@ -21,7 +21,9 @@ import { listarColetasOS, lerColetaOS, salvarColetaOSDireto } from './coletas.js
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const agora = () => { try { return new Date().toISOString(); } catch { return ''; } };
 const digits = (s) => String(s == null ? '' : s).replace(/\D/g, '');
-const dataBR = (iso) => { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : ''; };
+// Fuso de Brasília (UTC-3, sem horário de verão). Datas com hora (ISO em UTC) são
+// convertidas; datas só-dia (sem "T") ficam como estão.
+const dataBR = (iso) => { const d = new Date(iso); if (!iso || isNaN(d.getTime())) return ''; if (String(iso).includes('T')) d.setUTCHours(d.getUTCHours() - 3); const p = (n) => String(n).padStart(2, '0'); return `${p(d.getUTCDate())}/${p(d.getUTCMonth() + 1)}/${d.getUTCFullYear()}`; };
 const fmtDoc = (d) => { const n = digits(d); return n.length === 14 ? n.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5') : n.length === 11 ? n.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4') : (d || ''); };
 const brl = (v) => 'R$ ' + (Number(v) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 

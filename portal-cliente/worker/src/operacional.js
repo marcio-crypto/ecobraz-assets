@@ -22,8 +22,9 @@ const IDS_FATOR_TRIAGEM = new Set(FATORES_TRIAGEM.map((f) => f.id));
 const ROTULO_FATOR = Object.fromEntries(FATORES_TRIAGEM.map((f) => [f.id, f.material]));
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const agora = () => { try { return new Date().toISOString(); } catch { return ''; } };
-const hhmm = (iso) => { const m = String(iso || '').match(/T(\d{2}:\d{2})/); return m ? m[1] : ''; };
-const dataHora = (iso) => { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}:\d{2})/); return m ? `${m[3]}/${m[2]} ${m[4]}` : ''; };
+// Fuso de Brasília (UTC-3, sem horário de verão) a partir do instante ISO (UTC).
+const hhmm = (iso) => { const d = new Date(iso); if (!iso || isNaN(d.getTime())) return ''; d.setUTCHours(d.getUTCHours() - 3); const p = (n) => String(n).padStart(2, '0'); return `${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`; };
+const dataHora = (iso) => { const d = new Date(iso); if (!iso || isNaN(d.getTime())) return ''; d.setUTCHours(d.getUTCHours() - 3); const p = (n) => String(n).padStart(2, '0'); return `${p(d.getUTCDate())}/${p(d.getUTCMonth() + 1)} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`; };
 function base64ParaBytes(b64) { const bin = atob(b64); const out = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i); return out; }
 
 // --- Registro de operadores (fonte única: env OPERACAO_EMAILS) ---

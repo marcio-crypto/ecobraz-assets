@@ -23,7 +23,9 @@ const anoAtual = () => { try { return new Date().getFullYear(); } catch { return
 // (pedido da Débora). Lista fechada — o que a Ecobraz emite hoje.
 const CERTIFICADOS_OS = ['Laudo fotográfico', 'Laudo de Sanitização', 'Certificado de Destinação', 'Certificado Detalhado'];
 const normalizarCertificados = (v) => (Array.isArray(v) ? CERTIFICADOS_OS.filter((c) => v.includes(c)) : []);
-const dataBR = (iso) => { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : ''; };
+// Fuso de Brasília (UTC-3, sem horário de verão). Datas com hora (ISO em UTC) são
+// convertidas; datas só-dia (sem "T") ficam como estão.
+const dataBR = (iso) => { const d = new Date(iso); if (!iso || isNaN(d.getTime())) return ''; if (String(iso).includes('T')) d.setUTCHours(d.getUTCHours() - 3); const p = (n) => String(n).padStart(2, '0'); return `${p(d.getUTCDate())}/${p(d.getUTCMonth() + 1)}/${d.getUTCFullYear()}`; };
 const STATUS = { agendada: 'Agendada', em_transporte: 'Em transporte', na_unidade: 'Na unidade', concluida: 'Concluída', cancelada: 'Cancelada' };
 const STATUS_COR = { agendada: '#8A6A16;background:#FFF4DE', em_transporte: '#0B5B66;background:#E3F0F3', na_unidade: '#6B3FA0;background:#EFE7FA', concluida: '#1E5B31;background:#E4F3E6', cancelada: '#8a4b45;background:#FBE9E7' };
 
@@ -347,7 +349,7 @@ export function blocoRegistroMotorista(reg, fotoUrl) {
 
 export function paginaColetaOSDetalhe(user, os, acomp) {
   const linha = (l, v) => v ? `<tr><td style="padding:8px 0;border-top:1px solid #EEF1F0;color:#6B7B78;width:38%">${esc(l)}</td><td style="padding:8px 0;border-top:1px solid #EEF1F0;font-weight:600;white-space:pre-wrap;word-break:break-word">${esc(v)}</td></tr>` : '';
-  const hhmm = (x) => String(x || '').slice(11, 16);
+  const hhmm = (x) => { const d = new Date(x); if (!x || isNaN(d.getTime())) return ''; d.setUTCHours(d.getUTCHours() - 3); const p = (n) => String(n).padStart(2, '0'); return `${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`; };
   const canalAviso = (a) => (a && a.via === 'whatsapp') ? ' (WhatsApp)' : ((a && a.via === 'sms') ? ' (SMS)' : ((a && a.via === 'email') ? ' (e-mail)' : ''));
   const acompHTML = (() => {
     const a = acomp || {};
