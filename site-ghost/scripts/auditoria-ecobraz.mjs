@@ -30,7 +30,9 @@ const context = await browser.newContext({
 const gaHits = [];
 context.on('request', (req) => {
   const u = req.url();
-  if (/google-analytics\.com|analytics\.google\.com/.test(u) && /\/(g\/)?collect/.test(u)) {
+  // Aceita tanto o envio direto ao Google quanto o Tag Gateway first-party
+  // (Cloudflare roteia /g/collect pelo próprio domínio do site desde jul/2026).
+  if (/\/(g\/)?collect/.test(u) && /google-analytics\.com|analytics\.google\.com|ecobraz\.org/.test(u)) {
     const evs = [];
     try { const q = new URL(u).searchParams; if (q.get('en')) evs.push(q.get('en')); } catch {}
     // eventos em lote vão no corpo do POST (uma linha por evento, com en=...)
