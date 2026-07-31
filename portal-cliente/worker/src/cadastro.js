@@ -1233,6 +1233,7 @@ export function paginaInicio(user, stats) {
     ${card('/frota/aovivo', '🛰️', 'Frota ao vivo', 'Onde está cada caminhão, qual coleta atende agora e a próxima da fila.')}
     ${card('/eng', '🔬', 'Engenharia Ambiental', 'Validação técnica (RT), destino final e relatórios de conformidade.')}
     ${card('/mtr', '🏛️', 'MTR & DMR', 'Manifestos de entrada e saída de resíduos. Relatório DMR (cruzamento) para os órgãos.')}
+    ${card('/cronograma', '🗂️', 'Cronograma / Kanban', 'Acompanhe cada lote: Recebido → Tratamento → Laudo → Concluído, com alerta de prazo.', badge(s.aReceber != null && s.aReceber > 0 ? `${num(s.aReceber)} na fila` : null))}
     ${card('/diretoria', '📊', 'Diretoria', 'Visão macro: volume, prazos e alertas.')}
     ${card('/equipe', '🔑', 'Equipe & Acessos', 'Cadastre as pessoas e defina o que cada uma pode acessar.', badge(s.equipe != null && s.equipe > 0 ? `${num(s.equipe)} pessoas` : null))}
   </div>

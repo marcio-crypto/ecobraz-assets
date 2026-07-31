@@ -47,6 +47,7 @@ import { MANUAL_CLIENTE_PDF_B64 } from './manual-pdf.js';
 import { MANUAL_COMERCIAL_B64, MANUAL_MOTORISTA_B64, MANUAL_DOCA_B64, MANUAL_ENGENHARIA_B64 } from './manuais-pdf.js';
 import { sondaMTR, consultarMtrSigor, baixarPdfManifesto } from './mtr.js';
 import { listarMtrs, lerMtr, salvarMtr, mudarStatusMtr, definirPdfMtr, removerMtr, dadosDMR, paginaMtrLista, paginaMtrForm, paginaMtrDetalhe, paginaDMR } from './gestao-mtr.js';
+import { dadosCronograma, paginaCronograma } from './cronograma.js';
 import { acharPacote, precoPacote, acharModuloAdote, precoModuloAdote, paginaLojaAdote, paginaObrigadoAdote, paginaDiagnostico, lerCredito, salvarCredito, novoCredito, aplicarCompra, aplicarRecarga, precisaRecarga, listarPatrocinadores, resumoPatrocinio, lerCreditoPorDoc } from './adote.js';
 import { paginaLojaESG, paginaESGContato, paginaESGObrigado, relatorioESG, precoRelatorioESG } from './esg.js';
 import { statusDaEtapa, valorProp, CAMPOS_OS } from './os-utils.js';
@@ -1342,6 +1343,12 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         if (!obj) return new Response('não encontrado', { status: 404 });
         const ct = (obj.httpMetadata && obj.httpMetadata.contentType) || 'application/octet-stream';
         return new Response(obj.body, { headers: { 'content-type': ct, 'cache-control': 'private, max-age=300', 'content-disposition': 'inline' } });
+      }
+      // --- CRONOGRAMA / KANBAN (visão do fluxo operacional; pedido do Marcelo) ---
+      if (pathname === '/cronograma' && request.method === 'GET') {
+        if (!escritorio) return html(paginaLoginEscritorio(googleConfigurado(env)));
+        const dados = await dadosCronograma(env);
+        return html(paginaCronograma(escritorio, dados));
       }
       // Prova de gravação: 1 escrita de teste no KV para saber NA HORA se o
       // limite diário está bloqueando (usado após o upgrade do plano).
