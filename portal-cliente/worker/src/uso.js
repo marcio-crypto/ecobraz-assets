@@ -132,7 +132,7 @@ export function reunirPendencias({ leads = [], coletas = [], aguardandoValidacao
     if (dISO === hoje) g.hoje++; else if (d7.has(dISO)) g.semana++; else if (d30.has(dISO)) g.mes++; else g.antigas++;
     grupos.set(chave, g);
   };
-  for (const l of leads) if (l && l.status !== 'tratado') add('leads', 'Leads do site sem tratamento', 'Escritório', l.criadoEm);
+  for (const l of leads) if (l && l.status !== 'tratado' && l.status !== 'sem_retorno' && l.status !== 'excluido') add('leads', 'Leads do site sem tratamento', 'Escritório', l.criadoEm);
   const ROT = {
     agendada: ['Coletas agendadas aguardando execução', (c) => c.agenteNome || 'Sem motorista designado'],
     em_transporte: ['Coletas em transporte (não encerradas)', (c) => c.agenteNome || 'Motorista'],

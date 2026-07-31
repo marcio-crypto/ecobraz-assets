@@ -66,7 +66,7 @@ import { sondarAnexosPloomes, paginaSondaAnexos } from './ploomes-docs.js';
 import { amostraContatosPloomes, paginaAmostraContatos, importarLoteContatos, estatisticasMigracao, buscarContatos, paginaMigrarPloomes, detalheContato, paginaContatoDetalhe, importarLoteNegocios, estatisticasNegocios, paginaMigrarNegocios } from './ploomes-migracao.js';
 import { importarLoteAnexos, importarLoteAnexosContatos, completarAnexos, importarAnexosJanela, reprocessarFalhas, importarLoteDocumentos, recuperarDocumentos, estatisticasArquivos, paginaMigrarArquivos, diagnosticoAnexos, paginaDiagAnexos } from './ploomes-arquivos.js';
 import { fiscalPermitido, nomeFiscal, listarNotas, lerNota, importarLote, vincularNota, sugerirVinculoSync, paginaFiscalLogin, paginaFiscalHome, paginaFiscalResultado, paginaFiscalNota } from './fiscal.js';
-import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, emailsDoCliente, reindexarEmailsClientes, backfillEnderecos, paginaManutencao, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, clienteDeLead, arquivosDoCliente, paginaLeads, paginaLeadDetalhe, paginaInicio, listarClientesD1, contagensClientesD1, lerClienteD1, negociosDoCliente, espelharClienteD1, sincronizarKVparaD1, lerNegocioDetalheD1, paginaOSDetalhe, curarContatosKV, classificarPedido, atualizarIndexLead } from './cadastro.js';
+import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, emailsDoCliente, reindexarEmailsClientes, backfillEnderecos, paginaManutencao, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, clienteDeLead, arquivosDoCliente, paginaLeads, paginaLeadDetalhe, paginaInicio, listarClientesD1, contagensClientesD1, lerClienteD1, negociosDoCliente, espelharClienteD1, sincronizarKVparaD1, lerNegocioDetalheD1, paginaOSDetalhe, curarContatosKV, classificarPedido, atualizarIndexLead, excluirLead } from './cadastro.js';
 import { listarColetasOS, lerColetaOS, seloOS, criarColetaOS, atualizarStatusOS, atualizarColetaOS, anexarTelemetriaOS, registrarAnexoColeta, removerAnexoColeta, paginaColetasLista, paginaGerarColeta, paginaEditarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga, definirCobrancaOS, marcarCobrancaPagaOS, definirMtrOS } from './coletas.js';
 import { listarVeiculos, lerVeiculo, salvarVeiculo, paginaFrota, paginaVeiculoForm, lerJornadaAtiva, abrirJornada, fecharJornada, registrarAbastecimento, tagColetaComVeiculo, servirFotoJornada, bannerJornada, paginaAbrirDia, paginaFecharDia, paginaAbastecer, placaDaColeta } from './frota.js';
 import { carregarEquipeNoEnv, listarUsuarios, lerUsuario, salvarUsuario, importarUsuarios, paginaEquipe, paginaUsuarioForm, paginaEquipeImportar } from './equipe.js';
@@ -1159,7 +1159,7 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
             clientes: clientes.length,
             coletasAbertas: coletas.filter((c) => c.status !== 'concluida' && c.status !== 'cancelada').length,
             aReceber: coletas.filter((c) => c.status === 'concluida').length,
-            leadsNovos: leads.filter((l) => l.status !== 'tratado').length,
+            leadsNovos: leads.filter((l) => l.status !== 'tratado' && l.status !== 'sem_retorno' && l.status !== 'excluido').length,
             veiculos: veiculos.filter((v) => v.ativo !== false).length,
             equipe: usuarios.filter((u) => u.ativo !== false).length,
           };
@@ -1392,6 +1392,25 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         if (!l) return json({ ok: false, error: 'nao_encontrado' }, 404);
         l.status = 'tratado'; await salvarLead(env, l);
         return json({ ok: true });
+      }
+      // "Sem retorno": cliente mandou o formulário e não respondeu ao contato. Fica
+      // registrado (não some), para separar quem engajou de quem sumiu.
+      if (pathname === '/api/leads/sem-retorno' && request.method === 'POST') {
+        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = null; }
+        if (!b || !b.id) return json({ ok: false, error: 'dados' }, 400);
+        const l = await lerLead(env, b.id);
+        if (!l) return json({ ok: false, error: 'nao_encontrado' }, 404);
+        l.status = 'sem_retorno'; await salvarLead(env, l);
+        return json({ ok: true });
+      }
+      // Excluir de vez (testes/duplicados) — some do registro e do índice. Irreversível.
+      if (pathname === '/api/leads/excluir' && request.method === 'POST') {
+        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = null; }
+        if (!b || !b.id) return json({ ok: false, error: 'dados' }, 400);
+        const ok = await excluirLead(env, b.id);
+        return json({ ok: !!ok });
       }
 
       // Ordens de Coleta (escritório/comercial) — geração própria a partir do cliente.

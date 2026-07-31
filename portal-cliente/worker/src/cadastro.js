@@ -937,6 +937,28 @@ export async function atualizarIndexLead(env, id, patch) {
   const i = idx.findIndex((x) => x.id === id);
   if (i >= 0) { Object.assign(idx[i], patch); await env.PORTAL_KV.put('leads:index', JSON.stringify(idx).slice(0, 800000)); }
 }
+// Exclui um lead de vez (registro + índice). Uso: tirar testes/duplicados da caixa,
+// para não confundir com quem realmente entrou em contato. É irreversível.
+export async function excluirLead(env, id) {
+  if (!env.PORTAL_KV || !id) return false;
+  const safe = String(id).replace(/[^a-zA-Z0-9_]/g, '');
+  await env.PORTAL_KV.delete(`lead:${safe}`);
+  const idx = await listarLeads(env);
+  const novo = idx.filter((x) => x.id !== id && x.id !== safe);
+  await env.PORTAL_KV.put('leads:index', JSON.stringify(novo).slice(0, 800000));
+  return true;
+}
+// Status que NÃO são mais "novo/pendente" (não contam como lead a tratar na caixa).
+// 'sem_retorno' = o cliente sumiu depois de mandar o formulário; 'tratado' = já cuidado.
+export const LEAD_RESOLVIDO = new Set(['tratado', 'sem_retorno', 'excluido']);
+export const leadPendente = (l) => !!l && !LEAD_RESOLVIDO.has(l && l.status);
+// Pílula de status do lead — mesma aparência na lista e no detalhe.
+export function badgeStatusLead(status) {
+  const base = 'flex:none;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;';
+  if (status === 'tratado') return `<span style="${base}background:#EEF1F0;color:#7c8a87">TRATADO</span>`;
+  if (status === 'sem_retorno') return `<span style="${base}background:#F7E9E9;color:#9B4A4A">SEM RETORNO</span>`;
+  return `<span style="${base}background:#FFF4DE;color:#8A6A16">NOVO</span>`;
+}
 // Recebe um lead do site (worker ecobraz-coletas) e guarda na nossa base.
 // LISTA OFICIAL DA DEBORA (2026-07-29) — preços e regras dela, item por item.
 // Casamento por regex em texto minúsculo sem acento; \b evita falso positivo
@@ -1083,9 +1105,11 @@ export async function ingestLead(env, body) {
 }
 
 export function paginaLeads(user, leads) {
-  const novos = leads.filter((l) => l.status !== 'tratado').length;
+  // Testes/duplicados excluídos somem da lista; 'sem_retorno' e 'tratado' não contam como novos.
+  leads = leads.filter((l) => l && l.status !== 'excluido');
+  const novos = leads.filter(leadPendente).length;
   // Prioritárias ainda não tratadas sobem para o topo da fila.
-  const ordenados = [...leads].sort((a, b2) => Number(b2.prioridade === 'alta' && b2.status !== 'tratado') - Number(a.prioridade === 'alta' && a.status !== 'tratado'));
+  const ordenados = [...leads].sort((a, b2) => Number(b2.prioridade === 'alta' && leadPendente(b2)) - Number(a.prioridade === 'alta' && leadPendente(a)));
   const seloTriagem = (l) => {
     if (l.prioridade === 'alta') return '<span style="flex:none;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;background:#FFE9C7;color:#8A4B00;border:1px solid #F2C173">🌟 PRIORITÁRIA</span>';
     if (l.triagem === 'barrado') return '<span style="flex:none;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;background:#FDE8E8;color:#9B1C1C">🚫 NÃO COLETAMOS</span>';
@@ -1095,10 +1119,10 @@ export function paginaLeads(user, leads) {
     if (l.pagamento === 'pago') return '<span style="flex:none;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;background:#E5F6E5;color:#1E7A1E">💳 TAXA PAGA</span>';
     return '';
   };
-  const linhas = ordenados.length ? ordenados.map((l) => `<a href="/leads/lead?id=${esc(l.id)}" style="display:flex;justify-content:space-between;align-items:center;gap:12px;text-decoration:none;background:#fff;border:1px solid ${l.prioridade === 'alta' && l.status !== 'tratado' ? '#F2C173;box-shadow:0 0 0 2px #FFF3DF' : '#E4EBE9'};border-radius:12px;padding:13px 15px;margin-bottom:9px">
+  const linhas = ordenados.length ? ordenados.map((l) => `<a href="/leads/lead?id=${esc(l.id)}" style="display:flex;justify-content:space-between;align-items:center;gap:12px;text-decoration:none;background:#fff;border:1px solid ${l.prioridade === 'alta' && leadPendente(l) ? '#F2C173;box-shadow:0 0 0 2px #FFF3DF' : '#E4EBE9'};border-radius:12px;padding:13px 15px;margin-bottom:9px">
       <div style="min-width:0"><div style="font-size:14px;font-weight:800;color:#10262B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.nome || l.empresa || '(sem nome)')}</div>
       <div style="font-size:12px;color:#7c8a87;margin-top:3px">${esc(l.email || '')}${l.cidade ? ' · ' + esc(l.cidade) : ''} · ${esc(dataBR(l.criadoEm))}</div></div>
-      <span style="display:flex;flex:none;gap:6px;align-items:center">${seloTriagem(l)}<span style="flex:none;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;${l.status === 'tratado' ? 'background:#EEF1F0;color:#7c8a87' : 'background:#FFF4DE;color:#8A6A16'}">${l.status === 'tratado' ? 'TRATADO' : 'NOVO'}</span></span>
+      <span style="display:flex;flex:none;gap:6px;align-items:center">${seloTriagem(l)}${badgeStatusLead(l.status)}</span>
     </a>`).join('') : `<div class="card" style="text-align:center;color:#8fa39f;font-size:13.5px">Nenhum lead ainda. Quando alguém preencher o formulário do site, aparece aqui.</div>`;
   return `${head('Leads do site')}<body>${topo(user, 'leads')}
 <div class="wrap">
@@ -1134,7 +1158,7 @@ export function paginaLeadDetalhe(user, lead) {
 <div class="wrap">
   <a href="/leads" style="font-size:13px;font-weight:800;text-decoration:none;color:#4F6469">← Todos os leads</a>
   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin:12px 0 16px">
-    <div><span style="font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;${lead.status === 'tratado' ? 'background:#EEF1F0;color:#7c8a87' : 'background:#FFF4DE;color:#8A6A16'}">${lead.status === 'tratado' ? 'TRATADO' : 'NOVO'}</span>
+    <div>${badgeStatusLead(lead.status)}
     <h1 style="font-size:22px;margin:8px 0 0">${esc(lead.nome || lead.empresa || '—')}</h1></div>
   </div>
   <div class="card">
@@ -1158,11 +1182,23 @@ export function paginaLeadDetalhe(user, lead) {
   <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
     <a class="btn btn-p" href="/cadastro/novo?tipo=${lead.perfil === 'pessoa_fisica' ? 'PF' : 'PJ'}&lead=${esc(lead.id)}">➜ Converter em cliente</a>
     <button class="btn btn-g" id="btrat" ${lead.status === 'tratado' ? 'disabled style="opacity:.5"' : ''}>${lead.status === 'tratado' ? '✓ Tratado' : 'Marcar como tratado'}</button>
+    <button class="btn btn-g" id="bsr" ${lead.status === 'sem_retorno' ? 'disabled style="opacity:.5"' : ''}>${lead.status === 'sem_retorno' ? '✓ Sem retorno' : 'Sem retorno'}</button>
+    <button class="btn" id="bdel" style="background:#FDECEC;color:#9B1C1C;border:1px solid #F3C6C6">Excluir</button>
     <span id="m" style="font-size:13px;color:#4F6469;align-self:center"></span>
   </div>
-  <div style="font-size:11px;color:#9aa7a4;margin-top:10px">Ao converter, o cadastro já vem preenchido com os dados do lead — e o lead é marcado como tratado automaticamente. Depois é só <b>Gerar coleta</b> na ficha do cliente.</div>
+  <div style="font-size:11px;color:#9aa7a4;margin-top:10px;line-height:1.6">
+    <b>Converter em cliente</b>: o cadastro já vem preenchido com os dados do lead e o lead é marcado como tratado. Depois é só <b>Gerar coleta</b> na ficha.<br>
+    <b>Sem retorno</b>: mandou o formulário mas não respondeu ao contato — fica registrado, sem sumir da lista (para você separar quem engajou de quem sumiu).<br>
+    <b>Excluir</b>: remove de vez. Use só em <b>testes ou duplicados</b> — não dá para desfazer.
+  </div>
 </div>
-<script>const bt=document.getElementById('btrat');if(bt&&!bt.disabled)bt.onclick=async()=>{bt.disabled=true;document.getElementById('m').textContent='Salvando…';try{const r=await fetch('/api/leads/tratar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:'${esc(lead.id)}'})});if(r.ok){location.reload();}else{document.getElementById('m').textContent='Falha. Tente de novo.';bt.disabled=false;}}catch{document.getElementById('m').textContent='Sem conexão.';bt.disabled=false;}};</script>
+<script>
+var LID='${esc(lead.id)}';var m=document.getElementById('m');
+function acao(btn,url,indo,depois){if(!btn||btn.disabled)return;btn.onclick=async()=>{if(url.indexOf('excluir')>=0&&!confirm('Excluir este lead? Não dá para desfazer. Use em testes ou duplicados.'))return;btn.disabled=true;m.textContent=indo;try{const r=await fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:LID})});if(r.ok){depois();}else{m.textContent='Falha. Tente de novo.';btn.disabled=false;}}catch{m.textContent='Sem conexão.';btn.disabled=false;}};}
+acao(document.getElementById('btrat'),'/api/leads/tratar','Salvando…',function(){location.reload();});
+acao(document.getElementById('bsr'),'/api/leads/sem-retorno','Salvando…',function(){location.reload();});
+acao(document.getElementById('bdel'),'/api/leads/excluir','Excluindo…',function(){location.href='/leads';});
+</script>
 </body></html>`;
 }
 
