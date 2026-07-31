@@ -1232,6 +1232,7 @@ export function paginaInicio(user, stats) {
     ${card('/frota', '🚛', 'Frota', 'Veículos da empresa. O motorista faz o checklist ao abrir e fechar o dia.', badge(s.veiculos != null && s.veiculos > 0 ? `${num(s.veiculos)} veículos` : null))}
     ${card('/frota/aovivo', '🛰️', 'Frota ao vivo', 'Onde está cada caminhão, qual coleta atende agora e a próxima da fila.')}
     ${card('/eng', '🔬', 'Engenharia Ambiental', 'Validação técnica (RT), destino final e relatórios de conformidade.')}
+    ${card('/mtr', '🏛️', 'MTR & DMR', 'Manifestos de entrada e saída de resíduos. Relatório DMR (cruzamento) para os órgãos.')}
     ${card('/diretoria', '📊', 'Diretoria', 'Visão macro: volume, prazos e alertas.')}
     ${card('/equipe', '🔑', 'Equipe & Acessos', 'Cadastre as pessoas e defina o que cada uma pode acessar.', badge(s.equipe != null && s.equipe > 0 ? `${num(s.equipe)} pessoas` : null))}
   </div>
