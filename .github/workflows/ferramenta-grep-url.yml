@@ -1,0 +1,32 @@
+name: Ferramenta — procurar padrão no HTML ao vivo
+
+# Baixa a(s) URL(s) e conta/mostra ocorrências de um padrão no corpo da página.
+# Serve para verificar se um componente/classe/texto realmente chegou ao site
+# (o título sozinho não prova markup). Imprime contagem + trechos no log.
+
+on:
+  workflow_dispatch:
+    inputs:
+      urls:
+        description: 'URLs separadas por espaço'
+        required: true
+      padrao:
+        description: 'Padrão (grep -E) a procurar no HTML'
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  procurar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Contagem e trechos do padrão em cada URL
+        run: |
+          for u in ${{ inputs.urls }}; do
+            echo "=== $u ==="
+            curl -sS -L --max-time 20 "$u" -o /tmp/body || { echo "FALHA de conexão"; continue; }
+            n=$(grep -Eo '${{ inputs.padrao }}' /tmp/body | wc -l)
+            echo "ocorrências de '${{ inputs.padrao }}': $n"
+            grep -Eo '.{0,60}${{ inputs.padrao }}.{0,60}' /tmp/body | head -4 || true
+          done

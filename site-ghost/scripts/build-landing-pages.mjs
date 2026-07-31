@@ -85,6 +85,25 @@ function renderTemplate(p) {
   // Perfil do mini-formulário: 'empresa' por padrão; landings B2C declaram
   // form.perfil = 'pessoa_fisica' em landing-pages.json.
   const perfil = (p.form && p.form.perfil) || 'empresa';
+  // Voz por público (doc 34, gap 7): os textos fixos do template não podem
+  // vazar jargão B2B ("avaliação técnica", "retorno técnico", "sua operação")
+  // nas páginas de pessoa física — cada rótulo tem a sua versão de casa.
+  const pf = perfil === 'pessoa_fisica';
+  const formLabel = pf ? 'Pedido de coleta' : 'Avaliação técnica';
+  const formButtonDefault = pf ? 'Pedir minha coleta' : 'Solicitar avaliação técnica';
+  const formMicroDefault = pf
+    ? 'A gente confirma tudo com você antes de agendar — sem surpresa.'
+    : 'A coleta é confirmada após a avaliação de material, volume, localidade e documentação.';
+  const recoCta = pf
+    ? 'Bastou um item da lista ser verdade aí dentro? Então esta página foi escrita para você — <a href="#avaliacao">conte em 1 minuto o que você tem</a>. A gente confirma tudo com você antes, sem telemarketing.'
+    : 'Bastou um item da lista ser verdade aí dentro? Então esta página foi escrita para você — <a href="#avaliacao">descreva a situação em 1 minuto</a> e receba um retorno técnico, não um telemarketing.';
+  const relatedTitle = pf ? 'Também pode ser útil para você' : 'Também pode fazer parte da sua operação';
+  const stepsSubDefault = pf
+    ? 'A gente fala tudo antes e só agenda depois de confirmar os detalhes com você.'
+    : 'Nenhuma retirada é confirmada sem avaliação técnica. É isso que mantém a operação previsível e documentável.';
+  const scopeSubDefault = pf
+    ? 'A gente fala tudo antes: o que buscamos, o que não buscamos — e confirma os detalhes com você antes de ir.'
+    : 'Escopo declarado antes do agendamento reduz retrabalho e surpresa. Cada lote é avaliado tecnicamente.';
   const formAction = '{{@site.url}}/agendamento/';
   const hiddenMaterial = p.form.material ? `<input type="hidden" name="material" value="${esc(p.form.material)}">` : '';
   const heroBand = p.hero.band.map((b) => `<span><strong>${esc(b.title)}</strong>${esc(b.text)}</span>`).join('\n        ');
@@ -123,7 +142,7 @@ function renderTemplate(p) {
       </div>
     </div>
     <form class="hx-quote" id="avaliacao" method="get" action="${formAction}">
-      <span class="hx-label">Avaliação técnica</span>
+      <span class="hx-label">${formLabel}</span>
       <h2>${esc(p.form.title)}</h2>
       <p class="hx-hint">${esc(p.form.hint)}</p>
       <input type="hidden" name="perfil" value="${perfil}">
@@ -137,9 +156,9 @@ function renderTemplate(p) {
         <label for="lp-local">CEP ou cidade da retirada</label>
         <input id="lp-local" name="local" placeholder="Ex.: 02175-010 ou São Paulo">
       </div>
-      <button class="button" type="submit" data-track="${slug}_hero_form">${esc(p.form.button || 'Solicitar avaliação técnica')} →</button>
+      <button class="button" type="submit" data-track="${slug}_hero_form">${esc(p.form.button || formButtonDefault)} →</button>
       <div class="hx-or-wa">ou <a href="{{@custom.whatsapp_url}}" rel="noopener" data-track="${slug}_hero_whatsapp">${wa} falar com a equipe no WhatsApp</a></div>
-      <p class="hx-micro">${esc(p.form.micro || 'A coleta é confirmada após a avaliação de material, volume, localidade e documentação.')}</p>
+      <p class="hx-micro">${esc(p.form.micro || formMicroDefault)}</p>
     </form>
   </div>
 </section>
@@ -149,7 +168,7 @@ ${telasSection(p, slug)}${p.recognize ? `<section class="hx-block">
     <div>
       <span class="hx-label">Você se reconhece?</span>
       <h2>${esc(p.recognize.title)}</h2>
-      <p class="hx-reco-cta">Bastou um item da lista ser verdade aí dentro? Então esta página foi escrita para você — <a href="#avaliacao">descreva a situação em 1 minuto</a> e receba um retorno técnico, não um telemarketing.</p>
+      <p class="hx-reco-cta">${recoCta}</p>
     </div>
     <ul class="hx-reco-list">${recognize}</ul>
   </div>
@@ -196,7 +215,7 @@ ${telasSection(p, slug)}${p.recognize ? `<section class="hx-block">
   <div class="container">
     <div class="hx-head-split">
       <div><span class="hx-label">Escopo claro</span><h2>${esc(p.scope.title || 'O que entra — e o que não entra')}</h2></div>
-      <p>${esc(p.scope.sub || 'Escopo declarado antes do agendamento reduz retrabalho e surpresa. Cada lote é avaliado tecnicamente.')}</p>
+      <p>${esc(p.scope.sub || scopeSubDefault)}</p>
     </div>
     <div class="hx-scope">
       <div class="hx-yes"><h3>${esc(p.scope.inTitle || 'Dentro do escopo')}</h3><ul>${scopeIn}</ul><p>${esc(p.scope.conditions)}</p></div>
@@ -209,7 +228,7 @@ ${telasSection(p, slug)}${p.recognize ? `<section class="hx-block">
   <div class="container">
     <div class="hx-head-split">
       <div><span class="hx-label">Processo</span><h2>${esc(p.stepsTitle || 'Como funciona, do contato à destinação')}</h2></div>
-      <p>${esc(p.stepsSub || 'Nenhuma retirada é confirmada sem avaliação técnica. É isso que mantém a operação previsível e documentável.')}</p>
+      <p>${esc(p.stepsSub || stepsSubDefault)}</p>
     </div>
     <div class="hx-steps${p.steps.length === 4 ? ' four' : ''}">
         ${steps}
@@ -268,7 +287,7 @@ ${depoimentosSection(p, slug)}<section class="hx-block alt">
 <section class="hx-block">
   <div class="container">
     <div class="hx-head-split">
-      <div><span class="hx-label">Soluções relacionadas</span><h2>Também pode fazer parte da sua operação</h2></div>
+      <div><span class="hx-label">Soluções relacionadas</span><h2>${relatedTitle}</h2></div>
     </div>
     <div class="hx-sol-grid">
         ${related}
@@ -390,11 +409,14 @@ function renderHubSyncEntry(p) {
       }
     ]
   };
+  // Conteúdo de reserva no Ghost em componentes visuais v2c (nada de parede de
+  // links): cartões-link por grupo, aviso de escopo em callout e CTA-pílula.
+  // O sync-pages.mjs blinda este HTML em kg-card por conter classes v2c-*.
   const html = [
-    `<p>${esc(p.hero.sub)}</p>`,
-    ...p.groups.map((g) => `<h2>${esc(g.title)}</h2><ul>${g.items.map((i) => `<li><a href="${i.href}">${esc(i.title)}</a> — ${esc(i.text)}</li>`).join('')}</ul>`),
-    `<p>${esc(p.note.text)} <a href="${p.note.href}">${esc(p.note.linkLabel)}</a>.</p>`,
-    `<p><a href="/agendamento/?perfil=${p.form && p.form.perfil ? p.form.perfil : 'empresa'}&amp;origem=${p.slug}">${esc(p.hero.cta)}</a>.</p>`
+    `<p class="v2c-lead">${esc(p.hero.sub)}</p>`,
+    ...p.groups.map((g) => `<h2>${esc(g.title)}</h2><div class="v2c-grid">${g.items.map((i) => `<div><h3><a href="${i.href}">${esc(i.title)}</a></h3><p>${esc(i.text)}</p></div>`).join('')}</div>`),
+    `<div class="v2c-callout"><strong>${esc(p.note.title)}</strong><p>${esc(p.note.text)} <a href="${p.note.href}">${esc(p.note.linkLabel)}</a>.</p></div>`,
+    `<div class="v2c-cta"><strong>${esc(p.final.title)}</strong><p>${esc(p.final.text)}</p><div class="v2c-cta-botoes"><a class="button" href="/agendamento/?perfil=${p.form && p.form.perfil ? p.form.perfil : 'empresa'}&amp;origem=${p.slug}">${esc(p.hero.cta)}</a></div></div>`
   ].join('') + referenciaHtml(p);
   return {
     title: p.title,

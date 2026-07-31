@@ -16,11 +16,21 @@ const pages = JSON.parse(await fs.readFile(file,'utf8'));
 const syncedSlugs = [];
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// Ghost converte o HTML enviado para o formato do editor e ARRANCA classes de
+// listas/divs no processo — os componentes visuais (v2c-*) chegavam pelados no
+// site. O invólucro kg-card diz ao Ghost: "isto é um cartão de HTML bruto, não
+// mexa". Aplicado automaticamente a toda página que usa componentes v2c.
+const blindaHtml = (html) => {
+  if (!html || !html.includes('v2c-') || html.includes('kg-card-begin')) return html;
+  return `<!--kg-card-begin: html-->\n${html}\n<!--kg-card-end: html-->`;
+};
+
 for (const page of pages) {
   const lookup = await fetch(`${adminUrl}/ghost/api/admin/pages/?filter=slug:${encodeURIComponent(page.slug)}&limit=1`, {headers});
   if (!lookup.ok) throw new Error(`Lookup failed for ${page.slug}: ${lookup.status} ${await lookup.text()}`);
   const existing = (await lookup.json()).pages?.[0];
-  const payload = {pages:[{...page,status:'published',updated_at:existing?.updated_at}]};
+  const pagePayload = {...page, html: blindaHtml(page.html), status:'published', updated_at: existing?.updated_at};
+  const payload = {pages:[pagePayload]};
   const endpoint = existing ? `${adminUrl}/ghost/api/admin/pages/${existing.id}/?source=html` : `${adminUrl}/ghost/api/admin/pages/?source=html`;
   const response = await fetch(endpoint,{method:existing?'PUT':'POST',headers,body:JSON.stringify(payload)});
   if (!response.ok) throw new Error(`Sync failed for ${page.slug}: ${response.status} ${(await response.text()).slice(0,600)}`);

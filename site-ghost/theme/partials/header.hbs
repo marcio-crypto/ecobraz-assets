@@ -25,14 +25,15 @@
             <span class="sr-only">Abrir menu</span><span></span><span></span><span></span>
         </button>
         <nav id="primary-nav" class="primary-nav" aria-label="Navegação principal" data-nav>
+            {{!-- Navegação POR PÚBLICO (decisão do Marcio 31/07 + matemática do
+                 doc 35: o roteador precisa estar onde todos estão — no topo). --}}
             <ul class="only-pt">
+                <li><a href="{{@site.url}}/coleta-gratuita/">Para sua casa</a></li>
                 <li><a href="{{@site.url}}/para-empresas/">Para empresas</a></li>
-                <li><a href="{{@site.url}}/solucoes-corporativas/">Soluções</a></li>
-                <li><a href="{{@site.url}}/solucoes-por-setor/">Setores</a></li>
-                <li><a href="{{@site.url}}/materiais-e-equipamentos-coletados/">Materiais</a></li>
                 <li><a href="{{@site.url}}/para-governo/">Governo</a></li>
-                <li><a href="{{@site.url}}/evidencias/">Evidências</a></li>
+                <li><a href="{{@site.url}}/materiais-e-equipamentos-coletados/">Materiais</a></li>
                 <li><a href="{{@site.url}}/como-funciona/">Como funciona</a></li>
+                <li><a href="{{@site.url}}/evidencias/">Evidências</a></li>
             </ul>
             <ul class="only-en">
                 <li><a href="{{@site.url}}/en/">Overview</a></li>

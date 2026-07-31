@@ -1,9 +1,6 @@
-.collection-form.is-enhanced .form-step{display:none}
-.collection-form.is-enhanced .form-step.is-active{display:block;animation:formStepIn .28s ease-out}
+/* Formulário de coleta em TELA ÚNICA (31/07/2026): o assistente em 3 passos
+   saiu; restam o guarda-chuva sem-JS (fim do arquivo) e as ações do envio. */
 .form-actions{display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-top:22px}
-.button-back{background:transparent;color:var(--teal);border:1px solid var(--line)}
-.button-back:hover{background:var(--soft);color:var(--teal)}
-@keyframes formStepIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @media(max-width:620px){.form-actions{align-items:stretch}.form-actions .button{flex:1;padding:0 14px}}
 .page-hero{background:var(--teal);color:#fff;padding:105px 0 85px;overflow:hidden;position:relative}
 .page-hero:after{content:"";position:absolute;width:540px;height:540px;border:1px solid rgba(126,188,43,.24);border-radius:50%;right:-160px;top:-300px}

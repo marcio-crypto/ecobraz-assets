@@ -53,12 +53,37 @@ for (const match of sourceText.matchAll(/href=["'](?:{{@site\.url}})?\/([^?#"'\s
   if (route && !knownSlugs.has(route)) warnings.push(`Internal link target not managed by page sync: /${route}/`);
 }
 
-const form = fs.readFileSync(path.join(root, 'custom-agendamento.hbs'), 'utf8');
-for (const required of ['Eletrodomésticos', 'Cabos e fios', 'Informática e TI', 'Servidores e data center']) {
-  if (!form.includes(`<option>${required}</option>`)) errors.push(`Collection form missing category: ${required}`);
-}
-for (const requiredField of ['profile', 'material_category', 'volume', 'material_description', 'postal_code', 'city', 'state', 'name', 'email', 'phone', 'service_consent']) {
-  if (!form.includes(`name="${requiredField}"`)) errors.push(`Collection form missing required field: ${requiredField}`);
+// Contrato do formulário de coleta (TELA ÚNICA, 31/07/2026): todos os campos
+// numa tela só, perfil como alternador com pessoa física pré-selecionada,
+// nada de assistente em passos. Vale para o PT e para o espelho EN.
+const collectionForms = [
+  ['custom-agendamento.hbs', true],
+  ['page-request-a-collection.hbs', false]
+];
+for (const [formFile, isPt] of collectionForms) {
+  const form = fs.readFileSync(path.join(root, formFile), 'utf8');
+  if (isPt) {
+    for (const required of ['Eletrodomésticos', 'Cabos e fios', 'Informática e TI', 'Servidores e data center']) {
+      if (!form.includes(`<option>${required}</option>`)) errors.push(`${formFile}: collection form missing category: ${required}`);
+    }
+  } else {
+    // O EN traduz o rótulo mas envia o valor PT que o Worker espera.
+    for (const required of ['Eletrodomésticos', 'Cabos e fios', 'Informática e TI', 'Servidores e data center']) {
+      if (!form.includes(`value="${required}"`)) errors.push(`${formFile}: collection form missing category value: ${required}`);
+    }
+  }
+  for (const requiredField of ['profile', 'material_category', 'volume', 'material_description', 'postal_code', 'city', 'state', 'name', 'email', 'phone', 'service_consent']) {
+    if (!form.includes(`name="${requiredField}"`)) errors.push(`${formFile}: collection form missing required field: ${requiredField}`);
+  }
+  // Tela única: o assistente em passos não pode voltar.
+  for (const forbidden of ['data-form-step', 'data-next-step', 'data-prev-step']) {
+    if (form.includes(forbidden)) errors.push(`${formFile}: wizard markup is back (${forbidden}) — the form must stay single-screen`);
+  }
+  // Perfil pré-selecionado (pessoa física = maior tráfego) no alternador.
+  if (!form.includes('value="pessoa_fisica" checked')) errors.push(`${formFile}: profile toggle must preselect pessoa_fisica`);
+  if (!form.includes('data-collection-form')) errors.push(`${formFile}: missing data-collection-form hook`);
+  if (!form.includes('data-form-status')) errors.push(`${formFile}: missing data-form-status hook`);
+  if (!form.includes('name="website"')) errors.push(`${formFile}: missing anti-spam honeypot field`);
 }
 
 const redirectsText = fs.readFileSync(path.join(root, 'redirects.yaml'), 'utf8');
