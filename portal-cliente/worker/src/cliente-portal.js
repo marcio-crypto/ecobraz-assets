@@ -26,6 +26,57 @@ export function colunaClienteDe(status, etapaOp, validado) {
   return 'transporte'; // em_transporte / na_unidade sem operação registrada ainda
 }
 
+// ===== Multi-usuário por cliente (gestores) com níveis de acesso =====
+// Cada CNPJ pode ter vários gestores. O login principal do cliente (resolvido pela
+// base) é ADMIN; gestores cadastrados têm o nível gravado. Additivo: só entra em cena
+// quando o e-mail NÃO é da base — a base sempre tem precedência (sem sequestro de conta).
+export const NIVEIS = {
+  ver: { rotulo: 'Somente visualizar', desc: 'Vê o quadro e a linha do tempo. Não baixa documentos.' },
+  baixar: { rotulo: 'Visualizar e baixar', desc: 'Vê tudo e baixa Carta, MTR, CDF e laudos.' },
+  admin: { rotulo: 'Administrador', desc: 'Tudo acima + cadastra e remove os gestores do cliente.' },
+};
+const normalizarNivel = (v) => (NIVEIS[v] ? v : 'ver');
+const soDoc = (s) => String(s || '').replace(/\D/g, '');
+
+export async function lerGestores(env, doc) {
+  const d = soDoc(doc);
+  if (!env || !env.PORTAL_KV || !d) return { doc: d, empresaNome: '', gestores: [] };
+  try { const raw = await env.PORTAL_KV.get(`cligest:${d}`); const o = raw ? JSON.parse(raw) : null; return (o && Array.isArray(o.gestores)) ? { doc: d, empresaNome: o.empresaNome || '', gestores: o.gestores } : { doc: d, empresaNome: '', gestores: [] }; } catch { return { doc: d, empresaNome: '', gestores: [] }; }
+}
+// Login: dado um e-mail, devolve o cliente (CNPJ) do qual ele é gestor + o nível.
+export async function gestorPorEmail(env, email) {
+  const em = String(email || '').trim().toLowerCase();
+  if (!env || !env.PORTAL_KV || !em) return null;
+  let d = ''; try { d = await env.PORTAL_KV.get(`cligestmail:${em}`); } catch { d = ''; }
+  if (!d) return null;
+  const g = await lerGestores(env, d);
+  const found = (g.gestores || []).find((x) => x.email === em);
+  return found ? { doc: g.doc, empresaNome: g.empresaNome, gestor: found } : null;
+}
+export async function salvarGestor(env, doc, empresaNome, dados) {
+  const d = soDoc(doc);
+  if (!env.PORTAL_KV || !d) return { erro: 'Indisponível.' };
+  const email = String((dados && dados.email) || '').trim().toLowerCase();
+  if (!/^\S+@\S+\.\S+$/.test(email)) return { erro: 'Informe um e-mail válido.' };
+  const g = await lerGestores(env, d);
+  const rec = { email, nome: String((dados && dados.nome) || '').replace(/[<>]/g, '').slice(0, 100), papel: String((dados && dados.papel) || '').slice(0, 60), nivel: normalizarNivel(dados && dados.nivel) };
+  const i = g.gestores.findIndex((x) => x.email === email);
+  if (i >= 0) g.gestores[i] = rec; else g.gestores.push(rec);
+  if (g.gestores.length > 30) return { erro: 'Limite de 30 gestores por cliente.' };
+  await env.PORTAL_KV.put(`cligest:${d}`, JSON.stringify({ doc: d, empresaNome: empresaNome || g.empresaNome || '', gestores: g.gestores }), { expirationTtl: 60 * 60 * 24 * 1825 });
+  await env.PORTAL_KV.put(`cligestmail:${email}`, d, { expirationTtl: 60 * 60 * 24 * 1825 });
+  return { ok: true };
+}
+export async function removerGestor(env, doc, email) {
+  const d = soDoc(doc), em = String(email || '').trim().toLowerCase();
+  if (!env.PORTAL_KV || !d) return { erro: 'Indisponível.' };
+  const g = await lerGestores(env, d);
+  g.gestores = g.gestores.filter((x) => x.email !== em);
+  await env.PORTAL_KV.put(`cligest:${d}`, JSON.stringify({ doc: d, empresaNome: g.empresaNome, gestores: g.gestores }));
+  try { await env.PORTAL_KV.delete(`cligestmail:${em}`); } catch { /* ok */ }
+  return { ok: true };
+}
+
 const CSS = `*{box-sizing:border-box}body{margin:0;font-family:'Helvetica Neue',Arial,'Segoe UI',sans-serif;background:#F2F6F4;color:#10262B}
 a{color:#0B5B66}
 .appbar{background:#00333B;padding:14px 20px}
