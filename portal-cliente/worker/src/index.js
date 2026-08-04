@@ -49,7 +49,7 @@ import { sondaMTR, consultarMtrSigor, baixarPdfManifesto } from './mtr.js';
 import { listarMtrs, lerMtr, salvarMtr, mudarStatusMtr, definirPdfMtr, removerMtr, dadosDMR, paginaMtrLista, paginaMtrForm, paginaMtrDetalhe, paginaDMR, sincronizarMtrDaOS, removerMtrDaOS, importarMtrsDasOSs } from './gestao-mtr.js';
 import { dadosCronograma, paginaCronograma, salvarSla } from './cronograma.js';
 import { paginaAcompanhamento, colunaClienteDe, lerGestores, gestorPorEmail, salvarGestor, removerGestor, NIVEIS, paginaGestores } from './cliente-portal.js';
-import { DEMO_CLIENTE_HTML } from './demo-cliente.js';
+import { DEMO_CLIENTE_HTML, DEMO_OG_PNG_B64 } from './demo-cliente.js';
 import { acharPacote, precoPacote, acharModuloAdote, precoModuloAdote, paginaLojaAdote, paginaObrigadoAdote, paginaDiagnostico, lerCredito, salvarCredito, novoCredito, aplicarCompra, aplicarRecarga, precisaRecarga, listarPatrocinadores, resumoPatrocinio, lerCreditoPorDoc } from './adote.js';
 import { paginaLojaESG, paginaESGContato, paginaESGObrigado, relatorioESG, precoRelatorioESG } from './esg.js';
 import { statusDaEtapa, valorProp, CAMPOS_OS } from './os-utils.js';
@@ -176,7 +176,17 @@ export default {
       if (pathname === '/calculadora' && request.method === 'GET') return html(paginaCalculadora());
       // Demonstração pública e ISOLADA do Portal do Cliente (ferramenta de marketing).
       // Sem login, sem back-end, sem pagamento — nada aqui toca o sistema real.
-      if ((pathname === '/demo' || pathname === '/demonstracao') && request.method === 'GET') return html(DEMO_CLIENTE_HTML);
+      if ((pathname === '/demo' || pathname === '/demonstracao') && (request.method === 'GET' || request.method === 'HEAD')) {
+        if (request.method === 'HEAD') return new Response(null, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } });
+        return html(DEMO_CLIENTE_HTML);
+      }
+      // Imagem de preview social (Open Graph) da demonstração.
+      if (pathname === '/demo/og.png' && (request.method === 'GET' || request.method === 'HEAD')) {
+        if (request.method === 'HEAD') return new Response(null, { status: 200, headers: { 'content-type': 'image/png' } });
+        return servirLogo(DEMO_OG_PNG_B64);
+      }
+      // Métrica da demonstração — SEM dados pessoais (só contadores por dia/evento). Beacon.
+      if (pathname === '/demo/ev' && request.method === 'POST') return registrarEventoDemo(request, env);
       // Loja de carbono — 4 níveis × faixa de faturamento (anual). Preços aprovados (a refinar c/ Villanova).
       if (pathname === '/carbono/planos' && request.method === 'GET') return html(paginaLojaCarbono(url.searchParams.get('faixa') || ''));
       if (pathname === '/carbono/contato' && request.method === 'GET') return html(paginaCarbonoContato(nivelCarbono(url.searchParams.get('nivel') || ''), url.searchParams.get('faixa') || ''));
@@ -4086,6 +4096,27 @@ function html(markup, status = 200) { return new Response(markup, { status, head
 function servirLogo(b64) {
   const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
   return new Response(bytes, { headers: { 'content-type': 'image/png', 'cache-control': 'public, max-age=604800' } });
+}
+// Métrica da demonstração pública — armazena APENAS contadores agregados por dia/evento.
+// Nunca grava IP, user-agent, cookies, e-mail ou qualquer dado pessoal.
+const DEMO_EVENTS = new Set(['demo_view', 'demo_enter', 'demo_section_view', 'demo_cta_click']);
+async function registrarEventoDemo(request, env) {
+  try {
+    if (!env.PORTAL_KV) return new Response(null, { status: 204 });
+    let b; try { b = await request.json(); } catch { b = {}; }
+    const ev = String((b && b.e) || '');
+    if (!DEMO_EVENTS.has(ev)) return new Response(null, { status: 204 });
+    const dia = new Date().toISOString().slice(0, 10);
+    const sec = String((b && b.s) || '').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 24);
+    const src = String((b && b.utm_source) || '').toLowerCase().replace(/[^a-z0-9_.-]/g, '').slice(0, 40);
+    const bump = async (k) => {
+      try { const cur = parseInt((await env.PORTAL_KV.get(k)) || '0', 10) || 0; await env.PORTAL_KV.put(k, String(cur + 1), { expirationTtl: 150 * 86400 }); } catch { /* ok */ }
+    };
+    await bump(`demoev:${dia}:${ev}`);
+    if (ev === 'demo_section_view' && sec) await bump(`demoev:${dia}:sec:${sec}`);
+    if (src) await bump(`demoev:${dia}:src:${src}`);
+    return new Response(null, { status: 204 });
+  } catch { return new Response(null, { status: 204 }); }
 }
 function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 // Página do Pix nativo: QR Code + copia-e-cola, com verificação automática do pagamento.
