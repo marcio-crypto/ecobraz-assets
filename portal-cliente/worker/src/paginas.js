@@ -244,6 +244,12 @@ export function paginaPainel({ nome, email, dataFim, whatsapp, segmento }) {
     <div class="kpi"><span class="kpi-label">Pegada de carbono</span><a class="kpi-num ok" href="/painel-carbono" style="font-size:20px;text-decoration:none">Ver painel →</a><span class="kpi-hint">termômetro de neutralidade</span></div>
   </section>
 
+  <a href="/acompanhamento" style="display:flex;align-items:center;gap:12px;background:#00333B;border-radius:12px;padding:13px 16px;margin:0 0 14px;text-decoration:none">
+    <span style="font-size:22px">🗂️</span>
+    <span style="min-width:0;flex:1;font-size:13px;color:#cfe3e0;line-height:1.4"><b style="color:#fff">Acompanhamento em tempo real</b> — quadro (Kanban) dos seus lotes, cronograma e central de downloads (Carta, MTR, CDF e laudos), só do seu CNPJ.</span>
+    <span style="flex:none;font-size:12px;font-weight:800;background:#92C430;color:#10262B;border-radius:8px;padding:7px 12px">Abrir →</span>
+  </a>
+
   <a href="/adote" style="display:flex;align-items:center;gap:12px;background:#F3FAEA;border:1px solid #D9EDBB;border-radius:12px;padding:11px 16px;margin:0 0 16px;text-decoration:none">
     <span style="font-size:20px">🌱</span>
     <span style="min-width:0;flex:1;font-size:13px;color:#3F5A34;line-height:1.4"><b style="color:#2E4A24">Adote um Bairro:</b> patrocine coletas com o selo da sua empresa e mostre o impacto no seu termômetro.</span>

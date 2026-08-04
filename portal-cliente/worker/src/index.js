@@ -48,6 +48,7 @@ import { MANUAL_COMERCIAL_B64, MANUAL_MOTORISTA_B64, MANUAL_DOCA_B64, MANUAL_ENG
 import { sondaMTR, consultarMtrSigor, baixarPdfManifesto } from './mtr.js';
 import { listarMtrs, lerMtr, salvarMtr, mudarStatusMtr, definirPdfMtr, removerMtr, dadosDMR, paginaMtrLista, paginaMtrForm, paginaMtrDetalhe, paginaDMR, sincronizarMtrDaOS, removerMtrDaOS, importarMtrsDasOSs } from './gestao-mtr.js';
 import { dadosCronograma, paginaCronograma, salvarSla } from './cronograma.js';
+import { paginaAcompanhamento, colunaClienteDe } from './cliente-portal.js';
 import { acharPacote, precoPacote, acharModuloAdote, precoModuloAdote, paginaLojaAdote, paginaObrigadoAdote, paginaDiagnostico, lerCredito, salvarCredito, novoCredito, aplicarCompra, aplicarRecarga, precisaRecarga, listarPatrocinadores, resumoPatrocinio, lerCreditoPorDoc } from './adote.js';
 import { paginaLojaESG, paginaESGContato, paginaESGObrigado, relatorioESG, precoRelatorioESG } from './esg.js';
 import { statusDaEtapa, valorProp, CAMPOS_OS } from './os-utils.js';
@@ -2361,6 +2362,11 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         if (!sessao) return json({ ok: false, error: 'nao_autenticado' }, 401);
         return await baixarDocOS(url, sessao, env);
       }
+      // Portal de Grandes Contas — Acompanhamento (Kanban + cronograma + downloads).
+      if (pathname === '/acompanhamento' && request.method === 'GET') {
+        if (!sessao) return new Response(null, { status: 302, headers: { Location: '/', 'cache-control': 'no-store' } });
+        return html(paginaAcompanhamento(await dadosAcompanhamentoCliente(sessao, env)));
+      }
 
       return json({ ok: false, error: 'not_found' }, 404);
     } catch (error) {
@@ -3001,6 +3007,55 @@ async function listarOS(sessao, env) {
   return json({ ok: true, os: out });
 }
 
+// Monta os dados do Acompanhamento (Portal de Grandes Contas): Kanban + linha do
+// tempo + central de downloads, SÓ das coletas do CNPJ do cliente logado.
+async function dadosAcompanhamentoCliente(sessao, env) {
+  const doc = String(sessao.documento || '').replace(/\D/g, '');
+  const empresa = sessao.nome || sessao.email || '';
+  const cards = [];
+  const resumo = { total: 0, aguardando: 0, transporte: 0, processamento: 0, finalizado: 0, concluido: 0 };
+  const LAUDO_TIPOS = ['Laudo de Descaracterização', 'Laudo de Destruição de Dados', 'Laudo de Análise Química', 'Laudo fotográfico', 'Laudo de Sanitização', 'Certificado de Destinação', 'Foto do material / local'];
+  const iconeLaudo = (t) => /Destruição de Dados/i.test(t) ? '🔒' : /Descaracterização/i.test(t) ? '🧰' : /Análise Química/i.test(t) ? '🧪' : /fotográfico|Foto/i.test(t) ? '🖼️' : /Sanitiza/i.test(t) ? '🧼' : /Certificado/i.test(t) ? '🏅' : '📋';
+  if (!env.PORTAL_KV || !doc) return { empresa, doc, cards, resumo };
+  let idx = []; try { idx = await listarColetasOS(env); } catch { idx = []; }
+  for (const c of idx) {
+    if (String(c.clienteDoc || '').replace(/\D/g, '') !== doc) continue;
+    if (c.status === 'cancelada') continue;
+    let os = null, op = null, val = null;
+    try { os = await lerColetaOS(env, c.id); } catch { /* pula */ }
+    if (!os) continue;
+    try { op = await lerOperacao(env, os.id); } catch { /* sem operação ainda */ }
+    try { if (op) val = await lerValidacaoOp(env, os.id); } catch { /* ok */ }
+    const validado = !!(op && op.etapa === 'concluida' && val && val.decisao === 'validada');
+    const coluna = colunaClienteDe(os.status, op && op.etapa, validado);
+    resumo.total++; resumo[coluna] = (resumo[coluna] || 0) + 1;
+    const docs = [];
+    if (['em_transporte', 'na_unidade', 'concluida'].includes(os.status)) {
+      docs.push({ nome: 'Ordem de Coleta', icone: '📄', href: `/api/os/doc?docId=${encodeURIComponent(os.id)}&fonte=os-comprovante` });
+      docs.push({ nome: 'Carta de Descarte', icone: '📄', href: `/api/os/doc?docId=${encodeURIComponent(os.id)}&fonte=os-carta` });
+      docs.push({ nome: 'Manifesto de Transporte (MTR)', icone: '🏛️', href: `/api/os/doc?docId=${encodeURIComponent(os.id)}&fonte=os-manifesto` });
+      if (validado) docs.push({ nome: 'Certificado de Destinação Final (CDF)', icone: '🏅', href: `/api/os/doc?docId=${encodeURIComponent(os.id)}&fonte=os-cdf` });
+      for (const a of (Array.isArray(os.anexos) ? os.anexos : [])) {
+        if (a.tipo && LAUDO_TIPOS.includes(a.tipo) && a.key) docs.push({ nome: a.tipo, icone: iconeLaudo(a.tipo), href: `/api/os/doc?os=${encodeURIComponent(os.id)}&docId=${encodeURIComponent(a.key)}&fonte=os-anexo` });
+      }
+    }
+    let dias = null; try { if (os.criadoEm) dias = Math.max(0, Math.floor((Date.now() - new Date(os.criadoEm).getTime()) / 86400000)); } catch { dias = null; }
+    const prazo = coluna === 'concluido'
+      ? { dot: '✓', rotulo: 'concluído', cor: '#1E5B31' }
+      : (dias == null ? null : (dias > 15 ? { dot: '🔴', rotulo: 'atrasado', cor: '#B23A2E' } : (dias > 7 ? { dot: '🟡', rotulo: 'atenção', cor: '#8A6A16' } : { dot: '🟢', rotulo: 'no prazo', cor: '#1E5B31' })));
+    cards.push({
+      id: os.id, numero: os.numero || '', local: String(os.endereco || '').slice(0, 52),
+      coluna, dataColeta: os.dataAgendada || '', criadoEm: os.criadoEm || '',
+      recebidoEm: (op && op.criadoEm) || '',
+      processadoEm: (op && ['processamento', 'saida', 'validacao', 'concluida'].includes(op.etapa)) ? (op.atualizadoEm || '') : '',
+      cdfEm: validado ? ((val && val.em) || '') : '',
+      docs, prazo,
+    });
+  }
+  cards.sort((a, b) => String(b.criadoEm || '').localeCompare(String(a.criadoEm || '')));
+  return { empresa, doc, cards, resumo };
+}
+
 // Resolve um cliente pelo id da lista de Cadastro: 'p'+ploomes = base D1 (migrado);
 // emp_/pf_ = registro KV (novo/editado). Devolve o objeto "cli".
 async function carregarClientePorId(env, id) {
@@ -3139,6 +3194,24 @@ async function baixarDocOS(url, sessao, env) {
     if (fonte !== 'os-comprovante' && !os.veiculoPlaca) { try { os.veiculoPlaca = await placaDaColeta(env, os); } catch { /* ok */ } }
     let regCli = null, fotoCli = '', assCli = ''; if (fonte === 'os-carta') { try { const e = await lerEstadoColeta(env, os.id); regCli = { checkin: e && e.checkin, foto: e && e.foto, encerramento: e && e.encerramento, assinatura: e && e.assinatura }; const seloC = await seloOS(os.id, env); fotoCli = `/coletas/foto-motorista?id=${encodeURIComponent(os.id)}&t=${seloC}`; assCli = `/coletas/assinatura-motorista?id=${encodeURIComponent(os.id)}&t=${seloC}`; } catch { regCli = null; } }
     return html(fonte === 'os-comprovante' ? paginaComprovanteOS(os, selo) : (fonte === 'os-carta' ? paginaCartaDescarte(os, selo, regCli, fotoCli, assCli) : paginaManifestoCarga(os, selo)));
+  }
+  // Laudo/anexo tipado de uma coleta (descaracterização, destruição de dados, foto…).
+  // Segurança: a OS tem que ser do CNPJ do cliente, estar liberada, e a chave PRECISA
+  // constar em os.anexos (impede acesso a chave arbitrária). Serve o arquivo do R2.
+  if (fonte === 'os-anexo') {
+    const coletaId = String(url.searchParams.get('os') || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40);
+    const anexoKey = String(url.searchParams.get('docId') || '').replace(/[^a-zA-Z0-9/_.-]/g, '').slice(0, 200);
+    const os = coletaId ? await lerColetaOS(env, coletaId) : null;
+    if (!os) return json({ ok: false, error: 'nao_encontrado' }, 404);
+    if (!doc || String(os.clienteDoc || '').replace(/\D/g, '') !== doc) return json({ ok: false, error: 'sem_permissao' }, 403);
+    if (!['em_transporte', 'na_unidade', 'concluida'].includes(os.status)) return json({ ok: false, error: 'nao_liberado' }, 403);
+    const anexo = (Array.isArray(os.anexos) ? os.anexos : []).find((a) => a.key === anexoKey);
+    if (!anexo) return json({ ok: false, error: 'nao_encontrado' }, 404);
+    if (!env.R2_ARQUIVOS) return json({ ok: false, error: 'indisponivel' }, 503);
+    const obj = await env.R2_ARQUIVOS.get(anexoKey);
+    if (!obj) return json({ ok: false, error: 'indisponivel' }, 404);
+    const ct = (obj.httpMetadata && obj.httpMetadata.contentType) || anexo.content_type || 'application/octet-stream';
+    return new Response(obj.body, { headers: { 'content-type': ct, 'cache-control': 'private, no-store', 'content-disposition': 'inline' } });
   }
   const key = String(url.searchParams.get('docId') || '').replace(/[^a-zA-Z0-9/_.-]/g, '').slice(0, 200);
   if (fonte !== 'r2' || !key) return json({ ok: false, error: 'sem_id' }, 400);
