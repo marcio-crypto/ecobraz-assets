@@ -283,6 +283,7 @@ export function paginaAcompanhamento(dados) {
       '<div class="sh"><div><div style="font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#9FC6C1">Ordem de Serviço</div><div style="font-size:17px;font-weight:800">'+esc(c.numero||'OS')+'</div></div><button onclick="fechar()" style="background:none;border:0;color:#9FC6C1;font-size:22px;cursor:pointer;line-height:1">×</button></div>'+
       '<div class="sb">'+
         (c.local?'<div style="font-size:12.5px;color:#4F6469;margin-bottom:12px">📍 '+esc(c.local)+'</div>':'')+
+        (c.rastrear?'<a class="dl" href="'+c.rastrear+'" target="_blank" rel="noopener" style="background:#92C430;color:#10262B;border-color:#92C430;margin-bottom:12px"><span class="nm">🛰️ Rastrear o caminhão ao vivo</span><span class="go">abrir ↗</span></a>':'')+
         '<div style="font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#8fa39f;margin-bottom:10px">Linha do tempo</div>'+
         '<div class="tl">'+tl+'</div>'+
         '<div style="font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#8fa39f;margin:16px 0 10px">Documentos e laudos</div>'+

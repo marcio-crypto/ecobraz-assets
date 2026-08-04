@@ -3086,6 +3086,7 @@ async function dadosAcompanhamentoCliente(sessao, env) {
       processadoEm: (op && ['processamento', 'saida', 'validacao', 'concluida'].includes(op.etapa)) ? (op.atualizadoEm || '') : '',
       cdfEm: validado ? ((val && val.em) || '') : '',
       docs, prazo,
+      rastrear: (rastreioDisponivel(env) && os.status === 'em_transporte') ? ('/rastreio?os=' + encodeURIComponent(os.id)) : '',
     });
   }
   cards.sort((a, b) => String(b.criadoEm || '').localeCompare(String(a.criadoEm || '')));
