@@ -77,6 +77,83 @@ export async function removerGestor(env, doc, email) {
   return { ok: true };
 }
 
+// Tela de gestão de usuários (só o admin da conta do cliente vê). Página completa.
+export function paginaGestores(dados) {
+  const d = dados || {};
+  const gest = Array.isArray(d.gestores) ? d.gestores : [];
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const rot = (n) => (NIVEIS[n] || NIVEIS.ver).rotulo;
+  const linhas = gest.length ? gest.map((g) => `
+    <tr><td><b>${esc(g.nome || '—')}</b><br><span class="mut">${esc(g.email)}</span></td>
+      <td>${esc(g.papel || '')}</td>
+      <td><span class="pill">${esc(rot(g.nivel))}</span></td>
+      <td style="text-align:right"><button class="rm" onclick="remover('${esc(g.email)}')">Remover</button></td></tr>`).join('')
+    : '<tr><td colspan="4" class="mut" style="padding:16px">Nenhum usuário adicional ainda. Cadastre abaixo.</td></tr>';
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Usuários & acessos — Ecobraz</title>
+   <style>
+    body{margin:0;background:#eef3f1;color:#12314a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif}
+    .wrap{max-width:820px;margin:0 auto;padding:26px 18px}
+    .top a{color:#15803d;text-decoration:none;font-weight:700;font-size:13px}
+    h1{font-size:22px;color:#0b2136;margin:8px 0 2px}
+    .sub{color:#5b7186;font-size:13.5px;margin-bottom:20px}
+    .mut{color:#5b7186;font-size:12px}
+    .card{background:#fff;border:1px solid #e6edf2;border-radius:14px;box-shadow:0 10px 26px rgba(11,33,54,.06);padding:18px;margin-bottom:18px}
+    table{width:100%;border-collapse:collapse}
+    th{text-align:left;color:#5b7186;font-size:12px;font-weight:700;padding:8px 10px;border-bottom:2px solid #eef2f4}
+    td{padding:11px 10px;border-bottom:1px solid #eef2f4;font-size:13.5px;vertical-align:top}
+    tr:last-child td{border-bottom:none}
+    .pill{background:#dcfce7;color:#166534;font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px}
+    .rm{background:#fff;border:1px solid #f0c9c9;color:#b91c1c;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer}
+    label{display:block;font-size:12.5px;font-weight:700;color:#0b2136;margin:12px 0 5px}
+    input,select{width:100%;border:1px solid #dbe3ea;border-radius:10px;padding:11px 12px;font-size:14px;background:#fbfdfe;box-sizing:border-box;font-family:inherit}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .btn{margin-top:16px;background:linear-gradient(90deg,#31a354,#059669);color:#fff;border:none;border-radius:10px;padding:12px 18px;font-size:14px;font-weight:800;cursor:pointer}
+    @media(max-width:560px){.grid{grid-template-columns:1fr}}
+   </style></head><body>
+   <div class="wrap">
+     <div class="top"><a href="/painel">← Voltar ao portal</a></div>
+     <h1>Usuários &amp; acessos</h1>
+     <div class="sub">${esc(d.empresaNome || 'Sua empresa')} — cada pessoa com o seu nível de acesso. Restrito ao seu CNPJ.</div>
+     <div class="card"><table><thead><tr><th>Usuário</th><th>Função</th><th>Nível</th><th></th></tr></thead><tbody>${linhas}</tbody></table></div>
+     <div class="card">
+       <h3 style="margin:0 0 4px;color:#0b2136;font-size:16px">Adicionar / atualizar usuário</h3>
+       <div class="mut" style="margin-bottom:6px">Níveis: <b>Ver</b> (acompanha) · <b>Ver + baixar</b> (baixa documentos) · <b>Administrador</b> (gerencia usuários).</div>
+       <div class="grid">
+         <div><label>Nome</label><input id="g-nome" placeholder="Nome da pessoa"></div>
+         <div><label>E-mail</label><input id="g-email" type="email" placeholder="email@empresa.com"></div>
+       </div>
+       <div class="grid">
+         <div><label>Função (opcional)</label><input id="g-papel" placeholder="Ex.: Gestor Ambiental"></div>
+         <div><label>Nível de acesso</label><select id="g-nivel">
+           <option value="ver">Ver — acompanha as coletas</option>
+           <option value="baixar">Ver + baixar documentos</option>
+           <option value="admin">Administrador (gerencia usuários)</option>
+         </select></div>
+       </div>
+       <button class="btn" onclick="salvar()">Salvar usuário</button>
+       <div class="mut" style="margin-top:12px">🔒 O usuário entra sem senha (link seguro ou Google) e vê apenas os dados do seu CNPJ.</div>
+     </div>
+   </div>
+   <script>
+     async function salvar(){
+       var nome=document.getElementById('g-nome').value.trim();
+       var email=document.getElementById('g-email').value.trim().toLowerCase();
+       var papel=document.getElementById('g-papel').value.trim();
+       var nivel=document.getElementById('g-nivel').value;
+       if(!/^\\S+@\\S+\\.\\S+$/.test(email)){alert('Informe um e-mail válido.');return;}
+       var r=await fetch('/api/gestores/salvar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({nome:nome,email:email,papel:papel,nivel:nivel})});
+       var j=await r.json().catch(function(){return {};});
+       if(j.ok){location.reload();}else{alert(j.message||j.erro||'Não foi possível salvar.');}
+     }
+     async function remover(email){
+       if(!confirm('Remover o acesso de '+email+'?'))return;
+       var r=await fetch('/api/gestores/remover',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:email})});
+       var j=await r.json().catch(function(){return {};});
+       if(j.ok){location.reload();}else{alert(j.message||'Não foi possível remover.');}
+     }
+   </script></body></html>`;
+}
+
 const CSS = `*{box-sizing:border-box}body{margin:0;font-family:'Helvetica Neue',Arial,'Segoe UI',sans-serif;background:#F2F6F4;color:#10262B}
 a{color:#0B5B66}
 .appbar{background:#00333B;padding:14px 20px}

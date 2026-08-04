@@ -181,7 +181,7 @@ async function enviar(e){e.preventDefault();
 </script></body></html>`;
 }
 
-export function paginaPainel({ nome, email, dataFim, whatsapp, segmento }) {
+export function paginaPainel({ nome, email, dataFim, whatsapp, segmento, nivel }) {
   const primeiro = esc((nome || '').split(/\s+/)[0] || 'cliente');
   const empresa = esc(nome || 'Sua empresa');
   // WhatsApp do comercial (pedido do Marcio): número oficial do site; o env
@@ -219,6 +219,7 @@ export function paginaPainel({ nome, email, dataFim, whatsapp, segmento }) {
     <span class="appbar-tag">Portal do Cliente</span>
     <div class="appbar-right">
       <span class="appbar-user" title="${esc(email)}">${empresa}</span>
+      ${nivel === 'admin' ? '<a class="btn-ghost" href="/gestores" style="text-decoration:none;display:inline-flex;align-items:center;gap:5px">👥 Usuários</a>' : ''}
       <form method="post" action="/api/auth/sair" style="margin:0"><button class="btn-ghost" type="submit">Sair</button></form>
     </div>
   </div>

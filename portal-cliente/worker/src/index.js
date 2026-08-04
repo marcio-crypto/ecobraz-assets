@@ -48,7 +48,7 @@ import { MANUAL_COMERCIAL_B64, MANUAL_MOTORISTA_B64, MANUAL_DOCA_B64, MANUAL_ENG
 import { sondaMTR, consultarMtrSigor, baixarPdfManifesto } from './mtr.js';
 import { listarMtrs, lerMtr, salvarMtr, mudarStatusMtr, definirPdfMtr, removerMtr, dadosDMR, paginaMtrLista, paginaMtrForm, paginaMtrDetalhe, paginaDMR, sincronizarMtrDaOS, removerMtrDaOS, importarMtrsDasOSs } from './gestao-mtr.js';
 import { dadosCronograma, paginaCronograma, salvarSla } from './cronograma.js';
-import { paginaAcompanhamento, colunaClienteDe } from './cliente-portal.js';
+import { paginaAcompanhamento, colunaClienteDe, lerGestores, gestorPorEmail, salvarGestor, removerGestor, NIVEIS, paginaGestores } from './cliente-portal.js';
 import { DEMO_CLIENTE_HTML } from './demo-cliente.js';
 import { acharPacote, precoPacote, acharModuloAdote, precoModuloAdote, paginaLojaAdote, paginaObrigadoAdote, paginaDiagnostico, lerCredito, salvarCredito, novoCredito, aplicarCompra, aplicarRecarga, precisaRecarga, listarPatrocinadores, resumoPatrocinio, lerCreditoPorDoc } from './adote.js';
 import { paginaLojaESG, paginaESGContato, paginaESGObrigado, relatorioESG, precoRelatorioESG } from './esg.js';
@@ -670,7 +670,7 @@ export default {
           let cli = null;
           try { cli = await buscarClienteBase(g.email, env); } catch (error) { console.error('google_cliente_lookup', safeError(error)); }
           if (cli && cli.liberado) {
-            const s = await criarToken({ cid: cli.contactId, emp: cli.empresaId, em: cli.email, nome: cli.nome, fim: cli.dataFim || '', doc: cli.documento || '', tipo: 'sessao' }, SESSAO_TTL_S, env);
+            const s = await criarToken({ cid: cli.contactId, emp: cli.empresaId, em: cli.email, nome: cli.nome, fim: cli.dataFim || '', doc: cli.documento || '', nvl: cli.nivel || 'admin', tipo: 'sessao' }, SESSAO_TTL_S, env);
             headers.append('Set-Cookie', cookieSessao(s.valor, SESSAO_TTL_S));
             destinos.push(['Portal do cliente', '/']);
           }
@@ -2371,6 +2371,29 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         if (!sessao) return new Response(null, { status: 302, headers: { Location: '/', 'cache-control': 'no-store' } });
         return html(paginaAcompanhamento(await dadosAcompanhamentoCliente(sessao, env)));
       }
+      // Multiusuário por cliente (gestores) — só o ADMIN da conta (login principal) gerencia.
+      if (pathname === '/gestores' && request.method === 'GET') {
+        if (!sessao) return new Response(null, { status: 302, headers: { Location: '/', 'cache-control': 'no-store' } });
+        if (sessao.nivel !== 'admin') return html(paginaMensagem('Acesso restrito', 'Só o administrador da conta da sua empresa pode gerenciar usuários e níveis de acesso.', '/painel'), 403);
+        const g = await lerGestores(env, sessao.documento);
+        return html(paginaGestores({ empresaNome: g.empresaNome || sessao.nome || '', doc: g.doc, gestores: g.gestores, email: sessao.email, nome: sessao.nome }));
+      }
+      if (pathname === '/api/gestores/salvar' && request.method === 'POST') {
+        if (!sessao) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        if (sessao.nivel !== 'admin') return json({ ok: false, error: 'sem_permissao', message: 'Só o administrador da conta pode gerenciar usuários.' }, 403);
+        let input; try { input = await request.json(); } catch { return json({ ok: false, message: 'Dados inválidos.' }, 400); }
+        const email = String(input?.email || '').trim().toLowerCase();
+        if (!/^\S+@\S+\.\S+$/.test(email)) return json({ ok: false, message: 'Informe um e-mail válido.' }, 400);
+        const r = await salvarGestor(env, sessao.documento, sessao.nome || '', { nome: input?.nome, papel: input?.papel, nivel: input?.nivel, email });
+        return json(r && r.erro ? { ok: false, message: r.erro } : { ok: true });
+      }
+      if (pathname === '/api/gestores/remover' && request.method === 'POST') {
+        if (!sessao) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        if (sessao.nivel !== 'admin') return json({ ok: false, error: 'sem_permissao' }, 403);
+        let input; try { input = await request.json(); } catch { return json({ ok: false, message: 'Dados inválidos.' }, 400); }
+        await removerGestor(env, sessao.documento, String(input?.email || ''));
+        return json({ ok: true });
+      }
 
       return json({ ok: false, error: 'not_found' }, 404);
     } catch (error) {
@@ -2396,7 +2419,7 @@ async function telaInicial(request, env) {
   if (!sessao) return html(paginaLogin(googleConfigurado(env)));
   let segmento = null;
   try { segmento = await segmentoDoCliente(env, sessao.documento); } catch { /* painel nunca depende do segmento */ }
-  return html(paginaPainel({ nome: sessao.nome, email: sessao.email, dataFim: sessao.dataFim || '', whatsapp: env.WHATSAPP_COMERCIAL || '', segmento }));
+  return html(paginaPainel({ nome: sessao.nome, email: sessao.email, dataFim: sessao.dataFim || '', whatsapp: env.WHATSAPP_COMERCIAL || '', segmento, nivel: sessao.nivel }));
 }
 
 // Tela "Entrar como…" — quando o e-mail tem mais de um acesso (os cookies de
@@ -2504,7 +2527,7 @@ async function entrarComToken(request, env, url) {
     return html(paginaMensagem('Acesso indisponível', 'Não encontramos seu cadastro na nossa base. Fale com a equipe da Ecobraz.', '/'), 403);
   }
 
-  const sessao = await criarToken({ cid: cliente.contactId, emp: cliente.empresaId, em: cliente.email, nome: cliente.nome, fim: cliente.dataFim || '', doc: cliente.documento || '', tipo: 'sessao' }, SESSAO_TTL_S, env);
+  const sessao = await criarToken({ cid: cliente.contactId, emp: cliente.empresaId, em: cliente.email, nome: cliente.nome, fim: cliente.dataFim || '', doc: cliente.documento || '', nvl: cliente.nivel || 'admin', tipo: 'sessao' }, SESSAO_TTL_S, env);
   return new Response(null, {
     status: 302,
     headers: { Location: '/', 'Set-Cookie': cookieSessao(sessao.valor, SESSAO_TTL_S) },
@@ -2521,7 +2544,7 @@ async function lerSessao(request, env) {
   const valor = decodeURIComponent(cookie.slice(SESSAO_COOKIE.length + 1));
   const payload = await verificarToken(valor, env);
   if (!payload || payload.tipo !== 'sessao') return null;
-  return { contactId: payload.cid, empresaId: payload.emp || payload.cid, email: payload.em, nome: payload.nome, dataFim: payload.fim, documento: payload.doc || '' };
+  return { contactId: payload.cid, empresaId: payload.emp || payload.cid, email: payload.em, nome: payload.nome, dataFim: payload.fim, documento: payload.doc || '', nivel: payload.nvl || 'admin' };
 }
 
 function cookieSessao(valor, maxAge) {
@@ -2868,6 +2891,7 @@ async function buscarClienteBase(email, env) {
           documento: (temEmpresa ? (row.emp_doc || row.doc_pessoa) : row.doc_pessoa) || '',
           dataFim: null,
           liberado: true, // sistema aberto a todos os clientes da base
+          nivel: 'admin', // login principal do cliente = administrador da conta (CNPJ)
         };
       }
     } catch (error) { console.error('base_lookup_falhou', safeError(error)); }
@@ -2882,11 +2906,19 @@ async function buscarClienteBase(email, env) {
         if (cli && emailsDoCliente(cli).includes(em)) {
           const nome = cli.tipo === 'PJ' ? (cli.razaoSocial || cli.nomeFantasia || '') : (cli.nome || '');
           const documento = String((cli.tipo === 'PJ' ? cli.cnpj : cli.cpf) || '').replace(/\D/g, '');
-          return { contactId: 0, empresaId: 0, nome, email: em, documento, dataFim: null, liberado: true };
+          return { contactId: 0, empresaId: 0, nome, email: em, documento, dataFim: null, liberado: true, nivel: 'admin' };
         }
       }
     } catch (error) { console.error('base_kv_lookup', safeError(error)); }
   }
+  // 3) Multiusuário: e-mail cadastrado como GESTOR por um cliente admin (por CNPJ).
+  //    Additivo — só entra em cena quando o e-mail NÃO está na base acima.
+  try {
+    const g = await gestorPorEmail(env, em);
+    if (g && g.gestor && g.doc) {
+      return { contactId: 0, empresaId: 0, nome: g.empresaNome || g.gestor.nome || '', email: em, documento: g.doc, dataFim: null, liberado: true, nivel: (g.gestor.nivel === 'admin' || g.gestor.nivel === 'baixar') ? g.gestor.nivel : 'ver' };
+    }
+  } catch (error) { console.error('gestor_lookup', safeError(error)); }
   return null;
 }
 
@@ -3177,6 +3209,8 @@ async function listarDocsOS(url, sessao, env) {
 // entrega o arquivo direto. Segurança: o arquivo tem que pertencer a um contato/negócio
 // com o MESMO documento do cliente logado, e o tipo passa pela allowlist.
 async function baixarDocOS(url, sessao, env) {
+  // Multiusuário — nível "ver" acompanha as coletas, mas não abre/baixa documentos.
+  if (sessao && sessao.nivel === 'ver') return json({ ok: false, error: 'sem_nivel', message: 'Seu acesso permite acompanhar as coletas. Para baixar documentos, peça ao administrador da sua empresa o nível “Baixar”.' }, 403);
   const doc = String(sessao.documento || '').replace(/\D/g, '');
   const cid = Number(sessao.contactId) || 0, emp = Number(sessao.empresaId) || 0;
   const fonte = url.searchParams.get('fonte') || '';
