@@ -63,6 +63,7 @@ export function paginaLoginAgente(googleOn) {
     <button id="b" style="width:100%;margin-top:12px;background:#92C430;color:#10262B;border:none;border-radius:12px;padding:15px;font-size:15px;font-weight:800;">Entrar</button>
     ${googleOn ? `<div style="text-align:center;color:#9aa7a4;font-size:12px;margin:14px 0 10px;">ou</div>${botaoGoogle('agente')}` : ''}
     <div id="m" style="font-size:13px;color:#4F6469;margin-top:14px;line-height:1.5;"></div>
+    <div style="border-top:1px solid #EEF1F3;margin-top:16px;padding-top:14px;">${botaoInstalarPWA()}</div>
   </div>
 </div>
 <script>
