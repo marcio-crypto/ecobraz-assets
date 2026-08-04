@@ -49,6 +49,7 @@ import { sondaMTR, consultarMtrSigor, baixarPdfManifesto } from './mtr.js';
 import { listarMtrs, lerMtr, salvarMtr, mudarStatusMtr, definirPdfMtr, removerMtr, dadosDMR, paginaMtrLista, paginaMtrForm, paginaMtrDetalhe, paginaDMR, sincronizarMtrDaOS, removerMtrDaOS, importarMtrsDasOSs } from './gestao-mtr.js';
 import { dadosCronograma, paginaCronograma, salvarSla } from './cronograma.js';
 import { paginaAcompanhamento, colunaClienteDe } from './cliente-portal.js';
+import { DEMO_CLIENTE_HTML } from './demo-cliente.js';
 import { acharPacote, precoPacote, acharModuloAdote, precoModuloAdote, paginaLojaAdote, paginaObrigadoAdote, paginaDiagnostico, lerCredito, salvarCredito, novoCredito, aplicarCompra, aplicarRecarga, precisaRecarga, listarPatrocinadores, resumoPatrocinio, lerCreditoPorDoc } from './adote.js';
 import { paginaLojaESG, paginaESGContato, paginaESGObrigado, relatorioESG, precoRelatorioESG } from './esg.js';
 import { statusDaEtapa, valorProp, CAMPOS_OS } from './os-utils.js';
@@ -173,6 +174,9 @@ export default {
 
       // Calculadora de pegada de carbono — Nível 1 (estimativa grátis por CNPJ). Público.
       if (pathname === '/calculadora' && request.method === 'GET') return html(paginaCalculadora());
+      // Demonstração pública e ISOLADA do Portal do Cliente (ferramenta de marketing).
+      // Sem login, sem back-end, sem pagamento — nada aqui toca o sistema real.
+      if ((pathname === '/demo' || pathname === '/demonstracao') && request.method === 'GET') return html(DEMO_CLIENTE_HTML);
       // Loja de carbono — 4 níveis × faixa de faturamento (anual). Preços aprovados (a refinar c/ Villanova).
       if (pathname === '/carbono/planos' && request.method === 'GET') return html(paginaLojaCarbono(url.searchParams.get('faixa') || ''));
       if (pathname === '/carbono/contato' && request.method === 'GET') return html(paginaCarbonoContato(nivelCarbono(url.searchParams.get('nivel') || ''), url.searchParams.get('faixa') || ''));
