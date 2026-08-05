@@ -61,9 +61,19 @@ export async function listarClientesD1(env, { tipo = '', q = '', pag = 1, porPag
   const termo = String(q || '').trim();
   if (termo) {
     params.push('%' + termo + '%'); const pLike = params.length;
-    let s = `nome LIKE ?${pLike} OR nome_fantasia LIKE ?${pLike}`;
+    // Busca por nome, nome fantasia e e-mail (texto cru)…
+    let s = `nome LIKE ?${pLike} OR nome_fantasia LIKE ?${pLike} OR email LIKE ?${pLike}`;
     const dig = digits(termo);
-    if (dig.length >= 3) { params.push('%' + dig + '%'); s += ` OR REPLACE(REPLACE(REPLACE(REPLACE(documento,'.',''),'-',''),'/',''),' ','') LIKE ?${params.length}`; }
+    if (dig.length >= 3) {
+      // …e por documento e TELEFONE só pelos números — "(11) 94535-6330",
+      // "+5511945356330" e "11 94535 6330" encontram o mesmo cliente.
+      params.push('%' + dig + '%'); const pDig = params.length;
+      s += ` OR REPLACE(REPLACE(REPLACE(REPLACE(documento,'.',''),'-',''),'/',''),' ','') LIKE ?${pDig}`;
+      s += ` OR REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(telefone,'(',''),')',''),'+',''),'.',''),'-',''),' ',''),'/','') LIKE ?${pDig}`;
+      s += ` OR nome LIKE ?${pDig}`;
+    }
+    // E-mail de pessoa de contato fica no JSON migrado do Ploomes — cobre esse caso também.
+    if (termo.includes('@')) s += ` OR dados_json LIKE ?${pLike}`;
     where += ` AND (${s})`;
   }
   const prep = (sql) => { const st = env.DB_PLOOMES.prepare(sql); return params.length ? st.bind(...params) : st; };
@@ -692,7 +702,7 @@ export function paginaCadastroHome(user, clientes, q = '', totalFiltrado = null,
     <a href="/cadastro/novo?tipo=PF" class="btn btn-g">＋ Nova pessoa física</a>
     <a href="/cadastro/manutencao" style="margin-left:auto;font-size:12.5px;font-weight:700;color:#7c8a87;text-decoration:none">⚙ Manutenção</a>
   </div>
-  <form method="get" action="/cadastro" style="margin:0 0 10px">${tipo ? `<input type="hidden" name="tipo" value="${tipo}">` : ''}<input name="q" value="${esc(q)}" placeholder="🔎 Buscar por nome ou documento e apertar Enter…" autocomplete="off"></form>
+  <form method="get" action="/cadastro" style="margin:0 0 10px">${tipo ? `<input type="hidden" name="tipo" value="${tipo}">` : ''}<input name="q" value="${esc(q)}" placeholder="🔎 Buscar por nome, documento, telefone ou e-mail e apertar Enter…" autocomplete="off"></form>
   <div style="display:flex;gap:8px;margin-bottom:12px">${chip('Todos', '')}${chip('Empresas', 'PJ')}${chip('Pessoas', 'PF')}</div>
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-size:13px;font-weight:800">${q ? 'Resultados' : (tipo === 'PJ' ? 'Empresas' : tipo === 'PF' ? 'Pessoas físicas' : 'Clientes')}</div><span style="font-size:11px;background:#E3F0F3;color:#0B5B66;font-weight:800;padding:3px 9px;border-radius:20px">${tf.toLocaleString('pt-BR')}</span></div>
   <div id="lista">${linhas}</div>
