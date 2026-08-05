@@ -51,6 +51,7 @@ import { dadosCronograma, paginaCronograma, salvarSla } from './cronograma.js';
 import { paginaAcompanhamento, colunaClienteDe, lerGestores, gestorPorEmail, salvarGestor, removerGestor, NIVEIS, paginaGestores } from './cliente-portal.js';
 import { DEMO_CLIENTE_HTML, DEMO_OG_PNG_B64 } from './demo-cliente.js';
 import { listarPropostas, lerProposta, salvarProposta, paginaPropostas, paginaPropostaForm, paginaPropostaVer, paginaContratoVer, garantirTokenAceite, registrarAceite, paginaAceite, paginaAceiteVerificar } from './proposta.js';
+import { lerEmpresaDocs, salvarEmpresaDoc, anexarEmpresaDoc, paginaEmpresaDocs, alertasEmpresaDocs } from './empresa-docs.js';
 import { acharPacote, precoPacote, acharModuloAdote, precoModuloAdote, paginaLojaAdote, paginaObrigadoAdote, paginaDiagnostico, lerCredito, salvarCredito, novoCredito, aplicarCompra, aplicarRecarga, precisaRecarga, listarPatrocinadores, resumoPatrocinio, lerCreditoPorDoc } from './adote.js';
 import { paginaLojaESG, paginaESGContato, paginaESGObrigado, relatorioESG, precoRelatorioESG } from './esg.js';
 import { statusDaEtapa, valorProp, CAMPOS_OS } from './os-utils.js';
@@ -99,6 +100,11 @@ function garantirAcessosFixos(env) {
 }
 
 export default {
+  // Cron diário (wrangler.toml [triggers]) — alertas de vencimento dos Documentos da Empresa.
+  async scheduled(event, env, ctx) {
+    try { const r = await alertasEmpresaDocs(env); console.log('cron_empdocs', r); }
+    catch (error) { console.error('cron_empdocs_erro', safeError(error)); }
+  },
   async fetch(request, env) {
     const url = new URL(request.url);
     const { pathname } = url;
@@ -1491,6 +1497,42 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         const link = `${base}/aceite?id=${encodeURIComponent(p.id)}&t=${encodeURIComponent(p.aceiteToken)}`;
         try { await enviarEmailAceite(p, link, env); } catch (error) { console.error('aceite_email', safeError(error)); return json({ ok: false, message: 'Não consegui enviar o e-mail agora. Copie o link e mande por WhatsApp.' }, 502); }
         return json({ ok: true, para: mascararEmail(para), path: `/aceite?id=${encodeURIComponent(p.id)}&t=${encodeURIComponent(p.aceiteToken)}` });
+      }
+      // Documentos da Empresa (licenças/NRs — caso SIGRA). Escritório + Engenharia (RT) + Diretoria.
+      if (pathname === '/empresa/docs' && request.method === 'GET') {
+        if (!escritorio && !eng && !diretoria) return html(paginaLoginEscritorio(googleConfigurado(env)));
+        return html(paginaEmpresaDocs(escritorio || eng || diretoria, await lerEmpresaDocs(env)));
+      }
+      if (pathname === '/api/empresa-docs/salvar' && request.method === 'POST') {
+        if (!escritorio && !eng && !diretoria) return json({ ok: false, message: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = {}; }
+        return json(await salvarEmpresaDoc(env, escritorio || eng || diretoria, b || {}));
+      }
+      if (pathname === '/api/empresa-docs/arquivo' && request.method === 'POST') {
+        if (!escritorio && !eng && !diretoria) return json({ ok: false, message: 'nao_autenticado' }, 401);
+        if (!env.R2_ARQUIVOS) return json({ ok: false, message: 'Armazenamento indisponível.' }, 503);
+        let form; try { form = await request.formData(); } catch { return json({ ok: false, message: 'Envio inválido.' }, 400); }
+        const file = form.get('file');
+        const idDoc = String(form.get('id') || '').replace(/[^a-zA-Z0-9_-]/g, '');
+        if (!file || typeof file === 'string' || !idDoc) return json({ ok: false, message: 'Selecione um arquivo.' }, 400);
+        const nomeArq = (String(file.name || 'arquivo').replace(/[^\w .()\-]+/g, '_').slice(0, 120)) || 'arquivo';
+        const tamArq = Number(file.size) || 0;
+        if (tamArq > 15 * 1024 * 1024) return json({ ok: false, message: 'Arquivo muito grande (máx. 15 MB).' }, 400);
+        const keyArq = (`empresa-docs/${idDoc}/${novoId()}_${nomeArq}`).replace(/[^a-zA-Z0-9/_.\-]/g, '_').slice(0, 200);
+        const ctArq = file.type || 'application/octet-stream';
+        try {
+          await env.R2_ARQUIVOS.put(keyArq, await file.arrayBuffer(), { httpMetadata: { contentType: ctArq } });
+          return json(await anexarEmpresaDoc(env, escritorio || eng || diretoria, idDoc, { key: keyArq, nome: nomeArq, ct: ctArq, tamanho: tamArq, em: agoraISO() }));
+        } catch (error) { console.error('empdoc_upload', safeError(error)); return json({ ok: false, message: 'Falha ao anexar. Tente de novo.' }, 500); }
+      }
+      if (pathname === '/empresa/docs/arquivo' && request.method === 'GET') {
+        if (!escritorio && !eng && !diretoria) return html(paginaLoginEscritorio(googleConfigurado(env)));
+        const docsEmp = await lerEmpresaDocs(env);
+        const dEmp = docsEmp.find((x) => x.id === (url.searchParams.get('id') || ''));
+        if (!dEmp || !dEmp.arquivo || !env.R2_ARQUIVOS) return html(paginaMensagem('Arquivo não encontrado', 'Volte e tente de novo.'), 404);
+        const objEmp = await env.R2_ARQUIVOS.get(dEmp.arquivo.key);
+        if (!objEmp) return html(paginaMensagem('Arquivo não encontrado', 'Volte e tente de novo.'), 404);
+        return new Response(objEmp.body, { headers: { 'content-type': dEmp.arquivo.ct || 'application/octet-stream', 'content-disposition': `inline; filename="${String(dEmp.arquivo.nome || 'arquivo').replace(/"/g, '')}"`, 'cache-control': 'no-store' } });
       }
       if (pathname === '/proposta/ver' && request.method === 'GET') {
         if (!escritorio && !diretoria) return html(paginaLoginEscritorio(googleConfigurado(env)));
