@@ -50,6 +50,7 @@ import { listarMtrs, lerMtr, salvarMtr, mudarStatusMtr, definirPdfMtr, removerMt
 import { dadosCronograma, paginaCronograma, salvarSla } from './cronograma.js';
 import { paginaAcompanhamento, colunaClienteDe, lerGestores, gestorPorEmail, salvarGestor, removerGestor, NIVEIS, paginaGestores } from './cliente-portal.js';
 import { DEMO_CLIENTE_HTML, DEMO_OG_PNG_B64 } from './demo-cliente.js';
+import { listarPropostas, lerProposta, salvarProposta, paginaPropostas, paginaPropostaForm, paginaPropostaVer, paginaContratoVer } from './proposta.js';
 import { acharPacote, precoPacote, acharModuloAdote, precoModuloAdote, paginaLojaAdote, paginaObrigadoAdote, paginaDiagnostico, lerCredito, salvarCredito, novoCredito, aplicarCompra, aplicarRecarga, precisaRecarga, listarPatrocinadores, resumoPatrocinio, lerCreditoPorDoc } from './adote.js';
 import { paginaLojaESG, paginaESGContato, paginaESGObrigado, relatorioESG, precoRelatorioESG } from './esg.js';
 import { statusDaEtapa, valorProp, CAMPOS_OS } from './os-utils.js';
@@ -1420,6 +1421,41 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         let negocios = []; try { negocios = await negociosDoCliente(env, cli); } catch { /* sem histórico, tudo bem */ }
         let segmento = null; try { segmento = await segmentoDoCliente(env, cli.tipo === 'PJ' ? cli.cnpj : cli.cpf); } catch { /* segmento é opcional */ }
         return html(paginaClienteDetalhe(escritorio, cli, arquivos, negocios, segmento));
+      }
+      // Propostas & Contratos (escritório — Débora). Emissão própria, fora do Ploomes.
+      if (pathname === '/propostas' && request.method === 'GET') {
+        if (!escritorio) return html(paginaLoginEscritorio(googleConfigurado(env)));
+        return html(paginaPropostas(escritorio, await listarPropostas(env)));
+      }
+      if (pathname === '/proposta/nova' && request.method === 'GET') {
+        if (!escritorio) return html(paginaLoginEscritorio(googleConfigurado(env)));
+        const cliId = url.searchParams.get('cliente') || '';
+        const cli = cliId ? await carregarClientePorId(env, cliId) : null;
+        return html(paginaPropostaForm(escritorio, null, cli));
+      }
+      if (pathname === '/proposta/editar' && request.method === 'GET') {
+        if (!escritorio) return html(paginaLoginEscritorio(googleConfigurado(env)));
+        const p = await lerProposta(env, url.searchParams.get('id'));
+        if (!p) return html(paginaMensagem('Proposta não encontrada', 'Volte e tente de novo.'), 404);
+        return html(paginaPropostaForm(escritorio, p, null));
+      }
+      if (pathname === '/api/proposta/salvar' && request.method === 'POST') {
+        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = {}; }
+        const p = await salvarProposta(env, escritorio, b || {});
+        return json({ ok: !!p, id: p && p.id });
+      }
+      if (pathname === '/proposta/ver' && request.method === 'GET') {
+        if (!escritorio && !diretoria) return html(paginaLoginEscritorio(googleConfigurado(env)));
+        const p = await lerProposta(env, url.searchParams.get('id'));
+        if (!p) return html(paginaMensagem('Proposta não encontrada', 'Volte e tente de novo.'), 404);
+        return html(paginaPropostaVer(p));
+      }
+      if (pathname === '/contrato/ver' && request.method === 'GET') {
+        if (!escritorio && !diretoria) return html(paginaLoginEscritorio(googleConfigurado(env)));
+        const p = await lerProposta(env, url.searchParams.get('id'));
+        if (!p) return html(paginaMensagem('Proposta não encontrada', 'Volte e tente de novo.'), 404);
+        return html(paginaContratoVer(p));
       }
       // Segmento do cliente (Premium/Plus/Tradicional) — override manual da equipe.
       if (pathname === '/api/cliente/segmento' && request.method === 'POST') {

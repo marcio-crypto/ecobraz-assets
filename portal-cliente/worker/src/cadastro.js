@@ -860,7 +860,10 @@ export function paginaClienteDetalhe(user, cli, arquivos, negocios, segmento) {
     <div><span style="font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;${cli.tipo === 'PJ' ? 'background:#E3F0F3;color:#0B5B66' : 'background:#EAF2E6;color:#3f7a2e'}">${cli.tipo === 'PJ' ? 'EMPRESA' : 'PESSOA FÍSICA'}</span>
     <h1 style="font-size:22px;margin:8px 0 0">${esc(cli.tipo === 'PJ' ? (cli.razaoSocial || '—') : (cli.nome || '—'))}</h1>
     ${cli.tipo === 'PJ' && cli.nomeFantasia ? `<div style="font-size:13px;color:#7c8a87;margin-top:2px">${esc(cli.nomeFantasia)}</div>` : ''}</div>
-    <a href="/cadastro/editar?id=${esc(cli.id)}" class="btn btn-g" style="flex:none;padding:9px 14px;font-size:13px">Editar</a>
+    <div style="flex:none;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+      <a href="/proposta/nova?cliente=${esc(cli.id)}" class="btn btn-d" style="padding:9px 14px;font-size:13px">📄 Gerar proposta</a>
+      <a href="/cadastro/editar?id=${esc(cli.id)}" class="btn btn-g" style="padding:9px 14px;font-size:13px">Editar</a>
+    </div>
   </div>
   <div class="card">
     <table role="presentation" style="width:100%;border-collapse:collapse;font-size:13.5px">
@@ -1228,6 +1231,7 @@ export function paginaInicio(user, stats) {
     ${card('/cadastro', '🏢', 'Cadastro & Clientes', 'Empresas e pessoas físicas, com contatos embutidos. Busca rápida.', badge(s.clientes != null ? `${num(s.clientes)} clientes` : null))}
     ${card('/coletas', '📋', 'Ordens de Coleta', 'Abra e acompanhe as coletas. Comprovante com QR de rastreio.', badge(s.coletasAbertas != null ? `${num(s.coletasAbertas)} em aberto` : null, s.coletasAbertas > 0))}
     ${card('/leads', '📥', 'Leads do site', 'Solicitações que chegam pelo formulário do site.', badge(s.leadsNovos != null ? `${num(s.leadsNovos)} novos` : null, s.leadsNovos > 0))}
+    ${card('/propostas', '📄', 'Propostas & Contratos', 'Emita a proposta comercial e o contrato básico, prontos para PDF.')}
     ${card('/operacao', '🏭', 'Operação (doca)', 'Recepção, triagem, processamento e saída. Balanço de massa.', badge(s.aReceber != null && s.aReceber > 0 ? `${num(s.aReceber)} a receber` : null, true))}
     ${card('/frota', '🚛', 'Frota', 'Veículos da empresa. O motorista faz o checklist ao abrir e fechar o dia.', badge(s.veiculos != null && s.veiculos > 0 ? `${num(s.veiculos)} veículos` : null))}
     ${card('/frota/aovivo', '🛰️', 'Frota ao vivo', 'Onde está cada caminhão, qual coleta atende agora e a próxima da fila.')}

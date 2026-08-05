@@ -1,0 +1,350 @@
+// Propostas comerciais & Contratos (escritório/comercial — a Débora).
+// Substitui a emissão que era feita no Ploomes: proposta com itens/valores e
+// contrato básico de prestação de serviços, ambos prontos para imprimir/salvar
+// em PDF (pelo navegador) no padrão visual novo da Ecobraz.
+//
+// Guardado no KV: prop:{id} (registro), prop:index (lista), prop:seq:{ano} (numeração).
+// O CONTRATO usa os mesmos dados da proposta. O texto atual é uma MINUTA-PADRÃO
+// (marcada na tela, fora da impressão) — quando a Débora enviar o modelo oficial
+// do Ploomes, é só substituir as cláusulas em clausulasContrato().
+
+const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const digits = (s) => String(s || '').replace(/\D/g, '');
+const limpar = (s) => String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
+const fmtCNPJ = (v) => { const d = digits(v); return d.length === 14 ? d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5') : (v || ''); };
+const fmtCPF = (v) => { const d = digits(v); return d.length === 11 ? d.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4') : (v || ''); };
+const fmtDoc = (v) => { const d = digits(v); return d.length === 14 ? fmtCNPJ(d) : d.length === 11 ? fmtCPF(d) : (v || ''); };
+const money = (n) => 'R$ ' + (Number(n) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const numBR = (s) => { const t = String(s == null ? '' : s).trim(); if (!t) return 0; return Number(t.includes(',') ? t.replace(/\./g, '').replace(',', '.') : t) || 0; };
+const dataBR = (iso) => { const d = new Date(iso || Date.now()); if (isNaN(d.getTime())) return ''; d.setUTCHours(d.getUTCHours() - 3); const p = (n) => String(n).padStart(2, '0'); return `${p(d.getUTCDate())}/${p(d.getUTCMonth() + 1)}/${d.getUTCFullYear()}`; };
+const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+const dataExtenso = (iso) => { const d = new Date(iso || Date.now()); if (isNaN(d.getTime())) return ''; d.setUTCHours(d.getUTCHours() - 3); return `${d.getUTCDate()} de ${MESES[d.getUTCMonth()]} de ${d.getUTCFullYear()}`; };
+
+// Dados da Ecobraz no cabeçalho dos documentos (do modelo do Ploomes — ajuste aqui se algo mudar).
+export const ECOBRAZ = {
+  razao: 'Associação Auxílio à Reciclagem de Eletrônicos e Inc. Dig. Ecobraz',
+  cnpj: '14.197.457/0001-42',
+  fone: '(11) 4329-2001',
+  email: 'contato@ecobraz.org.br',
+  endereco: 'Rua Dona Maria Quedas, 230 — Jd. Andaraí — São Paulo — SP',
+  cidadeForo: 'São Paulo/SP',
+};
+
+// --- Dados (KV) ---------------------------------------------------------------
+export async function listarPropostas(env) {
+  const raw = env.PORTAL_KV ? await env.PORTAL_KV.get('prop:index') : null;
+  return raw ? JSON.parse(raw) : [];
+}
+export async function lerProposta(env, id) {
+  if (!env.PORTAL_KV || !id) return null;
+  const raw = await env.PORTAL_KV.get(`prop:${String(id).replace(/[^a-zA-Z0-9_-]/g, '')}`);
+  return raw ? JSON.parse(raw) : null;
+}
+function totalDe(itens) { return (itens || []).reduce((s, i) => s + (Number(i.qtd) || 0) * (Number(i.unit) || 0), 0); }
+export async function salvarProposta(env, user, b) {
+  if (!env.PORTAL_KV) return null;
+  const agoraISO = new Date().toISOString();
+  const itens = Array.isArray(b.itens) ? b.itens.map((i) => ({
+    residuo: limpar(i.residuo).slice(0, 140), qtd: Number(i.qtd) || 0, un: limpar(i.un).slice(0, 12) || 'un.', unit: Number(i.unit) || 0,
+  })).filter((i) => i.residuo || i.qtd || i.unit).slice(0, 40) : [];
+  let p = b.id ? await lerProposta(env, b.id) : null;
+  if (!p) {
+    const ano = new Date().getFullYear();
+    const seq = 1 + (Number(await env.PORTAL_KV.get(`prop:seq:${ano}`)) || 0);
+    await env.PORTAL_KV.put(`prop:seq:${ano}`, String(seq));
+    p = { id: `${ano}-${String(seq).padStart(3, '0')}`, numero: `P-${ano}-${String(seq).padStart(3, '0')}`, criadoEm: agoraISO };
+  }
+  p = {
+    ...p,
+    atualizadoEm: agoraISO,
+    por: (user && user.email) || '',
+    clienteId: limpar(b.clienteId).slice(0, 40),
+    cliente: {
+      nome: limpar(b.nome).slice(0, 160), doc: digits(b.doc).slice(0, 14),
+      endereco: limpar(b.endereco).slice(0, 220), contato: limpar(b.contato).slice(0, 120),
+      email: limpar(b.email).slice(0, 120), fone: limpar(b.fone).slice(0, 40),
+    },
+    titulo: limpar(b.titulo).slice(0, 160),
+    itens,
+    total: totalDe(itens),
+    pagamento: limpar(b.pagamento).slice(0, 120),
+    validade: limpar(b.validade).slice(0, 80),
+    prazo: limpar(b.prazo).slice(0, 120),
+    obs: String(b.obs || '').slice(0, 2000).trim(),
+  };
+  await env.PORTAL_KV.put(`prop:${p.id}`, JSON.stringify(p));
+  const idx = (await listarPropostas(env)).filter((x) => x.id !== p.id);
+  idx.unshift({ id: p.id, numero: p.numero, nome: p.cliente.nome, doc: p.cliente.doc, total: p.total, criadoEm: p.criadoEm });
+  await env.PORTAL_KV.put('prop:index', JSON.stringify(idx.slice(0, 500)));
+  return p;
+}
+
+// --- UI base (mesmo padrão do módulo de Cadastro) -----------------------------
+function head(titulo) {
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${esc(titulo)} — Ecobraz</title>
+<style>*{box-sizing:border-box}body{margin:0;font-family:Montserrat,'Segoe UI',Arial,Helvetica,sans-serif;background:#F2F6F4;color:#10262B}
+a{color:#0B5B66}.wrap{max-width:840px;margin:0 auto;padding:20px 18px 56px}
+.card{background:#fff;border:1px solid #E4EBE9;border-radius:14px;padding:20px}
+label{display:block;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#7c8a87;margin:14px 0 5px}
+input,select,textarea{width:100%;border:1px solid #DDE1E6;border-radius:10px;padding:11px 12px;font-size:14px;font-family:inherit;background:#fff;color:#10262B}
+textarea{resize:vertical}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}.g3{display:grid;grid-template-columns:2fr 1fr 1fr;gap:0 16px}
+.btn{display:inline-block;border:none;border-radius:11px;padding:13px 18px;font-size:14px;font-weight:800;cursor:pointer;text-decoration:none;text-align:center}
+.btn-p{background:#92C430;color:#10262B}.btn-d{background:#00333B;color:#fff}.btn-g{background:#fff;color:#00333B;border:1.5px solid #cfe0dd}
+.sec{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#00333B;margin:22px 0 4px;display:flex;align-items:center;gap:9px}
+.sec::before{content:"";width:4px;height:15px;background:#92C430;border-radius:2px;display:inline-block}
+@media(max-width:640px){.g2,.g3{grid-template-columns:1fr}}
+</style></head>`;
+}
+function topo(sub) {
+  return `<div style="background:#00333B;padding:15px 20px"><div style="max-width:840px;margin:0 auto;display:flex;justify-content:space-between;align-items:center">
+    <a href="/inicio" style="text-decoration:none"><span style="color:#fff;font-size:16px;font-weight:800">ecobraz</span><span style="color:#92C430;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin-left:8px">${esc(sub)}</span></a>
+    <form method="post" action="/api/cadastro/sair" style="margin:0"><button class="btn" style="background:#0e4651;color:#cfe3e0;border:1px solid #1c5b66;padding:8px 12px;font-size:12px">Sair</button></form>
+  </div></div>`;
+}
+
+// --- Lista --------------------------------------------------------------------
+export function paginaPropostas(user, lista) {
+  const rows = (lista || []).map((p) => `<a href="/proposta/ver?id=${esc(p.id)}" style="display:flex;justify-content:space-between;align-items:center;gap:10px;text-decoration:none;border:1px solid #EEF1F0;border-radius:10px;padding:12px 14px;margin-bottom:8px;background:#FBFDFC">
+      <span style="min-width:0"><span style="font-size:13px;font-weight:800;color:#10262B">${esc(p.numero)} · ${esc(p.nome || '—')}</span><span style="display:block;font-size:11px;color:#8fa39f">${esc(fmtDoc(p.doc))}${p.criadoEm ? ' · ' + esc(dataBR(p.criadoEm)) : ''}</span></span>
+      <span style="flex:none;text-align:right"><span style="display:block;font-size:12.5px;font-weight:800;color:#0B5B66">${money(p.total)}</span><span style="font-size:10.5px;color:#3f8f3a;font-weight:700">abrir ↗</span></span>
+    </a>`).join('') || '<div style="font-size:12.5px;color:#8fa39f">Nenhuma proposta ainda. Crie a primeira — ou abra a ficha de um cliente e clique em “Gerar proposta”.</div>';
+  return `${head('Propostas')}<body>${topo('propostas')}
+<div class="wrap">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px">
+    <div><h1 style="font-size:22px;margin:0">Propostas &amp; Contratos</h1>
+    <div style="font-size:12.5px;color:#7c8a87;margin-top:3px">Emita a proposta comercial e o contrato básico — prontos para imprimir ou salvar em PDF.</div></div>
+    <a href="/proposta/nova" class="btn btn-p" style="flex:none">＋ Nova proposta</a>
+  </div>
+  <div class="card">${rows}</div>
+</div></body></html>`;
+}
+
+// --- Formulário ---------------------------------------------------------------
+export function paginaPropostaForm(user, prop, cli) {
+  const p = prop || {};
+  const c = p.cliente || {};
+  // Pré-preenche a partir da ficha do cliente (quando veio de /cadastro/cliente).
+  const pre = cli ? {
+    nome: cli.tipo === 'PJ' ? (cli.razaoSocial || cli.nomeFantasia || '') : (cli.nome || ''),
+    doc: cli.tipo === 'PJ' ? cli.cnpj : cli.cpf,
+    endereco: (() => { const e = cli.endereco || {}; return [[e.logradouro, e.numero].filter(Boolean).join(', '), e.bairro, [e.cidade, e.uf].filter(Boolean).join('/'), e.cep].filter(Boolean).join(' · ') || limpar(cli.enderecoTexto || ''); })(),
+    contato: ((cli.contatos || [])[0] || {}).nome || cli.responsavel || '',
+    email: cli.email || ((cli.contatos || [])[0] || {}).email || '',
+    fone: cli.telefone || cli.fone || ((cli.contatos || [])[0] || {}).fone || '',
+    clienteId: cli.id || '',
+  } : {};
+  const v = (k) => esc(c[k] != null && c[k] !== '' ? c[k] : (pre[k] || ''));
+  const itens = (p.itens && p.itens.length ? p.itens : [{ residuo: '', qtd: 1, un: 'un.', unit: 0 }]);
+  return `${head(p.id ? 'Editar proposta' : 'Nova proposta')}<body>${topo('propostas')}
+<div class="wrap">
+  <a href="${p.id ? '/proposta/ver?id=' + esc(p.id) : '/propostas'}" style="font-size:13px;font-weight:800;text-decoration:none;color:#4F6469">← Voltar</a>
+  <h1 style="font-size:22px;margin:12px 0 16px">${p.id ? 'Editar proposta ' + esc(p.numero) : 'Nova proposta comercial'}</h1>
+  <div class="card">
+    <div class="sec" style="margin-top:0">Cliente</div>
+    <div class="g2">
+      <div><label>Razão social / Nome</label><input id="f-nome" value="${v('nome')}"></div>
+      <div><label>CNPJ / CPF</label><input id="f-doc" value="${esc(fmtDoc(c.doc != null && c.doc !== '' ? c.doc : (pre.doc || '')))}"></div>
+    </div>
+    <label>Endereço (coleta)</label><input id="f-end" value="${v('endereco')}">
+    <div class="g3">
+      <div><label>Contato</label><input id="f-contato" value="${v('contato')}"></div>
+      <div><label>E-mail</label><input id="f-email" value="${v('email')}"></div>
+      <div><label>Telefone</label><input id="f-fone" value="${v('fone')}"></div>
+    </div>
+    <label>Título / referência (opcional)</label><input id="f-titulo" value="${esc(p.titulo || '')}" placeholder="ex.: Coleta de equipamentos de informática — matriz">
+
+    <div class="sec">Itens da proposta</div>
+    <div style="font-size:12px;color:#7c8a87;margin:-2px 0 8px">Resíduo, quantidade e valor unitário — o total calcula sozinho. Use valor 0 para item sem cobrança.</div>
+    <div id="itens"></div>
+    <button type="button" class="btn btn-g" style="padding:9px 14px;font-size:13px" onclick="addItem()">＋ Adicionar item</button>
+    <div style="text-align:right;font-size:15px;font-weight:800;color:#00333B;margin-top:10px">Total: <span id="f-total">R$ 0,00</span></div>
+
+    <div class="sec">Condições</div>
+    <div class="g3">
+      <div><label>Forma de pagamento</label><input id="f-pag" value="${esc(p.pagamento || '')}" placeholder="ex.: Boleto 10 DDL"></div>
+      <div><label>Validade da proposta</label><input id="f-val" value="${esc(p.validade || '')}" placeholder="ex.: 15 dias"></div>
+      <div><label>Prazo de atendimento</label><input id="f-prazo" value="${esc(p.prazo || '')}" placeholder="ex.: até 5 dias úteis"></div>
+    </div>
+    <label>Observações</label><textarea id="f-obs" rows="3" placeholder="condições adicionais, detalhes da coleta…">${esc(p.obs || '')}</textarea>
+
+    <div style="display:flex;gap:10px;margin-top:20px;align-items:center;flex-wrap:wrap">
+      <button type="button" class="btn btn-p" onclick="salvar()">${p.id ? 'Salvar alterações' : 'Salvar e visualizar'}</button>
+      <span id="msg" style="font-size:12.5px;color:#4F6469"></span>
+    </div>
+  </div>
+</div>
+<script>
+const ITENS_INI=${JSON.stringify(itens).replace(/</g, '\\u003c')};
+const fmt=(n)=>'R$ '+(Number(n)||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const numBR=(s)=>{const t=String(s==null?'':s).trim();if(!t)return 0;return Number(t.includes(',')?t.replace(/\\./g,'').replace(',','.'):t)||0;};
+function rowHTML(i){return '<div class="g-item" style="display:grid;grid-template-columns:1fr 74px 70px 110px 96px 34px;gap:8px;align-items:center;margin-bottom:8px">'
+ +'<input class="i-res" placeholder="Resíduo / serviço" value="'+String(i.residuo||'').replace(/"/g,'&quot;')+'">'
+ +'<input class="i-qtd" inputmode="decimal" placeholder="Qtd" value="'+(i.qtd||'')+'">'
+ +'<input class="i-un" placeholder="un." value="'+String(i.un||'un.').replace(/"/g,'&quot;')+'">'
+ +'<input class="i-unit" inputmode="decimal" placeholder="Valor unit." value="'+(i.unit?String(i.unit).replace('.',','):'')+'">'
+ +'<div class="i-tot" style="font-size:13px;font-weight:800;color:#00333B;text-align:right">R$ 0,00</div>'
+ +'<button type="button" onclick="this.parentNode.remove();recalc()" style="border:none;background:#fff;border:1px solid #E4EBE9;border-radius:8px;padding:8px 0;cursor:pointer;color:#a06a62;font-weight:800">✕</button></div>';}
+function addItem(i){document.getElementById('itens').insertAdjacentHTML('beforeend',rowHTML(i||{qtd:1,un:'un.'}));recalc();}
+function coletar(){return Array.from(document.querySelectorAll('.g-item')).map(r=>({residuo:r.querySelector('.i-res').value,qtd:numBR(r.querySelector('.i-qtd').value),un:r.querySelector('.i-un').value,unit:numBR(r.querySelector('.i-unit').value)}));}
+function recalc(){let t=0;document.querySelectorAll('.g-item').forEach(r=>{const s=numBR(r.querySelector('.i-qtd').value)*numBR(r.querySelector('.i-unit').value);t+=s;r.querySelector('.i-tot').textContent=fmt(s);});document.getElementById('f-total').textContent=fmt(t);}
+document.getElementById('itens').addEventListener('input',recalc);
+ITENS_INI.forEach(i=>addItem(i));
+async function salvar(){
+  const msg=document.getElementById('msg');msg.textContent='Salvando…';
+  const body={id:${JSON.stringify(p.id || '')},clienteId:${JSON.stringify(p.clienteId || pre.clienteId || '')},
+   nome:document.getElementById('f-nome').value,doc:document.getElementById('f-doc').value,endereco:document.getElementById('f-end').value,
+   contato:document.getElementById('f-contato').value,email:document.getElementById('f-email').value,fone:document.getElementById('f-fone').value,
+   titulo:document.getElementById('f-titulo').value,itens:coletar(),pagamento:document.getElementById('f-pag').value,
+   validade:document.getElementById('f-val').value,prazo:document.getElementById('f-prazo').value,obs:document.getElementById('f-obs').value};
+  if(!body.nome.trim()){msg.textContent='Preencha o nome/razão social do cliente.';return;}
+  try{const r=await fetch('/api/proposta/salvar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+   const j=await r.json();if(j.ok&&j.id){location.href='/proposta/ver?id='+encodeURIComponent(j.id);}else{msg.textContent=j.message||'Não consegui salvar. Tente de novo.';}}
+  catch{msg.textContent='Falha de rede. Tente de novo.';}
+}
+</script></body></html>`;
+}
+
+// --- Documentos (A4, padrão visual novo da Ecobraz) ---------------------------
+function cssDoc() {
+  return `<style>*{box-sizing:border-box}body{margin:0;background:#DDE5E2;font-family:Montserrat,'Segoe UI',Arial,Helvetica,sans-serif;color:#10262B;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.folha{max-width:800px;margin:18px auto;background:#fff;box-shadow:0 10px 30px rgba(11,33,54,.14)}
+.cabo{background:#00333B;color:#fff;padding:22px 30px;display:flex;justify-content:space-between;align-items:center;gap:16px}
+.cabo img{height:34px;display:block}
+.cabo .dados{text-align:right;font-size:9.5px;line-height:1.55;color:#cfe3e0}
+.cabo .dados b{color:#fff;font-size:10.5px;display:block;margin-bottom:2px}
+.filete{height:5px;background:linear-gradient(90deg,#92C430,#5a9e2f)}
+.corpo{padding:26px 30px 30px}
+.titulo{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:0 0 4px}
+.titulo h1{font-size:19px;color:#00333B;margin:0;letter-spacing:-.2px}
+.numero{flex:none;background:#92C430;color:#10262B;font-weight:800;font-size:12.5px;border-radius:20px;padding:5px 14px}
+.subt{font-size:12px;color:#7c8a87;margin:0 0 18px}
+.sec{font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:#00333B;margin:20px 0 8px;display:flex;align-items:center;gap:8px}
+.sec::before{content:"";width:4px;height:13px;background:#92C430;border-radius:2px}
+.bloco{border:1px solid #E4EBE9;border-radius:12px;padding:14px 16px}
+.linha{display:flex;gap:10px;font-size:12px;padding:4px 0}
+.linha span{color:#6B7B78;width:150px;flex:none}
+.linha b{font-weight:700}
+table.itens{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px}
+table.itens th{background:#00333B;color:#fff;text-align:left;padding:9px 12px;font-size:10.5px;letter-spacing:.04em;text-transform:uppercase}
+table.itens th.r,table.itens td.r{text-align:right}
+table.itens td{padding:9px 12px;border-bottom:1px solid #EEF1F0}
+table.itens tr:nth-child(even) td{background:#FBFDFC}
+table.itens tr.total td{border-top:2px solid #92C430;border-bottom:none;font-weight:800;color:#00333B;font-size:13px;background:#F4FAEA}
+.cond{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.cond .c{border:1px solid #E4EBE9;border-radius:12px;padding:11px 13px}
+.cond .c i{display:block;font-style:normal;font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#7c8a87;margin-bottom:4px}
+.cond .c b{font-size:12.5px}
+.obs{border:1px dashed #cfe0dd;border-radius:12px;padding:12px 14px;font-size:12px;color:#374b48;line-height:1.6;white-space:pre-wrap}
+.rodape{border-top:1px solid #E4EBE9;margin-top:26px;padding-top:12px;font-size:9.5px;color:#8fa39f;display:flex;justify-content:space-between;gap:10px}
+.clausula{font-size:12px;line-height:1.7;margin:0 0 12px;text-align:justify}
+.clausula b{color:#00333B}
+.assin{display:grid;grid-template-columns:1fr 1fr;gap:34px;margin-top:44px}
+.assin .a{text-align:center;font-size:11px;color:#374b48}
+.assin .a .tr{border-top:1.5px solid #10262B;padding-top:7px;margin-top:36px}
+.toolbar{max-width:800px;margin:14px auto 4px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.tb{display:inline-block;border:none;border-radius:11px;padding:11px 16px;font-size:13px;font-weight:800;cursor:pointer;text-decoration:none;text-align:center}
+.tb-p{background:#92C430;color:#10262B}.tb-d{background:#00333B;color:#fff}.tb-g{background:#fff;color:#00333B;border:1.5px solid #cfe0dd}
+.aviso-minuta{max-width:800px;margin:0 auto 10px;background:#FFF4DE;border:1px solid #eed9a8;color:#8A6A16;border-radius:12px;padding:10px 14px;font-size:12px;line-height:1.5}
+@media print{body{background:#fff}.folha{margin:0;max-width:none;box-shadow:none}.toolbar,.aviso-minuta{display:none}}
+@page{size:A4;margin:0}
+</style>`;
+}
+function cabecalhoDoc() {
+  return `<div class="cabo">
+    <img src="/assets/logo-claro.png" alt="Ecobraz">
+    <div class="dados"><b>${esc(ECOBRAZ.razao)}</b>
+      CNPJ: ${esc(ECOBRAZ.cnpj)}<br>${esc(ECOBRAZ.fone)} · ${esc(ECOBRAZ.email)}<br>${esc(ECOBRAZ.endereco)}</div>
+  </div><div class="filete"></div>`;
+}
+function blocoCliente(c) {
+  return `<div class="bloco">
+    <div class="linha"><span>Razão social / Nome</span><b>${esc(c.nome || '—')}</b></div>
+    ${c.doc ? `<div class="linha"><span>${digits(c.doc).length === 14 ? 'CNPJ' : 'CPF'}</span><b>${esc(fmtDoc(c.doc))}</b></div>` : ''}
+    ${c.endereco ? `<div class="linha"><span>Endereço (coleta)</span><b>${esc(c.endereco)}</b></div>` : ''}
+    ${c.contato ? `<div class="linha"><span>Contato</span><b>${esc(c.contato)}</b></div>` : ''}
+    ${(c.email || c.fone) ? `<div class="linha"><span>E-mail / Telefone</span><b>${esc([c.email, c.fone].filter(Boolean).join(' · '))}</b></div>` : ''}
+  </div>`;
+}
+function tabelaItens(p) {
+  const linhas = (p.itens || []).map((i, n) => `<tr><td>${n + 1}</td><td>${esc(i.residuo || '—')}</td><td class="r">${(Number(i.qtd) || 0).toLocaleString('pt-BR')} ${esc(i.un || '')}</td><td class="r">${money(i.unit)}</td><td class="r">${money((Number(i.qtd) || 0) * (Number(i.unit) || 0))}</td></tr>`).join('');
+  return `<table class="itens"><thead><tr><th style="width:34px">Item</th><th>Resíduo / serviço</th><th class="r" style="width:90px">Qtd.</th><th class="r" style="width:110px">Valor unitário</th><th class="r" style="width:110px">Total</th></tr></thead>
+    <tbody>${linhas || '<tr><td colspan="5" style="color:#8fa39f">Sem itens.</td></tr>'}
+    <tr class="total"><td colspan="4">Valor total</td><td class="r">${money(p.total)}</td></tr></tbody></table>`;
+}
+
+export function paginaPropostaVer(p) {
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Proposta ${esc(p.numero)} — Ecobraz</title>${cssDoc()}</head><body>
+<div class="toolbar">
+  <a href="/propostas" class="tb tb-g">← Propostas</a>
+  <button class="tb tb-p" onclick="print()">🖨️ Imprimir / salvar PDF</button>
+  <a href="/proposta/editar?id=${esc(p.id)}" class="tb tb-g">✏️ Editar</a>
+  <a href="/contrato/ver?id=${esc(p.id)}" class="tb tb-d">📜 Gerar contrato</a>
+</div>
+<div class="folha">
+  ${cabecalhoDoc()}
+  <div class="corpo">
+    <div class="titulo"><h1>PROPOSTA COMERCIAL</h1><span class="numero">Nº ${esc(p.numero)}</span></div>
+    <p class="subt">${p.titulo ? esc(p.titulo) + ' · ' : ''}Emitida em ${esc(dataBR(p.criadoEm))}</p>
+    <div class="sec">Dados do cliente</div>
+    ${blocoCliente(p.cliente || {})}
+    <div class="sec">Itens</div>
+    ${tabelaItens(p)}
+    <div class="sec">Condições</div>
+    <div class="cond">
+      <div class="c"><i>Forma de pagamento</i><b>${esc(p.pagamento || 'a combinar')}</b></div>
+      <div class="c"><i>Validade da proposta</i><b>${esc(p.validade || 'a combinar')}</b></div>
+      <div class="c"><i>Prazo de atendimento</i><b>${esc(p.prazo || 'a combinar')}</b></div>
+    </div>
+    ${p.obs ? `<div class="sec">Observações</div><div class="obs">${esc(p.obs)}</div>` : ''}
+    <div class="rodape"><span>${esc(ECOBRAZ.razao)} · CNPJ ${esc(ECOBRAZ.cnpj)}</span><span>${esc(ECOBRAZ.fone)} · ${esc(ECOBRAZ.email)}</span></div>
+  </div>
+</div></body></html>`;
+}
+
+// MINUTA-PADRÃO do contrato — será substituída pelo modelo oficial (Ploomes) da Débora.
+function clausulasContrato(p) {
+  const c = p.cliente || {};
+  return [
+    ['CLÁUSULA 1ª — DO OBJETO', `Prestação, pela CONTRATADA, dos serviços de coleta, transporte, triagem, descaracterização e destinação dos resíduos relacionados no quadro de itens desta proposta/contrato, a serem retirados no endereço indicado pela CONTRATANTE${c.endereco ? ` (${c.endereco})` : ''}.`],
+    ['CLÁUSULA 2ª — DO VALOR E DO PAGAMENTO', `Pelos serviços descritos, a CONTRATANTE pagará à CONTRATADA o valor total de ${money(p.total)}, na seguinte forma: ${p.pagamento || 'a combinar entre as partes'}.`],
+    ['CLÁUSULA 3ª — DO PRAZO DE ATENDIMENTO', `Os serviços serão executados no prazo de ${p.prazo || 'comum acordo entre as partes'}, contado da assinatura deste instrumento e da confirmação da agenda de coleta.`],
+    ['CLÁUSULA 4ª — DA DOCUMENTAÇÃO', 'A CONTRATADA disponibilizará à CONTRATANTE os documentos aplicáveis à operação (como MTR, CDF e laudos), quando previstos no escopo contratado.'],
+    ['CLÁUSULA 5ª — DAS OBRIGAÇÕES', 'A CONTRATANTE disponibilizará os materiais e o acesso ao local na data agendada. A CONTRATADA executará os serviços com pessoal próprio e em conformidade com a legislação aplicável.'],
+    ['CLÁUSULA 6ª — DA VIGÊNCIA', 'O presente contrato vigora da data de assinatura até a conclusão dos serviços e a entrega da documentação aplicável.'],
+    ['CLÁUSULA 7ª — DO FORO', `Fica eleito o foro da Comarca de ${ECOBRAZ.cidadeForo} para dirimir quaisquer controvérsias decorrentes deste contrato.`],
+  ];
+}
+export function paginaContratoVer(p) {
+  const c = p.cliente || {};
+  const clausulas = clausulasContrato(p).map(([t, x]) => `<p class="clausula"><b>${esc(t)}.</b> ${esc(x)}</p>`).join('');
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Contrato ${esc(p.numero)} — Ecobraz</title>${cssDoc()}</head><body>
+<div class="toolbar">
+  <a href="/proposta/ver?id=${esc(p.id)}" class="tb tb-g">← Proposta</a>
+  <button class="tb tb-p" onclick="print()">🖨️ Imprimir / salvar PDF</button>
+</div>
+<div class="aviso-minuta">⚠️ <b>Minuta-padrão</b> (não sai na impressão): revise o texto antes de enviar ao cliente. Quando a Débora enviar o modelo oficial de contrato, este texto será substituído.</div>
+<div class="folha">
+  ${cabecalhoDoc()}
+  <div class="corpo">
+    <div class="titulo"><h1>CONTRATO DE PRESTAÇÃO DE SERVIÇOS</h1><span class="numero">Ref. ${esc(p.numero)}</span></div>
+    <p class="subt">Coleta e destinação de resíduos eletrônicos${p.titulo ? ' · ' + esc(p.titulo) : ''}</p>
+    <p class="clausula"><b>CONTRATADA:</b> ${esc(ECOBRAZ.razao)}, inscrita no CNPJ sob nº ${esc(ECOBRAZ.cnpj)}, com sede na ${esc(ECOBRAZ.endereco)}.</p>
+    <p class="clausula"><b>CONTRATANTE:</b> ${esc(c.nome || '________________')}${c.doc ? `, inscrita no ${digits(c.doc).length === 14 ? 'CNPJ' : 'CPF'} sob nº ${esc(fmtDoc(c.doc))}` : ''}${c.endereco ? `, com endereço na ${esc(c.endereco)}` : ''}.</p>
+    <p class="clausula">As partes acima identificadas têm, entre si, justo e acertado o presente contrato, que se regerá pelas cláusulas seguintes:</p>
+    ${clausulas}
+    <div class="sec">Itens contratados</div>
+    ${tabelaItens(p)}
+    ${p.obs ? `<div class="sec">Observações</div><div class="obs">${esc(p.obs)}</div>` : ''}
+    <p class="clausula" style="margin-top:22px">E por estarem justas e contratadas, as partes assinam o presente instrumento em duas vias de igual teor.</p>
+    <p class="clausula" style="text-align:right">${esc(ECOBRAZ.cidadeForo.split('/')[0])}, ${esc(dataExtenso(new Date().toISOString()))}.</p>
+    <div class="assin">
+      <div class="a"><div class="tr"><b>${esc(ECOBRAZ.razao)}</b><br>CONTRATADA</div></div>
+      <div class="a"><div class="tr"><b>${esc(c.nome || 'CONTRATANTE')}</b><br>CONTRATANTE</div></div>
+      <div class="a"><div class="tr">Testemunha 1 — CPF</div></div>
+      <div class="a"><div class="tr">Testemunha 2 — CPF</div></div>
+    </div>
+    <div class="rodape"><span>${esc(ECOBRAZ.razao)} · CNPJ ${esc(ECOBRAZ.cnpj)}</span><span>${esc(ECOBRAZ.fone)} · ${esc(ECOBRAZ.email)}</span></div>
+  </div>
+</div></body></html>`;
+}
