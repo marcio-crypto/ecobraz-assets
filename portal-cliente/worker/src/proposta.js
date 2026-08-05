@@ -19,6 +19,15 @@ const numBR = (s) => { const t = String(s == null ? '' : s).trim(); if (!t) retu
 const dataBR = (iso) => { const d = new Date(iso || Date.now()); if (isNaN(d.getTime())) return ''; d.setUTCHours(d.getUTCHours() - 3); const p = (n) => String(n).padStart(2, '0'); return `${p(d.getUTCDate())}/${p(d.getUTCMonth() + 1)}/${d.getUTCFullYear()}`; };
 const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 const dataExtenso = (iso) => { const d = new Date(iso || Date.now()); if (isNaN(d.getTime())) return ''; d.setUTCHours(d.getUTCHours() - 3); return `${d.getUTCDate()} de ${MESES[d.getUTCMonth()]} de ${d.getUTCFullYear()}`; };
+const horaBR = (iso) => { const d = new Date(iso || Date.now()); if (isNaN(d.getTime())) return ''; d.setUTCHours(d.getUTCHours() - 3); const p = (n) => String(n).padStart(2, '0'); return `${p(d.getUTCDate())}/${p(d.getUTCMonth() + 1)}/${d.getUTCFullYear()} às ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`; };
+async function sha256hex(s) { const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(s))); return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, '0')).join(''); }
+// Validação de CPF (dígitos verificadores) — evita erro de digitação no aceite.
+function cpfValido(v) {
+  const d = digits(v); if (d.length !== 11 || /^(\d)\1{10}$/.test(d)) return false;
+  for (const n of [9, 10]) { let s = 0; for (let i = 0; i < n; i++) s += Number(d[i]) * (n + 1 - i); const dv = ((s * 10) % 11) % 10; if (dv !== Number(d[n])) return false; }
+  return true;
+}
+const maskCPF = (v) => { const d = digits(v); return d.length === 11 ? `***.***.${d.slice(6, 9)}-${d.slice(9)}` : '***'; };
 
 // Dados da Ecobraz no cabeçalho dos documentos (do modelo do Ploomes — ajuste aqui se algo mudar).
 export const ECOBRAZ = {
@@ -73,10 +82,50 @@ export async function salvarProposta(env, user, b) {
     obs: String(b.obs || '').slice(0, 2000).trim(),
   };
   await env.PORTAL_KV.put(`prop:${p.id}`, JSON.stringify(p));
-  const idx = (await listarPropostas(env)).filter((x) => x.id !== p.id);
-  idx.unshift({ id: p.id, numero: p.numero, nome: p.cliente.nome, doc: p.cliente.doc, total: p.total, criadoEm: p.criadoEm });
-  await env.PORTAL_KV.put('prop:index', JSON.stringify(idx.slice(0, 500)));
+  await atualizarIndice(env, p);
   return p;
+}
+async function atualizarIndice(env, p) {
+  const idx = (await listarPropostas(env)).filter((x) => x.id !== p.id);
+  idx.unshift({ id: p.id, numero: p.numero, nome: (p.cliente || {}).nome || '', doc: (p.cliente || {}).doc || '', total: p.total, criadoEm: p.criadoEm, aceite: !!p.aceite, temLink: !!p.aceiteToken });
+  await env.PORTAL_KV.put('prop:index', JSON.stringify(idx.slice(0, 500)));
+}
+
+// --- Aceite eletrônico ---------------------------------------------------------
+// O cliente abre um link único (token), confere o contrato, preenche nome/CPF,
+// desenha a assinatura e aceita. Fica registrada a trilha de evidências (data/hora,
+// IP, navegador, código de verificação). Assinatura eletrônica simples — não é
+// certificado ICP-Brasil.
+export async function garantirTokenAceite(env, id) {
+  const p = await lerProposta(env, id);
+  if (!p) return null;
+  if (!p.aceiteToken) {
+    const b = crypto.getRandomValues(new Uint8Array(18));
+    p.aceiteToken = btoa(String.fromCharCode(...b)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    await env.PORTAL_KV.put(`prop:${p.id}`, JSON.stringify(p));
+    await atualizarIndice(env, p);
+  }
+  return p;
+}
+export async function registrarAceite(env, id, token, dados, meta) {
+  const p = await lerProposta(env, id);
+  if (!p || !p.aceiteToken || String(token || '') !== p.aceiteToken) return { ok: false, error: 'link_invalido', message: 'Link inválido ou expirado. Peça um novo link à Ecobraz.' };
+  if (p.aceite) return { ok: false, error: 'ja_aceita', message: 'Este documento já foi aceito.' };
+  const nome = limpar(dados.nome).slice(0, 120);
+  const cpf = digits(dados.cpf);
+  const cargo = limpar(dados.cargo).slice(0, 80);
+  const email = limpar(dados.email).slice(0, 120);
+  const ass = String(dados.assinatura || '');
+  if (nome.length < 5 || !nome.includes(' ')) return { ok: false, error: 'nome', message: 'Escreva o nome completo.' };
+  if (!cpfValido(cpf)) return { ok: false, error: 'cpf', message: 'CPF inválido — confira os números.' };
+  if (!dados.aceito) return { ok: false, error: 'aceito', message: 'É preciso marcar a caixa "Li e aceito".' };
+  if (!/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(ass) || ass.length < 800 || ass.length > 200000) return { ok: false, error: 'assinatura', message: 'Desenhe a sua assinatura no quadro.' };
+  const dt = new Date().toISOString();
+  const codigo = (await sha256hex(`${p.id}|${nome}|${cpf}|${dt}|${p.aceiteToken}`)).slice(0, 10).toUpperCase();
+  p.aceite = { nome, cpf, cargo, email, dt, ip: String((meta && meta.ip) || '').slice(0, 45), ua: String((meta && meta.ua) || '').slice(0, 180), assinatura: ass, codigo };
+  await env.PORTAL_KV.put(`prop:${p.id}`, JSON.stringify(p));
+  await atualizarIndice(env, p);
+  return { ok: true, codigo, p };
 }
 
 // --- UI base (mesmo padrão do módulo de Cadastro) -----------------------------
@@ -105,8 +154,10 @@ function topo(sub) {
 
 // --- Lista --------------------------------------------------------------------
 export function paginaPropostas(user, lista) {
+  const badge = (p) => p.aceite ? '<span style="font-size:10px;font-weight:800;color:#0B6B3A;background:#E7F4EC;border-radius:999px;padding:2px 9px">✓ Aceita</span>'
+    : p.temLink ? '<span style="font-size:10px;font-weight:800;color:#8A6A16;background:#FFF4DE;border-radius:999px;padding:2px 9px">Aguardando aceite</span>' : '';
   const rows = (lista || []).map((p) => `<a href="/proposta/ver?id=${esc(p.id)}" style="display:flex;justify-content:space-between;align-items:center;gap:10px;text-decoration:none;border:1px solid #EEF1F0;border-radius:10px;padding:12px 14px;margin-bottom:8px;background:#FBFDFC">
-      <span style="min-width:0"><span style="font-size:13px;font-weight:800;color:#10262B">${esc(p.numero)} · ${esc(p.nome || '—')}</span><span style="display:block;font-size:11px;color:#8fa39f">${esc(fmtDoc(p.doc))}${p.criadoEm ? ' · ' + esc(dataBR(p.criadoEm)) : ''}</span></span>
+      <span style="min-width:0"><span style="font-size:13px;font-weight:800;color:#10262B">${esc(p.numero)} · ${esc(p.nome || '—')}</span> ${badge(p)}<span style="display:block;font-size:11px;color:#8fa39f">${esc(fmtDoc(p.doc))}${p.criadoEm ? ' · ' + esc(dataBR(p.criadoEm)) : ''}</span></span>
       <span style="flex:none;text-align:right"><span style="display:block;font-size:12.5px;font-weight:800;color:#0B5B66">${money(p.total)}</span><span style="font-size:10.5px;color:#3f8f3a;font-weight:700">abrir ↗</span></span>
     </a>`).join('') || '<div style="font-size:12.5px;color:#8fa39f">Nenhuma proposta ainda. Crie a primeira — ou abra a ficha de um cliente e clique em “Gerar proposta”.</div>';
   return `${head('Propostas')}<body>${topo('propostas')}
@@ -246,7 +297,12 @@ table.itens tr.total td{border-top:2px solid #92C430;border-bottom:none;font-wei
 .tb{display:inline-block;border:none;border-radius:11px;padding:11px 16px;font-size:13px;font-weight:800;cursor:pointer;text-decoration:none;text-align:center}
 .tb-p{background:#92C430;color:#10262B}.tb-d{background:#00333B;color:#fff}.tb-g{background:#fff;color:#00333B;border:1.5px solid #cfe0dd}
 .aviso-minuta{max-width:800px;margin:0 auto 10px;background:#FFF4DE;border:1px solid #eed9a8;color:#8A6A16;border-radius:12px;padding:10px 14px;font-size:12px;line-height:1.5}
-@media print{body{background:#fff}.folha{margin:0;max-width:none;box-shadow:none}.toolbar,.aviso-minuta{display:none}}
+.linkbox{max-width:800px;margin:0 auto 10px;background:#E7F4EC;border:1px solid #bfe0cb;color:#0B6B3A;border-radius:12px;padding:10px 14px;font-size:12px;line-height:1.6;display:none;word-break:break-all}
+.aceitebox{border:1.5px solid #1E7A3D;background:#F0FAF3;border-radius:12px;padding:12px 16px;font-size:11px;line-height:1.7;color:#14532d;margin-top:20px}
+.aceitebox b{color:#0B6B3A}
+.ass-img{height:54px;display:block;margin:0 auto -8px}
+.chip-ok{background:#E7F4EC;color:#0B6B3A;border:1px solid #bfe0cb;cursor:default}
+@media print{body{background:#fff}.folha{margin:0;max-width:none;box-shadow:none}.toolbar,.aviso-minuta,.linkbox{display:none}}
 @page{size:A4;margin:0}
 </style>`;
 }
@@ -273,14 +329,41 @@ function tabelaItens(p) {
     <tr class="total"><td colspan="4">Valor total</td><td class="r">${money(p.total)}</td></tr></tbody></table>`;
 }
 
+// Botões e caixa do fluxo de aceite (equipe). O link é montado no navegador
+// (location.origin), copiado para a área de transferência e pode ir por e-mail.
+function aceiteUI(p) {
+  if (p.aceite) return { botoes: `<span class="tb chip-ok">✓ Aceito em ${esc(horaBR(p.aceite.dt))}</span>`, extra: '' };
+  const temEmail = !!((p.cliente || {}).email);
+  return {
+    botoes: `<button class="tb tb-g" onclick="gerarLinkAceite(false)">✍️ Link de aceite</button>${temEmail ? `<button class="tb tb-g" onclick="gerarLinkAceite(true)">✉️ Enviar para aceite</button>` : ''}`,
+    extra: `<div class="linkbox" id="lkbox"></div>
+<script>
+async function gerarLinkAceite(porEmail){
+  const box=document.getElementById('lkbox');box.style.display='block';box.textContent=porEmail?'Enviando…':'Gerando link…';
+  try{
+    const r=await fetch(porEmail?'/api/proposta/enviar-aceite':'/api/proposta/gerar-link',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:${JSON.stringify(p.id)}})});
+    const j=await r.json();
+    if(!j.ok){box.textContent=j.message||'Não deu certo — tente de novo.';return;}
+    const u=location.origin+j.path;
+    let cop='';try{await navigator.clipboard.writeText(u);cop=' (copiado ✓)';}catch(e){}
+    box.innerHTML=(porEmail?'<b>E-mail enviado ✓</b> para '+(j.para||'o cliente')+'. ':'')+'<b>Link de aceite'+cop+':</b><br>'+u+'<br><span style="color:#4F6469">Mande por WhatsApp ou e-mail — o cliente abre, confere o contrato, assina na tela e aceita.</span>';
+  }catch(e){box.textContent='Falha de rede — tente de novo.';}
+}
+</script>`,
+  };
+}
+
 export function paginaPropostaVer(p) {
+  const ac = aceiteUI(p);
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Proposta ${esc(p.numero)} — Ecobraz</title>${cssDoc()}</head><body>
 <div class="toolbar">
   <a href="/propostas" class="tb tb-g">← Propostas</a>
   <button class="tb tb-p" onclick="print()">🖨️ Imprimir / salvar PDF</button>
-  <a href="/proposta/editar?id=${esc(p.id)}" class="tb tb-g">✏️ Editar</a>
-  <a href="/contrato/ver?id=${esc(p.id)}" class="tb tb-d">📜 Gerar contrato</a>
+  ${p.aceite ? '' : `<a href="/proposta/editar?id=${esc(p.id)}" class="tb tb-g">✏️ Editar</a>`}
+  <a href="/contrato/ver?id=${esc(p.id)}" class="tb tb-d">📜 ${p.aceite ? 'Contrato assinado' : 'Gerar contrato'}</a>
+  ${ac.botoes}
 </div>
+${ac.extra}
 <div class="folha">
   ${cabecalhoDoc()}
   <div class="corpo">
@@ -315,15 +398,24 @@ function clausulasContrato(p) {
     ['CLÁUSULA 7ª — DO FORO', `Fica eleito o foro da Comarca de ${ECOBRAZ.cidadeForo} para dirimir quaisquer controvérsias decorrentes deste contrato.`],
   ];
 }
-export function paginaContratoVer(p) {
+export function paginaContratoVer(p, modo = 'equipe', base = 'https://sistema.ecobraz.org') {
   const c = p.cliente || {};
+  const cliente = modo === 'cliente';
+  const a = p.aceite || null;
   const clausulas = clausulasContrato(p).map(([t, x]) => `<p class="clausula"><b>${esc(t)}.</b> ${esc(x)}</p>`).join('');
+  const ac = cliente ? { botoes: '', extra: '' } : aceiteUI(p);
+  const assinContratante = a
+    ? `<div class="a"><img class="ass-img" src="${esc(a.assinatura)}" alt="Assinatura"><div class="tr"><b>${esc(a.nome)}</b><br>CPF ${esc(fmtCPF(a.cpf))}${a.cargo ? ' · ' + esc(a.cargo) : ''} · CONTRATANTE<br><span style="font-size:9px;color:#0B6B3A;font-weight:700">Assinado eletronicamente em ${esc(horaBR(a.dt))} · código ${esc(a.codigo)}</span></div></div>`
+    : `<div class="a"><div class="tr"><b>${esc(c.nome || 'CONTRATANTE')}</b><br>CONTRATANTE</div></div>`;
+  const evidencias = a ? `<div class="aceitebox"><b>✔ ACEITE ELETRÔNICO REGISTRADO</b> — Documento aceito e assinado eletronicamente por <b>${esc(a.nome)}</b> (CPF ${esc(fmtCPF(a.cpf))}${a.cargo ? ', ' + esc(a.cargo) : ''}${a.email ? ', e-mail ' + esc(a.email) : ''}) em <b>${esc(horaBR(a.dt))}</b> (horário de Brasília)${a.ip ? `, IP ${esc(a.ip)}` : ''}. Código de verificação: <b>${esc(a.codigo)}</b>. Confira a autenticidade em ${esc(base)}/aceite/verificar?id=${esc(p.id)}&amp;c=${esc(a.codigo)}</div>` : '';
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Contrato ${esc(p.numero)} — Ecobraz</title>${cssDoc()}</head><body>
 <div class="toolbar">
-  <a href="/proposta/ver?id=${esc(p.id)}" class="tb tb-g">← Proposta</a>
+  ${cliente ? '' : `<a href="/proposta/ver?id=${esc(p.id)}" class="tb tb-g">← Proposta</a>`}
   <button class="tb tb-p" onclick="print()">🖨️ Imprimir / salvar PDF</button>
+  ${ac.botoes}
 </div>
-<div class="aviso-minuta">⚠️ <b>Minuta-padrão</b> (não sai na impressão): revise o texto antes de enviar ao cliente. Quando a Débora enviar o modelo oficial de contrato, este texto será substituído.</div>
+${ac.extra}
+${cliente ? '' : '<div class="aviso-minuta">⚠️ <b>Minuta-padrão</b> (não sai na impressão): revise o texto antes de enviar ao cliente. Quando a Débora enviar o modelo oficial de contrato, este texto será substituído.</div>'}
 <div class="folha">
   ${cabecalhoDoc()}
   <div class="corpo">
@@ -340,11 +432,130 @@ export function paginaContratoVer(p) {
     <p class="clausula" style="text-align:right">${esc(ECOBRAZ.cidadeForo.split('/')[0])}, ${esc(dataExtenso(new Date().toISOString()))}.</p>
     <div class="assin">
       <div class="a"><div class="tr"><b>${esc(ECOBRAZ.razao)}</b><br>CONTRATADA</div></div>
-      <div class="a"><div class="tr"><b>${esc(c.nome || 'CONTRATANTE')}</b><br>CONTRATANTE</div></div>
+      ${assinContratante}
       <div class="a"><div class="tr">Testemunha 1 — CPF</div></div>
       <div class="a"><div class="tr">Testemunha 2 — CPF</div></div>
     </div>
+    ${evidencias}
     <div class="rodape"><span>${esc(ECOBRAZ.razao)} · CNPJ ${esc(ECOBRAZ.cnpj)}</span><span>${esc(ECOBRAZ.fone)} · ${esc(ECOBRAZ.email)}</span></div>
   </div>
+</div></body></html>`;
+}
+
+// --- Página pública de ACEITE (link único enviado ao cliente) ------------------
+const CSS_FORM_ACEITE = `<style>
+.fa label{display:block;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#7c8a87;margin:14px 0 5px}
+.fa input{width:100%;box-sizing:border-box;border:1px solid #DDE1E6;border-radius:10px;padding:12px 13px;font-size:16px;font-family:inherit;background:#fff;color:#10262B}
+.fa .g2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+@media(max-width:560px){.fa .g2{grid-template-columns:1fr}}
+.fa .pad-assin{border:1.5px dashed #9db8b3;border-radius:12px;background:#fff;position:relative}
+.fa canvas{display:block;width:100%;height:170px;border-radius:12px;touch-action:none}
+.fa .pad-dica{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#b5c4c0;font-size:13px;pointer-events:none}
+.fa .chk{display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.55;color:#374b48;margin-top:16px}
+.fa .chk input{width:20px;height:20px;flex:none;margin-top:1px}
+.fa .btn-ok{width:100%;border:none;border-radius:12px;padding:15px;font-size:15.5px;font-weight:800;cursor:pointer;background:#92C430;color:#10262B;margin-top:16px}
+.fa .btn-ok:disabled{opacity:.55;cursor:default}
+.fa .limpar{border:none;background:#fff;border:1px solid #DDE1E6;border-radius:9px;padding:7px 12px;font-size:12px;font-weight:700;color:#4F6469;cursor:pointer;margin-top:8px}
+.fa .msg{font-size:13px;color:#a04030;margin-top:10px;min-height:18px}
+.fa .lgpdnote{font-size:11px;color:#8fa39f;line-height:1.6;margin-top:12px}
+</style>`;
+export function paginaAceite(p, base = 'https://sistema.ecobraz.org') {
+  const c = p.cliente || {};
+  if (p.aceite) {
+    const a = p.aceite;
+    return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Documento aceito — Ecobraz</title>${cssDoc()}</head><body>
+<div class="folha" style="margin-top:26px"><div style="height:5px;background:linear-gradient(90deg,#92C430,#5a9e2f)"></div>
+  <div class="corpo" style="text-align:center;padding:40px 30px">
+    <div style="width:66px;height:66px;border-radius:50%;background:#E7F4EC;display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 14px">✅</div>
+    <h1 style="font-size:20px;color:#00333B;margin:0 0 6px">Documento aceito</h1>
+    <p style="font-size:13.5px;color:#4F6469;line-height:1.6;margin:0 0 4px">Contrato ref. <b>${esc(p.numero)}</b> aceito e assinado por <b>${esc(a.nome)}</b><br>em ${esc(horaBR(a.dt))} · código de verificação <b>${esc(a.codigo)}</b>.</p>
+    <p style="font-size:12.5px;color:#7c8a87;margin:0 0 22px">Guarde este código. A Ecobraz também recebeu a confirmação.</p>
+    <a class="tb tb-p" style="text-decoration:none" href="/contrato/ver?id=${esc(p.id)}&t=${esc(p.aceiteToken)}">📄 Ver / imprimir o contrato assinado</a>
+  </div>
+</div></body></html>`;
+  }
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Aceite do contrato — Ecobraz</title>${cssDoc()}${CSS_FORM_ACEITE}</head><body>
+<div class="folha" style="margin-top:26px">
+  ${cabecalhoDoc()}
+  <div class="corpo">
+    <div class="titulo"><h1>CONTRATO PARA ACEITE</h1><span class="numero">Ref. ${esc(p.numero)}</span></div>
+    <p class="subt">Confira o documento abaixo com calma. O aceite e a assinatura ficam no final da página.</p>
+    <p class="clausula"><b>CONTRATADA:</b> ${esc(ECOBRAZ.razao)}, CNPJ ${esc(ECOBRAZ.cnpj)}, ${esc(ECOBRAZ.endereco)}.</p>
+    <p class="clausula"><b>CONTRATANTE:</b> ${esc(c.nome || '—')}${c.doc ? `, ${digits(c.doc).length === 14 ? 'CNPJ' : 'CPF'} ${esc(fmtDoc(c.doc))}` : ''}${c.endereco ? `, ${esc(c.endereco)}` : ''}.</p>
+    ${clausulasContrato(p).map(([t, x]) => `<p class="clausula"><b>${esc(t)}.</b> ${esc(x)}</p>`).join('')}
+    <div class="sec">Itens contratados</div>
+    ${tabelaItens(p)}
+    ${p.obs ? `<div class="sec">Observações</div><div class="obs">${esc(p.obs)}</div>` : ''}
+  </div>
+</div>
+<div class="folha" style="margin-bottom:30px">
+  <div class="corpo fa">
+    <div class="sec" style="margin-top:0">Aceite e assinatura</div>
+    <div class="g2">
+      <div><label>Nome completo *</label><input id="a-nome" autocomplete="name"></div>
+      <div><label>CPF *</label><input id="a-cpf" inputmode="numeric" placeholder="000.000.000-00"></div>
+    </div>
+    <div class="g2">
+      <div><label>Cargo (opcional)</label><input id="a-cargo" placeholder="ex.: Gerente administrativo"></div>
+      <div><label>E-mail (opcional)</label><input id="a-email" inputmode="email" value="${esc(c.email || '')}"></div>
+    </div>
+    <label>Assinatura * <span style="font-weight:600;text-transform:none;letter-spacing:0">— desenhe no quadro (dedo ou mouse)</span></label>
+    <div class="pad-assin"><canvas id="pad"></canvas><div class="pad-dica" id="pad-dica">✍️ assine aqui</div></div>
+    <button type="button" class="limpar" onclick="limparPad()">↺ Limpar assinatura</button>
+    <label class="chk" style="text-transform:none;letter-spacing:0;font-weight:600"><input type="checkbox" id="a-ok"> <span>Li e <b>aceito</b> os termos deste contrato, e declaro ter poderes para representar a contratante.</span></label>
+    <button class="btn-ok" id="a-btn" onclick="enviarAceite()">✍️ Aceitar e assinar</button>
+    <div class="msg" id="a-msg"></div>
+    <div class="lgpdnote">Ao aceitar, registramos seu nome, CPF, data/hora, endereço IP e navegador como evidência do aceite (assinatura eletrônica). Esses dados são usados somente para comprovar este contrato.</div>
+  </div>
+</div>
+<script>
+const pad=document.getElementById('pad');const ctx=pad.getContext('2d');let tracos=0;
+function prepPad(){const r=pad.getBoundingClientRect();const dpr=window.devicePixelRatio||1;pad.width=Math.round(r.width*dpr);pad.height=Math.round(170*dpr);ctx.scale(dpr,dpr);ctx.fillStyle='#fff';ctx.fillRect(0,0,r.width,170);ctx.strokeStyle='#10262B';ctx.lineWidth=2.2;ctx.lineCap='round';ctx.lineJoin='round';}
+prepPad();
+let desenhando=false,px=0,py=0;
+function pos(e){const r=pad.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top];}
+pad.addEventListener('pointerdown',e=>{e.preventDefault();pad.setPointerCapture(e.pointerId);desenhando=true;[px,py]=pos(e);});
+pad.addEventListener('pointermove',e=>{if(!desenhando)return;const [x,y]=pos(e);ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(x,y);ctx.stroke();px=x;py=y;tracos++;document.getElementById('pad-dica').style.display='none';});
+pad.addEventListener('pointerup',()=>{desenhando=false;});
+pad.addEventListener('pointercancel',()=>{desenhando=false;});
+function limparPad(){tracos=0;const r=pad.getBoundingClientRect();ctx.setTransform(1,0,0,1,0,0);prepPad();document.getElementById('pad-dica').style.display='flex';}
+async function enviarAceite(){
+  const msg=document.getElementById('a-msg'),btn=document.getElementById('a-btn');
+  msg.textContent='';
+  const nome=document.getElementById('a-nome').value.trim();
+  const cpf=document.getElementById('a-cpf').value;
+  if(nome.length<5||!nome.includes(' ')){msg.textContent='Escreva o nome completo.';return;}
+  if(cpf.replace(/\\D/g,'').length!==11){msg.textContent='Confira o CPF (11 números).';return;}
+  if(tracos<8){msg.textContent='Desenhe a sua assinatura no quadro.';return;}
+  if(!document.getElementById('a-ok').checked){msg.textContent='Marque a caixa "Li e aceito".';return;}
+  btn.disabled=true;btn.textContent='Registrando…';
+  try{
+    const r=await fetch('/api/aceite',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({
+      id:${JSON.stringify(p.id)},t:${JSON.stringify(p.aceiteToken || '')},nome,cpf,
+      cargo:document.getElementById('a-cargo').value,email:document.getElementById('a-email').value,
+      aceito:document.getElementById('a-ok').checked,assinatura:pad.toDataURL('image/png')})});
+    const j=await r.json();
+    if(j.ok){btn.textContent='✓ Aceito!';location.reload();}
+    else{msg.textContent=j.message||'Não deu certo — confira os campos.';btn.disabled=false;btn.textContent='✍️ Aceitar e assinar';}
+  }catch(e){msg.textContent='Falha de rede — tente de novo.';btn.disabled=false;btn.textContent='✍️ Aceitar e assinar';}
+}
+</script></body></html>`;
+}
+
+// Página pública de verificação do aceite (código impresso no contrato).
+export function paginaAceiteVerificar(p, code) {
+  const ok = p && p.aceite && String(code || '').toUpperCase() === p.aceite.codigo;
+  const inner = ok
+    ? `<div style="width:66px;height:66px;border-radius:50%;background:#E7F4EC;display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 14px">✅</div>
+       <h1 style="font-size:20px;color:#00333B;margin:0 0 8px">Aceite confirmado</h1>
+       <p style="font-size:13.5px;color:#4F6469;line-height:1.7;margin:0">Contrato ref. <b>${esc(p.numero)}</b><br>
+       Aceito e assinado eletronicamente por <b>${esc(p.aceite.nome)}</b> (CPF ${esc(maskCPF(p.aceite.cpf))})<br>
+       em <b>${esc(horaBR(p.aceite.dt))}</b> (horário de Brasília)<br>Código de verificação: <b>${esc(p.aceite.codigo)}</b></p>`
+    : `<div style="width:66px;height:66px;border-radius:50%;background:#FDECEA;display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 14px">❌</div>
+       <h1 style="font-size:20px;color:#00333B;margin:0 0 8px">Aceite não encontrado</h1>
+       <p style="font-size:13.5px;color:#4F6469;line-height:1.7;margin:0">Não encontramos um aceite com esse código.<br>Confira o código impresso no contrato ou fale com a Ecobraz:<br><b>${esc(ECOBRAZ.fone)}</b> · ${esc(ECOBRAZ.email)}</p>`;
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Verificação de aceite — Ecobraz</title>${cssDoc()}</head><body>
+<div class="folha" style="margin-top:26px"><div style="height:5px;background:linear-gradient(90deg,#92C430,#5a9e2f)"></div>
+  <div class="corpo" style="text-align:center;padding:40px 30px">${inner}</div>
 </div></body></html>`;
 }

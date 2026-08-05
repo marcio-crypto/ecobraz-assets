@@ -50,7 +50,7 @@ import { listarMtrs, lerMtr, salvarMtr, mudarStatusMtr, definirPdfMtr, removerMt
 import { dadosCronograma, paginaCronograma, salvarSla } from './cronograma.js';
 import { paginaAcompanhamento, colunaClienteDe, lerGestores, gestorPorEmail, salvarGestor, removerGestor, NIVEIS, paginaGestores } from './cliente-portal.js';
 import { DEMO_CLIENTE_HTML, DEMO_OG_PNG_B64 } from './demo-cliente.js';
-import { listarPropostas, lerProposta, salvarProposta, paginaPropostas, paginaPropostaForm, paginaPropostaVer, paginaContratoVer } from './proposta.js';
+import { listarPropostas, lerProposta, salvarProposta, paginaPropostas, paginaPropostaForm, paginaPropostaVer, paginaContratoVer, garantirTokenAceite, registrarAceite, paginaAceite, paginaAceiteVerificar } from './proposta.js';
 import { acharPacote, precoPacote, acharModuloAdote, precoModuloAdote, paginaLojaAdote, paginaObrigadoAdote, paginaDiagnostico, lerCredito, salvarCredito, novoCredito, aplicarCompra, aplicarRecarga, precisaRecarga, listarPatrocinadores, resumoPatrocinio, lerCreditoPorDoc } from './adote.js';
 import { paginaLojaESG, paginaESGContato, paginaESGObrigado, relatorioESG, precoRelatorioESG } from './esg.js';
 import { statusDaEtapa, valorProp, CAMPOS_OS } from './os-utils.js';
@@ -560,6 +560,28 @@ export default {
       // Verificação pública da Ordem de Coleta (QR anti-fraude).
       if (pathname === '/qr-os' && request.method === 'GET') return await qrOS(request, env, url);
       if (pathname === '/validar-os' && request.method === 'GET') return await validarOSPublico(request, env, url);
+
+      // ACEITE eletrônico de proposta/contrato — público, autenticado pelo token do link.
+      if (pathname === '/aceite' && request.method === 'GET') {
+        const p = await lerProposta(env, url.searchParams.get('id'));
+        const t = url.searchParams.get('t') || '';
+        if (!p || !p.aceiteToken || t !== p.aceiteToken) return html(paginaMensagem('Link inválido ou expirado', 'Peça um novo link de aceite à Ecobraz.'), 404);
+        return html(paginaAceite(p, String(env.PORTAL_BASE_URL || url.origin).replace(/\/+$/, '')));
+      }
+      if (pathname === '/api/aceite' && request.method === 'POST') {
+        let b; try { b = await request.json(); } catch { b = {}; }
+        const meta = { ip: request.headers.get('CF-Connecting-IP') || '', ua: request.headers.get('User-Agent') || '' };
+        const r = await registrarAceite(env, b && b.id, b && b.t, b || {}, meta);
+        if (r.ok) {
+          console.log('aceite_registrado', { id: b.id, codigo: r.codigo });
+          try { await avisarEquipeAceite(env, r.p); } catch (error) { console.error('aceite_aviso', safeError(error)); }
+        }
+        return json({ ok: r.ok, message: r.message || '', codigo: r.codigo || '' }, r.ok ? 200 : 400);
+      }
+      if (pathname === '/aceite/verificar' && request.method === 'GET') {
+        const p = await lerProposta(env, url.searchParams.get('id'));
+        return html(paginaAceiteVerificar(p, url.searchParams.get('c') || ''));
+      }
       // Selo PÚBLICO da metodologia (só confirma a validação da Villanova; não expõe a receita).
       if (pathname === '/validar-metodologia' && request.method === 'GET') return await validarMetodologiaPublico(request, env, url);
       if (pathname === '/qr-metodologia' && request.method === 'GET') return await qrMetodologia(request, env, url);
@@ -1437,13 +1459,38 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         if (!escritorio) return html(paginaLoginEscritorio(googleConfigurado(env)));
         const p = await lerProposta(env, url.searchParams.get('id'));
         if (!p) return html(paginaMensagem('Proposta não encontrada', 'Volte e tente de novo.'), 404);
+        // Aceita não se edita — o que o cliente assinou não pode mudar depois.
+        if (p.aceite) return new Response(null, { status: 302, headers: { Location: '/proposta/ver?id=' + encodeURIComponent(p.id), 'cache-control': 'no-store' } });
         return html(paginaPropostaForm(escritorio, p, null));
       }
       if (pathname === '/api/proposta/salvar' && request.method === 'POST') {
         if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
         let b; try { b = await request.json(); } catch { b = {}; }
+        if (b && b.id) {
+          const atual = await lerProposta(env, b.id);
+          if (atual && atual.aceite) return json({ ok: false, error: 'ja_aceita', message: 'Esta proposta já foi aceita pelo cliente e não pode mais ser alterada. Crie uma nova.' }, 409);
+        }
         const p = await salvarProposta(env, escritorio, b || {});
         return json({ ok: !!p, id: p && p.id });
+      }
+      if (pathname === '/api/proposta/gerar-link' && request.method === 'POST') {
+        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = {}; }
+        const p = await garantirTokenAceite(env, b && b.id);
+        if (!p) return json({ ok: false, message: 'Proposta não encontrada.' }, 404);
+        return json({ ok: true, path: `/aceite?id=${encodeURIComponent(p.id)}&t=${encodeURIComponent(p.aceiteToken)}` });
+      }
+      if (pathname === '/api/proposta/enviar-aceite' && request.method === 'POST') {
+        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = {}; }
+        const p = await garantirTokenAceite(env, b && b.id);
+        if (!p) return json({ ok: false, message: 'Proposta não encontrada.' }, 404);
+        const para = (p.cliente && p.cliente.email) || '';
+        if (!para) return json({ ok: false, message: 'Este cliente não tem e-mail na proposta — use o link e mande por WhatsApp.' }, 422);
+        const base = String(env.PORTAL_BASE_URL || url.origin).replace(/\/+$/, '');
+        const link = `${base}/aceite?id=${encodeURIComponent(p.id)}&t=${encodeURIComponent(p.aceiteToken)}`;
+        try { await enviarEmailAceite(p, link, env); } catch (error) { console.error('aceite_email', safeError(error)); return json({ ok: false, message: 'Não consegui enviar o e-mail agora. Copie o link e mande por WhatsApp.' }, 502); }
+        return json({ ok: true, para: mascararEmail(para), path: `/aceite?id=${encodeURIComponent(p.id)}&t=${encodeURIComponent(p.aceiteToken)}` });
       }
       if (pathname === '/proposta/ver' && request.method === 'GET') {
         if (!escritorio && !diretoria) return html(paginaLoginEscritorio(googleConfigurado(env)));
@@ -1452,10 +1499,14 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         return html(paginaPropostaVer(p));
       }
       if (pathname === '/contrato/ver' && request.method === 'GET') {
-        if (!escritorio && !diretoria) return html(paginaLoginEscritorio(googleConfigurado(env)));
         const p = await lerProposta(env, url.searchParams.get('id'));
+        // O cliente que assinou também pode ver/baixar o contrato — pelo token do link de aceite.
+        const tok = url.searchParams.get('t') || '';
+        const clienteOk = !!(p && p.aceiteToken && tok && tok === p.aceiteToken);
+        if (!escritorio && !diretoria && !clienteOk) return html(paginaLoginEscritorio(googleConfigurado(env)));
         if (!p) return html(paginaMensagem('Proposta não encontrada', 'Volte e tente de novo.'), 404);
-        return html(paginaContratoVer(p));
+        const base = String(env.PORTAL_BASE_URL || url.origin).replace(/\/+$/, '');
+        return html(paginaContratoVer(p, (escritorio || diretoria) ? 'equipe' : 'cliente', base));
       }
       // Segmento do cliente (Premium/Plus/Tradicional) — override manual da equipe.
       if (pathname === '/api/cliente/segmento' && request.method === 'POST') {
@@ -3624,6 +3675,39 @@ async function avisarEquipeCobrancaPaga(env, os, pg) {
   const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${env.RESEND_API_KEY}` }, body: JSON.stringify(payload) });
   if (!r.ok) throw new Error('resend_equipe_oscobranca_' + r.status);
   if (env.PORTAL_KV) await env.PORTAL_KV.put(chave, '1', { expirationTtl: 60 * 60 * 24 * 90 });
+}
+
+// Envia ao CLIENTE o link de aceite do contrato (proposta da Débora).
+async function enviarEmailAceite(p, link, env) {
+  if (!env.RESEND_API_KEY) throw new Error('sem_chave_email');
+  const para = p.cliente && p.cliente.email;
+  if (!para) throw new Error('sem_email');
+  const quem = (p.cliente.contato || p.cliente.nome || '').split(/\s+/)[0];
+  const assunto = `Contrato para aceite — Ecobraz (ref. ${p.numero})`;
+  const texto = `Olá${quem ? ' ' + quem : ''}!\n\nSegue o contrato da Ecobraz (ref. ${p.numero}) para sua conferência e aceite.\n\nAbra o link, confira o documento e assine direto na tela (leva 1 minuto):\n${link}\n\nQualquer dúvida, estamos à disposição.\nEcobraz · ${p.numero}`;
+  const htmlCorpo = `<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;color:#10262B"><div style="background:#00333B;border-radius:14px 14px 0 0;padding:18px 22px"><span style="color:#fff;font-size:18px;font-weight:800">ecobraz</span><span style="color:#92C430;font-size:10px;font-weight:800;letter-spacing:.14em;margin-left:8px">CONTRATO</span></div><div style="border:1px solid #E4EBE9;border-top:none;border-radius:0 0 14px 14px;padding:24px 22px"><h1 style="font-size:19px;margin:0 0 10px">Contrato para aceite ✍️</h1><p style="font-size:14px;line-height:1.6;color:#4F6469">Olá${quem ? ' <b>' + esc(quem) + '</b>' : ''}! Segue o contrato da Ecobraz (ref. <b>${esc(p.numero)}</b>) para sua conferência. Abra, confira o documento e <b>assine direto na tela</b> — leva 1 minuto.</p><a href="${esc(link)}" style="display:block;background:#92C430;color:#10262B;text-decoration:none;border-radius:10px;padding:14px;text-align:center;font-weight:800;font-size:15px;margin:16px 0">Conferir e assinar →</a><p style="font-size:12px;color:#8fa39f;line-height:1.5">Se o botão não funcionar, copie e cole este endereço no navegador:<br>${esc(link)}</p></div></div>`;
+  const payload = { from: env.RESEND_FROM || 'Portal Ecobraz <acesso@ecobraz.org.br>', to: [para], subject: assunto, html: htmlCorpo, text: texto };
+  if (env.RESEND_REPLY_TO) payload.reply_to = env.RESEND_REPLY_TO;
+  const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${env.RESEND_API_KEY}` }, body: JSON.stringify(payload) });
+  if (!r.ok) throw new Error('resend_aceite_' + r.status);
+}
+// Avisa a EQUIPE (Débora) quando o cliente aceita e assina. Best-effort.
+async function avisarEquipeAceite(env, p) {
+  if (!env.RESEND_API_KEY || !p || !p.aceite) return;
+  const listaEnv = env.PROPOSTA_NOTIFY_EMAILS || env.COBRANCA_NOTIFY_EMAILS
+    ? String(env.PROPOSTA_NOTIFY_EMAILS || env.COBRANCA_NOTIFY_EMAILS).split(/[,;]+/).map((s) => s.split('|')[0].trim().toLowerCase()).filter(Boolean)
+    : ['debora.villanova@ecobraz.org.br'];
+  const dest = [...new Set(listaEnv)].filter((e) => /^\S+@\S+\.\S+$/.test(e)).slice(0, 25);
+  if (!dest.length) return;
+  const a = p.aceite;
+  const link = `https://sistema.ecobraz.org/contrato/ver?id=${encodeURIComponent(p.id)}`;
+  const assunto = `✍️ Contrato ${p.numero} ACEITO — ${(p.cliente && p.cliente.nome) || 'cliente'}`.slice(0, 120);
+  const texto = `O contrato ${p.numero} (${(p.cliente && p.cliente.nome) || 'cliente'}) foi aceito e assinado eletronicamente.\n\nPor: ${a.nome} (CPF ${a.cpf})\nQuando: ${a.dt}\nCódigo: ${a.codigo}\n\nVer o contrato assinado: ${link}\n\nEcobraz · sistema`;
+  const htmlCorpo = `<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;color:#10262B"><div style="background:#00333B;border-radius:14px 14px 0 0;padding:18px 22px"><span style="color:#fff;font-size:18px;font-weight:800">ecobraz</span><span style="color:#92C430;font-size:10px;font-weight:800;letter-spacing:.14em;margin-left:8px">ACEITE</span></div><div style="border:1px solid #E4EBE9;border-top:none;border-radius:0 0 14px 14px;padding:24px 22px"><h1 style="font-size:19px;margin:0 0 10px">✍️ Contrato ${esc(p.numero)} aceito</h1><p style="font-size:14px;line-height:1.6;color:#4F6469"><b>${esc((p.cliente && p.cliente.nome) || 'Cliente')}</b> aceitou e assinou eletronicamente.<br>Por <b>${esc(a.nome)}</b> · código <b>${esc(a.codigo)}</b>.</p><a href="${esc(link)}" style="display:block;background:#92C430;color:#10262B;text-decoration:none;border-radius:10px;padding:14px;text-align:center;font-weight:800;font-size:15px;margin:16px 0">Ver o contrato assinado →</a></div></div>`;
+  const payload = { from: env.RESEND_FROM || 'Portal Ecobraz <acesso@ecobraz.org.br>', to: dest, subject: assunto, html: htmlCorpo, text: texto };
+  if (env.RESEND_REPLY_TO) payload.reply_to = env.RESEND_REPLY_TO;
+  const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${env.RESEND_API_KEY}` }, body: JSON.stringify(payload) });
+  if (!r.ok) throw new Error('resend_equipe_aceite_' + r.status);
 }
 
 async function enviarEmailLogin(cliente, link, env) {
