@@ -23,31 +23,50 @@ function seedInicial() {
   ];
 }
 
-export async function lerEmpresaDocs(env) {
-  if (!env.PORTAL_KV) return [];
-  const raw = await env.PORTAL_KV.get('empdocs');
-  if (raw) return JSON.parse(raw);
-  const seed = seedInicial();
-  await env.PORTAL_KV.put('empdocs', JSON.stringify(seed));
-  return seed;
+// ARMAZENAMENTO: D1 (banco SQL, leitura consistente na hora). O KV era o depósito
+// original, mas a propagação dele demora (~60s) e fazia as alterações "sumirem" ao
+// salvar/recarregar — e salvamentos seguidos podiam se sobrescrever. Um registro por
+// documento (linha própria), com migração automática do que já existia no KV.
+async function d1Docs(env) {
+  if (!env.DB_PLOOMES) return null;
+  try { await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS empresa_docs (id TEXT PRIMARY KEY, dados TEXT)').run(); return env.DB_PLOOMES; }
+  catch { return null; }
 }
-async function gravar(env, docs) { await env.PORTAL_KV.put('empdocs', JSON.stringify(docs)); }
-
-export async function salvarEmpresaDoc(env, user, b) {
-  if (!env.PORTAL_KV) return { ok: false, message: 'Armazenamento indisponível.' };
-  const docs = await lerEmpresaDocs(env);
-  let d = docs.find((x) => x.id === String(b.id || ''));
-  if (!d) {
-    const titulo = limpar(b.titulo).slice(0, 140);
-    if (!titulo) return { ok: false, message: 'Dê um nome ao documento.' };
-    d = { id: 'doc-' + Date.now().toString(36), titulo, emissor: '', emissao: '', validade: '', indeterminada: false, naoAplica: false, obs: '', arquivo: null, checklist: { cnpj: false, endereco: false, escopo: false, vigencia: false, legivel: false }, atualizadoEm: '', por: '' };
-    docs.push(d);
+async function lerDocD1(db, id) {
+  try { const r = await db.prepare('SELECT dados FROM empresa_docs WHERE id=?1').bind(String(id)).first(); return r ? JSON.parse(r.dados) : null; }
+  catch { return null; }
+}
+async function gravarDocD1(db, d) {
+  await db.prepare('INSERT OR REPLACE INTO empresa_docs (id,dados) VALUES (?1,?2)').bind(d.id, JSON.stringify(d)).run();
+}
+export async function lerEmpresaDocs(env) {
+  const db = await d1Docs(env);
+  if (!db) {
+    // Sem D1 (não deve acontecer em produção): cai no KV como era.
+    if (!env.PORTAL_KV) return [];
+    const raw = await env.PORTAL_KV.get('empdocs');
+    if (raw) return JSON.parse(raw);
+    const seed = seedInicial();
+    await env.PORTAL_KV.put('empdocs', JSON.stringify(seed));
+    return seed;
   }
-  const okData = (v) => /^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? String(v) : '';
+  let rows = [];
+  try { const r = await db.prepare('SELECT dados FROM empresa_docs ORDER BY rowid').all(); rows = (r.results || []).map((x) => JSON.parse(x.dados)); } catch { rows = []; }
+  if (rows.length) return rows;
+  // Primeira vez no D1: migra o que já existia no KV (inclusive anexos enviados); senão, semeia.
+  let base = null;
+  try { const raw = env.PORTAL_KV ? await env.PORTAL_KV.get('empdocs') : null; base = raw ? JSON.parse(raw) : null; } catch { base = null; }
+  const docs = (base && base.length) ? base : seedInicial();
+  for (const d of docs) { try { await gravarDocD1(db, d); } catch { /* segue */ } }
+  return docs;
+}
+
+const OK_DATA = (v) => /^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? String(v) : '';
+function aplicarCampos(d, b, user) {
   if (b.titulo != null) d.titulo = limpar(b.titulo).slice(0, 140) || d.titulo;
   if (b.emissor != null) d.emissor = limpar(b.emissor).slice(0, 120);
-  if (b.emissao != null) d.emissao = okData(b.emissao);
-  if (b.validade != null) d.validade = okData(b.validade);
+  if (b.emissao != null) d.emissao = OK_DATA(b.emissao);
+  if (b.validade != null) d.validade = OK_DATA(b.validade);
   if (b.indeterminada != null) d.indeterminada = !!b.indeterminada;
   if (b.naoAplica != null) d.naoAplica = !!b.naoAplica;
   if (b.obs != null) d.obs = String(b.obs).slice(0, 1500).trim();
@@ -56,16 +75,35 @@ export async function salvarEmpresaDoc(env, user, b) {
   }
   d.atualizadoEm = new Date().toISOString();
   d.por = (user && user.email) || '';
-  await gravar(env, docs);
+  return d;
+}
+function docNovo(titulo) {
+  return { id: 'doc-' + Date.now().toString(36), titulo, emissor: '', emissao: '', validade: '', indeterminada: false, naoAplica: false, obs: '', arquivo: null, checklist: { cnpj: false, endereco: false, escopo: false, vigencia: false, legivel: false }, atualizadoEm: '', por: '' };
+}
+export async function salvarEmpresaDoc(env, user, b) {
+  const db = await d1Docs(env);
+  if (!db) return { ok: false, message: 'Banco indisponível — tente de novo em instantes.' };
+  await lerEmpresaDocs(env); // garante seed/migração antes do primeiro salvar
+  const idPedido = String(b.id || '');
+  let d = idPedido ? await lerDocD1(db, idPedido) : null;
+  if (!d) {
+    const titulo = limpar(b.titulo).slice(0, 140);
+    if (!titulo) return { ok: false, message: idPedido ? 'Documento não encontrado — recarregue a página.' : 'Dê um nome ao documento.' };
+    d = docNovo(titulo);
+  }
+  aplicarCampos(d, b, user);
+  try { await gravarDocD1(db, d); } catch { return { ok: false, message: 'Não consegui gravar — tente de novo.' }; }
   return { ok: true, id: d.id };
 }
 
 export async function anexarEmpresaDoc(env, user, id, meta) {
-  const docs = await lerEmpresaDocs(env);
-  const d = docs.find((x) => x.id === String(id || ''));
+  const db = await d1Docs(env);
+  if (!db) return { ok: false, message: 'Banco indisponível — tente de novo em instantes.' };
+  await lerEmpresaDocs(env);
+  const d = await lerDocD1(db, String(id || ''));
   if (!d) return { ok: false, message: 'Documento não encontrado.' };
   d.arquivo = meta; d.atualizadoEm = new Date().toISOString(); d.por = (user && user.email) || '';
-  await gravar(env, docs);
+  try { await gravarDocD1(db, d); } catch { return { ok: false, message: 'Não consegui gravar o anexo — tente de novo.' }; }
   return { ok: true };
 }
 
