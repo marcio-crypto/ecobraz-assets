@@ -30,7 +30,7 @@ database_id = "acd75607-389c-42c3-b50b-24f607350dd9"
 binding = "R2_ARQUIVOS"
 bucket_name = "ecobraz-arquivos"
 
-# Cron diário — alertas de vencimento dos Documentos da Empresa (11:00 UTC = 8h em Brasília).
+# Cron diário — alertas de vencimento dos Documentos da Empresa (11:00 UTC = 8h de Brasília).
 [triggers]
 crons = ["0 11 * * *"]
 
