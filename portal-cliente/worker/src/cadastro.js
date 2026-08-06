@@ -872,6 +872,7 @@ export function paginaClienteDetalhe(user, cli, arquivos, negocios, segmento) {
     ${cli.tipo === 'PJ' && cli.nomeFantasia ? `<div style="font-size:13px;color:#7c8a87;margin-top:2px">${esc(cli.nomeFantasia)}</div>` : ''}</div>
     <div style="flex:none;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
       <a href="/proposta/nova?cliente=${esc(cli.id)}" class="btn btn-d" style="padding:9px 14px;font-size:13px">📄 Gerar proposta</a>
+      <a href="/proposta/nova?cliente=${esc(cli.id)}&tipo=contrato" class="btn btn-d" style="padding:9px 14px;font-size:13px;background:#0B5B66">📜 Gerar contrato</a>
       <a href="/cadastro/editar?id=${esc(cli.id)}" class="btn btn-g" style="padding:9px 14px;font-size:13px">Editar</a>
     </div>
   </div>

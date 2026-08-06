@@ -1459,7 +1459,7 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         if (!escritorio) return html(paginaLoginEscritorio(googleConfigurado(env)));
         const cliId = url.searchParams.get('cliente') || '';
         const cli = cliId ? await carregarClientePorId(env, cliId) : null;
-        return html(paginaPropostaForm(escritorio, null, cli));
+        return html(paginaPropostaForm(escritorio, null, cli, url.searchParams.get('tipo') || ''));
       }
       if (pathname === '/proposta/editar' && request.method === 'GET') {
         if (!escritorio) return html(paginaLoginEscritorio(googleConfigurado(env)));
@@ -1538,6 +1538,8 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         if (!escritorio && !diretoria) return html(paginaLoginEscritorio(googleConfigurado(env)));
         const p = await lerProposta(env, url.searchParams.get('id'));
         if (!p) return html(paginaMensagem('Proposta não encontrada', 'Volte e tente de novo.'), 404);
+        // Contrato avulso não tem "visão de proposta" — vai direto ao documento.
+        if (p.docTipo === 'contrato') return new Response(null, { status: 302, headers: { Location: '/contrato/ver?id=' + encodeURIComponent(p.id), 'cache-control': 'no-store' } });
         return html(paginaPropostaVer(p));
       }
       if (pathname === '/contrato/ver' && request.method === 'GET') {

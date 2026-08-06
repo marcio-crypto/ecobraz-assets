@@ -59,9 +59,15 @@ export async function salvarProposta(env, user, b) {
   let p = b.id ? await lerProposta(env, b.id) : null;
   if (!p) {
     const ano = new Date().getFullYear();
-    const seq = 1 + (Number(await env.PORTAL_KV.get(`prop:seq:${ano}`)) || 0);
-    await env.PORTAL_KV.put(`prop:seq:${ano}`, String(seq));
-    p = { id: `${ano}-${String(seq).padStart(3, '0')}`, numero: `P-${ano}-${String(seq).padStart(3, '0')}`, criadoEm: agoraISO };
+    // Contrato AVULSO (pedido da Débora): documento geral, sem proposta — numeração própria CT-AAAA-NNN.
+    const ehContrato = String(b.tipoDoc || '') === 'contrato';
+    const chaveSeq = ehContrato ? `prop:seqct:${ano}` : `prop:seq:${ano}`;
+    const seq = 1 + (Number(await env.PORTAL_KV.get(chaveSeq)) || 0);
+    await env.PORTAL_KV.put(chaveSeq, String(seq));
+    const num = String(seq).padStart(3, '0');
+    p = ehContrato
+      ? { id: `ct-${ano}-${num}`, numero: `CT-${ano}-${num}`, docTipo: 'contrato', criadoEm: agoraISO }
+      : { id: `${ano}-${num}`, numero: `P-${ano}-${num}`, criadoEm: agoraISO };
   }
   p = {
     ...p,
@@ -87,7 +93,7 @@ export async function salvarProposta(env, user, b) {
 }
 async function atualizarIndice(env, p) {
   const idx = (await listarPropostas(env)).filter((x) => x.id !== p.id);
-  idx.unshift({ id: p.id, numero: p.numero, nome: (p.cliente || {}).nome || '', doc: (p.cliente || {}).doc || '', total: p.total, criadoEm: p.criadoEm, aceite: !!p.aceite, temLink: !!p.aceiteToken });
+  idx.unshift({ id: p.id, numero: p.numero, nome: (p.cliente || {}).nome || '', doc: (p.cliente || {}).doc || '', total: p.total, criadoEm: p.criadoEm, aceite: !!p.aceite, temLink: !!p.aceiteToken, docTipo: p.docTipo || '' });
   await env.PORTAL_KV.put('prop:index', JSON.stringify(idx.slice(0, 500)));
 }
 
@@ -154,27 +160,33 @@ function topo(sub) {
 
 // --- Lista --------------------------------------------------------------------
 export function paginaPropostas(user, lista) {
-  const badge = (p) => p.aceite ? '<span style="font-size:10px;font-weight:800;color:#0B6B3A;background:#E7F4EC;border-radius:999px;padding:2px 9px">✓ Aceita</span>'
-    : p.temLink ? '<span style="font-size:10px;font-weight:800;color:#8A6A16;background:#FFF4DE;border-radius:999px;padding:2px 9px">Aguardando aceite</span>' : '';
-  const rows = (lista || []).map((p) => `<a href="/proposta/ver?id=${esc(p.id)}" style="display:flex;justify-content:space-between;align-items:center;gap:10px;text-decoration:none;border:1px solid #EEF1F0;border-radius:10px;padding:12px 14px;margin-bottom:8px;background:#FBFDFC">
+  const badge = (p) => (p.docTipo === 'contrato' ? '<span style="font-size:10px;font-weight:800;color:#0B5B66;background:#E3F0F3;border-radius:999px;padding:2px 9px">CONTRATO</span> ' : '')
+    + (p.aceite ? '<span style="font-size:10px;font-weight:800;color:#0B6B3A;background:#E7F4EC;border-radius:999px;padding:2px 9px">✓ Aceito</span>'
+    : p.temLink ? '<span style="font-size:10px;font-weight:800;color:#8A6A16;background:#FFF4DE;border-radius:999px;padding:2px 9px">Aguardando aceite</span>' : '');
+  const rows = (lista || []).map((p) => `<a href="${p.docTipo === 'contrato' ? '/contrato/ver' : '/proposta/ver'}?id=${esc(p.id)}" style="display:flex;justify-content:space-between;align-items:center;gap:10px;text-decoration:none;border:1px solid #EEF1F0;border-radius:10px;padding:12px 14px;margin-bottom:8px;background:#FBFDFC">
       <span style="min-width:0"><span style="font-size:13px;font-weight:800;color:#10262B">${esc(p.numero)} · ${esc(p.nome || '—')}</span> ${badge(p)}<span style="display:block;font-size:11px;color:#8fa39f">${esc(fmtDoc(p.doc))}${p.criadoEm ? ' · ' + esc(dataBR(p.criadoEm)) : ''}</span></span>
-      <span style="flex:none;text-align:right"><span style="display:block;font-size:12.5px;font-weight:800;color:#0B5B66">${money(p.total)}</span><span style="font-size:10.5px;color:#3f8f3a;font-weight:700">abrir ↗</span></span>
-    </a>`).join('') || '<div style="font-size:12.5px;color:#8fa39f">Nenhuma proposta ainda. Crie a primeira — ou abra a ficha de um cliente e clique em “Gerar proposta”.</div>';
+      <span style="flex:none;text-align:right">${p.docTipo === 'contrato' ? '' : `<span style="display:block;font-size:12.5px;font-weight:800;color:#0B5B66">${money(p.total)}</span>`}<span style="font-size:10.5px;color:#3f8f3a;font-weight:700">abrir ↗</span></span>
+    </a>`).join('') || '<div style="font-size:12.5px;color:#8fa39f">Nenhum documento ainda. Crie a primeira proposta ou um contrato avulso — ou abra a ficha de um cliente.</div>';
   return `${head('Propostas')}<body>${topo('propostas')}
 <div class="wrap">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px">
     <div><h1 style="font-size:22px;margin:0">Propostas &amp; Contratos</h1>
     <div style="font-size:12.5px;color:#7c8a87;margin-top:3px">Emita a proposta comercial e o contrato básico — prontos para imprimir ou salvar em PDF.</div></div>
-    <a href="/proposta/nova" class="btn btn-p" style="flex:none">＋ Nova proposta</a>
+    <div style="flex:none;display:flex;gap:8px;flex-wrap:wrap">
+      <a href="/proposta/nova" class="btn btn-p">＋ Nova proposta</a>
+      <a href="/proposta/nova?tipo=contrato" class="btn btn-d">＋ Novo contrato (avulso)</a>
+    </div>
   </div>
   <div class="card">${rows}</div>
 </div></body></html>`;
 }
 
 // --- Formulário ---------------------------------------------------------------
-export function paginaPropostaForm(user, prop, cli) {
+export function paginaPropostaForm(user, prop, cli, tipoNovo) {
   const p = prop || {};
   const c = p.cliente || {};
+  // Contrato AVULSO: formulário reduzido (só cliente + referência + observações).
+  const ehContrato = (p.docTipo === 'contrato') || tipoNovo === 'contrato';
   // Pré-preenche a partir da ficha do cliente (quando veio de /cadastro/cliente).
   const pre = cli ? {
     nome: cli.tipo === 'PJ' ? (cli.razaoSocial || cli.nomeFantasia || '') : (cli.nome || ''),
@@ -187,10 +199,11 @@ export function paginaPropostaForm(user, prop, cli) {
   } : {};
   const v = (k) => esc(c[k] != null && c[k] !== '' ? c[k] : (pre[k] || ''));
   const itens = (p.itens && p.itens.length ? p.itens : [{ residuo: '', qtd: 1, un: 'un.', unit: 0 }]);
-  return `${head(p.id ? 'Editar proposta' : 'Nova proposta')}<body>${topo('propostas')}
+  return `${head(ehContrato ? (p.id ? 'Editar contrato' : 'Novo contrato') : (p.id ? 'Editar proposta' : 'Nova proposta'))}<body>${topo('propostas')}
 <div class="wrap">
-  <a href="${p.id ? '/proposta/ver?id=' + esc(p.id) : '/propostas'}" style="font-size:13px;font-weight:800;text-decoration:none;color:#4F6469">← Voltar</a>
-  <h1 style="font-size:22px;margin:12px 0 16px">${p.id ? 'Editar proposta ' + esc(p.numero) : 'Nova proposta comercial'}</h1>
+  <a href="${p.id ? (ehContrato ? '/contrato/ver?id=' : '/proposta/ver?id=') + esc(p.id) : '/propostas'}" style="font-size:13px;font-weight:800;text-decoration:none;color:#4F6469">← Voltar</a>
+  <h1 style="font-size:22px;margin:12px 0 16px">${ehContrato ? (p.id ? 'Editar contrato ' + esc(p.numero) : 'Novo contrato (avulso)') : (p.id ? 'Editar proposta ' + esc(p.numero) : 'Nova proposta comercial')}</h1>
+  ${ehContrato && !p.id ? '<div style="font-size:12.5px;color:#7c8a87;margin:-8px 0 14px;line-height:1.5">Contrato geral, sem proposta: identifica as partes e as condições gerais. Valores ficam nas propostas/ordens de cada serviço.</div>' : ''}
   <div class="card">
     <div class="sec" style="margin-top:0">Cliente</div>
     <div class="g2">
@@ -205,7 +218,7 @@ export function paginaPropostaForm(user, prop, cli) {
     </div>
     <label>Título / referência (opcional)</label><input id="f-titulo" value="${esc(p.titulo || '')}" placeholder="ex.: Coleta de equipamentos de informática — matriz">
 
-    <div class="sec">Itens da proposta</div>
+    ${ehContrato ? '' : `<div class="sec">Itens da proposta</div>
     <div style="font-size:12px;color:#7c8a87;margin:-2px 0 8px">Resíduo, quantidade e valor unitário — o total calcula sozinho. Use valor 0 para item sem cobrança.</div>
     <div id="itens"></div>
     <button type="button" class="btn btn-g" style="padding:9px 14px;font-size:13px" onclick="addItem()">＋ Adicionar item</button>
@@ -216,8 +229,8 @@ export function paginaPropostaForm(user, prop, cli) {
       <div><label>Forma de pagamento</label><input id="f-pag" value="${esc(p.pagamento || '')}" placeholder="ex.: Boleto 10 DDL"></div>
       <div><label>Validade da proposta</label><input id="f-val" value="${esc(p.validade || '')}" placeholder="ex.: 15 dias"></div>
       <div><label>Prazo de atendimento</label><input id="f-prazo" value="${esc(p.prazo || '')}" placeholder="ex.: até 5 dias úteis"></div>
-    </div>
-    <label>Observações</label><textarea id="f-obs" rows="3" placeholder="condições adicionais, detalhes da coleta…">${esc(p.obs || '')}</textarea>
+    </div>`}
+    <label>Observações</label><textarea id="f-obs" rows="3" placeholder="${ehContrato ? 'condições específicas acordadas com este cliente (opcional)…' : 'condições adicionais, detalhes da coleta…'}">${esc(p.obs || '')}</textarea>
 
     <div style="display:flex;gap:10px;margin-top:20px;align-items:center;flex-wrap:wrap">
       <button type="button" class="btn btn-p" onclick="salvar()">${p.id ? 'Salvar alterações' : 'Salvar e visualizar'}</button>
@@ -237,20 +250,22 @@ function rowHTML(i){return '<div class="g-item" style="display:grid;grid-templat
  +'<div class="i-tot" style="font-size:13px;font-weight:800;color:#00333B;text-align:right">R$ 0,00</div>'
  +'<button type="button" onclick="this.parentNode.remove();recalc()" style="border:none;background:#fff;border:1px solid #E4EBE9;border-radius:8px;padding:8px 0;cursor:pointer;color:#a06a62;font-weight:800">✕</button></div>';}
 function addItem(i){document.getElementById('itens').insertAdjacentHTML('beforeend',rowHTML(i||{qtd:1,un:'un.'}));recalc();}
-function coletar(){return Array.from(document.querySelectorAll('.g-item')).map(r=>({residuo:r.querySelector('.i-res').value,qtd:numBR(r.querySelector('.i-qtd').value),un:r.querySelector('.i-un').value,unit:numBR(r.querySelector('.i-unit').value)}));}
-function recalc(){let t=0;document.querySelectorAll('.g-item').forEach(r=>{const s=numBR(r.querySelector('.i-qtd').value)*numBR(r.querySelector('.i-unit').value);t+=s;r.querySelector('.i-tot').textContent=fmt(s);});document.getElementById('f-total').textContent=fmt(t);}
-document.getElementById('itens').addEventListener('input',recalc);
-ITENS_INI.forEach(i=>addItem(i));
+function coletar(){const el=document.getElementById('itens');if(!el)return [];return Array.from(document.querySelectorAll('.g-item')).map(r=>({residuo:r.querySelector('.i-res').value,qtd:numBR(r.querySelector('.i-qtd').value),un:r.querySelector('.i-un').value,unit:numBR(r.querySelector('.i-unit').value)}));}
+function recalc(){const tot=document.getElementById('f-total');if(!tot)return;let t=0;document.querySelectorAll('.g-item').forEach(r=>{const s=numBR(r.querySelector('.i-qtd').value)*numBR(r.querySelector('.i-unit').value);t+=s;r.querySelector('.i-tot').textContent=fmt(s);});tot.textContent=fmt(t);}
+const EH_CONTRATO=${ehContrato ? 'true' : 'false'};
+if(document.getElementById('itens')){document.getElementById('itens').addEventListener('input',recalc);ITENS_INI.forEach(i=>addItem(i));}
+const gv=(id)=>{const el=document.getElementById(id);return el?el.value:'';};
 async function salvar(){
   const msg=document.getElementById('msg');msg.textContent='Salvando…';
   const body={id:${JSON.stringify(p.id || '')},clienteId:${JSON.stringify(p.clienteId || pre.clienteId || '')},
-   nome:document.getElementById('f-nome').value,doc:document.getElementById('f-doc').value,endereco:document.getElementById('f-end').value,
-   contato:document.getElementById('f-contato').value,email:document.getElementById('f-email').value,fone:document.getElementById('f-fone').value,
-   titulo:document.getElementById('f-titulo').value,itens:coletar(),pagamento:document.getElementById('f-pag').value,
-   validade:document.getElementById('f-val').value,prazo:document.getElementById('f-prazo').value,obs:document.getElementById('f-obs').value};
+   tipoDoc:EH_CONTRATO?'contrato':'',
+   nome:gv('f-nome'),doc:gv('f-doc'),endereco:gv('f-end'),
+   contato:gv('f-contato'),email:gv('f-email'),fone:gv('f-fone'),
+   titulo:gv('f-titulo'),itens:coletar(),pagamento:gv('f-pag'),
+   validade:gv('f-val'),prazo:gv('f-prazo'),obs:gv('f-obs')};
   if(!body.nome.trim()){msg.textContent='Preencha o nome/razão social do cliente.';return;}
   try{const r=await fetch('/api/proposta/salvar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
-   const j=await r.json();if(j.ok&&j.id){location.href='/proposta/ver?id='+encodeURIComponent(j.id);}else{msg.textContent=j.message||'Não consegui salvar. Tente de novo.';}}
+   const j=await r.json();if(j.ok&&j.id){location.href=(EH_CONTRATO?'/contrato/ver?id=':'/proposta/ver?id=')+encodeURIComponent(j.id);}else{msg.textContent=j.message||'Não consegui salvar. Tente de novo.';}}
   catch{msg.textContent='Falha de rede. Tente de novo.';}
 }
 </script></body></html>`;
@@ -387,6 +402,22 @@ ${ac.extra}
 
 // Texto do contrato — minuta-padrão APROVADA pela Débora (06/08/2026) como modelo
 // oficial da Ecobraz. Qualquer ajuste futuro de cláusula é feito aqui.
+// Contrato AVULSO/GERAL (sem proposta): mesmas cláusulas, generalizadas — valores e
+// prazos ficam nas propostas/ordens de cada serviço. Ajustar ao modelo oficial da
+// Débora quando o PDF dela chegar.
+function clausulasContratoGeral(p) {
+  const c = p.cliente || {};
+  return [
+    ['CLÁUSULA 1ª — DO OBJETO', `Prestação, pela CONTRATADA, dos serviços de coleta, transporte, triagem, descaracterização e destinação de resíduos eletrônicos, conforme as solicitações da CONTRATANTE aceitas pela CONTRATADA${c.endereco ? `, com retirada no endereço indicado pela CONTRATANTE (${c.endereco})` : ''} ou em outro endereço acordado entre as partes.`],
+    ['CLÁUSULA 2ª — DO VALOR E DO PAGAMENTO', 'Os valores e as condições de pagamento serão os acordados entre as partes em cada proposta ou ordem de serviço aprovada, que passa a integrar o presente contrato.'],
+    ['CLÁUSULA 3ª — DO PRAZO DE ATENDIMENTO', 'Os serviços serão executados conforme a agenda acordada entre as partes em cada solicitação, contada da confirmação da agenda de coleta.'],
+    ['CLÁUSULA 4ª — DA DOCUMENTAÇÃO', 'A CONTRATADA disponibilizará à CONTRATANTE os documentos aplicáveis à operação (como MTR, CDF e laudos), quando previstos no escopo contratado.'],
+    ['CLÁUSULA 5ª — DAS OBRIGAÇÕES', 'A CONTRATANTE disponibilizará os materiais e o acesso ao local nas datas agendadas. A CONTRATADA executará os serviços com pessoal próprio e em conformidade com a legislação aplicável.'],
+    ['CLÁUSULA 6ª — DA VIGÊNCIA', 'O presente contrato vigora por prazo indeterminado a partir da assinatura, podendo ser encerrado por qualquer das partes mediante aviso prévio de 30 (trinta) dias, sem prejuízo dos serviços já solicitados.'],
+    ['CLÁUSULA 7ª — DO FORO', `Fica eleito o foro da Comarca de ${ECOBRAZ.cidadeForo} para dirimir quaisquer controvérsias decorrentes deste contrato.`],
+  ];
+}
+const clausulasDe = (p) => p.docTipo === 'contrato' ? clausulasContratoGeral(p) : clausulasContrato(p);
 function clausulasContrato(p) {
   const c = p.cliente || {};
   return [
@@ -402,8 +433,9 @@ function clausulasContrato(p) {
 export function paginaContratoVer(p, modo = 'equipe', base = 'https://sistema.ecobraz.org') {
   const c = p.cliente || {};
   const cliente = modo === 'cliente';
+  const geral = p.docTipo === 'contrato';
   const a = p.aceite || null;
-  const clausulas = clausulasContrato(p).map(([t, x]) => `<p class="clausula"><b>${esc(t)}.</b> ${esc(x)}</p>`).join('');
+  const clausulas = clausulasDe(p).map(([t, x]) => `<p class="clausula"><b>${esc(t)}.</b> ${esc(x)}</p>`).join('');
   const ac = cliente ? { botoes: '', extra: '' } : aceiteUI(p);
   const assinContratante = a
     ? `<div class="a"><img class="ass-img" src="${esc(a.assinatura)}" alt="Assinatura"><div class="tr"><b>${esc(a.nome)}</b><br>CPF ${esc(fmtCPF(a.cpf))}${a.cargo ? ' · ' + esc(a.cargo) : ''} · CONTRATANTE<br><span style="font-size:9px;color:#0B6B3A;font-weight:700">Assinado eletronicamente em ${esc(horaBR(a.dt))} · código ${esc(a.codigo)}</span></div></div>`
@@ -411,22 +443,23 @@ export function paginaContratoVer(p, modo = 'equipe', base = 'https://sistema.ec
   const evidencias = a ? `<div class="aceitebox"><b>✔ ACEITE ELETRÔNICO REGISTRADO</b> — Documento aceito e assinado eletronicamente por <b>${esc(a.nome)}</b> (CPF ${esc(fmtCPF(a.cpf))}${a.cargo ? ', ' + esc(a.cargo) : ''}${a.email ? ', e-mail ' + esc(a.email) : ''}) em <b>${esc(horaBR(a.dt))}</b> (horário de Brasília)${a.ip ? `, IP ${esc(a.ip)}` : ''}. Código de verificação: <b>${esc(a.codigo)}</b>. Confira a autenticidade em ${esc(base)}/aceite/verificar?id=${esc(p.id)}&amp;c=${esc(a.codigo)}</div>` : '';
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Contrato ${esc(p.numero)} — Ecobraz</title>${cssDoc()}</head><body>
 <div class="toolbar">
-  ${cliente ? '' : `<a href="/proposta/ver?id=${esc(p.id)}" class="tb tb-g">← Proposta</a>`}
+  ${cliente ? '' : (geral ? `<a href="/propostas" class="tb tb-g">← Documentos</a>` : `<a href="/proposta/ver?id=${esc(p.id)}" class="tb tb-g">← Proposta</a>`)}
   <button class="tb tb-p" onclick="print()">🖨️ Imprimir / salvar PDF</button>
+  ${(!cliente && geral && !p.aceite) ? `<a href="/proposta/editar?id=${esc(p.id)}" class="tb tb-g">✏️ Editar</a>` : ''}
   ${ac.botoes}
 </div>
 ${ac.extra}
 <div class="folha">
   ${cabecalhoDoc()}
   <div class="corpo">
-    <div class="titulo"><h1>CONTRATO DE PRESTAÇÃO DE SERVIÇOS</h1><span class="numero">Ref. ${esc(p.numero)}</span></div>
+    <div class="titulo"><h1>CONTRATO DE PRESTAÇÃO DE SERVIÇOS</h1><span class="numero">${geral ? 'Nº' : 'Ref.'} ${esc(p.numero)}</span></div>
     <p class="subt">Coleta e destinação de resíduos eletrônicos${p.titulo ? ' · ' + esc(p.titulo) : ''}</p>
     <p class="clausula"><b>CONTRATADA:</b> ${esc(ECOBRAZ.razao)}, inscrita no CNPJ sob nº ${esc(ECOBRAZ.cnpj)}, com sede na ${esc(ECOBRAZ.endereco)}.</p>
     <p class="clausula"><b>CONTRATANTE:</b> ${esc(c.nome || '________________')}${c.doc ? `, inscrita no ${digits(c.doc).length === 14 ? 'CNPJ' : 'CPF'} sob nº ${esc(fmtDoc(c.doc))}` : ''}${c.endereco ? `, com endereço na ${esc(c.endereco)}` : ''}.</p>
     <p class="clausula">As partes acima identificadas têm, entre si, justo e acertado o presente contrato, que se regerá pelas cláusulas seguintes:</p>
     ${clausulas}
-    <div class="sec">Itens contratados</div>
-    ${tabelaItens(p)}
+    ${geral ? '' : `<div class="sec">Itens contratados</div>
+    ${tabelaItens(p)}`}
     ${p.obs ? `<div class="sec">Observações</div><div class="obs">${esc(p.obs)}</div>` : ''}
     <p class="clausula" style="margin-top:22px">E por estarem justas e contratadas, as partes assinam o presente instrumento em duas vias de igual teor.</p>
     <p class="clausula" style="text-align:right">${esc(ECOBRAZ.cidadeForo.split('/')[0])}, ${esc(dataExtenso(new Date().toISOString()))}.</p>
@@ -478,13 +511,13 @@ export function paginaAceite(p, base = 'https://sistema.ecobraz.org') {
 <div class="folha" style="margin-top:26px">
   ${cabecalhoDoc()}
   <div class="corpo">
-    <div class="titulo"><h1>CONTRATO PARA ACEITE</h1><span class="numero">Ref. ${esc(p.numero)}</span></div>
+    <div class="titulo"><h1>CONTRATO PARA ACEITE</h1><span class="numero">${p.docTipo === 'contrato' ? 'Nº' : 'Ref.'} ${esc(p.numero)}</span></div>
     <p class="subt">Confira o documento abaixo com calma. O aceite e a assinatura ficam no final da página.</p>
     <p class="clausula"><b>CONTRATADA:</b> ${esc(ECOBRAZ.razao)}, CNPJ ${esc(ECOBRAZ.cnpj)}, ${esc(ECOBRAZ.endereco)}.</p>
     <p class="clausula"><b>CONTRATANTE:</b> ${esc(c.nome || '—')}${c.doc ? `, ${digits(c.doc).length === 14 ? 'CNPJ' : 'CPF'} ${esc(fmtDoc(c.doc))}` : ''}${c.endereco ? `, ${esc(c.endereco)}` : ''}.</p>
-    ${clausulasContrato(p).map(([t, x]) => `<p class="clausula"><b>${esc(t)}.</b> ${esc(x)}</p>`).join('')}
-    <div class="sec">Itens contratados</div>
-    ${tabelaItens(p)}
+    ${clausulasDe(p).map(([t, x]) => `<p class="clausula"><b>${esc(t)}.</b> ${esc(x)}</p>`).join('')}
+    ${p.docTipo === 'contrato' ? '' : `<div class="sec">Itens contratados</div>
+    ${tabelaItens(p)}`}
     ${p.obs ? `<div class="sec">Observações</div><div class="obs">${esc(p.obs)}</div>` : ''}
   </div>
 </div>
