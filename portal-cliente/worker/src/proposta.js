@@ -385,7 +385,8 @@ ${ac.extra}
 </div></body></html>`;
 }
 
-// MINUTA-PADRÃO do contrato — será substituída pelo modelo oficial (Ploomes) da Débora.
+// Texto do contrato — minuta-padrão APROVADA pela Débora (06/08/2026) como modelo
+// oficial da Ecobraz. Qualquer ajuste futuro de cláusula é feito aqui.
 function clausulasContrato(p) {
   const c = p.cliente || {};
   return [
@@ -415,7 +416,6 @@ export function paginaContratoVer(p, modo = 'equipe', base = 'https://sistema.ec
   ${ac.botoes}
 </div>
 ${ac.extra}
-${cliente ? '' : '<div class="aviso-minuta">⚠️ <b>Minuta-padrão</b> (não sai na impressão): revise o texto antes de enviar ao cliente. Quando a Débora enviar o modelo oficial de contrato, este texto será substituído.</div>'}
 <div class="folha">
   ${cabecalhoDoc()}
   <div class="corpo">
