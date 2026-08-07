@@ -2222,7 +2222,21 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
       }
       if (pathname === '/cargas/nova' && request.method === 'GET') {
         if (!docaOk) return html(paginaLoginOperacao(googleConfigurado(env)));
-        return html(paginaNovaCarga(docaOk, await listarColetasRecebiveis(env)));
+        // Lista PRÓPRIA do Cargas (OSs completas, com certificados/cliente):
+        // coletas concluídas, fora de outras cargas; o fluxo antigo da doca só
+        // bloqueia se tiver dado real (peso/fotos/etapa avançada) — um clique
+        // acidental em "receber" não esconde a OS daqui.
+        const todasOS = await listarColetasOS(env);
+        const emCargas = new Set();
+        (await listarCargas(env)).forEach((cg) => (cg.oss || []).forEach((o) => emCargas.add(o.id)));
+        const livres = [];
+        for (const c of todasOS.filter((x) => x.status === 'concluida')) {
+          if (emCargas.has(c.id)) continue;
+          let opAntiga = null; try { opAntiga = await lerOperacao(env, c.id); } catch { opAntiga = null; }
+          if (opAntiga && (opAntiga.entrada || (opAntiga.fotos && Object.keys(opAntiga.fotos).length) || (opAntiga.etapa && opAntiga.etapa !== 'recepcao'))) continue;
+          livres.push(c);
+        }
+        return html(paginaNovaCarga(docaOk, livres));
       }
       if (pathname === '/cargas/carga' && request.method === 'GET') {
         if (!docaOk) return html(paginaLoginOperacao(googleConfigurado(env)));
