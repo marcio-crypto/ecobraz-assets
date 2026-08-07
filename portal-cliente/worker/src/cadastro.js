@@ -1244,6 +1244,7 @@ export function paginaInicio(user, stats) {
     ${card('/leads', '📥', 'Leads do site', 'Solicitações que chegam pelo formulário do site.', badge(s.leadsNovos != null ? `${num(s.leadsNovos)} novos` : null, s.leadsNovos > 0))}
     ${card('/propostas', '📄', 'Propostas & Contratos', 'Emita a proposta comercial e o contrato básico, prontos para PDF.')}
     ${card('/operacao', '🏭', 'Operação (doca)', 'Recepção, triagem, processamento e saída. Balanço de massa.', badge(s.aReceber != null && s.aReceber > 0 ? `${num(s.aReceber)} a receber` : null, true))}
+    ${card('/cargas', '🚛', 'Entrada por Cargas', 'Consolidação, pesagem, fotos, lotes com etiqueta QR e filas por destino.')}
     ${card('/frota', '🚛', 'Frota', 'Veículos da empresa. O motorista faz o checklist ao abrir e fechar o dia.', badge(s.veiculos != null && s.veiculos > 0 ? `${num(s.veiculos)} veículos` : null))}
     ${card('/frota/aovivo', '🛰️', 'Frota ao vivo', 'Onde está cada caminhão, qual coleta atende agora e a próxima da fila.')}
     ${card('/eng', '🔬', 'Engenharia Ambiental', 'Validação técnica (RT), destino final e relatórios de conformidade.')}

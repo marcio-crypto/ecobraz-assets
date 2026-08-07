@@ -296,7 +296,8 @@ export function paginaAppOperacao(operador, operacoes) {
   <form method="post" action="/api/operacao/sair" style="margin:0"><button style="background:#0e4651;color:#cfe3e0;border:1px solid #1c5b66;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700">Sair</button></form>
 </div></div>
 <div class="wrap">
-  <a href="/operacao/receber" class="btn dark" style="margin-bottom:16px">➕ Receber novo lote</a>
+  <a href="/operacao/receber" class="btn dark" style="margin-bottom:10px">➕ Receber novo lote</a>
+  <a href="/cargas" class="btn" style="margin-bottom:16px;background:#92C430;color:#10262B">🚛 Entrada por Cargas (novo) — pesar, fotografar, fracionar e etiquetar</a>
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div style="font-size:13px;font-weight:800">Operações em andamento</div><span class="pill" style="background:#E3F0F3;color:#0B5B66">${operacoes.length}</span></div>
   ${itens}
   <div style="text-align:center;margin-top:16px"><a href="/manual-doca.pdf" target="_blank" rel="noopener" style="color:#0B5B66;font-size:12px;font-weight:700;text-decoration:none">📄 Manual da doca (PDF)</a></div>

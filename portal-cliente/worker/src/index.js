@@ -52,6 +52,7 @@ import { paginaAcompanhamento, colunaClienteDe, lerGestores, gestorPorEmail, sal
 import { DEMO_CLIENTE_HTML, DEMO_OG_PNG_B64 } from './demo-cliente.js';
 import { listarPropostas, lerProposta, salvarProposta, paginaPropostas, paginaPropostaForm, paginaPropostaVer, paginaContratoVer, garantirTokenAceite, registrarAceite, paginaAceite, paginaAceiteVerificar } from './proposta.js';
 import { lerEmpresaDocs, salvarEmpresaDoc, anexarEmpresaDoc, paginaEmpresaDocs, alertasEmpresaDocs } from './empresa-docs.js';
+import { listarCargas, lerCarga, lotesDaCarga, lerLote, listarLotesPorDestino, novaCarga, pesarCarga, fotoCarga, criarLote, excluirLote, mudarStatusLote, seloLote, qrLoteGif, paginaCargas, paginaNovaCarga, paginaCarga, paginaEtiqueta, paginaFilas, paginaValidarLote } from './cargas.js';
 import { acharPacote, precoPacote, acharModuloAdote, precoModuloAdote, paginaLojaAdote, paginaObrigadoAdote, paginaDiagnostico, lerCredito, salvarCredito, novoCredito, aplicarCompra, aplicarRecarga, precisaRecarga, listarPatrocinadores, resumoPatrocinio, lerCreditoPorDoc } from './adote.js';
 import { paginaLojaESG, paginaESGContato, paginaESGObrigado, relatorioESG, precoRelatorioESG } from './esg.js';
 import { statusDaEtapa, valorProp, CAMPOS_OS } from './os-utils.js';
@@ -566,6 +567,16 @@ export default {
       // Verificação pública da Ordem de Coleta (QR anti-fraude).
       if (pathname === '/qr-os' && request.method === 'GET') return await qrOS(request, env, url);
       if (pathname === '/validar-os' && request.method === 'GET') return await validarOSPublico(request, env, url);
+
+      // Quem bipa a etiqueta de um LOTE cai aqui — página pública com a cadeia do lote.
+      if (pathname === '/validar-lote' && request.method === 'GET') {
+        const idL = (url.searchParams.get('id') || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 24);
+        const cSelo = (url.searchParams.get('c') || '').replace(/[^a-f0-9]/g, '').slice(0, 12);
+        const lote = idL ? await lerLote(env, idL) : null;
+        const okSelo = !!(lote && cSelo && cSelo === await seloLote(lote.id, env));
+        const cargaL = okSelo ? await lerCarga(env, lote.cargaId) : null;
+        return html(paginaValidarLote(lote, cargaL, okSelo));
+      }
 
       // ACEITE eletrônico de proposta/contrato — público, autenticado pelo token do link.
       if (pathname === '/aceite' && request.method === 'GET') {
@@ -2202,6 +2213,96 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
       }
 
       // Módulo OPERACIONAL (doca → destino). Exige sessão de operador.
+      // ===== ENTRADA POR CARGAS (spec do Eng. Marcelo) — doca/galpão =====
+      // Acesso: operação, escritório, engenharia (RT) e diretoria.
+      const docaOk = operacao || escritorio || eng || diretoria;
+      if (pathname === '/cargas' && request.method === 'GET') {
+        if (!docaOk) return html(paginaLoginOperacao(googleConfigurado(env)));
+        return html(paginaCargas(docaOk, await listarCargas(env)));
+      }
+      if (pathname === '/cargas/nova' && request.method === 'GET') {
+        if (!docaOk) return html(paginaLoginOperacao(googleConfigurado(env)));
+        return html(paginaNovaCarga(docaOk, await listarColetasRecebiveis(env)));
+      }
+      if (pathname === '/cargas/carga' && request.method === 'GET') {
+        if (!docaOk) return html(paginaLoginOperacao(googleConfigurado(env)));
+        const c = await lerCarga(env, url.searchParams.get('id'));
+        if (!c) return html(paginaMensagem('Carga não encontrada', 'Volte e tente de novo.'), 404);
+        return html(paginaCarga(docaOk, c, await lotesDaCarga(env, c.id)));
+      }
+      if (pathname === '/cargas/etiqueta' && request.method === 'GET') {
+        if (!docaOk) return html(paginaLoginOperacao(googleConfigurado(env)));
+        const l = await lerLote(env, url.searchParams.get('id'));
+        if (!l) return html(paginaMensagem('Lote não encontrado', 'Volte e tente de novo.'), 404);
+        const c = await lerCarga(env, l.cargaId);
+        return html(paginaEtiqueta(l, c || {}, String(env.PORTAL_BASE_URL || url.origin).replace(/\/+$/, '')));
+      }
+      if (pathname === '/cargas/qr' && request.method === 'GET') {
+        if (!docaOk) return json({ ok: false }, 401);
+        const idL = (url.searchParams.get('id') || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 24);
+        if (!idL) return json({ ok: false }, 400);
+        const bytes = await qrLoteGif(env, idL, String(env.PORTAL_BASE_URL || url.origin).replace(/\/+$/, ''));
+        return new Response(bytes, { headers: { 'content-type': 'image/gif', 'cache-control': 'public, max-age=86400' } });
+      }
+      if (pathname === '/cargas/filas' && request.method === 'GET') {
+        if (!docaOk) return html(paginaLoginOperacao(googleConfigurado(env)));
+        const dest = ['laudo', 'remanufatura', 'reciclagem', 'destinacao'].includes(url.searchParams.get('destino')) ? url.searchParams.get('destino') : 'laudo';
+        return html(paginaFilas(docaOk, dest, await listarLotesPorDestino(env, dest)));
+      }
+      if (pathname === '/cargas/foto' && request.method === 'GET') {
+        if (!docaOk) return json({ ok: false }, 401);
+        const c = await lerCarga(env, url.searchParams.get('id'));
+        const i = Number(url.searchParams.get('i')) || 0;
+        const f = c && c.fotos && c.fotos[i];
+        if (!f || !env.R2_ARQUIVOS) return json({ ok: false }, 404);
+        const obj = await env.R2_ARQUIVOS.get(f.key);
+        if (!obj) return json({ ok: false }, 404);
+        return new Response(obj.body, { headers: { 'content-type': f.ct || 'image/jpeg', 'cache-control': 'no-store' } });
+      }
+      if (pathname === '/api/cargas/nova' && request.method === 'POST') {
+        if (!docaOk) return json({ ok: false, message: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = {}; }
+        const ids = Array.isArray(b && b.osIds) ? b.osIds.slice(0, 20) : [];
+        const oss = [];
+        for (const osId of ids) { const o = await lerColetaOS(env, String(osId).replace(/[^a-zA-Z0-9_-]/g, '')); if (o) oss.push(o); }
+        return json(await novaCarga(env, docaOk, oss));
+      }
+      if (pathname === '/api/cargas/pesar' && request.method === 'POST') {
+        if (!docaOk) return json({ ok: false, message: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = {}; }
+        return json(await pesarCarga(env, b && b.id, b && b.bruto, b && b.tara));
+      }
+      if (pathname === '/api/cargas/foto' && request.method === 'POST') {
+        if (!docaOk) return json({ ok: false, message: 'nao_autenticado' }, 401);
+        if (!env.R2_ARQUIVOS) return json({ ok: false, message: 'Armazenamento indisponível.' }, 503);
+        let form; try { form = await request.formData(); } catch { return json({ ok: false, message: 'Envio inválido.' }, 400); }
+        const file = form.get('file');
+        const idC = String(form.get('id') || '').replace(/[^a-zA-Z0-9_-]/g, '');
+        if (!file || typeof file === 'string' || !idC) return json({ ok: false, message: 'Selecione uma foto.' }, 400);
+        const tamF = Number(file.size) || 0;
+        if (tamF > 10 * 1024 * 1024) return json({ ok: false, message: 'Foto muito grande (máx. 10 MB).' }, 400);
+        const keyF = `cargas/${idC}/${novoId()}_${String(file.name || 'foto.jpg').replace(/[^\w.\-]+/g, '_').slice(0, 80)}`;
+        const ctF = file.type || 'image/jpeg';
+        try {
+          await env.R2_ARQUIVOS.put(keyF, await file.arrayBuffer(), { httpMetadata: { contentType: ctF } });
+          return json(await fotoCarga(env, idC, { key: keyF, ct: ctF, em: agoraISO() }));
+        } catch (error) { console.error('carga_foto', safeError(error)); return json({ ok: false, message: 'Falha ao enviar a foto.' }, 500); }
+      }
+      if (pathname === '/api/cargas/lote' && request.method === 'POST') {
+        if (!docaOk) return json({ ok: false, message: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = {}; }
+        return json(await criarLote(env, docaOk, b && b.cargaId, b || {}));
+      }
+      if (pathname === '/api/cargas/lote-excluir' && request.method === 'POST') {
+        if (!docaOk) return json({ ok: false, message: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = {}; }
+        return json(await excluirLote(env, b && b.id));
+      }
+      if (pathname === '/api/cargas/lote-status' && request.method === 'POST') {
+        if (!docaOk) return json({ ok: false, message: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = {}; }
+        return json(await mudarStatusLote(env, b && b.id, b && b.novo));
+      }
       if (pathname === '/operacao' && request.method === 'GET') {
         if (!operacao) return html(paginaLoginOperacao(googleConfigurado(env)));
         return html(paginaAppOperacao(operacao, await listarOperacoes(env)));
