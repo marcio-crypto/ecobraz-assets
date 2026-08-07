@@ -71,8 +71,9 @@ export async function listarLotesPorDestino(env, destino) {
   try { const r = await d.prepare('SELECT * FROM op_lotes WHERE destino=?1 ORDER BY (status=\'finalizado\'), id DESC LIMIT 300').bind(String(destino || '')).all(); return (r.results || []).map(rowLote); } catch { return []; }
 }
 
-// Abre a carga agrupando OSs. Regra do laudo: OS com certificado/laudo solicitado
-// não agrupa — vira carga exclusiva.
+// Abre a carga agrupando as OSs do dia — de 1 a N clientes (a rota do caminhão),
+// conforme o Marcelo. Regra do laudo: OS com certificado/laudo solicitado não
+// agrupa — vira carga exclusiva.
 export async function novaCarga(env, user, oss) {
   const d = await db(env); if (!d) return { ok: false, message: 'Banco indisponível.' };
   const lista = (oss || []).filter(Boolean);
@@ -81,13 +82,13 @@ export async function novaCarga(env, user, oss) {
   if (comLaudo.length && lista.length > 1) {
     return { ok: false, message: `A OS ${comLaudo[0].numero || comLaudo[0].id} exige laudo e precisa de carga EXCLUSIVA. Crie uma carga só para ela.` };
   }
-  const clientes = [...new Set(lista.map((o) => String(o.clienteDoc || o.clienteNome || '')))];
-  if (clientes.length > 1) return { ok: false, message: 'Agrupe apenas OSs do mesmo cliente na mesma carga.' };
+  const clientes = [...new Set(lista.map((o) => limpar(o.clienteNome || '')).filter(Boolean))];
+  const rotulo = clientes.length <= 1 ? (clientes[0] || '') : `${clientes.length} clientes (rota do dia)`;
   const id = await proximoId(d, 'op_cargas', 'CG', 3);
   const agora = new Date().toISOString();
   const osJson = JSON.stringify(lista.map((o) => ({ id: o.id, numero: o.numero || '', clienteNome: o.clienteNome || '', laudo: (o.certificados || []).length > 0 })));
   await d.prepare('INSERT INTO op_cargas (id,criado_em,criado_por,cliente_nome,cliente_doc,os_json,exclusiva_laudo,fotos_json,status) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9)')
-    .bind(id, agora, (user && user.email) || '', lista[0].clienteNome || '', String(lista[0].clienteDoc || ''), osJson, comLaudo.length ? 1 : 0, '[]', 'aberta').run();
+    .bind(id, agora, (user && user.email) || '', rotulo, clientes.length === 1 ? String(lista[0].clienteDoc || '') : '', osJson, comLaudo.length ? 1 : 0, '[]', 'aberta').run();
   return { ok: true, id };
 }
 
@@ -225,7 +226,7 @@ export function paginaNovaCarga(user, oss) {
 <div class="wrap">
   <a href="/cargas" style="font-size:13px;font-weight:800;text-decoration:none;color:#4F6469">← Cargas</a>
   <h1 style="font-size:20px;margin:10px 0 4px">Abrir carga (consolidação)</h1>
-  <p style="font-size:12.5px;color:#7c8a87;margin:0 0 12px">Marque as OSs que chegaram juntas (mesmo cliente/rota). OS que exige laudo entra <b>sozinha</b> numa carga exclusiva.</p>
+  <p style="font-size:12.5px;color:#7c8a87;margin:0 0 12px">Marque as OSs que chegaram juntas <b>no dia</b> — pode misturar clientes da mesma rota. OS que exige laudo entra <b>sozinha</b> numa carga exclusiva.</p>
   <div class="card">${rows}
     <button class="btn btn-p" style="width:100%;margin-top:10px" onclick="abrir()">Abrir carga com as OSs marcadas</button>
     <div class="msg" id="msg"></div>
@@ -251,7 +252,7 @@ export function paginaCarga(user, c, lotes) {
   const limite = c.pesoLiquido ? Math.round(c.pesoLiquido * TOLERANCIA * 10) / 10 : 0;
   const pct = limite ? Math.min(100, Math.round(soma / limite * 100)) : 0;
   const podeFracionar = !!c.pesoLiquido && (c.fotos || []).length >= 2;
-  const osRows = c.oss.map((o) => `<span class="pill" style="background:#EEF3F1;color:#374b48;margin:0 6px 6px 0">${esc(o.numero || o.id)}${o.laudo ? ' · LAUDO' : ''}</span>`).join('');
+  const osRows = c.oss.map((o) => `<span class="pill" style="background:#EEF3F1;color:#374b48;margin:0 6px 6px 0">${esc(o.numero || o.id)}${o.clienteNome ? ' · ' + esc(o.clienteNome) : ''}${o.laudo ? ' · LAUDO' : ''}</span>`).join('');
   const fotos = (c.fotos || []).map((f, i) => `<a href="/cargas/foto?id=${esc(c.id)}&i=${i}" target="_blank" rel="noopener" style="display:inline-block;width:74px;height:74px;border-radius:10px;background:#EEF3F1;border:1px solid #E4EBE9;overflow:hidden;margin:0 6px 6px 0"><img src="/cargas/foto?id=${esc(c.id)}&i=${i}" style="width:100%;height:100%;object-fit:cover" alt="foto"></a>`).join('');
   const loteRows = (lotes || []).map((l) => `<div class="row">
     <span style="min-width:0"><b style="font-size:13px">${esc(l.id)}</b> · <span style="font-size:12.5px">${esc(l.categoria)}</span>
