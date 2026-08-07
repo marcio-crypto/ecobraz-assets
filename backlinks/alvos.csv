@@ -1,0 +1,38 @@
+dominio,tipo,empresa,prioridade,custo,url_cadastro,status_ecobraz,status_villanova,observacoes
+business.google.com,perfil,ambas,P0,gratis,https://business.google.com,verificar,verificar,Ficha no Google Maps/Busca; base de presença local e de entidade
+linkedin.com,perfil,ambas,P0,gratis,https://www.linkedin.com/company/setup/new/,verificar,tem_pagina,Página de empresa + perfil do fundador conectados aos sites
+wikidata.org,entidade,ambas,P0,gratis,https://www.wikidata.org/wiki/Special:NewItem,pendente,pendente,Entidade estruturada citando DOIs e imprensa; ajuda buscadores e IAs a entender a marca
+orcid.org,perfil-academico,ambas,P0,gratis,https://orcid.org/register,pendente,pendente,Perfil ORCID de Marcio Villanova vinculando as 7 publicações DOI aos dois sites
+sinir.gov.br,cadastro-oficial,ecobraz,P0,gratis,https://sinir.gov.br,pendente,nao_aplica,Sistema Nacional de Informações sobre Gestão de Resíduos; cadastro oficial de logística reversa (gov.br DR 92)
+ecycle.com.br,setorial,ecobraz,P0,variavel,https://www.ecycle.com.br,pendente,nao_aplica,Guia 'onde descartar' e pautas; DR 73; concorrentes diretos têm link
+zenodo.org,repositorio-doi,ambas,P1,gratis,https://zenodo.org,verificar,verificar,Conferir se as publicações DOI existentes linkam ecobraz.org e villanovaesg.com
+europages.com,diretorio-b2b,ambas,P1,freemium,https://www.europages.com,pendente,pendente,Diretório B2B europeu; alinhado ao posicionamento Brasil-Europa
+clutch.co,reviews-consultoria,villanova,P1,gratis,https://clutch.co/get-listed,nao_aplica,pendente,Perfil de consultoria com reviews de clientes; DR ~90
+pactoglobal.org.br,iniciativa-esg,ambas,P1,adesao,https://www.pactoglobal.org.br,pendente,pendente,Pacto Global ONU rede Brasil; gera página de participante em unglobalcompact.org
+cempre.org.br,associacao,ecobraz,P1,associacao,https://cempre.org.br,pendente,nao_aplica,CEMPRE — Compromisso Empresarial para Reciclagem
+abree.org.br,associacao,ecobraz,P1,associacao,https://abree.org.br,pendente,nao_aplica,Sistema coletivo de logística reversa de eletroeletrônicos
+rotadareciclagem.com.br,setorial,ecobraz,P1,gratis,https://www.rotadareciclagem.com.br,pendente,nao_aplica,Mapa de pontos de coleta de eletrônicos
+solutudo.com.br,diretorio,ecobraz,P1,gratis,https://www.solutudo.com.br,pendente,nao_aplica,Diretório de negócios BR com DR 75; presente no perfil de concorrentes
+dino.com.br,press-release,ambas,P1,pago,https://www.dino.com.br,tem_link,pendente,Distribuição de releases que replicam em portais (Terra IG etc); já usado pela Ecobraz
+bingplaces.com,perfil,ecobraz,P1,gratis,https://www.bingplaces.com,pendente,nao_aplica,Ficha no Bing Maps
+crunchbase.com,perfil,ambas,P1,gratis,https://www.crunchbase.com,pendente,pendente,Perfil de empresa; forte para entidade e AI answers
+f6s.com,perfil,ambas,P2,gratis,https://www.f6s.com,tem_link,tem_link,Já linkando para os dois sites; manter perfil atualizado
+comunique-se.com.br,press,ambas,P2,pago,https://www.comunique-se.com.br,tem_link,pendente,Assessoria/press; já linkando para Ecobraz
+greeneletron.org.br,setorial,ecobraz,P2,parceria,https://greeneletron.org.br,pendente,nao_aplica,Sistema coletivo; avaliar parceria/ponto de coleta
+reciclasampa.com.br,setorial,ecobraz,P2,pauta,https://reciclasampa.com.br,pendente,nao_aplica,Portal de reciclagem de SP (DR 47); sugerir pauta
+gs1br.org,associacao,ecobraz,P2,associacao,https://gs1br.org,pendente,nao_aplica,Associados GS1 Brasil; presente no perfil de concorrentes
+apontador.com.br,diretorio,ecobraz,P2,gratis,https://www.apontador.com.br,pendente,nao_aplica,Diretório local consolidado
+telelistas.net,diretorio,ecobraz,P2,gratis,https://www.telelistas.net,pendente,nao_aplica,Diretório local consolidado
+guiamais.com.br,diretorio,ecobraz,P2,gratis,https://www.guiamais.com.br,pendente,nao_aplica,Diretório local consolidado
+b2brazil.com.br,diretorio-b2b,ecobraz,P2,freemium,https://www.b2brazil.com.br,pendente,nao_aplica,Diretório B2B brasileiro
+kompass.com,diretorio-b2b,ambas,P2,freemium,https://www.kompass.com,pendente,pendente,Diretório B2B internacional
+ecovadis.com,rating-esg,ambas,P2,pago,https://ecovadis.com,pendente,pendente,Não é backlink em si; é a credencial que procurement europeu costuma exigir
+apple-business-connect,perfil,ecobraz,P2,gratis,https://businessconnect.apple.com,pendente,nao_aplica,Ficha no Apple Maps
+researchgate.net,perfil-academico,ambas,P2,gratis,https://www.researchgate.net,pendente,pendente,Perfil + upload das publicações DOI
+scholar.google.com,perfil-academico,ambas,P2,gratis,https://scholar.google.com,pendente,pendente,Perfil de autor agregando as publicações
+youtube.com,perfil,ecobraz,P3,gratis,https://www.youtube.com,verificar,nao_aplica,Canal com link verificado para o site
+hotfrog.com.br,diretorio,ecobraz,P3,gratis,https://www.hotfrog.com.br,pendente,nao_aplica,Diretório secundário; só se sobrar tempo
+cylex.com.br,diretorio,ecobraz,P3,gratis,https://www.cylex.com.br,pendente,nao_aplica,Diretório secundário; só se sobrar tempo
+infobel.com,diretorio,ecobraz,P3,gratis,https://www.infobel.com,pendente,nao_aplica,Diretório internacional secundário
+goodfirms.co,reviews-consultoria,villanova,P3,gratis,https://www.goodfirms.co,nao_aplica,pendente,Alternativa ao Clutch
+bcorporation.net,certificacao,villanova,P3,pago,https://www.bcorporation.net,nao_aplica,pendente,Sistema B; diretório público de certificadas; custo alto — avaliar retorno
