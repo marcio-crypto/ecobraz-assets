@@ -28,6 +28,9 @@ export const DESTINOS = {
 };
 const STATUS_LOTE = { aguardando: 'Aguardando processamento', processando: 'Em processamento', finalizado: 'Finalizado' };
 export const TOLERANCIA = 1.05; // 5% sobre o peso líquido
+// Só o laudo de destruição técnica exige carga exclusiva (ajuste do Marcelo, 07/08):
+// "Laudo fotográfico" e certificados comuns são de rotina e NÃO travam o agrupamento.
+export const exigeLaudoExclusivo = (os) => (((os && os.certificados) || []).includes('Laudo de Sanitização'));
 
 // --- Banco (D1) ----------------------------------------------------------------
 async function db(env) {
@@ -78,7 +81,7 @@ export async function novaCarga(env, user, oss) {
   const d = await db(env); if (!d) return { ok: false, message: 'Banco indisponível.' };
   const lista = (oss || []).filter(Boolean);
   if (!lista.length) return { ok: false, message: 'Selecione ao menos uma OS.' };
-  const comLaudo = lista.filter((o) => (o.certificados || []).length > 0);
+  const comLaudo = lista.filter(exigeLaudoExclusivo);
   if (comLaudo.length && lista.length > 1) {
     return { ok: false, message: `A OS ${comLaudo[0].numero || comLaudo[0].id} exige laudo e precisa de carga EXCLUSIVA. Crie uma carga só para ela.` };
   }
@@ -86,7 +89,7 @@ export async function novaCarga(env, user, oss) {
   const rotulo = clientes.length <= 1 ? (clientes[0] || '') : `${clientes.length} clientes (rota do dia)`;
   const id = await proximoId(d, 'op_cargas', 'CG', 3);
   const agora = new Date().toISOString();
-  const osJson = JSON.stringify(lista.map((o) => ({ id: o.id, numero: o.numero || '', clienteNome: o.clienteNome || '', laudo: (o.certificados || []).length > 0 })));
+  const osJson = JSON.stringify(lista.map((o) => ({ id: o.id, numero: o.numero || '', clienteNome: o.clienteNome || '', laudo: exigeLaudoExclusivo(o) })));
   await d.prepare('INSERT INTO op_cargas (id,criado_em,criado_por,cliente_nome,cliente_doc,os_json,exclusiva_laudo,fotos_json,status) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9)')
     .bind(id, agora, (user && user.email) || '', rotulo, clientes.length === 1 ? String(lista[0].clienteDoc || '') : '', osJson, comLaudo.length ? 1 : 0, '[]', 'aberta').run();
   return { ok: true, id };
@@ -215,7 +218,7 @@ export function paginaCargas(user, cargas) {
 
 export function paginaNovaCarga(user, oss) {
   const rows = (oss || []).map((o) => {
-    const laudo = (o.certificados || []).length > 0;
+    const laudo = exigeLaudoExclusivo(o);
     return `<label class="row" style="cursor:pointer">
       <span style="display:flex;gap:10px;align-items:center;min-width:0"><input type="checkbox" class="os" value="${esc(o.id)}" data-laudo="${laudo ? '1' : '0'}" style="width:19px;height:19px;flex:none">
       <span style="min-width:0"><b style="font-size:13px">${esc(o.numero || o.id)}</b> · <span style="font-size:12.5px">${esc(o.clienteNome || '—')}</span>${laudo ? ' <span class="pill p-laudo">exige laudo — carga exclusiva</span>' : ''}
