@@ -145,3 +145,102 @@ export function reunirPendencias({ leads = [], coletas = [], aguardandoValidacao
   if (aguardandoValidacao > 0) grupos.set('eng', { rotulo: 'Operações aguardando validação técnica', quem: 'Engenharia Ambiental', qtd: aguardandoValidacao, maisAntigaDias: null, hoje: 0, semana: 0, mes: 0, antigas: 0 });
   return [...grupos.values()].sort((a, b) => b.qtd - a.qtd);
 }
+
+// --- Monitor nominal de acessos dos CLIENTES (pedido do Marcio, 09/08) -----------
+// Detalha, cliente a cliente, o que os cartões agregados não mostram: QUEM entrou,
+// QUANDO foi a última vez e a frequência. Janela = o que existe no KV (TTL 60 dias).
+const fmtBR = (iso) => { const [a, m, d] = String(iso || '').split('-'); return d ? `${d}/${m}/${a}` : '—'; };
+const fmtDocBR = (v) => { const d = String(v || '').replace(/\D/g, ''); if (d.length === 14) return d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5'); if (d.length === 11) return d.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4'); return v || '—'; };
+
+export async function acessosClientesDetalhe(env) {
+  const out = { clientes: [], hoje: 0, semana: 0, mes: 0, janelaDias: 60 };
+  if (!env.PORTAL_KV) return out;
+  const hoje = dataBrasil();
+  const d7 = new Set(seq(7)), d30 = new Set(seq(30));
+  const porDoc = new Map();
+  try {
+    const keys = await (async () => {
+      const acc = []; let cursor;
+      do { const r = await env.PORTAL_KV.list({ prefix: 'uso:c:', cursor, limit: 1000 }); acc.push(...(r.keys || [])); cursor = r.list_complete ? null : r.cursor; } while (cursor);
+      return acc;
+    })();
+    for (const k of keys) {
+      const m = k.name.match(/^uso:c:(\d{4}-\d{2}-\d{2}):(.+)$/);
+      if (!m) continue;
+      const dia = m[1], doc = m[2];
+      const c = porDoc.get(doc) || { doc, dias: [] };
+      c.dias.push(dia);
+      porDoc.set(doc, c);
+    }
+    for (const c of porDoc.values()) {
+      c.dias.sort();
+      c.primeiro = c.dias[0];
+      c.ultimo = c.dias[c.dias.length - 1];
+      c.ativoHoje = c.ultimo === hoje;
+      c.dias30 = c.dias.filter((d) => d30.has(d)).length;
+      c.dias7 = c.dias.filter((d) => d7.has(d)).length;
+      try { c.pessoa = (await env.PORTAL_KV.get('uso:cnome:' + c.doc)) || ''; } catch { c.pessoa = ''; }
+      // Enriquecimento pela base (D1): razão social e e-mail do cadastro.
+      if (env.DB_PLOOMES) {
+        try {
+          const r = await env.DB_PLOOMES.prepare("SELECT nome, email FROM contatos WHERE REPLACE(REPLACE(REPLACE(REPLACE(documento,'.',''),'-',''),'/',''),' ','')=?1 LIMIT 1").bind(c.doc).first();
+          if (r) { c.empresa = String(r.nome || '').trim(); c.email = String(r.email || '').trim(); }
+        } catch { /* segue sem enriquecer */ }
+      }
+      if (c.ultimo === hoje) out.hoje++;
+      if (c.dias7 > 0) out.semana++;
+      if (c.dias30 > 0) out.mes++;
+    }
+    out.clientes = [...porDoc.values()].sort((a, b) => String(b.ultimo).localeCompare(String(a.ultimo)));
+  } catch { /* devolve o que tiver */ }
+  return out;
+}
+
+export function paginaAcessosClientes(dados) {
+  const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const d = dados || { clientes: [], hoje: 0, semana: 0, mes: 0, janelaDias: 60 };
+  const rows = d.clientes.map((c) => `<tr>
+    <td><b>${esc(c.empresa || c.pessoa || 'Cliente ***' + String(c.doc).slice(-4))}</b>${c.empresa && c.pessoa && c.pessoa !== c.empresa ? `<br><span style="color:#7c8a87;font-size:11px">${esc(c.pessoa)}</span>` : ''}</td>
+    <td style="white-space:nowrap">${esc(fmtDocBR(c.doc))}</td>
+    <td>${esc(c.email || '—')}</td>
+    <td style="white-space:nowrap"><b>${esc(fmtBR(c.ultimo))}</b>${c.ativoHoje ? ' <span style="font-size:9.5px;font-weight:800;color:#0B6B3A;background:#E7F4EC;border-radius:999px;padding:2px 8px">HOJE</span>' : ''}</td>
+    <td style="white-space:nowrap">${esc(fmtBR(c.primeiro))}</td>
+    <td style="text-align:center"><b>${c.dias7}</b></td>
+    <td style="text-align:center"><b>${c.dias30}</b></td>
+  </tr>`).join('') || '<tr><td colspan="7" style="color:#8fa39f">Nenhum acesso de cliente registrado na janela de medição.</td></tr>';
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Acessos dos clientes — Ecobraz</title>
+<style>*{box-sizing:border-box}body{margin:0;font-family:Montserrat,'Segoe UI',Arial,Helvetica,sans-serif;background:#F2F6F4;color:#10262B}
+.wrap{max-width:960px;margin:0 auto;padding:20px 18px 56px}
+.card{background:#fff;border:1px solid #E4EBE9;border-radius:14px;padding:18px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;color:#7c8a87;font-weight:800;font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:8px 10px;border-bottom:2px solid #E4EBE9}
+td{padding:10px;border-bottom:1px solid #EEF1F0;vertical-align:top}
+tr:last-child td{border-bottom:none}
+.kpi{display:flex;gap:14px;text-align:center;margin-bottom:16px}
+.kpi>div{flex:1;background:#fff;border:1px solid #E4EBE9;border-radius:14px;padding:14px}
+.kpi b{font-size:26px;color:#0B5B66;display:block;line-height:1}
+.kpi span{font-size:10px;color:#8fa39f;font-weight:800;letter-spacing:.06em}
+@media(max-width:700px){.tblwrap{overflow-x:auto}}
+</style></head><body>
+<div style="background:#00333B;padding:15px 20px"><div style="max-width:960px;margin:0 auto;display:flex;justify-content:space-between;align-items:center">
+  <a href="/diretoria" style="text-decoration:none"><span style="color:#fff;font-size:16px;font-weight:800">ecobraz</span><span style="color:#92C430;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin-left:8px">acessos · clientes</span></a>
+  <a href="/diretoria" style="color:#cfe3e0;font-size:12px;font-weight:700;text-decoration:none">← Painel</a>
+</div></div>
+<div class="wrap">
+  <h1 style="font-size:21px;margin:0 0 4px">🏢 Quais clientes estão usando o sistema</h1>
+  <p style="font-size:12.5px;color:#7c8a87;margin:0 0 16px">Cliente a cliente: última entrada, primeira entrada registrada e frequência. Um "dia ativo" = entrou no portal naquele dia (contado uma vez por dia).</p>
+  <div class="kpi">
+    <div><b>${d.hoje}</b><span>HOJE</span></div>
+    <div><b>${d.semana}</b><span>7 DIAS</span></div>
+    <div><b>${d.mes}</b><span>30 DIAS</span></div>
+    <div><b>${d.clientes.length}</b><span>NA JANELA (${d.janelaDias}D)</span></div>
+  </div>
+  <div class="card tblwrap">
+    <table>
+      <thead><tr><th>Cliente</th><th>Documento</th><th>E-mail (cadastro)</th><th>Último acesso</th><th>Primeiro registro</th><th style="text-align:center">Dias 7d</th><th style="text-align:center">Dias 30d</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>
+  <p style="font-size:11px;color:#9aa7a4;margin-top:12px;line-height:1.6"><b>Transparência da medição:</b> a contagem existe desde que a medição foi ligada (não há registro retroativo) e guarda ${d.janelaDias} dias. "Primeiro registro" é o primeiro acesso <i>dentro dessa janela</i> — não necessariamente o primeiro da vida. Clientes que nunca entraram não aparecem aqui.</p>
+</div></body></html>`;
+}

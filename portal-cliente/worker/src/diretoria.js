@@ -164,7 +164,7 @@ export function paginaPainelDiretoria(diretor, d, x) {
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px" class="g2">
     <div style="background:#fff;border:1px solid #E4EBE9;border-radius:16px;padding:18px">
-      <div style="font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#7c8a87;margin-bottom:10px">🏢 Uso do sistema — clientes</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#7c8a87">🏢 Uso do sistema — clientes</div><a href="/diretoria/acessos-clientes" style="font-size:11px;font-weight:800;color:#0B5B66;text-decoration:none;white-space:nowrap">Ver todos →</a></div>
       <div style="display:flex;gap:14px;text-align:center;margin-bottom:14px">
         <div style="flex:1"><div style="font-size:24px;font-weight:800;color:${TEAL};line-height:1">${uso.clientes.hoje}</div><div style="font-size:10px;color:#8fa39f;font-weight:700;margin-top:4px">HOJE</div></div>
         <div style="flex:1;border-left:1px solid #EEF1F0"><div style="font-size:24px;font-weight:800;color:${TEAL};line-height:1">${uso.clientes.semana}</div><div style="font-size:10px;color:#8fa39f;font-weight:700;margin-top:4px">7 DIAS</div></div>

@@ -58,7 +58,7 @@ import { paginaLojaESG, paginaESGContato, paginaESGObrigado, relatorioESG, preco
 import { statusDaEtapa, valorProp, CAMPOS_OS } from './os-utils.js';
 import { qrCDF, validarCDF } from './validacao.js';
 import { paginaMetodologia, fatorCompensacaoAdote } from './carbono-metodologia.js';
-import { registrarUso, resumoUso, contarPorPeriodo, reunirPendencias } from './uso.js';
+import { registrarUso, resumoUso, contarPorPeriodo, reunirPendencias, acessosClientesDetalhe, paginaAcessosClientes } from './uso.js';
 import { backfillEgoi } from './egoi.js';
 import { sondaRotaExata, paginaSondaRotaExata, paginaRastreio, posicaoDoVeiculo, posicoesFrota, capturarTelemetria, paginaFrotaAoVivo, rastreioDisponivel } from './rotaexata.js';
 import { lerValidacao, registrarValidacao, paginaAreaValidacao, qrMetodologia, validarMetodologiaPublico, homologarFatorAcao } from './validacao-metodologia.js';
@@ -773,6 +773,12 @@ export default {
           try { extras.vendas = await fluxoDeVendas(env); } catch { extras.vendas = null; }
         }
         return html(paginaPainelDiretoria(diretoria, dados, extras));
+      }
+      // Acessos dos clientes (nominal): quem entrou no portal, último acesso e
+      // frequência. Diretoria e escritório podem ver.
+      if (pathname === '/diretoria/acessos-clientes' && request.method === 'GET') {
+        if (!diretoria && !escritorio) return html(paginaLoginDiretoria(googleConfigurado(env)));
+        return html(paginaAcessosClientes(await acessosClientesDetalhe(env)));
       }
       // RotaExata — sonda de configuração (só Diretoria): lê a documentação da API e
       // testa o login com as credenciais do cofre. Mostra só status/estrutura.
