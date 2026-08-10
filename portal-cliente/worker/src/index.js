@@ -59,6 +59,7 @@ import { statusDaEtapa, valorProp, CAMPOS_OS } from './os-utils.js';
 import { qrCDF, validarCDF } from './validacao.js';
 import { paginaMetodologia, fatorCompensacaoAdote } from './carbono-metodologia.js';
 import { registrarUso, resumoUso, contarPorPeriodo, reunirPendencias, acessosClientesDetalhe, paginaAcessosClientes } from './uso.js';
+import { criarTarefa, listarTarefasCliente, tarefasEmAtencao, listarTarefasPainel, mudarStatusTarefa, excluirTarefa, cardTarefasCliente, bannerTarefasAtencao, paginaTarefas } from './tarefas.js';
 import { backfillEgoi } from './egoi.js';
 import { sondaRotaExata, paginaSondaRotaExata, paginaRastreio, posicaoDoVeiculo, posicoesFrota, capturarTelemetria, paginaFrotaAoVivo, rastreioDisponivel } from './rotaexata.js';
 import { lerValidacao, registrarValidacao, paginaAreaValidacao, qrMetodologia, validarMetodologiaPublico, homologarFatorAcao } from './validacao-metodologia.js';
@@ -1244,7 +1245,8 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         const lista = await listarClientesD1(env, { tipo: tp, q, pag: pagReq, porPag: 50 });
         const cont = await contagensClientesD1(env);
         const totalGeral = tp === 'PJ' ? cont.pj : tp === 'PF' ? cont.pf : cont.todos;
-        return html(paginaCadastroHome(escritorio, lista.rows, q, lista.total, totalGeral, { tipo: tp, pag: lista.pag, totalPags: lista.totalPags }));
+        let bannerTarefas = ''; try { bannerTarefas = bannerTarefasAtencao(await tarefasEmAtencao(env)); } catch { bannerTarefas = ''; }
+        return html(paginaCadastroHome(escritorio, lista.rows, q, lista.total, totalGeral, { tipo: tp, pag: lista.pag, totalPags: lista.totalPags, bannerTarefas }));
       }
       if (pathname === '/cadastro/manutencao' && request.method === 'GET') {
         if (!escritorio) return html(paginaLoginEscritorio(googleConfigurado(env)));
@@ -1465,7 +1467,45 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         let arquivos = []; try { arquivos = await arquivosDoCliente(env, cli); } catch { /* sem arquivos, tudo bem */ }
         let negocios = []; try { negocios = await negociosDoCliente(env, cli); } catch { /* sem histórico, tudo bem */ }
         let segmento = null; try { segmento = await segmentoDoCliente(env, cli.tipo === 'PJ' ? cli.cnpj : cli.cpf); } catch { /* segmento é opcional */ }
-        return html(paginaClienteDetalhe(escritorio, cli, arquivos, negocios, segmento));
+        let cardTarefas = '';
+        try {
+          const idFicha = String(url.searchParams.get('id') || '');
+          cardTarefas = cardTarefasCliente(idFicha, await listarTarefasCliente(env, { clienteId: idFicha, clienteDoc: cli.tipo === 'PJ' ? cli.cnpj : cli.cpf }));
+        } catch { cardTarefas = ''; }
+        return html(paginaClienteDetalhe(escritorio, cli, arquivos, negocios, segmento, cardTarefas));
+      }
+      // Tarefas por cliente (pedido da Débora): criar na ficha; quando o dia chega,
+      // a tarefa fica "em atenção" na ficha, no topo do Cadastro e nesta página.
+      if (pathname === '/cadastro/tarefas' && request.method === 'GET') {
+        if (!escritorio) return html(paginaLoginEscritorio(googleConfigurado(env)));
+        return html(paginaTarefas(escritorio, await listarTarefasPainel(env)));
+      }
+      if (pathname === '/api/cadastro/tarefa' && request.method === 'POST') {
+        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        const b = await request.json().catch(() => ({}));
+        const idCli = String(b.cliente || '').trim();
+        const cli = idCli ? await carregarClientePorId(env, idCli) : null;
+        if (!cli) return json({ ok: false, error: 'Cliente não encontrado — recarregue a página.' }, 404);
+        const r = await criarTarefa(env, {
+          clienteId: idCli,
+          clienteDoc: cli.tipo === 'PJ' ? cli.cnpj : cli.cpf,
+          clienteNome: cli.tipo === 'PJ' ? (cli.razaoSocial || cli.nomeFantasia || '') : (cli.nome || ''),
+          titulo: b.titulo, data: b.data,
+          por: escritorio.nome || escritorio.email, porEmail: escritorio.email,
+        });
+        return json(r, r.ok ? 200 : 400);
+      }
+      if (pathname === '/api/cadastro/tarefa-status' && request.method === 'POST') {
+        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        const b = await request.json().catch(() => ({}));
+        const r = await mudarStatusTarefa(env, b.id, String(b.acao || ''), escritorio.nome || escritorio.email);
+        return json(r, r.ok ? 200 : 400);
+      }
+      if (pathname === '/api/cadastro/tarefa-excluir' && request.method === 'POST') {
+        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        const b = await request.json().catch(() => ({}));
+        const r = await excluirTarefa(env, b.id);
+        return json(r, r.ok ? 200 : 400);
       }
       // Propostas & Contratos (escritório — Débora). Emissão própria, fora do Ploomes.
       if (pathname === '/propostas' && request.method === 'GET') {
