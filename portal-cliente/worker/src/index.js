@@ -52,7 +52,7 @@ import { paginaAcompanhamento, colunaClienteDe, lerGestores, gestorPorEmail, sal
 import { DEMO_CLIENTE_HTML, DEMO_OG_PNG_B64 } from './demo-cliente.js';
 import { listarPropostas, lerProposta, salvarProposta, paginaPropostas, paginaPropostaForm, paginaPropostaVer, paginaContratoVer, garantirTokenAceite, registrarAceite, paginaAceite, paginaAceiteVerificar } from './proposta.js';
 import { lerEmpresaDocs, salvarEmpresaDoc, anexarEmpresaDoc, paginaEmpresaDocs, alertasEmpresaDocs } from './empresa-docs.js';
-import { listarCargas, lerCarga, lotesDaCarga, lerLote, listarLotesPorDestino, novaCarga, pesarCarga, fotoCarga, criarLote, excluirLote, mudarStatusLote, seloLote, qrLoteGif, paginaCargas, paginaNovaCarga, paginaCarga, paginaEtiqueta, paginaFilas, paginaValidarLote } from './cargas.js';
+import { listarCargas, lerCarga, lotesDaCarga, lerLote, listarLotesPorDestino, novaCarga, pesarCarga, fotoCarga, criarLote, excluirLote, cancelarCarga, mudarStatusLote, seloLote, qrLoteGif, paginaCargas, paginaNovaCarga, paginaCarga, paginaEtiqueta, paginaFilas, paginaValidarLote } from './cargas.js';
 import { acharPacote, precoPacote, acharModuloAdote, precoModuloAdote, paginaLojaAdote, paginaObrigadoAdote, paginaDiagnostico, lerCredito, salvarCredito, novoCredito, aplicarCompra, aplicarRecarga, precisaRecarga, listarPatrocinadores, resumoPatrocinio, lerCreditoPorDoc } from './adote.js';
 import { paginaLojaESG, paginaESGContato, paginaESGObrigado, relatorioESG, precoRelatorioESG } from './esg.js';
 import { statusDaEtapa, valorProp, CAMPOS_OS } from './os-utils.js';
@@ -2274,7 +2274,8 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         // acidental em "receber" não esconde a OS daqui.
         const todasOS = await listarColetasOS(env);
         const emCargas = new Set();
-        (await listarCargas(env)).forEach((cg) => (cg.oss || []).forEach((o) => emCargas.add(o.id)));
+        // Carga CANCELADA devolve as OSs para cá (não trava mais ninguém).
+        (await listarCargas(env)).forEach((cg) => { if (cg.status === 'cancelada') return; (cg.oss || []).forEach((o) => emCargas.add(o.id)); });
         const livres = [];
         for (const c of todasOS.filter((x) => x.status === 'concluida')) {
           if (emCargas.has(c.id)) continue;
@@ -2362,6 +2363,11 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         if (!docaOk) return json({ ok: false, message: 'nao_autenticado' }, 401);
         let b; try { b = await request.json(); } catch { b = {}; }
         return json(await mudarStatusLote(env, b && b.id, b && b.novo));
+      }
+      if (pathname === '/api/cargas/cancelar' && request.method === 'POST') {
+        if (!docaOk) return json({ ok: false, message: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = {}; }
+        return json(await cancelarCarga(env, docaOk, b && b.id));
       }
       if (pathname === '/operacao' && request.method === 'GET') {
         if (!operacao) return html(paginaLoginOperacao(googleConfigurado(env)));

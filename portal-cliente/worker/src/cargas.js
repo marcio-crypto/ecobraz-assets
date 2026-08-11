@@ -33,13 +33,19 @@ export const TOLERANCIA = 1.05; // 5% sobre o peso líquido
 export const exigeLaudoExclusivo = (os) => (((os && os.certificados) || []).includes('Laudo de Sanitização'));
 
 // --- Banco (D1) ----------------------------------------------------------------
+let migrouCancelada = false;
 async function db(env) {
   if (!env.DB_PLOOMES) return null;
   try {
-    await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS op_cargas (id TEXT PRIMARY KEY, criado_em TEXT, criado_por TEXT, cliente_nome TEXT, cliente_doc TEXT, os_json TEXT, exclusiva_laudo INTEGER DEFAULT 0, peso_bruto REAL, tara REAL, peso_liquido REAL, fotos_json TEXT, status TEXT)').run();
+    await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS op_cargas (id TEXT PRIMARY KEY, criado_em TEXT, criado_por TEXT, cliente_nome TEXT, cliente_doc TEXT, os_json TEXT, exclusiva_laudo INTEGER DEFAULT 0, peso_bruto REAL, tara REAL, peso_liquido REAL, fotos_json TEXT, status TEXT, cancelada_json TEXT DEFAULT \'\')').run();
     await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS op_lotes (id TEXT PRIMARY KEY, carga_id TEXT, categoria TEXT, peso REAL, qtd TEXT, destino TEXT, status TEXT, criado_em TEXT, criado_por TEXT)').run();
-    return env.DB_PLOOMES;
   } catch { return null; }
+  // Tabela criada antes do botão de cancelar não tem a coluna — completa uma vez.
+  if (!migrouCancelada) {
+    try { await env.DB_PLOOMES.prepare('ALTER TABLE op_cargas ADD COLUMN cancelada_json TEXT DEFAULT \'\'').run(); } catch { /* coluna já existe */ }
+    migrouCancelada = true;
+  }
+  return env.DB_PLOOMES;
 }
 async function proximoId(d, tabela, prefixo, digitos) {
   const ano = new Date().getFullYear();
@@ -48,7 +54,11 @@ async function proximoId(d, tabela, prefixo, digitos) {
   try { const r = await d.prepare(`SELECT MAX(CAST(substr(id, ${prefixo.length + 7}) AS INTEGER)) AS m FROM ${tabela} WHERE id LIKE ?1`).bind(like).first(); n = Number(r && r.m) || 0; } catch { n = 0; }
   return `${prefixo}-${ano}-${String(n + 1).padStart(digitos, '0')}`;
 }
-const rowCarga = (r) => r ? ({ id: r.id, criadoEm: r.criado_em, criadoPor: r.criado_por, clienteNome: r.cliente_nome, clienteDoc: r.cliente_doc, oss: JSON.parse(r.os_json || '[]'), exclusivaLaudo: !!r.exclusiva_laudo, pesoBruto: r.peso_bruto, tara: r.tara, pesoLiquido: r.peso_liquido, fotos: JSON.parse(r.fotos_json || '[]'), status: r.status }) : null;
+const rowCarga = (r) => {
+  if (!r) return null;
+  let cancelada = null; try { cancelada = r.cancelada_json ? JSON.parse(r.cancelada_json) : null; } catch { cancelada = null; }
+  return { id: r.id, criadoEm: r.criado_em, criadoPor: r.criado_por, clienteNome: r.cliente_nome, clienteDoc: r.cliente_doc, oss: JSON.parse(r.os_json || '[]'), exclusivaLaudo: !!r.exclusiva_laudo, pesoBruto: r.peso_bruto, tara: r.tara, pesoLiquido: r.peso_liquido, fotos: JSON.parse(r.fotos_json || '[]'), status: r.status, cancelada };
+};
 const rowLote = (r) => r ? ({ id: r.id, cargaId: r.carga_id, categoria: r.categoria, peso: r.peso, qtd: r.qtd, destino: r.destino, status: r.status, criadoEm: r.criado_em, criadoPor: r.criado_por }) : null;
 
 export async function listarCargas(env) {
@@ -99,6 +109,7 @@ export async function pesarCarga(env, id, bruto, tara) {
   const d = await db(env); if (!d) return { ok: false, message: 'Banco indisponível.' };
   const c = await lerCarga(env, id);
   if (!c) return { ok: false, message: 'Carga não encontrada.' };
+  if (c.status === 'cancelada') return { ok: false, message: 'Esta carga foi cancelada — abra uma carga nova.' };
   const b = Number(bruto) || 0, t = Number(tara) || 0;
   if (b <= 0) return { ok: false, message: 'Informe o peso bruto (da balança).' };
   if (t < 0 || t >= b) return { ok: false, message: 'A tara precisa ser menor que o peso bruto.' };
@@ -111,6 +122,7 @@ export async function fotoCarga(env, id, meta) {
   const d = await db(env); if (!d) return { ok: false, message: 'Banco indisponível.' };
   const c = await lerCarga(env, id);
   if (!c) return { ok: false, message: 'Carga não encontrada.' };
+  if (c.status === 'cancelada') return { ok: false, message: 'Esta carga foi cancelada — abra uma carga nova.' };
   const fotos = c.fotos.concat([meta]).slice(0, 12);
   await d.prepare('UPDATE op_cargas SET fotos_json=?2 WHERE id=?1').bind(c.id, JSON.stringify(fotos)).run();
   return { ok: true, total: fotos.length };
@@ -120,6 +132,7 @@ export async function criarLote(env, user, cargaId, dados) {
   const d = await db(env); if (!d) return { ok: false, message: 'Banco indisponível.' };
   const c = await lerCarga(env, cargaId);
   if (!c) return { ok: false, message: 'Carga não encontrada.' };
+  if (c.status === 'cancelada') return { ok: false, message: 'Esta carga foi cancelada — abra uma carga nova.' };
   if (!c.pesoLiquido) return { ok: false, message: 'Registre a pesagem antes de fracionar.' };
   if ((c.fotos || []).length < 2) return { ok: false, message: 'Anexe no mínimo 2 fotos da carga antes de fracionar.' };
   const categoria = limpar(dados.categoria).slice(0, 80);
@@ -147,6 +160,22 @@ export async function excluirLote(env, id) {
   if (!l) return { ok: false, message: 'Lote não encontrado.' };
   if (l.status !== 'aguardando') return { ok: false, message: 'Só dá para excluir lote que ainda não entrou em processamento.' };
   await d.prepare('DELETE FROM op_lotes WHERE id=?1').bind(l.id).run();
+  return { ok: true };
+}
+
+// Cancela a carga e devolve as OSs para a recepção (pedido do Marcelo, 11/08:
+// carga de teste travou 5 OSs). Regras: não cancela duas vezes; não cancela se
+// já houver lote (exclua os lotes antes — e lote em processamento nem se exclui).
+// Pesagem e fotos registradas ficam guardadas no registro cancelado, só de histórico.
+export async function cancelarCarga(env, user, id) {
+  const d = await db(env); if (!d) return { ok: false, message: 'Banco indisponível.' };
+  const c = await lerCarga(env, id);
+  if (!c) return { ok: false, message: 'Carga não encontrada.' };
+  if (c.status === 'cancelada') return { ok: false, message: 'Esta carga já está cancelada.' };
+  const lotes = await lotesDaCarga(env, c.id);
+  if (lotes.length) return { ok: false, message: `Esta carga já tem ${lotes.length} lote(s). Exclua cada lote primeiro (botão ✕) e aí cancele. Lote que já entrou em processamento não pode ser desfeito.` };
+  await d.prepare('UPDATE op_cargas SET status=\'cancelada\', cancelada_json=?2 WHERE id=?1')
+    .bind(c.id, JSON.stringify({ por: (user && user.email) || '', em: new Date().toISOString() })).run();
   return { ok: true };
 }
 
@@ -203,7 +232,7 @@ export function paginaCargas(user, cargas) {
   const rows = (cargas || []).map((c) => `<a class="row" style="text-decoration:none" href="/cargas/carga?id=${esc(c.id)}">
     <span style="min-width:0"><b style="font-size:13.5px;color:#10262B">${esc(c.id)}</b> · <span style="font-size:12.5px">${esc(c.clienteNome || '—')}</span>${c.exclusivaLaudo ? ' <span class="pill p-laudo">LAUDO — exclusiva</span>' : ''}
       <span style="display:block;font-size:11px;color:#8fa39f">${esc(horaBR(c.criadoEm))} · ${c.oss.length} OS · ${c.pesoLiquido ? 'líquido ' + kg(c.pesoLiquido) : 'sem pesagem'}</span></span>
-    <span style="flex:none;font-size:11px;font-weight:800;color:#0B5B66;text-transform:uppercase">${esc(c.status)}</span>
+    <span style="flex:none;font-size:11px;font-weight:800;color:${c.status === 'cancelada' ? '#B23A2E' : '#0B5B66'};text-transform:uppercase">${esc(c.status)}</span>
   </a>`).join('') || '<div style="font-size:12.5px;color:#8fa39f">Nenhuma carga ainda. Abra a primeira quando o caminhão chegar.</div>';
   return `${head('Cargas')}${topo('entrada · cargas')}
 <div class="wrap">
@@ -255,6 +284,11 @@ export function paginaCarga(user, c, lotes) {
   const limite = c.pesoLiquido ? Math.round(c.pesoLiquido * TOLERANCIA * 10) / 10 : 0;
   const pct = limite ? Math.min(100, Math.round(soma / limite * 100)) : 0;
   const podeFracionar = !!c.pesoLiquido && (c.fotos || []).length >= 2;
+  const cancelada = c.status === 'cancelada';
+  const avisoCancelada = cancelada ? `<div style="background:#FDF3F1;border:1.5px solid #E8B9B2;border-radius:14px;padding:14px 16px;margin-bottom:12px">
+    <div style="font-size:14px;font-weight:800;color:#B23A2E">🚫 Carga cancelada</div>
+    <div style="font-size:12.5px;color:#5d4a46;margin-top:4px">${c.cancelada ? `Em ${esc(horaBR(c.cancelada.em))} por ${esc(c.cancelada.por || '—')}. ` : ''}As OSs desta carga <b>voltaram para a recepção</b> e já podem entrar numa nova carga (em "＋ Abrir carga"). Este registro fica só como histórico.</div>
+  </div>` : '';
   const osRows = c.oss.map((o) => `<span class="pill" style="background:#EEF3F1;color:#374b48;margin:0 6px 6px 0">${esc(o.numero || o.id)}${o.clienteNome ? ' · ' + esc(o.clienteNome) : ''}${o.laudo ? ' · LAUDO' : ''}</span>`).join('');
   const fotos = (c.fotos || []).map((f, i) => `<a href="/cargas/foto?id=${esc(c.id)}&i=${i}" target="_blank" rel="noopener" style="display:inline-block;width:74px;height:74px;border-radius:10px;background:#EEF3F1;border:1px solid #E4EBE9;overflow:hidden;margin:0 6px 6px 0"><img src="/cargas/foto?id=${esc(c.id)}&i=${i}" style="width:100%;height:100%;object-fit:cover" alt="foto"></a>`).join('');
   const loteRows = (lotes || []).map((l) => `<div class="row">
@@ -273,8 +307,9 @@ export function paginaCarga(user, c, lotes) {
     ${c.exclusivaLaudo ? '<span class="pill p-laudo">CARGA EXCLUSIVA — LAUDO</span>' : ''}
   </div>
   <div style="font-size:11.5px;color:#8fa39f;margin-bottom:10px">${esc(horaBR(c.criadoEm))} · aberta por ${esc(c.criadoPor || '—')}</div>
+  ${avisoCancelada}
   <div class="card" style="margin-bottom:12px"><div class="sec" style="margin-top:0">OSs desta carga</div>${osRows}</div>
-
+  ${cancelada ? '' : `
   <div class="card" style="margin-bottom:12px">
     <div class="sec" style="margin-top:0">⚖️ Pesagem</div>
     <div class="g3">
@@ -310,20 +345,24 @@ export function paginaCarga(user, c, lotes) {
     <div class="sec">Lotes desta carga (${(lotes || []).length})</div>
     ${loteRows}
   </div>
+  <div style="margin-top:14px;text-align:right">
+    <button onclick="cancelarCg()" style="background:none;border:1.5px solid #E8B9B2;color:#B23A2E;border-radius:11px;padding:10px 16px;font-size:12.5px;font-weight:800;cursor:pointer">✖ Cancelar carga — OSs voltam para a recepção</button>
+  </div>`}
 </div>
 <script>
 const DESC=${JSON.stringify(Object.fromEntries(Object.entries(DESTINOS).map(([k, v]) => [k, v.desc]))).replace(/</g, '\\u003c')};
 const numBR=(s)=>{const t=String(s==null?'':s).trim();if(!t)return 0;return Number(t.includes(',')?t.replace(/\\./g,'').replace(',','.'):t)||0;};
 const dsel=document.getElementById('l-dest'), ddesc=document.getElementById('l-desc');
-function attDesc(){ddesc.textContent=DESC[dsel.value]||'';} dsel.addEventListener('change',attDesc); attDesc();
-['p-bruto','p-tara'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{const b=numBR(document.getElementById('p-bruto').value),t=numBR(document.getElementById('p-tara').value);document.getElementById('p-liq').textContent=(b>0&&t>=0&&t<b)?((b-t).toLocaleString('pt-BR',{maximumFractionDigits:1})+' kg'):'—';}));
+function attDesc(){if(dsel&&ddesc)ddesc.textContent=DESC[dsel.value]||'';} if(dsel){dsel.addEventListener('change',attDesc); attDesc();}
+['p-bruto','p-tara'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('input',()=>{const b=numBR(document.getElementById('p-bruto').value),t=numBR(document.getElementById('p-tara').value);document.getElementById('p-liq').textContent=(b>0&&t>=0&&t<b)?((b-t).toLocaleString('pt-BR',{maximumFractionDigits:1})+' kg'):'—';});});
 async function pesar(){
   const msg=document.getElementById('msg-peso');msg.textContent='Registrando…';
   try{const r=await fetch('/api/cargas/pesar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:${JSON.stringify(c.id)},bruto:numBR(document.getElementById('p-bruto').value),tara:numBR(document.getElementById('p-tara').value)})});
     const j=await r.json(); if(j.ok)location.reload(); else msg.textContent=j.message||'Não deu certo.';}
   catch{msg.textContent='Falha de rede.';}
 }
-document.getElementById('foto').addEventListener('change',async function(){
+const fotoEl=document.getElementById('foto');
+if(fotoEl)fotoEl.addEventListener('change',async function(){
   const msg=document.getElementById('msg-foto'); if(!this.files||!this.files[0])return;
   msg.textContent='Enviando foto…';
   const fd=new FormData(); fd.append('id',${JSON.stringify(c.id)}); fd.append('file',this.files[0]);
@@ -340,6 +379,12 @@ async function excluirLote(id){
   if(!confirm('Excluir o lote '+id+'?'))return;
   try{const r=await fetch('/api/cargas/lote-excluir',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id})});
     const j=await r.json(); if(j.ok)location.reload(); else alert(j.message||'Não deu certo.');}
+  catch{alert('Falha de rede.');}
+}
+async function cancelarCg(){
+  if(!confirm('Cancelar a carga ${esc(c.id)}?\\n\\nAs OSs desta carga voltam para a lista de recebimento (dá para abrir uma carga nova com elas). Pesagem e fotos já registradas aqui saem do fluxo e ficam só no histórico.'))return;
+  try{const r=await fetch('/api/cargas/cancelar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:${JSON.stringify(c.id)}})});
+    const j=await r.json(); if(j.ok){alert('Carga cancelada. As OSs voltaram para a recepção.');location.href='/cargas';}else{alert(j.message||'Não deu certo.');}}
   catch{alert('Falha de rede.');}
 }
 </script></body></html>`;
