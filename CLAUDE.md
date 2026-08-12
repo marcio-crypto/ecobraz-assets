@@ -14,6 +14,17 @@ Leia isto no início de toda sessão. É um compromisso permanente, não uma pre
 ## Segurança (regra rígida)
 
 - Nunca exponha, imprima ou grave chaves de API no repositório, em logs ou na conversa. Use apenas GitHub Actions Secrets, Ghost Integration Keys e Cloudflare Secrets já configurados. Nunca peça ao Marcio para colar segredos no chat.
+- **Este repositório é PÚBLICO.** Nunca grave aqui dados pessoais (CPF, RG,
+  endereços residenciais, telefones particulares), nem chaves de autenticação
+  ou códigos verificadores de documentos oficiais — mesmo que o Marcio envie os
+  PDFs. Os originais ficam no Google Drive dele; aqui só a ficha institucional.
+
+## Documentação institucional da Ecobraz
+
+Dados cadastrais, licenças e prazos: `docs/institucional/DOCUMENTOS-ECOBRAZ.md`.
+Consultar antes de preencher cadastros, responder questionários de compradores
+ou publicar qualquer dado institucional em página nova. Atualizar a ficha (e
+avisar o Marcio) sempre que um documento for renovado ou vencer.
 
 ## Padrão visual da Villanova ESG (aprovado em 30/07/2026)
 
