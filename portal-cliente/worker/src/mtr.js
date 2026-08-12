@@ -168,10 +168,12 @@ export async function sondaMTR(env) {
 // Contrato PROVADO ao vivo (D1 id 34): POST mtrr/apiws/rest/gettoken
 // { cpfCnpj, senha, unidade(número) } → objetoResposta = token (usar cru no header).
 // Token de UM sistema (sigor OU sinir), com cache no KV por 1h.
+// Devolve { token, cache?, falha? } — a falha vira mensagem clara na tela
+// (lição do caso Débora 12/08: "sem resposta" escondia o motivo real).
 async function tokenDe(env, cfg, { forcar } = {}) {
-  if (!cfg || !(cfg.cpf || cfg.email) || !cfg.senha || !cfg.unidade) return null;
+  if (!cfg || !(cfg.cpf || cfg.email) || !cfg.senha || !cfg.unidade) return { token: null, falha: 'credenciais incompletas no cofre' };
   const chave = `mtr:${cfg.tipo}:token`;
-  if (!forcar && env.PORTAL_KV) { const c = await env.PORTAL_KV.get(chave); if (c) return c; }
+  if (!forcar && env.PORTAL_KV) { const c = await env.PORTAL_KV.get(chave); if (c) return { token: c, cache: true }; }
   const doc = cfg.cpf || cfg.email;
   const uni = /^\d+$/.test(cfg.unidade) ? Number(cfg.unidade) : cfg.unidade;
   try {
@@ -179,12 +181,20 @@ async function tokenDe(env, cfg, { forcar } = {}) {
       method: 'POST', headers: { 'content-type': 'application/json', accept: 'application/json' },
       body: JSON.stringify({ cpfCnpj: doc, senha: cfg.senha, unidade: uni }), signal: AbortSignal.timeout(20000),
     });
-    const t = acharToken(await r.text());
-    if (t && env.PORTAL_KV) await env.PORTAL_KV.put(chave, t, { expirationTtl: 3600 });
-    return t || null;
-  } catch { return null; }
+    const txt = await r.text();
+    const t = acharToken(txt);
+    if (t) {
+      if (env.PORTAL_KV) await env.PORTAL_KV.put(chave, t, { expirationTtl: 3600 });
+      return { token: t };
+    }
+    let msgOrgao = ''; try { const j = JSON.parse(txt); msgOrgao = String((j && (j.mensagem || j.restResponseMensagem)) || ''); } catch { msgOrgao = ''; }
+    return { token: null, falha: `login recusado pelo órgão (HTTP ${r.status}${msgOrgao ? ': ' + semSegredos(msgOrgao, cfg, '').slice(0, 120) : ''})` };
+  } catch (e) {
+    const m = String((e && e.message) || e);
+    return { token: null, falha: /abort|timeout|timed?\s*out/i.test(m) ? 'órgão não respondeu ao login em 20s' : ('falha de rede no login: ' + m.slice(0, 80)) };
+  }
 }
-export async function tokenSigor(env, opts) { return tokenDe(env, SISTEMAS(env).find((s) => s.tipo === 'sigor'), opts); }
+export async function tokenSigor(env, opts) { const r = await tokenDe(env, SISTEMAS(env).find((s) => s.tipo === 'sigor'), opts); return (r && r.token) || null; }
 
 // CONSTATAÇÃO (pacote oficial de tipos v1.15): a API do SIGOR/SINIR NÃO tem
 // endpoint de "listar/pescar manifestos". A consulta é sempre POR NÚMERO:
@@ -222,10 +232,8 @@ function resumoManifesto(obj, num) {
   };
 }
 
-// Consulta retornaManifesto em UM sistema.
-async function consultarEm(env, cfg, num) {
-  const token = await tokenDe(env, cfg);
-  if (!token) return { erroToken: true, sistema: cfg.nome };
+// Uma chamada retornaManifesto com um token já obtido.
+async function tentarManifesto(cfg, num, token) {
   try {
     const r = await fetch(`${cfg.base}/apiws/rest/retornaManifesto/${encodeURIComponent(num)}`, { headers: { Authorization: token, accept: 'application/json' }, signal: AbortSignal.timeout(15000) });
     const txt = await r.text();
@@ -233,7 +241,21 @@ async function consultarEm(env, cfg, num) {
     const obj = dado && dado.objetoResposta;
     if (r.status === 200 && obj && !dado.erro) return { ok: true, sistema: cfg.tipo, nomeSistema: cfg.nome, resumo: resumoManifesto(obj, num) };
     return { ok: false, sistema: cfg.nome, status: r.status, mensagem: (dado && (dado.mensagem || dado.restResponseMensagem)) || `HTTP ${r.status}`, corpoInicio: semSegredos(txt, cfg, token).slice(0, 160) };
-  } catch (e) { return { ok: false, sistema: cfg.nome, erro: String(e && e.message || e).slice(0, 100) }; }
+  } catch (e) { return { ok: false, sistema: cfg.nome, erro: String((e && e.message) || e).slice(0, 100) }; }
+}
+
+// Consulta retornaManifesto em UM sistema (com renovação de token 1x se preciso).
+async function consultarEm(env, cfg, num) {
+  let tk = await tokenDe(env, cfg);
+  if (!tk.token) return { erroToken: true, sistema: cfg.nome, mensagem: `não autenticou — ${tk.falha}` };
+  let res = await tentarManifesto(cfg, num, tk.token);
+  // Token do cache pode ter caducado no órgão antes da nossa 1h: renova e tenta 1x.
+  // (Token NOVO com resposta de "não pertence" é resposta de verdade — não repete.)
+  if (!res.ok && tk.cache && /token/i.test(String(res.mensagem || ''))) {
+    tk = await tokenDe(env, cfg, { forcar: true });
+    if (tk.token) res = await tentarManifesto(cfg, num, tk.token);
+  }
+  return res;
 }
 
 // Consulta uma MTR por número tentando OS DOIS sistemas (SIGOR e SINIR): um MTR
@@ -244,12 +266,10 @@ export async function consultarMtrSigor(env, numero) {
   const sistemas = SISTEMAS(env);
   if (!sistemas.length) return { ok: false, error: 'sem_config', message: 'MTR não está configurado no cofre.' };
   const out = { ok: false, numero: num, tentativas: [] };
-  let ultima = null;
   for (const cfg of sistemas) {
     const res = await consultarEm(env, cfg, num);
-    out.tentativas.push({ sistema: res.sistema, ok: !!res.ok, status: res.status, mensagem: res.mensagem, erroToken: !!res.erroToken, corpoInicio: res.corpoInicio });
+    out.tentativas.push({ sistema: res.sistema || cfg.nome, ok: !!res.ok, status: res.status, mensagem: res.mensagem, erro: res.erro, erroToken: !!res.erroToken, corpoInicio: res.corpoInicio });
     if (res.ok) { out.ok = true; out.resumo = res.resumo; out.sistema = res.sistema; out.nomeSistema = res.nomeSistema; break; }
-    ultima = res;
   }
   // Evidência no D1 — token/segredos já vêm mascarados.
   try {
@@ -261,13 +281,31 @@ export async function consultarMtrSigor(env, numero) {
   } catch { /* best-effort */ }
   out.message = out.ok
     ? `✅ MTR ${out.resumo.numero} encontrada no ${out.nomeSistema} — gerador: ${out.resumo.gerador || '(n/d)'} · situação: ${out.resumo.situacao || '(n/d)'}.`
-    : `Não consegui ler a MTR ${num} em nenhum dos sistemas: ${(ultima && (ultima.mensagem || ultima.erro)) || 'sem resposta'}.`;
+    : `Não consegui vincular a MTR ${num}. ${detalheFalhas(out.tentativas)}`;
   return out;
+}
+
+// Traduz as respostas do órgão para linguagem de gente — e mostra CADA sistema,
+// em vez de engolir a resposta boa atrás de um "sem resposta" genérico
+// (defeito visto no caso da Débora, 12/08, MTR 260013297047).
+const TRADUCOES_ORGAO = [
+  [/n[aã]o pertence ao Gerador\/?Destinador\/?Transportador/i,
+    'a MTR existe, mas não está vinculada à unidade da Ecobraz nesse órgão (a Ecobraz precisa constar nela como gerador, transportador ou destinador). Confira o número digitado; se estiver certo, a MTR pode ter sido emitida para outro CNPJ/unidade'],
+  [/Manifesto n[aã]o encontrado/i, 'não existe MTR com esse número nesse sistema'],
+];
+function detalheFalhas(tentativas) {
+  const rotulo = (s) => /SIGOR/i.test(String(s)) ? 'SIGOR (SP)' : /SINIR/i.test(String(s)) ? 'SINIR (nacional)' : String(s || 'órgão');
+  const partes = (tentativas || []).filter((t) => !t.ok).map((t) => {
+    let m = t.mensagem || t.erro || 'sem resposta';
+    for (const [re, texto] of TRADUCOES_ORGAO) { if (re.test(m)) { m = texto; break; } }
+    return `${rotulo(t.sistema)}: ${m}`;
+  });
+  return partes.join(' · ') || 'sem resposta dos órgãos.';
 }
 
 // Baixa o PDF oficial (downloadManifesto) de UM sistema.
 async function baixarPdfEm(env, cfg, num) {
-  const token = await tokenDe(env, cfg);
+  const { token } = await tokenDe(env, cfg);
   if (!token) return { erro: 'sem_token' };
   try {
     const r = await fetch(`${cfg.base}/apiws/rest/downloadManifesto/${encodeURIComponent(num)}`, { headers: { Authorization: token, accept: 'application/json' }, signal: AbortSignal.timeout(20000) });
