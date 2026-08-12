@@ -52,7 +52,7 @@ import { paginaAcompanhamento, colunaClienteDe, lerGestores, gestorPorEmail, sal
 import { DEMO_CLIENTE_HTML, DEMO_OG_PNG_B64 } from './demo-cliente.js';
 import { listarPropostas, lerProposta, salvarProposta, paginaPropostas, paginaPropostaForm, paginaPropostaVer, paginaContratoVer, garantirTokenAceite, registrarAceite, paginaAceite, paginaAceiteVerificar } from './proposta.js';
 import { lerEmpresaDocs, salvarEmpresaDoc, anexarEmpresaDoc, paginaEmpresaDocs, alertasEmpresaDocs } from './empresa-docs.js';
-import { listarCargas, lerCarga, lotesDaCarga, lerLote, listarLotesPorDestino, novaCarga, pesarCarga, fotoCarga, criarLote, excluirLote, cancelarCarga, mudarStatusLote, seloLote, qrLoteGif, paginaCargas, paginaNovaCarga, paginaCarga, paginaEtiqueta, paginaFilas, paginaValidarLote } from './cargas.js';
+import { listarCargas, lerCarga, lotesDaCarga, lerLote, listarLotesPorDestino, novaCarga, pesarCarga, fotoCarga, criarLote, excluirLote, editarLote, cancelarCarga, mudarStatusLote, seloLote, qrLoteGif, paginaCargas, paginaNovaCarga, paginaCarga, paginaEtiqueta, paginaFilas, paginaValidarLote } from './cargas.js';
 import { acharPacote, precoPacote, acharModuloAdote, precoModuloAdote, paginaLojaAdote, paginaObrigadoAdote, paginaDiagnostico, lerCredito, salvarCredito, novoCredito, aplicarCompra, aplicarRecarga, precisaRecarga, listarPatrocinadores, resumoPatrocinio, lerCreditoPorDoc } from './adote.js';
 import { paginaLojaESG, paginaESGContato, paginaESGObrigado, relatorioESG, precoRelatorioESG } from './esg.js';
 import { statusDaEtapa, valorProp, CAMPOS_OS } from './os-utils.js';
@@ -2331,7 +2331,12 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
       if (pathname === '/api/cargas/pesar' && request.method === 'POST') {
         if (!docaOk) return json({ ok: false, message: 'nao_autenticado' }, 401);
         let b; try { b = await request.json(); } catch { b = {}; }
-        return json(await pesarCarga(env, b && b.id, b && b.bruto, b && b.tara));
+        return json(await pesarCarga(env, b && b.id, b && b.bruto, b && b.tara, { justificativa: b && b.justificativa, por: docaOk.email || '' }));
+      }
+      if (pathname === '/api/cargas/editar-lote' && request.method === 'POST') {
+        if (!docaOk) return json({ ok: false, message: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = {}; }
+        return json(await editarLote(env, docaOk, b && b.id, b || {}));
       }
       if (pathname === '/api/cargas/foto' && request.method === 'POST') {
         if (!docaOk) return json({ ok: false, message: 'nao_autenticado' }, 401);

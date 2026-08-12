@@ -33,20 +33,27 @@ export const TOLERANCIA = 1.05; // 5% sobre o peso líquido
 export const exigeLaudoExclusivo = (os) => (((os && os.certificados) || []).includes('Laudo de Sanitização'));
 
 // --- Banco (D1) ----------------------------------------------------------------
-let migrouCancelada = false;
+let migrouColunas = false;
 async function db(env) {
   if (!env.DB_PLOOMES) return null;
   try {
-    await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS op_cargas (id TEXT PRIMARY KEY, criado_em TEXT, criado_por TEXT, cliente_nome TEXT, cliente_doc TEXT, os_json TEXT, exclusiva_laudo INTEGER DEFAULT 0, peso_bruto REAL, tara REAL, peso_liquido REAL, fotos_json TEXT, status TEXT, cancelada_json TEXT DEFAULT \'\')').run();
-    await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS op_lotes (id TEXT PRIMARY KEY, carga_id TEXT, categoria TEXT, peso REAL, qtd TEXT, destino TEXT, status TEXT, criado_em TEXT, criado_por TEXT)').run();
+    await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS op_cargas (id TEXT PRIMARY KEY, criado_em TEXT, criado_por TEXT, cliente_nome TEXT, cliente_doc TEXT, os_json TEXT, exclusiva_laudo INTEGER DEFAULT 0, peso_bruto REAL, tara REAL, peso_liquido REAL, fotos_json TEXT, status TEXT, cancelada_json TEXT DEFAULT \'\', edicoes_json TEXT DEFAULT \'\')').run();
+    await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS op_lotes (id TEXT PRIMARY KEY, carga_id TEXT, categoria TEXT, peso REAL, qtd TEXT, destino TEXT, status TEXT, criado_em TEXT, criado_por TEXT, edicoes_json TEXT DEFAULT \'\')').run();
   } catch { return null; }
-  // Tabela criada antes do botão de cancelar não tem a coluna — completa uma vez.
-  if (!migrouCancelada) {
-    try { await env.DB_PLOOMES.prepare('ALTER TABLE op_cargas ADD COLUMN cancelada_json TEXT DEFAULT \'\'').run(); } catch { /* coluna já existe */ }
-    migrouCancelada = true;
+  // Tabelas criadas antes de cancelar/editar existirem não têm as colunas — completa uma vez.
+  if (!migrouColunas) {
+    for (const sql of [
+      'ALTER TABLE op_cargas ADD COLUMN cancelada_json TEXT DEFAULT \'\'',
+      'ALTER TABLE op_cargas ADD COLUMN edicoes_json TEXT DEFAULT \'\'',
+      'ALTER TABLE op_lotes ADD COLUMN edicoes_json TEXT DEFAULT \'\'',
+    ]) {
+      try { await env.DB_PLOOMES.prepare(sql).run(); } catch { /* coluna já existe */ }
+    }
+    migrouColunas = true;
   }
   return env.DB_PLOOMES;
 }
+const parseEdicoes = (raw) => { try { const v = raw ? JSON.parse(raw) : []; return Array.isArray(v) ? v : []; } catch { return []; } };
 async function proximoId(d, tabela, prefixo, digitos) {
   const ano = new Date().getFullYear();
   const like = `${prefixo}-${ano}-%`;
@@ -57,9 +64,9 @@ async function proximoId(d, tabela, prefixo, digitos) {
 const rowCarga = (r) => {
   if (!r) return null;
   let cancelada = null; try { cancelada = r.cancelada_json ? JSON.parse(r.cancelada_json) : null; } catch { cancelada = null; }
-  return { id: r.id, criadoEm: r.criado_em, criadoPor: r.criado_por, clienteNome: r.cliente_nome, clienteDoc: r.cliente_doc, oss: JSON.parse(r.os_json || '[]'), exclusivaLaudo: !!r.exclusiva_laudo, pesoBruto: r.peso_bruto, tara: r.tara, pesoLiquido: r.peso_liquido, fotos: JSON.parse(r.fotos_json || '[]'), status: r.status, cancelada };
+  return { id: r.id, criadoEm: r.criado_em, criadoPor: r.criado_por, clienteNome: r.cliente_nome, clienteDoc: r.cliente_doc, oss: JSON.parse(r.os_json || '[]'), exclusivaLaudo: !!r.exclusiva_laudo, pesoBruto: r.peso_bruto, tara: r.tara, pesoLiquido: r.peso_liquido, fotos: JSON.parse(r.fotos_json || '[]'), status: r.status, cancelada, edicoes: parseEdicoes(r.edicoes_json) };
 };
-const rowLote = (r) => r ? ({ id: r.id, cargaId: r.carga_id, categoria: r.categoria, peso: r.peso, qtd: r.qtd, destino: r.destino, status: r.status, criadoEm: r.criado_em, criadoPor: r.criado_por }) : null;
+const rowLote = (r) => r ? ({ id: r.id, cargaId: r.carga_id, categoria: r.categoria, peso: r.peso, qtd: r.qtd, destino: r.destino, status: r.status, criadoEm: r.criado_em, criadoPor: r.criado_por, edicoes: parseEdicoes(r.edicoes_json) }) : null;
 
 export async function listarCargas(env) {
   const d = await db(env); if (!d) return [];
@@ -105,7 +112,7 @@ export async function novaCarga(env, user, oss) {
   return { ok: true, id };
 }
 
-export async function pesarCarga(env, id, bruto, tara) {
+export async function pesarCarga(env, id, bruto, tara, opts = {}) {
   const d = await db(env); if (!d) return { ok: false, message: 'Banco indisponível.' };
   const c = await lerCarga(env, id);
   if (!c) return { ok: false, message: 'Carga não encontrada.' };
@@ -114,7 +121,23 @@ export async function pesarCarga(env, id, bruto, tara) {
   if (b <= 0) return { ok: false, message: 'Informe o peso bruto (da balança).' };
   if (t < 0 || t >= b) return { ok: false, message: 'A tara precisa ser menor que o peso bruto.' };
   const liquido = Math.round((b - t) * 10) / 10;
-  await d.prepare('UPDATE op_cargas SET peso_bruto=?2, tara=?3, peso_liquido=?4, status=CASE WHEN status=\'aberta\' THEN \'pesada\' ELSE status END WHERE id=?1').bind(c.id, b, t, liquido).run();
+  // ALTERAR uma pesagem já registrada: exige justificativa (controle interno,
+  // pedido do Marcelo 12/08) e não pode deixar os lotes já criados sem lastro.
+  const jaPesada = Number(c.pesoBruto) > 0;
+  let edicoes = c.edicoes || [];
+  if (jaPesada) {
+    const mudou = Number(c.pesoBruto) !== b || Number(c.tara || 0) !== t;
+    if (!mudou) return { ok: true, liquido, semMudanca: true };
+    const just = String(opts.justificativa || '').trim();
+    if (just.length < 5) return { ok: false, message: 'Alterar uma pesagem já registrada exige justificativa (fica só no controle interno).' };
+    const lotes = await lotesDaCarga(env, c.id);
+    const soma = lotes.reduce((s, l) => s + (Number(l.peso) || 0), 0);
+    const novoLimite = Math.round(liquido * TOLERANCIA * 10) / 10;
+    if (soma > novoLimite) return { ok: false, message: `Não dá: os lotes já criados somam ${kg(soma)} e o novo líquido só comporta ${kg(novoLimite)} (líquido ${kg(liquido)} +5%). Ajuste os lotes primeiro.` };
+    edicoes = edicoes.concat([{ em: new Date().toISOString(), por: String(opts.por || '').slice(0, 160), justificativa: just.slice(0, 300), o_que: 'pesagem', de: { bruto: c.pesoBruto, tara: c.tara, liquido: c.pesoLiquido }, para: { bruto: b, tara: t, liquido } }]).slice(-30);
+  }
+  await d.prepare('UPDATE op_cargas SET peso_bruto=?2, tara=?3, peso_liquido=?4, edicoes_json=?5, status=CASE WHEN status=\'aberta\' THEN \'pesada\' ELSE status END WHERE id=?1')
+    .bind(c.id, b, t, liquido, JSON.stringify(edicoes)).run();
   return { ok: true, liquido };
 }
 
@@ -161,6 +184,49 @@ export async function excluirLote(env, id) {
   if (l.status !== 'aguardando') return { ok: false, message: 'Só dá para excluir lote que ainda não entrou em processamento.' };
   await d.prepare('DELETE FROM op_lotes WHERE id=?1').bind(l.id).run();
   return { ok: true };
+}
+
+// EDITAR um lote (pedido do Marcelo 12/08): categoria, peso, qtd e destino, com
+// justificativa obrigatória — fica só no registro interno (não sai em etiqueta).
+// Só lote "aguardando": depois que entra em processamento, o conteúdo é história.
+export async function editarLote(env, user, id, dados) {
+  const d = await db(env); if (!d) return { ok: false, message: 'Banco indisponível.' };
+  const l = await lerLote(env, id);
+  if (!l) return { ok: false, message: 'Lote não encontrado.' };
+  if (l.status !== 'aguardando') return { ok: false, message: 'Lote que já entrou em processamento não pode ser editado — registre a correção na etapa atual.' };
+  const c = await lerCarga(env, l.cargaId);
+  if (!c) return { ok: false, message: 'Carga do lote não encontrada.' };
+  if (c.status === 'cancelada') return { ok: false, message: 'A carga deste lote foi cancelada.' };
+  const just = String((dados && dados.justificativa) || '').trim();
+  if (just.length < 5) return { ok: false, message: 'Escreva a justificativa da alteração (fica só no controle interno).' };
+  const categoria = limpar(dados.categoria).slice(0, 80);
+  const destino = String(dados.destino || '');
+  const peso = Number(dados.peso) || 0;
+  const qtd = limpar(dados.qtd).slice(0, 40);
+  if (!categoria) return { ok: false, message: 'Informe o tipo de material / categoria.' };
+  if (!DESTINOS[destino]) return { ok: false, message: 'Escolha o destino do lote.' };
+  if (peso <= 0) return { ok: false, message: 'Informe o peso do lote.' };
+  const outros = (await lotesDaCarga(env, c.id)).filter((x) => x.id !== l.id);
+  const soma = outros.reduce((s, x) => s + (Number(x.peso) || 0), 0);
+  const limite = Math.round((Number(c.pesoLiquido) || 0) * TOLERANCIA * 10) / 10;
+  if (limite && soma + peso > limite) {
+    return { ok: false, message: `Peso estoura o limite da carga: os outros lotes somam ${kg(soma)} + este ${kg(peso)} > ${kg(limite)} (líquido ${kg(c.pesoLiquido)} +5%).` };
+  }
+  const mudou = categoria !== l.categoria || peso !== Number(l.peso) || qtd !== String(l.qtd || '') || destino !== l.destino;
+  if (!mudou) return { ok: true, semMudanca: true };
+  const edicoes = (l.edicoes || []).concat([{ em: new Date().toISOString(), por: (user && user.email) || '', justificativa: just.slice(0, 300), o_que: 'lote', de: { categoria: l.categoria, peso: l.peso, qtd: l.qtd, destino: l.destino }, para: { categoria, peso, qtd, destino } }]).slice(-30);
+  await d.prepare('UPDATE op_lotes SET categoria=?2, peso=?3, qtd=?4, destino=?5, edicoes_json=?6 WHERE id=?1')
+    .bind(l.id, categoria, peso, qtd, destino, JSON.stringify(edicoes)).run();
+  return { ok: true };
+}
+
+// Lotes com os dados da carga (cliente) — para o Cronograma/Kanban.
+export async function listarLotesComCarga(env) {
+  const d = await db(env); if (!d) return [];
+  try {
+    const r = await d.prepare('SELECT l.*, c.cliente_nome AS carga_cliente, c.status AS carga_status FROM op_lotes l LEFT JOIN op_cargas c ON c.id = l.carga_id ORDER BY l.id DESC LIMIT 300').all();
+    return (r.results || []).map((x) => ({ ...rowLote(x), cargaCliente: x.carga_cliente || '', cargaStatus: x.carga_status || '' }));
+  } catch { return []; }
 }
 
 // Cancela a carga e devolve as OSs para a recepção (pedido do Marcelo, 11/08:
@@ -291,13 +357,56 @@ export function paginaCarga(user, c, lotes) {
   </div>` : '';
   const osRows = c.oss.map((o) => `<span class="pill" style="background:#EEF3F1;color:#374b48;margin:0 6px 6px 0">${esc(o.numero || o.id)}${o.clienteNome ? ' · ' + esc(o.clienteNome) : ''}${o.laudo ? ' · LAUDO' : ''}</span>`).join('');
   const fotos = (c.fotos || []).map((f, i) => `<a href="/cargas/foto?id=${esc(c.id)}&i=${i}" target="_blank" rel="noopener" style="display:inline-block;width:74px;height:74px;border-radius:10px;background:#EEF3F1;border:1px solid #E4EBE9;overflow:hidden;margin:0 6px 6px 0"><img src="/cargas/foto?id=${esc(c.id)}&i=${i}" style="width:100%;height:100%;object-fit:cover" alt="foto"></a>`).join('');
-  const loteRows = (lotes || []).map((l) => `<div class="row">
+  const destinoOptsDe = (sel) => Object.entries(DESTINOS).map(([k, v]) => `<option value="${k}"${k === sel ? ' selected' : ''}>${esc(v.rot)}</option>`).join('');
+  const loteRows = (lotes || []).map((l) => `<div>
+  <div class="row">
     <span style="min-width:0"><b style="font-size:13px">${esc(l.id)}</b> · <span style="font-size:12.5px">${esc(l.categoria)}</span>
-      <span style="display:block;font-size:11px;color:#8fa39f">${kg(l.peso)}${l.qtd ? ' · ' + esc(l.qtd) : ''} · ${esc((DESTINOS[l.destino] || {}).rot || l.destino)}</span></span>
+      <span style="display:block;font-size:11px;color:#8fa39f">${kg(l.peso)}${l.qtd ? ' · ' + esc(l.qtd) : ''} · ${esc((DESTINOS[l.destino] || {}).rot || l.destino)}${(l.edicoes || []).length ? ' · ✎ alterado' : ''}</span></span>
     <span style="flex:none;display:flex;gap:6px;align-items:center">${stLote(l.status)}
       <a class="btn btn-g" style="padding:7px 11px;font-size:12px" href="/cargas/etiqueta?id=${esc(l.id)}" target="_blank" rel="noopener">🏷️ Etiqueta</a>
-      ${l.status === 'aguardando' ? `<button class="btn btn-g" style="padding:7px 10px;font-size:12px;color:#a04030" onclick="excluirLote('${esc(l.id)}')">✕</button>` : ''}</span>
+      ${l.status === 'aguardando' ? `<button class="btn btn-g" style="padding:7px 10px;font-size:12px" onclick="abrirEdicao('${esc(l.id)}')">✏️</button>
+      <button class="btn btn-g" style="padding:7px 10px;font-size:12px;color:#a04030" onclick="excluirLote('${esc(l.id)}')">✕</button>` : ''}</span>
+  </div>
+  ${l.status === 'aguardando' ? `<div id="ed-${esc(l.id)}" style="display:none;border:1.5px dashed #cfe0dd;border-radius:11px;padding:12px;margin:-2px 0 8px;background:#F7FAF9">
+    <div style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#0B5B66;margin-bottom:8px">✏️ Editar ${esc(l.id)}</div>
+    <div class="g3">
+      <div><label>Categoria</label><input id="ed-cat-${esc(l.id)}" value="${esc(l.categoria)}"></div>
+      <div><label>Peso (kg)</label><input id="ed-peso-${esc(l.id)}" inputmode="decimal" value="${l.peso}"></div>
+      <div><label>Qtd (opcional)</label><input id="ed-qtd-${esc(l.id)}" value="${esc(l.qtd || '')}"></div>
+    </div>
+    <label>Destino</label><select id="ed-dest-${esc(l.id)}">${destinoOptsDe(l.destino)}</select>
+    <label>Justificativa da alteração (fica só no controle interno)</label><input id="ed-just-${esc(l.id)}" placeholder="ex.: peso digitado errado na criação">
+    <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
+      <button class="btn btn-d" style="padding:9px 14px;font-size:12.5px" onclick="salvarLote('${esc(l.id)}')">Salvar alterações</button>
+      <button class="btn btn-g" style="padding:9px 14px;font-size:12.5px" onclick="fecharEdicao('${esc(l.id)}')">Cancelar</button>
+      <span class="msg" id="ed-msg-${esc(l.id)}" style="margin:0"></span>
+    </div>
+  </div>` : ''}
   </div>`).join('') || '<div style="font-size:12.5px;color:#8fa39f">Nenhum lote ainda.</div>';
+  // Histórico interno de alterações (pesagem da carga + lotes) — só para controle.
+  const historico = [];
+  for (const e of (c.edicoes || [])) historico.push({ ...e, alvo: c.id });
+  for (const l of (lotes || [])) for (const e of (l.edicoes || [])) historico.push({ ...e, alvo: l.id });
+  historico.sort((a, b) => String(b.em).localeCompare(String(a.em)));
+  const mudancaTxt = (e) => {
+    if (e.o_que === 'pesagem') return `pesagem: bruto ${e.de.bruto ?? '—'}→${e.para.bruto} kg · tara ${e.de.tara ?? '—'}→${e.para.tara} kg (líquido ${e.para.liquido} kg)`;
+    const partes = [];
+    for (const [campo, rot] of [['categoria', 'categoria'], ['peso', 'peso'], ['qtd', 'qtd'], ['destino', 'destino']]) {
+      if (String(e.de[campo] ?? '') !== String(e.para[campo] ?? '')) {
+        const fmt = (v) => campo === 'destino' ? ((DESTINOS[v] || {}).rot || v) : v;
+        partes.push(`${rot} ${fmt(e.de[campo]) || '—'} → ${fmt(e.para[campo])}`);
+      }
+    }
+    return partes.join(' · ') || 'sem mudança de campos';
+  };
+  const historicoHTML = historico.length ? `<div class="card" style="margin-top:12px;background:#FBFDFC">
+    <div class="sec" style="margin-top:0">🗒️ Alterações registradas (controle interno)</div>
+    <div style="font-size:11px;color:#9aa7a4;margin:-2px 0 8px">Não sai em etiqueta nem documento — é o histórico interno de correções desta carga.</div>
+    ${historico.map((e) => `<div style="font-size:11.5px;color:#4F6469;border-top:1px solid #EEF1F0;padding:7px 2px">
+      <b>${esc(horaBR(e.em))}</b> · ${esc(String(e.por || '—').split('@')[0])} · <b>${esc(e.alvo)}</b> — ${esc(mudancaTxt(e))}
+      <span style="display:block;color:#8fa39f;margin-top:1px">“${esc(e.justificativa || '')}”</span>
+    </div>`).join('')}
+  </div>` : '';
   const destinoOpts = Object.entries(DESTINOS).map(([k, v]) => `<option value="${k}">${esc(v.rot)}</option>`).join('');
   return `${head('Carga ' + c.id)}${topo('entrada · cargas')}
 <div class="wrap">
@@ -317,7 +426,8 @@ export function paginaCarga(user, c, lotes) {
       <div><label>Tara (kg)</label><input id="p-tara" inputmode="decimal" value="${c.tara || ''}"></div>
       <div><label>Líquido</label><div style="font-size:22px;font-weight:900;color:#00333B;padding:8px 0" id="p-liq">${c.pesoLiquido ? kg(c.pesoLiquido) : '—'}</div></div>
     </div>
-    <button class="btn btn-d" style="margin-top:8px" onclick="pesar()">Registrar pesagem</button>
+    ${Number(c.pesoBruto) > 0 ? '<label>Justificativa da alteração (obrigatória para mudar uma pesagem já registrada — fica só no controle interno)</label><input id="p-just" placeholder="ex.: tara digitada errada na entrada">' : ''}
+    <button class="btn btn-d" style="margin-top:8px" onclick="pesar()">${Number(c.pesoBruto) > 0 ? 'Salvar pesagem corrigida' : 'Registrar pesagem'}</button>
     <span class="msg" id="msg-peso"></span>
   </div>
 
@@ -348,6 +458,7 @@ export function paginaCarga(user, c, lotes) {
   <div style="margin-top:14px;text-align:right">
     <button onclick="cancelarCg()" style="background:none;border:1.5px solid #E8B9B2;color:#B23A2E;border-radius:11px;padding:10px 16px;font-size:12.5px;font-weight:800;cursor:pointer">✖ Cancelar carga — OSs voltam para a recepção</button>
   </div>`}
+  ${historicoHTML}
 </div>
 <script>
 const DESC=${JSON.stringify(Object.fromEntries(Object.entries(DESTINOS).map(([k, v]) => [k, v.desc]))).replace(/</g, '\\u003c')};
@@ -357,7 +468,19 @@ function attDesc(){if(dsel&&ddesc)ddesc.textContent=DESC[dsel.value]||'';} if(ds
 ['p-bruto','p-tara'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('input',()=>{const b=numBR(document.getElementById('p-bruto').value),t=numBR(document.getElementById('p-tara').value);document.getElementById('p-liq').textContent=(b>0&&t>=0&&t<b)?((b-t).toLocaleString('pt-BR',{maximumFractionDigits:1})+' kg'):'—';});});
 async function pesar(){
   const msg=document.getElementById('msg-peso');msg.textContent='Registrando…';
-  try{const r=await fetch('/api/cargas/pesar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:${JSON.stringify(c.id)},bruto:numBR(document.getElementById('p-bruto').value),tara:numBR(document.getElementById('p-tara').value)})});
+  const just=document.getElementById('p-just');
+  try{const r=await fetch('/api/cargas/pesar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:${JSON.stringify(c.id)},bruto:numBR(document.getElementById('p-bruto').value),tara:numBR(document.getElementById('p-tara').value),justificativa:just?just.value.trim():''})});
+    const j=await r.json(); if(j.ok)location.reload(); else msg.textContent=j.message||'Não deu certo.';}
+  catch{msg.textContent='Falha de rede.';}
+}
+function abrirEdicao(id){const d=document.getElementById('ed-'+id);if(d)d.style.display='block';}
+function fecharEdicao(id){const d=document.getElementById('ed-'+id);if(d)d.style.display='none';}
+async function salvarLote(id){
+  const g=(p)=>{const el=document.getElementById(p+'-'+id);return el?el.value:'';};
+  const msg=document.getElementById('ed-msg-'+id);
+  if(!g('ed-just').trim()){msg.textContent='Escreva a justificativa da alteração.';return;}
+  msg.textContent='Salvando…';
+  try{const r=await fetch('/api/cargas/editar-lote',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:id,categoria:g('ed-cat'),peso:numBR(g('ed-peso')),qtd:g('ed-qtd'),destino:g('ed-dest'),justificativa:g('ed-just').trim()})});
     const j=await r.json(); if(j.ok)location.reload(); else msg.textContent=j.message||'Não deu certo.';}
   catch{msg.textContent='Falha de rede.';}
 }

@@ -10,6 +10,7 @@
 
 import { listarOperacoes } from './operacional.js';
 import { listarColetasOS } from './coletas.js';
+import { listarLotesComCarga, DESTINOS } from './cargas.js';
 
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const kg = (n) => `${(Math.round((Number(n) || 0) * 100) / 100).toLocaleString('pt-BR', { maximumFractionDigits: 0 })} kg`;
@@ -78,7 +79,20 @@ export async function dadosCronograma(env) {
     concluidos: cols.concluido.length,
     aCaminho,
   };
-  return { cols, ativos, resumo, sla };
+  // Lotes da ENTRADA POR CARGAS (pedido do Marcelo 12/08): aparecem aqui para
+  // acompanhamento e destino, com o mesmo alerta de prazo (desde a criação).
+  let todosLotes = []; try { todosLotes = await listarLotesComCarga(env); } catch { todosLotes = []; }
+  const lotes = { aguardando: [], processando: [], finalizado: [] };
+  for (const l of todosLotes) {
+    if (l.cargaStatus === 'cancelada') continue; // carga cancelada = lote fora do fluxo
+    const dias = diasDesde(l.criadoEm);
+    const alerta = l.status === 'finalizado' ? { dot: '✅', cor: '#1E5B31', rotulo: 'finalizado', nivel: 0 } : alertaPrazo(dias, sla);
+    (lotes[l.status] || lotes.aguardando).push({ ...l, dias, alerta });
+  }
+  lotes.aguardando.sort((a, b) => (b.dias || 0) - (a.dias || 0));
+  lotes.processando.sort((a, b) => (b.dias || 0) - (a.dias || 0));
+  const resumoLotes = { aguardando: lotes.aguardando.length, processando: lotes.processando.length, finalizado: lotes.finalizado.length };
+  return { cols, ativos, resumo, sla, lotes, resumoLotes };
 }
 
 // --- Página ---
@@ -120,8 +134,45 @@ function cardLote(c) {
   </a>`;
 }
 
+// Card de um lote da Entrada por Cargas, com ação de status direto no Kanban.
+function cardLoteCarga(l) {
+  const badge = `<span class="pill" style="background:${l.alerta.cor}1A;color:${l.alerta.cor}">${l.alerta.dot} ${esc(l.alerta.rotulo)}</span>`;
+  const destinoRot = (DESTINOS[l.destino] || {}).rot || l.destino;
+  const acao = l.status === 'aguardando'
+    ? `<button onclick="mudarLoteSt('${esc(l.id)}','processando')" style="background:#92C430;color:#10262B;border:none;border-radius:8px;padding:6px 11px;font-size:11px;font-weight:800;cursor:pointer">▶ Iniciar</button>`
+    : l.status === 'processando'
+      ? `<button onclick="mudarLoteSt('${esc(l.id)}','finalizado')" style="background:#00333B;color:#fff;border:none;border-radius:8px;padding:6px 11px;font-size:11px;font-weight:800;cursor:pointer">✔ Finalizar</button>`
+      : '';
+  return `<div class="lote">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><a href="/cargas/carga?id=${esc(l.cargaId)}" style="font-size:13.5px;font-weight:800;color:#10262B;text-decoration:none">${esc(l.id)}</a>${badge}</div>
+    <div style="font-size:12px;color:#4F6469;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.categoria)} · ${esc(kg(l.peso))}${l.qtd ? ' · ' + esc(l.qtd) : ''}</div>
+    <div style="font-size:11px;color:#8fa39f;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">🎯 ${esc(destinoRot)} · ${esc(l.cargaCliente || l.cargaId)}</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:8px">
+      <span style="font-size:11px;color:#8fa39f">${l.dias != null ? l.dias + 'd desde a criação' : ''}</span>${acao}
+    </div>
+  </div>`;
+}
+
 export function paginaCronograma(user, dados) {
   const { cols, ativos, resumo, sla } = dados;
+  const lotes = dados.lotes || { aguardando: [], processando: [], finalizado: [] };
+  const resumoLotes = dados.resumoLotes || { aguardando: 0, processando: 0, finalizado: 0 };
+  const COLS_LOTE = [
+    { id: 'aguardando', rotulo: 'Aguardando processamento', cor: '#8A6A16', bg: '#FFF4DE' },
+    { id: 'processando', rotulo: 'Em processamento', cor: '#0B5B66', bg: '#E3F0F3' },
+    { id: 'finalizado', rotulo: 'Finalizado', cor: '#1E5B31', bg: '#E4F3E6' },
+  ];
+  const totalLotes = resumoLotes.aguardando + resumoLotes.processando + resumoLotes.finalizado;
+  const lotesHTML = COLS_LOTE.map((cCol) => {
+    const itens = lotes[cCol.id] || [];
+    const mostra = cCol.id === 'finalizado' ? itens.slice(0, 10) : itens;
+    const corpo = mostra.length ? mostra.map(cardLoteCarga).join('') : '<div style="font-size:12px;color:#9aa7a4;text-align:center;padding:14px 6px">—</div>';
+    const extra = (cCol.id === 'finalizado' && itens.length > 10) ? `<div style="font-size:11px;color:#9aa7a4;text-align:center;padding:4px">+ ${itens.length - 10} finalizados anteriores</div>` : '';
+    return `<div class="col">
+      <div class="colh"><span style="font-size:12.5px;font-weight:800;color:${cCol.cor}">${esc(cCol.rotulo)}</span><span class="pill" style="background:${cCol.bg};color:${cCol.cor}">${itens.length}</span></div>
+      ${corpo}${extra}
+    </div>`;
+  }).join('');
   const colunasHTML = COLUNAS.map((c) => {
     const itens = cols[c.id] || [];
     const mostra = c.id === 'concluido' ? itens.slice(0, 12) : itens;
@@ -155,6 +206,13 @@ export function paginaCronograma(user, dados) {
 
   <div class="kb">${colunasHTML}</div>
 
+  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin:22px 0 10px;flex-wrap:wrap">
+    <div><div style="font-size:16px;font-weight:800;color:#00333B">📦 Lotes — Entrada por Cargas</div>
+    <div style="font-size:12px;color:#7c8a87;margin-top:2px">Cada lote pesado e etiquetado na doca, do fracionamento ao destino. Prazo contado desde a criação do lote.</div></div>
+    <div style="display:flex;gap:8px"><a href="/cargas" style="text-decoration:none;font-size:12.5px;font-weight:800;color:#0B5B66;background:#fff;border:1.5px solid #cfe0dd;border-radius:11px;padding:9px 13px">🚛 Abrir Cargas</a><a href="/cargas/filas" style="text-decoration:none;font-size:12.5px;font-weight:800;color:#0B5B66;background:#fff;border:1.5px solid #cfe0dd;border-radius:11px;padding:9px 13px">Filas por destino</a></div>
+  </div>
+  ${totalLotes ? `<div class="kb" style="grid-template-columns:repeat(3,1fr)">${lotesHTML}</div>` : '<div class="card" style="font-size:12.5px;color:#8fa39f">Nenhum lote criado na Entrada por Cargas ainda. Quando a doca pesar e fracionar uma carga, os lotes aparecem aqui.</div>'}
+
   <div class="card" style="margin-top:18px">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:6px">
       <div style="font-size:13px;font-weight:800;color:#00333B">⏱️ Linha do tempo por prazo (mais urgente primeiro)</div>
@@ -169,6 +227,11 @@ export function paginaCronograma(user, dados) {
     fetch('/api/cronograma/sla',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({atencao:at,atraso:atr})}).then(function(r){return r.json();}).then(function(j){
       if(j.ok){if(m)m.textContent='✓ salvo';setTimeout(function(){location.reload();},700);}else if(m){m.textContent='falha';}
     }).catch(function(){if(m)m.textContent='sem conexão';});}
+  function mudarLoteSt(id,novo){
+    if(novo==='finalizado'&&!confirm('Finalizar o lote '+id+'?'))return;
+    fetch('/api/cargas/lote-status',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:id,novo:novo})}).then(function(r){return r.json();}).then(function(j){
+      if(j.ok){location.reload();}else{alert(j.message||'Não deu certo.');}
+    }).catch(function(){alert('Sem conexão. Tente de novo.');});}
 </script>
 <style>@media(max-width:920px){.tiles{grid-template-columns:repeat(3,1fr)!important}}@media(max-width:560px){.tiles{grid-template-columns:1fr 1fr!important}}</style>
 </body></html>`;
