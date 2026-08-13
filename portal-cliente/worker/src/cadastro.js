@@ -1102,6 +1102,9 @@ export async function ingestLead(env, body) {
   const id = 'lead_' + (crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '').slice(0, 12) : Math.random().toString(36).slice(2, 14));
   const rec = {
     id, status: 'novo', perfil: String(b.profile || b.perfil || ''),
+    // CNPJ/CPF do solicitante (quando veio logado do portal) — permite mostrar
+    // "sua solicitação está em análise" no acompanhamento do próprio cliente.
+    documento: String(b.documento || '').replace(/\D/g, ''),
     nome, empresa, email, fone: String(b.phone || b.fone || '').trim(),
     material: String(b.material_category || b.material || '').trim(), volume: String(b.volume || '').trim(),
     descricao: String(b.material_description || b.descricao || '').slice(0, 4000),
@@ -1117,7 +1120,7 @@ export async function ingestLead(env, body) {
   if (env.PORTAL_KV) {
     await env.PORTAL_KV.put(`lead:${id}`, JSON.stringify(rec));
     const idx = await listarLeads(env);
-    idx.unshift({ id, nome: nome || empresa || email, empresa, email, cidade: rec.cidade, status: 'novo', criadoEm: rec.criadoEm, triagem: triagem.tipo, prioridade: rec.prioridade });
+    idx.unshift({ id, nome: nome || empresa || email, empresa, email, documento: rec.documento, cidade: rec.cidade, status: 'novo', criadoEm: rec.criadoEm, triagem: triagem.tipo, prioridade: rec.prioridade, origem: rec.origem });
     await env.PORTAL_KV.put('leads:index', JSON.stringify(idx).slice(0, 800000));
   }
   return { ok: true, id, triagem };

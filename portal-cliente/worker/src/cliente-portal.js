@@ -227,6 +227,16 @@ export function paginaAcompanhamento(dados) {
   }).join('');
 
   const r = d.resumo || {};
+  const sols = Array.isArray(d.solicitacoes) ? d.solicitacoes : [];
+  const dtBR = (iso) => { const s = String(iso || '').slice(0, 10).split('-'); return s.length === 3 ? `${s[2]}/${s[1]}/${s[0]}` : '—'; };
+  const solsHTML = sols.length ? `<div style="background:#FFFAEC;border:1.5px solid #E8C87A;border-radius:14px;padding:14px 16px;margin-top:14px">
+    <div style="font-size:13.5px;font-weight:800;color:#10262B">📨 Solicitações em análise (${sols.length})</div>
+    <div style="font-size:12px;color:#6b6046;margin:4px 0 10px;line-height:1.6">Seu pedido chegou! Antes de virar uma Ordem de Serviço, ele passa por uma <b>validação rápida da nossa equipe</b> (conferimos os dados e o material). Assim que aprovado, ele aparece no quadro abaixo com o número da OS.</div>
+    ${sols.map((s) => `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;background:#fff;border:1px solid #F0DCA8;border-radius:10px;padding:10px 12px;margin-bottom:7px">
+      <span style="font-size:12.5px;font-weight:700;color:#10262B">${esc(s.material || 'Solicitação de coleta')}<span style="display:block;font-size:11px;color:#8fa39f;font-weight:400;margin-top:2px">enviada em ${esc(dtBR(s.criadoEm))}</span></span>
+      <span style="flex:none;font-size:10px;font-weight:800;color:#8A6A16;background:#FFF4DE;border-radius:999px;padding:3px 9px;white-space:nowrap">⏳ EM ANÁLISE</span>
+    </div>`).join('')}
+  </div>` : '';
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Acompanhamento — Ecobraz</title><style>${CSS}</style></head><body>
 <div class="appbar"><div class="appbar-in"><div><a href="/painel" style="text-decoration:none"><span class="lg">ecobraz<span class="dot">.</span></span></a><span class="tg">Portal do Cliente</span></div>
   <div style="display:flex;gap:10px;align-items:center"><span style="color:#cfe3e0;font-size:12px">${esc(d.empresa || '')}</span><form method="post" action="/api/auth/sair" style="margin:0"><button class="btn" style="background:#0e4651;color:#cfe3e0;border:1px solid #1c5b66;padding:8px 12px;font-size:12px">Sair</button></form></div>
@@ -238,6 +248,8 @@ export function paginaAcompanhamento(dados) {
       <p class="muted" style="font-size:13px;margin:4px 0 0">Do agendamento ao Certificado de Destinação Final — em tempo real, só as OS do seu CNPJ.</p></div>
     <a href="/painel#solicitar" class="btn btn-p">➕ Solicitar nova coleta</a>
   </div>
+
+  ${solsHTML}
 
   <div class="tiles">
     <div class="tile"><b>${r.total || 0}</b><span>total de OS</span></div>
@@ -257,7 +269,7 @@ export function paginaAcompanhamento(dados) {
   </div>
 
   <div class="kb" id="kb">${colunasHTML}</div>
-  ${cards.length ? '' : '<div style="text-align:center;color:#8fa39f;font-size:13.5px;padding:30px">Nenhuma ordem de serviço encontrada para o seu CNPJ ainda.</div>'}
+  ${cards.length ? '' : `<div style="text-align:center;color:#8fa39f;font-size:13.5px;padding:30px">${sols.length ? 'Sua solicitação está <b>em análise</b> (acima). Assim que a equipe validar, a Ordem de Serviço aparece aqui.' : 'Nenhuma ordem de serviço encontrada para o seu CNPJ ainda.'}</div>`}
 
   <div style="font-size:11px;color:#9aa7a4;margin-top:16px;line-height:1.6">Clique num cartão para ver a linha do tempo e baixar os documentos. Você vê apenas as OS vinculadas ao seu CNPJ.</div>
 </div>

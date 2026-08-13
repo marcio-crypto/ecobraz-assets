@@ -3424,7 +3424,28 @@ async function dadosAcompanhamentoCliente(sessao, env) {
     });
   }
   cards.sort((a, b) => String(b.criadoEm || '').localeCompare(String(a.criadoEm || '')));
-  return { empresa, doc, cards, resumo };
+  // Solicitações do cliente AINDA EM TRIAGEM (leads): o pedido chega, a equipe
+  // valida e só então vira OS. Mostrar aqui evita a impressão de pedido perdido
+  // (sugestão de cliente real, 12/08). Casa por CNPJ/CPF e, para pedidos antigos
+  // sem documento gravado, pelo e-mail de quem está logado.
+  const solicitacoes = [];
+  try {
+    const emailSessao = String(sessao.email || '').trim().toLowerCase();
+    const leadsIdx = await listarLeads(env);
+    const meus = leadsIdx.filter((l) => {
+      if (!l || ['tratado', 'sem_retorno', 'excluido'].includes(l.status)) return false;
+      const dl = String(l.documento || '').replace(/\D/g, '');
+      if (dl && dl === doc) return true;
+      return !!(emailSessao && l.email && String(l.email).trim().toLowerCase() === emailSessao);
+    }).slice(0, 8);
+    for (const m of meus) {
+      let material = '';
+      try { const ld = await lerLead(env, m.id); material = (ld && ld.material) || ''; } catch { material = ''; }
+      solicitacoes.push({ criadoEm: m.criadoEm || '', material: material || 'Solicitação de coleta' });
+    }
+    solicitacoes.sort((a, b) => String(b.criadoEm).localeCompare(String(a.criadoEm)));
+  } catch { /* seção é opcional — nunca derruba o acompanhamento */ }
+  return { empresa, doc, cards, resumo, solicitacoes };
 }
 
 // Resolve um cliente pelo id da lista de Cadastro: 'p'+ploomes = base D1 (migrado);
@@ -3623,6 +3644,7 @@ async function abrirChamado(request, sessao, env) {
     material_category: 'Chamado / Suporte (portal)',
     material_description: `Chamado aberto pelo cliente no Portal.\nAssunto: ${assunto}\n\n${descricao}`,
     source: 'portal-chamado',
+    documento: sessao.documento || '',
   });
   if (!r || !r.ok) { console.error('criar_chamado_erro', r && r.error); return json({ ok: false, error: 'nao_foi_possivel_abrir' }, 502); }
   return json({ ok: true, chamado_id: r.id, message: 'Chamado aberto! Nossa equipe já recebeu.' }, 201);
@@ -3725,6 +3747,7 @@ async function solicitarOS(request, sessao, env) {
     material_category: 'Solicitação de coleta (portal)', material_description: descricao,
     postal_code: cep, city: cidade, state: uf, profile: cnpj ? 'empresa' : 'pessoa_fisica',
     source: 'portal-coleta', volume: itens ? `${itens} itens` : '',
+    documento: sessao.documento || cnpj,
   });
   if (!r || !r.ok) { console.error('solicitar_os_erro', r && r.error); return json({ ok: false, error: 'nao_foi_possivel' }, 502); }
   // Cliente Premium/Plus: a coleta dele entra com PRIORIDADE (benefício do porte),
