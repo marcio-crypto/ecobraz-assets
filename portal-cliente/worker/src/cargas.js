@@ -38,14 +38,16 @@ async function db(env) {
   if (!env.DB_PLOOMES) return null;
   try {
     await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS op_cargas (id TEXT PRIMARY KEY, criado_em TEXT, criado_por TEXT, cliente_nome TEXT, cliente_doc TEXT, os_json TEXT, exclusiva_laudo INTEGER DEFAULT 0, peso_bruto REAL, tara REAL, peso_liquido REAL, fotos_json TEXT, status TEXT, cancelada_json TEXT DEFAULT \'\', edicoes_json TEXT DEFAULT \'\')').run();
-    await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS op_lotes (id TEXT PRIMARY KEY, carga_id TEXT, categoria TEXT, peso REAL, qtd TEXT, destino TEXT, status TEXT, criado_em TEXT, criado_por TEXT, edicoes_json TEXT DEFAULT \'\')').run();
+    await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS op_lotes (id TEXT PRIMARY KEY, carga_id TEXT, categoria TEXT, peso REAL, qtd TEXT, destino TEXT, status TEXT, criado_em TEXT, criado_por TEXT, edicoes_json TEXT DEFAULT \'\', expedicao_json TEXT DEFAULT \'\')').run();
+    await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS op_fornecedores (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT, cnpj TEXT, cidade_uf TEXT, criado_em TEXT)').run();
   } catch { return null; }
-  // Tabelas criadas antes de cancelar/editar existirem não têm as colunas — completa uma vez.
+  // Tabelas criadas antes de cancelar/editar/expedir existirem não têm as colunas — completa uma vez.
   if (!migrouColunas) {
     for (const sql of [
       'ALTER TABLE op_cargas ADD COLUMN cancelada_json TEXT DEFAULT \'\'',
       'ALTER TABLE op_cargas ADD COLUMN edicoes_json TEXT DEFAULT \'\'',
       'ALTER TABLE op_lotes ADD COLUMN edicoes_json TEXT DEFAULT \'\'',
+      'ALTER TABLE op_lotes ADD COLUMN expedicao_json TEXT DEFAULT \'\'',
     ]) {
       try { await env.DB_PLOOMES.prepare(sql).run(); } catch { /* coluna já existe */ }
     }
@@ -66,7 +68,11 @@ const rowCarga = (r) => {
   let cancelada = null; try { cancelada = r.cancelada_json ? JSON.parse(r.cancelada_json) : null; } catch { cancelada = null; }
   return { id: r.id, criadoEm: r.criado_em, criadoPor: r.criado_por, clienteNome: r.cliente_nome, clienteDoc: r.cliente_doc, oss: JSON.parse(r.os_json || '[]'), exclusivaLaudo: !!r.exclusiva_laudo, pesoBruto: r.peso_bruto, tara: r.tara, pesoLiquido: r.peso_liquido, fotos: JSON.parse(r.fotos_json || '[]'), status: r.status, cancelada, edicoes: parseEdicoes(r.edicoes_json) };
 };
-const rowLote = (r) => r ? ({ id: r.id, cargaId: r.carga_id, categoria: r.categoria, peso: r.peso, qtd: r.qtd, destino: r.destino, status: r.status, criadoEm: r.criado_em, criadoPor: r.criado_por, edicoes: parseEdicoes(r.edicoes_json) }) : null;
+const rowLote = (r) => {
+  if (!r) return null;
+  let expedicao = null; try { expedicao = r.expedicao_json ? JSON.parse(r.expedicao_json) : null; } catch { expedicao = null; }
+  return { id: r.id, cargaId: r.carga_id, categoria: r.categoria, peso: r.peso, qtd: r.qtd, destino: r.destino, status: r.status, criadoEm: r.criado_em, criadoPor: r.criado_por, edicoes: parseEdicoes(r.edicoes_json), expedicao };
+};
 
 export async function listarCargas(env) {
   const d = await db(env); if (!d) return [];
@@ -88,7 +94,7 @@ export async function lerLote(env, id) {
 }
 export async function listarLotesPorDestino(env, destino) {
   const d = await db(env); if (!d) return [];
-  try { const r = await d.prepare('SELECT * FROM op_lotes WHERE destino=?1 ORDER BY (status=\'finalizado\'), id DESC LIMIT 300').bind(String(destino || '')).all(); return (r.results || []).map(rowLote); } catch { return []; }
+  try { const r = await d.prepare('SELECT * FROM op_lotes WHERE destino=?1 ORDER BY (status IN (\'finalizado\',\'expedido\')), id DESC LIMIT 300').bind(String(destino || '')).all(); return (r.results || []).map(rowLote); } catch { return []; }
 }
 
 // Abre a carga agrupando as OSs do dia — de 1 a N clientes (a rota do caminhão),
@@ -220,6 +226,93 @@ export async function editarLote(env, user, id, dados) {
   return { ok: true };
 }
 
+// EXPEDIÇÃO do lote finalizado (pedido do Marcelo 12/08): registrar a SAÍDA —
+// fornecedor que recebe o material, MTR de saída (número) e data. O status vira
+// "expedido" e fecha o ciclo do lote. A EMISSÃO de MTR pela API do órgão é a
+// próxima etapa da integração (task #31) — por ora o número é informado.
+export async function expedirLote(env, user, id, dados) {
+  const d = await db(env); if (!d) return { ok: false, message: 'Banco indisponível.' };
+  const l = await lerLote(env, id);
+  if (!l) return { ok: false, message: 'Lote não encontrado.' };
+  if (l.status === 'expedido') return { ok: false, message: 'Este lote já foi expedido.' };
+  if (l.status !== 'finalizado') return { ok: false, message: 'Finalize o processamento do lote antes de registrar a saída.' };
+  const fornecedor = limpar((dados && dados.fornecedor) || '').slice(0, 160);
+  if (fornecedor.length < 3) return { ok: false, message: 'Informe o fornecedor/destinatário que recebe o material.' };
+  const cnpj = String((dados && dados.cnpj) || '').replace(/\D/g, '');
+  if (cnpj && cnpj.length !== 14) return { ok: false, message: 'CNPJ do fornecedor incompleto — confira (ou deixe em branco).' };
+  const dataSaida = String((dados && dados.data) || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dataSaida) || Number.isNaN(Date.parse(dataSaida))) return { ok: false, message: 'Informe a data de saída.' };
+  const mtr = String((dados && dados.mtr) || '').replace(/\D/g, '').slice(0, 20);
+  const cidadeUf = limpar((dados && dados.cidadeUf) || '').slice(0, 80);
+  const obs = limpar((dados && dados.obs) || '').slice(0, 300);
+  const expedicao = { fornecedor, cnpj, cidadeUf, mtr, data: dataSaida, obs, por: (user && user.email) || '', em: new Date().toISOString() };
+  await d.prepare('UPDATE op_lotes SET status=\'expedido\', expedicao_json=?2 WHERE id=?1').bind(l.id, JSON.stringify(expedicao)).run();
+  // Registra o fornecedor para as próximas expedições (lista de sugestão).
+  try {
+    const achou = cnpj
+      ? await d.prepare('SELECT id FROM op_fornecedores WHERE cnpj=?1 LIMIT 1').bind(cnpj).first()
+      : await d.prepare('SELECT id FROM op_fornecedores WHERE LOWER(nome)=LOWER(?1) LIMIT 1').bind(fornecedor).first();
+    if (!achou) await d.prepare('INSERT INTO op_fornecedores (nome, cnpj, cidade_uf, criado_em) VALUES (?1,?2,?3,?4)').bind(fornecedor, cnpj, cidadeUf, new Date().toISOString()).run();
+  } catch { /* sugestão é best-effort */ }
+  return { ok: true };
+}
+
+export async function listarFornecedores(env) {
+  const d = await db(env); if (!d) return [];
+  try { const r = await d.prepare('SELECT nome, cnpj, cidade_uf FROM op_fornecedores ORDER BY nome LIMIT 200').all(); return r.results || []; } catch { return []; }
+}
+
+// Página de expedição do lote (saída para o fornecedor).
+export function paginaExpedirLote(l, c, fornecedores, hoje) {
+  const forn = (fornecedores || []).map((f) => `<option value="${esc(f.nome)}">${f.cnpj ? esc(f.cnpj) : ''}</option>`).join('');
+  return `${head('Expedir ' + l.id)}${topo('entrada · cargas')}
+<div class="wrap" style="max-width:640px">
+  <a href="/cargas/carga?id=${esc(l.cargaId)}" style="font-size:13px;font-weight:800;text-decoration:none;color:#4F6469">← Carga ${esc(l.cargaId)}</a>
+  <h1 style="font-size:20px;margin:10px 0 4px">🚚 Registrar saída — ${esc(l.id)}</h1>
+  <p style="font-size:12.5px;color:#7c8a87;margin:0 0 12px">${esc(l.categoria)} · ${kg(l.peso)} · destino ${esc((DESTINOS[l.destino] || {}).rot || l.destino)}${c && c.clienteNome ? ' · origem ' + esc(c.clienteNome) : ''}</p>
+  <div class="card">
+    <label>Fornecedor / destinatário que recebe *</label>
+    <input id="x-forn" list="forns" placeholder="ex.: Recicladora XYZ Ltda"><datalist id="forns">${forn}</datalist>
+    <div class="g2">
+      <div><label>CNPJ do fornecedor (opcional)</label><input id="x-cnpj" inputmode="numeric" placeholder="00.000.000/0000-00"></div>
+      <div><label>Cidade/UF (opcional)</label><input id="x-cid" placeholder="ex.: Sorocaba/SP"></div>
+    </div>
+    <div class="g2">
+      <div><label>Data de saída *</label><input id="x-data" type="date" value="${esc(hoje || '')}"></div>
+      <div><label>Nº do MTR de saída (se já emitido)</label><input id="x-mtr" inputmode="numeric" placeholder="ex.: 2600XXXXXXXX"></div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
+      <button type="button" class="btn btn-g" style="padding:8px 12px;font-size:12px" onclick="conferirMtr()">Conferir MTR no órgão</button>
+      <span id="x-mtr-info" style="font-size:11.5px;color:#4F6469"></span>
+    </div>
+    <div style="font-size:11px;color:#9aa7a4;margin-top:6px">A emissão do MTR pela API do órgão é a próxima etapa da integração — por enquanto, emita no site do SIGOR/SINIR e informe o número aqui (ou deixe em branco e complete depois).</div>
+    <label>Observação (opcional)</label><input id="x-obs" placeholder="ex.: NF 1234 · motorista João">
+    <div style="display:flex;gap:10px;align-items:center;margin-top:16px">
+      <button class="btn btn-p" onclick="expedir()">Registrar saída do lote</button>
+      <span class="msg" id="x-msg" style="margin:0"></span>
+    </div>
+  </div>
+</div>
+<script>
+const numBR=(s)=>String(s==null?'':s).replace(/\\D/g,'');
+async function conferirMtr(){
+  const n=numBR(document.getElementById('x-mtr').value), i=document.getElementById('x-mtr-info');
+  if(!n){i.textContent='Digite o número do MTR primeiro.';return;}
+  i.textContent='Consultando o órgão…';
+  try{const r=await fetch('/api/cargas/mtr-info',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({numero:n})});
+    const j=await r.json(); i.textContent=j.message||'Sem retorno.';}
+  catch{i.textContent='Falha de rede na consulta.';}
+}
+async function expedir(){
+  const g=(id)=>document.getElementById(id).value;
+  const msg=document.getElementById('x-msg');msg.textContent='Registrando…';
+  try{const r=await fetch('/api/cargas/expedir',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:${JSON.stringify(l.id)},fornecedor:g('x-forn'),cnpj:g('x-cnpj'),cidadeUf:g('x-cid'),data:g('x-data'),mtr:g('x-mtr'),obs:g('x-obs')})});
+    const j=await r.json(); if(j.ok){location.href='/cargas/carga?id=${esc(l.cargaId)}';}else{msg.textContent=j.message||'Não deu certo.';}}
+  catch{msg.textContent='Falha de rede.';}
+}
+</script></body></html>`;
+}
+
 // Lotes com os dados da carga (cliente) — para o Cronograma/Kanban.
 export async function listarLotesComCarga(env) {
   const d = await db(env); if (!d) return [];
@@ -292,7 +385,7 @@ function topo(sub) {
     <a href="/operacao" style="color:#cfe3e0;font-size:12px;font-weight:700;text-decoration:none">Operação →</a>
   </div></div>`;
 }
-const stLote = (s) => s === 'finalizado' ? '<span class="pill p-fi">Finalizado</span>' : s === 'processando' ? '<span class="pill p-pr">Em processamento</span>' : '<span class="pill p-ag">Aguardando</span>';
+const stLote = (s) => s === 'expedido' ? '<span class="pill p-fi">🚚 Expedido</span>' : s === 'finalizado' ? '<span class="pill p-fi">Finalizado</span>' : s === 'processando' ? '<span class="pill p-pr">Em processamento</span>' : '<span class="pill p-ag">Aguardando</span>';
 
 export function paginaCargas(user, cargas) {
   const rows = (cargas || []).map((c) => `<a class="row" style="text-decoration:none" href="/cargas/carga?id=${esc(c.id)}">
@@ -361,9 +454,11 @@ export function paginaCarga(user, c, lotes) {
   const loteRows = (lotes || []).map((l) => `<div>
   <div class="row">
     <span style="min-width:0"><b style="font-size:13px">${esc(l.id)}</b> · <span style="font-size:12.5px">${esc(l.categoria)}</span>
-      <span style="display:block;font-size:11px;color:#8fa39f">${kg(l.peso)}${l.qtd ? ' · ' + esc(l.qtd) : ''} · ${esc((DESTINOS[l.destino] || {}).rot || l.destino)}${(l.edicoes || []).length ? ' · ✎ alterado' : ''}</span></span>
+      <span style="display:block;font-size:11px;color:#8fa39f">${kg(l.peso)}${l.qtd ? ' · ' + esc(l.qtd) : ''} · ${esc((DESTINOS[l.destino] || {}).rot || l.destino)}${(l.edicoes || []).length ? ' · ✎ alterado' : ''}</span>
+      ${l.status === 'expedido' && l.expedicao ? `<span style="display:block;font-size:11px;color:#1E5B31;margin-top:2px">🚚 ${esc(l.expedicao.fornecedor)}${l.expedicao.mtr ? ' · MTR ' + esc(l.expedicao.mtr) : ''} · saída ${esc((l.expedicao.data || '').split('-').reverse().join('/'))}</span>` : ''}</span>
     <span style="flex:none;display:flex;gap:6px;align-items:center">${stLote(l.status)}
       <a class="btn btn-g" style="padding:7px 11px;font-size:12px" href="/cargas/etiqueta?id=${esc(l.id)}" target="_blank" rel="noopener">🏷️ Etiqueta</a>
+      ${l.status === 'finalizado' ? `<a class="btn btn-p" style="padding:7px 11px;font-size:12px;text-decoration:none" href="/cargas/expedir?id=${esc(l.id)}">🚚 Registrar saída</a>` : ''}
       ${l.status === 'aguardando' ? `<button class="btn btn-g" style="padding:7px 10px;font-size:12px" onclick="abrirEdicao('${esc(l.id)}')">✏️</button>
       <button class="btn btn-g" style="padding:7px 10px;font-size:12px;color:#a04030" onclick="excluirLote('${esc(l.id)}')">✕</button>` : ''}</span>
   </div>
@@ -435,7 +530,12 @@ export function paginaCarga(user, c, lotes) {
     <div class="sec" style="margin-top:0">📷 Fotos de entrada (mínimo 2)</div>
     <div>${fotos || '<span style="font-size:12.5px;color:#a04030;font-weight:700">Nenhuma foto ainda.</span>'}</div>
     <input type="file" id="foto" accept="image/*" capture="environment" style="display:none">
-    <button class="btn btn-g" style="margin-top:8px" onclick="document.getElementById('foto').click()">＋ Adicionar foto</button>
+    <input type="file" id="fotoArq" accept="image/*" style="display:none">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+      <button class="btn btn-p" onclick="document.getElementById('foto').click()">📷 Tirar foto agora</button>
+      <button class="btn btn-g" onclick="document.getElementById('fotoArq').click()">🖼️ Anexar da galeria</button>
+    </div>
+    <div style="font-size:11px;color:#9aa7a4;margin-top:6px">No celular/tablet, "Tirar foto agora" abre a câmera direto — dá para fotografar a abertura junto com o processo.</div>
     <span class="msg" id="msg-foto"></span>
   </div>
 
@@ -484,13 +584,15 @@ async function salvarLote(id){
     const j=await r.json(); if(j.ok)location.reload(); else msg.textContent=j.message||'Não deu certo.';}
   catch{msg.textContent='Falha de rede.';}
 }
-const fotoEl=document.getElementById('foto');
-if(fotoEl)fotoEl.addEventListener('change',async function(){
-  const msg=document.getElementById('msg-foto'); if(!this.files||!this.files[0])return;
-  msg.textContent='Enviando foto…';
-  const fd=new FormData(); fd.append('id',${JSON.stringify(c.id)}); fd.append('file',this.files[0]);
-  try{const r=await fetch('/api/cargas/foto',{method:'POST',body:fd}); const j=await r.json(); if(j.ok)location.reload(); else msg.textContent=j.message||'Falha no envio.';}
-  catch{msg.textContent='Falha de rede.';}
+['foto','fotoArq'].forEach(function(fid){
+  const el=document.getElementById(fid);
+  if(el)el.addEventListener('change',async function(){
+    const msg=document.getElementById('msg-foto'); if(!this.files||!this.files[0])return;
+    msg.textContent='Enviando foto…';
+    const fd=new FormData(); fd.append('id',${JSON.stringify(c.id)}); fd.append('file',this.files[0]);
+    try{const r=await fetch('/api/cargas/foto',{method:'POST',body:fd}); const j=await r.json(); if(j.ok)location.reload(); else msg.textContent=j.message||'Falha no envio.';}
+    catch{msg.textContent='Falha de rede.';}
+  });
 });
 async function addLote(){
   const msg=document.getElementById('msg-lote');msg.textContent='Criando lote…';
@@ -550,10 +652,12 @@ export function paginaFilas(user, destino, lotes) {
   const tabs = Object.entries(DESTINOS).map(([k, v]) => `<a href="/cargas/filas?destino=${k}" class="btn ${k === destino ? 'btn-d' : 'btn-g'}" style="padding:9px 13px;font-size:12.5px">${esc(v.rot)}</a>`).join('');
   const rows = (lotes || []).map((l) => `<div class="row">
     <span style="min-width:0"><b style="font-size:13px">${esc(l.id)}</b> · <span style="font-size:12.5px">${esc(l.categoria)}</span>
-      <span style="display:block;font-size:11px;color:#8fa39f">${kg(l.peso)}${l.qtd ? ' · ' + esc(l.qtd) : ''} · carga ${esc(l.cargaId)}</span></span>
+      <span style="display:block;font-size:11px;color:#8fa39f">${kg(l.peso)}${l.qtd ? ' · ' + esc(l.qtd) : ''} · carga ${esc(l.cargaId)}</span>
+      ${l.status === 'expedido' && l.expedicao ? `<span style="display:block;font-size:11px;color:#1E5B31;margin-top:2px">🚚 ${esc(l.expedicao.fornecedor)}${l.expedicao.mtr ? ' · MTR ' + esc(l.expedicao.mtr) : ''}</span>` : ''}</span>
     <span style="flex:none;display:flex;gap:6px;align-items:center">${stLote(l.status)}
       ${l.status === 'aguardando' ? `<button class="btn btn-p" style="padding:7px 11px;font-size:12px" onclick="mudar('${esc(l.id)}','processando')">▶ Iniciar</button>` : ''}
       ${l.status === 'processando' ? `<button class="btn btn-d" style="padding:7px 11px;font-size:12px" onclick="mudar('${esc(l.id)}','finalizado')">✔ Finalizar</button>` : ''}
+      ${l.status === 'finalizado' ? `<a class="btn btn-p" style="padding:7px 11px;font-size:12px;text-decoration:none" href="/cargas/expedir?id=${esc(l.id)}">🚚 Registrar saída</a>` : ''}
       <a class="btn btn-g" style="padding:7px 11px;font-size:12px" href="/cargas/etiqueta?id=${esc(l.id)}" target="_blank" rel="noopener">🏷️</a></span>
   </div>`).join('') || '<div style="font-size:12.5px;color:#8fa39f">Fila vazia.</div>';
   return `${head('Filas por destino')}${topo('entrada · filas')}

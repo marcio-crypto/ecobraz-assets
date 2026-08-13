@@ -52,7 +52,7 @@ import { paginaAcompanhamento, colunaClienteDe, lerGestores, gestorPorEmail, sal
 import { DEMO_CLIENTE_HTML, DEMO_OG_PNG_B64 } from './demo-cliente.js';
 import { listarPropostas, lerProposta, salvarProposta, paginaPropostas, paginaPropostaForm, paginaPropostaVer, paginaContratoVer, garantirTokenAceite, registrarAceite, paginaAceite, paginaAceiteVerificar } from './proposta.js';
 import { lerEmpresaDocs, salvarEmpresaDoc, anexarEmpresaDoc, paginaEmpresaDocs, alertasEmpresaDocs } from './empresa-docs.js';
-import { listarCargas, lerCarga, lotesDaCarga, lerLote, listarLotesPorDestino, novaCarga, pesarCarga, fotoCarga, criarLote, excluirLote, editarLote, cancelarCarga, mudarStatusLote, seloLote, qrLoteGif, paginaCargas, paginaNovaCarga, paginaCarga, paginaEtiqueta, paginaFilas, paginaValidarLote } from './cargas.js';
+import { listarCargas, lerCarga, lotesDaCarga, lerLote, listarLotesPorDestino, novaCarga, pesarCarga, fotoCarga, criarLote, excluirLote, editarLote, cancelarCarga, mudarStatusLote, expedirLote, listarFornecedores, paginaExpedirLote, seloLote, qrLoteGif, paginaCargas, paginaNovaCarga, paginaCarga, paginaEtiqueta, paginaFilas, paginaValidarLote } from './cargas.js';
 import { acharPacote, precoPacote, acharModuloAdote, precoModuloAdote, paginaLojaAdote, paginaObrigadoAdote, paginaDiagnostico, lerCredito, salvarCredito, novoCredito, aplicarCompra, aplicarRecarga, precisaRecarga, listarPatrocinadores, resumoPatrocinio, lerCreditoPorDoc } from './adote.js';
 import { paginaLojaESG, paginaESGContato, paginaESGObrigado, relatorioESG, precoRelatorioESG } from './esg.js';
 import { statusDaEtapa, valorProp, CAMPOS_OS } from './os-utils.js';
@@ -2373,6 +2373,27 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         if (!docaOk) return json({ ok: false, message: 'nao_autenticado' }, 401);
         let b; try { b = await request.json(); } catch { b = {}; }
         return json(await cancelarCarga(env, docaOk, b && b.id));
+      }
+      // Expedição do lote: registrar saída (fornecedor + MTR + data).
+      if (pathname === '/cargas/expedir' && request.method === 'GET') {
+        if (!docaOk) return html(paginaLoginOperacao(googleConfigurado(env)));
+        const l = await lerLote(env, url.searchParams.get('id'));
+        if (!l) return html(paginaMensagem('Lote não encontrado', 'Volte e tente de novo.'), 404);
+        const c = await lerCarga(env, l.cargaId);
+        const hojeBR = new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10);
+        return html(paginaExpedirLote(l, c || {}, await listarFornecedores(env), hojeBR));
+      }
+      if (pathname === '/api/cargas/expedir' && request.method === 'POST') {
+        if (!docaOk) return json({ ok: false, message: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = {}; }
+        return json(await expedirLote(env, docaOk, b && b.id, b || {}));
+      }
+      // Consulta um MTR (número) nos órgãos — usada na tela de expedição.
+      if (pathname === '/api/cargas/mtr-info' && request.method === 'POST') {
+        if (!docaOk) return json({ ok: false, message: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = {}; }
+        const cons = await consultarMtrSigor(env, b && b.numero);
+        return json({ ok: !!cons.ok, message: cons.message });
       }
       if (pathname === '/operacao' && request.method === 'GET') {
         if (!operacao) return html(paginaLoginOperacao(googleConfigurado(env)));

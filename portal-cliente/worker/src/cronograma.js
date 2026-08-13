@@ -86,8 +86,14 @@ export async function dadosCronograma(env) {
   for (const l of todosLotes) {
     if (l.cargaStatus === 'cancelada') continue; // carga cancelada = lote fora do fluxo
     const dias = diasDesde(l.criadoEm);
-    const alerta = l.status === 'finalizado' ? { dot: '✅', cor: '#1E5B31', rotulo: 'finalizado', nivel: 0 } : alertaPrazo(dias, sla);
-    (lotes[l.status] || lotes.aguardando).push({ ...l, dias, alerta });
+    // "expedido" (saída registrada) mora na coluna Finalizado, com o selo da saída.
+    const balde = l.status === 'expedido' ? 'finalizado' : l.status;
+    const alerta = l.status === 'expedido'
+      ? { dot: '🚚', cor: '#1E5B31', rotulo: 'expedido', nivel: 0 }
+      : l.status === 'finalizado'
+        ? { dot: '✅', cor: '#8A6A16', rotulo: 'aguarda saída', nivel: 0 }
+        : alertaPrazo(dias, sla);
+    (lotes[balde] || lotes.aguardando).push({ ...l, dias, alerta });
   }
   lotes.aguardando.sort((a, b) => (b.dias || 0) - (a.dias || 0));
   lotes.processando.sort((a, b) => (b.dias || 0) - (a.dias || 0));
@@ -142,11 +148,17 @@ function cardLoteCarga(l) {
     ? `<button onclick="mudarLoteSt('${esc(l.id)}','processando')" style="background:#92C430;color:#10262B;border:none;border-radius:8px;padding:6px 11px;font-size:11px;font-weight:800;cursor:pointer">▶ Iniciar</button>`
     : l.status === 'processando'
       ? `<button onclick="mudarLoteSt('${esc(l.id)}','finalizado')" style="background:#00333B;color:#fff;border:none;border-radius:8px;padding:6px 11px;font-size:11px;font-weight:800;cursor:pointer">✔ Finalizar</button>`
-      : '';
+      : l.status === 'finalizado'
+        ? `<a href="/cargas/expedir?id=${esc(l.id)}" style="background:#92C430;color:#10262B;border-radius:8px;padding:6px 11px;font-size:11px;font-weight:800;text-decoration:none;white-space:nowrap">🚚 Registrar saída</a>`
+        : '';
+  const saida = l.status === 'expedido' && l.expedicao
+    ? `<div style="font-size:11px;color:#1E5B31;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">🚚 ${esc(l.expedicao.fornecedor)}${l.expedicao.mtr ? ' · MTR ' + esc(l.expedicao.mtr) : ''}</div>`
+    : '';
   return `<div class="lote">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><a href="/cargas/carga?id=${esc(l.cargaId)}" style="font-size:13.5px;font-weight:800;color:#10262B;text-decoration:none">${esc(l.id)}</a>${badge}</div>
     <div style="font-size:12px;color:#4F6469;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.categoria)} · ${esc(kg(l.peso))}${l.qtd ? ' · ' + esc(l.qtd) : ''}</div>
     <div style="font-size:11px;color:#8fa39f;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">🎯 ${esc(destinoRot)} · ${esc(l.cargaCliente || l.cargaId)}</div>
+    ${saida}
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:8px">
       <span style="font-size:11px;color:#8fa39f">${l.dias != null ? l.dias + 'd desde a criação' : ''}</span>${acao}
     </div>
