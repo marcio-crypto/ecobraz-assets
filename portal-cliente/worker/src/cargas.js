@@ -532,11 +532,23 @@ export function paginaCarga(user, c, lotes) {
     <input type="file" id="foto" accept="image/*" capture="environment" style="display:none">
     <input type="file" id="fotoArq" accept="image/*" style="display:none">
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
-      <button class="btn btn-p" onclick="document.getElementById('foto').click()">📷 Tirar foto agora</button>
+      <button class="btn btn-p" onclick="tirarFoto()">📷 Tirar foto agora</button>
       <button class="btn btn-g" onclick="document.getElementById('fotoArq').click()">🖼️ Anexar da galeria</button>
     </div>
-    <div style="font-size:11px;color:#9aa7a4;margin-top:6px">No celular/tablet, "Tirar foto agora" abre a câmera direto — dá para fotografar a abertura junto com o processo.</div>
+    <div style="font-size:11px;color:#9aa7a4;margin-top:6px">"Tirar foto agora" abre a câmera do aparelho — celular, tablet Android ou tablet/PC Windows com webcam — para fotografar a abertura junto com o processo.</div>
     <span class="msg" id="msg-foto"></span>
+    <div id="cam-ov" style="display:none;position:fixed;inset:0;background:#000;z-index:60;flex-direction:column">
+      <video id="cam-v" autoplay playsinline style="flex:1;min-height:0;width:100%;object-fit:contain;background:#000"></video>
+      <img id="cam-prev" style="display:none;flex:1;min-height:0;width:100%;object-fit:contain;background:#000" alt="prévia da foto">
+      <canvas id="cam-c" style="display:none"></canvas>
+      <div id="cam-msg" style="color:#cfe3e0;text-align:center;font-size:13px;padding:6px 10px;background:#00333B"></div>
+      <div style="display:flex;gap:10px;justify-content:center;padding:12px;background:#00333B">
+        <button id="cam-shot" class="btn btn-p" onclick="capturarFoto()">📸 Capturar</button>
+        <button id="cam-use" class="btn btn-p" style="display:none" onclick="usarFoto()">✔ Usar esta foto</button>
+        <button id="cam-again" class="btn btn-g" style="display:none" onclick="outraFoto()">🔁 Tirar outra</button>
+        <button class="btn btn-g" onclick="fecharCamera()">Fechar</button>
+      </div>
+    </div>
   </div>
 
   <div class="card">
@@ -584,16 +596,65 @@ async function salvarLote(id){
     const j=await r.json(); if(j.ok)location.reload(); else msg.textContent=j.message||'Não deu certo.';}
   catch{msg.textContent='Falha de rede.';}
 }
+async function enviarFoto(arquivo){
+  const msg=document.getElementById('msg-foto');
+  msg.textContent='Enviando foto…';
+  const fd=new FormData(); fd.append('id',${JSON.stringify(c.id)}); fd.append('file',arquivo,arquivo.name||'foto-camera.jpg');
+  try{const r=await fetch('/api/cargas/foto',{method:'POST',body:fd}); const j=await r.json(); if(j.ok)location.reload(); else msg.textContent=j.message||'Falha no envio.';}
+  catch{msg.textContent='Falha de rede.';}
+}
 ['foto','fotoArq'].forEach(function(fid){
   const el=document.getElementById(fid);
-  if(el)el.addEventListener('change',async function(){
-    const msg=document.getElementById('msg-foto'); if(!this.files||!this.files[0])return;
-    msg.textContent='Enviando foto…';
-    const fd=new FormData(); fd.append('id',${JSON.stringify(c.id)}); fd.append('file',this.files[0]);
-    try{const r=await fetch('/api/cargas/foto',{method:'POST',body:fd}); const j=await r.json(); if(j.ok)location.reload(); else msg.textContent=j.message||'Falha no envio.';}
-    catch{msg.textContent='Falha de rede.';}
-  });
+  if(el)el.addEventListener('change',function(){ if(this.files&&this.files[0])enviarFoto(this.files[0]); });
 });
+// Câmera: celular/tablet Android usa o app nativo (input capture); Windows/desktop
+// com webcam usa a câmera DENTRO da página (getUserMedia). Sem câmera → seletor.
+let camStream=null, camBlob=null;
+function tirarFoto(){
+  if(/Android|iPhone|iPad/i.test(navigator.userAgent)){document.getElementById('foto').click();return;}
+  abrirCamera();
+}
+async function abrirCamera(){
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){document.getElementById('fotoArq').click();return;}
+  const ov=document.getElementById('cam-ov');
+  try{
+    camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1080}},audio:false});
+    document.getElementById('cam-v').srcObject=camStream;
+    ov.style.display='flex';
+    modoCamera(true);
+    document.getElementById('cam-msg').textContent='Aponte para a carga e toque em Capturar.';
+  }catch(e){
+    document.getElementById('cam-msg').textContent='';
+    document.getElementById('fotoArq').click(); // sem permissão/câmera → arquivo
+  }
+}
+function modoCamera(aoVivo){
+  document.getElementById('cam-v').style.display=aoVivo?'block':'none';
+  document.getElementById('cam-prev').style.display=aoVivo?'none':'block';
+  document.getElementById('cam-shot').style.display=aoVivo?'inline-block':'none';
+  document.getElementById('cam-use').style.display=aoVivo?'none':'inline-block';
+  document.getElementById('cam-again').style.display=aoVivo?'none':'inline-block';
+}
+function capturarFoto(){
+  const v=document.getElementById('cam-v'), cv=document.getElementById('cam-c');
+  const esc=Math.min(1,1600/Math.max(v.videoWidth||1,v.videoHeight||1));
+  cv.width=Math.round((v.videoWidth||640)*esc); cv.height=Math.round((v.videoHeight||480)*esc);
+  cv.getContext('2d').drawImage(v,0,0,cv.width,cv.height);
+  cv.toBlob(function(b){
+    if(!b){document.getElementById('cam-msg').textContent='Não consegui capturar — tente de novo.';return;}
+    camBlob=b;
+    document.getElementById('cam-prev').src=URL.createObjectURL(b);
+    modoCamera(false);
+    document.getElementById('cam-msg').textContent='Ficou boa? Use ou tire outra.';
+  },'image/jpeg',0.85);
+}
+function outraFoto(){ camBlob=null; modoCamera(true); document.getElementById('cam-msg').textContent='Aponte para a carga e toque em Capturar.'; }
+function usarFoto(){ if(!camBlob)return; const b=camBlob; fecharCamera(); enviarFoto(new File([b],'foto-camera.jpg',{type:'image/jpeg'})); }
+function fecharCamera(){
+  if(camStream){camStream.getTracks().forEach(function(t){t.stop();});camStream=null;}
+  camBlob=null;
+  document.getElementById('cam-ov').style.display='none';
+}
 async function addLote(){
   const msg=document.getElementById('msg-lote');msg.textContent='Criando lote…';
   try{const r=await fetch('/api/cargas/lote',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({cargaId:${JSON.stringify(c.id)},categoria:document.getElementById('l-cat').value,peso:numBR(document.getElementById('l-peso').value),qtd:document.getElementById('l-qtd').value,destino:document.getElementById('l-dest').value})});

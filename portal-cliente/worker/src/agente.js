@@ -64,6 +64,15 @@ export function paginaLoginAgente(googleOn) {
     ${googleOn ? `<div style="text-align:center;color:#9aa7a4;font-size:12px;margin:14px 0 10px;">ou</div>${botaoGoogle('agente')}` : ''}
     <div id="m" style="font-size:13px;color:#4F6469;margin-top:14px;line-height:1.5;"></div>
     <div style="border-top:1px solid #EEF1F3;margin-top:16px;padding-top:14px;">${botaoInstalarPWA()}</div>
+    <div style="border-top:1px solid #EEF1F3;margin-top:14px;padding-top:14px;">
+      <div style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#8fa39f;margin-bottom:8px;">Outras áreas do sistema</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <a href="/operacao" style="text-decoration:none;font-size:12px;font-weight:800;color:#00333B;border:1.5px solid #cfe0dd;border-radius:10px;padding:10px 8px;text-align:center;">🏭 Operação</a>
+        <a href="/cargas" style="text-decoration:none;font-size:12px;font-weight:800;color:#00333B;border:1.5px solid #cfe0dd;border-radius:10px;padding:10px 8px;text-align:center;">🚛 Entrada por Cargas</a>
+        <a href="/inicio" style="text-decoration:none;font-size:12px;font-weight:800;color:#00333B;border:1.5px solid #cfe0dd;border-radius:10px;padding:10px 8px;text-align:center;">💼 Escritório</a>
+        <a href="/" style="text-decoration:none;font-size:12px;font-weight:800;color:#00333B;border:1.5px solid #cfe0dd;border-radius:10px;padding:10px 8px;text-align:center;">🌐 Todas as áreas</a>
+      </div>
+    </div>
   </div>
 </div>
 <script>
