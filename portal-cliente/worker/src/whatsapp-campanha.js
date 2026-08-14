@@ -29,11 +29,73 @@ async function db(env) {
 
 export const PUBLICOS_WA = {
   'teste': 'Teste — só o número que você digitar',
+  'top-200': 'Top 200 — empresas mais relevantes (negócios concluídos + coletas recentes)',
   'clientes-os': 'Clientes que já têm OS no sistema (com telefone)',
   'sem-coleta-6m': 'Clientes com OS, mas SEM coleta nos últimos 6 meses (oferecer coleta)',
   'base-pj': 'Base de empresas (PJ) com telefone — os primeiros 500 em ordem alfabética',
 };
 const LIMITE_CAMPANHA = 500;
+
+// TOP 200 (pedido do Marcio 13/08): as empresas mais relevantes, por CRITÉRIO
+// ABERTO (mostrado na lista): negócios CONCLUÍDOS no histórico (peso 3), volume
+// total de negócios (até 20), OS no sistema novo (peso 5 — relação ativa) e
+// atividade recente (+10 em 12 meses, +5 em 24). Desempate por valor concluído.
+export async function publicoTop200(env) {
+  const d = await db(env); if (!d) return [];
+  let linhas = [];
+  try {
+    const r = await d.prepare(`SELECT c.nome, c.telefone, c.documento,
+        COUNT(n.ploomes_id) AS total,
+        SUM(CASE WHEN n.status_id=2 THEN 1 ELSE 0 END) AS concluidos,
+        SUM(CASE WHEN n.status_id=2 THEN COALESCE(n.amount,0) ELSE 0 END) AS valor,
+        MAX(n.criado_em) AS ultimo
+      FROM contatos c JOIN negocios n ON n.contact_id = c.ploomes_id
+      WHERE c.tipo='PJ' AND COALESCE(c.telefone,'')<>''
+      GROUP BY c.ploomes_id, c.nome, c.telefone, c.documento
+      ORDER BY concluidos DESC, total DESC LIMIT 600`).all();
+    linhas = r.results || [];
+  } catch { linhas = []; }
+  // Junta as OS do sistema novo (clientes ativos AGORA contam mais).
+  let coletas = []; try { coletas = await listarColetasOS(env); } catch { coletas = []; }
+  const osPorDoc = new Map();
+  for (const c of coletas.filter((x) => x && x.status !== 'cancelada')) {
+    const doc = String(c.clienteDoc || '').replace(/\D/g, '');
+    if (!doc) continue;
+    const atual = osPorDoc.get(doc) || { qtd: 0, ultimo: '' };
+    atual.qtd++; if (String(c.criadoEm || '') > atual.ultimo) atual.ultimo = String(c.criadoEm || '');
+    osPorDoc.set(doc, atual);
+  }
+  // Clientes com OS novas que não estão na lista de negócios entram também.
+  const docsNaLista = new Set(linhas.map((l) => String(l.documento || '').replace(/\D/g, '')));
+  const docsSoOS = [...osPorDoc.keys()].filter((doc) => doc && !docsNaLista.has(doc));
+  for (const c of await contatosPorDocs(env, docsSoOS)) {
+    linhas.push({ nome: c.nome, telefone: c.telefone, documento: c.documento, total: 0, concluidos: 0, valor: 0, ultimo: '' });
+  }
+  const ANO = 365 * 86400e3;
+  const agora = Date.now();
+  const pontuadas = [];
+  const vistosDoc = new Set();
+  for (const l of linhas) {
+    const tel = telWhatsApp(l.telefone);
+    const doc = String(l.documento || '').replace(/\D/g, '');
+    if (!tel) continue;
+    if (doc && vistosDoc.has(doc)) continue;
+    if (doc) vistosDoc.add(doc);
+    const os = (doc && osPorDoc.get(doc)) || { qtd: 0, ultimo: '' };
+    const ultimaAtv = [String(l.ultimo || ''), os.ultimo].sort().pop() || '';
+    let recencia = 0;
+    const t = Date.parse(String(ultimaAtv).slice(0, 10));
+    if (Number.isFinite(t)) { const idade = agora - t; recencia = idade <= ANO ? 10 : (idade <= 2 * ANO ? 5 : 0); }
+    const pontos = (Number(l.concluidos) || 0) * 3 + Math.min(20, Number(l.total) || 0) + os.qtd * 5 + recencia;
+    const valorMil = Math.round((Number(l.valor) || 0) / 1000);
+    pontuadas.push({
+      tel, nome: limpar(l.nome), doc, pontos, valor: Number(l.valor) || 0,
+      motivo: `${l.concluidos || 0} concluída(s) · ${l.total || 0} negócio(s)${valorMil ? ` · R$ ${valorMil} mil` : ''}${os.qtd ? ` · ${os.qtd} OS no sistema novo` : ''}${ultimaAtv ? ` · última ${String(ultimaAtv).slice(0, 7)}` : ''}`,
+    });
+  }
+  pontuadas.sort((a, b) => (b.pontos - a.pontos) || (b.valor - a.valor));
+  return pontuadas.slice(0, 200);
+}
 
 // Busca contatos por documento no D1, em blocos (IN limitado).
 async function contatosPorDocs(env, docs) {
@@ -57,6 +119,7 @@ export async function montarPublicoWA(env, publico, telTeste) {
     const t = telWhatsApp(telTeste);
     return t ? [{ tel: t, nome: 'Teste', doc: '' }] : [];
   }
+  if (publico === 'top-200') return publicoTop200(env);
   if (publico === 'base-pj') {
     const d = await db(env); if (!d) return [];
     try {
@@ -180,6 +243,42 @@ export async function listarOptoutWA(env) {
   try { const r = await d.prepare('SELECT tel, motivo, em FROM wa_optout ORDER BY em DESC LIMIT 200').all(); return r.results || []; } catch { return []; }
 }
 
+// Lista completa de um público, para conferência ANTES do disparo (transparência:
+// mostra o critério e a pontuação de cada empresa — nada de lista mágica).
+export async function listaDetalhadaPublicoWA(env, publico, telTeste) {
+  const previa = await previaPublicoWA(env, publico, telTeste);
+  return previa.lista;
+}
+const fmtDocWA = (v) => { const d0 = String(v || '').replace(/\D/g, ''); if (d0.length === 14) return d0.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5'); if (d0.length === 11) return d0.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4'); return v || '—'; };
+export function paginaListaPublicoWA(publico, itens) {
+  const rotulo = PUBLICOS_WA[publico] || publico;
+  const rows = (itens || []).map((c, i) => `<tr>
+    <td style="color:#8fa39f">${i + 1}</td>
+    <td><b>${esc(c.nome || '—')}</b>${c.motivo ? `<span style="display:block;font-size:11px;color:#8fa39f;margin-top:2px">${esc(c.motivo)}</span>` : ''}</td>
+    <td style="white-space:nowrap">${esc(fmtDocWA(c.doc))}</td>
+    <td style="white-space:nowrap">${esc(c.tel)}</td>
+    ${c.pontos != null ? `<td style="text-align:center"><b>${c.pontos}</b></td>` : '<td style="text-align:center;color:#8fa39f">—</td>'}
+  </tr>`).join('') || '<tr><td colspan="5" style="color:#8fa39f">Nenhuma empresa nesse público.</td></tr>';
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Público da campanha — Ecobraz</title>
+<style>*{box-sizing:border-box}body{margin:0;font-family:Montserrat,'Segoe UI',Arial,Helvetica,sans-serif;background:#F2F6F4;color:#10262B}
+table{width:100%;border-collapse:collapse;font-size:12.5px;background:#fff}
+th{text-align:left;color:#7c8a87;font-weight:800;font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:8px 10px;border-bottom:2px solid #E4EBE9;background:#fff;position:sticky;top:0}
+td{padding:9px 10px;border-bottom:1px solid #EEF1F0;vertical-align:top}
+</style></head><body>
+<div style="background:#00333B;padding:15px 20px"><div style="max-width:900px;margin:0 auto;display:flex;justify-content:space-between;align-items:center">
+  <a href="/diretoria/whatsapp" style="text-decoration:none"><span style="color:#fff;font-size:16px;font-weight:800">ecobraz</span><span style="color:#92C430;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin-left:8px">público · campanha</span></a>
+  <a href="/diretoria/whatsapp" style="color:#cfe3e0;font-size:12px;font-weight:700;text-decoration:none">← Campanhas</a>
+</div></div>
+<div style="max-width:900px;margin:0 auto;padding:20px 18px 56px">
+  <h1 style="font-size:19px;margin:0 0 4px">📋 ${esc(rotulo)}</h1>
+  <p style="font-size:12.5px;color:#7c8a87;margin:0 0 6px"><b>${(itens || []).length}</b> empresa(s), já sem repetidos e sem quem pediu para sair.</p>
+  ${publico === 'top-200' ? '<p style="font-size:11.5px;color:#9aa7a4;margin:0 0 14px">Critério da pontuação (aberto): negócio concluído ×3 · volume de negócios (até 20) · OS no sistema novo ×5 · atividade nos últimos 12 meses +10 (24 meses +5). Desempate por valor concluído.</p>' : '<div style="margin-bottom:14px"></div>'}
+  <div style="background:#fff;border:1px solid #E4EBE9;border-radius:14px;overflow:auto;max-height:75vh">
+  <table><thead><tr><th>#</th><th>Empresa</th><th>CNPJ/CPF</th><th>WhatsApp</th><th style="text-align:center">Pontos</th></tr></thead><tbody>${rows}</tbody></table>
+  </div>
+</div></body></html>`;
+}
+
 // --- Página (Diretoria) -----------------------------------------------------------
 export function paginaCampanhasWA(user, campanhas, optouts) {
   const fmtDt = (iso) => { const d0 = new Date(iso); if (!iso || isNaN(d0.getTime())) return '—'; d0.setUTCHours(d0.getUTCHours() - 3); const p = (n) => String(n).padStart(2, '0'); return `${p(d0.getUTCDate())}/${p(d0.getUTCMonth() + 1)} ${p(d0.getUTCHours())}:${p(d0.getUTCMinutes())}`; };
@@ -250,6 +349,7 @@ input,select,textarea{width:100%;border:1px solid #DDE1E6;border-radius:10px;pad
     <div id="c-teste-wrap"><label>Número para o teste (com DDD)</label><input id="c-tel" inputmode="tel" placeholder="ex.: 11 99999-9999"></div>
     <div style="display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap">
       <button type="button" class="btn btn-g" onclick="previa()">👀 Ver contagem do público</button>
+      <button type="button" class="btn btn-g" onclick="window.open('/diretoria/whatsapp/lista?publico='+encodeURIComponent(el('c-pub').value),'_blank')">📋 Ver a lista completa</button>
       <button type="button" class="btn btn-d" onclick="preparar()">Preparar campanha</button>
       <span id="c-msg" style="font-size:12.5px;color:#4F6469"></span>
     </div>
