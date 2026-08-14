@@ -40,6 +40,7 @@ import { gerarPixCopiaECola, pixConfig, paginaPix } from './pix.js';
 import { paginaColetaExpressa } from './coleta-expressa.js';
 import { enviarSMS, smsConfigurado } from './sms.js';
 import { whatsappConfigurado, templateColeta, enviarWhatsAppTemplate, enviarWhatsAppDiag, listarTemplatesGupshup } from './whatsapp.js';
+import { paginaCampanhasWA, listarCampanhasWA, listarOptoutWA, previaPublicoWA, prepararCampanhaWA, enviarLoteWA, falhasDaCampanhaWA, mudarOptoutWA } from './whatsapp-campanha.js';
 import { paginaAcompanhar, paginaAcompanharErro } from './acompanhar.js';
 import { registrarFalha, receberErroCliente, listarFalhas } from './monitor.js';
 import { segmentoDoCliente, definirSegmento, SEGMENTOS, fluxoDeVendas, ultimosPedidos, paginaPagamentos } from './premium.js';
@@ -981,6 +982,46 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
           const r = await enviarWhatsAppDiag(env, tel, tipo, params);
           return json({ ok: !!(r && r.ok), vencedor: (r && r.vencedor) || '', motivo: (r && r.motivo) || '', tentativas: (r && r.tentativas) || [] });
         } catch (e) { return json({ ok: false, motivo: 'excecao', detalhe: String((e && e.name) || 'erro'), tentativas: [] }); }
+      }
+      // Campanhas de WhatsApp (SÓ Diretoria): divulgação/oferta de coleta em massa,
+      // sempre pelo canal oficial (template aprovado), com opt-out e envio em lotes.
+      if (pathname === '/diretoria/whatsapp' && request.method === 'GET') {
+        if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
+        return html(paginaCampanhasWA(diretoria, await listarCampanhasWA(env), await listarOptoutWA(env)));
+      }
+      if (pathname === '/api/diretoria/wa/templates' && request.method === 'GET') {
+        if (!diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        if (!whatsappConfigurado(env)) return json({ ok: false, motivo: 'WhatsApp não configurado no cofre' });
+        return json(await listarTemplatesGupshup(env));
+      }
+      if (pathname === '/api/diretoria/wa/previa' && request.method === 'POST') {
+        if (!diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = {}; }
+        const p = await previaPublicoWA(env, String(b.publico || ''), b.telTeste);
+        return json({ ok: true, total: p.total, cortados: p.cortados, exemplos: p.exemplos });
+      }
+      if (pathname === '/api/diretoria/wa/preparar' && request.method === 'POST') {
+        if (!diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = {}; }
+        const r = await prepararCampanhaWA(env, diretoria, b || {});
+        return json(r, r.ok ? 200 : 400);
+      }
+      if (pathname === '/api/diretoria/wa/enviar-lote' && request.method === 'POST') {
+        if (!diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        if (!whatsappConfigurado(env)) return json({ ok: false, message: 'WhatsApp não configurado no cofre.' });
+        let b; try { b = await request.json(); } catch { b = {}; }
+        const r = await enviarLoteWA(env, b && b.id);
+        return json(r, r.ok ? 200 : 400);
+      }
+      if (pathname === '/api/diretoria/wa/falhas' && request.method === 'GET') {
+        if (!diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        return json({ ok: true, falhas: await falhasDaCampanhaWA(env, url.searchParams.get('id')) });
+      }
+      if (pathname === '/api/diretoria/wa/optout' && request.method === 'POST') {
+        if (!diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = {}; }
+        const r = await mudarOptoutWA(env, b && b.tel, String((b && b.acao) || 'add'), b && b.motivo);
+        return json(r, r.ok ? 200 : 400);
       }
       if (pathname === '/diretoria/teste-stripe' && request.method === 'GET') {
         if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));

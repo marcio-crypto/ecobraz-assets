@@ -137,13 +137,18 @@ async function viaSelfServe(env, to, info, params) {
 // Cascata com diagnóstico: tenta as estratégias na ordem, para na primeira 2xx, registra
 // todas. Devolve { ok, vencedor, motivo, detalhe, tentativas:[{estrategia,status,ok,corpo}] }.
 export async function enviarWhatsAppDiag(env, telefone, tipo, params) {
+  return enviarWhatsAppInfo(env, telefone, templateInfo(env, tipo), params);
+}
+// Envio por template QUALQUER (campanhas da Diretoria): mesma cascata, mas o template
+// vem por { nome, id, lang } em vez dos dois tipos fixos da coleta.
+export async function enviarWhatsAppInfo(env, telefone, info, params) {
   const key = chaveGupshup(env);
   const to = telWhatsApp(telefone);
-  const info = templateInfo(env, tipo);
+  info = info || {};
   if (!key) return { ok: false, motivo: 'nao_configurado', tentativas: [] };
   if (!to) return { ok: false, motivo: 'telefone_invalido', tentativas: [] };
   if (!info.nome && !info.id) return { ok: false, motivo: 'sem_template', tentativas: [] };
-  const lang = idiomaTpl(env);
+  const lang = String(info.lang || idiomaTpl(env)).trim() || 'pt_BR';
   const langAlt = lang === 'pt_BR' ? 'pt' : (lang === 'pt' ? 'pt_BR' : '');
   const plano = [];
   // Caminho CONFIRMADO em 2026-07-30 (HTTP 202 + mensagem entregue no WhatsApp do Marcio):
@@ -175,28 +180,50 @@ export async function enviarWhatsAppTemplate(env, telefone, tipo, params) {
   } catch (e) { console.error('gupshup_wa_erro', String((e && e.name) || 'erro')); return { ok: false, motivo: 'excecao' }; }
 }
 
-// Diagnóstico: lista os templates reais do app no Gupshup (nome + id + status + idioma), para
-// conferir se os IDs/nomes/idiomas configurados batem com os templates aprovados.
+// Diagnóstico: lista os templates reais do app no Gupshup (nome + id + status + idioma +
+// corpo), para conferir configuração e para a tela de CAMPANHAS escolher o template.
+// Tenta a Partner API e, se a chave for self-serve (o caminho confirmado do envio), cai
+// para a listagem self-serve por nome do app.
+const mapaTpl = (t) => ({
+  id: t.id || t.templateId || '',
+  nome: t.elementName || t.templateName || t.name || '',
+  status: String(t.status || t.templateStatus || ''),
+  idioma: t.languageCode || t.language || t.locale || '',
+  corpo: String(t.data || t.templateData || t.body || '').slice(0, 1200),
+});
 export async function listarTemplatesGupshup(env) {
   const key = chaveGupshup(env);
   const appId = appIdDe(env);
   if (!key || !appId) return { ok: false, motivo: 'nao_configurado' };
+  const tentativas = [];
+  // A) Partner API (token)
   try {
     const r = await fetch(`https://partner.gupshup.io/partner/app/${encodeURIComponent(appId)}/templates`, {
-      method: 'GET',
-      headers: { token: key, accept: 'application/json' },
-      signal: AbortSignal.timeout(8000),
+      method: 'GET', headers: { token: key, accept: 'application/json' }, signal: AbortSignal.timeout(8000),
     });
     const txt = await r.text();
-    if (!r.ok) return { ok: false, motivo: 'http_' + r.status, detalhe: txt.slice(0, 200) };
-    let data = null; try { data = JSON.parse(txt); } catch { data = null; }
-    const arr = (data && (data.templates || data.data || data.templateList)) || [];
-    const tpls = (Array.isArray(arr) ? arr : []).map((t) => ({
-      id: t.id || t.templateId || '',
-      nome: t.elementName || t.templateName || t.name || '',
-      status: t.status || t.templateStatus || '',
-      idioma: t.languageCode || t.language || t.locale || '',
-    })).filter((t) => t.id || t.nome);
-    return { ok: true, templates: tpls };
-  } catch (e) { console.error('gupshup_tpls_erro', String((e && e.name) || 'erro')); return { ok: false, motivo: 'excecao' }; }
+    if (r.ok) {
+      let data = null; try { data = JSON.parse(txt); } catch { data = null; }
+      const arr = (data && (data.templates || data.data || data.templateList)) || [];
+      const tpls = (Array.isArray(arr) ? arr : []).map(mapaTpl).filter((t) => t.id || t.nome);
+      if (tpls.length) return { ok: true, via: 'partner', templates: tpls };
+    }
+    tentativas.push('partner http_' + r.status);
+  } catch { tentativas.push('partner excecao'); }
+  // B) Self-serve (apikey + nome do app) — mesmo credencial do envio confirmado.
+  try {
+    const r = await fetch(`https://api.gupshup.io/sm/api/v1/template/list/${encodeURIComponent(appNomeDe(env))}`, {
+      method: 'GET', headers: { apikey: key, accept: 'application/json' }, signal: AbortSignal.timeout(8000),
+    });
+    const txt = await r.text();
+    if (r.ok) {
+      let data = null; try { data = JSON.parse(txt); } catch { data = null; }
+      const arr = (data && (data.templates || data.data)) || [];
+      const tpls = (Array.isArray(arr) ? arr : []).map(mapaTpl).filter((t) => t.id || t.nome);
+      if (tpls.length) return { ok: true, via: 'self-serve', templates: tpls };
+    }
+    tentativas.push('self-serve http_' + r.status);
+  } catch { tentativas.push('self-serve excecao'); }
+  console.error('gupshup_tpls_erro', tentativas.join(' · '));
+  return { ok: false, motivo: 'sem_listagem', detalhe: tentativas.join(' · ') };
 }
