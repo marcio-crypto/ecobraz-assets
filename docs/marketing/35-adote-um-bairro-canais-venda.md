@@ -7,8 +7,15 @@
 > **Como foi feito:** 3 pesquisas independentes em 14/08/2026 (plataformas
 > sociais BR · canais corporativos BR · internacional), consolidadas e
 > deduplicadas aqui. Textos prontos para os cadastros: **doc 36 (kit de
+> cadastro)**. Roteiros passo a passo por canal: **doc 37 (pacotes de
 > cadastro)**. Complementa o `docs/PLANO-BACKLINKS.md` (item "diretórios") e o
 > ABM Itália (`kit-europa/alvos-italia.md`).
+>
+> **Automação ativa (desde 14/08/2026):** radar semanal — toda segunda de
+> manhã uma rotina pesquisa novos editais/chamadas corporativas compatíveis
+> com o Adote um Bairro e prazos próximos dos canais deste dossiê, e reporta
+> ao Marcio. Cadastros continuam manuais (exigem e-mail/senha e análise
+> humana das plataformas — ver doc 37). Para desligar: pedir "desliga o radar".
 
 ## ⚠️ Aviso de método — ler antes de usar
 
