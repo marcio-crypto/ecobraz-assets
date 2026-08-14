@@ -99,6 +99,15 @@ export async function prepararCampanhaWA(env, user, dados) {
   if (titulo.length < 3) return { ok: false, message: 'Dê um título para a campanha (ex.: Oferta de coleta — agosto).' };
   const tpl = (dados && dados.template) || {};
   if (!tpl.nome && !tpl.id) return { ok: false, message: 'Escolha o template aprovado.' };
+  // Template com variáveis conhecidas: TODAS precisam vir preenchidas — variável
+  // faltando faz o Gupshup aceitar ("submitted") e a Meta descartar sem entregar.
+  const nvars = tpl.nvars != null ? Number(tpl.nvars) : null;
+  if (nvars != null && nvars > 0) {
+    const ps = Array.isArray(dados && dados.params) ? dados.params : [];
+    if (ps.length < nvars || ps.slice(0, nvars).some((p) => !String(p || '').trim())) {
+      return { ok: false, message: `Este template tem ${nvars} variável(is) — preencha todas antes de preparar.` };
+    }
+  }
   const publico = String((dados && dados.publico) || '');
   if (!PUBLICOS_WA[publico]) return { ok: false, message: 'Escolha o público.' };
   const params = Array.isArray(dados && dados.params) ? dados.params.map((p) => String(p).slice(0, 200)).slice(0, 10) : [];
@@ -135,8 +144,13 @@ export async function enviarLoteWA(env, campanhaId, tamanho = 15) {
     try { r = await enviarWhatsAppInfo(env, dest.tel, info, pDest); } catch { r = { ok: false, motivo: 'excecao' }; }
     const okEnvio = !!(r && r.ok);
     if (okEnvio) enviados++; else falhas++;
+    // No sucesso, guarda também o começo da resposta do Gupshup (tem o id da
+    // mensagem) — é a prova de aceite para rastrear entrega com o provedor.
+    const tent = (r && r.tentativas) || [];
+    const vencedora = tent.find((t) => t.ok) || {};
+    const detalheOk = `${r && r.vencedor ? r.vencedor : ''} · ${String(vencedora.corpo || '').slice(0, 120)}`;
     await d.prepare('UPDATE wa_destinatarios SET status=?2, detalhe=?3, em=?4 WHERE id=?1')
-      .bind(dest.id, okEnvio ? 'enviado' : 'falha', okEnvio ? String(r.vencedor || '') : String((r && (r.motivo || '')) + ' ' + ((r && r.detalhe) || '')).slice(0, 200), new Date().toISOString()).run();
+      .bind(dest.id, okEnvio ? 'enviado' : 'falha', okEnvio ? detalheOk.slice(0, 200) : String((r && (r.motivo || '')) + ' ' + ((r && r.detalhe) || '')).slice(0, 200), new Date().toISOString()).run();
   }
   const resta = await d.prepare('SELECT COUNT(*) AS n FROM wa_destinatarios WHERE campanha_id=?1 AND status=\'pendente\'').bind(cid).first();
   const restantes = Number(resta && resta.n) || 0;
@@ -287,9 +301,14 @@ el('c-tpl').addEventListener('change',function(){
   var t=(window.__APR||[])[Number(this.value)];
   if(!t){box.style.display='none';return;}
   if(t.corpo){box.style.display='block';box.textContent=t.corpo;}else{box.style.display='none';}
-  var n=0;var m=(t.corpo||'').match(/\\{\\{\\d+\\}\\}/g);if(m){var mx=0;m.forEach(function(x){var v=Number(x.replace(/\\D/g,''));if(v>mx)mx=v;});n=mx;}
-  if(!t.corpo){n=Number(prompt('Quantas variáveis {{n}} esse template tem? (0 se nenhuma)','0'))||0;}
-  for(var i=1;i<=n;i++){pw.innerHTML+='<label>Variável {{'+i+'}}</label><input class="c-par" placeholder="ex.: {nome}">';}
+  var n;
+  if(t.nvars!=null){n=Number(t.nvars)||0;}
+  else{n=0;var m=(t.corpo||'').match(/\\{\\{\\d+\\}\\}/g);if(m){var mx=0;m.forEach(function(x){var v=Number(x.replace(/\\D/g,''));if(v>mx)mx=v;});n=mx;}
+    if(!t.corpo){n=Number(prompt('Quantas variáveis {{n}} esse template tem? (0 se nenhuma)','0'))||0;}}
+  for(var i=1;i<=n;i++){
+    var sug=(t.sugestoes&&t.sugestoes[i-1])||'';
+    pw.innerHTML+='<label>Variável {{'+i+'}}</label><input class="c-par" placeholder="ex.: {nome}" value="'+String(sug).replace(/"/g,'&quot;')+'">';
+  }
 });
 el('c-pub').addEventListener('change',function(){el('c-teste-wrap').style.display=this.value==='teste'?'block':'none';});
 el('c-teste-wrap').style.display='block';
@@ -297,14 +316,23 @@ function dadosCampanha(){
   var sel=el('c-tpl').value, t=null;
   if(sel==='manual'){
     var nm=el('m-nome').value.trim(), idm=el('m-id').value.trim();
-    if(nm||idm)t={nome:nm.replace(/ \\(aviso de coleta.*$/,''),id:idm,lang:el('m-lang').value.trim()||'pt_BR'};
+    if(nm||idm)t={nome:nm.replace(/ \\(aviso de coleta.*$/,''),id:idm,lang:el('m-lang').value.trim()||'pt_BR',nvars:Number(el('m-nvars').value)||0};
   }else{
     var x=(window.__APR||[])[Number(sel)];
-    if(x)t={nome:String(x.nome).replace(/ \\(aviso de coleta.*$/,''),id:x.id,lang:x.idioma||'pt_BR'};
+    if(x)t={nome:String(x.nome).replace(/ \\(aviso de coleta.*$/,''),id:x.id,lang:x.idioma||'pt_BR',nvars:x.nvars!=null?Number(x.nvars):null};
   }
   return {titulo:el('c-titulo').value,template:t,
     params:[].map.call(document.querySelectorAll('.c-par'),function(x2){return x2.value;}),
     publico:el('c-pub').value,telTeste:el('c-tel').value};
+}
+function paramsOk(d){
+  if(!d.template)return 'Escolha o template.';
+  var n=d.template.nvars;
+  if(n!=null&&n>0){
+    if(d.params.length<n)return 'Este template tem '+n+' variável(is) — preencha todas.';
+    for(var i=0;i<n;i++){if(!String(d.params[i]||'').trim())return 'Preencha a variável {{'+(i+1)+'}} — enviar sem ela faz a Meta descartar a mensagem em silêncio.';}
+  }
+  return '';
 }
 async function previa(){
   msg('Contando…');
@@ -316,7 +344,8 @@ async function previa(){
 }
 async function preparar(){
   var d=dadosCampanha();
-  if(!d.template){msg('Escolha o template.','#a06a62');return;}
+  var erro=paramsOk(d);
+  if(erro){msg(erro,'#a06a62');return;}
   msg('Preparando…');
   try{var r=await fetch('/api/diretoria/wa/preparar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(d)});
     var j=await r.json();

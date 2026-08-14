@@ -1004,10 +1004,17 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         // Mesmo sem listagem, os templates JÁ CONFIGURADOS no cofre (avisos de
         // coleta) entram como opção — a tela nunca fica vazia e o teste destrava.
         const lang = String(env.GUPSHUP_TEMPLATE_LANG || 'pt_BR').trim();
+        // Os templates do cofre têm variáveis CONHECIDAS — declarar evita o envio
+        // "aceito mas nunca entregue" (Meta descarta template com variáveis faltando).
+        const baseUrlWa = String(env.PORTAL_BASE_URL || url.origin).replace(/\/+$/, '');
+        const COFRE_META = {
+          a_caminho: { nvars: 2, corpo: 'Aviso "estamos a caminho" — 2 variáveis: {{1}} = nome, {{2}} = link de acompanhamento.', sugestoes: ['{nome}', baseUrlWa + '/painel'] },
+          chegou: { nvars: 1, corpo: 'Aviso "chegamos" — 1 variável: {{1}} = nome.', sugestoes: ['{nome}'] },
+        };
         const doCofre = ['a_caminho', 'chegou']
-          .map((t) => templateInfo(env, t))
-          .filter((i) => i.nome || i.id)
-          .map((i) => ({ id: i.id, nome: i.nome + ' (aviso de coleta — do cofre)', status: 'APPROVED', idioma: lang, corpo: '' }));
+          .map((t) => ({ info: templateInfo(env, t), meta: COFRE_META[t] }))
+          .filter((x) => x.info.nome || x.info.id)
+          .map((x) => ({ id: x.info.id, nome: x.info.nome + ' (aviso de coleta — do cofre)', status: 'APPROVED', idioma: lang, corpo: x.meta.corpo, nvars: x.meta.nvars, sugestoes: x.meta.sugestoes }));
         const daLista = lst.ok ? (lst.templates || []) : [];
         const nomes = new Set(daLista.map((t) => t.nome));
         const templates = daLista.concat(doCofre.filter((t) => !nomes.has(t.nome)));
