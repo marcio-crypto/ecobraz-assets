@@ -39,7 +39,7 @@ import { criarCheckoutStripe, consultarCheckoutStripe, verificarEventoStripe, st
 import { gerarPixCopiaECola, pixConfig, paginaPix } from './pix.js';
 import { paginaColetaExpressa } from './coleta-expressa.js';
 import { enviarSMS, smsConfigurado } from './sms.js';
-import { whatsappConfigurado, templateColeta, enviarWhatsAppTemplate, enviarWhatsAppDiag, listarTemplatesGupshup } from './whatsapp.js';
+import { whatsappConfigurado, templateColeta, templateInfo, enviarWhatsAppTemplate, enviarWhatsAppDiag, listarTemplatesGupshup } from './whatsapp.js';
 import { paginaCampanhasWA, listarCampanhasWA, listarOptoutWA, previaPublicoWA, prepararCampanhaWA, enviarLoteWA, falhasDaCampanhaWA, mudarOptoutWA } from './whatsapp-campanha.js';
 import { paginaAcompanhar, paginaAcompanharErro } from './acompanhar.js';
 import { registrarFalha, receberErroCliente, listarFalhas } from './monitor.js';
@@ -992,7 +992,26 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
       if (pathname === '/api/diretoria/wa/templates' && request.method === 'GET') {
         if (!diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);
         if (!whatsappConfigurado(env)) return json({ ok: false, motivo: 'WhatsApp não configurado no cofre' });
-        return json(await listarTemplatesGupshup(env));
+        const lst = await listarTemplatesGupshup(env);
+        // Evidência no D1 (sem segredos) — para diagnosticar a listagem remotamente.
+        try {
+          if (env.DB_PLOOMES) {
+            await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS diagnosticos (id INTEGER PRIMARY KEY AUTOINCREMENT, tipo TEXT, criado_em TEXT, dados TEXT)').run();
+            await env.DB_PLOOMES.prepare('INSERT INTO diagnosticos (tipo, criado_em, dados) VALUES (?1, ?2, ?3)')
+              .bind('wa-templates', new Date().toISOString(), JSON.stringify({ ok: lst.ok, via: lst.via || '', qtd: (lst.templates || []).length, tentativas: lst.tentativas || [] }).slice(0, 20000)).run();
+          }
+        } catch { /* evidência é best-effort */ }
+        // Mesmo sem listagem, os templates JÁ CONFIGURADOS no cofre (avisos de
+        // coleta) entram como opção — a tela nunca fica vazia e o teste destrava.
+        const lang = String(env.GUPSHUP_TEMPLATE_LANG || 'pt_BR').trim();
+        const doCofre = ['a_caminho', 'chegou']
+          .map((t) => templateInfo(env, t))
+          .filter((i) => i.nome || i.id)
+          .map((i) => ({ id: i.id, nome: i.nome + ' (aviso de coleta — do cofre)', status: 'APPROVED', idioma: lang, corpo: '' }));
+        const daLista = lst.ok ? (lst.templates || []) : [];
+        const nomes = new Set(daLista.map((t) => t.nome));
+        const templates = daLista.concat(doCofre.filter((t) => !nomes.has(t.nome)));
+        return json({ ok: templates.length > 0, motivo: lst.ok ? '' : 'sem_listagem', aviso: lst.ok ? '' : 'Não consegui listar do Gupshup — mostrando os templates do cofre. Dá para digitar nome + id manualmente (opção ✍️).', templates });
       }
       if (pathname === '/api/diretoria/wa/previa' && request.method === 'POST') {
         if (!diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);

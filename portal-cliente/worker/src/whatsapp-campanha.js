@@ -218,6 +218,16 @@ input,select,textarea{width:100%;border:1px solid #DDE1E6;border-radius:10px;pad
     <label>Título (interno)</label><input id="c-titulo" placeholder="ex.: Oferta de coleta — agosto" maxlength="120">
     <label>Template aprovado</label>
     <div style="display:flex;gap:8px"><select id="c-tpl"><option value="">Carregando templates…</option></select><button type="button" class="btn btn-g" style="flex:none;padding:9px 12px;font-size:12px" onclick="carregarTemplates()">↻</button></div>
+    <div id="c-aviso-tpl" style="display:none;font-size:11.5px;color:#8A6A16;background:#FFF4DE;border-radius:10px;padding:8px 11px;margin-top:8px"></div>
+    <div id="c-manual" style="display:none;border:1.5px dashed #cfe0dd;border-radius:10px;padding:10px 12px;margin-top:8px">
+      <div style="font-size:11px;color:#7c8a87;margin-bottom:4px">Copie do painel do Gupshup (aba Templates):</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 90px;gap:8px">
+        <div><label style="margin-top:0">Nome do template</label><input id="m-nome" placeholder="ex.: ecobraz_oferta"></div>
+        <div><label style="margin-top:0">ID do template</label><input id="m-id" placeholder="com hífens"></div>
+        <div><label style="margin-top:0">Idioma</label><input id="m-lang" value="pt_BR"></div>
+      </div>
+      <div style="margin-top:6px"><label style="margin-top:0">Quantas variáveis {{n}} tem o texto?</label><input id="m-nvars" inputmode="numeric" value="0" style="width:90px" onchange="paramsManuais()"></div>
+    </div>
     <div id="c-corpo" style="display:none;background:#F7FAF9;border:1px dashed #cfe0dd;border-radius:10px;padding:10px 12px;font-size:12px;color:#374b48;margin-top:8px;white-space:pre-wrap"></div>
     <div id="c-params"></div>
     <div style="font-size:11px;color:#9aa7a4;margin-top:6px">Nas variáveis você pode usar <b>{nome}</b> (primeiro nome do contato) e <b>{empresa}</b> (nome completo) — o sistema troca para cada destinatário.</div>
@@ -250,17 +260,25 @@ function el(id){return document.getElementById(id);}
 function msg(t,cor){var m=el('c-msg');m.style.color=cor||'#4F6469';m.textContent=t;}
 async function carregarTemplates(){
   var s=el('c-tpl');s.innerHTML='<option value="">Carregando…</option>';
+  var aviso=el('c-aviso-tpl');aviso.style.display='none';
   try{var r=await fetch('/api/diretoria/wa/templates');var j=await r.json();
-    if(!j.ok){s.innerHTML='<option value="">Não consegui listar ('+(j.motivo||'erro')+') — confira no painel do Gupshup</option>';return;}
     TPLS=j.templates||[];
+    if(j.aviso){aviso.style.display='block';aviso.textContent=j.aviso;}
     var apr=TPLS.filter(function(t){return /approved|enabled/i.test(t.status||'');});
-    s.innerHTML='<option value="">— escolha —</option>'+apr.map(function(t,i){return '<option value="'+i+'">'+t.nome+' ('+(t.idioma||'?')+')</option>';}).join('');
-    if(!apr.length)s.innerHTML='<option value="">Nenhum template APROVADO — crie no painel do Gupshup e aprove na Meta</option>';
+    s.innerHTML='<option value="">— escolha —</option>'+apr.map(function(t,i){return '<option value="'+i+'">'+t.nome+' ('+(t.idioma||'?')+')</option>';}).join('')+'<option value="manual">✍️ Digitar manualmente (nome + id do painel do Gupshup)</option>';
     window.__APR=apr;
-  }catch(e){s.innerHTML='<option value="">Sem conexão com o sistema</option>';}
+  }catch(e){s.innerHTML='<option value="">Sem conexão</option><option value="manual">✍️ Digitar manualmente</option>';}
+}
+function paramsManuais(){
+  var pw=el('c-params');pw.innerHTML='';
+  var n=Number(el('m-nvars').value)||0;
+  for(var i=1;i<=n;i++){pw.innerHTML+='<label>Variável {{'+i+'}}</label><input class="c-par" placeholder="ex.: {nome}">';}
 }
 el('c-tpl').addEventListener('change',function(){
-  var t=(window.__APR||[])[Number(this.value)];var box=el('c-corpo'),pw=el('c-params');pw.innerHTML='';
+  var box=el('c-corpo'),pw=el('c-params'),man=el('c-manual');pw.innerHTML='';
+  if(this.value==='manual'){man.style.display='block';box.style.display='none';paramsManuais();return;}
+  man.style.display='none';
+  var t=(window.__APR||[])[Number(this.value)];
   if(!t){box.style.display='none';return;}
   if(t.corpo){box.style.display='block';box.textContent=t.corpo;}else{box.style.display='none';}
   var n=0;var m=(t.corpo||'').match(/\\{\\{\\d+\\}\\}/g);if(m){var mx=0;m.forEach(function(x){var v=Number(x.replace(/\\D/g,''));if(v>mx)mx=v;});n=mx;}
@@ -270,9 +288,16 @@ el('c-tpl').addEventListener('change',function(){
 el('c-pub').addEventListener('change',function(){el('c-teste-wrap').style.display=this.value==='teste'?'block':'none';});
 el('c-teste-wrap').style.display='block';
 function dadosCampanha(){
-  var t=(window.__APR||[])[Number(el('c-tpl').value)];
-  return {titulo:el('c-titulo').value,template:t?{nome:t.nome,id:t.id,lang:t.idioma||'pt_BR'}:null,
-    params:[].map.call(document.querySelectorAll('.c-par'),function(x){return x.value;}),
+  var sel=el('c-tpl').value, t=null;
+  if(sel==='manual'){
+    var nm=el('m-nome').value.trim(), idm=el('m-id').value.trim();
+    if(nm||idm)t={nome:nm.replace(/ \\(aviso de coleta.*$/,''),id:idm,lang:el('m-lang').value.trim()||'pt_BR'};
+  }else{
+    var x=(window.__APR||[])[Number(sel)];
+    if(x)t={nome:String(x.nome).replace(/ \\(aviso de coleta.*$/,''),id:x.id,lang:x.idioma||'pt_BR'};
+  }
+  return {titulo:el('c-titulo').value,template:t,
+    params:[].map.call(document.querySelectorAll('.c-par'),function(x2){return x2.value;}),
     publico:el('c-pub').value,telTeste:el('c-tel').value};
 }
 async function previa(){
