@@ -23,24 +23,45 @@ async function db(env) {
     await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS wa_campanhas (id INTEGER PRIMARY KEY AUTOINCREMENT, titulo TEXT, template_nome TEXT, template_id TEXT, template_lang TEXT, params_json TEXT, publico TEXT, criado_por TEXT, criado_em TEXT, status TEXT, total INTEGER DEFAULT 0, enviados INTEGER DEFAULT 0, falhas INTEGER DEFAULT 0)').run();
     await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS wa_destinatarios (id INTEGER PRIMARY KEY AUTOINCREMENT, campanha_id INTEGER, tel TEXT, nome TEXT, doc TEXT, status TEXT, detalhe TEXT, em TEXT)').run();
     await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS wa_optout (tel TEXT PRIMARY KEY, motivo TEXT, em TEXT)').run();
+    await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS wa_excluidos (doc TEXT PRIMARY KEY, nome TEXT, por TEXT, em TEXT)').run();
     return env.DB_PLOOMES;
   } catch { return null; }
 }
 
+export const TOP_N = 450;
 export const PUBLICOS_WA = {
   'teste': 'Teste — só o número que você digitar',
-  'top-200': 'Top 200 — empresas mais relevantes (negócios concluídos + coletas recentes)',
+  'top-450': `Top ${TOP_N} — empresas mais relevantes (negócios concluídos + coletas recentes)`,
   'clientes-os': 'Clientes que já têm OS no sistema (com telefone)',
   'sem-coleta-6m': 'Clientes com OS, mas SEM coleta nos últimos 6 meses (oferecer coleta)',
   'base-pj': 'Base de empresas (PJ) com telefone — os primeiros 500 em ordem alfabética',
 };
 const LIMITE_CAMPANHA = 500;
 
-// TOP 200 (pedido do Marcio 13/08): as empresas mais relevantes, por CRITÉRIO
-// ABERTO (mostrado na lista): negócios CONCLUÍDOS no histórico (peso 3), volume
-// total de negócios (até 20), OS no sistema novo (peso 5 — relação ativa) e
-// atividade recente (+10 em 12 meses, +5 em 24). Desempate por valor concluído.
-export async function publicoTop200(env) {
+// Empresas REMOVIDAS das campanhas pela Diretoria (ex.: "tire a PHX da lista").
+// Por CNPJ — some de todos os públicos até ser reincluída; a vaga no Top é
+// preenchida automaticamente pela próxima da fila.
+export async function mudarExclusaoEmpresaWA(env, doc, nome, acao, por) {
+  const d = await db(env); if (!d) return { ok: false, message: 'Banco indisponível.' };
+  const dd = String(doc || '').replace(/\D/g, '');
+  if (!dd) return { ok: false, message: 'Documento inválido.' };
+  if (acao === 'del') { await d.prepare('DELETE FROM wa_excluidos WHERE doc=?1').bind(dd).run(); return { ok: true }; }
+  try { await d.prepare('INSERT INTO wa_excluidos (doc, nome, por, em) VALUES (?1,?2,?3,?4)').bind(dd, limpar(nome).slice(0, 160), String(por || '').slice(0, 160), new Date().toISOString()).run(); } catch { /* já existe */ }
+  return { ok: true };
+}
+export async function listarExcluidasWA(env) {
+  const d = await db(env); if (!d) return [];
+  try { const r = await d.prepare('SELECT doc, nome, por, em FROM wa_excluidos ORDER BY em DESC LIMIT 200').all(); return r.results || []; } catch { return []; }
+}
+async function docsExcluidos(env) {
+  return new Set((await listarExcluidasWA(env)).map((x) => String(x.doc || '').replace(/\D/g, '')));
+}
+
+// TOP N (pedido do Marcio 13/08; N=450 desde 13/08): as empresas mais relevantes,
+// por CRITÉRIO ABERTO (mostrado na lista): negócios CONCLUÍDOS no histórico (peso
+// 3), volume total de negócios (até 20), OS no sistema novo (peso 5 — relação
+// ativa) e atividade recente (+10 em 12 meses, +5 em 24). Desempate por valor.
+export async function publicoTop200(env, n = TOP_N) {
   const d = await db(env); if (!d) return [];
   let linhas = [];
   try {
@@ -52,7 +73,7 @@ export async function publicoTop200(env) {
       FROM contatos c JOIN negocios n ON n.contact_id = c.ploomes_id
       WHERE c.tipo='PJ' AND COALESCE(c.telefone,'')<>''
       GROUP BY c.ploomes_id, c.nome, c.telefone, c.documento
-      ORDER BY concluidos DESC, total DESC LIMIT 600`).all();
+      ORDER BY concluidos DESC, total DESC LIMIT 1000`).all();
     linhas = r.results || [];
   } catch { linhas = []; }
   // Junta as OS do sistema novo (clientes ativos AGORA contam mais).
@@ -94,7 +115,7 @@ export async function publicoTop200(env) {
     });
   }
   pontuadas.sort((a, b) => (b.pontos - a.pontos) || (b.valor - a.valor));
-  return pontuadas.slice(0, 200);
+  return pontuadas.slice(0, n);
 }
 
 // Busca contatos por documento no D1, em blocos (IN limitado).
@@ -119,7 +140,7 @@ export async function montarPublicoWA(env, publico, telTeste) {
     const t = telWhatsApp(telTeste);
     return t ? [{ tel: t, nome: 'Teste', doc: '' }] : [];
   }
-  if (publico === 'top-200') return publicoTop200(env);
+  if (publico === 'top-450' || publico === 'top-200') return publicoTop200(env, TOP_N);
   if (publico === 'base-pj') {
     const d = await db(env); if (!d) return [];
     try {
@@ -147,9 +168,12 @@ export async function previaPublicoWA(env, publico, telTeste) {
   const d = await db(env);
   let optouts = new Set();
   try { if (d) { const r = await d.prepare('SELECT tel FROM wa_optout').all(); optouts = new Set((r.results || []).map((x) => x.tel)); } } catch { /* segue */ }
+  let excluidas = new Set();
+  try { if (publico !== 'teste') excluidas = await docsExcluidos(env); } catch { /* segue */ }
   const vistos = new Set(); const finais = [];
   for (const c of brutos) {
     if (vistos.has(c.tel) || optouts.has(c.tel)) continue;
+    if (c.doc && excluidas.has(String(c.doc).replace(/\D/g, ''))) continue;
     vistos.add(c.tel); finais.push(c);
   }
   const cortados = Math.max(0, finais.length - LIMITE_CAMPANHA);
@@ -250,7 +274,7 @@ export async function listaDetalhadaPublicoWA(env, publico, telTeste) {
   return previa.lista;
 }
 const fmtDocWA = (v) => { const d0 = String(v || '').replace(/\D/g, ''); if (d0.length === 14) return d0.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5'); if (d0.length === 11) return d0.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4'); return v || '—'; };
-export function paginaListaPublicoWA(publico, itens) {
+export function paginaListaPublicoWA(publico, itens, excluidas) {
   const rotulo = PUBLICOS_WA[publico] || publico;
   const rows = (itens || []).map((c, i) => `<tr>
     <td style="color:#8fa39f">${i + 1}</td>
@@ -258,25 +282,47 @@ export function paginaListaPublicoWA(publico, itens) {
     <td style="white-space:nowrap">${esc(fmtDocWA(c.doc))}</td>
     <td style="white-space:nowrap">${esc(c.tel)}</td>
     ${c.pontos != null ? `<td style="text-align:center"><b>${c.pontos}</b></td>` : '<td style="text-align:center;color:#8fa39f">—</td>'}
-  </tr>`).join('') || '<tr><td colspan="5" style="color:#8fa39f">Nenhuma empresa nesse público.</td></tr>';
+    <td style="text-align:right">${c.doc ? `<button data-doc="${esc(c.doc)}" data-nome="${esc(c.nome || '')}" onclick="excluir(this)" style="background:none;border:1px solid #E8B9B2;color:#B23A2E;border-radius:8px;padding:4px 9px;font-size:11px;font-weight:800;cursor:pointer">✕ Tirar da lista</button>` : ''}</td>
+  </tr>`).join('') || '<tr><td colspan="6" style="color:#8fa39f">Nenhuma empresa nesse público.</td></tr>';
+  const exRows = (excluidas || []).map((x) => `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;border-top:1px solid #EEF1F0;padding:7px 2px;font-size:12px">
+    <span><b>${esc(x.nome || '—')}</b> · ${esc(fmtDocWA(x.doc))}<span style="color:#9aa7a4"> · removida em ${esc(String(x.em || '').slice(0, 10).split('-').reverse().join('/'))}</span></span>
+    <button data-doc="${esc(x.doc)}" onclick="reincluir(this)" style="background:none;border:none;color:#0B5B66;font-size:11px;font-weight:700;cursor:pointer">↩ devolver para a lista</button>
+  </div>`).join('');
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Público da campanha — Ecobraz</title>
 <style>*{box-sizing:border-box}body{margin:0;font-family:Montserrat,'Segoe UI',Arial,Helvetica,sans-serif;background:#F2F6F4;color:#10262B}
 table{width:100%;border-collapse:collapse;font-size:12.5px;background:#fff}
 th{text-align:left;color:#7c8a87;font-weight:800;font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:8px 10px;border-bottom:2px solid #E4EBE9;background:#fff;position:sticky;top:0}
 td{padding:9px 10px;border-bottom:1px solid #EEF1F0;vertical-align:top}
 </style></head><body>
-<div style="background:#00333B;padding:15px 20px"><div style="max-width:900px;margin:0 auto;display:flex;justify-content:space-between;align-items:center">
+<div style="background:#00333B;padding:15px 20px"><div style="max-width:940px;margin:0 auto;display:flex;justify-content:space-between;align-items:center">
   <a href="/diretoria/whatsapp" style="text-decoration:none"><span style="color:#fff;font-size:16px;font-weight:800">ecobraz</span><span style="color:#92C430;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin-left:8px">público · campanha</span></a>
   <a href="/diretoria/whatsapp" style="color:#cfe3e0;font-size:12px;font-weight:700;text-decoration:none">← Campanhas</a>
 </div></div>
-<div style="max-width:900px;margin:0 auto;padding:20px 18px 56px">
+<div style="max-width:940px;margin:0 auto;padding:20px 18px 56px">
   <h1 style="font-size:19px;margin:0 0 4px">📋 ${esc(rotulo)}</h1>
-  <p style="font-size:12.5px;color:#7c8a87;margin:0 0 6px"><b>${(itens || []).length}</b> empresa(s), já sem repetidos e sem quem pediu para sair.</p>
-  ${publico === 'top-200' ? '<p style="font-size:11.5px;color:#9aa7a4;margin:0 0 14px">Critério da pontuação (aberto): negócio concluído ×3 · volume de negócios (até 20) · OS no sistema novo ×5 · atividade nos últimos 12 meses +10 (24 meses +5). Desempate por valor concluído.</p>' : '<div style="margin-bottom:14px"></div>'}
-  <div style="background:#fff;border:1px solid #E4EBE9;border-radius:14px;overflow:auto;max-height:75vh">
-  <table><thead><tr><th>#</th><th>Empresa</th><th>CNPJ/CPF</th><th>WhatsApp</th><th style="text-align:center">Pontos</th></tr></thead><tbody>${rows}</tbody></table>
+  <p style="font-size:12.5px;color:#7c8a87;margin:0 0 6px"><b>${(itens || []).length}</b> empresa(s), já sem repetidos, sem quem pediu para sair e sem as removidas. Ao tirar uma, a próxima da fila entra no lugar.</p>
+  ${String(publico).startsWith('top-') ? '<p style="font-size:11.5px;color:#9aa7a4;margin:0 0 14px">Critério da pontuação (aberto): negócio concluído ×3 · volume de negócios (até 20) · OS no sistema novo ×5 · atividade nos últimos 12 meses +10 (24 meses +5). Desempate por valor concluído.</p>' : '<div style="margin-bottom:14px"></div>'}
+  <div style="background:#fff;border:1px solid #E4EBE9;border-radius:14px;overflow:auto;max-height:70vh">
+  <table><thead><tr><th>#</th><th>Empresa</th><th>CNPJ/CPF</th><th>WhatsApp</th><th style="text-align:center">Pontos</th><th></th></tr></thead><tbody>${rows}</tbody></table>
   </div>
-</div></body></html>`;
+  ${exRows ? `<div style="background:#fff;border:1px solid #E4EBE9;border-radius:14px;padding:14px 16px;margin-top:14px">
+    <div style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#7c8a87;margin-bottom:4px">🚫 Removidas das campanhas (${(excluidas || []).length})</div>
+    ${exRows}
+  </div>` : ''}
+</div>
+<script>
+async function excluir(btn){
+  if(!confirm('Tirar "'+(btn.dataset.nome||btn.dataset.doc)+'" das campanhas? A próxima empresa da fila entra no lugar. Dá para devolver depois.'))return;
+  try{const r=await fetch('/api/diretoria/wa/excluir-empresa',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({doc:btn.dataset.doc,nome:btn.dataset.nome,acao:'add'})});
+    const j=await r.json(); if(j.ok)location.reload(); else alert(j.message||'Não deu.');}
+  catch(e){alert('Sem conexão.');}
+}
+async function reincluir(btn){
+  try{const r=await fetch('/api/diretoria/wa/excluir-empresa',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({doc:btn.dataset.doc,acao:'del'})});
+    const j=await r.json(); if(j.ok)location.reload(); else alert(j.message||'Não deu.');}
+  catch(e){alert('Sem conexão.');}
+}
+</script></body></html>`;
 }
 
 // --- Página (Diretoria) -----------------------------------------------------------
@@ -287,7 +333,7 @@ export function paginaCampanhasWA(user, campanhas, optouts) {
     return `<div style="border:1px solid #EEF1F0;border-radius:12px;padding:13px 15px;margin-bottom:10px" data-camp="${c.id}">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
         <div style="min-width:0"><b style="font-size:13.5px">${esc(c.titulo)}</b>
-          <span style="display:block;font-size:11px;color:#8fa39f;margin-top:2px">${esc(fmtDt(c.criado_em))} · template ${esc(c.template_nome || c.template_id)} · ${esc(PUBLICOS_WA[c.publico] || c.publico)}</span></div>
+          <span style="display:block;font-size:11px;color:#8fa39f;margin-top:2px">${esc(fmtDt(c.criado_em))} · template ${esc(c.template_nome || c.template_id)} · ${esc(PUBLICOS_WA[c.publico] || (c.publico === 'top-200' ? 'Top 200 — empresas mais relevantes (antigo)' : c.publico))}</span></div>
         <div style="flex:none;display:flex;gap:8px;align-items:center">
           <span style="font-size:11px;font-weight:800;color:${c.status === 'concluida' ? '#1E5B31' : '#8A6A16'}">${c.enviados}/${c.total} enviados${c.falhas ? ` · <b style="color:#B23A2E">${c.falhas} falhas</b>` : ''}</span>
           ${c.status !== 'concluida' ? `<button class="btn btn-p" style="padding:8px 13px;font-size:12px" onclick="enviarTudo(${c.id},this)">▶ ${c.enviados + c.falhas ? 'Continuar envio' : 'Iniciar envio'}</button>` : '<span style="font-size:10.5px;font-weight:800;color:#1E5B31;background:#E4F3E6;border-radius:999px;padding:3px 9px">✓ CONCLUÍDA</span>'}
@@ -406,7 +452,8 @@ el('c-tpl').addEventListener('change',function(){
   else{n=0;var m=(t.corpo||'').match(/\\{\\{\\d+\\}\\}/g);if(m){var mx=0;m.forEach(function(x){var v=Number(x.replace(/\\D/g,''));if(v>mx)mx=v;});n=mx;}
     if(!t.corpo){n=Number(prompt('Quantas variáveis {{n}} esse template tem? (0 se nenhuma)','0'))||0;}}
   for(var i=1;i<=n;i++){
-    var sug=(t.sugestoes&&t.sugestoes[i-1])||'';
+    // {{1}} quase sempre é o nome — já vem preenchida com {nome} (editável).
+    var sug=(t.sugestoes&&t.sugestoes[i-1])||(i===1?'{nome}':'');
     pw.innerHTML+='<label>Variável {{'+i+'}}</label><input class="c-par" placeholder="ex.: {nome}" value="'+String(sug).replace(/"/g,'&quot;')+'">';
   }
 });

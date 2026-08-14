@@ -40,7 +40,7 @@ import { gerarPixCopiaECola, pixConfig, paginaPix } from './pix.js';
 import { paginaColetaExpressa } from './coleta-expressa.js';
 import { enviarSMS, smsConfigurado } from './sms.js';
 import { whatsappConfigurado, templateColeta, templateInfo, enviarWhatsAppTemplate, enviarWhatsAppDiag, listarTemplatesGupshup } from './whatsapp.js';
-import { paginaCampanhasWA, listarCampanhasWA, listarOptoutWA, previaPublicoWA, prepararCampanhaWA, enviarLoteWA, falhasDaCampanhaWA, mudarOptoutWA, listaDetalhadaPublicoWA, paginaListaPublicoWA, PUBLICOS_WA } from './whatsapp-campanha.js';
+import { paginaCampanhasWA, listarCampanhasWA, listarOptoutWA, previaPublicoWA, prepararCampanhaWA, enviarLoteWA, falhasDaCampanhaWA, mudarOptoutWA, listaDetalhadaPublicoWA, paginaListaPublicoWA, PUBLICOS_WA, mudarExclusaoEmpresaWA, listarExcluidasWA } from './whatsapp-campanha.js';
 import { paginaAcompanhar, paginaAcompanharErro } from './acompanhar.js';
 import { registrarFalha, receberErroCliente, listarFalhas } from './monitor.js';
 import { segmentoDoCliente, definirSegmento, SEGMENTOS, fluxoDeVendas, ultimosPedidos, paginaPagamentos } from './premium.js';
@@ -1024,7 +1024,13 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
         const pub = String(url.searchParams.get('publico') || '');
         if (!PUBLICOS_WA[pub]) return html(paginaMensagem('Público não encontrado', 'Escolha o público na tela de Campanhas.', '/diretoria/whatsapp'), 404);
-        return html(paginaListaPublicoWA(pub, await listaDetalhadaPublicoWA(env, pub, url.searchParams.get('tel') || '')));
+        return html(paginaListaPublicoWA(pub, await listaDetalhadaPublicoWA(env, pub, url.searchParams.get('tel') || ''), await listarExcluidasWA(env)));
+      }
+      if (pathname === '/api/diretoria/wa/excluir-empresa' && request.method === 'POST') {
+        if (!diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = {}; }
+        const r = await mudarExclusaoEmpresaWA(env, b && b.doc, b && b.nome, String((b && b.acao) || 'add'), diretoria.email || '');
+        return json(r, r.ok ? 200 : 400);
       }
       if (pathname === '/api/diretoria/wa/previa' && request.method === 'POST') {
         if (!diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);
