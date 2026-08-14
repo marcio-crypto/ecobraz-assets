@@ -263,7 +263,13 @@ async function carregarTemplates(){
   var aviso=el('c-aviso-tpl');aviso.style.display='none';
   try{var r=await fetch('/api/diretoria/wa/templates');var j=await r.json();
     TPLS=j.templates||[];
-    if(j.aviso){aviso.style.display='block';aviso.textContent=j.aviso;}
+    if(j.aviso){aviso.style.display='block';aviso.textContent=j.aviso;
+      if(j.tentativas&&j.tentativas.length){
+        var det=document.createElement('div');
+        det.style.cssText='margin-top:6px;font-family:monospace;font-size:10.5px;color:#6b6046;white-space:pre-wrap';
+        det.textContent='Diagnóstico (mande um print disto):\\n'+j.tentativas.map(function(t){return '• '+t.via+' → HTTP '+t.status+' · '+String(t.corpoInicio||'').slice(0,90);}).join('\\n');
+        aviso.appendChild(det);
+      }}
     var apr=TPLS.filter(function(t){return /approved|enabled/i.test(t.status||'');});
     s.innerHTML='<option value="">— escolha —</option>'+apr.map(function(t,i){return '<option value="'+i+'">'+t.nome+' ('+(t.idioma||'?')+')</option>';}).join('')+'<option value="manual">✍️ Digitar manualmente (nome + id do painel do Gupshup)</option>';
     window.__APR=apr;

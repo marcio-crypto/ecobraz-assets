@@ -1011,7 +1011,7 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         const daLista = lst.ok ? (lst.templates || []) : [];
         const nomes = new Set(daLista.map((t) => t.nome));
         const templates = daLista.concat(doCofre.filter((t) => !nomes.has(t.nome)));
-        return json({ ok: templates.length > 0, motivo: lst.ok ? '' : 'sem_listagem', aviso: lst.ok ? '' : 'Não consegui listar do Gupshup — mostrando os templates do cofre. Dá para digitar nome + id manualmente (opção ✍️).', templates });
+        return json({ ok: templates.length > 0, motivo: lst.ok ? '' : 'sem_listagem', aviso: lst.ok ? '' : 'Não consegui listar do Gupshup — mostrando os templates do cofre. Dá para digitar nome + id manualmente (opção ✍️).', templates, tentativas: lst.ok ? [] : (lst.tentativas || []) });
       }
       if (pathname === '/api/diretoria/wa/previa' && request.method === 'POST') {
         if (!diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);
