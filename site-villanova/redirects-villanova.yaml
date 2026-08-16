@@ -370,3 +370,15 @@
   "^\\/precision-tracking-erp-vs-blockchain-structural-standard-brussels\\/?$": "/digital-product-passport-architecture-eu-brazil-supply-chains/"
   "^\\/financial-materiality-matrix-quantifying-climate-risk-balance-sheet\\/?$": "/the-eu-brazil-sector-risk-matrix/"
   "^\\/eudr-practice-financial-mathematics-tracing-indirect-suppliers\\/?$": "/eudr-supply-chain-screening-high-risk-commodities/"
+
+  # 16/08/2026 (2a rodada) — URLs que aparecem no Search Console carregando
+  # impressoes de MARCA ("villanova esg", "marcio villanova") e estavam em 404
+  # sem regra nenhuma. Nao constavam da lista dos 66 do relatorio de Indexacao.
+  # Cada uma foi checada ao vivo antes: /author/marcio/ e a tag
+  # supplier-evidence-buyer-readiness RESPONDEM 200 e ficaram de fora.
+  "^\\/who-is-villanova-esg\\/?$": "/the-firm/"
+  "^\\/marcio-villanova-linkedin-authority-profile\\/?$": "/marcio-villanova/"
+  "^\\/two-public-listings-one-strategic-signal\\/?$": "/publications/"
+  "^\\/authority-without-overclaim-marcio-villanova\\/?$": "/marcio-villanova/"
+  "^\\/from-ecobraz-to-villanova-esg-operational-evidence\\/?$": "/the-firm/"
+  "^\\/tag\\/brazilian-compliance-fdi\\/?$": "/eu-brazil-supplier-evidence-knowledge-base/"
