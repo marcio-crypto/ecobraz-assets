@@ -1,0 +1,98 @@
+[
+  {
+    "slug": "home",
+    "tipo": "page",
+    "meta_title": "Villanova ESG — EU Buyer Evidence, Brazilian Suppliers",
+    "meta_description": "Villanova ESG reviews the supplier evidence European buyers actually ask for — CBAM, EUDR, CSDDD — and finds the gaps before procurement calls it contract risk."
+  },
+  {
+    "slug": "contact",
+    "tipo": "page",
+    "meta_title": "Contact Villanova ESG — EU Buyer Evidence Requests",
+    "meta_description": "Send the buyer questionnaire, contract clause or documentation request you received. Write to contact@villanovaesg.com or start with the Evidence & Risk Intake."
+  },
+  {
+    "slug": "the-firm",
+    "tipo": "page",
+    "meta_title": "Villanova ESG: The Firm, Its Method and Its Limits",
+    "meta_description": "What Villanova ESG does — and does not — do: supplier evidence review for EU-facing Brazilian suppliers. Advisory only: not audit, certification, verification."
+  },
+  {
+    "slug": "marcio-villanova",
+    "tipo": "page",
+    "meta_title": "Marcio Villanova — Founder, Villanova ESG · CEO, Ecobraz",
+    "meta_description": "Marcio Villanova: CEO of Ecobraz since 2011, founder of Villanova ESG, author of the SEMM framework. Roles, ORCID, 18 reports with DOI and declared limits."
+  },
+  {
+    "slug": "eu-buyer-ready-supplier-evidence-review",
+    "tipo": "page",
+    "meta_title": "European Buyer Supplier Evidence Review — The Gaps",
+    "meta_description": "What European buyers actually ask for, where the evidence file fails, and which gaps to fix first. Advisory review for Brazilian suppliers — not an audit."
+  },
+  {
+    "slug": "eu-brazil-supply-chain-risk-review",
+    "tipo": "page",
+    "meta_title": "EU–Brazil Supply Chain Risk: Where Evidence Fails",
+    "meta_description": "Where EU–Brazil supply chain risk really sits: the supplier evidence file. Gap map, risk ranking and fix order before the European buyer escalates the request."
+  },
+  {
+    "slug": "supply-chain-risk",
+    "tipo": "page",
+    "meta_title": "Supply Chain Regulatory Risk — Villanova ESG Review",
+    "meta_description": "Supply chain regulatory risk read through documentation: what a European buyer can verify, what fails under scrutiny, and what to fix before it costs a deal."
+  },
+  {
+    "slug": "board-usable-evidence-review-eu-facing-suppliers",
+    "tipo": "page",
+    "meta_title": "Board-Usable Supplier Evidence Review for EU Buyers",
+    "meta_description": "Evidence a board and a buyer's committee can both use: graded, dated, sourced, owned. Review for EU-facing suppliers across CBAM, EUDR, CSDDD and financing."
+  },
+  {
+    "slug": "what-villanova-esg-reviews",
+    "tipo": "page",
+    "meta_title": "What Villanova ESG Reviews: Files, Data, Contracts",
+    "meta_description": "The five things reviewed: supplier evidence files, CBAM and EUDR data requests, contract clauses, product data and ongoing files. Graded against SEMM."
+  },
+  {
+    "slug": "supplier-evidence-file-assessment",
+    "tipo": "page",
+    "meta_title": "Supplier Evidence File Assessment — Gap Report",
+    "meta_description": "A graded read of the supplier evidence file: what a European buyer can use, what fails, who owns each fix. Covers CBAM, EUDR and CSDDD exposure. Not an audit."
+  },
+  {
+    "slug": "eu-brazil-supplier-evidence-knowledge-base",
+    "tipo": "page",
+    "meta_title": "EU–Brazil Supplier Evidence: Public Knowledge Base",
+    "meta_description": "Free reference on supplier evidence for EU–Brazil trade: definitions, buyer expectations, CBAM, EUDR and CSDDD duties, FAQ, glossary and regulatory sources."
+  },
+  {
+    "slug": "european-buyers-need-supplier-evidence",
+    "tipo": "page",
+    "meta_title": "European Buyers Need Evidence, Not ESG Claims",
+    "meta_description": "Why a European buyer rejects the ESG report and asks for the records behind it — and what procurement, compliance, legal and boards read instead of claims."
+  },
+  {
+    "slug": "csddd-due-diligence",
+    "tipo": "page",
+    "meta_title": "CSDDD Due Diligence — Supplier Evidence Review",
+    "meta_description": "CSDDD reaches Brazilian suppliers through buyer requests, not regulators. See which due diligence evidence holds up, which does not, and what to fix first."
+  },
+  {
+    "slug": "cbam-compliance",
+    "tipo": "page",
+    "meta_title": "CBAM Compliance — Supplier Emissions Evidence",
+    "meta_description": "CBAM turns emissions data into a customs document. Review of the supplier records behind the number, and the gaps a European importer will send back."
+  },
+  {
+    "slug": "eudr-evidence-readiness-review",
+    "tipo": "page",
+    "meta_title": "EUDR Evidence Readiness — Origin and Geolocation",
+    "meta_description": "EUDR readiness read as evidence: origin, legality, geolocation and chain of custody. What survives a European buyer's due diligence statement, and what fails."
+  },
+  {
+    "slug": "eudr-geography-supplier-proof",
+    "tipo": "post",
+    "meta_title": "EUDR: The New Geography of Supplier Proof",
+    "meta_description": "EUDR moves proof to the plot of land: geolocation, legality and custody. What changes for Brazilian suppliers, and where existing origin records fall short."
+  }
+]
