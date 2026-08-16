@@ -52,6 +52,92 @@
     <script src="https://analytics.ahrefs.com/analytics.js" data-key="pyjZvQbqtsTMr2VxxHE5Uw" async></script>
     <!-- Ahrefs — verificação de propriedade do site (método HTML tag) -->
     <meta name="ahrefs-site-verification" content="414fe2eda6a9d59fe6d45ee353290f541eb057edd819f1a7db4e0aca809687c5">
+    {{!-- Identidade da marca em dados estruturados (schema.org), em todas as
+         páginas. Serve para o Google e os chats de IA entenderem que "Villanova
+         ESG" e "Marcio Villanova" são entidades definidas, com página oficial,
+         fundador declarado e registro público (ORCID). Só afirma o que está
+         escrito e verificável no próprio site. --}}
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://www.villanovaesg.com/#organization",
+          "name": "Villanova ESG",
+          "url": "https://www.villanovaesg.com/",
+          "email": "contact@villanovaesg.com",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://www.villanovaesg.com/assets/apple-touch-icon.png",
+            "width": 180,
+            "height": 180
+          },
+          "description": "EU–Brazil supplier evidence advisory: reviews whether supplier documentation stands up as buyer-readable evidence for European procurement, compliance, legal and finance teams. Advisory work only — not audit, certification or verification.",
+          "founder": {"@id": "https://www.villanovaesg.com/#marcio-villanova"},
+          "mainEntityOfPage": {"@id": "https://www.villanovaesg.com/the-firm/"},
+          "areaServed": [
+            {"@type": "Place", "name": "European Union"},
+            {"@type": "Country", "name": "Brazil"}
+          ],
+          "knowsAbout": [
+            "Supplier evidence",
+            "EU Carbon Border Adjustment Mechanism (CBAM)",
+            "EU Deforestation Regulation (EUDR)",
+            "Corporate Sustainability Due Diligence Directive (CSDDD)",
+            "Corporate Sustainability Reporting Directive (CSRD)",
+            "Digital Product Passport",
+            "Supply chain due diligence",
+            "EU–Brazil trade documentation"
+          ]
+        },
+        {
+          "@type": "Person",
+          "@id": "https://www.villanovaesg.com/#marcio-villanova",
+          "name": "Marcio Villanova",
+          "url": "https://www.villanovaesg.com/marcio-villanova/",
+          "mainEntityOfPage": {"@id": "https://www.villanovaesg.com/marcio-villanova/"},
+          "image": "https://www.villanovaesg.com/assets/images/marcio-retrato.jpg",
+          "jobTitle": ["Founder, Villanova ESG", "CEO, Ecobraz"],
+          "description": "Founder of Villanova ESG and CEO of Ecobraz since 2011. Author of the Supplier Evidence Maturity Model (SEMM). Works on turning Brazilian operational proof into evidence a European buyer can read, test, archive and defend.",
+          "sameAs": ["https://orcid.org/0009-0001-8072-6287"],
+          "identifier": {
+            "@type": "PropertyValue",
+            "propertyID": "ORCID",
+            "value": "0009-0001-8072-6287",
+            "url": "https://orcid.org/0009-0001-8072-6287"
+          },
+          "worksFor": [
+            {"@id": "https://www.villanovaesg.com/#organization"},
+            {"@id": "https://ecobraz.org/#organization"}
+          ],
+          "knowsAbout": [
+            "Supplier evidence",
+            "Reverse logistics",
+            "WEEE and e-waste management",
+            "Chain of custody documentation",
+            "EU supply chain regulation"
+          ]
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://ecobraz.org/#organization",
+          "name": "Ecobraz",
+          "url": "https://ecobraz.org/",
+          "description": "Brazilian reverse-logistics and e-waste management operation serving corporate clients since 2011: collection, custody, treatment, destination and the traceability records those activities generate. Separate organisation from Villanova ESG, connected by one person.",
+          "foundingDate": "2011"
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://www.villanovaesg.com/#website",
+          "url": "https://www.villanovaesg.com/",
+          "name": "Villanova ESG",
+          "publisher": {"@id": "https://www.villanovaesg.com/#organization"},
+          "inLanguage": ["en", "pt-BR", "it"]
+        }
+      ]
+    }
+    </script>
     {{ghost_head}}
 </head>
 <body class="{{body_class}}">

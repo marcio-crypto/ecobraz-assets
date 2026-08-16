@@ -1,0 +1,27 @@
+name: Villanova ESG — atualizar títulos e descrições (SEO/CTR)
+
+on:
+  workflow_dispatch:
+    inputs:
+      arquivo:
+        description: 'Caminho do JSON de metas (padrão: site-villanova/content/metas-ctr.json)'
+        required: false
+        default: 'site-villanova/content/metas-ctr.json'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  metas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Atualizar meta_title e meta_description no Ghost
+        env:
+          VILLANOVA_GHOST_ADMIN_URL: ${{ secrets.VILLANOVA_GHOST_ADMIN_URL }}
+          VILLANOVA_GHOST_ADMIN_API_KEY: ${{ secrets.VILLANOVA_GHOST_ADMIN_API_KEY }}
+        run: node site-villanova/scripts/atualiza-metas.mjs "${{ inputs.arquivo }}"
+      - name: Avisar buscadores (IndexNow)
+        continue-on-error: true
+        run: node site-villanova/scripts/submit-indexnow.mjs
