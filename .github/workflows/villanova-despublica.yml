@@ -1,0 +1,25 @@
+name: Villanova ESG — despublicar páginas (sai do sitemap)
+
+on:
+  workflow_dispatch:
+    inputs:
+      arquivo:
+        description: 'JSON com a lista de slugs (ex.: site-villanova/content/despublica-redirecionadas.json)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  despublicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Mudar status para draft
+        env:
+          VILLANOVA_GHOST_ADMIN_URL: ${{ secrets.VILLANOVA_GHOST_ADMIN_URL }}
+          VILLANOVA_GHOST_ADMIN_API_KEY: ${{ secrets.VILLANOVA_GHOST_ADMIN_API_KEY }}
+        run: node site-villanova/scripts/despublica-paginas.mjs "${{ inputs.arquivo }}"
+      - name: Conferir o sitemap depois da mudança
+        run: node site-villanova/scripts/audita-sitemap.mjs

@@ -1,0 +1,154 @@
+[
+ {
+  "slug": "contact",
+  "destino": "/supplier-evidence-risk-intake/"
+ },
+ {
+  "slug": "contato",
+  "destino": "/solicitar-analise/"
+ },
+ {
+  "slug": "eu-buyer-readiness-review-brazilian-suppliers",
+  "destino": "/supplier-evidence-file-assessment/"
+ },
+ {
+  "slug": "board-usable-evidence-review-eu-facing-suppliers",
+  "destino": "/supplier-evidence-file-assessment/"
+ },
+ {
+  "slug": "eu-buyer-ready-supplier-evidence-review",
+  "destino": "/supplier-evidence-file-assessment/"
+ },
+ {
+  "slug": "30-day-supplier-evidence-readiness-review",
+  "destino": "/supplier-evidence-file-assessment/"
+ },
+ {
+  "slug": "cbam-compliance",
+  "destino": "/cbam-evidence-review-brazilian-suppliers/"
+ },
+ {
+  "slug": "eudr-traceability-evidence-review-brazilian-suppliers",
+  "destino": "/eudr-evidence-readiness-review/"
+ },
+ {
+  "slug": "csddd-due-diligence",
+  "destino": "/contract-clause-risk-review-eu-facing-suppliers/"
+ },
+ {
+  "slug": "eu-buyer-readable-evidence-framework-circular-supply-chains",
+  "destino": "/european-product-passport/"
+ },
+ {
+  "slug": "circular-supply-chain-evidence-toolkit-non-eu-suppliers",
+  "destino": "/european-product-passport/"
+ },
+ {
+  "slug": "what-villanova-esg-reviews",
+  "destino": "/the-firm/"
+ },
+ {
+  "slug": "brazil-europe-compliance-bridge",
+  "destino": "/the-firm/"
+ },
+ {
+  "slug": "reference-villanova-esg-source-trail",
+  "destino": "/eu-brazil-supplier-evidence-knowledge-base/"
+ },
+ {
+  "slug": "supplier-evidence-glossary",
+  "destino": "/eu-brazil-supplier-evidence-knowledge-base/"
+ },
+ {
+  "slug": "faq-eu-buyer-evidence-brazilian-suppliers",
+  "destino": "/eu-brazil-supplier-evidence-knowledge-base/"
+ },
+ {
+  "slug": "eu-brazil-supplier-evidence-market",
+  "destino": "/eu-brazil-supplier-evidence-knowledge-base/"
+ },
+ {
+  "slug": "brazilian-suppliers-have-an-evidence-problem",
+  "destino": "/eu-brazil-supplier-evidence-knowledge-base/"
+ },
+ {
+  "slug": "european-buyers-need-supplier-evidence",
+  "destino": "/eu-brazil-supplier-evidence-knowledge-base/"
+ },
+ {
+  "slug": "when-european-buyer-requests-evidence",
+  "destino": "/eu-brazil-supplier-evidence-knowledge-base/"
+ },
+ {
+  "slug": "2026-eu-buyer-evidence-file",
+  "destino": "/eu-brazil-supplier-evidence-knowledge-base/"
+ },
+ {
+  "slug": "supply-chain-risk",
+  "destino": "/contract-clause-risk-review-eu-facing-suppliers/"
+ },
+ {
+  "slug": "regulatory-source-trail",
+  "destino": "/eu-brazil-supplier-evidence-knowledge-base/"
+ },
+ {
+  "slug": "revisao-evidencias-para-diretoria",
+  "destino": "/revisao-evidencias-eudr-cbam-csddd-exportadores/"
+ },
+ {
+  "slug": "preparacao-fornecedores-brasileiros-compradores-europeus",
+  "destino": "/revisao-evidencias-eudr-cbam-csddd-exportadores/"
+ },
+ {
+  "slug": "due-diligence-csddd",
+  "destino": "/revisao-risco-clausulas-contratuais/"
+ },
+ {
+  "slug": "risco-da-cadeia-de-suprimentos",
+  "destino": "/revisao-risco-clausulas-contratuais/"
+ },
+ {
+  "slug": "estrutura-de-evidencias-legiveis-para-o-comprador-europeu",
+  "destino": "/passaporte-produto-europeu/"
+ },
+ {
+  "slug": "kit-de-evidencias-cadeia-circular",
+  "destino": "/passaporte-produto-europeu/"
+ },
+ {
+  "slug": "o-que-analisamos",
+  "destino": "/a-firma/"
+ },
+ {
+  "slug": "trilha-de-fontes",
+  "destino": "/base-de-conhecimento/"
+ },
+ {
+  "slug": "fontes-regulatorias",
+  "destino": "/base-de-conhecimento/"
+ },
+ {
+  "slug": "glossario-de-evidencias",
+  "destino": "/base-de-conhecimento/"
+ },
+ {
+  "slug": "perguntas-frequentes",
+  "destino": "/base-de-conhecimento/"
+ },
+ {
+  "slug": "mercado-de-evidencias-ue-brasil",
+  "destino": "/base-de-conhecimento/"
+ },
+ {
+  "slug": "o-problema-de-evidencia-dos-fornecedores-brasileiros",
+  "destino": "/base-de-conhecimento/"
+ },
+ {
+  "slug": "quando-o-comprador-europeu-pede-evidencias",
+  "destino": "/base-de-conhecimento/"
+ },
+ {
+  "slug": "arquivo-de-evidencias-2026",
+  "destino": "/base-de-conhecimento/"
+ }
+]
