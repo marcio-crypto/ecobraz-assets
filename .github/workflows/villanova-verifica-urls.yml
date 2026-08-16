@@ -1,0 +1,21 @@
+name: Villanova ESG — verificar lista de URLs ao vivo
+
+on:
+  workflow_dispatch:
+    inputs:
+      arquivo:
+        description: 'JSON com a lista de URLs (padrão: as 66 do Search Console)'
+        required: false
+        default: 'site-villanova/content/urls-404-gsc.json'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Status inicial, destino e status final de cada URL
+        run: node site-villanova/scripts/verifica-urls.mjs "${{ inputs.arquivo }}"
