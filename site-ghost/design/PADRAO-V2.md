@@ -51,7 +51,7 @@ NF, cadeia de custódia) com B2C (geladeira, "a gente busca") no mesmo fluxo.
    botões verdes lado a lado.
 4. **Hero da home = 1 pergunta + 4 portas** (Pessoa física · Empresa ·
    Governo · English), cada porta com 1 linha e 1 CTA próprio.
-5. **Faixa de prova** logo sob o hero: ★4,9 Google · 354 avaliações · desde
+5. **Faixa de prova** logo sob o hero: ★4,9 Google · 354 avaliações (ago/2026) · desde
    2011 · ONU/Comissão Europeia · resposta em 24h úteis. Só fatos verificados.
 6. Timeline "Como funciona" em 4 passos numerados (não cards).
 7. FAQ em `details/summary` — "sem letra miúda" como tom.
@@ -89,5 +89,5 @@ NF, cadeia de custódia) com B2C (geladeira, "a gente busca") no mesmo fluxo.
 ## Inglês (decisão do Marcio, 30/07)
 
 Transcriação, não tradução: "your Brazilian operation, handled in Brazil,
-with documentation any auditor accepts" — vocabulário de quem responde à
+with documentation an auditor can check at source" — vocabulário de quem responde à
 matriz (CSRD, Scope 3, due diligence). 100% do site EN nessa realidade.
