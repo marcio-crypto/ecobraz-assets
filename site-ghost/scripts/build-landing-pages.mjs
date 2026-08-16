@@ -69,7 +69,7 @@ const depoimentosSection = (p, slug) => !p.depoimentos ? '' : `<section class="h
   <div class="container">
     <div class="hx-head-split">
       <div><span class="hx-label">Avaliações públicas</span><h2>${esc(p.depoimentos.titulo || 'O que os clientes dizem no Google')}</h2></div>
-      <p><span style="color:#F5B940">★</span> <strong>${esc(p.depoimentos.nota)}</strong> em <a class="hx-src" href="${p.depoimentos.url}" rel="noopener" data-track="${slug}_avaliacoes_google">${esc(p.depoimentos.total)} avaliações públicas no Google →</a></p>
+      <p><span style="color:#F5B940">★</span> <strong>${esc(p.depoimentos.nota)}</strong> em <a class="hx-src" href="${p.depoimentos.url}" rel="noopener" data-track="${slug}_avaliacoes_google">${esc(p.depoimentos.total)} avaliações públicas no Google em ${esc(p.depoimentos.data || 'ago/2026')} →</a></p>
     </div>
     <div class="hx-docs">
         ${p.depoimentos.itens.map((r) => `<div class="hx-doc"><p style="color:#F5B940;letter-spacing:2px;margin:0 0 8px">★★★★★</p><p style="font-size:14px;color:var(--ink);margin:0 0 10px">“${esc(r.texto)}”</p><h3 style="font-size:13px;color:var(--muted)">— ${esc(r.autor)}, no Google</h3></div>`).join('\n        ')}
@@ -78,7 +78,7 @@ const depoimentosSection = (p, slug) => !p.depoimentos ? '' : `<section class="h
 </section>
 
 `;
-const depoimentosHtml = (p) => !p.depoimentos ? '' : `<hr><h2>Avaliações públicas no Google</h2><p>Nota ${esc(p.depoimentos.nota)} em ${esc(p.depoimentos.total)} avaliações públicas.</p>${p.depoimentos.itens.map((r) => `<blockquote><p>“${esc(r.texto)}” — ${esc(r.autor)}</p></blockquote>`).join('')}<p><a href="${p.depoimentos.url}" rel="noopener">Ver todas as avaliações no Google →</a></p>`;
+const depoimentosHtml = (p) => !p.depoimentos ? '' : `<hr><h2>Avaliações públicas no Google</h2><p>Nota ${esc(p.depoimentos.nota)} em ${esc(p.depoimentos.total)} avaliações públicas em ${esc(p.depoimentos.data || 'ago/2026')}.</p>${p.depoimentos.itens.map((r) => `<blockquote><p>“${esc(r.texto)}” — ${esc(r.autor)}</p></blockquote>`).join('')}<p><a href="${p.depoimentos.url}" rel="noopener">Ver todas as avaliações no Google →</a></p>`;
 
 function renderTemplate(p) {
   const slug = p.slug;
