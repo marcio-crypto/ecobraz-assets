@@ -13,16 +13,28 @@
     <link rel="apple-touch-icon" href="{{asset "apple-touch-icon.png"}}">
     <script src="{{asset "js/idioma-auto.js"}}"></script>
     <script>
-      /* Consent Mode v2: tudo negado por padrão, antes de qualquer tag (GDPR/LGPD) */
+      /* Consent Mode v2 com régua regional (mesmo padrão da Ecobraz):
+         UE/EEE/Reino Unido/Suíça começam NEGADOS até o aceite no banner —
+         exigência do GDPR/ePrivacy; demais regiões começam permitidas, com
+         a recusa sempre disponível no mesmo banner. Antes desta régua o
+         padrão era negado no mundo inteiro e o GA4 ficava sem dado nenhum
+         (corrigido em 16/08/2026). A escolha salva pelo visitante manda. */
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
-      gtag('consent', 'default', {
-        analytics_storage: 'denied',
-        ad_storage: 'denied',
-        ad_user_data: 'denied',
-        ad_personalization: 'denied',
-        wait_for_update: 500
-      });
+      (function () {
+        var stored = null;
+        try { stored = localStorage.getItem('vn-consent'); } catch (e) {}
+        var all = function (value) { return {ad_storage: value, ad_user_data: value, ad_personalization: value, analytics_storage: value}; };
+        if (stored === 'granted' || stored === 'denied') {
+          gtag('consent', 'default', all(stored));
+        } else {
+          gtag('consent', 'default', all('granted'));
+          var eea = all('denied');
+          eea.region = ['AT','BE','BG','HR','CY','CZ','DK','EE','FI','FR','DE','GR','HU','IE','IT','LV','LT','LU','MT','NL','PL','PT','RO','SK','SI','ES','SE','IS','LI','NO','GB','CH'];
+          eea.wait_for_update = 500;
+          gtag('consent', 'default', eea);
+        }
+      })();
     </script>
     <!-- Google Analytics 4 — respeita o Consent Mode acima (só mede após aceite) -->
     <link rel="preconnect" href="https://www.googletagmanager.com">
