@@ -45,7 +45,17 @@ for (const item of itens) {
     const r = await fetch(`${adminUrl}/ghost/api/admin/settings/`, {
       method: 'PUT', headers, body: JSON.stringify({settings}),
     });
-    if (!r.ok) throw new Error(`Settings do site: ${r.status} ${(await r.text()).slice(0, 300)}`);
+    // A Integration Key não tem permissão em settings/ (403 NoPermissionError):
+    // esse endpoint exige token de usuário. Não é motivo para derrubar o resto
+    // do arquivo — avisa e segue, e o ajuste da home fica para o painel.
+    if (!r.ok) {
+      console.log(`AVISO: não foi possível gravar as settings do site (${r.status}).`);
+      console.log('       Ajuste manual no painel: Settings > Meta data.');
+      console.log(`       Título:    ${item.meta_title}`);
+      console.log(`       Descrição: ${item.meta_description}`);
+      avisos++;
+      continue;
+    }
     console.log('atualizado: configurações do site (título e descrição da home)');
     console.log(`  depois: ${item.meta_title}`);
     alterados++;
