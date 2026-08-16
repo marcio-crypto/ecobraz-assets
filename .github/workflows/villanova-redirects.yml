@@ -1,0 +1,26 @@
+name: Villanova ESG — redirecionamentos 301
+
+on:
+  workflow_dispatch:
+    inputs:
+      modo:
+        description: 'comparar (só relatório) ou enviar (aplica no site)'
+        type: choice
+        options:
+          - comparar
+          - enviar
+        default: comparar
+
+permissions:
+  contents: read
+
+jobs:
+  redirects:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Comparar/enviar redirecionamentos
+        env:
+          VILLANOVA_GHOST_ADMIN_URL: ${{ secrets.VILLANOVA_GHOST_ADMIN_URL }}
+          VILLANOVA_GHOST_ADMIN_API_KEY: ${{ secrets.VILLANOVA_GHOST_ADMIN_API_KEY }}
+        run: node site-villanova/scripts/sync-redirects.mjs "${{ inputs.modo }}"
