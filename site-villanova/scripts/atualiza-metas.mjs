@@ -35,6 +35,23 @@ let alterados = 0;
 let avisos = 0;
 
 for (const item of itens) {
+  // A home não usa as metas da página: a rota "/" do routes.yaml cai no
+  // template home e o {{meta_title}} ali resolve para as CONFIGURAÇÕES do
+  // site, não para a página. Por isso ela é tratada como caso próprio.
+  if (item.tipo === 'site') {
+    const settings = [];
+    if (item.meta_title) settings.push({key: 'meta_title', value: item.meta_title});
+    if (item.meta_description) settings.push({key: 'meta_description', value: item.meta_description});
+    const r = await fetch(`${adminUrl}/ghost/api/admin/settings/`, {
+      method: 'PUT', headers, body: JSON.stringify({settings}),
+    });
+    if (!r.ok) throw new Error(`Settings do site: ${r.status} ${(await r.text()).slice(0, 300)}`);
+    console.log('atualizado: configurações do site (título e descrição da home)');
+    console.log(`  depois: ${item.meta_title}`);
+    alterados++;
+    continue;
+  }
+
   const tipo = item.tipo === 'post' ? 'posts' : 'pages';
   const atual = (await api('GET', `${tipo}/?filter=slug:${item.slug}&limit=1`))[tipo]?.[0];
   if (!atual) { console.log(`AVISO: ${tipo}/${item.slug} não existe — pulado`); avisos++; continue; }

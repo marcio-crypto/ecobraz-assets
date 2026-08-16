@@ -1,0 +1,50 @@
+[
+  {
+    "slug": "__site__",
+    "tipo": "site",
+    "meta_title": "Villanova ESG — EU Buyer Evidence, Brazilian Suppliers",
+    "meta_description": "Villanova ESG reviews the supplier evidence European buyers actually ask for — CBAM, EUDR, CSDDD — and finds the gaps before procurement calls it contract risk."
+  },
+  {
+    "slug": "supplier-evidence-risk-intake",
+    "tipo": "page",
+    "meta_title": "Contact Villanova ESG — Supplier Evidence Intake",
+    "meta_description": "Send the buyer questionnaire, contract clause or documentation request you received. Villanova ESG reads it against the evidence you can actually produce."
+  },
+  {
+    "slug": "cbam-evidence-review-brazilian-suppliers",
+    "tipo": "page",
+    "meta_title": "CBAM Evidence Review for Brazilian Suppliers",
+    "meta_description": "CBAM turns emissions data into a customs document. Review of the supplier records behind the number, and the gaps a European importer will send back."
+  },
+  {
+    "slug": "contract-clause-risk-review-eu-facing-suppliers",
+    "tipo": "page",
+    "meta_title": "Contract Clause Risk Review — EU-Facing Suppliers",
+    "meta_description": "Contract clauses read as evidence requests, before signature: audit rights, reporting duties, sustainability representations and the proof each one will demand."
+  },
+  {
+    "slug": "for-european-buyers",
+    "tipo": "page",
+    "meta_title": "For European Buyers Sourcing From Brazil",
+    "meta_description": "What to ask a Brazilian supplier, and how to read the answer: evidence a procurement, compliance or legal team can compare across the supplier base."
+  },
+  {
+    "slug": "supplier-evidence-maturity-model",
+    "tipo": "page",
+    "meta_title": "SEMM — Supplier Evidence Maturity Model",
+    "meta_description": "The public, citable framework Villanova ESG grades evidence against: five levels from undocumented claim to buyer-usable proof. Deposited with DOI on Zenodo."
+  },
+  {
+    "slug": "publications",
+    "tipo": "page",
+    "meta_title": "Villanova ESG Publications — 18 Reports With DOI",
+    "meta_description": "Technical reports on EU–Brazil supplier evidence, each with a DOI and verifiable at the source. Methodology and worked analyses, free to read and cite."
+  },
+  {
+    "slug": "european-product-passport",
+    "tipo": "page",
+    "meta_title": "Digital Product Passport — The Supplier Data Burden",
+    "meta_description": "What the European Digital Product Passport will ask a supplier to produce, and how to structure that data at source without exposing industrial secrets."
+  }
+]
