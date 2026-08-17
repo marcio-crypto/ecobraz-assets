@@ -41,9 +41,11 @@ async function db(env) {
 }
 
 export const TOP_N = 450;
+export const MESES_REATIVACAO = 12;
 export const PUBLICOS_WA = {
   'teste': 'Teste — só o número que você digitar',
   'top-450': `Top ${TOP_N} — empresas mais relevantes (negócios concluídos + coletas recentes)`,
+  'reativacao-200': `Top 200 para REATIVAR — já descartaram com a Ecobraz, mas estão paradas há ${MESES_REATIVACAO}+ meses`,
   'clientes-os': 'Clientes que já têm OS no sistema (com telefone)',
   'sem-coleta-6m': 'Clientes com OS, mas SEM coleta nos últimos 6 meses (oferecer coleta)',
   'base-pj': 'Base de empresas (PJ) com telefone — os primeiros 500 em ordem alfabética',
@@ -73,7 +75,14 @@ async function docsExcluidos(env) {
 // por CRITÉRIO ABERTO (mostrado na lista): negócios CONCLUÍDOS no histórico (peso
 // 3), volume total de negócios (até 20), OS no sistema novo (peso 5 — relação
 // ativa) e atividade recente (+10 em 12 meses, +5 em 24). Desempate por valor.
+// SEM REPETIÇÃO ENTRE LISTAS (regra do Marcio 17/08): empresa parada pertence à
+// lista de REATIVAÇÃO — e por isso sai do Top. A próxima da fila entra no lugar.
 export async function publicoTop200(env, n = TOP_N) {
+  let docsReativacao = new Set();
+  try { docsReativacao = new Set((await publicoReativacao(env, 200)).map((c) => c.doc).filter(Boolean)); } catch { docsReativacao = new Set(); }
+  return publicoTopBruto(env, n, docsReativacao);
+}
+async function publicoTopBruto(env, n, docsFora) {
   const d = await db(env); if (!d) return [];
   let linhas = [];
   try {
@@ -113,6 +122,7 @@ export async function publicoTop200(env, n = TOP_N) {
     const doc = String(l.documento || '').replace(/\D/g, '');
     if (!tel) continue;
     if (doc && vistosDoc.has(doc)) continue;
+    if (doc && docsFora && docsFora.has(doc)) continue; // pertence à lista de reativação
     if (doc) vistosDoc.add(doc);
     const os = (doc && osPorDoc.get(doc)) || { qtd: 0, ultimo: '' };
     const ultimaAtv = [String(l.ultimo || ''), os.ultimo].sort().pop() || '';
@@ -128,6 +138,61 @@ export async function publicoTop200(env, n = TOP_N) {
   }
   pontuadas.sort((a, b) => (b.pontos - a.pontos) || (b.valor - a.valor));
   return pontuadas.slice(0, n);
+}
+
+// REATIVAÇÃO (pedido do Marcio 17/08): empresas ESTRATÉGICAS que pararam.
+// Critério aberto: precisa ter pelo menos 1 descarte CONCLUÍDO no histórico
+// (isso é o "estratégica" — relação real, não lead frio) e NENHUMA atividade
+// (negócio ou OS no sistema novo) nos últimos MESES_REATIVACAO meses.
+// Ranking pela força do histórico: concluídos ×3 + volume (até 20), desempate
+// pelo valor concluído. Mostra desde quando está parada.
+export async function publicoReativacao(env, n = 200, meses = MESES_REATIVACAO) {
+  const d = await db(env); if (!d) return [];
+  let linhas = [];
+  try {
+    const r = await d.prepare(`SELECT c.nome, c.telefone, c.documento,
+        COUNT(n.ploomes_id) AS total,
+        SUM(CASE WHEN n.status_id=2 THEN 1 ELSE 0 END) AS concluidos,
+        SUM(CASE WHEN n.status_id=2 THEN COALESCE(n.amount,0) ELSE 0 END) AS valor,
+        MAX(n.criado_em) AS ultimo
+      FROM contatos c JOIN negocios n ON n.contact_id = c.ploomes_id
+      WHERE c.tipo='PJ' AND COALESCE(c.telefone,'')<>''
+      GROUP BY c.ploomes_id, c.nome, c.telefone, c.documento
+      HAVING concluidos >= 1
+      ORDER BY concluidos DESC, total DESC LIMIT 1500`).all();
+    linhas = r.results || [];
+  } catch { linhas = []; }
+  // Atividade no sistema novo também conta como "não está parada".
+  let coletas = []; try { coletas = await listarColetasOS(env); } catch { coletas = []; }
+  const osUltimoPorDoc = new Map();
+  for (const c of coletas.filter((x) => x && x.status !== 'cancelada')) {
+    const doc = String(c.clienteDoc || '').replace(/\D/g, '');
+    if (!doc) continue;
+    const em = String(c.criadoEm || '');
+    if (em > (osUltimoPorDoc.get(doc) || '')) osUltimoPorDoc.set(doc, em);
+  }
+  const corte = new Date(Date.now() - meses * 30.44 * 86400e3).toISOString().slice(0, 10);
+  const agora = Date.now();
+  const paradas = [];
+  const vistosDoc = new Set();
+  for (const l of linhas) {
+    const tel = telWhatsApp(l.telefone);
+    const doc = String(l.documento || '').replace(/\D/g, '');
+    if (!tel || (doc && vistosDoc.has(doc))) continue;
+    if (doc) vistosDoc.add(doc);
+    const ultimaAtv = [String(l.ultimo || '').slice(0, 10), (doc && String(osUltimoPorDoc.get(doc) || '').slice(0, 10)) || ''].sort().pop() || '';
+    if (!ultimaAtv || ultimaAtv >= corte) continue; // ativa (ou sem data) → fora
+    const t = Date.parse(ultimaAtv);
+    const mesesParada = Number.isFinite(t) ? Math.floor((agora - t) / (30.44 * 86400e3)) : null;
+    const pontos = (Number(l.concluidos) || 0) * 3 + Math.min(20, Number(l.total) || 0);
+    const valorMil = Math.round((Number(l.valor) || 0) / 1000);
+    paradas.push({
+      tel, nome: limpar(l.nome), doc, pontos, valor: Number(l.valor) || 0,
+      motivo: `${l.concluidos} concluída(s) · ${l.total} negócio(s)${valorMil ? ` · R$ ${valorMil} mil` : ''} · parada desde ${ultimaAtv.slice(0, 7)}${mesesParada != null ? ` (há ${mesesParada} meses)` : ''}`,
+    });
+  }
+  paradas.sort((a, b) => (b.pontos - a.pontos) || (b.valor - a.valor));
+  return paradas.slice(0, n);
 }
 
 // Busca contatos por documento no D1, em blocos (IN limitado).
@@ -153,6 +218,7 @@ export async function montarPublicoWA(env, publico, telTeste) {
     return t ? [{ tel: t, nome: 'Teste', doc: '' }] : [];
   }
   if (publico === 'top-450' || publico === 'top-200') return publicoTop200(env, TOP_N);
+  if (publico === 'reativacao-200') return publicoReativacao(env, 200);
   if (publico === 'base-pj') {
     const d = await db(env); if (!d) return [];
     try {
@@ -212,15 +278,31 @@ export async function prepararCampanhaWA(env, user, dados) {
   const params = Array.isArray(dados && dados.params) ? dados.params.map((p) => String(p).slice(0, 200)).slice(0, 10) : [];
   const previa = await previaPublicoWA(env, publico, dados && dados.telTeste);
   if (!previa.lista.length) return { ok: false, message: publico === 'teste' ? 'Digite um número de WhatsApp válido para o teste.' : 'Nenhum destinatário nesse público (com telefone e fora da lista de saída).' };
+  // TRAVA ANTI-REPETIÇÃO (regra do Marcio): quem JÁ RECEBEU este template em
+  // qualquer campanha anterior fica de fora — não importa por qual lista veio.
+  // O público "teste" é isento (teste tem que sempre enviar).
+  let lista = previa.lista;
+  let jaReceberam = 0;
+  if (publico !== 'teste') {
+    try {
+      const r0 = await d.prepare('SELECT DISTINCT d0.tel AS tel FROM wa_destinatarios d0 JOIN wa_campanhas c0 ON c0.id = d0.campanha_id WHERE d0.status=\'enviado\' AND ((c0.template_nome <> \'\' AND c0.template_nome = ?1) OR (?2 <> \'\' AND c0.template_id = ?2))')
+        .bind(String(tpl.nome || ''), String(tpl.id || '')).all();
+      const jaTel = new Set((r0.results || []).map((x) => x.tel));
+      const antes = lista.length;
+      lista = lista.filter((c) => !jaTel.has(c.tel));
+      jaReceberam = antes - lista.length;
+    } catch { /* trava é best-effort — nunca derruba a preparação */ }
+    if (!lista.length) return { ok: false, message: `Todos os destinatários desse público (${jaReceberam}) já receberam este template em campanhas anteriores — nada novo a enviar. Use outro template ou outro público.` };
+  }
   const agora = new Date().toISOString();
   await d.prepare('INSERT INTO wa_campanhas (titulo, template_nome, template_id, template_lang, params_json, publico, criado_por, criado_em, status, total) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,\'preparada\',?9)')
-    .bind(titulo, String(tpl.nome || ''), String(tpl.id || ''), String(tpl.lang || 'pt_BR'), JSON.stringify(params), publico, (user && user.email) || '', agora, previa.lista.length).run();
+    .bind(titulo, String(tpl.nome || ''), String(tpl.id || ''), String(tpl.lang || 'pt_BR'), JSON.stringify(params), publico, (user && user.email) || '', agora, lista.length).run();
   const row = await d.prepare('SELECT id FROM wa_campanhas ORDER BY id DESC LIMIT 1').first();
   const cid = Number(row && row.id);
-  for (const c of previa.lista) {
+  for (const c of lista) {
     await d.prepare('INSERT INTO wa_destinatarios (campanha_id, tel, nome, doc, status) VALUES (?1,?2,?3,?4,\'pendente\')').bind(cid, c.tel, c.nome.slice(0, 160), c.doc).run();
   }
-  return { ok: true, id: cid, total: previa.lista.length, cortados: previa.cortados };
+  return { ok: true, id: cid, total: lista.length, cortados: previa.cortados, jaReceberam };
 }
 
 const primeiroNome = (n) => { const p = limpar(n).split(' ')[0] || ''; return p ? p.charAt(0).toUpperCase() + p.slice(1).toLowerCase() : 'cliente'; };
@@ -426,7 +508,7 @@ td{padding:9px 10px;border-bottom:1px solid #EEF1F0;vertical-align:top}
 <div style="max-width:940px;margin:0 auto;padding:20px 18px 56px">
   <h1 style="font-size:19px;margin:0 0 4px">📋 ${esc(rotulo)}</h1>
   <p style="font-size:12.5px;color:#7c8a87;margin:0 0 6px"><b>${(itens || []).length}</b> empresa(s), já sem repetidos, sem quem pediu para sair e sem as removidas. Ao tirar uma, a próxima da fila entra no lugar.</p>
-  ${String(publico).startsWith('top-') ? '<p style="font-size:11.5px;color:#9aa7a4;margin:0 0 14px">Critério da pontuação (aberto): negócio concluído ×3 · volume de negócios (até 20) · OS no sistema novo ×5 · atividade nos últimos 12 meses +10 (24 meses +5). Desempate por valor concluído.</p>' : '<div style="margin-bottom:14px"></div>'}
+  ${String(publico).startsWith('top-') ? `<p style="font-size:11.5px;color:#9aa7a4;margin:0 0 14px">Critério da pontuação (aberto): negócio concluído ×3 · volume de negócios (até 20) · OS no sistema novo ×5 · atividade nos últimos 12 meses +10 (24 meses +5). Desempate por valor concluído. <b>Sem repetição entre listas:</b> empresa parada há ${MESES_REATIVACAO}+ meses pertence à lista de Reativação e fica fora daqui.</p>` : publico === 'reativacao-200' ? `<p style="font-size:11.5px;color:#9aa7a4;margin:0 0 14px">Critério (aberto): entra quem tem pelo menos 1 descarte CONCLUÍDO no histórico e NENHUMA atividade (negócio ou OS) nos últimos ${MESES_REATIVACAO} meses. Pontos: concluídas ×3 + volume (até 20), desempate por valor. Cada linha mostra desde quando a empresa está parada. <b>Sem repetição entre listas:</b> quem está aqui fica fora do Top ${TOP_N} — e, ao preparar a campanha, quem já recebeu o template escolhido em qualquer disparo anterior também fica de fora automaticamente.</p>` : '<div style="margin-bottom:14px"></div>'}
   <div style="background:#fff;border:1px solid #E4EBE9;border-radius:14px;overflow:auto;max-height:70vh">
   <table><thead><tr><th>#</th><th>Empresa</th><th>CNPJ/CPF</th><th>WhatsApp</th><th style="text-align:center">Pontos</th><th></th></tr></thead><tbody>${rows}</tbody></table>
   </div>
@@ -674,7 +756,7 @@ async function preparar(){
   msg('Preparando…');
   try{var r=await fetch('/api/diretoria/wa/preparar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(d)});
     var j=await r.json();
-    if(j.ok){msg('✓ Campanha preparada com '+j.total+' destinatário(s). Atualizando…','#1E7A3D');setTimeout(function(){location.reload();},800);}
+    if(j.ok){msg('✓ Campanha preparada com '+j.total+' destinatário(s)'+(j.jaReceberam?(' · '+j.jaReceberam+' ficaram de fora por já terem recebido este template'):'')+'. Atualizando…','#1E7A3D');setTimeout(function(){location.reload();},900);}
     else{msg(j.message||'Não deu.','#a06a62');}}
   catch(e){msg('Sem conexão.','#a06a62');}
 }
