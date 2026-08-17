@@ -25,6 +25,7 @@ async function db(env) {
     await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS wa_destinatarios (id INTEGER PRIMARY KEY AUTOINCREMENT, campanha_id INTEGER, tel TEXT, nome TEXT, doc TEXT, status TEXT, detalhe TEXT, em TEXT, msg_id TEXT DEFAULT \'\', entrega TEXT DEFAULT \'\', respondeu INTEGER DEFAULT 0)').run();
     await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS wa_optout (tel TEXT PRIMARY KEY, motivo TEXT, em TEXT)').run();
     await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS wa_excluidos (doc TEXT PRIMARY KEY, nome TEXT, por TEXT, em TEXT)').run();
+    await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS wa_tel_invalido (tel TEXT PRIMARY KEY, motivo TEXT, em TEXT)').run();
   } catch { return null; }
   // Medição (13/08): colunas novas nas tabelas que já existem em produção.
   if (!migrouWa) {
@@ -248,14 +249,19 @@ export async function previaPublicoWA(env, publico, telTeste) {
   try { if (d) { const r = await d.prepare('SELECT tel FROM wa_optout').all(); optouts = new Set((r.results || []).map((x) => x.tel)); } } catch { /* segue */ }
   let excluidas = new Set();
   try { if (publico !== 'teste') excluidas = await docsExcluidos(env); } catch { /* segue */ }
-  const vistos = new Set(); const finais = [];
+  // Números que a Meta já devolveu como "sem WhatsApp" saem sozinhos (menos no
+  // público de teste, para nunca travar um teste do próprio Marcio).
+  let telsSemZap = new Set();
+  try { if (d && publico !== 'teste') { const r = await d.prepare('SELECT tel FROM wa_tel_invalido').all(); telsSemZap = new Set((r.results || []).map((x) => x.tel)); } } catch { /* segue */ }
+  const vistos = new Set(); const finais = []; let semZap = 0;
   for (const c of brutos) {
     if (vistos.has(c.tel) || optouts.has(c.tel)) continue;
     if (c.doc && excluidas.has(String(c.doc).replace(/\D/g, ''))) continue;
+    if (telsSemZap.has(c.tel)) { semZap++; continue; }
     vistos.add(c.tel); finais.push(c);
   }
   const cortados = Math.max(0, finais.length - LIMITE_CAMPANHA);
-  return { total: Math.min(finais.length, LIMITE_CAMPANHA), cortados, exemplos: finais.slice(0, 5).map((c) => c.nome || c.tel.slice(0, 6) + '…'), lista: finais.slice(0, LIMITE_CAMPANHA) };
+  return { total: Math.min(finais.length, LIMITE_CAMPANHA), cortados, semZap, exemplos: finais.slice(0, 5).map((c) => c.nome || c.tel.slice(0, 6) + '…'), lista: finais.slice(0, LIMITE_CAMPANHA) };
 }
 
 export async function prepararCampanhaWA(env, user, dados) {
@@ -285,7 +291,10 @@ export async function prepararCampanhaWA(env, user, dados) {
   let jaReceberam = 0;
   if (publico !== 'teste') {
     try {
-      const r0 = await d.prepare('SELECT DISTINCT d0.tel AS tel FROM wa_destinatarios d0 JOIN wa_campanhas c0 ON c0.id = d0.campanha_id WHERE d0.status=\'enviado\' AND ((c0.template_nome <> \'\' AND c0.template_nome = ?1) OR (?2 <> \'\' AND c0.template_id = ?2))')
+      // "Já recebeu" = aceito E não devolvido como falha de entrega. Quem teve
+      // entrega FALHADA nunca viu a mensagem — pode entrar de novo (número morto
+      // de verdade já fica fora sozinho pela wa_tel_invalido).
+      const r0 = await d.prepare('SELECT DISTINCT d0.tel AS tel FROM wa_destinatarios d0 JOIN wa_campanhas c0 ON c0.id = d0.campanha_id WHERE d0.status=\'enviado\' AND IFNULL(d0.entrega,\'\') <> \'falhou\' AND ((c0.template_nome <> \'\' AND c0.template_nome = ?1) OR (?2 <> \'\' AND c0.template_id = ?2))')
         .bind(String(tpl.nome || ''), String(tpl.id || '')).all();
       const jaTel = new Set((r0.results || []).map((x) => x.tel));
       const antes = lista.length;
@@ -373,6 +382,10 @@ export async function chaveWebhookWA(env) {
   return [...new Uint8Array(dig)].map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 20);
 }
 const RANK_ENTREGA = { '': 0, 'enviada': 1, 'entregue': 2, 'lida': 3, 'falhou': 9 };
+// Motivos que significam "este número não recebe WhatsApp" (código 1002 do
+// Gupshup / 131026 da Meta): o número entra sozinho em wa_tel_invalido e some
+// das próximas listas — não adianta gastar disparo com número morto.
+const SEM_ZAP_RE = /\b(1002|131026)\b|not exist|undeliverable|(no|not|sem|nao|não)[^a-z0-9]{0,3}whatsapp|invalid[^a-z0-9]{0,3}(number|destination|phone)/i;
 export async function processarWebhookWA(env, corpo) {
   const d = await db(env); if (!d) return { ok: false };
   const b = corpo || {};
@@ -387,12 +400,25 @@ export async function processarWebhookWA(env, corpo) {
       const mid = String(p.gsId || p.id || '').slice(0, 80);
       const tel = String(p.destination || '').replace(/\D/g, '');
       // Casa pelo id da mensagem; sem id, pelo telefone (último envio para ele).
-      let dest = mid ? await d.prepare('SELECT id, entrega FROM wa_destinatarios WHERE msg_id=?1 ORDER BY id DESC LIMIT 1').bind(mid).first() : null;
-      if (!dest && tel) dest = await d.prepare('SELECT id, entrega FROM wa_destinatarios WHERE tel=?1 AND status=\'enviado\' ORDER BY id DESC LIMIT 1').bind(tel).first();
+      let dest = mid ? await d.prepare('SELECT id, entrega, tel FROM wa_destinatarios WHERE msg_id=?1 ORDER BY id DESC LIMIT 1').bind(mid).first() : null;
+      if (!dest && tel) dest = await d.prepare('SELECT id, entrega, tel FROM wa_destinatarios WHERE tel=?1 AND status=\'enviado\' ORDER BY id DESC LIMIT 1').bind(tel).first();
       if (!dest) return { ok: true, sem_destinatario: true };
       // Nunca rebaixa (lida não volta para entregue); falha sempre registra.
       const atual = RANK_ENTREGA[String(dest.entrega || '')] || 0;
       if (novo !== 'falhou' && RANK_ENTREGA[novo] <= atual) return { ok: true };
+      if (novo === 'falhou') {
+        // O evento "failed" traz o PORQUÊ (code + reason) — guarda para mostrar
+        // nos Resultados em vez de jogar fora (lição da Reativação de 17/08).
+        const pp = (p.payload && typeof p.payload === 'object') ? p.payload : {};
+        const motivo = limpar([pp.code, pp.reason || pp.message].filter((x) => x != null && x !== '').join(' ')).slice(0, 160);
+        await d.prepare('UPDATE wa_destinatarios SET entrega=?2, detalhe=?3 WHERE id=?1')
+          .bind(dest.id, novo, ('entrega falhou: ' + (motivo || 'canal não informou o motivo')).slice(0, 200)).run();
+        const telDest = String(dest.tel || tel || '');
+        if (telDest && SEM_ZAP_RE.test(motivo)) {
+          try { await d.prepare('INSERT OR REPLACE INTO wa_tel_invalido (tel, motivo, em) VALUES (?1,?2,?3)').bind(telDest, motivo, new Date().toISOString()).run(); } catch { /* segue */ }
+        }
+        return { ok: true, entrega: novo };
+      }
       await d.prepare('UPDATE wa_destinatarios SET entrega=?2 WHERE id=?1').bind(dest.id, novo).run();
       return { ok: true, entrega: novo };
     }
@@ -425,18 +451,29 @@ export async function metricasCampanhaWA(env, campanhaId) {
   const camp = await d.prepare('SELECT * FROM wa_campanhas WHERE id=?1').bind(cid).first();
   if (!camp) return { ok: false, message: 'Campanha não encontrada.' };
   const dataCorte = String(camp.criado_em || '').slice(0, 10);
-  const dest = await d.prepare('SELECT doc, tel, entrega, respondeu FROM wa_destinatarios WHERE campanha_id=?1 AND status=\'enviado\'').bind(cid).all();
+  const dest = await d.prepare('SELECT nome, doc, tel, entrega, respondeu, detalhe FROM wa_destinatarios WHERE campanha_id=?1 AND status=\'enviado\'').bind(cid).all();
   const rows = dest.results || [];
   const docs = new Set(rows.map((x) => String(x.doc || '').replace(/\D/g, '')).filter(Boolean));
   const canal = { entregues: 0, lidas: 0, falharam: 0, responderam: 0, comRetorno: 0 };
+  const falhouLista = [];
   for (const x of rows) {
     const e = String(x.entrega || '');
     if (e && e !== 'enviada') canal.comRetorno++;
     if (e === 'entregue' || e === 'lida') canal.entregues++;
     if (e === 'lida') canal.lidas++;
-    if (e === 'falhou') canal.falharam++;
+    if (e === 'falhou') {
+      canal.falharam++;
+      // O motivo só existe se veio do webhook (prefixo "entrega falhou:");
+      // o detalhe de ENVIO (aceite do Gupshup) não é motivo de falha.
+      const det = String(x.detalhe || '');
+      const motivo = det.startsWith('entrega falhou') ? det.replace(/^entrega falhou:?\s*/, '') : '';
+      falhouLista.push({ nome: String(x.nome || ''), tel: String(x.tel || ''), motivoTexto: traduzirFalhaWA(motivo) });
+    }
     if (Number(x.respondeu)) canal.responderam++;
   }
+  const porMotivo = new Map();
+  for (const f of falhouLista) porMotivo.set(f.motivoTexto, (porMotivo.get(f.motivoTexto) || 0) + 1);
+  const falhouResumo = [...porMotivo.entries()].map(([motivo, n]) => ({ motivo, n })).sort((a, b) => b.n - a.n);
   let sairam = 0;
   try {
     const tels = new Set(rows.map((x) => x.tel));
@@ -469,9 +506,20 @@ export async function metricasCampanhaWA(env, campanhaId) {
   return {
     ok: true, titulo: camp.titulo, desde: dataCorte,
     enviadas: Number(camp.enviados) || 0, falhasEnvio: Number(camp.falhas) || 0,
-    canal, sairam,
+    canal, sairam, falhouResumo, falhouLista: falhouLista.slice(0, 300),
     conversao: { portal: portal.size, solicitacoes, novasOS },
   };
+}
+
+// Traduz o motivo técnico da falha de entrega para o time (código Meta/Gupshup → português).
+export function traduzirFalhaWA(motivo) {
+  const m = String(motivo || '');
+  if (!m) return 'motivo não registrado (falha anterior a 17/08 — desde então o porquê fica gravado)';
+  if (SEM_ZAP_RE.test(m)) return 'número não tem WhatsApp (ou não existe mais)';
+  if (/\b131048\b|spam/i.test(m)) return 'trava de qualidade da Meta (risco de spam) — pausar disparos por alguns dias';
+  if (/\b130429\b|rate limit|too many/i.test(m)) return 'limite de velocidade do canal — dá para tentar de novo mais tarde';
+  if (/\b(131049|131050)\b|healthy|ecosystem|frequency/i.test(m)) return 'a própria Meta segurou marketing para este contato agora (limite por pessoa)';
+  return m.slice(0, 120);
 }
 
 // Lista completa de um público, para conferência ANTES do disparo (transparência:
@@ -507,7 +555,7 @@ td{padding:9px 10px;border-bottom:1px solid #EEF1F0;vertical-align:top}
 </div></div>
 <div style="max-width:940px;margin:0 auto;padding:20px 18px 56px">
   <h1 style="font-size:19px;margin:0 0 4px">📋 ${esc(rotulo)}</h1>
-  <p style="font-size:12.5px;color:#7c8a87;margin:0 0 6px"><b>${(itens || []).length}</b> empresa(s), já sem repetidos, sem quem pediu para sair e sem as removidas. Ao tirar uma, a próxima da fila entra no lugar.</p>
+  <p style="font-size:12.5px;color:#7c8a87;margin:0 0 6px"><b>${(itens || []).length}</b> empresa(s), já sem repetidos, sem quem pediu para sair, sem números que a Meta devolveu como "sem WhatsApp" e sem as removidas. Ao tirar uma, a próxima da fila entra no lugar.</p>
   ${String(publico).startsWith('top-') ? `<p style="font-size:11.5px;color:#9aa7a4;margin:0 0 14px">Critério da pontuação (aberto): negócio concluído ×3 · volume de negócios (até 20) · OS no sistema novo ×5 · atividade nos últimos 12 meses +10 (24 meses +5). Desempate por valor concluído. <b>Sem repetição entre listas:</b> empresa parada há ${MESES_REATIVACAO}+ meses pertence à lista de Reativação e fica fora daqui.</p>` : publico === 'reativacao-200' ? `<p style="font-size:11.5px;color:#9aa7a4;margin:0 0 14px">Critério (aberto): entra quem tem pelo menos 1 descarte CONCLUÍDO no histórico e NENHUMA atividade (negócio ou OS) nos últimos ${MESES_REATIVACAO} meses. Pontos: concluídas ×3 + volume (até 20), desempate por valor. Cada linha mostra desde quando a empresa está parada. <b>Sem repetição entre listas:</b> quem está aqui fica fora do Top ${TOP_N} — e, ao preparar a campanha, quem já recebeu o template escolhido em qualquer disparo anterior também fica de fora automaticamente.</p>` : '<div style="margin-bottom:14px"></div>'}
   <div style="background:#fff;border:1px solid #E4EBE9;border-radius:14px;overflow:auto;max-height:70vh">
   <table><thead><tr><th>#</th><th>Empresa</th><th>CNPJ/CPF</th><th>WhatsApp</th><th style="text-align:center">Pontos</th><th></th></tr></thead><tbody>${rows}</tbody></table>
@@ -556,7 +604,8 @@ export async function saldoEstimadoWA(env) {
   const d = await db(env); if (!d) return null;
   let enviadas = 0;
   try {
-    const r = await d.prepare('SELECT COUNT(*) AS n FROM wa_destinatarios WHERE status=\'enviado\' AND em >= ?1').bind(String(base.em)).first();
+    // Falha de entrega não é cobrada pela Meta — não desconta do saldo estimado.
+    const r = await d.prepare('SELECT COUNT(*) AS n FROM wa_destinatarios WHERE status=\'enviado\' AND IFNULL(entrega,\'\') <> \'falhou\' AND em >= ?1').bind(String(base.em)).first();
     enviadas = Number(r && r.n) || 0;
   } catch { enviadas = 0; }
   const estimado = Math.round((base.valor - enviadas * base.custoMsg) * 100) / 100;
@@ -745,7 +794,7 @@ async function previa(){
   msg('Contando…');
   try{var r=await fetch('/api/diretoria/wa/previa',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(dadosCampanha())});
     var j=await r.json();
-    if(j.ok){msg('Público: '+j.total+' destinatário(s)'+(j.cortados?' (+'+j.cortados+' acima do limite, fora desta campanha)':'')+(j.exemplos&&j.exemplos.length?' · ex.: '+j.exemplos.join(', '):''));}
+    if(j.ok){msg('Público: '+j.total+' destinatário(s)'+(j.cortados?' (+'+j.cortados+' acima do limite, fora desta campanha)':'')+(j.semZap?' · '+j.semZap+' fora por não ter WhatsApp (detectado em campanha anterior)':'')+(j.exemplos&&j.exemplos.length?' · ex.: '+j.exemplos.join(', '):''));}
     else{msg(j.message||'Não deu.', '#a06a62');}}
   catch(e){msg('Sem conexão.','#a06a62');}
 }
@@ -783,10 +832,23 @@ async function verResultados(id){
     if(!j.ok){box.innerHTML='<span style="font-size:12px;color:#a06a62">'+(j.message||'Não deu.')+'</span>';return;}
     var c=j.canal||{},v=j.conversao||{};
     var tile=function(n,rot,cor){return '<div style="flex:1;min-width:90px;background:#F7FAF9;border:1px solid #E4EBE9;border-radius:10px;padding:9px;text-align:center"><b style="font-size:18px;color:'+(cor||'#00333B')+';display:block">'+n+'</b><span style="font-size:10px;color:#7c8a87;font-weight:700">'+rot+'</span></div>';};
+    var eh=function(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
     var semRetorno=!c.comRetorno;
+    var blocoFalhas='';
+    if(j.falhouResumo&&j.falhouResumo.length){
+      var fl=j.falhouLista||[];
+      blocoFalhas='<div style="background:#FDF3F1;border:1px solid #F0D8D3;border-radius:10px;padding:9px 11px;margin-top:8px">'
+        +'<div style="font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#B23A2E;margin-bottom:4px">Por que falharam</div>'
+        +j.falhouResumo.map(function(x){return '<div style="font-size:12px;color:#5b4340"><b>'+x.n+'</b> × '+eh(x.motivo)+'</div>';}).join('')
+        +'<details style="margin-top:6px"><summary style="font-size:11.5px;font-weight:700;color:#8a5a52;cursor:pointer">📄 Ver as empresas que não receberam ('+fl.length+')</summary>'
+        +'<div style="max-height:220px;overflow:auto;margin-top:6px">'+fl.map(function(f){return '<div style="font-size:11.5px;color:#5b4340;border-top:1px solid #F0D8D3;padding:4px 0"><b>'+eh(f.nome||f.tel)+'</b> <span style="color:#9aa7a4">· '+eh(f.tel)+'</span><span style="display:block;font-size:10.5px;color:#a06a62">'+eh(f.motivoTexto||'')+'</span></div>';}).join('')+'</div></details>'
+        +'<div style="font-size:10.5px;color:#8a5a52;margin-top:6px">Falha de entrega não é cobrada pela Meta. Número que a Meta devolve como "sem WhatsApp" sai sozinho das próximas listas (a vaga vai para a próxima empresa da fila) — e quem falhou pode receber numa próxima campanha, porque nunca viu a mensagem.</div>'
+        +'</div>';
+    }
     box.innerHTML=
       '<div style="font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#7c8a87;margin-bottom:6px">Canal (WhatsApp)'+(semRetorno?' — <span style="color:#8A6A16">sem retorno ainda: configure o webhook abaixo</span>':'')+'</div>'
       +'<div style="display:flex;gap:8px;flex-wrap:wrap">'+tile(j.enviadas,'aceitas')+tile(c.entregues,'entregues','#0B5B66')+tile(c.lidas,'lidas','#1E5B31')+tile(c.responderam,'responderam','#1E5B31')+tile(c.falharam,'falhou entrega','#B23A2E')+tile(j.sairam,'pediram SAIR','#8A6A16')+'</div>'
+      +blocoFalhas
       +'<div style="font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#7c8a87;margin:10px 0 6px">Conversão no portal (desde '+j.desde.split('-').reverse().join('/')+')</div>'
       +'<div style="display:flex;gap:8px;flex-wrap:wrap">'+tile(v.portal,'entraram no portal','#0B5B66')+tile(v.solicitacoes,'pediram coleta','#1E5B31')+tile(v.novasOS,'viraram OS','#1E5B31')+'</div>'
       +'<div style="font-size:10.5px;color:#9aa7a4;margin-top:6px">Honestidade da medição: "entrou no portal depois do disparo" é correlação (a pessoa pode ter entrado por outro motivo) — mas é o termômetro real de resultado. Entregas/leituras dependem do webhook configurado e do WhatsApp do cliente (recibo de leitura desligado não conta "lida").</div>';

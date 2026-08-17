@@ -1067,7 +1067,7 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         if (!diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);
         let b; try { b = await request.json(); } catch { b = {}; }
         const p = await previaPublicoWA(env, String(b.publico || ''), b.telTeste);
-        return json({ ok: true, total: p.total, cortados: p.cortados, exemplos: p.exemplos });
+        return json({ ok: true, total: p.total, cortados: p.cortados, semZap: p.semZap || 0, exemplos: p.exemplos });
       }
       if (pathname === '/api/diretoria/wa/preparar' && request.method === 'POST') {
         if (!diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);
