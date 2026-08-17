@@ -17,6 +17,15 @@ import { listarColetasOS } from './coletas.js';
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const limpar = (s) => String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
 
+// Linha FIXA brasileira (55 + DDD + 8 dígitos começando em 2–5) quase nunca tem
+// WhatsApp — cadastro antigo costuma guardar o número do PABX da empresa.
+// Celular tem 9 dígitos começando em 9. É "provável": serve para avisar e para
+// preferir o celular, nunca para barrar sozinho.
+export function ehFixoBR(tel) {
+  const m = String(tel || '').match(/^55\d{2}(\d{8,9})$/);
+  return !!m && m[1].length === 8 && /^[2-5]/.test(m[1]);
+}
+
 let migrouWa = false;
 async function db(env) {
   if (!env.DB_PLOOMES) return null;
@@ -118,11 +127,18 @@ async function publicoTopBruto(env, n, docsFora) {
   const agora = Date.now();
   const pontuadas = [];
   const vistosDoc = new Set();
+  const porDoc = new Map();
   for (const l of linhas) {
     const tel = telWhatsApp(l.telefone);
     const doc = String(l.documento || '').replace(/\D/g, '');
     if (!tel) continue;
-    if (doc && vistosDoc.has(doc)) continue;
+    if (doc && vistosDoc.has(doc)) {
+      // Mesmo CNPJ, outro contato: se o escolhido ficou com o FIXO da empresa e
+      // este contato tem celular, o celular assume (fixo não recebe WhatsApp).
+      const p0 = porDoc.get(doc);
+      if (p0 && ehFixoBR(p0.tel) && !ehFixoBR(tel)) p0.tel = tel;
+      continue;
+    }
     if (doc && docsFora && docsFora.has(doc)) continue; // pertence à lista de reativação
     if (doc) vistosDoc.add(doc);
     const os = (doc && osPorDoc.get(doc)) || { qtd: 0, ultimo: '' };
@@ -132,10 +148,12 @@ async function publicoTopBruto(env, n, docsFora) {
     if (Number.isFinite(t)) { const idade = agora - t; recencia = idade <= ANO ? 10 : (idade <= 2 * ANO ? 5 : 0); }
     const pontos = (Number(l.concluidos) || 0) * 3 + Math.min(20, Number(l.total) || 0) + os.qtd * 5 + recencia;
     const valorMil = Math.round((Number(l.valor) || 0) / 1000);
-    pontuadas.push({
+    const item = {
       tel, nome: limpar(l.nome), doc, pontos, valor: Number(l.valor) || 0,
       motivo: `${l.concluidos || 0} concluída(s) · ${l.total || 0} negócio(s)${valorMil ? ` · R$ ${valorMil} mil` : ''}${os.qtd ? ` · ${os.qtd} OS no sistema novo` : ''}${ultimaAtv ? ` · última ${String(ultimaAtv).slice(0, 7)}` : ''}`,
-    });
+    };
+    pontuadas.push(item);
+    if (doc) porDoc.set(doc, item);
   }
   pontuadas.sort((a, b) => (b.pontos - a.pontos) || (b.valor - a.valor));
   return pontuadas.slice(0, n);
@@ -176,10 +194,17 @@ export async function publicoReativacao(env, n = 200, meses = MESES_REATIVACAO) 
   const agora = Date.now();
   const paradas = [];
   const vistosDoc = new Set();
+  const porDoc = new Map();
   for (const l of linhas) {
     const tel = telWhatsApp(l.telefone);
     const doc = String(l.documento || '').replace(/\D/g, '');
-    if (!tel || (doc && vistosDoc.has(doc))) continue;
+    if (!tel) continue;
+    if (doc && vistosDoc.has(doc)) {
+      // Mesmo CNPJ, outro contato: celular assume o lugar de um fixo escolhido.
+      const p0 = porDoc.get(doc);
+      if (p0 && ehFixoBR(p0.tel) && !ehFixoBR(tel)) p0.tel = tel;
+      continue;
+    }
     if (doc) vistosDoc.add(doc);
     const ultimaAtv = [String(l.ultimo || '').slice(0, 10), (doc && String(osUltimoPorDoc.get(doc) || '').slice(0, 10)) || ''].sort().pop() || '';
     if (!ultimaAtv || ultimaAtv >= corte) continue; // ativa (ou sem data) → fora
@@ -187,10 +212,12 @@ export async function publicoReativacao(env, n = 200, meses = MESES_REATIVACAO) 
     const mesesParada = Number.isFinite(t) ? Math.floor((agora - t) / (30.44 * 86400e3)) : null;
     const pontos = (Number(l.concluidos) || 0) * 3 + Math.min(20, Number(l.total) || 0);
     const valorMil = Math.round((Number(l.valor) || 0) / 1000);
-    paradas.push({
+    const item = {
       tel, nome: limpar(l.nome), doc, pontos, valor: Number(l.valor) || 0,
       motivo: `${l.concluidos} concluída(s) · ${l.total} negócio(s)${valorMil ? ` · R$ ${valorMil} mil` : ''} · parada desde ${ultimaAtv.slice(0, 7)}${mesesParada != null ? ` (há ${mesesParada} meses)` : ''}`,
-    });
+    };
+    paradas.push(item);
+    if (doc) porDoc.set(doc, item);
   }
   paradas.sort((a, b) => (b.pontos - a.pontos) || (b.valor - a.valor));
   return paradas.slice(0, n);
@@ -238,7 +265,18 @@ export async function montarPublicoWA(env, publico, telTeste) {
     docsAlvo = docsAlvo.filter((doc) => !recentes.has(doc));
   }
   const contatos = await contatosPorDocs(env, docsAlvo);
-  return contatos.map((c) => ({ tel: telWhatsApp(c.telefone), nome: limpar(c.nome), doc: String(c.documento || '').replace(/\D/g, '') })).filter((c) => c.tel);
+  // Uma mensagem por empresa: com vários contatos no mesmo CNPJ, o celular
+  // vence o fixo (fixo não recebe WhatsApp).
+  const porDoc = new Map(); const saida = [];
+  for (const c of contatos) {
+    const e = { tel: telWhatsApp(c.telefone), nome: limpar(c.nome), doc: String(c.documento || '').replace(/\D/g, '') };
+    if (!e.tel) continue;
+    if (!e.doc) { saida.push(e); continue; }
+    const p0 = porDoc.get(e.doc);
+    if (!p0) { porDoc.set(e.doc, e); saida.push(e); }
+    else if (ehFixoBR(p0.tel) && !ehFixoBR(e.tel)) p0.tel = e.tel;
+  }
+  return saida;
 }
 
 // Prévia: contagem + exemplos, já sem duplicados e sem opt-outs.
@@ -466,8 +504,14 @@ export async function metricasCampanhaWA(env, campanhaId) {
       // O motivo só existe se veio do webhook (prefixo "entrega falhou:");
       // o detalhe de ENVIO (aceite do Gupshup) não é motivo de falha.
       const det = String(x.detalhe || '');
-      const motivo = det.startsWith('entrega falhou') ? det.replace(/^entrega falhou:?\s*/, '') : '';
-      falhouLista.push({ nome: String(x.nome || ''), tel: String(x.tel || ''), motivoTexto: traduzirFalhaWA(motivo) });
+      const motivoBruto = det.startsWith('entrega falhou') ? det.replace(/^entrega falhou:?\s*/, '') : '';
+      const semInfo = !motivoBruto || /^canal não informou/.test(motivoBruto);
+      // Sem motivo gravado, o formato do número ainda explica muito: linha fixa
+      // não recebe WhatsApp (foi o caso de boa parte da Reativação de 17/08).
+      const motivoTexto = !semInfo ? traduzirFalhaWA(motivoBruto)
+        : (ehFixoBR(String(x.tel || '')) ? 'provável telefone FIXO — linha fixa não recebe WhatsApp (visto pelo formato do número)'
+          : (motivoBruto ? 'o canal não informou o motivo' : traduzirFalhaWA('')));
+      falhouLista.push({ nome: String(x.nome || ''), tel: String(x.tel || ''), motivoTexto });
     }
     if (Number(x.respondeu)) canal.responderam++;
   }
@@ -535,7 +579,7 @@ export function paginaListaPublicoWA(publico, itens, excluidas) {
     <td style="color:#8fa39f">${i + 1}</td>
     <td><b>${esc(c.nome || '—')}</b>${c.motivo ? `<span style="display:block;font-size:11px;color:#8fa39f;margin-top:2px">${esc(c.motivo)}</span>` : ''}</td>
     <td style="white-space:nowrap">${esc(fmtDocWA(c.doc))}</td>
-    <td style="white-space:nowrap">${esc(c.tel)}</td>
+    <td style="white-space:nowrap">${esc(c.tel)}${ehFixoBR(c.tel) ? '<span style="display:block;font-size:10px;color:#8A6A16;font-weight:700">☎️ provável fixo</span>' : ''}</td>
     ${c.pontos != null ? `<td style="text-align:center"><b>${c.pontos}</b></td>` : '<td style="text-align:center;color:#8fa39f">—</td>'}
     <td style="text-align:right">${c.doc ? `<button data-doc="${esc(c.doc)}" data-nome="${esc(c.nome || '')}" onclick="excluir(this)" style="background:none;border:1px solid #E8B9B2;color:#B23A2E;border-radius:8px;padding:4px 9px;font-size:11px;font-weight:800;cursor:pointer">✕ Tirar da lista</button>` : ''}</td>
   </tr>`).join('') || '<tr><td colspan="6" style="color:#8fa39f">Nenhuma empresa nesse público.</td></tr>';
@@ -555,7 +599,7 @@ td{padding:9px 10px;border-bottom:1px solid #EEF1F0;vertical-align:top}
 </div></div>
 <div style="max-width:940px;margin:0 auto;padding:20px 18px 56px">
   <h1 style="font-size:19px;margin:0 0 4px">📋 ${esc(rotulo)}</h1>
-  <p style="font-size:12.5px;color:#7c8a87;margin:0 0 6px"><b>${(itens || []).length}</b> empresa(s), já sem repetidos, sem quem pediu para sair, sem números que a Meta devolveu como "sem WhatsApp" e sem as removidas. Ao tirar uma, a próxima da fila entra no lugar.</p>
+  <p style="font-size:12.5px;color:#7c8a87;margin:0 0 6px"><b>${(itens || []).length}</b> empresa(s), já sem repetidos, sem quem pediu para sair, sem números que a Meta devolveu como "sem WhatsApp" e sem as removidas. Ao tirar uma, a próxima da fila entra no lugar. <b>☎️ provável fixo</b> = o cadastro só tem telefone de linha fixa (dificilmente recebe WhatsApp) — vale a equipe atualizar o contato dessa empresa.</p>
   ${String(publico).startsWith('top-') ? `<p style="font-size:11.5px;color:#9aa7a4;margin:0 0 14px">Critério da pontuação (aberto): negócio concluído ×3 · volume de negócios (até 20) · OS no sistema novo ×5 · atividade nos últimos 12 meses +10 (24 meses +5). Desempate por valor concluído. <b>Sem repetição entre listas:</b> empresa parada há ${MESES_REATIVACAO}+ meses pertence à lista de Reativação e fica fora daqui.</p>` : publico === 'reativacao-200' ? `<p style="font-size:11.5px;color:#9aa7a4;margin:0 0 14px">Critério (aberto): entra quem tem pelo menos 1 descarte CONCLUÍDO no histórico e NENHUMA atividade (negócio ou OS) nos últimos ${MESES_REATIVACAO} meses. Pontos: concluídas ×3 + volume (até 20), desempate por valor. Cada linha mostra desde quando a empresa está parada. <b>Sem repetição entre listas:</b> quem está aqui fica fora do Top ${TOP_N} — e, ao preparar a campanha, quem já recebeu o template escolhido em qualquer disparo anterior também fica de fora automaticamente.</p>` : '<div style="margin-bottom:14px"></div>'}
   <div style="background:#fff;border:1px solid #E4EBE9;border-radius:14px;overflow:auto;max-height:70vh">
   <table><thead><tr><th>#</th><th>Empresa</th><th>CNPJ/CPF</th><th>WhatsApp</th><th style="text-align:center">Pontos</th><th></th></tr></thead><tbody>${rows}</tbody></table>
