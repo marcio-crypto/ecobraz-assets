@@ -40,7 +40,7 @@ import { gerarPixCopiaECola, pixConfig, paginaPix } from './pix.js';
 import { paginaColetaExpressa } from './coleta-expressa.js';
 import { enviarSMS, smsConfigurado } from './sms.js';
 import { whatsappConfigurado, templateColeta, templateInfo, enviarWhatsAppTemplate, enviarWhatsAppDiag, listarTemplatesGupshup } from './whatsapp.js';
-import { paginaCampanhasWA, listarCampanhasWA, listarOptoutWA, previaPublicoWA, prepararCampanhaWA, enviarLoteWA, falhasDaCampanhaWA, mudarOptoutWA, listaDetalhadaPublicoWA, paginaListaPublicoWA, PUBLICOS_WA, mudarExclusaoEmpresaWA, listarExcluidasWA } from './whatsapp-campanha.js';
+import { paginaCampanhasWA, listarCampanhasWA, listarOptoutWA, previaPublicoWA, prepararCampanhaWA, enviarLoteWA, falhasDaCampanhaWA, mudarOptoutWA, listaDetalhadaPublicoWA, paginaListaPublicoWA, PUBLICOS_WA, mudarExclusaoEmpresaWA, listarExcluidasWA, chaveWebhookWA, processarWebhookWA, metricasCampanhaWA } from './whatsapp-campanha.js';
 import { paginaAcompanhar, paginaAcompanharErro } from './acompanhar.js';
 import { registrarFalha, receberErroCliente, listarFalhas } from './monitor.js';
 import { segmentoDoCliente, definirSegmento, SEGMENTOS, fluxoDeVendas, ultimosPedidos, paginaPagamentos } from './premium.js';
@@ -197,6 +197,15 @@ export default {
       }
       // Métrica da demonstração — SEM dados pessoais (só contadores por dia/evento). Beacon.
       if (pathname === '/demo/ev' && request.method === 'POST') return registrarEventoDemo(request, env);
+      // Retorno do Gupshup (entrega/leitura/respostas das campanhas de WhatsApp).
+      // Público, mas exige a chave derivada do cofre na URL; responde sempre 200
+      // rápido (senão o provedor fica reenviando).
+      if (pathname === '/api/wa/webhook' && request.method === 'POST') {
+        if (url.searchParams.get('k') !== await chaveWebhookWA(env)) return json({ ok: false }, 401);
+        let b; try { b = await request.json(); } catch { b = {}; }
+        try { await processarWebhookWA(env, b); } catch { /* nunca propaga */ }
+        return json({ ok: true });
+      }
       // Loja de carbono — 4 níveis × faixa de faturamento (anual). Preços aprovados (a refinar c/ Villanova).
       if (pathname === '/carbono/planos' && request.method === 'GET') return html(paginaLojaCarbono(url.searchParams.get('faixa') || ''));
       if (pathname === '/carbono/contato' && request.method === 'GET') return html(paginaCarbonoContato(nivelCarbono(url.searchParams.get('nivel') || ''), url.searchParams.get('faixa') || ''));
@@ -987,7 +996,14 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
       // sempre pelo canal oficial (template aprovado), com opt-out e envio em lotes.
       if (pathname === '/diretoria/whatsapp' && request.method === 'GET') {
         if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
-        return html(paginaCampanhasWA(diretoria, await listarCampanhasWA(env), await listarOptoutWA(env)));
+        const baseWa = String(env.PORTAL_BASE_URL || url.origin).replace(/\/+$/, '');
+        const urlWebhook = `${baseWa}/api/wa/webhook?k=${await chaveWebhookWA(env)}`;
+        return html(paginaCampanhasWA(diretoria, await listarCampanhasWA(env), await listarOptoutWA(env), urlWebhook));
+      }
+      if (pathname === '/api/diretoria/wa/metricas' && request.method === 'GET') {
+        if (!diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        const r = await metricasCampanhaWA(env, url.searchParams.get('id'));
+        return json(r, r.ok ? 200 : 404);
       }
       if (pathname === '/api/diretoria/wa/templates' && request.method === 'GET') {
         if (!diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);

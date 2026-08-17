@@ -17,15 +17,27 @@ import { listarColetasOS } from './coletas.js';
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const limpar = (s) => String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
 
+let migrouWa = false;
 async function db(env) {
   if (!env.DB_PLOOMES) return null;
   try {
     await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS wa_campanhas (id INTEGER PRIMARY KEY AUTOINCREMENT, titulo TEXT, template_nome TEXT, template_id TEXT, template_lang TEXT, params_json TEXT, publico TEXT, criado_por TEXT, criado_em TEXT, status TEXT, total INTEGER DEFAULT 0, enviados INTEGER DEFAULT 0, falhas INTEGER DEFAULT 0)').run();
-    await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS wa_destinatarios (id INTEGER PRIMARY KEY AUTOINCREMENT, campanha_id INTEGER, tel TEXT, nome TEXT, doc TEXT, status TEXT, detalhe TEXT, em TEXT)').run();
+    await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS wa_destinatarios (id INTEGER PRIMARY KEY AUTOINCREMENT, campanha_id INTEGER, tel TEXT, nome TEXT, doc TEXT, status TEXT, detalhe TEXT, em TEXT, msg_id TEXT DEFAULT \'\', entrega TEXT DEFAULT \'\', respondeu INTEGER DEFAULT 0)').run();
     await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS wa_optout (tel TEXT PRIMARY KEY, motivo TEXT, em TEXT)').run();
     await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS wa_excluidos (doc TEXT PRIMARY KEY, nome TEXT, por TEXT, em TEXT)').run();
-    return env.DB_PLOOMES;
   } catch { return null; }
+  // Medição (13/08): colunas novas nas tabelas que já existem em produção.
+  if (!migrouWa) {
+    for (const sql of [
+      'ALTER TABLE wa_destinatarios ADD COLUMN msg_id TEXT DEFAULT \'\'',
+      'ALTER TABLE wa_destinatarios ADD COLUMN entrega TEXT DEFAULT \'\'',
+      'ALTER TABLE wa_destinatarios ADD COLUMN respondeu INTEGER DEFAULT 0',
+    ]) {
+      try { await env.DB_PLOOMES.prepare(sql).run(); } catch { /* coluna já existe */ }
+    }
+    migrouWa = true;
+  }
+  return env.DB_PLOOMES;
 }
 
 export const TOP_N = 450;
@@ -231,13 +243,15 @@ export async function enviarLoteWA(env, campanhaId, tamanho = 15) {
     try { r = await enviarWhatsAppInfo(env, dest.tel, info, pDest); } catch { r = { ok: false, motivo: 'excecao' }; }
     const okEnvio = !!(r && r.ok);
     if (okEnvio) enviados++; else falhas++;
-    // No sucesso, guarda também o começo da resposta do Gupshup (tem o id da
-    // mensagem) — é a prova de aceite para rastrear entrega com o provedor.
+    // No sucesso, guarda também o começo da resposta do Gupshup e o ID da
+    // mensagem — é com ele que o retorno de entrega (webhook) casa depois.
     const tent = (r && r.tentativas) || [];
     const vencedora = tent.find((t) => t.ok) || {};
+    let msgId = '';
+    try { const j = JSON.parse(vencedora.corpo || '{}'); msgId = String(j.messageId || j.messageid || (j.message && j.message.id) || '').slice(0, 80); } catch { msgId = ''; }
     const detalheOk = `${r && r.vencedor ? r.vencedor : ''} · ${String(vencedora.corpo || '').slice(0, 120)}`;
-    await d.prepare('UPDATE wa_destinatarios SET status=?2, detalhe=?3, em=?4 WHERE id=?1')
-      .bind(dest.id, okEnvio ? 'enviado' : 'falha', okEnvio ? detalheOk.slice(0, 200) : String((r && (r.motivo || '')) + ' ' + ((r && r.detalhe) || '')).slice(0, 200), new Date().toISOString()).run();
+    await d.prepare('UPDATE wa_destinatarios SET status=?2, detalhe=?3, em=?4, msg_id=?5, entrega=?6 WHERE id=?1')
+      .bind(dest.id, okEnvio ? 'enviado' : 'falha', okEnvio ? detalheOk.slice(0, 200) : String((r && (r.motivo || '')) + ' ' + ((r && r.detalhe) || '')).slice(0, 200), new Date().toISOString(), msgId, okEnvio ? 'enviada' : '').run();
   }
   const resta = await d.prepare('SELECT COUNT(*) AS n FROM wa_destinatarios WHERE campanha_id=?1 AND status=\'pendente\'').bind(cid).first();
   const restantes = Number(resta && resta.n) || 0;
@@ -265,6 +279,117 @@ export async function mudarOptoutWA(env, tel, acao, motivo) {
 export async function listarOptoutWA(env) {
   const d = await db(env); if (!d) return [];
   try { const r = await d.prepare('SELECT tel, motivo, em FROM wa_optout ORDER BY em DESC LIMIT 200').all(); return r.results || []; } catch { return []; }
+}
+
+// --- MEDIÇÃO (pedido do Marcio 13/08) ---------------------------------------------
+// 1) RETORNO DO CANAL (webhook do Gupshup): entregue / lida / falhou + respostas.
+//    O Gupshup chama nossa URL a cada evento. Quem responder SAIR entra sozinho
+//    na lista de saída. A URL leva uma chave derivada do segredo do cofre.
+export async function chaveWebhookWA(env) {
+  const base = `${env.PORTAL_SESSION_SECRET || 'ecobraz'}|wa-webhook`;
+  const dig = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(base));
+  return [...new Uint8Array(dig)].map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 20);
+}
+const RANK_ENTREGA = { '': 0, 'enviada': 1, 'entregue': 2, 'lida': 3, 'falhou': 9 };
+export async function processarWebhookWA(env, corpo) {
+  const d = await db(env); if (!d) return { ok: false };
+  const b = corpo || {};
+  const tipo = String(b.type || '');
+  try {
+    if (tipo === 'message-event') {
+      const p = b.payload || {};
+      const evento = String(p.type || '').toLowerCase();
+      const mapa = { sent: 'enviada', enqueued: 'enviada', delivered: 'entregue', read: 'lida', failed: 'falhou' };
+      const novo = mapa[evento];
+      if (!novo) return { ok: true, ignorado: evento };
+      const mid = String(p.gsId || p.id || '').slice(0, 80);
+      const tel = String(p.destination || '').replace(/\D/g, '');
+      // Casa pelo id da mensagem; sem id, pelo telefone (último envio para ele).
+      let dest = mid ? await d.prepare('SELECT id, entrega FROM wa_destinatarios WHERE msg_id=?1 ORDER BY id DESC LIMIT 1').bind(mid).first() : null;
+      if (!dest && tel) dest = await d.prepare('SELECT id, entrega FROM wa_destinatarios WHERE tel=?1 AND status=\'enviado\' ORDER BY id DESC LIMIT 1').bind(tel).first();
+      if (!dest) return { ok: true, sem_destinatario: true };
+      // Nunca rebaixa (lida não volta para entregue); falha sempre registra.
+      const atual = RANK_ENTREGA[String(dest.entrega || '')] || 0;
+      if (novo !== 'falhou' && RANK_ENTREGA[novo] <= atual) return { ok: true };
+      await d.prepare('UPDATE wa_destinatarios SET entrega=?2 WHERE id=?1').bind(dest.id, novo).run();
+      return { ok: true, entrega: novo };
+    }
+    if (tipo === 'message') {
+      const p = b.payload || {};
+      const tel = String(p.source || (p.sender && p.sender.phone) || '').replace(/\D/g, '');
+      if (!tel) return { ok: true };
+      const texto = limpar((p.payload && (p.payload.text || p.payload.title)) || p.text || '').slice(0, 200);
+      const dest = await d.prepare('SELECT id FROM wa_destinatarios WHERE tel=?1 ORDER BY id DESC LIMIT 1').bind(tel).first();
+      if (dest) await d.prepare('UPDATE wa_destinatarios SET respondeu=1 WHERE id=?1').bind(dest.id).run();
+      // SAIR → entra sozinho na lista de saída (nunca mais recebe campanha).
+      if (/^\s*sair\s*[.!]?\s*$/i.test(texto)) {
+        try { await d.prepare('INSERT INTO wa_optout (tel, motivo, em) VALUES (?1,?2,?3)').bind(tel, 'respondeu SAIR no WhatsApp', new Date().toISOString()).run(); } catch { /* já está */ }
+        return { ok: true, optout: true };
+      }
+      return { ok: true, resposta: true };
+    }
+  } catch { /* webhook nunca devolve erro para o Gupshup ficar reenviando */ }
+  return { ok: true, ignorado: tipo || 'sem_tipo' };
+}
+
+// 2) CONVERSÃO DE VERDADE (sem depender de webhook): dos destinatários da
+//    campanha, quantos ENTRARAM NO PORTAL depois do disparo (medição de uso por
+//    CNPJ que já existe), quantos criaram SOLICITAÇÃO de coleta e quantos
+//    ganharam OS nova. Correlação honesta: entrou depois ≠ certeza de que foi
+//    por causa da mensagem — mas é o termômetro real de "está funcionando?".
+export async function metricasCampanhaWA(env, campanhaId) {
+  const d = await db(env); if (!d) return { ok: false, message: 'Banco indisponível.' };
+  const cid = Number(campanhaId) || 0;
+  const camp = await d.prepare('SELECT * FROM wa_campanhas WHERE id=?1').bind(cid).first();
+  if (!camp) return { ok: false, message: 'Campanha não encontrada.' };
+  const dataCorte = String(camp.criado_em || '').slice(0, 10);
+  const dest = await d.prepare('SELECT doc, tel, entrega, respondeu FROM wa_destinatarios WHERE campanha_id=?1 AND status=\'enviado\'').bind(cid).all();
+  const rows = dest.results || [];
+  const docs = new Set(rows.map((x) => String(x.doc || '').replace(/\D/g, '')).filter(Boolean));
+  const canal = { entregues: 0, lidas: 0, falharam: 0, responderam: 0, comRetorno: 0 };
+  for (const x of rows) {
+    const e = String(x.entrega || '');
+    if (e && e !== 'enviada') canal.comRetorno++;
+    if (e === 'entregue' || e === 'lida') canal.entregues++;
+    if (e === 'lida') canal.lidas++;
+    if (e === 'falhou') canal.falharam++;
+    if (Number(x.respondeu)) canal.responderam++;
+  }
+  let sairam = 0;
+  try {
+    const tels = new Set(rows.map((x) => x.tel));
+    sairam = (await listarOptoutWA(env)).filter((o) => tels.has(o.tel) && String(o.em || '') >= dataCorte).length;
+  } catch { sairam = 0; }
+  // Portal: dias de uso (uso:c:{dia}:{doc}) a partir do dia do disparo.
+  const portal = new Set();
+  try {
+    if (env.PORTAL_KV && docs.size) {
+      let cursor;
+      do {
+        const r = await env.PORTAL_KV.list({ prefix: 'uso:c:', cursor, limit: 1000 });
+        for (const k of (r.keys || [])) {
+          const m = k.name.match(/^uso:c:(\d{4}-\d{2}-\d{2}):(.+)$/);
+          if (m && m[1] >= dataCorte && docs.has(m[2])) portal.add(m[2]);
+        }
+        cursor = r.list_complete ? null : r.cursor;
+      } while (cursor);
+    }
+  } catch { /* segue com o que tiver */ }
+  // Solicitações (leads) e OS novas dos destinatários após o disparo.
+  let solicitacoes = 0, novasOS = 0;
+  try {
+    const { listarLeads } = await import('./cadastro.js');
+    solicitacoes = (await listarLeads(env)).filter((l) => l && String(l.criadoEm || '') >= dataCorte && docs.has(String(l.documento || '').replace(/\D/g, ''))).length;
+  } catch { solicitacoes = 0; }
+  try {
+    novasOS = (await listarColetasOS(env)).filter((c) => c && c.status !== 'cancelada' && String(c.criadoEm || '') >= dataCorte && docs.has(String(c.clienteDoc || '').replace(/\D/g, ''))).length;
+  } catch { novasOS = 0; }
+  return {
+    ok: true, titulo: camp.titulo, desde: dataCorte,
+    enviadas: Number(camp.enviados) || 0, falhasEnvio: Number(camp.falhas) || 0,
+    canal, sairam,
+    conversao: { portal: portal.size, solicitacoes, novasOS },
+  };
 }
 
 // Lista completa de um público, para conferência ANTES do disparo (transparência:
@@ -326,7 +451,7 @@ async function reincluir(btn){
 }
 
 // --- Página (Diretoria) -----------------------------------------------------------
-export function paginaCampanhasWA(user, campanhas, optouts) {
+export function paginaCampanhasWA(user, campanhas, optouts, urlWebhook) {
   const fmtDt = (iso) => { const d0 = new Date(iso); if (!iso || isNaN(d0.getTime())) return '—'; d0.setUTCHours(d0.getUTCHours() - 3); const p = (n) => String(n).padStart(2, '0'); return `${p(d0.getUTCDate())}/${p(d0.getUTCMonth() + 1)} ${p(d0.getUTCHours())}:${p(d0.getUTCMinutes())}`; };
   const rows = (campanhas || []).map((c) => {
     const pct = c.total ? Math.round(((c.enviados + c.falhas) / c.total) * 100) : 0;
@@ -337,11 +462,13 @@ export function paginaCampanhasWA(user, campanhas, optouts) {
         <div style="flex:none;display:flex;gap:8px;align-items:center">
           <span style="font-size:11px;font-weight:800;color:${c.status === 'concluida' ? '#1E5B31' : '#8A6A16'}">${c.enviados}/${c.total} enviados${c.falhas ? ` · <b style="color:#B23A2E">${c.falhas} falhas</b>` : ''}</span>
           ${c.status !== 'concluida' ? `<button class="btn btn-p" style="padding:8px 13px;font-size:12px" onclick="enviarTudo(${c.id},this)">▶ ${c.enviados + c.falhas ? 'Continuar envio' : 'Iniciar envio'}</button>` : '<span style="font-size:10.5px;font-weight:800;color:#1E5B31;background:#E4F3E6;border-radius:999px;padding:3px 9px">✓ CONCLUÍDA</span>'}
+          <button class="btn btn-g" style="padding:8px 11px;font-size:12px" onclick="verResultados(${c.id})">📈 Resultados</button>
           ${c.falhas ? `<button class="btn btn-g" style="padding:8px 11px;font-size:12px" onclick="verFalhas(${c.id})">falhas</button>` : ''}
         </div>
       </div>
       <div style="background:#EEF3F2;border-radius:99px;height:7px;margin-top:9px;overflow:hidden"><i style="display:block;height:100%;width:${pct}%;background:#92C430"></i></div>
       <div class="lote-msg" style="font-size:11.5px;color:#4F6469;margin-top:5px"></div>
+      <div class="resultados-box" style="display:none;margin-top:8px"></div>
       <div class="falhas-box" style="display:none;font-size:11.5px;color:#a05a52;margin-top:6px"></div>
     </div>`;
   }).join('') || '<div style="font-size:12.5px;color:#8fa39f">Nenhuma campanha ainda. Monte a primeira acima.</div>';
@@ -405,6 +532,13 @@ input,select,textarea{width:100%;border:1px solid #DDE1E6;border-radius:10px;pad
   <div class="card">
     <div class="sec">2 · Campanhas</div>
     ${rows}
+  </div>
+
+  <div class="card">
+    <div class="sec">📡 Medição de entrega e respostas (configurar 1 vez)</div>
+    <div style="font-size:12px;color:#4F6469;line-height:1.7">Para o sistema saber quem <b>recebeu</b>, quem <b>leu</b>, quem <b>respondeu</b> (e registrar o SAIR sozinho), o Gupshup precisa avisar o portal a cada evento. No painel do Gupshup → app ECOBRAZAPP → <b>Webhooks / Callback URL</b>, cole esta URL e marque os eventos de mensagem (sent, delivered, read, failed) e mensagens recebidas:</div>
+    ${urlWebhook ? `<div style="font-family:monospace;font-size:11.5px;background:#F7FAF9;border:1px dashed #cfe0dd;border-radius:10px;padding:10px 12px;margin-top:8px;word-break:break-all" onclick="navigator.clipboard&&navigator.clipboard.writeText(this.textContent)">${esc(urlWebhook)}</div>
+    <div style="font-size:10.5px;color:#9aa7a4;margin-top:4px">Toque na URL para copiar. Sem isso, o painel mostra só aceites e a conversão no portal (que já funciona sozinha).</div>` : ''}
   </div>
 
   <div class="card">
@@ -514,6 +648,23 @@ async function enviarTudo(id,btn){
     m.textContent='Enviados nesta sessão: '+total+(j.falhas?' · falhas no lote: '+j.falhas:'')+' · restantes: '+j.restantes;
     if(!j.restantes){m.textContent+=' — ✅ campanha concluída!';setTimeout(function(){location.reload();},1200);return;}
   }
+}
+async function verResultados(id){
+  var box=document.querySelector('[data-camp="'+id+'"] .resultados-box');
+  if(box.style.display==='block'){box.style.display='none';return;}
+  box.style.display='block';box.innerHTML='<span style="font-size:12px;color:#4F6469">Calculando…</span>';
+  try{var r=await fetch('/api/diretoria/wa/metricas?id='+id);var j=await r.json();
+    if(!j.ok){box.innerHTML='<span style="font-size:12px;color:#a06a62">'+(j.message||'Não deu.')+'</span>';return;}
+    var c=j.canal||{},v=j.conversao||{};
+    var tile=function(n,rot,cor){return '<div style="flex:1;min-width:90px;background:#F7FAF9;border:1px solid #E4EBE9;border-radius:10px;padding:9px;text-align:center"><b style="font-size:18px;color:'+(cor||'#00333B')+';display:block">'+n+'</b><span style="font-size:10px;color:#7c8a87;font-weight:700">'+rot+'</span></div>';};
+    var semRetorno=!c.comRetorno;
+    box.innerHTML=
+      '<div style="font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#7c8a87;margin-bottom:6px">Canal (WhatsApp)'+(semRetorno?' — <span style="color:#8A6A16">sem retorno ainda: configure o webhook abaixo</span>':'')+'</div>'
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap">'+tile(j.enviadas,'aceitas')+tile(c.entregues,'entregues','#0B5B66')+tile(c.lidas,'lidas','#1E5B31')+tile(c.responderam,'responderam','#1E5B31')+tile(c.falharam,'falhou entrega','#B23A2E')+tile(j.sairam,'pediram SAIR','#8A6A16')+'</div>'
+      +'<div style="font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#7c8a87;margin:10px 0 6px">Conversão no portal (desde '+j.desde.split('-').reverse().join('/')+')</div>'
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap">'+tile(v.portal,'entraram no portal','#0B5B66')+tile(v.solicitacoes,'pediram coleta','#1E5B31')+tile(v.novasOS,'viraram OS','#1E5B31')+'</div>'
+      +'<div style="font-size:10.5px;color:#9aa7a4;margin-top:6px">Honestidade da medição: "entrou no portal depois do disparo" é correlação (a pessoa pode ter entrado por outro motivo) — mas é o termômetro real de resultado. Entregas/leituras dependem do webhook configurado e do WhatsApp do cliente (recibo de leitura desligado não conta "lida").</div>';
+  }catch(e){box.innerHTML='<span style="font-size:12px;color:#a06a62">Sem conexão.</span>';}
 }
 async function verFalhas(id){
   var box=document.querySelector('[data-camp="'+id+'"] .falhas-box');
