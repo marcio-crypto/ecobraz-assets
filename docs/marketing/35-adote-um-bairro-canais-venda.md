@@ -243,6 +243,9 @@ os mutirões do Adote = presença em campanha global citada por imprensa +
 gancho anual de venda ("sua marca na campanha global de 14/10"). A associação
 plena ao WEEE Forum é para entidades de produtores — fora do perfil.
 **Adequação: ALTA via IEWD.**
+**Radar 17/08/2026:** o registro da edição 2026 (9ª, tema "Fast Tech" —
+eletrônicos pequenos/baratos) **está aberto** em weee-forum.org/iewd-register
+(⚠️ busca). Usar o prompt 15 do doc 38.
 
 ### I5. StEP / Sustainable Electronics Platform — step-initiative.org
 Plataforma multistakeholder global de e-waste (origem na universidade da ONU,
@@ -292,7 +295,8 @@ GM/MMA 1.250/2024), via Transferegov.
 
 - O ciclo 2026 **fechou em 30/07/2026** — não dá para este ano.
 - Em 08/07/2026 a Câmara aprovou o PL 1.361/2025 tornando o incentivo
-  permanente e elevando a dedução PJ de 1% para 4% (**sanção não confirmada**).
+  permanente e elevando a dedução PJ de 1% para 4% (**radar 17/08: ainda
+  aguarda o Senado — não sancionado**).
 - **Recomendação:** preparar um "Adote um Bairro — versão incentivada" para o
   ciclo 2027. Não substitui o produto atual (patrocínio direto, margem livre);
   cria uma segunda porta onde a empresa paga com imposto. Decisão do Marcio —
@@ -336,6 +340,31 @@ proposta antes de qualquer compromisso.
 | Data | Canal | Ação | Status | Observação |
 |---|---|---|---|---|
 |  |  |  |  |  |
+
+## 7-bis. Histórico do radar semanal (⚠️ tudo por busca, sem página aberta)
+
+**17/08/2026 (1ª execução):**
+- **Editais abertos com prazo:** Chamada EDP "SIM para Cuidar do Futuro 2026"
+  (Instituto EDP, até R$ 12 mi, via leis de incentivo — inclui a LIR;
+  inscrições até **31/08** no Prosas; provável exigência de projeto já
+  habilitado em lei de incentivo — a Ecobraz não tem hoje; confirmar
+  regulamento antes de investir tempo).
+- **Fluxo contínuo (avaliar com calma):** Klabin Transforma (banco de projetos
+  no Prosas); Edital Suzano chamada contínua (R$ 100 mil–1 mi, exige
+  contrapartida de 50% e territórios de influência — capital SP provavelmente
+  fora); Instituto Claro (patrocínio contínuo, mas só projetos já incentivados
+  ICMS/ISS — não serve no formato atual).
+- **Prazos confirmados:** Salone della CSR visitante grátis até **31/08**;
+  IEWD 2026 com registro **aberto** (ver I4); Eco Expo com página de
+  credenciamento de visitante no ar (gratuidade indicada, formulário ativo não
+  confirmado).
+- **Sem novidade:** Von Martius (edição 2026/27 não anunciada nos resultados —
+  seguir pelo e-mail do doc 37), Benchmarking (ciclo não confirmado), Pacto
+  Global (ONG segue sem contribuição), Melhores ONGs (2026 fechado, sem
+  calendário 2027). LIR: PL 1.361/2025 aguarda o Senado.
+- Fechados no 1º semestre (registro p/ ciclo 2027): Neoenergia (abr), Ambev
+  VOA (mai), Petrobras resíduos (jul), LIR/MMA (30/07), Bem Maior (17/08,
+  inelegível).
 
 ## 8. Balanço honesto deste dossiê
 
