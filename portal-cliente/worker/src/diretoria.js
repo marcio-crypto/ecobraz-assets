@@ -157,13 +157,16 @@ export function paginaPainelDiretoria(diretor, d, x) {
       const p2 = (n) => String(n).padStart(2, '0');
       const hora = Number.isNaN(dtA.getTime()) ? '' : ` · lido às ${p2(dtA.getUTCHours())}:${p2(dtA.getUTCMinutes())}`;
       const valor = (ws.moeda === 'USD' ? 'US$ ' : esc(ws.moeda) + ' ') + (Number(ws.saldo) || 0).toFixed(2).replace('.', ',');
+      const baseTxt = ws.estimado && ws.base
+        ? `Estimado: base de US$ ${Number(ws.base.valor).toFixed(2)} informada em ${esc(String(ws.base.em).slice(0, 10).split('-').reverse().join('/'))} − ${Number(ws.enviadas) || 0} msg × US$ ${Number(ws.base.custoMsg).toFixed(2)}. Atualize a base nas Campanhas ao recarregar.`
+        : `Crédito das campanhas e avisos de coleta — alerta abaixo de US$ 25, urgente abaixo de US$ 10${hora}. Recarga: painel do Gupshup.`;
       waSaldoHtml = `<a href="/diretoria/whatsapp" style="display:flex;justify-content:space-between;align-items:center;gap:12px;text-decoration:none;background:#062f36;border:1px solid #12525d;border-radius:14px;padding:14px 16px;margin-bottom:12px;color:#eaf5f3">
-    <div><div style="font-size:14px;font-weight:800">💬 Saldo do WhatsApp (Gupshup): ${valor}</div>
-    <div style="font-size:12px;color:#9FC6C1;margin-top:2px">Crédito das campanhas e avisos de coleta — alerta abaixo de US$ 25, urgente abaixo de US$ 10${hora}. Recarga: painel do Gupshup.</div></div>
+    <div><div style="font-size:14px;font-weight:800">💬 Saldo do WhatsApp${ws.estimado ? ' (estimado)' : ' (Gupshup)'}: ${valor}</div>
+    <div style="font-size:12px;color:#9FC6C1;margin-top:2px">${baseTxt}</div></div>
     <span style="flex:none;font-size:12px;font-weight:800;color:${farol.cor}">${farol.rotulo}</span>
   </a>`;
     } else if (ws.motivo !== 'nao_configurado') {
-      waSaldoHtml = `<div style="background:#062f36;border:1px solid #12525d;border-radius:14px;padding:12px 16px;margin-bottom:12px;color:#9FC6C1;font-size:12px">💬 Saldo do WhatsApp: não consegui ler no Gupshup agora — confira no painel deles. (Detalhe: ${esc((ws.tentativas || []).map((t) => `${t.via} HTTP ${t.status}`).join(' · ') || ws.motivo)})</div>`;
+      waSaldoHtml = `<a href="/diretoria/whatsapp" style="display:block;text-decoration:none;background:#062f36;border:1px solid #12525d;border-radius:14px;padding:12px 16px;margin-bottom:12px;color:#9FC6C1;font-size:12px">💬 Saldo do WhatsApp: a API desta conta não deixa ler a carteira. <b style="color:#FFD46B">Informe o saldo uma vez na tela de Campanhas</b> e o painel passa a mostrar o saldo estimado (desconta cada disparo sozinho). (Detalhe: ${esc((ws.tentativas || []).map((t) => `${t.via} HTTP ${t.status}`).join(' · ') || ws.motivo)})</a>`;
     }
   }
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Painel da Diretoria — Ecobraz</title></head>

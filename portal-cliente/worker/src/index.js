@@ -40,7 +40,7 @@ import { gerarPixCopiaECola, pixConfig, paginaPix } from './pix.js';
 import { paginaColetaExpressa } from './coleta-expressa.js';
 import { enviarSMS, smsConfigurado } from './sms.js';
 import { whatsappConfigurado, templateColeta, templateInfo, enviarWhatsAppTemplate, enviarWhatsAppDiag, listarTemplatesGupshup, saldoGupshup } from './whatsapp.js';
-import { paginaCampanhasWA, listarCampanhasWA, listarOptoutWA, previaPublicoWA, prepararCampanhaWA, enviarLoteWA, falhasDaCampanhaWA, mudarOptoutWA, listaDetalhadaPublicoWA, paginaListaPublicoWA, PUBLICOS_WA, mudarExclusaoEmpresaWA, listarExcluidasWA, chaveWebhookWA, processarWebhookWA, metricasCampanhaWA } from './whatsapp-campanha.js';
+import { paginaCampanhasWA, listarCampanhasWA, listarOptoutWA, previaPublicoWA, prepararCampanhaWA, enviarLoteWA, falhasDaCampanhaWA, mudarOptoutWA, listaDetalhadaPublicoWA, paginaListaPublicoWA, PUBLICOS_WA, mudarExclusaoEmpresaWA, listarExcluidasWA, chaveWebhookWA, processarWebhookWA, metricasCampanhaWA, salvarSaldoBaseWA, lerSaldoBaseWA, saldoEstimadoWA } from './whatsapp-campanha.js';
 import { paginaAcompanhar, paginaAcompanharErro } from './acompanhar.js';
 import { registrarFalha, receberErroCliente, listarFalhas } from './monitor.js';
 import { segmentoDoCliente, definirSegmento, SEGMENTOS, fluxoDeVendas, ultimosPedidos, paginaPagamentos } from './premium.js';
@@ -782,7 +782,15 @@ export default {
         // Fluxo de vendas e saldo do WhatsApp: SÓ no acesso do dono (marcio@ecobraz.org.br).
         if (String(diretoria.email || '').trim().toLowerCase() === 'marcio@ecobraz.org.br') {
           try { extras.vendas = await fluxoDeVendas(env); } catch { extras.vendas = null; }
-          try { extras.waSaldo = whatsappConfigurado(env) ? await saldoGupshup(env) : null; } catch { extras.waSaldo = null; }
+          try {
+            extras.waSaldo = whatsappConfigurado(env) ? await saldoGupshup(env) : null;
+            // Carteira não legível pela API (app de parceiro) → saldo ESTIMADO
+            // a partir da base informada na tela de Campanhas.
+            if (extras.waSaldo && !extras.waSaldo.ok) {
+              const est = await saldoEstimadoWA(env);
+              if (est) extras.waSaldo = est;
+            }
+          } catch { extras.waSaldo = null; }
         }
         return html(paginaPainelDiretoria(diretoria, dados, extras));
       }
@@ -999,7 +1007,13 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
         const baseWa = String(env.PORTAL_BASE_URL || url.origin).replace(/\/+$/, '');
         const urlWebhook = `${baseWa}/api/wa/webhook?k=${await chaveWebhookWA(env)}`;
-        return html(paginaCampanhasWA(diretoria, await listarCampanhasWA(env), await listarOptoutWA(env), urlWebhook));
+        return html(paginaCampanhasWA(diretoria, await listarCampanhasWA(env), await listarOptoutWA(env), urlWebhook, await lerSaldoBaseWA(env)));
+      }
+      if (pathname === '/api/diretoria/wa/saldo-base' && request.method === 'POST') {
+        if (!diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = {}; }
+        const r = await salvarSaldoBaseWA(env, b && b.valor, b && b.custoMsg, diretoria.email || '');
+        return json(r, r.ok ? 200 : 400);
       }
       if (pathname === '/api/diretoria/wa/metricas' && request.method === 'GET') {
         if (!diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);

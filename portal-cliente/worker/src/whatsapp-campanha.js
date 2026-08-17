@@ -450,8 +450,39 @@ async function reincluir(btn){
 </script></body></html>`;
 }
 
+// --- SALDO ESTIMADO (plano B quando a carteira do Gupshup não é legível pela API) --
+// O Marcio informa o saldo que vê no painel do Gupshup UMA vez; daí em diante o
+// sistema desconta o custo estimado de cada mensagem DISPARADA POR AQUI. Estimativa
+// declarada como estimativa — avisos transacionais de coleta não entram na conta.
+export async function salvarSaldoBaseWA(env, valor, custoMsg, por) {
+  const v = Number(String(valor).replace(',', '.'));
+  if (!Number.isFinite(v) || v < 0) return { ok: false, message: 'Informe o saldo em dólares como aparece no painel do Gupshup (ex.: 42.50).' };
+  let c = Number(String(custoMsg == null || custoMsg === '' ? '0.07' : custoMsg).replace(',', '.'));
+  if (!Number.isFinite(c) || c <= 0 || c > 5) c = 0.07;
+  const base = { valor: Math.round(v * 100) / 100, custoMsg: Math.round(c * 10000) / 10000, em: new Date().toISOString(), por: String(por || '').slice(0, 160) };
+  if (!env.PORTAL_KV) return { ok: false, message: 'Armazenamento indisponível.' };
+  await env.PORTAL_KV.put('wa:saldo-base', JSON.stringify(base));
+  return { ok: true, base };
+}
+export async function lerSaldoBaseWA(env) {
+  try { if (env.PORTAL_KV) { const raw = await env.PORTAL_KV.get('wa:saldo-base'); if (raw) return JSON.parse(raw); } } catch { /* sem base */ }
+  return null;
+}
+export async function saldoEstimadoWA(env) {
+  const base = await lerSaldoBaseWA(env);
+  if (!base) return null;
+  const d = await db(env); if (!d) return null;
+  let enviadas = 0;
+  try {
+    const r = await d.prepare('SELECT COUNT(*) AS n FROM wa_destinatarios WHERE status=\'enviado\' AND em >= ?1').bind(String(base.em)).first();
+    enviadas = Number(r && r.n) || 0;
+  } catch { enviadas = 0; }
+  const estimado = Math.round((base.valor - enviadas * base.custoMsg) * 100) / 100;
+  return { ok: true, saldo: estimado, moeda: 'USD', em: new Date().toISOString(), estimado: true, base, enviadas };
+}
+
 // --- Página (Diretoria) -----------------------------------------------------------
-export function paginaCampanhasWA(user, campanhas, optouts, urlWebhook) {
+export function paginaCampanhasWA(user, campanhas, optouts, urlWebhook, saldoBase) {
   const fmtDt = (iso) => { const d0 = new Date(iso); if (!iso || isNaN(d0.getTime())) return '—'; d0.setUTCHours(d0.getUTCHours() - 3); const p = (n) => String(n).padStart(2, '0'); return `${p(d0.getUTCDate())}/${p(d0.getUTCMonth() + 1)} ${p(d0.getUTCHours())}:${p(d0.getUTCMinutes())}`; };
   const rows = (campanhas || []).map((c) => {
     const pct = c.total ? Math.round(((c.enviados + c.falhas) / c.total) * 100) : 0;
@@ -532,6 +563,19 @@ input,select,textarea{width:100%;border:1px solid #DDE1E6;border-radius:10px;pad
   <div class="card">
     <div class="sec">2 · Campanhas</div>
     ${rows}
+  </div>
+
+  <div class="card">
+    <div class="sec">💰 Saldo para o painel do Marcio</div>
+    <div style="font-size:12px;color:#4F6469;line-height:1.7">A API do Gupshup desta conta não deixa ler a carteira (app gerido pelo parceiro). Plano B: informe aqui o saldo que aparece no <b>painel do Gupshup</b> — o sistema desconta sozinho o custo estimado de cada mensagem disparada por aqui e mostra o <b>saldo estimado</b> no painel da Diretoria. Atualize este valor sempre que recarregar ou conferir no Gupshup.</div>
+    ${saldoBase ? `<div style="font-size:12px;color:#1E7A3D;font-weight:700;margin-top:8px">Base atual: US$ ${Number(saldoBase.valor).toFixed(2)} informada em ${esc(String(saldoBase.em).slice(0, 10).split('-').reverse().join('/'))} · custo por mensagem US$ ${Number(saldoBase.custoMsg).toFixed(4)}</div>` : ''}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:10px">
+      <div style="flex:1;min-width:140px"><label>Saldo no Gupshup (US$)</label><input id="sb-valor" inputmode="decimal" placeholder="ex.: 42.50"></div>
+      <div style="flex:1;min-width:140px"><label>Custo por mensagem (US$)</label><input id="sb-custo" inputmode="decimal" value="${saldoBase ? Number(saldoBase.custoMsg).toFixed(4) : '0.07'}"></div>
+      <button class="btn btn-d" style="flex:none" onclick="salvarSaldoBase()">Salvar</button>
+      <span id="sb-msg" style="font-size:12px;color:#4F6469"></span>
+    </div>
+    <div style="font-size:10.5px;color:#9aa7a4;margin-top:6px">O custo real por mensagem de marketing aparece na fatura do Gupshup — ajuste o valor acima quando souber o exato. A estimativa considera só os disparos feitos por esta tela.</div>
   </div>
 
   <div class="card">
@@ -673,6 +717,13 @@ async function verFalhas(id){
   try{var r=await fetch('/api/diretoria/wa/falhas?id='+id);var j=await r.json();
     box.innerHTML=(j.falhas||[]).map(function(f){return '• '+(f.nome||f.tel)+' — '+(f.detalhe||'sem detalhe');}).join('<br>')||'Nenhuma falha registrada.';}
   catch(e){box.textContent='Não consegui carregar.';}
+}
+async function salvarSaldoBase(){
+  var m=el('sb-msg');m.style.color='#4F6469';m.textContent='Salvando…';
+  try{var r=await fetch('/api/diretoria/wa/saldo-base',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({valor:el('sb-valor').value,custoMsg:el('sb-custo').value})});
+    var j=await r.json(); if(j.ok){m.style.color='#1E7A3D';m.textContent='✓ Salvo! O painel da Diretoria já mostra o saldo estimado.';setTimeout(function(){location.reload();},900);}
+    else{m.style.color='#a06a62';m.textContent=j.message||'Não deu.';}}
+  catch(e){m.style.color='#a06a62';m.textContent='Sem conexão.';}
 }
 async function optout(tel,acao){
   try{var r=await fetch('/api/diretoria/wa/optout',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({tel:tel,acao:acao})});

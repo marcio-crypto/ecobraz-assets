@@ -203,11 +203,13 @@ export async function saldoGupshup(env, { forcar } = {}) {
   const tentativas = [];
   const semChave = (t) => String(t || '').split(key).join('▮▮▮').slice(0, 160);
   for (const c of [
-    { via: 'self-serve v2', url: 'https://api.gupshup.io/sm/api/v2/wallet/balance' },
-    { via: 'self-serve v1', url: 'https://api.gupshup.io/sm/api/v1/wallet/balance' },
+    { via: 'self-serve v2', url: 'https://api.gupshup.io/sm/api/v2/wallet/balance', headers: { apikey: key, accept: 'application/json' } },
+    { via: 'self-serve v1', url: 'https://api.gupshup.io/sm/api/v1/wallet/balance', headers: { apikey: key, accept: 'application/json' } },
+    // App gerido por parceiro (ISV): a carteira pode morar no nível do parceiro.
+    { via: 'partner wallet', url: `https://partner.gupshup.io/partner/app/${encodeURIComponent(appIdDe(env))}/wallet/balance`, headers: { token: key, accept: 'application/json' } },
   ]) {
     try {
-      const r = await fetch(c.url, { headers: { apikey: key, accept: 'application/json' }, signal: AbortSignal.timeout(6000) });
+      const r = await fetch(c.url, { headers: c.headers, signal: AbortSignal.timeout(6000) });
       const txt = await r.text();
       if (r.ok) {
         let j = null; try { j = JSON.parse(txt); } catch { j = null; }
