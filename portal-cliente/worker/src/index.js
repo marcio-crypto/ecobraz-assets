@@ -43,7 +43,7 @@ import { whatsappConfigurado, templateColeta, templateInfo, enviarWhatsAppTempla
 import { paginaCampanhasWA, listarCampanhasWA, listarOptoutWA, previaPublicoWA, prepararCampanhaWA, enviarLoteWA, falhasDaCampanhaWA, mudarOptoutWA, listaDetalhadaPublicoWA, paginaListaPublicoWA, PUBLICOS_WA, mudarExclusaoEmpresaWA, listarExcluidasWA, chaveWebhookWA, processarWebhookWA, metricasCampanhaWA, salvarSaldoBaseWA, lerSaldoBaseWA, saldoEstimadoWA } from './whatsapp-campanha.js';
 import { paginaAcompanhar, paginaAcompanharErro } from './acompanhar.js';
 import { registrarFalha, receberErroCliente, listarFalhas } from './monitor.js';
-import { segmentoDoCliente, definirSegmento, SEGMENTOS, fluxoDeVendas, ultimosPedidos, paginaPagamentos } from './premium.js';
+import { segmentoDoCliente, definirSegmento, SEGMENTOS, fluxoDeVendas, ultimosPedidos, paginaPagamentos, avisoResgatePendentes } from './premium.js';
 import { MANUAL_CLIENTE_PDF_B64 } from './manual-pdf.js';
 import { MANUAL_COMERCIAL_B64, MANUAL_MOTORISTA_B64, MANUAL_DOCA_B64, MANUAL_ENGENHARIA_B64 } from './manuais-pdf.js';
 import { sondaMTR, consultarMtrSigor, baixarPdfManifesto } from './mtr.js';
@@ -103,10 +103,14 @@ function garantirAcessosFixos(env) {
 }
 
 export default {
-  // Cron diário (wrangler.toml [triggers]) — alertas de vencimento dos Documentos da Empresa.
+  // Cron diário (wrangler.toml [triggers]) — alertas de vencimento dos Documentos
+  // da Empresa + resgate de vendas (cobrança gerada e não paga em 7 dias → e-mail
+  // para a equipe comercial tentar reverter; um aviso por pedido).
   async scheduled(event, env, ctx) {
     try { const r = await alertasEmpresaDocs(env); console.log('cron_empdocs', r); }
     catch (error) { console.error('cron_empdocs_erro', safeError(error)); }
+    try { const r = await avisoResgatePendentes(env); console.log('cron_resgate', r); }
+    catch (error) { console.error('cron_resgate_erro', safeError(error)); }
   },
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -230,7 +234,7 @@ export default {
         if (!preco || preco.sobConsulta) return new Response(null, { status: 302, headers: { Location: `/carbono/contato?nivel=${encodeURIComponent(nv.id)}&faixa=${encodeURIComponent(fx)}`, 'cache-control': 'no-store' } });
         const pedidoId = novoId();
         const baseUrl = env.PORTAL_BASE_URL || url.origin;
-        if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${pedidoId}`, JSON.stringify({ produto: 'carbono', status: 'pendente', nivel: nv.id, faixa: fx, valor: preco.valor, criadoEm: nowS() }), { expirationTtl: 7 * 86400 });
+        if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${pedidoId}`, JSON.stringify({ produto: 'carbono', status: 'pendente', nivel: nv.id, faixa: fx, valor: preco.valor, criadoEm: nowS() }), { expirationTtl: 35 * 86400 });
         try {
           const s = await criarCheckoutStripe({ valor: preco.valor, descricao: `Inventário de carbono — nível ${nv.nome} (anual)`, externalReference: pedidoId, baseUrl, backPath: '/pagamento/ok', metodos: ['card', 'boleto'] }, env);
           return new Response(null, { status: 302, headers: { Location: s.url, 'cache-control': 'no-store' } });
@@ -334,7 +338,7 @@ export default {
         const valor = preco.valor;
         const ref = novoId();
         const baseUrl = env.PORTAL_BASE_URL || url.origin;
-        if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${ref}`, JSON.stringify({ produto: 'adote', status: 'pendente', clienteId: cliente.id, clienteNome: razaoSocial, doc: cnpj, pacoteId: pac.id, faixa, tipo: 'avulso', valor, kg: pac.kg, coletas: pac.coletas, email, criadoEm: nowS() }), { expirationTtl: 7 * 86400 });
+        if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${ref}`, JSON.stringify({ produto: 'adote', status: 'pendente', clienteId: cliente.id, clienteNome: razaoSocial, doc: cnpj, pacoteId: pac.id, faixa, tipo: 'avulso', valor, kg: pac.kg, coletas: pac.coletas, email, criadoEm: nowS() }), { expirationTtl: 35 * 86400 });
         try {
           const s = await criarCheckoutStripe({ valor, descricao: `Adote um Bairro — módulo ${pac.ton}t (${pac.coletas} coletas patrocinadas)`, externalReference: ref, baseUrl, backPath: '/pagamento/ok', clienteEmail: email, metodos: ['card', 'boleto'] }, env);
           return json({ ok: true, pedido: ref, init_point: s.url });
@@ -528,7 +532,7 @@ export default {
         if (!preco || preco.sobConsulta) return new Response(null, { status: 302, headers: { Location: `/esg/contato?rel=${encodeURIComponent(rel.id)}&faixa=${encodeURIComponent(fx)}`, 'cache-control': 'no-store' } });
         const pedidoId = novoId();
         const baseUrl = env.PORTAL_BASE_URL || url.origin;
-        if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${pedidoId}`, JSON.stringify({ produto: 'esg', status: 'pendente', relatorio: rel.id, faixa: fx, valor: preco.valor, criadoEm: nowS() }), { expirationTtl: 7 * 86400 });
+        if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${pedidoId}`, JSON.stringify({ produto: 'esg', status: 'pendente', relatorio: rel.id, faixa: fx, valor: preco.valor, criadoEm: nowS() }), { expirationTtl: 35 * 86400 });
         try {
           const s = await criarCheckoutStripe({ valor: preco.valor, descricao: `Relatório de ESG — ${rel.nome} (anual)`, externalReference: pedidoId, baseUrl, backPath: '/pagamento/ok', metodos: ['card', 'boleto'] }, env);
           return new Response(null, { status: 302, headers: { Location: s.url, 'cache-control': 'no-store' } });
@@ -4199,7 +4203,7 @@ async function verificarRecargaAdote(env, clienteId, baseUrl) {
   const valor = precoPacote(pac, cred.faixa);
   const ref = novoId();
   const base = String(baseUrl || '').replace(/\/+$/, '');
-  await env.PORTAL_KV.put(`pedido:${ref}`, JSON.stringify({ produto: 'adote', evento: 'recarga', status: 'pendente', clienteId, clienteNome: cred.clienteNome, doc: cred.doc || '', pacoteId: pac.id, faixa: cred.faixa || '', tipo: 'recorrente', valor, kg: pac.kg, email, criadoEm: nowS() }), { expirationTtl: 14 * 86400 });
+  await env.PORTAL_KV.put(`pedido:${ref}`, JSON.stringify({ produto: 'adote', evento: 'recarga', status: 'pendente', clienteId, clienteNome: cred.clienteNome, doc: cred.doc || '', pacoteId: pac.id, faixa: cred.faixa || '', tipo: 'recorrente', valor, kg: pac.kg, email, criadoEm: nowS() }), { expirationTtl: 35 * 86400 });
   const s = await criarCheckoutStripe({ valor, descricao: `Adote um Bairro — renovação ${pac.ton}t (recorrente)`, externalReference: ref, baseUrl: base, backPath: '/pagamento/ok', clienteEmail: email, metodos: ['card', 'boleto'] }, env);
   cred.recargaPendente = { ref, em: nowS() };
   await salvarCredito(env, cred);

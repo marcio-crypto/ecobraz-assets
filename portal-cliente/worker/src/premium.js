@@ -135,12 +135,25 @@ export async function ultimosPedidos(env, limite = 40) {
   } catch { return out; }
   const alvo = keys.slice(0, 300);
   if (keys.length > 300) out.truncado = true;
+  // Marcadores do resgate (aviso à equipe já enviado): ref → data do aviso.
+  const resgates = new Map();
+  try {
+    let cursor, guard = 0;
+    do {
+      const r = await env.PORTAL_KV.list({ prefix: 'resgate:avisado:', cursor, limit: 1000 });
+      for (const k of (r.keys || [])) resgates.set(k.name.slice('resgate:avisado:'.length), '');
+      cursor = r.list_complete ? null : r.cursor;
+    } while (cursor && ++guard < 5);
+  } catch { /* segue sem os marcadores */ }
   for (const k of alvo) {
     let ped; try { ped = JSON.parse((await env.PORTAL_KV.get(k.name)) || '{}'); } catch { continue; }
     out.lidos++;
     const quem = descreverPedido(ped);
+    const ref = k.name.replace(/^pedido:/, '');
+    let resgateEm = '';
+    if (resgates.has(ref)) { try { resgateEm = (await env.PORTAL_KV.get(`resgate:avisado:${ref}`)) || '1'; } catch { resgateEm = '1'; } }
     out.itens.push({
-      ref: k.name.replace(/^pedido:/, ''),
+      ref,
       produto: ped.produto || 'outro',
       gateway: ped.gateway || (ped.pixId ? 'mercadopago' : (ped.sessionId ? 'stripe' : '—')),
       valor: Number(ped.valor) || 0,
@@ -148,6 +161,7 @@ export async function ultimosPedidos(env, limite = 40) {
       criadoEm: ped.criadoEm || 0,
       pagoEm: ped.pagoEm || 0,
       cliente: quem.cliente, sobre: quem.sobre, link: quem.link,
+      resgateEm,
     });
   }
   out.itens.sort((a, b) => (Number(b.criadoEm) || 0) - (Number(a.criadoEm) || 0));
@@ -157,6 +171,60 @@ export async function ultimosPedidos(env, limite = 40) {
   out.naoPagosMes = out.itens.filter((p) => p.produto !== 'teste' && p.status !== 'pago' && dataPedido(p.criadoEm).slice(0, 7) === mesAtual);
   out.naoPagosMesValor = Math.round(out.naoPagosMes.reduce((s, p) => s + (Number(p.valor) || 0), 0) * 100) / 100;
   out.itens = out.itens.slice(0, limite);
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// RESGATE DE VENDAS (pedido do Marcio 17/08): cliente gerou a cobrança e NÃO
+// pagou em 7 dias → a equipe comercial (Débora) recebe UM e-mail por pedido
+// para tentar reverter. Roda no cron diário das 08:00 (Brasília). O marcador
+// resgate:avisado:{ref} garante que nunca repete. Best-effort: nunca derruba o cron.
+export const RESGATE_DIAS = 7;
+export async function avisoResgatePendentes(env) {
+  const out = { ok: false, elegiveis: 0, avisados: 0, motivo: '' };
+  if (!env.PORTAL_KV) { out.motivo = 'sem_kv'; return out; }
+  if (!env.RESEND_API_KEY) { out.motivo = 'sem_chave_email'; return out; }
+  const ped = await ultimosPedidos(env, 300);
+  const corte = new Date(Date.now() - 3 * 3600e3 - RESGATE_DIAS * 86400e3).toISOString().slice(0, 10);
+  const alvo = (ped.itens || []).filter((p) => p.produto !== 'teste' && p.status !== 'pago' && p.status !== 'cancelada'
+    && !p.resgateEm && dataPedido(p.criadoEm) && dataPedido(p.criadoEm) <= corte);
+  out.elegiveis = alvo.length;
+  if (!alvo.length) { out.ok = true; return out; }
+  // Destinatário: mesma regra do aviso de OS paga — a Débora, sobrescrevível por env.
+  const listaEnv = env.COBRANCA_NOTIFY_EMAILS
+    ? String(env.COBRANCA_NOTIFY_EMAILS).split(/[,;]+/).map((s) => s.split('|')[0].trim().toLowerCase()).filter(Boolean)
+    : ['debora.villanova@ecobraz.org.br'];
+  const dest = [...new Set(listaEnv)].filter((x) => /^\S+@\S+\.\S+$/.test(x)).slice(0, 25);
+  if (!dest.length) { out.motivo = 'sem_destinatario'; return out; }
+  const e = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const brl = (n) => 'R$ ' + Number(n || 0).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  const fmtD = (v) => { const d = dataPedido(v); return d ? d.split('-').reverse().join('/') : '—'; };
+  const total = alvo.reduce((s, p) => s + (Number(p.valor) || 0), 0);
+  const linhas = alvo.map((p) => `<div style="border:1px solid #F0E4C8;background:#FDFAF1;border-radius:10px;padding:11px 13px;margin-bottom:8px">
+      <b style="font-size:15px">${brl(p.valor)}</b> · <b>${e(ROTULO_PRODUTO[p.produto] || p.produto)}</b>${p.sobre ? ' — ' + e(p.sobre) : ''}
+      <span style="display:block;font-size:12.5px;color:#5b716e;margin-top:3px">👤 ${p.cliente ? e(p.cliente) : '<i>cliente não identificado no pedido</i>'} · gerado em ${e(fmtD(p.criadoEm))}</span>
+      ${p.link ? `<a href="https://sistema.ecobraz.org${e(p.link)}" style="font-size:12px;color:#0B5B66;font-weight:700">Abrir a OS →</a>` : ''}
+    </div>`).join('');
+  const linhasTexto = alvo.map((p) => `- ${brl(p.valor)} · ${ROTULO_PRODUTO[p.produto] || p.produto}${p.sobre ? ' — ' + p.sobre : ''} · ${p.cliente || 'cliente não identificado'} · gerado em ${fmtD(p.criadoEm)}`).join('\n');
+  const assunto = `⏰ ${alvo.length} cobrança(s) sem pagamento há ${RESGATE_DIAS}+ dias — vale retomar o contato`;
+  const html = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;color:#10262B">
+    <div style="background:#00333B;border-radius:14px 14px 0 0;padding:18px 22px"><span style="color:#fff;font-size:18px;font-weight:800">ecobraz</span><span style="color:#FFD46B;font-size:10px;font-weight:800;letter-spacing:.14em;margin-left:8px">RESGATE DE VENDAS</span></div>
+    <div style="border:1px solid #E4EBE9;border-top:none;border-radius:0 0 14px 14px;padding:22px">
+      <p style="font-size:14px;line-height:1.6;margin:0 0 14px">Estes clientes <b>geraram a cobrança e não pagaram em ${RESGATE_DIAS} dias</b> — a intenção de compra existiu. Um contato agora pode reverter <b>${brl(total)}</b>:</p>
+      ${linhas}
+      <a href="https://sistema.ecobraz.org/diretoria/pagamentos" style="display:block;background:#92C430;color:#10262B;text-decoration:none;border-radius:10px;padding:13px;text-align:center;font-weight:800;font-size:14px;margin:14px 0 6px">Ver todos os pedidos →</a>
+      <p style="font-size:11px;color:#9aa7a4;margin:10px 0 0;line-height:1.5">Aviso automático do sistema (um por pedido, no dia em que completa ${RESGATE_DIAS} dias sem pagamento).</p>
+    </div></div>`;
+  const texto = `Cobranças geradas e não pagas há ${RESGATE_DIAS}+ dias (total ${brl(total)}):\n\n${linhasTexto}\n\nVer todos: https://sistema.ecobraz.org/diretoria/pagamentos\n\nAviso automático — um por pedido.`;
+  const payload = { from: env.RESEND_FROM || 'Portal Ecobraz <acesso@ecobraz.org.br>', to: dest, subject: assunto, html, text: texto };
+  if (env.RESEND_REPLY_TO) payload.reply_to = env.RESEND_REPLY_TO;
+  const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${env.RESEND_API_KEY}` }, body: JSON.stringify(payload) });
+  if (!r.ok) { out.motivo = 'resend_' + r.status; return out; }
+  const hoje = new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10);
+  for (const p of alvo) {
+    try { await env.PORTAL_KV.put(`resgate:avisado:${p.ref}`, hoje, { expirationTtl: 120 * 86400 }); } catch { /* segue */ }
+  }
+  out.ok = true; out.avisados = alvo.length; out.para = dest.length;
   return out;
 }
 
@@ -176,6 +244,7 @@ export function paginaPagamentos(dados) {
       <div style="font-size:13px;color:#173A38;margin-top:5px"><b>${e(ROTULO_PRODUTO[p.produto] || p.produto)}</b>${p.sobre ? ' — ' + e(p.sobre) : ''}</div>
       <div style="font-size:12.5px;color:#5b716e;margin-top:3px">👤 ${p.cliente ? e(p.cliente) : '<i>cliente não identificado no pedido</i>'}</div>
       <div style="font-size:11.5px;color:#8fa39f;margin-top:5px">gerado em ${fmt(p.criadoEm)} · forma: ${e(p.gateway)} · ref <code style="font-size:10px">${e(String(p.ref).slice(0, 26))}</code>${p.link ? ` · <a href="${e(p.link)}" style="color:#0B5B66;font-weight:700">abrir a OS →</a>` : ''}</div>
+      ${p.resgateEm ? `<div style="font-size:11.5px;color:#0B5B66;font-weight:700;margin-top:4px">📣 Equipe avisada${/^\d{4}-\d{2}-\d{2}$/.test(p.resgateEm) ? ' em ' + e(p.resgateEm.split('-').reverse().join('/')) : ''} para tentar reverter</div>` : ''}
     </div>`).join('');
   const npTotal = Number(dados.naoPagosMesValor) || 0;
   const linhas = (dados.itens || []).map((p) => {
@@ -202,7 +271,7 @@ export function paginaPagamentos(dados) {
     <h1 style="color:#8a6a16">⚠️ Gerados e NÃO pagos neste mês</h1>
     <p class="sub">As vendas que ainda não se concretizaram: <b>${np.length} pedido(s) · ${brl(npTotal)}</b> — o mesmo número do cartão da Diretoria.</p>
     ${npHtml}
-    <div class="obs">O que significa "aguardando pagamento": o cliente <b>gerou a cobrança</b> (cartão, Pix ou link) e o pagamento <b>ainda não foi confirmado</b>. Vale um contato do comercial com esses clientes — a intenção de compra existiu. Pedidos pendentes <b>expiram sozinhos</b> do registro depois de um tempo (de 7 a 90 dias, conforme o produto); por isso a lista e o cartão cobrem o mês corrente.</div>
+    <div class="obs">O que significa "aguardando pagamento": o cliente <b>gerou a cobrança</b> (cartão, Pix ou link) e o pagamento <b>ainda não foi confirmado</b>. ⏰ <b>Automático:</b> quando um pedido completa ${RESGATE_DIAS} dias sem pagamento, a equipe comercial recebe <b>um</b> e-mail (no cron das 08:00) para tentar reverter — aqui aparece "📣 Equipe avisada". Pedidos pendentes <b>expiram sozinhos</b> do registro depois de um tempo; por isso a lista e o cartão cobrem o mês corrente.</div>
   </div>` : ''}
   <div class="card">
     <h1>Todos os pagamentos registrados</h1>
