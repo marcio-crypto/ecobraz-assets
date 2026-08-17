@@ -239,14 +239,20 @@ async function contatosPorDocs(env, docs) {
   return out;
 }
 
+// Tamanho-alvo dos públicos RANQUEADOS. Ao preparar a campanha, quem já recebeu
+// o template sai e a PRÓXIMA empresa da fila entra — a campanha tenta completar
+// todas as vagas (regra do Marcio 17/08: "lista de 200 sem repetir quem já recebeu").
+const ALVO_PUBLICO = { 'top-450': TOP_N, 'top-200': TOP_N, 'reativacao-200': 200 };
+
 // Monta o público (antes de dedupe/supressão). Devolve [{tel, nome, doc}].
-export async function montarPublicoWA(env, publico, telTeste) {
+// nMaior: pede uma fila maior que o alvo (usado na preparação, para repor vagas).
+export async function montarPublicoWA(env, publico, telTeste, nMaior) {
   if (publico === 'teste') {
     const t = telWhatsApp(telTeste);
     return t ? [{ tel: t, nome: 'Teste', doc: '' }] : [];
   }
-  if (publico === 'top-450' || publico === 'top-200') return publicoTop200(env, TOP_N);
-  if (publico === 'reativacao-200') return publicoReativacao(env, 200);
+  if (publico === 'top-450' || publico === 'top-200') return publicoTop200(env, nMaior || TOP_N);
+  if (publico === 'reativacao-200') return publicoReativacao(env, nMaior || 200);
   if (publico === 'base-pj') {
     const d = await db(env); if (!d) return [];
     try {
@@ -280,8 +286,10 @@ export async function montarPublicoWA(env, publico, telTeste) {
 }
 
 // Prévia: contagem + exemplos, já sem duplicados e sem opt-outs.
-export async function previaPublicoWA(env, publico, telTeste) {
-  const brutos = await montarPublicoWA(env, publico, telTeste);
+// nMaior (só na preparação): busca uma fila maior e devolve a lista sem o corte
+// de 500 — o corte final é feito depois da trava, para repor as vagas.
+export async function previaPublicoWA(env, publico, telTeste, nMaior) {
+  const brutos = await montarPublicoWA(env, publico, telTeste, nMaior);
   const d = await db(env);
   let optouts = new Set();
   try { if (d) { const r = await d.prepare('SELECT tel FROM wa_optout').all(); optouts = new Set((r.results || []).map((x) => x.tel)); } } catch { /* segue */ }
@@ -298,8 +306,9 @@ export async function previaPublicoWA(env, publico, telTeste) {
     if (telsSemZap.has(c.tel)) { semZap++; continue; }
     vistos.add(c.tel); finais.push(c);
   }
-  const cortados = Math.max(0, finais.length - LIMITE_CAMPANHA);
-  return { total: Math.min(finais.length, LIMITE_CAMPANHA), cortados, semZap, exemplos: finais.slice(0, 5).map((c) => c.nome || c.tel.slice(0, 6) + '…'), lista: finais.slice(0, LIMITE_CAMPANHA) };
+  const teto = nMaior ? Math.max(nMaior, LIMITE_CAMPANHA) : LIMITE_CAMPANHA;
+  const cortados = Math.max(0, finais.length - teto);
+  return { total: Math.min(finais.length, teto), cortados, semZap, exemplos: finais.slice(0, 5).map((c) => c.nome || c.tel.slice(0, 6) + '…'), lista: finais.slice(0, teto) };
 }
 
 export async function prepararCampanhaWA(env, user, dados) {
@@ -320,7 +329,10 @@ export async function prepararCampanhaWA(env, user, dados) {
   const publico = String((dados && dados.publico) || '');
   if (!PUBLICOS_WA[publico]) return { ok: false, message: 'Escolha o público.' };
   const params = Array.isArray(dados && dados.params) ? dados.params.map((p) => String(p).slice(0, 200)).slice(0, 10) : [];
-  const previa = await previaPublicoWA(env, publico, dados && dados.telTeste);
+  // Público ranqueado: busca uma fila MAIOR que o alvo, para que as vagas de
+  // quem já recebeu o template sejam repostas pelas próximas empresas da fila.
+  const alvo = ALVO_PUBLICO[publico] || 0;
+  const previa = await previaPublicoWA(env, publico, dados && dados.telTeste, alvo ? alvo + 400 : undefined);
   if (!previa.lista.length) return { ok: false, message: publico === 'teste' ? 'Digite um número de WhatsApp válido para o teste.' : 'Nenhum destinatário nesse público (com telefone e fora da lista de saída).' };
   // TRAVA ANTI-REPETIÇÃO (regra do Marcio): quem JÁ RECEBEU este template em
   // qualquer campanha anterior fica de fora — não importa por qual lista veio.
@@ -341,6 +353,8 @@ export async function prepararCampanhaWA(env, user, dados) {
     } catch { /* trava é best-effort — nunca derruba a preparação */ }
     if (!lista.length) return { ok: false, message: `Todos os destinatários desse público (${jaReceberam}) já receberam este template em campanhas anteriores — nada novo a enviar. Use outro template ou outro público.` };
   }
+  // Corte final no tamanho do público (as vagas já foram repostas acima).
+  lista = lista.slice(0, Math.min(alvo || LIMITE_CAMPANHA, LIMITE_CAMPANHA));
   const agora = new Date().toISOString();
   await d.prepare('INSERT INTO wa_campanhas (titulo, template_nome, template_id, template_lang, params_json, publico, criado_por, criado_em, status, total) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,\'preparada\',?9)')
     .bind(titulo, String(tpl.nome || ''), String(tpl.id || ''), String(tpl.lang || 'pt_BR'), JSON.stringify(params), publico, (user && user.email) || '', agora, lista.length).run();
@@ -349,7 +363,7 @@ export async function prepararCampanhaWA(env, user, dados) {
   for (const c of lista) {
     await d.prepare('INSERT INTO wa_destinatarios (campanha_id, tel, nome, doc, status) VALUES (?1,?2,?3,?4,\'pendente\')').bind(cid, c.tel, c.nome.slice(0, 160), c.doc).run();
   }
-  return { ok: true, id: cid, total: lista.length, cortados: previa.cortados, jaReceberam };
+  return { ok: true, id: cid, total: lista.length, cortados: alvo ? 0 : previa.cortados, jaReceberam, vagasRepostas: !!alvo };
 }
 
 const primeiroNome = (n) => { const p = limpar(n).split(' ')[0] || ''; return p ? p.charAt(0).toUpperCase() + p.slice(1).toLowerCase() : 'cliente'; };
@@ -600,7 +614,7 @@ td{padding:9px 10px;border-bottom:1px solid #EEF1F0;vertical-align:top}
 <div style="max-width:940px;margin:0 auto;padding:20px 18px 56px">
   <h1 style="font-size:19px;margin:0 0 4px">📋 ${esc(rotulo)}</h1>
   <p style="font-size:12.5px;color:#7c8a87;margin:0 0 6px"><b>${(itens || []).length}</b> empresa(s), já sem repetidos, sem quem pediu para sair, sem números que a Meta devolveu como "sem WhatsApp" e sem as removidas. Ao tirar uma, a próxima da fila entra no lugar. <b>☎️ provável fixo</b> = o cadastro só tem telefone de linha fixa (dificilmente recebe WhatsApp) — vale a equipe atualizar o contato dessa empresa.</p>
-  ${String(publico).startsWith('top-') ? `<p style="font-size:11.5px;color:#9aa7a4;margin:0 0 14px">Critério da pontuação (aberto): negócio concluído ×3 · volume de negócios (até 20) · OS no sistema novo ×5 · atividade nos últimos 12 meses +10 (24 meses +5). Desempate por valor concluído. <b>Sem repetição entre listas:</b> empresa parada há ${MESES_REATIVACAO}+ meses pertence à lista de Reativação e fica fora daqui.</p>` : publico === 'reativacao-200' ? `<p style="font-size:11.5px;color:#9aa7a4;margin:0 0 14px">Critério (aberto): entra quem tem pelo menos 1 descarte CONCLUÍDO no histórico e NENHUMA atividade (negócio ou OS) nos últimos ${MESES_REATIVACAO} meses. Pontos: concluídas ×3 + volume (até 20), desempate por valor. Cada linha mostra desde quando a empresa está parada. <b>Sem repetição entre listas:</b> quem está aqui fica fora do Top ${TOP_N} — e, ao preparar a campanha, quem já recebeu o template escolhido em qualquer disparo anterior também fica de fora automaticamente.</p>` : '<div style="margin-bottom:14px"></div>'}
+  ${String(publico).startsWith('top-') ? `<p style="font-size:11.5px;color:#9aa7a4;margin:0 0 14px">Critério da pontuação (aberto): negócio concluído ×3 · volume de negócios (até 20) · OS no sistema novo ×5 · atividade nos últimos 12 meses +10 (24 meses +5). Desempate por valor concluído. <b>Sem repetição entre listas:</b> empresa parada há ${MESES_REATIVACAO}+ meses pertence à lista de Reativação e fica fora daqui.</p>` : publico === 'reativacao-200' ? `<p style="font-size:11.5px;color:#9aa7a4;margin:0 0 14px">Critério (aberto): entra quem tem pelo menos 1 descarte CONCLUÍDO no histórico e NENHUMA atividade (negócio ou OS) nos últimos ${MESES_REATIVACAO} meses. Pontos: concluídas ×3 + volume (até 20), desempate por valor. Cada linha mostra desde quando a empresa está parada. <b>Sem repetição entre listas:</b> quem está aqui fica fora do Top ${TOP_N} — e, ao preparar a campanha, quem já recebeu o template escolhido em qualquer disparo anterior fica de fora automaticamente e a próxima empresa da fila entra no lugar (a campanha tenta completar as 200 vagas). Quem teve FALHA de entrega não conta como "recebeu" e pode entrar de novo.</p>` : '<div style="margin-bottom:14px"></div>'}
   <div style="background:#fff;border:1px solid #E4EBE9;border-radius:14px;overflow:auto;max-height:70vh">
   <table><thead><tr><th>#</th><th>Empresa</th><th>CNPJ/CPF</th><th>WhatsApp</th><th style="text-align:center">Pontos</th><th></th></tr></thead><tbody>${rows}</tbody></table>
   </div>
@@ -849,7 +863,7 @@ async function preparar(){
   msg('Preparando…');
   try{var r=await fetch('/api/diretoria/wa/preparar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(d)});
     var j=await r.json();
-    if(j.ok){msg('✓ Campanha preparada com '+j.total+' destinatário(s)'+(j.jaReceberam?(' · '+j.jaReceberam+' ficaram de fora por já terem recebido este template'):'')+'. Atualizando…','#1E7A3D');setTimeout(function(){location.reload();},900);}
+    if(j.ok){msg('✓ Campanha preparada com '+j.total+' destinatário(s)'+(j.jaReceberam?(' · '+j.jaReceberam+' já tinham recebido este template e ficaram de fora'+(j.vagasRepostas?' — as próximas empresas da fila entraram no lugar':'')):'')+'. Atualizando…','#1E7A3D');setTimeout(function(){location.reload();},900);}
     else{msg(j.message||'Não deu.','#a06a62');}}
   catch(e){msg('Sem conexão.','#a06a62');}
 }
