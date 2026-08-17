@@ -44,6 +44,7 @@ import { paginaCampanhasWA, listarCampanhasWA, listarOptoutWA, previaPublicoWA, 
 import { paginaAcompanhar, paginaAcompanharErro } from './acompanhar.js';
 import { registrarFalha, receberErroCliente, listarFalhas } from './monitor.js';
 import { segmentoDoCliente, definirSegmento, SEGMENTOS, fluxoDeVendas, ultimosPedidos, paginaPagamentos, avisoResgatePendentes } from './premium.js';
+import { montarListaGoogleAds, gerarCsvGoogleAds, paginaGoogleAds } from './google-ads.js';
 import { MANUAL_CLIENTE_PDF_B64 } from './manual-pdf.js';
 import { MANUAL_COMERCIAL_B64, MANUAL_MOTORISTA_B64, MANUAL_DOCA_B64, MANUAL_ENGENHARIA_B64 } from './manuais-pdf.js';
 import { sondaMTR, consultarMtrSigor, baixarPdfManifesto } from './mtr.js';
@@ -1222,6 +1223,27 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
         const dados = await ultimosPedidos(env, 60);
         return html(paginaPagamentos(dados));
+      }
+      // Lista de clientes para o Google Ads (Customer Match) — só o dono baixa
+      // (mesmo gate do fluxo de vendas: dados de cliente em massa não circulam).
+      if ((pathname === '/diretoria/google-ads' || pathname === '/diretoria/google-ads.csv') && request.method === 'GET') {
+        if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
+        if (String(diretoria.email || '').trim().toLowerCase() !== 'marcio@ecobraz.org.br') {
+          return html('<!doctype html><meta charset="utf-8"><p style="font-family:sans-serif;padding:40px;text-align:center">Esta exportação fica restrita ao acesso do Marcio.<br><a href="/diretoria">← Voltar</a></p>', 403);
+        }
+        if (pathname === '/diretoria/google-ads.csv') {
+          const lista = await montarListaGoogleAds(env, url.searchParams.get('escopo') || 'clientes');
+          return new Response(gerarCsvGoogleAds(lista.itens), { headers: {
+            'content-type': 'text/csv; charset=utf-8', 'cache-control': 'no-store',
+            'content-disposition': `attachment; filename="ecobraz-google-ads-${lista.escopo}-${new Date().toISOString().slice(0, 10)}.csv"`,
+          } });
+        }
+        const contagens = {};
+        for (const escopo of ['clientes', 'todos']) {
+          try { const l = await montarListaGoogleAds(env, escopo); contagens[escopo] = { total: l.total, comEmail: l.comEmail, comFone: l.comFone, truncado: l.truncado }; }
+          catch { contagens[escopo] = { total: 0, comEmail: 0, comFone: 0, truncado: false }; }
+        }
+        return html(paginaGoogleAds(contagens));
       }
       if (pathname === '/diretoria/mp-diagnostico' && request.method === 'GET') {
         if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));

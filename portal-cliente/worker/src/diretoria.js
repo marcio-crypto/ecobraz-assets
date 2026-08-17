@@ -141,7 +141,7 @@ export function paginaPainelDiretoria(diretor, d, x) {
       <span style="font-size:12.5px;color:#EAF3F1">⚠️ Não concretizadas no mês (geradas e não pagas)</span>
       <a href="/diretoria/pagamentos" style="font-weight:800;font-size:15px;color:#FFD46B;text-decoration:underline">${esc(brl(vv.naoConcretizadasValor))} · ${esc(String(vv.naoConcretizadasQtd))} pedido(s)</a>
     </div>
-    <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px"><span style="font-size:10px;color:#9FC6C1">Soma dos pagamentos aprovados (coleta expressa, OS paga, Adote, carbono, ESG).${vv.truncado ? ' Mostrando os primeiros 800 pedidos.' : ''}</span><a href="/diretoria/pagamentos" style="font-size:11px;font-weight:800;color:#FFD46B;text-decoration:none">Ver os pedidos, um a um →</a></div>
+    <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px"><span style="font-size:10px;color:#9FC6C1">Soma dos pagamentos aprovados (coleta expressa, OS paga, Adote, carbono, ESG).${vv.truncado ? ' Mostrando os primeiros 800 pedidos.' : ''}</span><span style="display:flex;gap:14px"><a href="/diretoria/pagamentos" style="font-size:11px;font-weight:800;color:#FFD46B;text-decoration:none">Ver os pedidos, um a um →</a><a href="/diretoria/google-ads" style="font-size:11px;font-weight:800;color:#9FC6C1;text-decoration:none">🎯 Lista p/ Google Ads →</a></span></div>
   </div>` : '';
   // Saldo do WhatsApp (Gupshup) — só chega preenchido no acesso do Marcio (gate no index.js).
   const ws = x.waSaldo;
