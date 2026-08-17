@@ -53,6 +53,30 @@ export function segmentoAuto(stats, env) {
 // e as NÃO concretizadas no mês (geradas mas não pagas). Valores em reais.
 // Direto do KV (sem índice dedicado): honesto para o volume atual; se um dia a
 // base crescer muito, dá para trocar por um índice de vendas.
+// Datas dos pedidos vêm em epoch (segundos/ms) ou ISO — normaliza para AAAA-MM-DD (Brasília).
+const dataPedido = (v) => {
+  if (v == null || v === '') return '';
+  if (typeof v === 'number' || /^\d{10,13}$/.test(String(v))) { const n = Number(v); const d = new Date(n < 1e12 ? n * 1000 : n); return new Date(d.getTime() - 3 * 3600e3).toISOString().slice(0, 10); }
+  return String(v).slice(0, 10);
+};
+
+// O que é cada pedido, em linguagem de gente: cliente, assunto e link da OS quando houver.
+// Honesto com o que cada produto GRAVA: carbono/ESG não guardam o nome do cliente
+// no pedido — nesses cases o campo cliente sai vazio em vez de inventado.
+const fmtDocPed = (d) => { const s = String(d || '').replace(/\D/g, ''); return s.length === 14 ? s.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5') : s; };
+export function descreverPedido(ped) {
+  const p = ped || {};
+  const nome = String(p.clienteNome || p.clienteEmail || p.email || '').trim();
+  const comDoc = p.doc ? `${nome ? nome + ' · ' : ''}${fmtDocPed(p.doc)}` : nome;
+  if (p.produto === 'coleta') return { cliente: nome, sobre: `${p.expressa ? '⚡ Coleta EXPRESSA (taxa)' : 'Coleta pelo portal'}${p.itens ? ` · ${p.itens} item(ns)` : ''}${p.leadId ? ` · pedido ${p.leadId}` : ''}`, link: '' };
+  if (p.produto === 'oscobranca') return { cliente: nome, sobre: `Cobrança da OS ${p.numero || p.osId || ''}`, link: p.osId ? `/coletas/os?id=${encodeURIComponent(p.osId)}` : '' };
+  if (p.produto === 'adote') return { cliente: comDoc, sobre: `Adote um Bairro — ${p.kg ? p.kg + ' kg' : 'pacote'}${(p.tipo === 'recorrente' || p.evento === 'recarga') ? ' · recarga mensal' : ''}`, link: '' };
+  if (p.produto === 'carbono') return { cliente: nome, sobre: `Calculadora de Carbono${p.nivel ? ' — nível ' + p.nivel : ''}${p.faixa ? ' · faixa ' + p.faixa : ''}`, link: '' };
+  if (p.produto === 'esg') return { cliente: nome, sobre: `Relatório ESG${p.relatorio ? ' ' + p.relatorio : ''}${p.faixa ? ' · faixa ' + p.faixa : ''}`, link: '' };
+  if (p.produto === 'teste') return { cliente: String(p.por || ''), sobre: 'Pagamento de TESTE (não conta como venda)', link: '' };
+  return { cliente: nome, sobre: '', link: '' };
+}
+
 export async function fluxoDeVendas(env) {
   const out = { dia: 0, semana: 0, mes: 0, naoConcretizadasValor: 0, naoConcretizadasQtd: 0, lidos: 0, truncado: false, porProduto: {} };
   if (!env.PORTAL_KV) return out;
@@ -71,11 +95,7 @@ export async function fluxoDeVendas(env) {
   const ini7 = new Date(bras.getTime() - 7 * 86400e3).toISOString().slice(0, 10);
   const ini30 = new Date(bras.getTime() - 30 * 86400e3).toISOString().slice(0, 10);
   const mesAtual = bras.toISOString().slice(0, 7);
-  const dataDe = (v) => {
-    if (v == null || v === '') return '';
-    if (typeof v === 'number' || /^\d{10,13}$/.test(String(v))) { const n = Number(v); const d = new Date(n < 1e12 ? n * 1000 : n); return new Date(d.getTime() - 3 * 3600e3).toISOString().slice(0, 10); }
-    return String(v).slice(0, 10);
-  };
+  const dataDe = dataPedido;
   for (const k of keys.slice(0, 800)) {
     let ped; try { ped = JSON.parse((await env.PORTAL_KV.get(k.name)) || '{}'); } catch { continue; }
     if (ped.produto === 'teste') continue; // pagamentos de teste não contam como venda
@@ -118,6 +138,7 @@ export async function ultimosPedidos(env, limite = 40) {
   for (const k of alvo) {
     let ped; try { ped = JSON.parse((await env.PORTAL_KV.get(k.name)) || '{}'); } catch { continue; }
     out.lidos++;
+    const quem = descreverPedido(ped);
     out.itens.push({
       ref: k.name.replace(/^pedido:/, ''),
       produto: ped.produto || 'outro',
@@ -126,22 +147,39 @@ export async function ultimosPedidos(env, limite = 40) {
       status: ped.status || 'pendente',
       criadoEm: ped.criadoEm || 0,
       pagoEm: ped.pagoEm || 0,
+      cliente: quem.cliente, sobre: quem.sobre, link: quem.link,
     });
   }
   out.itens.sort((a, b) => (Number(b.criadoEm) || 0) - (Number(a.criadoEm) || 0));
+  // Os "gerados e não pagos" do MÊS — mesma regra do cartão da Diretoria
+  // (fluxoDeVendas): sem os de teste, status diferente de pago, criados no mês.
+  const mesAtual = new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 7);
+  out.naoPagosMes = out.itens.filter((p) => p.produto !== 'teste' && p.status !== 'pago' && dataPedido(p.criadoEm).slice(0, 7) === mesAtual);
+  out.naoPagosMesValor = Math.round(out.naoPagosMes.reduce((s, p) => s + (Number(p.valor) || 0), 0) * 100) / 100;
   out.itens = out.itens.slice(0, limite);
   return out;
 }
 
+const ROTULO_PRODUTO = { coleta: 'Coleta', oscobranca: 'Cobrança de OS', adote: 'Adote um Bairro', carbono: 'Calculadora de Carbono', esg: 'Relatório ESG', teste: 'Teste', outro: 'Pedido' };
 export function paginaPagamentos(dados) {
   const e = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  const brl = (n) => 'R$ ' + Number(n || 0).toFixed(2).replace('.', ',');
-  const fmt = (v) => { const n = Number(v); if (!n) return '—'; const ms = n < 1e12 ? n * 1000 : n; try { return new Date(ms - 3 * 3600e3).toISOString().slice(0, 16).replace('T', ' '); } catch { return '—'; } };
+  const brl = (n) => 'R$ ' + Number(n || 0).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  const fmt = (v) => { const n = Number(v); if (!n) return '—'; const ms = n < 1e12 ? n * 1000 : n; try { const s = new Date(ms - 3 * 3600e3).toISOString().slice(0, 16).replace('T', ' '); return s.slice(8, 10) + '/' + s.slice(5, 7) + ' ' + s.slice(11); } catch { return '—'; } };
+  const chip = (p) => p.status === 'pago' ? '<span style="color:#1d8a4e;font-weight:800">✅ pago</span>' : (p.status === 'cancelada' ? '<span style="color:#b23;font-weight:800">✖ cancelada</span>' : '<span style="color:#b8860b;font-weight:800">⏳ aguardando pagamento</span>');
+  // Seção 1: os GERADOS E NÃO PAGOS do mês — a resposta ao "quais são os 7 pedidos?".
+  const np = dados.naoPagosMes || [];
+  const npHtml = np.map((p) => `<div style="border:1px solid #F0E4C8;background:#FDFAF1;border-radius:12px;padding:12px 14px;margin-bottom:9px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <b style="font-size:15px;color:#173A38">${brl(p.valor)}</b>
+        <span style="font-size:12px">${chip(p)}</span>
+      </div>
+      <div style="font-size:13px;color:#173A38;margin-top:5px"><b>${e(ROTULO_PRODUTO[p.produto] || p.produto)}</b>${p.sobre ? ' — ' + e(p.sobre) : ''}</div>
+      <div style="font-size:12.5px;color:#5b716e;margin-top:3px">👤 ${p.cliente ? e(p.cliente) : '<i>cliente não identificado no pedido</i>'}</div>
+      <div style="font-size:11.5px;color:#8fa39f;margin-top:5px">gerado em ${fmt(p.criadoEm)} · forma: ${e(p.gateway)} · ref <code style="font-size:10px">${e(String(p.ref).slice(0, 26))}</code>${p.link ? ` · <a href="${e(p.link)}" style="color:#0B5B66;font-weight:700">abrir a OS →</a>` : ''}</div>
+    </div>`).join('');
+  const npTotal = Number(dados.naoPagosMesValor) || 0;
   const linhas = (dados.itens || []).map((p) => {
-    const pago = p.status === 'pago';
-    const cor = pago ? '#1d8a4e' : (p.status === 'cancelada' ? '#b23' : '#b8860b');
-    const rot = pago ? '✅ pago' : (p.status === 'cancelada' ? 'cancelada' : '⏳ pendente');
-    return `<tr><td>${fmt(p.criadoEm)}</td><td>${e(p.produto)}</td><td>${e(p.gateway)}</td><td style="text-align:right">${brl(p.valor)}</td><td style="color:${cor};font-weight:700">${rot}</td></tr>`;
+    return `<tr><td style="white-space:nowrap">${fmt(p.criadoEm)}</td><td><b>${e(ROTULO_PRODUTO[p.produto] || p.produto)}</b>${p.sobre ? `<span style="display:block;font-size:11px;color:#8fa39f">${e(p.sobre)}</span>` : ''}${p.cliente ? `<span style="display:block;font-size:11px;color:#5b716e">👤 ${e(p.cliente)}</span>` : ''}${p.link ? `<a href="${e(p.link)}" style="font-size:11px;color:#0B5B66;font-weight:700">abrir a OS →</a>` : ''}</td><td>${e(p.gateway)}</td><td style="text-align:right;white-space:nowrap">${brl(p.valor)}</td><td style="font-size:12px">${chip(p)}</td></tr>`;
   }).join('');
   const vazio = !(dados.itens && dados.itens.length);
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
@@ -160,10 +198,16 @@ export function paginaPagamentos(dados) {
 </style></head><body>
 <div class="wrap">
   <img class="logo" src="/assets/logo.png" alt="Ecobraz">
+  ${np.length ? `<div class="card" style="margin-bottom:16px;border:1px solid #efe1b5">
+    <h1 style="color:#8a6a16">⚠️ Gerados e NÃO pagos neste mês</h1>
+    <p class="sub">As vendas que ainda não se concretizaram: <b>${np.length} pedido(s) · ${brl(npTotal)}</b> — o mesmo número do cartão da Diretoria.</p>
+    ${npHtml}
+    <div class="obs">O que significa "aguardando pagamento": o cliente <b>gerou a cobrança</b> (cartão, Pix ou link) e o pagamento <b>ainda não foi confirmado</b>. Vale um contato do comercial com esses clientes — a intenção de compra existiu. Pedidos pendentes <b>expiram sozinhos</b> do registro depois de um tempo (de 7 a 90 dias, conforme o produto); por isso a lista e o cartão cobrem o mês corrente.</div>
+  </div>` : ''}
   <div class="card">
-    <h1>Pagamentos registrados</h1>
+    <h1>Todos os pagamentos registrados</h1>
     <p class="sub">Status real que o sistema tem de cada pedido${dados.truncado ? ' (mostrando os mais recentes)' : ''}.</p>
-    ${vazio ? '<div class="vazio">Nenhum pedido registrado ainda.</div>' : `<div style="overflow-x:auto"><table><thead><tr><th>Quando</th><th>Produto</th><th>Forma</th><th>Valor</th><th>Status</th></tr></thead><tbody>${linhas}</tbody></table></div>`}
+    ${vazio ? '<div class="vazio">Nenhum pedido registrado ainda.</div>' : `<div style="overflow-x:auto"><table><thead><tr><th>Quando</th><th>Pedido</th><th>Forma</th><th>Valor</th><th>Status</th></tr></thead><tbody>${linhas}</tbody></table></div>`}
     <div class="obs">💡 <b>Cartão (Stripe)</b> fica ✅ pago automaticamente. O <b>Pix "copia e cola"</b> de hoje fica ⏳ pendente até alguém dar a baixa — o código estático não avisa o sistema. Para o Pix ficar automático, é preciso um Pix com API (gateway).</div>
     <a class="voltar" href="/diretoria">← Voltar</a>
   </div>
