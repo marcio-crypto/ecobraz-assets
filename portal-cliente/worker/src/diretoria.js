@@ -96,7 +96,21 @@ export function paginaPainelDiretoria(diretor, d, x) {
   x = x || {};
   const leads = x.leads || { dia: 0, semana: 0, mes: 0, serie: [] };
   const os = x.os || { dia: 0, semana: 0, mes: 0, serie: [] };
-  const uso = x.uso || { clientes: { hoje: 0, semana: 0, mes: 0, top5: [] }, equipe: { hoje: 0, semana: 0, mes: 0, pessoas: [] } };
+  const uso = x.uso || { clientes: { hoje: 0, ontem: 0, semana: 0, mes: 0, serie: [], top5: [] }, equipe: { hoje: 0, semana: 0, mes: 0, pessoas: [] } };
+  // Contador do dia (pedido do Marcio 17/08): clientes distintos no portal HOJE,
+  // sempre à vista no topo, com a comparação com ontem.
+  const cHoje = Number(uso.clientes.hoje) || 0, cOntem = Number(uso.clientes.ontem) || 0;
+  const tendHoje = cHoje > cOntem ? `<span style="color:#92C430;font-weight:800"> ▲</span> <span style="color:#9FC6C1">ontem ${cOntem}</span>`
+    : cHoje < cOntem ? `<span style="color:#FFD46B;font-weight:800"> ▼</span> <span style="color:#9FC6C1">ontem ${cOntem}</span>`
+      : ` <span style="color:#9FC6C1">= ontem</span>`;
+  const contadorDia = `<a href="/diretoria/acessos-clientes" style="text-decoration:none;background:#0e4651;border:1px solid #1c5b66;border-radius:999px;padding:8px 16px;color:#eaf5f3;font-size:12px;font-weight:700;white-space:nowrap">👥 Hoje: <b style="color:#92C430;font-size:16px">${cHoje}</b> cliente(s) no portal${tendHoje}</a>`;
+  // Barras dos 14 dias (clientes distintos por dia) — sem fechar a div do cartão.
+  const barras14 = (serie) => {
+    const s = Array.isArray(serie) ? serie : [];
+    if (!s.length) return '';
+    const mx = Math.max(1, ...s.map((v) => v.n));
+    return `<div style="display:flex;align-items:flex-end;gap:3px;height:34px;margin-bottom:4px">${s.map((v) => `<div title="${esc(String(v.d).split('-').reverse().join('/'))}: ${v.n}" style="flex:1;background:${v.n ? '#7FB03C' : '#E9EFEC'};height:${v.n ? Math.max(12, Math.round((v.n / mx) * 100)) : 8}%;border-radius:3px"></div>`).join('')}</div><div style="font-size:9.5px;color:#9aa7a4;margin-bottom:12px;text-align:right">clientes distintos por dia — últimos 14 dias</div>`;
+  };
   const pend = Array.isArray(x.pend) ? x.pend : [];
   const frota = x.frota || null;
   const frotaRows = frota && Array.isArray(frota.frota) && frota.frota.length ? frota.frota.map((v) => `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;border:1px solid #E4EBE9;border-radius:12px;padding:11px 14px;margin-bottom:8px;flex-wrap:wrap">
@@ -171,9 +185,9 @@ export function paginaPainelDiretoria(diretor, d, x) {
   }
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Painel da Diretoria — Ecobraz</title></head>
 <body style="margin:0;background:#F2F6F4;min-height:100vh;font-family:Montserrat,'Segoe UI',Arial,Helvetica,sans-serif;color:#10262B">
-<div style="background:#00333B;padding:16px 20px"><div style="max-width:900px;margin:0 auto;display:flex;justify-content:space-between;align-items:center">
+<div style="background:#00333B;padding:16px 20px"><div style="max-width:900px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
   <div><span style="color:#fff;font-size:16px;font-weight:800">Painel da Diretoria</span><div style="color:#9FC6C1;font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;margin-top:4px">Ecobraz · visão macro</div></div>
-  <form method="post" action="/api/diretoria/sair" style="margin:0"><button style="background:#0e4651;color:#cfe3e0;border:1px solid #1c5b66;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700">Sair</button></form>
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">${contadorDia}<form method="post" action="/api/diretoria/sair" style="margin:0"><button style="background:#0e4651;color:#cfe3e0;border:1px solid #1c5b66;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700">Sair</button></form></div>
 </div></div>
 <div style="max-width:900px;margin:0 auto;padding:20px 18px 48px">
 
@@ -201,6 +215,7 @@ export function paginaPainelDiretoria(diretor, d, x) {
         <div style="flex:1;border-left:1px solid #EEF1F0"><div style="font-size:24px;font-weight:800;color:${TEAL};line-height:1">${uso.clientes.semana}</div><div style="font-size:10px;color:#8fa39f;font-weight:700;margin-top:4px">7 DIAS</div></div>
         <div style="flex:1;border-left:1px solid #EEF1F0"><div style="font-size:24px;font-weight:800;color:${TEAL};line-height:1">${uso.clientes.mes}</div><div style="font-size:10px;color:#8fa39f;font-weight:700;margin-top:4px">30 DIAS</div></div>
       </div>
+      ${barras14(uso.clientes.serie)}
       <div style="font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#7c8a87;margin-bottom:10px;border-top:1px solid #EEF1F0;padding-top:12px">Top 5 — clientes que mais usam (dias ativos em 30d)</div>
       ${barraLista(uso.clientes.top5, 'dia(s)')}
     </div>

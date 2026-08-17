@@ -51,10 +51,13 @@ async function listarPrefixo(env, prefix) {
 
 // Agrega os acessos: clientes distintos (hoje/7d/30d + top 5) e equipe pessoa a pessoa.
 export async function resumoUso(env) {
-  const vazio = { clientes: { hoje: 0, semana: 0, mes: 0, top5: [] }, equipe: { hoje: 0, semana: 0, mes: 0, pessoas: [] } };
+  const vazio = { clientes: { hoje: 0, ontem: 0, semana: 0, mes: 0, serie: [], top5: [] }, equipe: { hoje: 0, semana: 0, mes: 0, pessoas: [] } };
   if (!env.PORTAL_KV) return vazio;
   const hoje = dataBrasil();
   const d7 = new Set(seq(7)), d30 = new Set(seq(30));
+  // Série diária (contador do Marcio, 17/08): clientes DISTINTOS por dia, 14 dias.
+  const dias14 = seq(14);
+  const porDia = new Map(dias14.map((d) => [d, new Set()]));
   try {
     const kc = await listarPrefixo(env, 'uso:c:');
     const cDia = new Set(), cSem = new Set(), cMes = new Set(); const porCli = new Map();
@@ -64,6 +67,7 @@ export async function resumoUso(env) {
       const dia = m[1], doc = m[2];
       if (dia === hoje) cDia.add(doc);
       if (d7.has(dia)) cSem.add(doc);
+      if (porDia.has(dia)) porDia.get(dia).add(doc);
       if (d30.has(dia)) { cMes.add(doc); porCli.set(doc, (porCli.get(doc) || 0) + 1); }
     }
     const top5 = [];
@@ -87,7 +91,14 @@ export async function resumoUso(env) {
       try { const raw = await env.PORTAL_KV.get('uso:enome:' + em); if (raw) info = JSON.parse(raw); } catch { /* segue */ }
       pessoas.push({ email: em, nome: info.nome || em.split('@')[0], papel: info.papel || '', dias, ativoHoje: eDia.has(em) });
     }
-    return { clientes: { hoje: cDia.size, semana: cSem.size, mes: cMes.size, top5 }, equipe: { hoje: eDia.size, semana: eSem.size, mes: eMes.size, pessoas } };
+    return {
+      clientes: {
+        hoje: cDia.size, ontem: (porDia.get(dataBrasil(1)) || new Set()).size, semana: cSem.size, mes: cMes.size,
+        serie: [...dias14].reverse().map((d) => ({ d, n: (porDia.get(d) || new Set()).size })),
+        top5,
+      },
+      equipe: { hoje: eDia.size, semana: eSem.size, mes: eMes.size, pessoas },
+    };
   } catch { return vazio; }
 }
 
