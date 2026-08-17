@@ -39,7 +39,7 @@ import { criarCheckoutStripe, consultarCheckoutStripe, verificarEventoStripe, st
 import { gerarPixCopiaECola, pixConfig, paginaPix } from './pix.js';
 import { paginaColetaExpressa } from './coleta-expressa.js';
 import { enviarSMS, smsConfigurado } from './sms.js';
-import { whatsappConfigurado, templateColeta, templateInfo, enviarWhatsAppTemplate, enviarWhatsAppDiag, listarTemplatesGupshup } from './whatsapp.js';
+import { whatsappConfigurado, templateColeta, templateInfo, enviarWhatsAppTemplate, enviarWhatsAppDiag, listarTemplatesGupshup, saldoGupshup } from './whatsapp.js';
 import { paginaCampanhasWA, listarCampanhasWA, listarOptoutWA, previaPublicoWA, prepararCampanhaWA, enviarLoteWA, falhasDaCampanhaWA, mudarOptoutWA, listaDetalhadaPublicoWA, paginaListaPublicoWA, PUBLICOS_WA, mudarExclusaoEmpresaWA, listarExcluidasWA, chaveWebhookWA, processarWebhookWA, metricasCampanhaWA } from './whatsapp-campanha.js';
 import { paginaAcompanhar, paginaAcompanharErro } from './acompanhar.js';
 import { registrarFalha, receberErroCliente, listarFalhas } from './monitor.js';
@@ -779,9 +779,10 @@ export default {
           pend: reunirPendencias({ leads: leadsIdx, coletas: coletasValidas, aguardandoValidacao: dados.aguardando }),
         };
         try { extras.frota = await montarFrotaAoVivo(env); } catch { extras.frota = null; }
-        // Fluxo de vendas: SÓ no acesso do dono (marcio@ecobraz.org.br).
+        // Fluxo de vendas e saldo do WhatsApp: SÓ no acesso do dono (marcio@ecobraz.org.br).
         if (String(diretoria.email || '').trim().toLowerCase() === 'marcio@ecobraz.org.br') {
           try { extras.vendas = await fluxoDeVendas(env); } catch { extras.vendas = null; }
+          try { extras.waSaldo = whatsappConfigurado(env) ? await saldoGupshup(env) : null; } catch { extras.waSaldo = null; }
         }
         return html(paginaPainelDiretoria(diretoria, dados, extras));
       }

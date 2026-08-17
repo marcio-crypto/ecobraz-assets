@@ -191,6 +191,41 @@ const mapaTpl = (t) => ({
   idioma: t.languageCode || t.language || t.locale || '',
   corpo: String(t.data || t.templateData || t.body || '').slice(0, 1200),
 });
+// SALDO da carteira Gupshup (pedido do Marcio 13/08): acompanhar quando o
+// crédito dos disparos estiver acabando. Cache de 10 min no KV (o painel abre
+// rápido e o Gupshup não é chamado a cada visita). Nunca expõe a chave.
+export async function saldoGupshup(env, { forcar } = {}) {
+  const key = chaveGupshup(env);
+  if (!key) return { ok: false, motivo: 'nao_configurado' };
+  if (!forcar && env.PORTAL_KV) {
+    try { const c = await env.PORTAL_KV.get('wa:saldo'); if (c) return JSON.parse(c); } catch { /* segue */ }
+  }
+  const tentativas = [];
+  const semChave = (t) => String(t || '').split(key).join('▮▮▮').slice(0, 160);
+  for (const c of [
+    { via: 'self-serve v2', url: 'https://api.gupshup.io/sm/api/v2/wallet/balance' },
+    { via: 'self-serve v1', url: 'https://api.gupshup.io/sm/api/v1/wallet/balance' },
+  ]) {
+    try {
+      const r = await fetch(c.url, { headers: { apikey: key, accept: 'application/json' }, signal: AbortSignal.timeout(6000) });
+      const txt = await r.text();
+      if (r.ok) {
+        let j = null; try { j = JSON.parse(txt); } catch { j = null; }
+        const w = (j && (j.walletResponse || j.wallet || j.data || j)) || {};
+        const saldo = Number(w.currentBalance ?? w.balance ?? w.walletBalance ?? NaN);
+        if (Number.isFinite(saldo)) {
+          const out = { ok: true, saldo: Math.round(saldo * 100) / 100, moeda: String(w.currency || 'USD'), em: new Date().toISOString(), via: c.via };
+          try { if (env.PORTAL_KV) await env.PORTAL_KV.put('wa:saldo', JSON.stringify(out), { expirationTtl: 600 }); } catch { /* cache é best-effort */ }
+          return out;
+        }
+      }
+      tentativas.push({ via: c.via, status: r.status, corpoInicio: semChave(txt) });
+    } catch (e) { tentativas.push({ via: c.via, status: 0, corpoInicio: String((e && e.name) || 'excecao') }); }
+  }
+  console.error('gupshup_saldo_erro', tentativas.map((t) => `${t.via} ${t.status}`).join(' · '));
+  return { ok: false, motivo: 'sem_leitura', tentativas };
+}
+
 const extrairTpls = (txt) => {
   let data = null; try { data = JSON.parse(txt); } catch { data = null; }
   const arr = Array.isArray(data) ? data : ((data && (data.templates || data.data || data.templateList || data.template)) || []);

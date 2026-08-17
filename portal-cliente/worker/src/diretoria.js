@@ -143,6 +143,29 @@ export function paginaPainelDiretoria(diretor, d, x) {
     </div>
     <div style="font-size:10px;color:#9FC6C1;margin-top:8px">Soma dos pagamentos aprovados (coleta expressa, OS paga, Adote, carbono, ESG).${vv.truncado ? ' Mostrando os primeiros 800 pedidos.' : ''}</div>
   </div>` : '';
+  // Saldo do WhatsApp (Gupshup) — só chega preenchido no acesso do Marcio (gate no index.js).
+  const ws = x.waSaldo;
+  let waSaldoHtml = '';
+  if (ws) {
+    if (ws.ok) {
+      const farol = ws.saldo < 10
+        ? { cor: '#FF9B8E', rotulo: '🔴 RECARREGAR — está acabando' }
+        : ws.saldo < 25
+          ? { cor: '#FFD46B', rotulo: '🟡 Atenção — saldo baixo' }
+          : { cor: '#92C430', rotulo: '🟢 Saldo ok' };
+      const dtA = new Date(ws.em); dtA.setUTCHours(dtA.getUTCHours() - 3);
+      const p2 = (n) => String(n).padStart(2, '0');
+      const hora = Number.isNaN(dtA.getTime()) ? '' : ` · lido às ${p2(dtA.getUTCHours())}:${p2(dtA.getUTCMinutes())}`;
+      const valor = (ws.moeda === 'USD' ? 'US$ ' : esc(ws.moeda) + ' ') + (Number(ws.saldo) || 0).toFixed(2).replace('.', ',');
+      waSaldoHtml = `<a href="/diretoria/whatsapp" style="display:flex;justify-content:space-between;align-items:center;gap:12px;text-decoration:none;background:#062f36;border:1px solid #12525d;border-radius:14px;padding:14px 16px;margin-bottom:12px;color:#eaf5f3">
+    <div><div style="font-size:14px;font-weight:800">💬 Saldo do WhatsApp (Gupshup): ${valor}</div>
+    <div style="font-size:12px;color:#9FC6C1;margin-top:2px">Crédito das campanhas e avisos de coleta — alerta abaixo de US$ 25, urgente abaixo de US$ 10${hora}. Recarga: painel do Gupshup.</div></div>
+    <span style="flex:none;font-size:12px;font-weight:800;color:${farol.cor}">${farol.rotulo}</span>
+  </a>`;
+    } else if (ws.motivo !== 'nao_configurado') {
+      waSaldoHtml = `<div style="background:#062f36;border:1px solid #12525d;border-radius:14px;padding:12px 16px;margin-bottom:12px;color:#9FC6C1;font-size:12px">💬 Saldo do WhatsApp: não consegui ler no Gupshup agora — confira no painel deles. (Detalhe: ${esc((ws.tentativas || []).map((t) => `${t.via} HTTP ${t.status}`).join(' · ') || ws.motivo)})</div>`;
+    }
+  }
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Painel da Diretoria — Ecobraz</title></head>
 <body style="margin:0;background:#F2F6F4;min-height:100vh;font-family:Montserrat,'Segoe UI',Arial,Helvetica,sans-serif;color:#10262B">
 <div style="background:#00333B;padding:16px 20px"><div style="max-width:900px;margin:0 auto;display:flex;justify-content:space-between;align-items:center">
@@ -152,6 +175,7 @@ export function paginaPainelDiretoria(diretor, d, x) {
 <div style="max-width:900px;margin:0 auto;padding:20px 18px 48px">
 
   ${vendasHtml}
+  ${waSaldoHtml}
   <a href="/diretoria/prevencao" style="display:flex;justify-content:space-between;align-items:center;gap:12px;text-decoration:none;background:#062f36;border:1px solid #12525d;border-radius:14px;padding:14px 16px;margin-bottom:12px;color:#eaf5f3">
     <div><div style="font-size:14px;font-weight:800">🛡️ Prevenção de perdas</div><div style="font-size:12px;color:#9FC6C1;margin-top:2px">Reconciliação por peso, valor estimado e conferência das fotos por IA.</div></div>
     <span style="font-size:12px;font-weight:800;color:#92C430">Abrir →</span>
