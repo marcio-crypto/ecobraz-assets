@@ -203,9 +203,10 @@ export async function avisoResgatePendentes(env) {
   const linhas = alvo.map((p) => `<div style="border:1px solid #F0E4C8;background:#FDFAF1;border-radius:10px;padding:11px 13px;margin-bottom:8px">
       <b style="font-size:15px">${brl(p.valor)}</b> · <b>${e(ROTULO_PRODUTO[p.produto] || p.produto)}</b>${p.sobre ? ' — ' + e(p.sobre) : ''}
       <span style="display:block;font-size:12.5px;color:#5b716e;margin-top:3px">👤 ${p.cliente ? e(p.cliente) : '<i>cliente não identificado no pedido</i>'} · gerado em ${e(fmtD(p.criadoEm))}</span>
+      <span style="display:block;font-size:12px;margin-top:4px">🔗 Link de pagamento (Pix na hora, cartão ou boleto) para mandar ao cliente:<br><a href="https://sistema.ecobraz.org/pagar?pedido=${encodeURIComponent(p.ref)}" style="color:#0B5B66;font-weight:700;word-break:break-all">https://sistema.ecobraz.org/pagar?pedido=${e(p.ref)}</a></span>
       ${p.link ? `<a href="https://sistema.ecobraz.org${e(p.link)}" style="font-size:12px;color:#0B5B66;font-weight:700">Abrir a OS →</a>` : ''}
     </div>`).join('');
-  const linhasTexto = alvo.map((p) => `- ${brl(p.valor)} · ${ROTULO_PRODUTO[p.produto] || p.produto}${p.sobre ? ' — ' + p.sobre : ''} · ${p.cliente || 'cliente não identificado'} · gerado em ${fmtD(p.criadoEm)}`).join('\n');
+  const linhasTexto = alvo.map((p) => `- ${brl(p.valor)} · ${ROTULO_PRODUTO[p.produto] || p.produto}${p.sobre ? ' — ' + p.sobre : ''} · ${p.cliente || 'cliente não identificado'} · gerado em ${fmtD(p.criadoEm)}\n  Pagar (Pix/cartão/boleto): https://sistema.ecobraz.org/pagar?pedido=${p.ref}`).join('\n');
   const assunto = `⏰ ${alvo.length} cobrança(s) sem pagamento há ${RESGATE_DIAS}+ dias — vale retomar o contato`;
   const html = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;color:#10262B">
     <div style="background:#00333B;border-radius:14px 14px 0 0;padding:18px 22px"><span style="color:#fff;font-size:18px;font-weight:800">ecobraz</span><span style="color:#FFD46B;font-size:10px;font-weight:800;letter-spacing:.14em;margin-left:8px">RESGATE DE VENDAS</span></div>
@@ -229,8 +230,10 @@ export async function avisoResgatePendentes(env) {
 }
 
 const ROTULO_PRODUTO = { coleta: 'Coleta', oscobranca: 'Cobrança de OS', adote: 'Adote um Bairro', carbono: 'Calculadora de Carbono', esg: 'Relatório ESG', teste: 'Teste', outro: 'Pedido' };
-export function paginaPagamentos(dados) {
+export function paginaPagamentos(dados, base) {
   const e = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const b0 = String(base || 'https://sistema.ecobraz.org').replace(/\/+$/, '');
+  const linkPagar = (p) => p.status !== 'pago' && p.status !== 'cancelada' ? ` · <button data-l="${e(b0)}/pagar?pedido=${encodeURIComponent(p.ref)}" onclick="copiarLink(this)" style="background:none;border:none;color:#0B5B66;font-weight:800;font-size:11px;cursor:pointer;padding:0">🔗 copiar link de pagamento (Pix/cartão/boleto)</button>` : '';
   const brl = (n) => 'R$ ' + Number(n || 0).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   const fmt = (v) => { const n = Number(v); if (!n) return '—'; const ms = n < 1e12 ? n * 1000 : n; try { const s = new Date(ms - 3 * 3600e3).toISOString().slice(0, 16).replace('T', ' '); return s.slice(8, 10) + '/' + s.slice(5, 7) + ' ' + s.slice(11); } catch { return '—'; } };
   const chip = (p) => p.status === 'pago' ? '<span style="color:#1d8a4e;font-weight:800">✅ pago</span>' : (p.status === 'cancelada' ? '<span style="color:#b23;font-weight:800">✖ cancelada</span>' : '<span style="color:#b8860b;font-weight:800">⏳ aguardando pagamento</span>');
@@ -243,12 +246,12 @@ export function paginaPagamentos(dados) {
       </div>
       <div style="font-size:13px;color:#173A38;margin-top:5px"><b>${e(ROTULO_PRODUTO[p.produto] || p.produto)}</b>${p.sobre ? ' — ' + e(p.sobre) : ''}</div>
       <div style="font-size:12.5px;color:#5b716e;margin-top:3px">👤 ${p.cliente ? e(p.cliente) : '<i>cliente não identificado no pedido</i>'}</div>
-      <div style="font-size:11.5px;color:#8fa39f;margin-top:5px">gerado em ${fmt(p.criadoEm)} · forma: ${e(p.gateway)} · ref <code style="font-size:10px">${e(String(p.ref).slice(0, 26))}</code>${p.link ? ` · <a href="${e(p.link)}" style="color:#0B5B66;font-weight:700">abrir a OS →</a>` : ''}</div>
+      <div style="font-size:11.5px;color:#8fa39f;margin-top:5px">gerado em ${fmt(p.criadoEm)} · forma: ${e(p.gateway)} · ref <code style="font-size:10px">${e(String(p.ref).slice(0, 26))}</code>${p.link ? ` · <a href="${e(p.link)}" style="color:#0B5B66;font-weight:700">abrir a OS →</a>` : ''}${linkPagar(p)}</div>
       ${p.resgateEm ? `<div style="font-size:11.5px;color:#0B5B66;font-weight:700;margin-top:4px">📣 Equipe avisada${/^\d{4}-\d{2}-\d{2}$/.test(p.resgateEm) ? ' em ' + e(p.resgateEm.split('-').reverse().join('/')) : ''} para tentar reverter</div>` : ''}
     </div>`).join('');
   const npTotal = Number(dados.naoPagosMesValor) || 0;
   const linhas = (dados.itens || []).map((p) => {
-    return `<tr><td style="white-space:nowrap">${fmt(p.criadoEm)}</td><td><b>${e(ROTULO_PRODUTO[p.produto] || p.produto)}</b>${p.sobre ? `<span style="display:block;font-size:11px;color:#8fa39f">${e(p.sobre)}</span>` : ''}${p.cliente ? `<span style="display:block;font-size:11px;color:#5b716e">👤 ${e(p.cliente)}</span>` : ''}${p.link ? `<a href="${e(p.link)}" style="font-size:11px;color:#0B5B66;font-weight:700">abrir a OS →</a>` : ''}</td><td>${e(p.gateway)}</td><td style="text-align:right;white-space:nowrap">${brl(p.valor)}</td><td style="font-size:12px">${chip(p)}</td></tr>`;
+    return `<tr><td style="white-space:nowrap">${fmt(p.criadoEm)}</td><td><b>${e(ROTULO_PRODUTO[p.produto] || p.produto)}</b>${p.sobre ? `<span style="display:block;font-size:11px;color:#8fa39f">${e(p.sobre)}</span>` : ''}${p.cliente ? `<span style="display:block;font-size:11px;color:#5b716e">👤 ${e(p.cliente)}</span>` : ''}${p.link ? `<a href="${e(p.link)}" style="font-size:11px;color:#0B5B66;font-weight:700">abrir a OS →</a>` : ''}<span style="display:block">${linkPagar(p).replace(/^ · /, '')}</span></td><td>${e(p.gateway)}</td><td style="text-align:right;white-space:nowrap">${brl(p.valor)}</td><td style="font-size:12px">${chip(p)}</td></tr>`;
   }).join('');
   const vazio = !(dados.itens && dados.itens.length);
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
@@ -280,7 +283,9 @@ export function paginaPagamentos(dados) {
     <div class="obs">💡 <b>Cartão (Stripe)</b> fica ✅ pago automaticamente. O <b>Pix "copia e cola"</b> de hoje fica ⏳ pendente até alguém dar a baixa — o código estático não avisa o sistema. Para o Pix ficar automático, é preciso um Pix com API (gateway).</div>
     <a class="voltar" href="/diretoria">← Voltar</a>
   </div>
-</div></body></html>`;
+</div>
+<script>function copiarLink(b){var v=b.dataset.l;(navigator.clipboard?navigator.clipboard.writeText(v):Promise.reject()).then(function(){b.textContent='✓ link copiado — mande ao cliente!';}).catch(function(){prompt('Copie o link:',v);});}</script>
+</body></html>`;
 }
 
 // Segmento EFETIVO = manual (se houver) senão automático.

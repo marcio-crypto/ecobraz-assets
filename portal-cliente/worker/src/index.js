@@ -35,6 +35,7 @@ import { paginaLogin, paginaPainel, paginaMensagem } from './paginas.js';
 import { LOGO_ESCURO_B64, LOGO_CLARO_B64 } from './logos.js';
 import { paginaCalculadora, estimativaCarbono, paginaCalculoDetalhado, calculoDetalhadoGHG, paginaLojaCarbono, paginaCarbonoContato, paginaCarbonoObrigado, nivelCarbono, faixaValida, precoNivel } from './carbono.js';
 import { criarPreferencia, consultarPagamento, criarPixDireto, consultarMeiosPagamento } from './mercadopago.js';
+import { criarPagamentoEscolha, lerAuxPagar, descricaoDoPedido, paginaEscolherPagamento, paginaPixPagamento, statusPixPedido, abrirPixDoPedido, abrirStripeDoPedido, pagamentosDisponiveis, refLimpa } from './pagar.js';
 import { criarCheckoutStripe, consultarCheckoutStripe, verificarEventoStripe, stripeConfigurado } from './stripe.js';
 import { gerarPixCopiaECola, pixConfig, paginaPix } from './pix.js';
 import { paginaColetaExpressa } from './coleta-expressa.js';
@@ -237,7 +238,7 @@ export default {
         const baseUrl = env.PORTAL_BASE_URL || url.origin;
         if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${pedidoId}`, JSON.stringify({ produto: 'carbono', status: 'pendente', nivel: nv.id, faixa: fx, valor: preco.valor, criadoEm: nowS() }), { expirationTtl: 35 * 86400 });
         try {
-          const s = await criarCheckoutStripe({ valor: preco.valor, descricao: `Inventário de carbono — nível ${nv.nome} (anual)`, externalReference: pedidoId, baseUrl, backPath: '/pagamento/ok', metodos: ['card', 'boleto'] }, env);
+          const s = await criarPagamentoEscolha({ valor: preco.valor, descricao: `Inventário de carbono — nível ${nv.nome} (anual)`, externalReference: pedidoId, baseUrl, backPath: '/pagamento/ok', metodos: ['card', 'boleto'] }, env);
           return new Response(null, { status: 302, headers: { Location: s.url, 'cache-control': 'no-store' } });
         } catch (error) { console.error('carbono_assinar_falhou', safeError(error)); return html(paginaMensagem('Pagamento indisponível', 'Não consegui gerar a cobrança agora. Tente de novo em instantes.', '/carbono/planos'), 502); }
       }
@@ -292,7 +293,7 @@ export default {
         const baseUrl = env.PORTAL_BASE_URL || url.origin;
         if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${pedidoId}`, JSON.stringify({ status: 'pendente', valor, criadoEm: nowS() }), { expirationTtl: 86400 });
         try {
-          const s = await criarCheckoutStripe({ valor, descricao: 'Cálculo detalhado de pegada de carbono — GHG Protocol', externalReference: pedidoId, baseUrl, backPath: '/pagamento/ok', metodos: ['card', 'boleto'] }, env);
+          const s = await criarPagamentoEscolha({ valor, descricao: 'Cálculo detalhado de pegada de carbono — GHG Protocol', externalReference: pedidoId, baseUrl, backPath: '/pagamento/ok', metodos: ['card', 'boleto'] }, env);
           return json({ ok: true, pedido: pedidoId, init_point: s.url });
         } catch (error) {
           console.error('mp_criar_falhou', safeError(error));
@@ -341,7 +342,7 @@ export default {
         const baseUrl = env.PORTAL_BASE_URL || url.origin;
         if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${ref}`, JSON.stringify({ produto: 'adote', status: 'pendente', clienteId: cliente.id, clienteNome: razaoSocial, doc: cnpj, pacoteId: pac.id, faixa, tipo: 'avulso', valor, kg: pac.kg, coletas: pac.coletas, email, criadoEm: nowS() }), { expirationTtl: 35 * 86400 });
         try {
-          const s = await criarCheckoutStripe({ valor, descricao: `Adote um Bairro — módulo ${pac.ton}t (${pac.coletas} coletas patrocinadas)`, externalReference: ref, baseUrl, backPath: '/pagamento/ok', clienteEmail: email, metodos: ['card', 'boleto'] }, env);
+          const s = await criarPagamentoEscolha({ valor, descricao: `Adote um Bairro — módulo ${pac.ton}t (${pac.coletas} coletas patrocinadas)`, externalReference: ref, baseUrl, backPath: '/pagamento/ok', clienteEmail: email, metodos: ['card', 'boleto'] }, env);
           return json({ ok: true, pedido: ref, init_point: s.url });
         } catch (e) { console.error('adote_mp_falhou', safeError(e)); return json({ ok: false, erro: 'Não foi possível gerar o pagamento agora.' }, 502); }
       }
@@ -394,7 +395,7 @@ export default {
           const r = await ingestLead(env, { name: nome, company: empresa || nome, email, phone: telefone, material_category: '⚡ Coleta Expressa (site)', material_description: descricao, postal_code: cep, city: cidade, source: 'site-expressa', volume: itens ? `${itens} itens` : '' });
           if (!r || !r.ok) return json({ ok: false, message: 'Não foi possível registrar agora. Tente novamente.' }, 502);
           const ref = `coleta-${r.id}`;
-          const s = await criarCheckoutStripe({ valor: valorTaxa, descricao: 'Coleta Expressa Ecobraz — até 24h', externalReference: ref, baseUrl: base, backPath: '/pagamento/ok', clienteEmail: email, metodos: ['card', 'boleto'] }, env);
+          const s = await criarPagamentoEscolha({ valor: valorTaxa, descricao: 'Coleta Expressa Ecobraz — até 24h', externalReference: ref, baseUrl: base, backPath: '/pagamento/ok', clienteEmail: email, metodos: ['card', 'boleto'] }, env);
           if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${ref}`, JSON.stringify({ produto: 'coleta', leadId: r.id, expressa: true, itens, valor: valorTaxa, status: 'pendente', gateway: 'stripe', clienteEmail: email, clienteNome: nome, criadoEm: nowS() }), { expirationTtl: 30 * 86400 });
           try { const lead = await lerLead(env, r.id); if (lead) { lead.cobranca = { valor: valorTaxa, motivo: 'coleta expressa (site)', ref, link: s.url, status: 'aguardando', criadoEm: nowS() }; lead.expressa = true; lead.status = 'aguardando-pagamento'; lead.descricao = `💳 EXPRESSA (site) — TAXA R$ ${valorTaxa} AGUARDANDO PAGAMENTO. Coletar em até 24h após pago.\n\n${lead.descricao}`; await salvarLead(env, lead); await atualizarIndexLead(env, r.id, { pagamento: 'aguardando', status: lead.status, prioridade: 'alta' }); } } catch (error) { console.error('expressa_site_lead', safeError(error)); }
           console.log('coleta_expressa_site_gerada', { ref, valor: valorTaxa });
@@ -404,6 +405,42 @@ export default {
           await registrarFalha(env, 'coleta-expressa-site', safeError(error).message, {});
           return json({ ok: false, message: 'Não foi possível gerar o pagamento agora. Tente novamente em instantes.' }, 502);
         }
+      }
+      // --- ESCOLHA DE PAGAMENTO (Marcio 18/08): ⚡ Pix na hora · 💳 cartão · 🧾 boleto.
+      // Público (o ref aleatório do pedido é a chave). Vale para pedidos antigos também.
+      if (pathname === '/pagar' && request.method === 'GET') {
+        const refP = refLimpa(url.searchParams.get('pedido'));
+        const rawP = refP && env.PORTAL_KV ? await env.PORTAL_KV.get(`pedido:${refP}`) : null;
+        const pedP = rawP ? JSON.parse(rawP) : null;
+        if (!pedP) return html(paginaMensagem('Pagamento não encontrado', 'Este link de pagamento não existe mais. Fale com a equipe da Ecobraz para gerar um novo.', '/'), 404);
+        if (pedP.status === 'pago') return new Response(null, { status: 302, headers: { Location: `/pagamento/ok?pedido=${encodeURIComponent(refP)}`, 'cache-control': 'no-store' } });
+        const auxP = await lerAuxPagar(env, refP);
+        return html(paginaEscolherPagamento({ ref: refP, valor: pedP.valor, descricao: descricaoDoPedido(pedP, auxP), ...pagamentosDisponiveis(env) }));
+      }
+      if ((pathname === '/pagar/pix' || pathname === '/pagar/cartao' || pathname === '/pagar/boleto') && request.method === 'GET') {
+        const refP = refLimpa(url.searchParams.get('pedido'));
+        const rawP = refP && env.PORTAL_KV ? await env.PORTAL_KV.get(`pedido:${refP}`) : null;
+        const pedP = rawP ? JSON.parse(rawP) : null;
+        if (!pedP) return html(paginaMensagem('Pagamento não encontrado', 'Este link de pagamento não existe mais. Fale com a equipe da Ecobraz para gerar um novo.', '/'), 404);
+        if (pedP.status === 'pago') return new Response(null, { status: 302, headers: { Location: `/pagamento/ok?pedido=${encodeURIComponent(refP)}`, 'cache-control': 'no-store' } });
+        const auxP = await lerAuxPagar(env, refP);
+        const baseP = String(env.PORTAL_BASE_URL || env.PORTAL_URL || url.origin).replace(/\/+$/, '');
+        try {
+          if (pathname === '/pagar/pix') {
+            const { pix, descricao } = await abrirPixDoPedido(env, refP, pedP, auxP, baseP);
+            return html(paginaPixPagamento({ ref: refP, valor: pedP.valor, descricao, pix }));
+          }
+          const metodoP = pathname === '/pagar/boleto' ? 'boleto' : 'card';
+          const { s } = await abrirStripeDoPedido(env, refP, pedP, auxP, baseP, metodoP);
+          return new Response(null, { status: 302, headers: { Location: s.url, 'cache-control': 'no-store' } });
+        } catch (error) {
+          const det = (error && (error.mpDetalhe || error.detalhe)) || safeError(error).message;
+          console.error('pagar_metodo_falhou', { rota: pathname, ref: refP, erro: safeError(error) });
+          return html(paginaMensagem('Essa forma de pagamento falhou agora', `O provedor respondeu: <b>${esc(det)}</b><br><br>Volte e tente por outra forma.`, `/pagar?pedido=${encodeURIComponent(refP)}`), 502);
+        }
+      }
+      if (pathname === '/api/pagar/pix-status' && request.method === 'GET') {
+        return json(await statusPixPedido(env, url.searchParams.get('pedido')));
       }
       if (pathname === '/api/mp/webhook') {
         let paymentId = url.searchParams.get('data.id') || url.searchParams.get('id') || null;
@@ -535,7 +572,7 @@ export default {
         const baseUrl = env.PORTAL_BASE_URL || url.origin;
         if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${pedidoId}`, JSON.stringify({ produto: 'esg', status: 'pendente', relatorio: rel.id, faixa: fx, valor: preco.valor, criadoEm: nowS() }), { expirationTtl: 35 * 86400 });
         try {
-          const s = await criarCheckoutStripe({ valor: preco.valor, descricao: `Relatório de ESG — ${rel.nome} (anual)`, externalReference: pedidoId, baseUrl, backPath: '/pagamento/ok', metodos: ['card', 'boleto'] }, env);
+          const s = await criarPagamentoEscolha({ valor: preco.valor, descricao: `Relatório de ESG — ${rel.nome} (anual)`, externalReference: pedidoId, baseUrl, backPath: '/pagamento/ok', metodos: ['card', 'boleto'] }, env);
           return new Response(null, { status: 302, headers: { Location: s.url, 'cache-control': 'no-store' } });
         } catch (error) { console.error('esg_assinar_falhou', safeError(error)); return html(paginaMensagem('Pagamento indisponível', 'Não consegui gerar a cobrança agora. Tente de novo em instantes.', '/esg/planos'), 502); }
       }
@@ -1222,7 +1259,7 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
       if (pathname === '/diretoria/pagamentos' && request.method === 'GET') {
         if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
         const dados = await ultimosPedidos(env, 60);
-        return html(paginaPagamentos(dados));
+        return html(paginaPagamentos(dados, env.PORTAL_BASE_URL || 'https://sistema.ecobraz.org'));
       }
       // Lista de clientes para o Google Ads (Customer Match) — só o dono baixa
       // (mesmo gate do fluxo de vendas: dados de cliente em massa não circulam).
@@ -2017,7 +2054,7 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
           try { const cli = os.clienteId ? await lerCliente(env, os.clienteId) : null; clienteEmail = (cli && (cli.email || (Array.isArray(cli.contatos) && cli.contatos[0] && cli.contatos[0].email))) || ''; } catch { /* segue sem e-mail */ }
           // O cadastro pode ter mais de um e-mail no campo — usa só o 1º válido (a Stripe e o Resend recusam lista).
           clienteEmail = String(clienteEmail).split(/[,;\s]+/).map((s) => s.trim()).find((s) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s)) || '';
-          const s = await criarCheckoutStripe({ valor, descricao, externalReference: ref, baseUrl: base, backPath: '/pagamento/ok', clienteEmail, metodos: ['card', 'boleto'] }, env);
+          const s = await criarPagamentoEscolha({ valor, descricao, externalReference: ref, baseUrl: base, backPath: '/pagamento/ok', clienteEmail, metodos: ['card', 'boleto'] }, env);
           if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${ref}`, JSON.stringify({ produto: 'oscobranca', osId: id, numero: os.numero || '', valor, clienteEmail, clienteNome: os.clienteNome || '', status: 'pendente', gateway: 'stripe', criadoEm: nowS() }), { expirationTtl: 90 * 86400 });
           await definirCobrancaOS(env, id, { valor, descricao, ref, link: s.url, criadoPor: escritorio.email || '' });
           return json({ ok: true, link: s.url, valor });
@@ -3949,7 +3986,7 @@ async function solicitarOS(request, sessao, env) {
     const ref = `coleta-${r.id}`;
     try {
       const base = String(env.PORTAL_BASE_URL || env.PORTAL_URL || new URL(request.url).origin).replace(/\/+$/, '');
-      const s = await criarCheckoutStripe({ valor: valorTaxa, descricao: expressa ? 'Coleta Expressa Ecobraz — até 24h' : 'Taxa de coleta Ecobraz — pequeno volume', externalReference: ref, baseUrl: base, backPath: '/pagamento/ok', clienteEmail: (email || sessao.email || ''), metodos: ['card', 'boleto'] }, env);
+      const s = await criarPagamentoEscolha({ valor: valorTaxa, descricao: expressa ? 'Coleta Expressa Ecobraz — até 24h' : 'Taxa de coleta Ecobraz — pequeno volume', externalReference: ref, baseUrl: base, backPath: '/pagamento/ok', clienteEmail: (email || sessao.email || ''), metodos: ['card', 'boleto'] }, env);
       if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${ref}`, JSON.stringify({ produto: 'coleta', leadId: r.id, expressa, itens, valor: valorTaxa, status: 'pendente', clienteEmail: email || sessao.email || '', clienteNome: responsavel || sessao.nome || '', criadoEm: nowS() }), { expirationTtl: 30 * 86400 });
       const lead = await lerLead(env, r.id);
       if (lead) {
@@ -4242,7 +4279,7 @@ async function verificarRecargaAdote(env, clienteId, baseUrl) {
   const ref = novoId();
   const base = String(baseUrl || '').replace(/\/+$/, '');
   await env.PORTAL_KV.put(`pedido:${ref}`, JSON.stringify({ produto: 'adote', evento: 'recarga', status: 'pendente', clienteId, clienteNome: cred.clienteNome, doc: cred.doc || '', pacoteId: pac.id, faixa: cred.faixa || '', tipo: 'recorrente', valor, kg: pac.kg, email, criadoEm: nowS() }), { expirationTtl: 35 * 86400 });
-  const s = await criarCheckoutStripe({ valor, descricao: `Adote um Bairro — renovação ${pac.ton}t (recorrente)`, externalReference: ref, baseUrl: base, backPath: '/pagamento/ok', clienteEmail: email, metodos: ['card', 'boleto'] }, env);
+  const s = await criarPagamentoEscolha({ valor, descricao: `Adote um Bairro — renovação ${pac.ton}t (recorrente)`, externalReference: ref, baseUrl: base, backPath: '/pagamento/ok', clienteEmail: email, metodos: ['card', 'boleto'] }, env);
   cred.recargaPendente = { ref, em: nowS() };
   await salvarCredito(env, cred);
   if (email) { try { await enviarEmailRecarga({ nome: cred.clienteNome, email }, s.url, pac.ton, env); console.log('adote_recarga_email_ok', { cliente: clienteId }); } catch (e) { console.error('adote_recarga_email_falhou', safeError(e)); } }
