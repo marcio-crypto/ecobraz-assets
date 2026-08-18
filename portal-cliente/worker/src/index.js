@@ -116,7 +116,9 @@ export default {
   },
   async fetch(request, env) {
     const url = new URL(request.url);
-    const { pathname } = url;
+    // Tolerância a barra dobrada (ex.: sistema.ecobraz.org//diretoria/pagamentos,
+    // fácil de digitar sem querer): trata como uma barra só (caso real 18/08).
+    const pathname = url.pathname.replace(/\/{2,}/g, '/');
     try {
       if (pathname === '/health') return json({
         ok: true, service: 'ecobraz-portal', version: 29,
