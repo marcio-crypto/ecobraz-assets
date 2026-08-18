@@ -55,6 +55,7 @@ export const MESES_REATIVACAO = 12;
 export const PUBLICOS_WA = {
   'teste': 'Teste — só o número que você digitar',
   'top-450': `Top ${TOP_N} — empresas mais relevantes (negócios concluídos + coletas recentes)`,
+  'top-500-novos': 'Top 500 INÉDITOS — os próximos 500 mais relevantes que NUNCA receberam campanha',
   'reativacao-200': `Top 200 para REATIVAR — já descartaram com a Ecobraz, mas estão paradas há ${MESES_REATIVACAO}+ meses`,
   'clientes-os': 'Clientes que já têm OS no sistema (com telefone)',
   'sem-coleta-6m': 'Clientes com OS, mas SEM coleta nos últimos 6 meses (oferecer coleta)',
@@ -92,7 +93,24 @@ export async function publicoTop200(env, n = TOP_N) {
   try { docsReativacao = new Set((await publicoReativacao(env, 200)).map((c) => c.doc).filter(Boolean)); } catch { docsReativacao = new Set(); }
   return publicoTopBruto(env, n, docsReativacao);
 }
-async function publicoTopBruto(env, n, docsFora) {
+
+// TOP 500 INÉDITOS (pedido do Marcio 18/08): os PRÓXIMOS mais relevantes que
+// NUNCA receberam campanha — regra rígida: qualquer tentativa anterior conta
+// como "já enviado" (mesmo as que falharam; número morto já sai sozinho pela
+// wa_tel_invalido, então esta lista nasce limpa). Mesma pontuação aberta do Top.
+export async function publicoTopNovos(env, n = 500) {
+  let docsReativacao = new Set();
+  try { docsReativacao = new Set((await publicoReativacao(env, 200)).map((c) => c.doc).filter(Boolean)); } catch { docsReativacao = new Set(); }
+  let jaTentados = new Set();
+  try {
+    const d = await db(env);
+    if (d) { const r = await d.prepare('SELECT DISTINCT tel FROM wa_destinatarios').all(); jaTentados = new Set((r.results || []).map((x) => x.tel)); }
+  } catch { jaTentados = new Set(); }
+  const bruto = await publicoTopBruto(env, Math.max(n * 4, 2000), docsReativacao, 3000);
+  return bruto.filter((c) => !jaTentados.has(c.tel)).slice(0, n)
+    .map((c) => ({ ...c, motivo: `${c.motivo ? c.motivo + ' · ' : ''}inédito — nunca recebeu campanha` }));
+}
+async function publicoTopBruto(env, n, docsFora, poolLimite = 1000) {
   const d = await db(env); if (!d) return [];
   let linhas = [];
   try {
@@ -104,7 +122,7 @@ async function publicoTopBruto(env, n, docsFora) {
       FROM contatos c JOIN negocios n ON n.contact_id = c.ploomes_id
       WHERE c.tipo='PJ' AND COALESCE(c.telefone,'')<>''
       GROUP BY c.ploomes_id, c.nome, c.telefone, c.documento
-      ORDER BY concluidos DESC, total DESC LIMIT 1000`).all();
+      ORDER BY concluidos DESC, total DESC LIMIT ${Math.max(1000, Number(poolLimite) || 1000)}`).all();
     linhas = r.results || [];
   } catch { linhas = []; }
   // Junta as OS do sistema novo (clientes ativos AGORA contam mais).
@@ -242,7 +260,7 @@ async function contatosPorDocs(env, docs) {
 // Tamanho-alvo dos públicos RANQUEADOS. Ao preparar a campanha, quem já recebeu
 // o template sai e a PRÓXIMA empresa da fila entra — a campanha tenta completar
 // todas as vagas (regra do Marcio 17/08: "lista de 200 sem repetir quem já recebeu").
-const ALVO_PUBLICO = { 'top-450': TOP_N, 'top-200': TOP_N, 'reativacao-200': 200 };
+const ALVO_PUBLICO = { 'top-450': TOP_N, 'top-200': TOP_N, 'top-500-novos': 500, 'reativacao-200': 200 };
 
 // Monta o público (antes de dedupe/supressão). Devolve [{tel, nome, doc}].
 // nMaior: pede uma fila maior que o alvo (usado na preparação, para repor vagas).
@@ -252,6 +270,7 @@ export async function montarPublicoWA(env, publico, telTeste, nMaior) {
     return t ? [{ tel: t, nome: 'Teste', doc: '' }] : [];
   }
   if (publico === 'top-450' || publico === 'top-200') return publicoTop200(env, nMaior || TOP_N);
+  if (publico === 'top-500-novos') return publicoTopNovos(env, nMaior || 500);
   if (publico === 'reativacao-200') return publicoReativacao(env, nMaior || 200);
   if (publico === 'base-pj') {
     const d = await db(env); if (!d) return [];
@@ -614,7 +633,7 @@ td{padding:9px 10px;border-bottom:1px solid #EEF1F0;vertical-align:top}
 <div style="max-width:940px;margin:0 auto;padding:20px 18px 56px">
   <h1 style="font-size:19px;margin:0 0 4px">📋 ${esc(rotulo)}</h1>
   <p style="font-size:12.5px;color:#7c8a87;margin:0 0 6px"><b>${(itens || []).length}</b> empresa(s), já sem repetidos, sem quem pediu para sair, sem números que a Meta devolveu como "sem WhatsApp" e sem as removidas. Ao tirar uma, a próxima da fila entra no lugar. <b>☎️ provável fixo</b> = o cadastro só tem telefone de linha fixa (dificilmente recebe WhatsApp) — vale a equipe atualizar o contato dessa empresa.</p>
-  ${String(publico).startsWith('top-') ? `<p style="font-size:11.5px;color:#9aa7a4;margin:0 0 14px">Critério da pontuação (aberto): negócio concluído ×3 · volume de negócios (até 20) · OS no sistema novo ×5 · atividade nos últimos 12 meses +10 (24 meses +5). Desempate por valor concluído. <b>Sem repetição entre listas:</b> empresa parada há ${MESES_REATIVACAO}+ meses pertence à lista de Reativação e fica fora daqui.</p>` : publico === 'reativacao-200' ? `<p style="font-size:11.5px;color:#9aa7a4;margin:0 0 14px">Critério (aberto): entra quem tem pelo menos 1 descarte CONCLUÍDO no histórico e NENHUMA atividade (negócio ou OS) nos últimos ${MESES_REATIVACAO} meses. Pontos: concluídas ×3 + volume (até 20), desempate por valor. Cada linha mostra desde quando a empresa está parada. <b>Sem repetição entre listas:</b> quem está aqui fica fora do Top ${TOP_N} — e, ao preparar a campanha, quem já recebeu o template escolhido em qualquer disparo anterior fica de fora automaticamente e a próxima empresa da fila entra no lugar (a campanha tenta completar as 200 vagas). Quem teve FALHA de entrega não conta como "recebeu" e pode entrar de novo.</p>` : '<div style="margin-bottom:14px"></div>'}
+  ${publico === 'top-500-novos' ? `<p style="font-size:11.5px;color:#9aa7a4;margin:0 0 14px">Critério (aberto): mesma pontuação do Top (concluídas ×3 · volume até 20 · OS ×5 · recência) — mas <b>só entra quem NUNCA recebeu campanha</b>: qualquer tentativa anterior (mesmo as que falharam) deixa a empresa de fora. Números que a Meta devolveu como "sem WhatsApp", quem pediu SAIR e as removidas também ficam de fora. Empresa parada há ${MESES_REATIVACAO}+ meses pertence à lista de Reativação. Se a base tiver menos de 500 empresas inéditas com histórico, a lista vem com o que existe de verdade.</p>` : String(publico).startsWith('top-') ? `<p style="font-size:11.5px;color:#9aa7a4;margin:0 0 14px">Critério da pontuação (aberto): negócio concluído ×3 · volume de negócios (até 20) · OS no sistema novo ×5 · atividade nos últimos 12 meses +10 (24 meses +5). Desempate por valor concluído. <b>Sem repetição entre listas:</b> empresa parada há ${MESES_REATIVACAO}+ meses pertence à lista de Reativação e fica fora daqui.</p>` : publico === 'reativacao-200' ? `<p style="font-size:11.5px;color:#9aa7a4;margin:0 0 14px">Critério (aberto): entra quem tem pelo menos 1 descarte CONCLUÍDO no histórico e NENHUMA atividade (negócio ou OS) nos últimos ${MESES_REATIVACAO} meses. Pontos: concluídas ×3 + volume (até 20), desempate por valor. Cada linha mostra desde quando a empresa está parada. <b>Sem repetição entre listas:</b> quem está aqui fica fora do Top ${TOP_N} — e, ao preparar a campanha, quem já recebeu o template escolhido em qualquer disparo anterior fica de fora automaticamente e a próxima empresa da fila entra no lugar (a campanha tenta completar as 200 vagas). Quem teve FALHA de entrega não conta como "recebeu" e pode entrar de novo.</p>` : '<div style="margin-bottom:14px"></div>'}
   <div style="background:#fff;border:1px solid #E4EBE9;border-radius:14px;overflow:auto;max-height:70vh">
   <table><thead><tr><th>#</th><th>Empresa</th><th>CNPJ/CPF</th><th>WhatsApp</th><th style="text-align:center">Pontos</th><th></th></tr></thead><tbody>${rows}</tbody></table>
   </div>
