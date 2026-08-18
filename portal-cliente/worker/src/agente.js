@@ -5,7 +5,7 @@
 
 import { tagsPWA, botaoInstalarPWA } from './pwa.js';
 import qrcode from 'qrcode-generator';
-import { listarColetasOS, lerColetaOS, atualizarStatusOS } from './coletas.js';
+import { listarColetasOS, lerColetaOS, atualizarStatusOS, marcarReagendarOS, limparReagendarOS } from './coletas.js';
 import { botaoGoogle } from './google-auth.js';
 const STAGE_EM_TRANSPORTE = (env) => Number(env.COLETA_STAGE_EM_TRANSPORTE || 35313);
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -160,8 +160,13 @@ async function salvarEstadoColeta(env, id, e) { if (env.PORTAL_KV) await env.POR
 export async function registrarACaminho(env, id, agente) {
   const e = await lerEstadoColeta(env, id);
   const jaAvisado = !!e.acaminho;
-  if (!jaAvisado) { e.acaminho = { em: agora(), agente: agente.email }; await salvarEstadoColeta(env, id, e); }
+  let mudou = false;
+  if (!jaAvisado) { e.acaminho = { em: agora(), agente: agente.email }; mudou = true; }
+  // Nova tentativa depois de um reagendamento: o pedido de reagendar se encerra.
+  if (e.status === 'reagendar') { e.status = ''; mudou = true; }
+  if (mudou) await salvarEstadoColeta(env, id, e);
   try { await atualizarStatusOS(env, id, 'em_transporte'); } catch { /* ok */ }
+  try { await limparReagendarOS(env, id); } catch { /* ok */ }
   return { estado: e, jaAvisado };
 }
 export async function registrarCheckin(env, id, agente, geo) { const e = await lerEstadoColeta(env, id); e.checkin = { lat: Number(geo.lat), lon: Number(geo.lon), acc: Math.round(Number(geo.acc) || 0), em: agora(), agente: agente.email }; await salvarEstadoColeta(env, id, e); try { await atualizarStatusOS(env, id, 'em_transporte'); } catch { /* ok */ } return e; }
@@ -206,6 +211,7 @@ export async function registrarEncerramento(env, id, agente, dados) {
   await salvarEstadoColeta(env, id, e);
   // O motorista concluiu a coleta no cliente → a OS fica CONCLUÍDA e, com isso, entra
   // automaticamente na fila da doca (listarColetasRecebiveis lê status 'concluida').
+  try { await limparReagendarOS(env, id); } catch { /* ok */ }
   try { await atualizarStatusOS(env, id, 'concluida'); } catch { /* ok */ }
   return e;
 }
@@ -216,6 +222,9 @@ export async function registrarReagendamento(env, id, agente, dados) {
   e.reagendar = { em: agora(), agente: agente.email, motivo: String(d.motivo || '').slice(0, 300) };
   e.status = 'reagendar';
   await salvarEstadoColeta(env, id, e);
+  // Deixa o pedido À MOSTRA no escritório: a OS volta para "agendada" com o
+  // motivo em destaque e o selo ↩︎ REAGENDAR nas listas (pedido da equipe 18/08).
+  try { await marcarReagendarOS(env, id, { em: e.reagendar.em, motivo: e.reagendar.motivo, agente: agente.email, agenteNome: agente.nome || '' }); } catch { /* OS pode não existir (coleta antiga) */ }
   return e;
 }
 

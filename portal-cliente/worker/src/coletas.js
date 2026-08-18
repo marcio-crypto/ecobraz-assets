@@ -130,6 +130,37 @@ export async function atualizarStatusOS(env, id, status) {
   }
   return rec;
 }
+
+// Reagendamento pedido pelo MOTORISTA (pedido da equipe 18/08: "preciso que
+// fique à mostra"): a OS volta para AGENDADA (precisa de nova data), guarda o
+// motivo à vista e a listagem ganha o selo ↩︎ REAGENDAR. O selo some quando o
+// motorista sai para a nova tentativa ("estou indo") ou encerra a coleta.
+export async function marcarReagendarOS(env, id, info) {
+  const rec = await lerColetaOS(env, id); if (!rec) return null;
+  rec.reagendar = {
+    em: (info && info.em) || agora(),
+    motivo: String((info && info.motivo) || '').slice(0, 300),
+    agente: String((info && info.agente) || '').slice(0, 120),
+    agenteNome: String((info && info.agenteNome) || '').slice(0, 120),
+  };
+  rec.status = 'agendada'; rec.atualizadoEm = agora();
+  if (env.PORTAL_KV) {
+    await env.PORTAL_KV.put(`os:${id}`, JSON.stringify(rec));
+    const idx = await listarColetasOS(env); const i = idx.findIndex((x) => x.id === id);
+    if (i >= 0) { idx[i].status = 'agendada'; idx[i].reagendar = 1; await env.PORTAL_KV.put('os:index', JSON.stringify(idx).slice(0, 900000)); }
+  }
+  return rec;
+}
+export async function limparReagendarOS(env, id) {
+  const rec = await lerColetaOS(env, id); if (!rec || !rec.reagendar) return rec;
+  delete rec.reagendar; rec.atualizadoEm = agora();
+  if (env.PORTAL_KV) {
+    await env.PORTAL_KV.put(`os:${id}`, JSON.stringify(rec));
+    const idx = await listarColetasOS(env); const i = idx.findIndex((x) => x.id === id);
+    if (i >= 0 && idx[i].reagendar) { delete idx[i].reagendar; await env.PORTAL_KV.put('os:index', JSON.stringify(idx).slice(0, 900000)); }
+  }
+  return rec;
+}
 // Anexa um registro de TELEMETRIA (posição do rastreador no momento de um evento)
 // à coleta — vira prova de rastreabilidade incontestável no dossiê. Best-effort.
 export async function anexarTelemetriaOS(env, id, registro) {
@@ -299,7 +330,7 @@ export function paginaColetasLista(user, coletas, q, cliCtx, negocios, aba) {
   const linhas = lista.length ? lista.map((c) => `<a href="/coletas/os?id=${esc(c.id)}" style="display:flex;justify-content:space-between;align-items:center;gap:12px;text-decoration:none;background:#fff;border:1px solid #E4EBE9;border-radius:12px;padding:13px 15px;margin-bottom:9px">
       <div style="min-width:0"><div style="font-size:14px;font-weight:800;color:#10262B">${esc(c.numero)} <span style="font-weight:600;color:#7c8a87">· ${esc(c.clienteNome || '')}</span></div>
       <div style="font-size:12px;color:#7c8a87;margin-top:3px">${c.dataAgendada ? '📅 ' + esc(dataBR(c.dataAgendada)) : 'sem data'}${c.agenteNome ? ' · 🚚 ' + esc(c.agenteNome) : ''}${c.cidade ? ' · ' + esc(c.cidade) : ''}</div></div>
-      ${pill(c.status)}
+      <span style="flex:none;display:flex;align-items:center;gap:6px">${c.reagendar ? '<span style="font-size:10px;font-weight:800;color:#8A6A16;background:#FFF4DE;border-radius:20px;padding:3px 9px">↩︎ REAGENDAR</span>' : ''}${pill(c.status)}</span>
     </a>`).join('') : `<div class="card" style="text-align:center;color:#8fa39f;font-size:13.5px">${vazioMsg}</div>`;
   return `${head('Coletas')}<body>${topo('coletas')}
 <div class="wrap">
@@ -437,6 +468,15 @@ export function paginaColetaOSDetalhe(user, os, acomp) {
       ${rows.join('')}
     </div>`;
   })();
+  // Reagendamento à mostra (pedido da equipe 18/08): vale o que está na OS
+  // (fluxo novo) OU o estado do app do motorista (casos de antes do ajuste).
+  const rea = os.reagendar || (acomp && acomp.reagendar) || null;
+  const reaHTML = (rea && os.status !== 'concluida' && os.status !== 'cancelada') ? `<div class="card" style="margin-bottom:14px;border-left:4px solid #E0A800;background:#FFF9EC">
+    <div style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#8A6A16">↩︎ O motorista pediu REAGENDAMENTO — coleta NÃO realizada</div>
+    <div style="font-size:15px;font-weight:800;color:#10262B;margin-top:8px">${esc(rea.motivo || 'Sem motivo informado')}</div>
+    <div style="font-size:12.5px;color:#8A6A16;margin-top:6px">${(rea.agenteNome || rea.agente) ? '🚚 ' + esc(rea.agenteNome || rea.agente) + ' · ' : ''}${esc(dataBR(rea.em))}${hhmm(rea.em) ? ' às ' + hhmm(rea.em) : ''}</div>
+    <div style="font-size:12px;color:#4F6469;margin-top:8px">O que fazer: combinar a nova data com o cliente e ajustar em <b>✏️ Editar</b>. Este aviso some sozinho quando o motorista sair para a nova tentativa.</div>
+  </div>` : '';
   const registroHTML = blocoRegistroMotorista(acomp && acomp.registro, `/coletas/foto-motorista?id=${esc(os.id)}`, `/coletas/assinatura-motorista?id=${esc(os.id)}`);
   const anexosArr = Array.isArray(os.anexos) ? os.anexos : [];
   const badgeTipo = (t) => t ? `<span style="flex:none;font-size:9px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;padding:2px 8px;border-radius:20px;background:#E8F0EE;color:#3B5B57;white-space:nowrap">${esc(t)}</span>` : `<span style="flex:none;font-size:9px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:2px 8px;border-radius:20px;background:#FFF4DE;color:#8A6A16;white-space:nowrap">sem tipo</span>`;
@@ -459,6 +499,7 @@ export function paginaColetaOSDetalhe(user, os, acomp) {
       <a href="/coletas/os/comprovante?id=${esc(os.id)}" class="btn btn-d" style="padding:9px 12px;font-size:12.5px">✅ Comprovante (QR)</a>
     </div>
   </div>
+  ${reaHTML}
   ${acompHTML}
   ${registroHTML}
   <div class="card">

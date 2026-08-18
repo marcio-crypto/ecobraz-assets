@@ -1957,6 +1957,9 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
             avisoChegou: parseAviso(env.PORTAL_KV ? await env.PORTAL_KV.get(`notif:coleta:${os.id}:chegou`) : null),
           };
           acomp.registro = { checkin: est && est.checkin, foto: est && est.foto, encerramento: est && est.encerramento, assinatura: est && est.assinatura };
+          // Reagendamento pedido pelo motorista fica À MOSTRA (também cobre OS
+          // de antes do ajuste, em que só o estado do app tinha a informação).
+          acomp.reagendar = (est && est.status === 'reagendar' && est.reagendar) ? est.reagendar : null;
           const tel = Array.isArray(os.telemetria) ? os.telemetria : [];
           const ult = tel.length ? tel[tel.length - 1] : null;
           if (ult && ult.lat != null && ult.lng != null && !acomp.chegou) {
