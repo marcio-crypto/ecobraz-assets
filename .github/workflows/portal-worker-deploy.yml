@@ -30,6 +30,23 @@ jobs:
       - uses: actions/checkout@v4
       - name: Instalar dependências
         run: npm install --no-audit --no-fund
+      # O painel da Cloudflare trava a edição manual de segredos em Workers
+      # publicados por esteira. Solução: o segredo mora no GitHub (Settings →
+      # Secrets → Actions → MERCADOPAGO_ACCESS_TOKEN) e cada publicação leva o
+      # valor até a Cloudflare. Se o segredo não existir no GitHub, nada muda
+      # (mantém o que já está na Cloudflare). O valor nunca aparece no log.
+      - name: Sincronizar segredo do Mercado Pago (GitHub → Cloudflare)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MP_TOKEN: ${{ secrets.MERCADOPAGO_ACCESS_TOKEN }}
+        run: |
+          if [ -n "$MP_TOKEN" ]; then
+            printf '%s' "$MP_TOKEN" | npx wrangler@latest secret put MERCADOPAGO_ACCESS_TOKEN
+            echo "Segredo do Mercado Pago sincronizado."
+          else
+            echo "MERCADOPAGO_ACCESS_TOKEN não está no GitHub — mantendo o valor atual da Cloudflare."
+          fi
       - name: Publicar Worker (wrangler deploy)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
