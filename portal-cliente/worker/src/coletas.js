@@ -142,6 +142,7 @@ export async function marcarReagendarOS(env, id, info) {
     motivo: String((info && info.motivo) || '').slice(0, 300),
     agente: String((info && info.agente) || '').slice(0, 120),
     agenteNome: String((info && info.agenteNome) || '').slice(0, 120),
+    foto: !!(info && info.foto),
   };
   rec.status = 'agendada'; rec.atualizadoEm = agora();
   if (env.PORTAL_KV) {
@@ -475,6 +476,7 @@ export function paginaColetaOSDetalhe(user, os, acomp) {
     <div style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#8A6A16">↩︎ O motorista pediu REAGENDAMENTO — coleta NÃO realizada</div>
     <div style="font-size:15px;font-weight:800;color:#10262B;margin-top:8px">${esc(rea.motivo || 'Sem motivo informado')}</div>
     <div style="font-size:12.5px;color:#8A6A16;margin-top:6px">${(rea.agenteNome || rea.agente) ? '🚚 ' + esc(rea.agenteNome || rea.agente) + ' · ' : ''}${esc(dataBR(rea.em))}${hhmm(rea.em) ? ' às ' + hhmm(rea.em) : ''}</div>
+    ${rea.foto ? `<div style="font-size:11.5px;font-weight:800;color:#8A6A16;margin-top:10px">📷 Foto do motivo, enviada pelo motorista:</div><img src="/coletas/foto-reagendar?id=${esc(os.id)}" alt="Foto do motivo do reagendamento" style="width:100%;max-width:420px;border-radius:12px;margin-top:6px;border:1px solid #E8D9A8">` : ''}
     <div style="font-size:12px;color:#4F6469;margin-top:8px">O que fazer: combinar a nova data com o cliente e ajustar em <b>✏️ Editar</b>. Este aviso some sozinho quando o motorista sair para a nova tentativa.</div>
   </div>` : '';
   const registroHTML = blocoRegistroMotorista(acomp && acomp.registro, `/coletas/foto-motorista?id=${esc(os.id)}`, `/coletas/assinatura-motorista?id=${esc(os.id)}`);

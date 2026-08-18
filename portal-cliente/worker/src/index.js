@@ -67,7 +67,7 @@ import { sondaRotaExata, paginaSondaRotaExata, paginaRastreio, posicaoDoVeiculo,
 import { lerValidacao, registrarValidacao, paginaAreaValidacao, qrMetodologia, validarMetodologiaPublico, homologarFatorAcao } from './validacao-metodologia.js';
 import { paginaPainelCarbono } from './carbono-painel.js';
 import { clientesComOperacoes, carbonoDoCliente, paginaCarbonoAnalista, paginaCarbonoAuditor } from './carbono-motor.js';
-import { agentePermitido, nomeAgente, listarColetasComStatus, enriquecerProximidade, coordDoEndereco, paginaLoginAgente, paginaAppAgente, detalheColeta, lerEstadoColeta, registrarCheckin, registrarACaminho, registrarFoto, servirFotoColeta, registrarAssinatura, servirAssinaturaColeta, paginaColetaDetalhe, registrarEncerramento, registrarReagendamento, qrColeta, validarColetaPublico, paginaComprovante } from './agente.js';
+import { agentePermitido, nomeAgente, listarColetasComStatus, enriquecerProximidade, coordDoEndereco, paginaLoginAgente, paginaAppAgente, detalheColeta, lerEstadoColeta, registrarCheckin, registrarACaminho, registrarFoto, servirFotoColeta, registrarFotoReagendar, servirFotoReagendar, registrarAssinatura, servirAssinaturaColeta, paginaColetaDetalhe, registrarEncerramento, registrarReagendamento, qrColeta, validarColetaPublico, paginaComprovante } from './agente.js';
 import { operadorPermitido, nomeOperador, listarOperacoes, listarColetasRecebiveis, iniciarOperacao, lerOperacao, definirTipoOperacao, registrarPesoEntrada, registrarFotoOperacao, servirFotoOperacao, paginaLoginOperacao, paginaAppOperacao, paginaReceberLote, paginaLoteDetalhe, adicionarMaterial, removerMaterial, concluirTriagem, paginaTriagem, paginaProcessamento, concluirProcessamento, paginaSaida, registrarSaida, concluirSaida } from './operacional.js';
 import { engenheiroPermitido, nomeEngenheiro, filaValidacao, operacoesValidadas, lerValidacaoOp, registrarValidacaoOp, paginaLoginEng, paginaFilaEng, paginaDossie, qrOperacao, validarOperacaoPublico, listarDestinos, lerDestino, salvarDestino, paginaDestinos, paginaDestinoForm, paginaRelatorio, paginaCDF } from './engenharia.js';
 import { diretorPermitido, nomeDiretor, reunirDados, paginaLoginDiretoria, paginaPainelDiretoria } from './diretoria.js';
@@ -1904,6 +1904,11 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         if (!ok) return json({ ok: false, error: 'nao_autorizado' }, 403);
         return await servirFotoColeta(env, fid);
       }
+      // Foto do MOTIVO do reagendamento (visível para escritório/diretoria/operação).
+      if (pathname === '/coletas/foto-reagendar' && request.method === 'GET') {
+        if (!(escritorio || diretoria || agente || operacao)) return json({ ok: false, error: 'nao_autorizado' }, 403);
+        return await servirFotoReagendar(env, String(url.searchParams.get('id') || ''));
+      }
       if (pathname === '/coletas/assinatura-motorista' && request.method === 'GET') {
         const fid = String(url.searchParams.get('id') || '');
         const ftok = String(url.searchParams.get('t') || '');
@@ -2369,6 +2374,14 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         let b; try { b = await request.json(); } catch { b = null; }
         if (!b || !b.id || !b.foto) return json({ ok: false, error: 'dados' }, 400);
         await registrarFoto(env, b.id, agente, b.foto);
+        return json({ ok: true });
+      }
+      // Foto do motivo do REAGENDAMENTO (pedido do Paulo 18/08).
+      if (pathname === '/api/agente/foto-reagendar' && request.method === 'POST') {
+        if (!agente) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = null; }
+        if (!b || !b.id || !b.foto) return json({ ok: false, error: 'dados' }, 400);
+        await registrarFotoReagendar(env, b.id, agente, b.foto);
         return json({ ok: true });
       }
       // Assinatura do cliente (desenhada na tela) + RG/CPF — prova da coleta.

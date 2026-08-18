@@ -905,7 +905,8 @@ async function verResultados(id){
     }
     box.innerHTML=
       '<div style="font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#7c8a87;margin-bottom:6px">Canal (WhatsApp)'+(semRetorno?' — <span style="color:#8A6A16">sem retorno ainda: configure o webhook abaixo</span>':'')+'</div>'
-      +'<div style="display:flex;gap:8px;flex-wrap:wrap">'+tile(j.enviadas,'aceitas')+tile(c.entregues,'entregues','#0B5B66')+tile(c.lidas,'lidas','#1E5B31')+tile(c.responderam,'responderam','#1E5B31')+tile(c.falharam,'falhou entrega','#B23A2E')+tile(j.sairam,'pediram SAIR','#8A6A16')+'</div>'
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap">'+tile(j.enviadas,'aceitas')+tile(c.entregues,'entregues','#0B5B66')+tile(c.lidas,'lidas','#1E5B31')+tile(c.responderam,'responderam','#1E5B31')+tile(c.falharam,'falhou entrega','#B23A2E')+tile(Math.max(0,(j.enviadas||0)-((c&&c.comRetorno)||0)),'sem confirmação ainda','#6B7B78')+tile(j.sairam,'pediram SAIR','#8A6A16')+'</div>'
+      +((j.enviadas||0)-((c&&c.comRetorno)||0)>0?'<div style="font-size:10.5px;color:#7c8a87;margin-top:6px">"Sem confirmação ainda" = a Meta aceitou e ainda não devolveu o recibo de entrega — as falhas de número morto voltam na hora, mas as entregas podem levar horas para confirmar. O número cai sozinho conforme os recibos chegam.</div>':'')
       +blocoFalhas
       +'<div style="font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#7c8a87;margin:10px 0 6px">Conversão no portal (desde '+j.desde.split('-').reverse().join('/')+')</div>'
       +'<div style="display:flex;gap:8px;flex-wrap:wrap">'+tile(v.portal,'entraram no portal','#0B5B66')+tile(v.solicitacoes,'pediram coleta','#1E5B31')+tile(v.novasOS,'viraram OS','#1E5B31')+'</div>'

@@ -177,6 +177,24 @@ export async function servirFotoColeta(env, id) {
   if (!b64) return new Response('sem foto', { status: 404 });
   return new Response(base64ParaBytes(b64), { headers: { 'content-type': 'image/jpeg', 'cache-control': 'private, max-age=3600' } });
 }
+// Foto do MOTIVO do reagendamento (pedido do Paulo 18/08): prova visual do que
+// impediu a coleta (ex.: carreta bloqueando a rua). Mesma mecânica da foto da carga.
+export async function registrarFotoReagendar(env, id, agente, b64) {
+  if (env.PORTAL_KV) await env.PORTAL_KV.put(`coletareafoto:${id}`, String(b64).slice(0, 3000000), { expirationTtl: 60 * 60 * 24 * 120 });
+  const e = await lerEstadoColeta(env, id);
+  if (e.reagendar) {
+    e.reagendar.foto = true;
+    await salvarEstadoColeta(env, id, e);
+    try { await marcarReagendarOS(env, id, { ...e.reagendar, agenteNome: (agente && agente.nome) || '' }); } catch { /* OS pode não existir */ }
+  }
+  return e;
+}
+export async function servirFotoReagendar(env, id) {
+  if (!env.PORTAL_KV) return new Response('sem foto', { status: 404 });
+  const b64 = await env.PORTAL_KV.get(`coletareafoto:${id}`);
+  if (!b64) return new Response('sem foto', { status: 404 });
+  return new Response(base64ParaBytes(b64), { headers: { 'content-type': 'image/jpeg', 'cache-control': 'private, max-age=3600' } });
+}
 // Assinatura do cliente na coleta (desenhada na tela do celular) + RG/CPF — prova de que
 // o material foi coletado. A imagem (PNG) fica em coletaass:{id} (fora do estado, que é
 // pequeno); nome + documento ficam no estado. Aparece na Carta de Descarte, no comprovante
@@ -403,10 +421,13 @@ export function paginaColetaDetalhe(agente, coleta, estado) {
   <button class="btn ghost" id="brea">↩︎ Não deu pra coletar — reagendar</button>
   <div id="pane-rea" style="display:none;background:#fff;border:1px solid #E4EBE9;border-radius:12px;padding:14px;margin-bottom:10px;">
     <textarea id="mot" rows="2" placeholder="Motivo (ex: cliente ausente, carga não estava pronta)" style="width:100%;box-sizing:border-box;border:1px solid #DDE1E6;border-radius:10px;padding:12px;font-size:15px;font-family:inherit;"></textarea>
-    <button class="btn ghost" id="brea2" style="margin-top:8px;border-color:#E0B4AE;color:#B23A2E;">Enviar para reagendar</button>
+    <label style="display:block;margin-top:10px;font-size:12px;font-weight:800;color:#4F6469;">📷 Foto do motivo (opcional — ex.: rua bloqueada, portão fechado)
+      <input type="file" id="reafoto" accept="image/*" capture="environment" style="display:block;margin-top:6px;font-size:13px;width:100%;">
+    </label>
+    <button class="btn ghost" id="brea2" style="margin-top:10px;border-color:#E0B4AE;color:#B23A2E;">Enviar para reagendar</button>
   </div>
   `}
-  ${rea ? `<div style="text-align:center;font-size:11.5px;color:#8A6A16;background:#FFF4DE;border-radius:8px;padding:9px;margin-bottom:12px;">↩︎ Enviado para reagendar${rea.motivo ? ' — ' + esc(rea.motivo) : ''}</div>` : ''}
+  ${rea ? `<div style="text-align:center;font-size:11.5px;color:#8A6A16;background:#FFF4DE;border-radius:8px;padding:9px;margin-bottom:12px;">↩︎ Enviado para reagendar${rea.motivo ? ' — ' + esc(rea.motivo) : ''}${rea.foto ? ' · 📷 foto do motivo anexada' : ''}</div>` : ''}
   <div id="msg" style="text-align:center;font-size:12px;color:#4F6469;min-height:16px;"></div>
   <div id="net" style="text-align:center;font-size:10.5px;font-weight:700;margin-top:8px;"></div>
 </div>
@@ -452,7 +473,16 @@ export function paginaColetaDetalhe(agente, coleta, estado) {
     catch{msg.textContent='Sem conexão. Tente de novo com sinal.';benc2.disabled=false;}};
   if(brea2) brea2.onclick=async()=>{brea2.disabled=true;msg.textContent='Enviando…';
     try{const r=await fetch('/api/agente/reagendar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:ID,motivo:(document.getElementById('mot').value||'')})});
-      if(r.ok){location.reload();}else{msg.textContent='Falha ao enviar. Tente de novo.';brea2.disabled=false;}}
+      if(!r.ok){msg.textContent='Falha ao enviar. Tente de novo.';brea2.disabled=false;return;}
+      const rf=document.getElementById('reafoto');const f=rf&&rf.files&&rf.files[0];
+      if(f){msg.textContent='Enviando a foto do motivo…';
+        try{const img=await createImageBitmap(f);const max=1100;const sc=Math.min(1,max/Math.max(img.width,img.height));
+          const cv=document.createElement('canvas');cv.width=Math.round(img.width*sc);cv.height=Math.round(img.height*sc);
+          cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+          const b64=cv.toDataURL('image/jpeg',0.6).split(',')[1];
+          await fetch('/api/agente/foto-reagendar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:ID,foto:b64})});
+        }catch(e2){}}
+      location.reload();}
     catch{msg.textContent='Sem conexão. Tente de novo com sinal.';brea2.disabled=false;}};
   // Assinatura do cliente: quadro de desenho (dedo/mouse) → PNG enviado ao servidor.
   var bass=document.getElementById('bass'), acv=document.getElementById('ass-cv');
