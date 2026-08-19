@@ -204,8 +204,39 @@ com os campos do Zenodo prontos para copiar: [`serie-doi/README-deposito.md`](./
 | Registro | Estado |
 |---|---|
 | #1 Arquitetura de evidência | ✅ escrito (EN+PT) + PDF · aguarda conferência e depósito |
-| #2 Certificado verificável | ✅ escrito (EN+PT) + PDF · **depositar só depois do #1** (cita o DOI dele) |
-| #3 Crosswalk BR↔UE | ⏸️ bloqueado na validação jurídica |
-| #4 Emissões evitadas | 🔜 sem dependência; escrevo quando o Marcio pedir |
-| #5 Implementação (Ecobraz) | ⏸️ depende do Marcio dizer o que está em produção |
+| #2 Certificado verificável | ✅ escrito (EN+PT) + PDF |
+| #3 Crosswalk BR↔UE | ✅ escrito (EN+PT) + PDF · **destravado** — Marcio confirmou OK dos dois especialistas sobre a base de pesquisa |
+| #4 Emissões evitadas | ✅ escrito (EN+PT) + PDF · sem nenhum número, por decisão |
+| #5 Implementação (Ecobraz) | 🔜 destravado — classificação de maturidade recebida (abaixo) |
 | #6 Radar com IA | ⏸️ depende do Pacote 3 existir |
+
+**Ordem de depósito é obrigatória: 1 → 2 → 3 → 4** (cada um cita o DOI do anterior).
+Detalhes e campos do Zenodo em [`serie-doi/README-deposito.md`](./serie-doi/README-deposito.md).
+
+### Ressalva registrada sobre o #3
+
+O OK dos especialistas, conforme o Marcio informou em 19/08/2026, cobre a **base de
+pesquisa** (`portal-cliente/conformidade/`). O crosswalk é documento novo e faz
+correlações que eles não leram. Foi escrito colado no que a base marca como
+`[LEI FIRME]`, omitindo os números de artigo marcados `[A CONFIRMAR]`.
+**Recomendação: leitura final dos dois especialistas sobre o próprio documento antes
+do depósito** — em especial o §3.1 (desmatamento e CBAM "provavelmente não se
+aplicam") e o regime europeu de transferência transfronteiriça de resíduos, que
+**eu não verifiquei** e deixei marcado com ⚠️.
+
+## Maturidade do Sistema Ecobraz — classificação do Marcio (2026-08-19)
+
+Base honesta para o registro #5. Classificação conservadora, dada pelo Marcio; **eu
+não verifiquei nenhum destes itens em operação** — é declaração dele, registrada como tal.
+
+| Situação | Itens |
+|---|---|
+| **Em produção** | Coleta corporativa / logística reversa; qualificação prévia das coletas; cadeia de custódia e documentação ambiental; destruição de mídias e unidades de armazenamento; avaliação dos ativos; remanufatura/reintrodução quando autorizada pelo cliente; destruição integral dos bens quando contratada |
+| **Piloto / rollout** | Portal Ecobraz e a camada digital de relacionamento e gestão — houve teste funcional e está avançando para a base de clientes, mas **não** classificado como plataforma madura em produção |
+| **Plano / não validado em produção** | Módulo de cálculo de emissões evitadas; painel automatizado de impacto de carbono; demais funcionalidades analíticas que dependam desses cálculos |
+
+**Consequência direta para a série:** como o módulo de carbono é *plano*, o registro
+#4 foi escrito **sem nenhum fator, linha de base ou resultado** — o que o torna
+publicável hoje sem qualquer risco de alegação sem lastro. E o registro #5, quando
+for escrito, descreve o Portal como **piloto em rollout**, nunca como plataforma
+madura.
