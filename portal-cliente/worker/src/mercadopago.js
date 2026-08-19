@@ -43,18 +43,33 @@ export async function criarPreferencia({ valor, descricao, externalReference, ba
 // fricção de "entrar na conta". Quando pago, o webhook padrão (notification_url) faz
 // a baixa igual aos demais. Se o Pix NÃO estiver habilitado na conta, o Mercado Pago
 // devolve um erro claro — que a gente mostra para saber o que ativar.
-export async function criarPixDireto({ valor, descricao, externalReference, payerEmail, baseUrl }, env) {
+export async function criarPixDireto({ valor, descricao, externalReference, payerEmail, payerDoc, payerNome, baseUrl }, env) {
   const token = env.MERCADOPAGO_ACCESS_TOKEN;
   if (!token) throw new Error('sem_token_mp');
   const base = String(baseUrl || '').replace(/\/+$/, '');
-  const email = String(payerEmail || '').trim() || 'pagador+ecobraz@ecobraz.org.br';
+  const email = String(payerEmail || '').trim();
+  if (!email) {
+    // Pagador inventado é recusado pelas políticas do MP ("At least one policy
+    // returned UNAUTHORIZED", visto em produção 19/08/2026) — sem e-mail real,
+    // a tela pede antes de gerar.
+    const e = new Error('sem_email_pagador'); e.semEmail = true; throw e;
+  }
+  const payer = { email };
+  const doc = String(payerDoc || '').replace(/\D/g, '');
+  if (doc.length === 11 || doc.length === 14) payer.identification = { type: doc.length === 11 ? 'CPF' : 'CNPJ', number: doc };
+  const nome = String(payerNome || '').trim();
+  if (nome) {
+    const partes = nome.split(/\s+/);
+    payer.first_name = partes[0].slice(0, 60);
+    if (partes.length > 1) payer.last_name = partes.slice(1).join(' ').slice(0, 60);
+  }
   const body = {
     transaction_amount: Number(valor),
     description: descricao || 'Cobrança Ecobraz',
     payment_method_id: 'pix',
     external_reference: externalReference,
     notification_url: `${base}/api/mp/webhook`,
-    payer: { email },
+    payer,
   };
   const r = await fetch(`${MP_API}/v1/payments`, {
     method: 'POST',

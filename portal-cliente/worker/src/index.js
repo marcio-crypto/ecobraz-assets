@@ -35,7 +35,7 @@ import { paginaLogin, paginaPainel, paginaMensagem } from './paginas.js';
 import { LOGO_ESCURO_B64, LOGO_CLARO_B64 } from './logos.js';
 import { paginaCalculadora, estimativaCarbono, paginaCalculoDetalhado, calculoDetalhadoGHG, paginaLojaCarbono, paginaCarbonoContato, paginaCarbonoObrigado, nivelCarbono, faixaValida, precoNivel } from './carbono.js';
 import { criarPreferencia, consultarPagamento, criarPixDireto, consultarMeiosPagamento } from './mercadopago.js';
-import { criarPagamentoEscolha, lerAuxPagar, descricaoDoPedido, paginaEscolherPagamento, paginaPixPagamento, statusPixPedido, abrirPixDoPedido, abrirStripeDoPedido, pagamentosDisponiveis, refLimpa } from './pagar.js';
+import { criarPagamentoEscolha, lerAuxPagar, descricaoDoPedido, paginaEscolherPagamento, paginaPixPagamento, statusPixPedido, abrirPixDoPedido, abrirStripeDoPedido, dadosPagadorDoPedido, paginaDadosPix, paginaPagamentoFalhou, pagamentosDisponiveis, refLimpa } from './pagar.js';
 import { criarCheckoutStripe, consultarCheckoutStripe, verificarEventoStripe, stripeConfigurado } from './stripe.js';
 import { gerarPixCopiaECola, pixConfig, paginaPix } from './pix.js';
 import { paginaColetaExpressa } from './coleta-expressa.js';
@@ -419,7 +419,7 @@ export default {
         const auxP = await lerAuxPagar(env, refP);
         return html(paginaEscolherPagamento({ ref: refP, valor: pedP.valor, descricao: descricaoDoPedido(pedP, auxP), ...pagamentosDisponiveis(env) }));
       }
-      if ((pathname === '/pagar/pix' || pathname === '/pagar/cartao' || pathname === '/pagar/boleto') && request.method === 'GET') {
+      if ((pathname === '/pagar/pix' || pathname === '/pagar/cartao' || pathname === '/pagar/boleto') && (request.method === 'GET' || (request.method === 'POST' && pathname === '/pagar/pix'))) {
         const refP = refLimpa(url.searchParams.get('pedido'));
         const rawP = refP && env.PORTAL_KV ? await env.PORTAL_KV.get(`pedido:${refP}`) : null;
         const pedP = rawP ? JSON.parse(rawP) : null;
@@ -427,18 +427,32 @@ export default {
         if (pedP.status === 'pago') return new Response(null, { status: 302, headers: { Location: `/pagamento/ok?pedido=${encodeURIComponent(refP)}`, 'cache-control': 'no-store' } });
         const auxP = await lerAuxPagar(env, refP);
         const baseP = String(env.PORTAL_BASE_URL || env.PORTAL_URL || url.origin).replace(/\/+$/, '');
+        const metodoRota = pathname.split('/').pop();
         try {
           if (pathname === '/pagar/pix') {
-            const { pix, descricao } = await abrirPixDoPedido(env, refP, pedP, auxP, baseP);
+            // O MP exige pagador de verdade (e-mail; CPF/CNPJ ajuda). Se o pedido
+            // não tem, a tela pede — e o que o cliente digitar fica no pedido.
+            let extraP = null;
+            if (request.method === 'POST') {
+              const fd = await request.formData().catch(() => null);
+              extraP = { email: String((fd && fd.get('email')) || '').trim().slice(0, 200), doc: String((fd && fd.get('doc')) || '').replace(/\D/g, '').slice(0, 14) };
+              if (!/^\S+@\S+\.\S+$/.test(extraP.email)) return html(paginaDadosPix({ ref: refP, valor: pedP.valor, descricao: descricaoDoPedido(pedP, auxP), erro: 'Confira o e-mail digitado.' }), 400);
+              if (extraP.doc && extraP.doc.length !== 11 && extraP.doc.length !== 14) return html(paginaDadosPix({ ref: refP, valor: pedP.valor, descricao: descricaoDoPedido(pedP, auxP), erro: 'CPF tem 11 números e CNPJ tem 14 — confira (ou deixe em branco).' }), 400);
+            } else if (!dadosPagadorDoPedido(pedP, auxP).email) {
+              return html(paginaDadosPix({ ref: refP, valor: pedP.valor, descricao: descricaoDoPedido(pedP, auxP) }));
+            }
+            const { pix, descricao } = await abrirPixDoPedido(env, refP, pedP, auxP, baseP, extraP);
             return html(paginaPixPagamento({ ref: refP, valor: pedP.valor, descricao, pix }));
           }
           const metodoP = pathname === '/pagar/boleto' ? 'boleto' : 'card';
           const { s } = await abrirStripeDoPedido(env, refP, pedP, auxP, baseP, metodoP);
           return new Response(null, { status: 302, headers: { Location: s.url, 'cache-control': 'no-store' } });
         } catch (error) {
+          if (error && error.semEmail) return html(paginaDadosPix({ ref: refP, valor: pedP.valor, descricao: descricaoDoPedido(pedP, auxP) }));
           const det = (error && (error.mpDetalhe || error.detalhe)) || safeError(error).message;
           console.error('pagar_metodo_falhou', { rota: pathname, ref: refP, erro: safeError(error) });
-          return html(paginaMensagem('Essa forma de pagamento falhou agora', `O provedor respondeu: <b>${esc(det)}</b><br><br>Volte e tente por outra forma.`, `/pagar?pedido=${encodeURIComponent(refP)}`), 502);
+          await registrarFalha(env, 'pagar-' + metodoRota, det, { ref: refP });
+          return html(paginaPagamentoFalhou({ ref: refP, metodo: metodoRota, motivo: det, ...pagamentosDisponiveis(env) }), 502);
         }
       }
       if (pathname === '/api/pagar/pix-status' && request.method === 'GET') {
@@ -966,10 +980,12 @@ export default {
           const det = (error && error.mpDetalhe) || safeError(error).message;
           console.error('teste_pix_erro', safeError(error));
           await registrarFalha(env, 'teste-pix', det, { ref });
-          const dica = /pix/i.test(det) || (error && error.mpStatus === 400)
-            ? 'Isso normalmente significa que o <b>Pix ainda não está habilitado</b> na conta Mercado Pago da Ecobraz (falta cadastrar a chave Pix). Assim que ativar, este teste mostra o QR Code.'
-            : 'Tente de novo em instantes.';
-          return html(paginaMensagem('Pix não pôde ser gerado', `O Mercado Pago respondeu: <b>${esc(det)}</b><br><br>${dica}`, '/diretoria'), 502);
+          const dica = /policy|unauthorized/i.test(String(det))
+            ? 'A conta Mercado Pago recusou por POLÍTICA DE SEGURANÇA. Como este teste usa e-mail real, isso indica restrição na própria conta — normalmente cadastro incompleto (tipo de atividade, verificação de identidade). Complete o perfil no painel do Mercado Pago.'
+            : /pix/i.test(det) || (error && error.mpStatus === 400)
+              ? 'Isso normalmente significa que o Pix ainda não está habilitado na conta Mercado Pago da Ecobraz (falta cadastrar a chave Pix). Assim que ativar, este teste mostra o QR Code.'
+              : 'Tente de novo em instantes.';
+          return html(paginaMensagem('Pix não pôde ser gerado', `O Mercado Pago respondeu: "${det}" — ${dica}`, '/diretoria'), 502);
         }
       }
       // TESTE STRIPE: cria um Checkout (Pix + cartão) de R$ 1 e redireciona.

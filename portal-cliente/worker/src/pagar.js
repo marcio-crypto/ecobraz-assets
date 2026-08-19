@@ -112,12 +112,29 @@ export async function statusPixPedido(env, ref) {
   return { ok: true, status: 'pendente' };
 }
 
+// Quem paga, para o banco: e-mail (obrigatório no MP), CPF/CNPJ e nome quando o
+// pedido tem. O que o cliente digitar no formulário fica no pedido (ped vence o aux).
+export function dadosPagadorDoPedido(ped, aux) {
+  const p = ped || {};
+  const email = String(p.clienteEmail || p.email || (aux && aux.clienteEmail) || '').trim();
+  const doc = String(p.doc || p.documento || p.cnpj || p.cpf || '').replace(/\D/g, '');
+  const nome = String(p.clienteNome || p.nome || '').trim();
+  return { email, doc, nome };
+}
+
 // Cria o Pix para um pedido existente e grava o pixId nele (o webhook usa o
-// external_reference; o pixId serve para a tela conferir o status).
-export async function abrirPixDoPedido(env, ref, ped, aux, baseUrl) {
+// external_reference; o pixId serve para a tela conferir o status). `extra` traz
+// e-mail/CPF-CNPJ digitados na tela quando o pedido não tinha — e ficam salvos
+// no pedido (mesmo se o MP falhar, para não pedir de novo).
+export async function abrirPixDoPedido(env, ref, ped, aux, baseUrl, extra) {
   const descricao = descricaoDoPedido(ped, aux);
-  const payerEmail = (aux && aux.clienteEmail) || ped.clienteEmail || ped.email || '';
-  const pix = await criarPixDireto({ valor: Number(ped.valor) || 0, descricao, externalReference: refLimpa(ref), payerEmail, baseUrl }, env);
+  if (extra && (extra.email || extra.doc)) {
+    if (extra.email) ped.clienteEmail = String(extra.email).slice(0, 200);
+    if (extra.doc && !String(ped.doc || '').trim()) ped.doc = String(extra.doc).replace(/\D/g, '').slice(0, 14);
+    try { await env.PORTAL_KV.put(`pedido:${refLimpa(ref)}`, JSON.stringify(ped), { expirationTtl: 90 * 86400 }); } catch { /* segue */ }
+  }
+  const pagador = dadosPagadorDoPedido(ped, aux);
+  const pix = await criarPixDireto({ valor: Number(ped.valor) || 0, descricao, externalReference: refLimpa(ref), payerEmail: pagador.email, payerDoc: pagador.doc, payerNome: pagador.nome, baseUrl }, env);
   try {
     ped.pixId = pix.id; ped.gateway = 'mercadopago';
     await env.PORTAL_KV.put(`pedido:${refLimpa(ref)}`, JSON.stringify(ped), { expirationTtl: 90 * 86400 });
@@ -138,3 +155,53 @@ export async function abrirStripeDoPedido(env, ref, ped, aux, baseUrl, metodo) {
 }
 
 export const pagamentosDisponiveis = (env) => ({ pixDisponivel: !!env.MERCADOPAGO_ACCESS_TOKEN, cartaoDisponivel: stripeConfigurado(env) });
+
+// Pedido antigo sem e-mail do cliente: o banco exige saber quem paga, então a
+// tela pede antes de gerar o QR (e o pedido ganha dono de quebra).
+export function paginaDadosPix({ ref, valor, descricao, erro }) {
+  return CASCA('Pix — quem paga', `<div class="card" style="text-align:left">
+    <div style="font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#0B7A66;text-align:center">⚡ Pix · falta só um passo</div>
+    <h1 style="font-size:26px;margin:8px 0 2px;text-align:center">${esc(brl(valor))}</h1>
+    <div style="font-size:12.5px;color:#4F6469;margin-bottom:14px;text-align:center">${esc(descricao)}</div>
+    <p style="font-size:13px;color:#4F6469;margin:0 0 6px">Para gerar o Pix, o banco precisa saber <b>quem paga</b>:</p>
+    ${erro ? `<div style="background:#FBEFEA;border:1px solid #E8C9BE;border-radius:10px;padding:9px 11px;font-size:12.5px;color:#7A3B2E;margin-bottom:6px">${esc(erro)}</div>` : ''}
+    <form method="post" action="/pagar/pix?pedido=${encodeURIComponent(ref)}">
+      <label style="font-size:11px;font-weight:800;color:#7c8a87">Seu e-mail</label>
+      <input name="email" type="email" required placeholder="voce@empresa.com.br" autocomplete="email">
+      <label style="font-size:11px;font-weight:800;color:#7c8a87;display:block;margin-top:10px">CPF ou CNPJ (opcional, ajuda na aprovação)</label>
+      <input name="doc" inputmode="numeric" placeholder="somente números" autocomplete="off">
+      <button type="submit" style="display:block;width:100%;background:#92C430;color:#10262B;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:800;cursor:pointer;margin-top:14px">Gerar o Pix →</button>
+    </form>
+    <div style="font-size:11px;color:#9aa7a4;margin-top:10px">Usamos esses dados só para registrar o pagamento.</div>
+    <div style="text-align:center"><a href="/pagar?pedido=${encodeURIComponent(ref)}" style="display:inline-block;margin-top:12px;font-size:12.5px;color:#0B5B66;font-weight:700;text-decoration:none">← outras formas de pagamento</a></div>
+  </div>`);
+}
+
+// Tradução honesta dos erros do provedor para o cliente (sem tags HTML cruas).
+export function traduzirErroPagamento(det) {
+  const t = String(det || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  if (/policy|unauthorized/i.test(t)) return 'O provedor do Pix recusou esta cobrança por uma regra de segurança da conta recebedora. Não é um problema com você nem com o seu banco.';
+  if (/sem_email_pagador/.test(t)) return 'Faltou o e-mail de quem paga.';
+  return t.slice(0, 180) || 'o provedor não informou o motivo';
+}
+
+// Uma forma falhou ≠ beco sem saída: a tela já oferece as outras na hora.
+export function paginaPagamentoFalhou({ ref, metodo, motivo, pixDisponivel, cartaoDisponivel }) {
+  const NOME = { pix: '⚡ Pix', cartao: '💳 cartão', boleto: '🧾 boleto' };
+  const btn = (href, cor, corTxt, titulo, sub) => `<a href="${esc(href)}" style="display:block;background:${cor};color:${corTxt};text-decoration:none;border-radius:14px;padding:15px;margin-top:10px;text-align:center">
+      <span style="display:block;font-size:15px;font-weight:800">${titulo}</span>
+      <span style="display:block;font-size:11.5px;margin-top:3px;opacity:.85">${sub}</span>
+    </a>`;
+  const alternativas = [
+    metodo !== 'pix' && pixDisponivel ? btn(`/pagar/pix?pedido=${encodeURIComponent(ref)}`, '#92C430', '#10262B', '⚡ Pagar com Pix', 'QR Code na tela · aprovação na hora') : '',
+    metodo !== 'cartao' && cartaoDisponivel ? btn(`/pagar/cartao?pedido=${encodeURIComponent(ref)}`, '#00333B', '#fff', '💳 Pagar com cartão', 'crédito · aprovação imediata') : '',
+    metodo !== 'boleto' && cartaoDisponivel ? btn(`/pagar/boleto?pedido=${encodeURIComponent(ref)}`, '#EEF1F0', '#10262B', '🧾 Gerar boleto', 'compensa em 1 a 3 dias úteis') : '',
+  ].join('');
+  return CASCA('Pagamento', `<div class="card">
+    <h2 style="font-size:19px;margin:0 0 8px;color:#7A3B2E">O ${NOME[metodo] || metodo} falhou agora</h2>
+    <p style="font-size:13px;color:#4F6469;margin:0">${esc(traduzirErroPagamento(motivo))}</p>
+    ${alternativas ? `<p style="font-size:13px;color:#10262B;font-weight:700;margin:16px 0 2px">Você pode concluir por outra forma:</p>${alternativas}` : ''}
+    <a href="/pagar?pedido=${encodeURIComponent(ref)}" style="display:inline-block;margin-top:14px;font-size:12.5px;color:#0B5B66;font-weight:700;text-decoration:none">← voltar e tentar de novo</a>
+    <div style="font-size:10.5px;color:#b3bdba;margin-top:12px">detalhe técnico: ${esc(String(motivo || '').replace(/<[^>]*>/g, ' ').slice(0, 140))}</div>
+  </div>`);
+}
