@@ -190,3 +190,22 @@ quantidade (recomendo começar com **4** e decidir sobre o 5 e o 6 depois);
 
 **Se você aprovar, eu começo pelo #1 e pelo #2**, que não dependem de ninguém —
 escrevo, você revisa e deposita sob o seu ORCID, do mesmo jeito que fizemos no SEMM.
+
+---
+
+## Atualização — 2026-08-19
+
+Aprovado e executado o primeiro passo: **os registros #1 e #2 estão escritos**
+(EN + PT) e com **PDF gerado**, em [`serie-doi/`](./serie-doi/). Guia de depósito
+com os campos do Zenodo prontos para copiar: [`serie-doi/README-deposito.md`](./serie-doi/README-deposito.md).
+
+**Nada foi depositado** — o depósito é sob o ORCID do Marcio.
+
+| Registro | Estado |
+|---|---|
+| #1 Arquitetura de evidência | ✅ escrito (EN+PT) + PDF · aguarda conferência e depósito |
+| #2 Certificado verificável | ✅ escrito (EN+PT) + PDF · **depositar só depois do #1** (cita o DOI dele) |
+| #3 Crosswalk BR↔UE | ⏸️ bloqueado na validação jurídica |
+| #4 Emissões evitadas | 🔜 sem dependência; escrevo quando o Marcio pedir |
+| #5 Implementação (Ecobraz) | ⏸️ depende do Marcio dizer o que está em produção |
+| #6 Radar com IA | ⏸️ depende do Pacote 3 existir |
