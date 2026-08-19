@@ -441,8 +441,20 @@ export default {
             } else if (!dadosPagadorDoPedido(pedP, auxP).email) {
               return html(paginaDadosPix({ ref: refP, valor: pedP.valor, descricao: descricaoDoPedido(pedP, auxP) }));
             }
-            const { pix, descricao } = await abrirPixDoPedido(env, refP, pedP, auxP, baseP, extraP);
-            return html(paginaPixPagamento({ ref: refP, valor: pedP.valor, descricao, pix }));
+            try {
+              const { pix, descricao } = await abrirPixDoPedido(env, refP, pedP, auxP, baseP, extraP);
+              return html(paginaPixPagamento({ ref: refP, valor: pedP.valor, descricao, pix }));
+            } catch (ePix) {
+              if (ePix && ePix.semEmail) throw ePix;
+              // Plano B (19/08): a conta MP trava a API direta de Pix por política,
+              // mas o Checkout do próprio MP segue criando cobrança — e lá o cliente
+              // também paga por Pix. A baixa continua sendo do webhook.
+              await registrarFalha(env, 'pagar-pix-fallback', String((ePix && ePix.mpDetalhe) || safeError(ePix).message).slice(0, 200), { ref: refP });
+              const pref = await criarPreferencia({ valor: Number(pedP.valor) || 0, descricao: descricaoDoPedido(pedP, auxP), externalReference: refP, baseUrl: baseP, backPath: '/pagamento/ok' }, env);
+              try { pedP.mpPrefId = pref.id; pedP.gateway = 'mercadopago'; await env.PORTAL_KV.put(`pedido:${refP}`, JSON.stringify(pedP), { expirationTtl: 90 * 86400 }); } catch { /* webhook dá baixa mesmo assim */ }
+              console.log('pagar_pix_fallback_checkout', { ref: refP });
+              return new Response(null, { status: 302, headers: { Location: pref.initPoint, 'cache-control': 'no-store' } });
+            }
           }
           const metodoP = pathname === '/pagar/boleto' ? 'boleto' : 'card';
           const { s } = await abrirStripeDoPedido(env, refP, pedP, auxP, baseP, metodoP);
@@ -1217,6 +1229,30 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
       if (pathname === '/pagamento/ok' && request.method === 'GET') {
         if (url.searchParams.get('stripe_cancel')) return html(paginaMensagem('Pagamento não concluído', 'Você saiu sem concluir o pagamento. Sem problema — quando quiser, é só gerar a cobrança de novo.', '/painel'));
         const sid = url.searchParams.get('stripe') || '';
+        // Retorno do checkout do Mercado Pago (plano B do Pix) e da tela do QR: só
+        // LÊ — a baixa oficial é do webhook do MP, que confere na API e credita.
+        const refMp = !sid ? refLimpa(url.searchParams.get('pedido') || '') : '';
+        if (refMp) {
+          let pedMp = null;
+          try { const rawMp = env.PORTAL_KV ? await env.PORTAL_KV.get(`pedido:${refMp}`) : null; pedMp = rawMp ? JSON.parse(rawMp) : null; } catch { pedMp = null; }
+          let pagoMp = !!(pedMp && pedMp.status === 'pago');
+          if (!pagoMp && pedMp && pedMp.pixId) {
+            try { const stMp = await statusPixPedido(env, refMp); pagoMp = !!(stMp.ok && stMp.status === 'pago'); } catch { /* o webhook confirma */ }
+          }
+          if (!pagoMp) {
+            const payIdMp = url.searchParams.get('payment_id') || url.searchParams.get('collection_id') || '';
+            if (payIdMp && payIdMp !== 'null') {
+              try { const pgMp = await consultarPagamento(payIdMp, env); pagoMp = !!(pgMp && pgMp.status === 'approved' && pgMp.externalReference === refMp); } catch { /* o webhook confirma */ }
+            }
+          }
+          if (pagoMp) {
+            const prodMp = pedMp && pedMp.produto;
+            if (prodMp === 'coleta') return html(paginaMensagem('✅ Pagamento aprovado — Coleta Expressa confirmada!', 'Recebemos seu pagamento. Sua coleta entra na fila EXPRESSA (até 24h) e nossa equipe entra em contato para confirmar o horário. Obrigado!', 'https://ecobraz.org'));
+            if (prodMp === 'oscobranca') return html(paginaMensagem('✅ Pagamento aprovado!', 'Recebemos o pagamento da sua ordem de serviço. Obrigado — nossa equipe já foi avisada.', 'https://ecobraz.org'));
+            return new Response(null, { status: 302, headers: { Location: destinoObrigado(pedMp, refMp), 'cache-control': 'no-store' } });
+          }
+          return html(paginaMensagem('⏳ Aguardando a confirmação', 'Se você acabou de pagar, a confirmação é automática e chega em instantes — atualize esta página. Se ainda não pagou, dá para tentar de novo pelo mesmo link de pagamento.', `/pagar?pedido=${encodeURIComponent(refMp)}`));
+        }
         const s = sid ? await consultarCheckoutStripe(sid, env) : null;
         if (!s) return html(paginaMensagem('Pagamento', 'Não consegui confirmar este pagamento agora. Se você concluiu, a confirmação chega em instantes — atualize a página.', '/painel'));
         let ped = null;
