@@ -387,12 +387,21 @@ function topo(sub) {
 }
 const stLote = (s) => s === 'expedido' ? '<span class="pill p-fi">🚚 Expedido</span>' : s === 'finalizado' ? '<span class="pill p-fi">Finalizado</span>' : s === 'processando' ? '<span class="pill p-pr">Em processamento</span>' : '<span class="pill p-ag">Aguardando</span>';
 
+// Lista em 2 abas (pedido da equipe 19/08): Fracionadas numa, Canceladas na outra.
+// Cargas ainda em andamento (aberta/pesada) ficam SEMPRE à vista, acima das abas —
+// é o trabalho do dia, não pode sumir atrás de um clique.
 export function paginaCargas(user, cargas) {
-  const rows = (cargas || []).map((c) => `<a class="row" style="text-decoration:none" href="/cargas/carga?id=${esc(c.id)}">
+  const linha = (c) => `<a class="row" style="text-decoration:none" href="/cargas/carga?id=${esc(c.id)}">
     <span style="min-width:0"><b style="font-size:13.5px;color:#10262B">${esc(c.id)}</b> · <span style="font-size:12.5px">${esc(c.clienteNome || '—')}</span>${c.exclusivaLaudo ? ' <span class="pill p-laudo">LAUDO — exclusiva</span>' : ''}
       <span style="display:block;font-size:11px;color:#8fa39f">${esc(horaBR(c.criadoEm))} · ${c.oss.length} OS · ${c.pesoLiquido ? 'líquido ' + kg(c.pesoLiquido) : 'sem pesagem'}</span></span>
     <span style="flex:none;font-size:11px;font-weight:800;color:${c.status === 'cancelada' ? '#B23A2E' : '#0B5B66'};text-transform:uppercase">${esc(c.status)}</span>
-  </a>`).join('') || '<div style="font-size:12.5px;color:#8fa39f">Nenhuma carga ainda. Abra a primeira quando o caminhão chegar.</div>';
+  </a>`;
+  const todas = cargas || [];
+  const andamento = todas.filter((c) => c.status !== 'fracionada' && c.status !== 'cancelada');
+  const fracionadas = todas.filter((c) => c.status === 'fracionada');
+  const canceladas = todas.filter((c) => c.status === 'cancelada');
+  const blocoAndamento = andamento.length ? `<div class="sec">Em andamento agora</div>
+  <div class="card">${andamento.map(linha).join('')}</div>` : '';
   return `${head('Cargas')}${topo('entrada · cargas')}
 <div class="wrap">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
@@ -400,8 +409,22 @@ export function paginaCargas(user, cargas) {
     <div style="font-size:12px;color:#7c8a87;margin-top:3px">Chegou caminhão? Abra a carga, pese, fotografe, fracione em lotes e etiquete.</div></div>
     <div style="display:flex;gap:8px"><a href="/cargas/nova" class="btn btn-p">＋ Abrir carga</a><a href="/cargas/filas" class="btn btn-g">Filas por destino</a></div>
   </div>
-  <div class="card">${rows}</div>
-</div></body></html>`;
+  ${blocoAndamento}
+  <div style="display:flex;gap:8px;margin:${andamento.length ? '18px' : '0'} 0 10px">
+    <button id="b-frac" class="btn btn-d" onclick="abaCargas('frac')">✅ Fracionadas (${fracionadas.length})</button>
+    <button id="b-canc" class="btn btn-g" onclick="abaCargas('canc')">🚫 Canceladas (${canceladas.length})</button>
+  </div>
+  <div id="aba-frac" class="card">${fracionadas.map(linha).join('') || '<div style="font-size:12.5px;color:#8fa39f">Nenhuma carga fracionada ainda. Abra a primeira quando o caminhão chegar.</div>'}</div>
+  <div id="aba-canc" class="card" style="display:none">${canceladas.map(linha).join('') || '<div style="font-size:12.5px;color:#8fa39f">Nenhuma carga cancelada. 👍</div>'}</div>
+</div>
+<script>
+function abaCargas(qual){
+  document.getElementById('aba-frac').style.display = qual === 'frac' ? '' : 'none';
+  document.getElementById('aba-canc').style.display = qual === 'canc' ? '' : 'none';
+  document.getElementById('b-frac').className = 'btn ' + (qual === 'frac' ? 'btn-d' : 'btn-g');
+  document.getElementById('b-canc').className = 'btn ' + (qual === 'canc' ? 'btn-d' : 'btn-g');
+}
+</script></body></html>`;
 }
 
 export function paginaNovaCarga(user, oss) {
