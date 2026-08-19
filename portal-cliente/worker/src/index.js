@@ -34,7 +34,7 @@ const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8', 'cache
 import { paginaLogin, paginaPainel, paginaMensagem } from './paginas.js';
 import { LOGO_ESCURO_B64, LOGO_CLARO_B64 } from './logos.js';
 import { paginaCalculadora, estimativaCarbono, paginaCalculoDetalhado, calculoDetalhadoGHG, paginaLojaCarbono, paginaCarbonoContato, paginaCarbonoObrigado, nivelCarbono, faixaValida, precoNivel } from './carbono.js';
-import { criarPreferencia, consultarPagamento, criarPixDireto, consultarMeiosPagamento } from './mercadopago.js';
+import { criarPreferencia, consultarPagamento, criarPixDireto, consultarMeiosPagamento, consultarContaMP } from './mercadopago.js';
 import { criarPagamentoEscolha, lerAuxPagar, descricaoDoPedido, paginaEscolherPagamento, paginaPixPagamento, statusPixPedido, abrirPixDoPedido, abrirStripeDoPedido, dadosPagadorDoPedido, paginaDadosPix, paginaPagamentoFalhou, pagamentosDisponiveis, refLimpa } from './pagar.js';
 import { criarCheckoutStripe, consultarCheckoutStripe, verificarEventoStripe, stripeConfigurado } from './stripe.js';
 import { gerarPixCopiaECola, pixConfig, paginaPix } from './pix.js';
@@ -1367,10 +1367,17 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         const tipo = !tok ? 'AUSENTE' : tok.startsWith('TEST-') ? 'TESTE (sandbox)' : tok.startsWith('APP_USR-') ? 'PRODUÇÃO' : 'formato inesperado (não começa com TEST- nem APP_USR-)';
         const base = env.PORTAL_BASE_URL || url.origin;
         let mp;
+        let conta = { ok: false, erro: 'sem chave' };
+        let pixProbe = { ok: false, erro: 'sem chave' };
         if (!tok) { mp = { ok: false, erro: 'A variável MERCADOPAGO_ACCESS_TOKEN não existe no ambiente (confira o nome exato no Cloudflare).' }; }
         else {
           try { const pref = await criarPreferencia({ valor: 1, descricao: 'Diagnóstico MP (não é cobrança real)', externalReference: 'diag-' + novoId(), baseUrl: base, backPath: '/adote/obrigado' }, env); mp = { ok: true, temLink: !!pref.initPoint }; }
           catch (e) { mp = { ok: false, erro: String((e && e.message) || e).slice(0, 400) }; }
+          conta = await consultarContaMP(env);
+          // A prova real: o MESMO tipo de cobrança que o cliente usa (/v1/payments,
+          // Pix direto). Ninguém paga este QR — expira sozinho no MP em 24h.
+          try { const p = await criarPixDireto({ valor: 1, descricao: 'Diagnóstico Pix (não é cobrança real)', externalReference: 'diag-pix-' + novoId(), payerEmail: diretoria.email, baseUrl: base }, env); pixProbe = { ok: true, id: p.id }; }
+          catch (e) { pixProbe = { ok: false, erro: String((e && e.mpDetalhe) || (e && e.message) || e).slice(0, 300) }; }
         }
         const email = env.RESEND_API_KEY ? 'Resend configurado ✓' : (env.EGOI_TRANSACTIONAL_API_KEY || env.EGOI_API_KEY) ? 'e-Goi configurado ✓' : 'NENHUM — o e-mail de recarga não sai';
         const L = (k, v, cor) => `<tr><td style="padding:9px 12px;border-bottom:1px solid #eef1f0;color:#556">${esc(k)}</td><td style="padding:9px 12px;border-bottom:1px solid #eef1f0;font-weight:700;color:${cor || '#10262B'}">${esc(v)}</td></tr>`;
@@ -1382,13 +1389,18 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
     ${L('Chave no ambiente', tok ? 'presente' : 'AUSENTE', tok ? '#1E7A3D' : '#B23A2E')}
     ${L('Tipo da chave', tipo, tipo === 'PRODUÇÃO' ? '#B26A16' : (tok ? '#10262B' : '#B23A2E'))}
     ${L('Endereço base', base)}
-    ${L('Gerar cobrança (teste)', mp.ok ? 'OK — cobrança gerada ✓' : 'FALHOU ✕', mp.ok ? '#1E7A3D' : '#B23A2E')}
+    ${L('Conta Mercado Pago', conta.ok ? `${conta.apelido || conta.id} · situação: ${conta.siteStatus}` : 'não consegui consultar: ' + (conta.erro || ''), conta.ok && conta.siteStatus === 'active' ? '#1E7A3D' : '#B26A16')}
+    ${conta.ok && conta.pendencias && conta.pendencias.length ? L('Pendências que o MP aponta', conta.pendencias.join(' · '), '#B23A2E') : ''}
+    ${L('Gerar cobrança (Checkout Pro)', mp.ok ? 'OK — cobrança gerada ✓' : 'FALHOU ✕', mp.ok ? '#1E7A3D' : '#B23A2E')}
     ${mp.ok ? '' : L('Motivo real da falha', mp.erro, '#B23A2E')}
+    ${L('Gerar PIX direto (o que o cliente usa)', pixProbe.ok ? 'OK — QR gerado ✓' : 'FALHOU ✕', pixProbe.ok ? '#1E7A3D' : '#B23A2E')}
+    ${pixProbe.ok ? '' : L('Motivo da falha do Pix', pixProbe.erro, '#B23A2E')}
     ${L('E-mail (para a recarga)', email, email.startsWith('NENHUM') ? '#B26A16' : '#1E7A3D')}
   </table>
   <div style="margin-top:16px;font-size:12.5px;color:#556;line-height:1.6">
-    <b>Como ler:</b> se "Gerar cobrança" está OK, o checkout funciona. Se FALHOU, o "Motivo real" mostra o erro do Mercado Pago
-    (ex.: <code>mp_pref_401</code> = chave inválida/errada; <code>sem_token_mp</code> = variável não encontrada; <code>mp_pref_400</code> = algo no pedido).
+    <b>Como ler:</b> a linha que importa para o cliente é <b>"Gerar PIX direto"</b> — é exatamente a chamada que a tela de pagamento faz.
+    Se ela FALHOU com <code>policy</code>/<code>UNAUTHORIZED</code>, o bloqueio é da <b>conta</b> Mercado Pago (cadastro/verificação pendente — veja a linha "Pendências"),
+    não do nosso sistema. <code>mp_pref_401</code> = chave inválida; <code>sem_token_mp</code> = variável não encontrada.
   </div>
   <p style="color:#9aa7a4;font-size:11px;margin-top:18px">Interno · Diretoria · página não indexada.</p>
 </body></html>`);

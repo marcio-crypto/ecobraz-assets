@@ -95,6 +95,33 @@ export async function criarPixDireto({ valor, descricao, externalReference, paye
   };
 }
 
+// Saúde da CONTA (GET /users/me): é no cadastro que as "políticas" do MP travam
+// o Pix ("At least one policy returned UNAUTHORIZED") quando algo está pendente.
+// Nunca devolve a chave — só dados do perfil da própria conta.
+export async function consultarContaMP(env) {
+  const token = env.MERCADOPAGO_ACCESS_TOKEN;
+  if (!token) return { ok: false, erro: 'sem_token' };
+  try {
+    const r = await fetch(`${MP_API}/users/me`, { headers: { authorization: `Bearer ${token}` } });
+    const txt = await r.text();
+    if (!r.ok) return { ok: false, status: r.status, erro: txt.slice(0, 200) };
+    const d = JSON.parse(txt);
+    const st = d.status || {};
+    const pendencias = [];
+    if (st.confirmed_email === false) pendencias.push('e-mail da conta não confirmado');
+    if (st.required_action) pendencias.push(...(Array.isArray(st.required_action) ? st.required_action : [String(st.required_action)]));
+    if (st.site_status && st.site_status !== 'active') pendencias.push(`site_status: ${st.site_status}`);
+    return {
+      ok: true,
+      id: d.id,
+      apelido: d.nickname || [d.first_name, d.last_name].filter(Boolean).join(' ') || '',
+      siteStatus: st.site_status || '(não informado)',
+      tipoUsuario: st.user_type || d.user_type || '',
+      pendencias,
+    };
+  } catch (e) { return { ok: false, erro: String((e && e.message) || e).slice(0, 160) }; }
+}
+
 // Diagnóstico: lista as formas de pagamento que a CONTA aceita (GET
 // /v1/payment_methods). Responde de vez se o Pix está habilitado no checkout.
 export async function consultarMeiosPagamento(env) {
