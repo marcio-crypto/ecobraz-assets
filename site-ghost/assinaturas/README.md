@@ -36,7 +36,7 @@ jeito (passos 1 e 2 acima) e definir para novas mensagens e respostas.
 
 ## Se a logo não aparecer
 
-O arquivo aponta para `https://ecobraz.org.br/assets/images/ecobraz-emigre-logo-380.png`
+O arquivo aponta para `https://ecobraz.org/assets/images/ecobraz-emigre-logo-380.png`
 (caminho dos assets do tema do Ghost). Se por algum motivo a imagem sair
 quebrada no e-mail de teste, dá para resolver de duas formas:
 
@@ -65,3 +65,20 @@ Gmail — sem precisar baixar arquivo nem mexer em HTML.
   Gmail precisa.
 - Para atualizar a página depois de mudar a assinatura, republicar o mesmo
   arquivo no mesmo link (não criar artifact novo).
+
+## Página no site da Ecobraz (link público, sem login)
+
+Além do artifact, a mesma página existe no próprio site:
+**https://ecobraz.org/assinatura-debora/** — abre em qualquer navegador, sem
+login, e é o link para mandar para a equipe.
+
+Como ela é montada:
+
+- Conteúdo: `site-ghost/content/paginas-internas.json`, **gerado** por
+  `site-ghost/scripts/build-pagina-assinatura.mjs` a partir de
+  `assinatura-debora-villanova.html`. Não edite o JSON à mão — mude a
+  assinatura e rode o script (o deploy roda sozinho).
+- Estilo e botão de copiar: `site-ghost/theme/page-assinatura-debora.hbs`.
+- A página vai ao ar pelo workflow `deploy-ghost.yml` a cada push na `main`.
+- Leva `<meta name="robots" content="noindex,nofollow">`: é página de uso
+  interno, não entra no Google e não é ligada por nenhum menu do site.
