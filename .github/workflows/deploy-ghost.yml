@@ -32,6 +32,8 @@ jobs:
       - name: Build English commercial landing pages from data
         if: ${{ hashFiles('site-ghost/landing/landing-pages-en.json') != '' }}
         run: node site-ghost/scripts/build-landing-pages-en.mjs
+      - name: Build internal signature page from the signature file
+        run: node site-ghost/scripts/build-pagina-assinatura.mjs
       - name: Audit content, links and collection form
         run: node site-ghost/scripts/audit-content.mjs
       - name: Build Ghost theme ZIP
@@ -72,6 +74,11 @@ jobs:
           GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
           GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
         run: node site-ghost/scripts/sync-pages.mjs site-ghost/content/institutional-pages.json
+      - name: Sync internal pages (assinaturas de e-mail da equipe)
+        env:
+          GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
+          GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
+        run: node site-ghost/scripts/sync-pages.mjs site-ghost/content/paginas-internas.json
       - name: Sync English overview page (/en/)
         env:
           GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
