@@ -50,3 +50,18 @@ quebrada no e-mail de teste, dá para resolver de duas formas:
 Copiar `assinatura-debora-villanova.html`, renomear e trocar apenas nome,
 cargo, telefone e e-mail. Não mexer nas cores, tamanhos nem na estrutura de
 tabelas — é ela que mantém o layout inteiro no Gmail e no Outlook.
+
+## Página publicada (link para a Débora)
+
+`pagina-assinatura-debora.html` é a versão em página da assinatura, publicada
+como artifact: a Débora abre o link, clica em **Copiar assinatura** e cola no
+Gmail — sem precisar baixar arquivo nem mexer em HTML.
+
+- Link: https://claude.ai/code/artifact/bd1ca6cb-862e-418e-819e-c53a11f4af03
+- **O link nasce privado.** Para a Débora conseguir abrir, o Marcio precisa
+  compartilhar pelo menu de compartilhamento da própria página.
+- A prévia dentro da página usa a logo embutida (para aparecer mesmo sem rede);
+  o que o botão copia usa a logo hospedada em `ecobraz.org.br`, que é o que o
+  Gmail precisa.
+- Para atualizar a página depois de mudar a assinatura, republicar o mesmo
+  arquivo no mesmo link (não criar artifact novo).
