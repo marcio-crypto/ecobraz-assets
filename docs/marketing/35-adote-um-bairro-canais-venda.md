@@ -366,6 +366,24 @@ proposta antes de qualquer compromisso.
   VOA (mai), Petrobras resíduos (jul), LIR/MMA (30/07), Bem Maior (17/08,
   inelegível).
 
+**24/08/2026 (2ª execução):**
+- **Semana do prazo duplo 31/08:** Salone della CSR (visitante grátis) e
+  Chamada EDP (18h, via Prosas) confirmados sem prorrogação.
+- **Novos editais:** iCS "Comunicação para Ação Climática" (R$ 200–500 mil,
+  1ª etapa até 31/08 16h — encaixe parcial: exige 3 anos de experiência
+  comprovada em comunicação socioambiental); **MAPFRE Projetos Incentivados
+  2026** (até 30/09, inclui LIR, mas só projeto JÁ aprovado em lei de
+  incentivo — reforça a tese da versão incentivada para o ciclo 2027);
+  Instituto Impactarte (fluxo contínuo, OSC de qualquer tema/território,
+  valores caso a caso — tentar com custo baixo).
+- **Confirmado:** IEWD segue aberto (sem prazo-limite anunciado); Eco Expo com
+  formulário "Quero Visitar" no ar (gratuidade 2026 não confirmada — checar ao
+  credenciar). Sem novidade: PL 1.361/2025 (segue no Senado), Von Martius e
+  Benchmarking (ciclos não anunciados), Pacto Global.
+- Verificados e descartados nesta semana (fechados/territoriais): Boticário,
+  Salvador Arena, Porto Social, VW, Whirlpool, Renner, Anglo American,
+  ArcelorMittal, LAMSA, EAF e-lixo.
+
 ## 8. Balanço honesto deste dossiê
 
 **Feito:** ~40 canais avaliados nas 3 pesquisas; 30+ documentados acima com
