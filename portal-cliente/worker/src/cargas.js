@@ -379,8 +379,12 @@ export async function encaminharCargaParaValidacao(env, cargaId, user) {
   if (!lotes.length || !lotes.every((l) => l.status === 'finalizado' || l.status === 'expedido')) return { ok: false, motivo: 'lotes_abertos' };
   const em = new Date().toISOString();
   const quem = (user && user.email) || 'doca';
-  const materiais = lotes.map((l) => ({ rotulo: `${l.categoria} · ${l.id}`.slice(0, 60), ibama: '', classe: 'II-A', qtd: Number(l.peso) || 0, destino: MAPA_DESTINO_OP[l.destino] || 'reciclagem', por: quem, em }));
   const n = (c.oss || []).length;
+  // Carga com várias OSs: os kg de cada material são RATEADOS na mesma proporção
+  // do peso — assim o dossiê e o certificado de cada OS somam o que ELA recebeu,
+  // nunca a carga inteira (visto no CDF real de 25/08: 293,6 kg numa OS de 21,3).
+  const fator = n > 1 ? 1 / n : 1;
+  const materiais = lotes.map((l) => ({ rotulo: `${l.categoria} · ${l.id}`.slice(0, 60), ibama: '', classe: 'II-A', qtd: Math.round((Number(l.peso) || 0) * fator * 100) / 100, destino: MAPA_DESTINO_OP[l.destino] || 'reciclagem', por: quem, em }));
   let movidas = 0;
   for (const o of c.oss) {
     let op = null;

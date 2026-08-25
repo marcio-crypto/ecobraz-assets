@@ -2234,7 +2234,7 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
             : 'A operação está finalizada, mas ainda SEM a validação da engenharia (RT). Peça a validação no dossiê da engenharia — aí o certificado libera sozinho.';
           return html(paginaMensagem('Certificado ainda não apto', falta, `/coletas/os?id=${encodeURIComponent(osId)}`), 409);
         }
-        return html(paginaCDF(op, val, await listarDestinos(env), `/qr-operacao?id=${encodeURIComponent(op.osId)}`));
+        return html(paginaCDF(op, val, await listarDestinos(env), `/qr-operacao?id=${encodeURIComponent(op.osId)}`, await lerColetaOS(env, osId)));
       }
       // Peso REAL da operação (o que vale no certificado) — ajuste do escritório
       // ANTES da emissão, com trilha de quem mudou o quê (pedido da equipe 24/08).
@@ -3873,7 +3873,7 @@ async function baixarDocOS(url, sessao, env) {
       const op = await lerOperacao(env, os.id);
       const val = op ? await lerValidacaoOp(env, os.id) : null;
       if (!op || op.etapa !== 'concluida' || !val || val.decisao !== 'validada') return json({ ok: false, error: 'nao_liberado' }, 403);
-      return html(paginaCDF(op, val, await listarDestinos(env), `/qr-operacao?id=${encodeURIComponent(os.id)}`));
+      return html(paginaCDF(op, val, await listarDestinos(env), `/qr-operacao?id=${encodeURIComponent(os.id)}`, os));
     }
     const selo = `/qr-os?id=${encodeURIComponent(os.id)}`;
     if (fonte !== 'os-comprovante' && !os.veiculoPlaca) { try { os.veiculoPlaca = await placaDaColeta(env, os); } catch { /* ok */ } }

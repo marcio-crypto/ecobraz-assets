@@ -360,24 +360,41 @@ const EMPRESA_CDF = {
 };
 const tdC = 'padding:9px 10px;border:1px solid #E4EBE9';
 
+// CPF/CNPJ legível no documento (11 → CPF, 14 → CNPJ, senão como veio).
+function fmtDocGerador(v) {
+  const d = String(v || '').replace(/\D/g, '');
+  if (d.length === 14) return d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+  if (d.length === 11) return d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+  return String(v || '');
+}
+
 // Certificado de Destinação Final (CDF) — documento enxuto para o cliente, gerado
 // da operação VALIDADA. Só certifica de fato quando há validação técnica do RT.
-export function paginaCDF(op, validacao, destinos, seloUrl) {
+// `os` (opcional) traz os dados completos do gerador: razão social, CNPJ e o
+// endereço da Ordem de Serviço (pedido da Débora 25/08).
+export function paginaCDF(op, validacao, destinos, seloUrl, os) {
   const b = balanco(op);
   let emissao = ''; try { emissao = new Date().toLocaleDateString('pt-BR'); } catch { emissao = ''; }
   const validada = !!(validacao && validacao.decisao === 'validada');
   const numCDF = 'CDF-' + ((op.numero || '').replace(/[^0-9]/g, '') || '—');
   const tipos = [...new Set((op.materiais || []).map((m) => m.destino))];
+  // A tabela reparte o TOTAL CERTIFICADO desta OS pela proporção dos destinos —
+  // nunca mais que o recebido (corrige o caso de carga rateada entre várias OSs,
+  // em que os lotes somavam o peso da carga inteira).
+  const somaDest = tipos.reduce((s, t) => s + (b.porDestino[t] || 0), 0);
+  const escalaDest = (somaDest > 0 && b.entrada > 0) ? b.entrada / somaDest : 1;
   const destRows = tipos.map((t) => {
     const usinas = (destinos || []).filter((d) => d.tipo === t && destinoStatus(d) === 'validado');
-    const kg = Math.round((b.porDestino[t] || 0) * 100) / 100;
-    return `<tr><td style="${tdC}">${esc(DESTINOS[t] || t)}</td><td style="${tdC};text-align:right">${String(kg).replace('.', ',')} kg</td><td style="${tdC}">${usinas.length ? usinas.map((u) => esc(u.razaoSocial || u.cnpj) + (u.lo ? ' (LO ' + esc(u.lo) + ')' : '')).join('; ') : 'Ecobraz — aterro zero'}</td></tr>`;
+    const kg = Math.round((b.porDestino[t] || 0) * escalaDest * 100) / 100;
+    return `<tr><td style="${tdC}">${esc(DESTINOS[t] || t)}</td><td style="${tdC};text-align:right">${String(kg).replace('.', ',')} kg</td><td style="${tdC}">${usinas.length ? usinas.map((u) => esc(u.razaoSocial || u.cnpj) + (u.lo ? ' (LO ' + esc(u.lo) + ')' : '')).join('; ') : esc(EMPRESA_CDF.razao) + ' · CNPJ ' + esc(EMPRESA_CDF.cnpj) + ' · LO ' + esc(EMPRESA_CDF.lo)}</td></tr>`;
   }).join('') || `<tr><td style="${tdC}" colspan="3">—</td></tr>`;
   const eyebrow = (t) => `<div style="display:flex;align-items:center;gap:9px;margin:22px 0 8px"><span style="width:4px;height:16px;background:#92C430;border-radius:2px"></span><span style="font-size:12px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:#00333B">${esc(t)}</span></div>`;
   const corpo = `
     <div style="font-size:12.5px;color:#28413f;line-height:1.7;text-align:justify">A <b>${esc(EMPRESA_CDF.razao)}</b>, inscrita no CNPJ ${esc(EMPRESA_CDF.cnpj)}, licenciada sob LO ${esc(EMPRESA_CDF.lo)}, <b>CERTIFICA</b> que recebeu do gerador abaixo identificado, por meio da <b>Ordem de Serviço ${esc(op.numero)}</b>, a quantidade de <b>${String(b.entrada).replace('.', ',')} kg</b> de resíduos de equipamentos eletroeletrônicos (REEE), e promoveu sua <b>destinação final ambientalmente adequada</b>, nos termos da Política Nacional de Resíduos Sólidos (Lei nº 12.305/2010), conforme o detalhamento e a validação técnica a seguir.</div>
     ${eyebrow('Gerador')}
-    <div style="font-size:13px;font-weight:700;color:#10262B">${esc(op.cliente || '—')}</div>
+    <div style="font-size:13px;font-weight:700;color:#10262B">${esc((os && os.clienteNome) || op.cliente || '—')}</div>
+    ${os && os.clienteDoc ? `<div style="font-size:12px;color:#4F6469;margin-top:3px">${String(os.clienteDoc).replace(/\D/g, '').length === 11 ? 'CPF' : 'CNPJ'} ${esc(fmtDocGerador(os.clienteDoc))}</div>` : ''}
+    ${os && os.endereco ? `<div style="font-size:12px;color:#4F6469;margin-top:2px">Endereço (Ordem de Serviço ${esc(op.numero)}): ${esc(os.endereco)}</div>` : ''}
     ${eyebrow('Destinação final')}
     <table style="width:100%;border-collapse:collapse;font-size:12.5px">
       <thead><tr style="background:#F2F6F4;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#5c6f6b"><th style="${tdC};text-align:left">Tipo</th><th style="${tdC};text-align:right">Quantidade</th><th style="${tdC};text-align:left">Destino / usina homologada</th></tr></thead>
