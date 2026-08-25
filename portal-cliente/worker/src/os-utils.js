@@ -37,6 +37,23 @@ export function valorProp(props, fieldKey) {
   return p.StringValue ?? p.DateTimeValue ?? p.DateValue ?? p.DecimalValue ?? p.IntegerValue ?? null;
 }
 
+// Abas de navegação do topo (pedido da equipe 24/08): as telas centrais do fluxo
+// interno, sempre à mão. Cada página passa qual aba é a sua, que fica destacada.
+export function abasEquipe(atual) {
+  const ABAS = [
+    ['coletas', '/coletas', '📋 Coletas / OSs'],
+    ['cronograma', '/cronograma', '🗂️ Cronograma'],
+    ['matriz', '/cronograma/matriz', '📊 Planilha'],
+    ['cargas', '/cargas', '🚛 Cargas'],
+    ['filas', '/cargas/filas', '📦 Filas'],
+    ['operacao', '/operacao', '🏭 Operação'],
+  ];
+  const item = ([id, href, rot]) => id === atual
+    ? `<span style="flex:none;background:#00333B;color:#fff;border-radius:20px;padding:7px 13px;font-size:11.5px;font-weight:800;white-space:nowrap">${rot}</span>`
+    : `<a href="${href}" style="flex:none;background:#fff;color:#00333B;border:1.5px solid #cfe0dd;border-radius:20px;padding:7px 13px;font-size:11.5px;font-weight:800;text-decoration:none;white-space:nowrap">${rot}</a>`;
+  return `<div style="display:flex;gap:7px;overflow-x:auto;padding:2px 0 10px;-webkit-overflow-scrolling:touch">${ABAS.map(item).join('')}</div>`;
+}
+
 // FieldKeys dos campos operacionais no Negócio (descobertos na inspeção 2026-07-22).
 // Podem ser sobrescritos por variável de ambiente, se um dia mudarem.
 export const CAMPOS_OS = {

@@ -50,7 +50,7 @@ import { MANUAL_CLIENTE_PDF_B64 } from './manual-pdf.js';
 import { MANUAL_COMERCIAL_B64, MANUAL_MOTORISTA_B64, MANUAL_DOCA_B64, MANUAL_ENGENHARIA_B64 } from './manuais-pdf.js';
 import { sondaMTR, consultarMtrSigor, baixarPdfManifesto } from './mtr.js';
 import { listarMtrs, lerMtr, salvarMtr, mudarStatusMtr, definirPdfMtr, removerMtr, dadosDMR, paginaMtrLista, paginaMtrForm, paginaMtrDetalhe, paginaDMR, sincronizarMtrDaOS, removerMtrDaOS, importarMtrsDasOSs } from './gestao-mtr.js';
-import { dadosCronograma, paginaCronograma, salvarSla } from './cronograma.js';
+import { dadosCronograma, paginaCronograma, salvarSla, linhasMatriz, paginaMatriz } from './cronograma.js';
 import { paginaAcompanhamento, colunaClienteDe, lerGestores, gestorPorEmail, salvarGestor, removerGestor, NIVEIS, paginaGestores } from './cliente-portal.js';
 import { DEMO_CLIENTE_HTML, DEMO_OG_PNG_B64 } from './demo-cliente.js';
 import { listarPropostas, lerProposta, salvarProposta, paginaPropostas, paginaPropostaForm, paginaPropostaVer, paginaContratoVer, garantirTokenAceite, registrarAceite, paginaAceite, paginaAceiteVerificar } from './proposta.js';
@@ -69,7 +69,7 @@ import { lerValidacao, registrarValidacao, paginaAreaValidacao, qrMetodologia, v
 import { paginaPainelCarbono } from './carbono-painel.js';
 import { clientesComOperacoes, carbonoDoCliente, paginaCarbonoAnalista, paginaCarbonoAuditor } from './carbono-motor.js';
 import { agentePermitido, nomeAgente, listarColetasComStatus, enriquecerProximidade, coordDoEndereco, paginaLoginAgente, paginaAppAgente, detalheColeta, lerEstadoColeta, registrarCheckin, registrarACaminho, registrarFoto, servirFotoColeta, registrarFotoReagendar, servirFotoReagendar, registrarAssinatura, servirAssinaturaColeta, paginaColetaDetalhe, registrarEncerramento, registrarReagendamento, qrColeta, validarColetaPublico, paginaComprovante } from './agente.js';
-import { operadorPermitido, nomeOperador, listarOperacoes, listarColetasRecebiveis, iniciarOperacao, lerOperacao, definirTipoOperacao, registrarPesoEntrada, registrarFotoOperacao, servirFotoOperacao, paginaLoginOperacao, paginaAppOperacao, paginaReceberLote, paginaLoteDetalhe, adicionarMaterial, removerMaterial, concluirTriagem, paginaTriagem, paginaProcessamento, concluirProcessamento, paginaSaida, registrarSaida, concluirSaida } from './operacional.js';
+import { operadorPermitido, nomeOperador, listarOperacoes, listarColetasRecebiveis, iniciarOperacao, lerOperacao, definirTipoOperacao, registrarPesoEntrada, ajustarPesoReal, registrarFotoOperacao, servirFotoOperacao, paginaLoginOperacao, paginaAppOperacao, paginaReceberLote, paginaLoteDetalhe, adicionarMaterial, removerMaterial, concluirTriagem, paginaTriagem, paginaProcessamento, concluirProcessamento, paginaSaida, registrarSaida, concluirSaida } from './operacional.js';
 import { engenheiroPermitido, nomeEngenheiro, filaValidacao, operacoesValidadas, lerValidacaoOp, registrarValidacaoOp, paginaLoginEng, paginaFilaEng, paginaDossie, qrOperacao, validarOperacaoPublico, listarDestinos, lerDestino, salvarDestino, paginaDestinos, paginaDestinoForm, paginaRelatorio, paginaCDF } from './engenharia.js';
 import { diretorPermitido, nomeDiretor, reunirDados, paginaLoginDiretoria, paginaPainelDiretoria } from './diretoria.js';
 import { dadosPrevencao, paginaPrevencao, analisarColetaIA, salvarTabelaPrecos, pingIA } from './prevencao.js';
@@ -1666,6 +1666,12 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         const dados = await dadosCronograma(env);
         return html(paginaCronograma(escOuEng, dados));
       }
+      // Visão PLANILHA/matriz do fluxo (pedido da equipe 24/08): uma linha por lote,
+      // Entrada → Remanufatura → Reciclagem → Destinação Final, tudo linkado.
+      if (pathname === '/cronograma/matriz' && request.method === 'GET') {
+        if (!escOuEng) return html(paginaLoginEscritorio(googleConfigurado(env)));
+        return html(paginaMatriz(escOuEng, await linhasMatriz(env)));
+      }
       if (pathname === '/api/cronograma/sla' && request.method === 'POST') {
         if (!escOuEng) return json({ ok: false, error: 'nao_autenticado' }, 401);
         let b; try { b = await request.json(); } catch { b = {}; }
@@ -1969,7 +1975,7 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
 
       // Ordens de Coleta (escritório/comercial) — geração própria a partir do cliente.
       if (pathname === '/coletas' && request.method === 'GET') {
-        if (!escritorio) return html(paginaLoginEscritorio(googleConfigurado(env)));
+        if (!escOuEng) return html(paginaLoginEscritorio(googleConfigurado(env)));
         const q = (url.searchParams.get('q') || '').trim();
         const ql = q.toLowerCase();
         const cliId = (url.searchParams.get('cliente') || '').trim();
@@ -1984,7 +1990,7 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         } else if (ql) coletas = coletas.filter((c) => `${c.numero || ''} ${c.clienteNome || ''}`.toLowerCase().includes(ql)); // busca cobre canceladas
         // sem busca: passa todas; a página separa por abas (Agendadas / Concluídas / Canceladas)
         const aba = (url.searchParams.get('aba') || '').trim();
-        return html(paginaColetasLista(escritorio, coletas, q, cliCtx, negociosCli, aba));
+        return html(paginaColetasLista(escOuEng, coletas, q, cliCtx, negociosCli, aba));
       }
       if (pathname === '/coletas/nova' && request.method === 'GET') {
         if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
@@ -2050,7 +2056,9 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         return html(paginaAcompanhar({ numero: osA.numero, cliente: osA.clienteNome, status: statusA, pos, km, atualizadoEm: pos && pos.em }));
       }
       if (pathname === '/coletas/os' && request.method === 'GET') {
-        if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
+        // Engenharia também VÊ a OS (modo consulta) — precisa dela para o laudo
+        // (pedido da equipe 24/08). Edição/status continuam só do escritório.
+        if (!escOuEng) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
         const os = await lerColetaOS(env, url.searchParams.get('id') || '');
         if (!os) return html(paginaMensagem('Coleta não encontrada', 'Volte e tente de novo.'), 404);
         // Acompanhamento (best-effort): cliente avisado? distância do rastreador ao destino?
@@ -2080,7 +2088,11 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
             }
           }
         } catch { /* acompanhamento é best-effort */ }
-        return html(paginaColetaOSDetalhe(escritorio, os, acomp));
+        // Elo com a doca: etapa atual, peso real e aptidão do certificado na própria OS.
+        let opOS = null, valOS = null;
+        try { opOS = await lerOperacao(env, os.id); if (opOS && (opOS.etapa === 'concluida' || opOS.etapa === 'validacao')) valOS = await lerValidacaoOp(env, os.id); } catch { opOS = null; }
+        const cdfAptoOS = !!(opOS && opOS.etapa === 'concluida' && valOS && valOS.decisao === 'validada');
+        return html(paginaColetaOSDetalhe(escOuEng, os, acomp, { somenteLeitura: !escritorio, op: opOS, val: valOS, cdfApto: cdfAptoOS }));
       }
       if (pathname === '/coletas/editar' && request.method === 'GET') {
         if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
@@ -2182,13 +2194,13 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         return new Response(obj.body, { headers: { 'content-type': ct, 'cache-control': 'private, max-age=300', 'content-disposition': 'inline' } });
       }
       if (pathname === '/coletas/os/comprovante' && request.method === 'GET') {
-        if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
+        if (!escOuEng) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
         const os = await lerColetaOS(env, url.searchParams.get('id') || '');
         if (!os) return html(paginaMensagem('Coleta não encontrada', 'Volte e tente de novo.'), 404);
         return html(paginaComprovanteOS(os, `/qr-os?id=${encodeURIComponent(os.id)}`));
       }
       if (pathname === '/coletas/os/carta' && request.method === 'GET') {
-        if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
+        if (!escOuEng) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
         const os = await lerColetaOS(env, url.searchParams.get('id') || '');
         if (!os) return html(paginaMensagem('Coleta não encontrada', 'Volte e tente de novo.'), 404);
         if (!os.veiculoPlaca) { try { os.veiculoPlaca = await placaDaColeta(env, os); } catch { /* ok */ } }
@@ -2196,19 +2208,37 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         return html(paginaCartaDescarte(os, `/qr-os?id=${encodeURIComponent(os.id)}`, regC, fotoC, assC));
       }
       if (pathname === '/coletas/os/manifesto' && request.method === 'GET') {
-        if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
+        if (!escOuEng) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
         const os = await lerColetaOS(env, url.searchParams.get('id') || '');
         if (!os) return html(paginaMensagem('Coleta não encontrada', 'Volte e tente de novo.'), 404);
         if (!os.veiculoPlaca) { try { os.veiculoPlaca = await placaDaColeta(env, os); } catch { /* ok */ } }
         return html(paginaManifestoCarga(os, `/qr-os?id=${encodeURIComponent(os.id)}`));
       }
       if (pathname === '/coletas/os/cdf' && request.method === 'GET') {
-        if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
+        if (!escOuEng) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
         const osId = url.searchParams.get('id') || '';
         const op = await lerOperacao(env, osId);
         if (!op) return html(paginaMensagem('CDF ainda indisponível', 'O Certificado de Destinação Final é gerado depois que a coleta é recebida e processada na doca. Assim que a operação existir, ele fica disponível aqui.'), 404);
         const val = await lerValidacaoOp(env, op.osId);
+        // TRAVA do certificado (pedido da equipe 24/08): só OS FINALIZADA (operação
+        // concluída) e VALIDADA pela engenharia fica apta — antes disso, a tela diz
+        // exatamente o que falta, em vez de emitir um certificado pela metade.
+        const aptoCdf = op.etapa === 'concluida' && val && val.decisao === 'validada';
+        if (!aptoCdf) {
+          const rotEtapa = ({ recepcao: 'Recepção', triagem: 'Triagem', processamento: 'Processamento', saida: 'Saída', validacao: 'Validação da engenharia', concluida: 'Finalizada' })[op.etapa] || op.etapa;
+          const falta = op.etapa !== 'concluida'
+            ? `A operação desta OS está na etapa "${rotEtapa}" — o certificado só fica apto quando ela estiver FINALIZADA e validada pela engenharia. Confira também o PESO REAL na tela da OS antes de emitir.`
+            : 'A operação está finalizada, mas ainda SEM a validação da engenharia (RT). Peça a validação no dossiê da engenharia — aí o certificado libera sozinho.';
+          return html(paginaMensagem('Certificado ainda não apto', falta, `/coletas/os?id=${encodeURIComponent(osId)}`), 409);
+        }
         return html(paginaCDF(op, val, await listarDestinos(env), `/qr-operacao?id=${encodeURIComponent(op.osId)}`));
+      }
+      // Peso REAL da operação (o que vale no certificado) — ajuste do escritório
+      // ANTES da emissão, com trilha de quem mudou o quê (pedido da equipe 24/08).
+      if (pathname === '/api/coletas/peso-real' && request.method === 'POST') {
+        if (!escritorio) return json({ ok: false, message: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = {}; }
+        return json(await ajustarPesoReal(env, String((b && b.osId) || '').replace(/[^a-zA-Z0-9_-]/g, ''), escritorio.email || '', b && b.kg));
       }
       if (pathname === '/api/coletas/criar' && request.method === 'POST') {
         if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
@@ -2581,7 +2611,7 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         const ids = Array.isArray(b && b.osIds) ? b.osIds.slice(0, 20) : [];
         const oss = [];
         for (const osId of ids) { const o = await lerColetaOS(env, String(osId).replace(/[^a-zA-Z0-9_-]/g, '')); if (o) oss.push(o); }
-        return json(await novaCarga(env, docaOk, oss));
+        return json(await novaCarga(env, docaOk, oss, { especial: !!(b && b.especial), especialObs: (b && b.especialObs) || '' }));
       }
       if (pathname === '/api/cargas/pesar' && request.method === 'POST') {
         if (!docaOk) return json({ ok: false, message: 'nao_autenticado' }, 401);

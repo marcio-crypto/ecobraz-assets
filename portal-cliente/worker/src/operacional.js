@@ -150,6 +150,22 @@ export async function registrarPesoEntrada(env, osId, operador, kg) {
   await salvarOperacao(env, op); return op;
 }
 
+// Ajuste do PESO REAL antes da emissão do certificado (pedido da equipe 24/08):
+// a Débora confere e corrige o peso que vai valer no CDF/balanço. Cada ajuste
+// fica na trilha (de → para, quem, quando) — transparência, nunca sobrescrita muda.
+export async function ajustarPesoReal(env, osId, quem, kg) {
+  const op = await lerOperacao(env, osId);
+  if (!op) return { ok: false, message: 'Esta OS ainda não tem operação na doca — o peso real nasce lá.' };
+  const peso = Math.max(0, numBR(kg));
+  if (!peso) return { ok: false, message: 'Peso inválido — digite em kg (ex.: 1.500 ou 320,5).' };
+  const anterior = (op.entrada && op.entrada.pesoKg) || 0;
+  op.pesoAjustes = Array.isArray(op.pesoAjustes) ? op.pesoAjustes : [];
+  op.pesoAjustes.push({ de: anterior, para: peso, por: String(quem || ''), em: agora() });
+  op.entrada = { pesoKg: peso, em: (op.entrada && op.entrada.em) || agora(), por: (op.entrada && op.entrada.por) || String(quem || ''), ajustadoEm: agora(), ajustadoPor: String(quem || '') };
+  await salvarOperacao(env, op);
+  return { ok: true, pesoKg: peso, anterior };
+}
+
 export async function registrarFotoOperacao(env, osId, operador, fase, categoria, b64, meta) {
   const op = await lerOperacao(env, osId); if (!op) return null;
   const fdef = FASES[fase]; if (!fdef || !fdef.fotos.some((f) => f.id === categoria)) return null;

@@ -6,6 +6,7 @@
 
 import { botaoGoogle } from './google-auth.js';
 import { lerCliente } from './cadastro.js';
+import { abasEquipe } from './os-utils.js';
 import qrcode from 'qrcode-generator';
 
 const TE = new TextEncoder();
@@ -335,6 +336,7 @@ export function paginaColetasLista(user, coletas, q, cliCtx, negocios, aba) {
     </a>`).join('') : `<div class="card" style="text-align:center;color:#8fa39f;font-size:13.5px">${vazioMsg}</div>`;
   return `${head('Coletas')}<body>${topo('coletas')}
 <div class="wrap">
+  ${filtroCli ? '' : abasEquipe('coletas')}
   <div style="display:flex;justify-content:space-between;align-items:center;margin:0 0 12px"><h1 style="font-size:20px;margin:0">${filtroCli ? 'Coletas do cliente' : 'Ordens de Coleta'}</h1>${comAbas ? '' : `<span style="font-size:11px;background:#FFF4DE;color:#8A6A16;font-weight:800;padding:3px 9px;border-radius:20px">${abertas} em aberto</span>`}</div>
   ${filtroCli ? `<div style="background:#EAF2E6;border:1px solid #cfe6b8;border-radius:10px;padding:10px 13px;margin-bottom:12px;font-size:12.5px;color:#28413f;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><span>Mostrando as coletas de <b>${esc(filtroCli.nome)}</b></span><a href="/coletas" style="color:#0B5B66;font-weight:800;text-decoration:none;white-space:nowrap">ver todas as coletas →</a></div>
   <a href="/coletas/nova?cliente=${esc(filtroCli.id)}" class="btn btn-p" style="margin-bottom:14px">＋ Nova coleta para este cliente</a>` : `<form method="get" action="/coletas" style="margin:0 0 12px"><input type="hidden" name="aba" value="${esc(abaAtiva)}"><input name="q" value="${esc(q)}" placeholder="🔎 Buscar por número (ex.: OS-2026-0001) ou cliente… e aperte Enter" autocomplete="off" style="width:100%;border:1px solid #DDE1E6;border-radius:10px;padding:11px 12px;font-size:14px;font-family:inherit"></form>
@@ -447,7 +449,12 @@ export function blocoRegistroMotorista(reg, fotoUrl, assinaturaUrl) {
   </div>`;
 }
 
-export function paginaColetaOSDetalhe(user, os, acomp) {
+export function paginaColetaOSDetalhe(user, os, acomp, extras) {
+  // extras (24/08): somenteLeitura = sessão de engenharia (vê tudo, muda nada);
+  // op/val/cdfApto ligam a OS à operação da doca (peso real + gate do certificado).
+  const ro = !!(extras && extras.somenteLeitura);
+  const opDoca = (extras && extras.op) || null;
+  const cdfApto = !!(extras && extras.cdfApto);
   const linha = (l, v) => v ? `<tr><td style="padding:8px 0;border-top:1px solid #EEF1F0;color:#6B7B78;width:38%">${esc(l)}</td><td style="padding:8px 0;border-top:1px solid #EEF1F0;font-weight:600;white-space:pre-wrap;word-break:break-word">${esc(v)}</td></tr>` : '';
   const hhmm = (x) => { const d = new Date(x); if (!x || isNaN(d.getTime())) return ''; d.setUTCHours(d.getUTCHours() - 3); const p = (n) => String(n).padStart(2, '0'); return `${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`; };
   const canalAviso = (a) => (a && a.via === 'whatsapp') ? ' (WhatsApp)' : ((a && a.via === 'sms') ? ' (SMS)' : ((a && a.via === 'email') ? ' (e-mail)' : ''));
@@ -493,11 +500,11 @@ export function paginaColetaOSDetalhe(user, os, acomp) {
     <div>${pill(os.status)}<h1 style="font-size:22px;margin:8px 0 0">${esc(os.numero)}</h1>
     <div style="font-size:13px;color:#7c8a87;margin-top:2px">${os.clienteId ? `<a href="/cadastro/cliente?id=${esc(os.clienteId)}" style="color:#0B5B66;font-weight:700;text-decoration:none">${esc(os.clienteNome || 'Cliente')} ↗</a>` : esc(os.clienteNome || '')}</div></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;flex:none;justify-content:flex-end">
-      ${os.clienteId ? `<a href="/cadastro/cliente?id=${esc(os.clienteId)}" class="btn btn-g" style="padding:9px 12px;font-size:12.5px">👤 Abrir cliente</a>` : ''}
-      <a href="/coletas/editar?id=${esc(os.id)}" class="btn btn-g" style="padding:9px 12px;font-size:12.5px">✏️ Editar</a>
+      ${os.clienteId && !ro ? `<a href="/cadastro/cliente?id=${esc(os.clienteId)}" class="btn btn-g" style="padding:9px 12px;font-size:12.5px">👤 Abrir cliente</a>` : ''}
+      ${ro ? '' : `<a href="/coletas/editar?id=${esc(os.id)}" class="btn btn-g" style="padding:9px 12px;font-size:12.5px">✏️ Editar</a>`}
       <a href="/coletas/os/carta?id=${esc(os.id)}" class="btn btn-g" style="padding:9px 12px;font-size:12.5px">📄 Carta de Descarte</a>
       <a href="/coletas/os/manifesto?id=${esc(os.id)}" class="btn btn-g" style="padding:9px 12px;font-size:12.5px">📄 Manifesto de Carga</a>
-      <a href="/coletas/os/cdf?id=${esc(os.id)}" class="btn btn-g" style="padding:9px 12px;font-size:12.5px">🏅 Certificado (CDF)</a>
+      ${cdfApto ? `<a href="/coletas/os/cdf?id=${esc(os.id)}" class="btn" style="padding:9px 12px;font-size:12.5px;background:#E4F3E6;color:#1E5B31">🏅 Certificado (CDF) ✓</a>` : `<a href="/coletas/os/cdf?id=${esc(os.id)}" class="btn btn-g" style="padding:9px 12px;font-size:12.5px;opacity:.55" title="Só fica apto quando a operação é FINALIZADA e validada pela engenharia">🏅 CDF — ainda não apto</a>`}
       <a href="/coletas/os/comprovante?id=${esc(os.id)}" class="btn btn-d" style="padding:9px 12px;font-size:12.5px">✅ Comprovante (QR)</a>
     </div>
   </div>
@@ -547,8 +554,23 @@ export function paginaColetaOSDetalhe(user, os, acomp) {
       <div style="min-width:0;font-size:12.5px"><b>${esc({ a_caminho: '🚗 A caminho', checkin: '📍 Chegou no cliente', encerramento: '🏭 Encerrou na Ecobraz' }[t.evento] || t.evento)}</b><span style="color:#7c8a87"> · ${esc(hhmm(t.em))} · ${esc(dataBR(t.em))}${t.velocidade != null ? ` · ${Math.round(Number(t.velocidade) || 0)} km/h` : ''} · ${esc(t.placa || '')}</span></div>
       <a href="https://www.openstreetmap.org/?mlat=${encodeURIComponent(t.lat)}&mlon=${encodeURIComponent(t.lng)}#map=16/${encodeURIComponent(t.lat)}/${encodeURIComponent(t.lng)}" target="_blank" rel="noopener" style="flex:none;font-size:11.5px;color:#0B5B66;font-weight:700;text-decoration:none">🗺️ ver ponto ↗</a>
     </div>`).join('')}` : ''}
+    ${opDoca ? `<div class="sec">🏭 Operação na doca — elo do certificado</div>
+    <div style="border:1px solid #DDE7E4;border-radius:12px;padding:13px 15px;background:#F7FAF9;margin-bottom:4px">
+      <div style="font-size:13px">Etapa atual: <b>${esc(({ recepcao: 'Recepção', triagem: 'Triagem', processamento: 'Processamento', saida: 'Saída', validacao: 'Validação (Eng.)', concluida: 'FINALIZADA ✓' })[opDoca.etapa] || opDoca.etapa)}</b> · certificado ${cdfApto ? '<b style="color:#1E5B31">APTO ✓</b>' : '<b style="color:#8A6A16">ainda não apto</b> (precisa estar FINALIZADA e validada pela engenharia)'}</div>
+      <div style="display:flex;align-items:center;gap:9px;margin-top:10px;flex-wrap:wrap">
+        <span style="font-size:12.5px;font-weight:800;color:#4F6469">⚖️ Peso REAL (vai no certificado):</span>
+        ${ro ? `<b style="font-size:14px">${opDoca.entrada && opDoca.entrada.pesoKg != null ? esc(String(opDoca.entrada.pesoKg).replace('.', ',')) + ' kg' : 'ainda não pesado'}</b>`
+    : `<input id="pesoReal" value="${opDoca.entrada && opDoca.entrada.pesoKg != null ? esc(String(opDoca.entrada.pesoKg).replace('.', ',')) : ''}" placeholder="kg" inputmode="decimal" style="width:120px;border:1px solid #DDE1E6;border-radius:9px;padding:9px 10px;font-size:14px">
+        <span style="font-size:12px;color:#7c8a87">kg</span>
+        <button class="btn btn-d" style="padding:8px 13px;font-size:12px" onclick="salvarPesoReal()">Salvar peso</button>
+        <span id="pesoMsg" style="font-size:12px;color:#4F6469"></span>`}
+      </div>
+      ${Array.isArray(opDoca.pesoAjustes) && opDoca.pesoAjustes.length ? `<div style="font-size:11px;color:#8A6A16;margin-top:7px">✎ ajustado ${opDoca.pesoAjustes.length}× — último: ${esc(String(opDoca.pesoAjustes[opDoca.pesoAjustes.length - 1].de).replace('.', ','))} → ${esc(String(opDoca.pesoAjustes[opDoca.pesoAjustes.length - 1].para).replace('.', ','))} kg por ${esc(opDoca.pesoAjustes[opDoca.pesoAjustes.length - 1].por || '—')}</div>` : ''}
+      ${ro ? '' : '<div style="font-size:11px;color:#9aa7a4;margin-top:6px">Confira e ajuste o peso real ANTES de emitir o certificado — o valor salvo aqui é o que vale no CDF e no balanço de massa.</div>'}
+    </div>` : `<div class="sec">🏭 Operação na doca</div>
+    <div style="font-size:12.5px;color:#8fa39f;margin-bottom:4px">A doca ainda não recebeu esta coleta — a operação (pesagem real, processamento e certificado) começa quando ela chega lá.</div>`}
     <div class="sec">📎 Anexos da coleta</div>
-    <div style="font-size:11.5px;color:#9aa7a4;margin:-2px 0 8px">Fotos do material/local e arquivos (PDF) desta coleta — guardados no depósito próprio.</div>
+    <div style="font-size:11.5px;color:#9aa7a4;margin:-2px 0 8px">Fotos do material/local e arquivos (PDF) desta coleta — guardados no depósito próprio. Laudos entram aqui, com o tipo escolhido.</div>
     <div id="anexosLista">${anexosHTML}</div>
     <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
       <select id="arqTipo" style="font-size:12.5px;max-width:230px;border:1px solid #DDE1E6;border-radius:9px;padding:9px 10px;background:#fff;color:#10262B">
@@ -560,7 +582,7 @@ export function paginaColetaOSDetalhe(user, os, acomp) {
       <span id="anexoMsg" style="font-size:12px;color:#4F6469"></span>
     </div>
     <div style="font-size:11px;color:#9aa7a4;margin-top:5px">Escolha o <b>tipo</b> (laudo de descaracterização, destruição de dados, análise química…) antes de anexar — assim o documento fica identificado na auditoria.</div>
-    <div class="sec">Situação</div>
+    ${ro ? '<div class="sec">Situação</div><div style="font-size:12.5px;color:#8fa39f">👁 Modo consulta (engenharia): você vê tudo desta OS e pode anexar laudos — mudanças de status e edição ficam com o escritório.</div>' : `<div class="sec">Situação</div>
     ${os.status === 'agendada' ? (os.agenteEmail ? `<div style="background:#EAF2E6;border:1px solid #cfe6b8;border-radius:12px;padding:14px 16px;margin-bottom:10px">
       <div style="font-size:13.5px;font-weight:800;color:#28413f">🚚 Liberar para o motorista${os.agenteNome ? ` — ${esc(os.agenteNome)}` : ''}</div>
       <div style="font-size:12.5px;color:#4F6469;margin:5px 0 11px">Enquanto está <b>Agendada</b>, esta coleta <b>não aparece</b> no app do motorista. Coloque <b>Em transporte</b> para ela entrar só na tela dele.</div>
@@ -574,10 +596,12 @@ export function paginaColetaOSDetalhe(user, os, acomp) {
       ${Object.keys(STATUS).filter((s) => s !== 'na_unidade').map((s) => `<button class="btn ${s === os.status ? 'btn-d' : 'btn-g'}" style="padding:8px 12px;font-size:12.5px" onclick="setStatus('${s}')" ${s === os.status ? 'disabled' : ''}>${esc(STATUS[s])}</button>`).join('')}
     </div>
     <div style="font-size:11.5px;color:#9aa7a4;margin-top:6px">Fluxo normal: a OS nasce <b>Agendada</b> → o comercial <b>escolhe o motorista</b> e coloca <b>Em transporte</b> (aí ela aparece só no app daquele motorista) → o <b>motorista</b> toca a caminho → chegou → <b>Concluída</b>. Ao ficar <b>Concluída</b>, vai <b>automaticamente para a doca</b>. Os outros botões são só para ajuste manual.</div>
-    <div id="m" style="font-size:12.5px;color:#4F6469;margin-top:10px"></div>
+    <div id="m" style="font-size:12.5px;color:#4F6469;margin-top:10px"></div>`}
   </div>
 </div>
-<script>var TEM_MOTORISTA=${os.agenteEmail ? 'true' : 'false'};function setStatus(s){if(s==='em_transporte'&&!TEM_MOTORISTA&&!confirm('Esta coleta não tem motorista escolhido. Se colocar em transporte assim, ela NÃO vai aparecer para nenhum motorista. O ideal é Editar e escolher o motorista antes. Continuar mesmo assim?'))return;if(s==='cancelada'&&!confirm('Cancelar esta coleta? Ela sai da lista principal, mas fica guardada no histórico (dá pra reativar depois).'))return;document.getElementById('m').textContent='Salvando…';fetch('/api/coletas/status',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:'${esc(os.id)}',status:s})}).then(r=>r.json()).then(j=>{if(j.ok){location.reload();}else{document.getElementById('m').textContent='Falha.';}}).catch(()=>document.getElementById('m').textContent='Sem conexão.');}
+<script>var TEM_MOTORISTA=${os.agenteEmail ? 'true' : 'false'};
+function salvarPesoReal(){var i=document.getElementById('pesoReal'),m=document.getElementById('pesoMsg');if(!i)return;if(!i.value.trim()){if(m)m.textContent='Digite o peso.';return;}if(m)m.textContent='Salvando…';
+  fetch('/api/coletas/peso-real',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({osId:'${esc(os.id)}',kg:i.value})}).then(function(r){return r.json();}).then(function(j){if(j.ok){if(m)m.textContent='✓ salvo';setTimeout(function(){location.reload();},600);}else{if(m)m.textContent=j.message||'Falha ao salvar.';}}).catch(function(){if(m)m.textContent='Sem conexão.';});}function setStatus(s){if(s==='em_transporte'&&!TEM_MOTORISTA&&!confirm('Esta coleta não tem motorista escolhido. Se colocar em transporte assim, ela NÃO vai aparecer para nenhum motorista. O ideal é Editar e escolher o motorista antes. Continuar mesmo assim?'))return;if(s==='cancelada'&&!confirm('Cancelar esta coleta? Ela sai da lista principal, mas fica guardada no histórico (dá pra reativar depois).'))return;document.getElementById('m').textContent='Salvando…';fetch('/api/coletas/status',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:'${esc(os.id)}',status:s})}).then(r=>r.json()).then(j=>{if(j.ok){location.reload();}else{document.getElementById('m').textContent='Falha.';}}).catch(()=>document.getElementById('m').textContent='Sem conexão.');}
 function enviarAnexo(){var f=document.getElementById('arqFile'),tp=document.getElementById('arqTipo'),msg=document.getElementById('anexoMsg');if(!f.files||!f.files[0]){msg.textContent='Escolha um arquivo.';return;}if(f.files[0].size>15728640){msg.textContent='Arquivo muito grande (máx. 15 MB).';return;}if(!tp.value){msg.textContent='Escolha o tipo do documento.';return;}var fd=new FormData();fd.append('arquivo',f.files[0]);msg.textContent='Enviando…';fetch('/api/coletas/anexo?id=${esc(os.id)}&tipo='+encodeURIComponent(tp.value),{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(j){if(j.ok){location.reload();}else{msg.textContent=j.error||'Falha ao enviar.';}}).catch(function(){msg.textContent='Sem conexão.';});}
 function removerAnexo(k){if(!confirm('Remover este anexo?'))return;fetch('/api/coletas/anexo-remover',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:'${esc(os.id)}',key:k})}).then(function(r){return r.json();}).then(function(j){if(j.ok)location.reload();}).catch(function(){});}</script>
 </body></html>`;

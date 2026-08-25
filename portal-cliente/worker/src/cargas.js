@@ -10,6 +10,7 @@
 // Dados no D1 (consistente na hora — lição aprendida com a tela de Documentos).
 
 import qrcode from 'qrcode-generator';
+import { abasEquipe } from './os-utils.js';
 
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const limpar = (s) => String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
@@ -48,6 +49,8 @@ async function db(env) {
       'ALTER TABLE op_cargas ADD COLUMN edicoes_json TEXT DEFAULT \'\'',
       'ALTER TABLE op_lotes ADD COLUMN edicoes_json TEXT DEFAULT \'\'',
       'ALTER TABLE op_lotes ADD COLUMN expedicao_json TEXT DEFAULT \'\'',
+      'ALTER TABLE op_cargas ADD COLUMN especial INTEGER DEFAULT 0',
+      'ALTER TABLE op_cargas ADD COLUMN especial_obs TEXT DEFAULT \'\'',
     ]) {
       try { await env.DB_PLOOMES.prepare(sql).run(); } catch { /* coluna já existe */ }
     }
@@ -66,7 +69,7 @@ async function proximoId(d, tabela, prefixo, digitos) {
 const rowCarga = (r) => {
   if (!r) return null;
   let cancelada = null; try { cancelada = r.cancelada_json ? JSON.parse(r.cancelada_json) : null; } catch { cancelada = null; }
-  return { id: r.id, criadoEm: r.criado_em, criadoPor: r.criado_por, clienteNome: r.cliente_nome, clienteDoc: r.cliente_doc, oss: JSON.parse(r.os_json || '[]'), exclusivaLaudo: !!r.exclusiva_laudo, pesoBruto: r.peso_bruto, tara: r.tara, pesoLiquido: r.peso_liquido, fotos: JSON.parse(r.fotos_json || '[]'), status: r.status, cancelada, edicoes: parseEdicoes(r.edicoes_json) };
+  return { id: r.id, criadoEm: r.criado_em, criadoPor: r.criado_por, clienteNome: r.cliente_nome, clienteDoc: r.cliente_doc, oss: JSON.parse(r.os_json || '[]'), exclusivaLaudo: !!r.exclusiva_laudo, pesoBruto: r.peso_bruto, tara: r.tara, pesoLiquido: r.peso_liquido, fotos: JSON.parse(r.fotos_json || '[]'), status: r.status, cancelada, edicoes: parseEdicoes(r.edicoes_json), especial: !!r.especial, especialObs: r.especial_obs || '' };
 };
 const rowLote = (r) => {
   if (!r) return null;
@@ -100,7 +103,7 @@ export async function listarLotesPorDestino(env, destino) {
 // Abre a carga agrupando as OSs do dia — de 1 a N clientes (a rota do caminhão),
 // conforme o Marcelo. Regra do laudo: OS com certificado/laudo solicitado não
 // agrupa — vira carga exclusiva.
-export async function novaCarga(env, user, oss) {
+export async function novaCarga(env, user, oss, opts = {}) {
   const d = await db(env); if (!d) return { ok: false, message: 'Banco indisponível.' };
   const lista = (oss || []).filter(Boolean);
   if (!lista.length) return { ok: false, message: 'Selecione ao menos uma OS.' };
@@ -113,8 +116,12 @@ export async function novaCarga(env, user, oss) {
   const id = await proximoId(d, 'op_cargas', 'CG', 3);
   const agora = new Date().toISOString();
   const osJson = JSON.stringify(lista.map((o) => ({ id: o.id, numero: o.numero || '', clienteNome: o.clienteNome || '', laudo: exigeLaudoExclusivo(o) })));
-  await d.prepare('INSERT INTO op_cargas (id,criado_em,criado_por,cliente_nome,cliente_doc,os_json,exclusiva_laudo,fotos_json,status) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9)')
-    .bind(id, agora, (user && user.email) || '', rotulo, clientes.length === 1 ? String(lista[0].clienteDoc || '') : '', osJson, comLaudo.length ? 1 : 0, '[]', 'aberta').run();
+  // Carga Especial (pedido da equipe 24/08): materiais atípicos / fora do escopo
+  // padrão entram marcados desde o cadastro, com a descrição do que é.
+  const especial = opts && opts.especial ? 1 : 0;
+  const especialObs = especial ? String((opts && opts.especialObs) || '').slice(0, 300) : '';
+  await d.prepare('INSERT INTO op_cargas (id,criado_em,criado_por,cliente_nome,cliente_doc,os_json,exclusiva_laudo,fotos_json,status,especial,especial_obs) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11)')
+    .bind(id, agora, (user && user.email) || '', rotulo, clientes.length === 1 ? String(lista[0].clienteDoc || '') : '', osJson, comLaudo.length ? 1 : 0, '[]', 'aberta', especial, especialObs).run();
   return { ok: true, id };
 }
 
@@ -392,7 +399,7 @@ const stLote = (s) => s === 'expedido' ? '<span class="pill p-fi">🚚 Expedido<
 // é o trabalho do dia, não pode sumir atrás de um clique.
 export function paginaCargas(user, cargas) {
   const linha = (c) => `<a class="row" style="text-decoration:none" href="/cargas/carga?id=${esc(c.id)}">
-    <span style="min-width:0"><b style="font-size:13.5px;color:#10262B">${esc(c.id)}</b> · <span style="font-size:12.5px">${esc(c.clienteNome || '—')}</span>${c.exclusivaLaudo ? ' <span class="pill p-laudo">LAUDO — exclusiva</span>' : ''}
+    <span style="min-width:0"><b style="font-size:13.5px;color:#10262B">${esc(c.id)}</b> · <span style="font-size:12.5px">${esc(c.clienteNome || '—')}</span>${c.exclusivaLaudo ? ' <span class="pill p-laudo">LAUDO — exclusiva</span>' : ''}${c.especial ? ' <span class="pill" style="background:#FFF4DE;color:#8A6A16">⭐ ESPECIAL</span>' : ''}
       <span style="display:block;font-size:11px;color:#8fa39f">${esc(horaBR(c.criadoEm))} · ${c.oss.length} OS · ${c.pesoLiquido ? 'líquido ' + kg(c.pesoLiquido) : 'sem pesagem'}</span></span>
     <span style="flex:none;font-size:11px;font-weight:800;color:${c.status === 'cancelada' ? '#B23A2E' : '#0B5B66'};text-transform:uppercase">${esc(c.status)}</span>
   </a>`;
@@ -404,6 +411,7 @@ export function paginaCargas(user, cargas) {
   <div class="card">${andamento.map(linha).join('')}</div>` : '';
   return `${head('Cargas')}${topo('entrada · cargas')}
 <div class="wrap">
+  ${abasEquipe('cargas')}
   <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
     <div><h1 style="font-size:21px;margin:0">🚛 Entrada por Cargas</h1>
     <div style="font-size:12px;color:#7c8a87;margin-top:3px">Chegou caminhão? Abra a carga, pese, fotografe, fracione em lotes e etiquete.</div></div>
@@ -442,6 +450,10 @@ export function paginaNovaCarga(user, oss) {
   <h1 style="font-size:20px;margin:10px 0 4px">Abrir carga (consolidação)</h1>
   <p style="font-size:12.5px;color:#7c8a87;margin:0 0 12px">Marque as OSs que chegaram juntas <b>no dia</b> — pode misturar clientes da mesma rota. OS que exige laudo entra <b>sozinha</b> numa carga exclusiva.</p>
   <div class="card">${rows}
+    <div style="border:1.5px dashed #E8D9A8;background:#FFFBF0;border-radius:11px;padding:12px 14px;margin-top:12px">
+      <label style="display:flex;align-items:center;gap:9px;font-size:13.5px;font-weight:700;cursor:pointer;margin:0;text-transform:none;letter-spacing:0;color:#8A6A16"><input type="checkbox" id="cgEspecial" onchange="document.getElementById('cgEspObs').style.display=this.checked?'':'none'" style="width:18px;height:18px;flex:none">⭐ Carga ESPECIAL — material atípico / fora do escopo padrão</label>
+      <input id="cgEspObs" placeholder="qual material? (ex.: transformador com óleo, baterias industriais…)" style="display:none;margin-top:9px">
+    </div>
     <button class="btn btn-p" style="width:100%;margin-top:10px" onclick="abrir()">Abrir carga com as OSs marcadas</button>
     <div class="msg" id="msg"></div>
   </div>
@@ -453,8 +465,9 @@ async function abrir(){
   if(!ids.length){msg.textContent='Marque ao menos uma OS.';return;}
   const laudos=[...document.querySelectorAll('.os:checked')].filter(c=>c.dataset.laudo==='1');
   if(laudos.length && ids.length>1){msg.textContent='OS com laudo entra sozinha — desmarque as outras.';return;}
+  const esp=document.getElementById('cgEspecial').checked;
   msg.textContent='Abrindo…';
-  try{const r=await fetch('/api/cargas/nova',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({osIds:ids})});
+  try{const r=await fetch('/api/cargas/nova',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({osIds:ids,especial:esp,especialObs:esp?document.getElementById('cgEspObs').value.trim():''})});
     const j=await r.json(); if(j.ok){location.href='/cargas/carga?id='+encodeURIComponent(j.id);}else{msg.textContent=j.message||'Não deu certo.';}}
   catch{msg.textContent='Falha de rede.';}
 }
@@ -470,6 +483,10 @@ export function paginaCarga(user, c, lotes) {
   const avisoCancelada = cancelada ? `<div style="background:#FDF3F1;border:1.5px solid #E8B9B2;border-radius:14px;padding:14px 16px;margin-bottom:12px">
     <div style="font-size:14px;font-weight:800;color:#B23A2E">🚫 Carga cancelada</div>
     <div style="font-size:12.5px;color:#5d4a46;margin-top:4px">${c.cancelada ? `Em ${esc(horaBR(c.cancelada.em))} por ${esc(c.cancelada.por || '—')}. ` : ''}As OSs desta carga <b>voltaram para a recepção</b> e já podem entrar numa nova carga (em "＋ Abrir carga"). Este registro fica só como histórico.</div>
+  </div>` : '';
+  const avisoEspecial = c.especial ? `<div style="background:#FFFBF0;border:1.5px solid #E8D9A8;border-radius:14px;padding:13px 16px;margin-bottom:12px">
+    <div style="font-size:13.5px;font-weight:800;color:#8A6A16">⭐ CARGA ESPECIAL — material atípico / fora do escopo padrão</div>
+    ${c.especialObs ? `<div style="font-size:12.5px;color:#7a5f1c;margin-top:4px">${esc(c.especialObs)}</div>` : ''}
   </div>` : '';
   const osRows = c.oss.map((o) => `<span class="pill" style="background:#EEF3F1;color:#374b48;margin:0 6px 6px 0">${esc(o.numero || o.id)}${o.clienteNome ? ' · ' + esc(o.clienteNome) : ''}${o.laudo ? ' · LAUDO' : ''}</span>`).join('');
   const fotos = (c.fotos || []).map((f, i) => `<a href="/cargas/foto?id=${esc(c.id)}&i=${i}" target="_blank" rel="noopener" style="display:inline-block;width:74px;height:74px;border-radius:10px;background:#EEF3F1;border:1px solid #E4EBE9;overflow:hidden;margin:0 6px 6px 0"><img src="/cargas/foto?id=${esc(c.id)}&i=${i}" style="width:100%;height:100%;object-fit:cover" alt="foto"></a>`).join('');
@@ -535,6 +552,7 @@ export function paginaCarga(user, c, lotes) {
   </div>
   <div style="font-size:11.5px;color:#8fa39f;margin-bottom:10px">${esc(horaBR(c.criadoEm))} · aberta por ${esc(c.criadoPor || '—')}</div>
   ${avisoCancelada}
+  ${avisoEspecial}
   <div class="card" style="margin-bottom:12px"><div class="sec" style="margin-top:0">OSs desta carga</div>${osRows}</div>
   ${cancelada ? '' : `
   <div class="card" style="margin-bottom:12px">
@@ -746,6 +764,7 @@ export function paginaFilas(user, destino, lotes) {
   </div>`).join('') || '<div style="font-size:12.5px;color:#8fa39f">Fila vazia.</div>';
   return `${head('Filas por destino')}${topo('entrada · filas')}
 <div class="wrap">
+  ${abasEquipe('filas')}
   <a href="/cargas" style="font-size:13px;font-weight:800;text-decoration:none;color:#4F6469">← Cargas</a>
   <h1 style="font-size:20px;margin:10px 0 8px">Filas por destino</h1>
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${tabs}</div>

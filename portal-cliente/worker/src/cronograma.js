@@ -11,6 +11,8 @@
 import { listarOperacoes } from './operacional.js';
 import { listarColetasOS } from './coletas.js';
 import { listarLotesComCarga, DESTINOS } from './cargas.js';
+import { lerValidacaoOp } from './engenharia.js';
+import { abasEquipe } from './os-utils.js';
 
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const kg = (n) => `${(Math.round((Number(n) || 0) * 100) / 100).toLocaleString('pt-BR', { maximumFractionDigits: 0 })} kg`;
@@ -99,6 +101,82 @@ export async function dadosCronograma(env) {
   lotes.processando.sort((a, b) => (b.dias || 0) - (a.dias || 0));
   const resumoLotes = { aguardando: lotes.aguardando.length, processando: lotes.processando.length, finalizado: lotes.finalizado.length };
   return { cols, ativos, resumo, sla, lotes, resumoLotes };
+}
+
+// --- Visão MATRIZ / planilha (pedido da equipe 24/08) -----------------------------
+// Uma linha por lote, colunas Entrada → Remanufatura → Reciclagem → Destinação Final,
+// tudo linkado: a linha da OS abre a OS; a do lote abre a carga. Cobre os DOIS fluxos
+// (operação da doca por OS e lotes da Entrada por Cargas) na mesma planilha.
+const ORDEM_ETAPAS = ['recepcao', 'triagem', 'processamento', 'saida', 'validacao', 'concluida'];
+export async function linhasMatriz(env) {
+  const [ops, todosLotes] = await Promise.all([
+    listarOperacoes(env),
+    listarLotesComCarga(env).catch(() => []),
+  ]);
+  const linhas = [];
+  for (const o of ops) {
+    let val = null;
+    if (o.etapa === 'concluida' || o.etapa === 'validacao') {
+      try { val = await lerValidacaoOp(env, o.osId); } catch { val = null; }
+    }
+    const idx = ORDEM_ETAPAS.indexOf(o.etapa);
+    const validada = o.etapa === 'concluida' && val && val.decisao === 'validada';
+    linhas.push({
+      tipo: 'os', id: 'OS ' + (o.numero || o.osId), quem: o.cliente || '',
+      link: `/coletas/os?id=${encodeURIComponent(o.osId)}`,
+      entrada: { st: 'feito', info: `${dataBR(o.criadoEm)}${o.entradaKg ? ' · ' + kg(o.entradaKg) : ''}` },
+      remanufatura: idx > 2 ? { st: 'feito', info: 'processada' } : idx === 2 ? { st: 'atual', info: 'em processamento' } : { st: 'pendente', info: '' },
+      reciclagem: idx > 3 ? { st: 'feito', info: o.saidaKg ? kg(o.saidaKg) + ' saída' : 'saída registrada' } : idx === 3 ? { st: 'atual', info: 'em saída' } : { st: 'pendente', info: '' },
+      destinacao: validada ? { st: 'feito', info: `CDF apto · ${dataBR(val.em)}` } : o.etapa === 'validacao' ? { st: 'atual', info: 'na validação (Eng.)' } : o.etapa === 'concluida' ? { st: 'atual', info: 'validação a confirmar' } : { st: 'pendente', info: '' },
+    });
+  }
+  for (const l of todosLotes) {
+    if (l.cargaStatus === 'cancelada') continue;
+    const destinoRot = (DESTINOS[l.destino] || {}).rot || l.destino || '';
+    linhas.push({
+      tipo: 'lote', id: l.id, quem: `${l.categoria || ''}${l.cargaCliente ? ' · ' + l.cargaCliente : ''}`,
+      link: `/cargas/carga?id=${encodeURIComponent(l.cargaId)}`,
+      entrada: { st: 'feito', info: `${dataBR(l.criadoEm)}${l.peso ? ' · ' + kg(l.peso) : ''}` },
+      remanufatura: l.status === 'processando' ? { st: 'atual', info: 'em processamento' } : (l.status === 'finalizado' || l.status === 'expedido') ? { st: 'feito', info: 'processado' } : { st: 'pendente', info: 'aguardando' },
+      reciclagem: (l.status === 'finalizado' || l.status === 'expedido') ? { st: 'feito', info: destinoRot } : { st: l.status === 'processando' ? 'atual' : 'pendente', info: destinoRot ? 'fila: ' + destinoRot : '' },
+      destinacao: l.status === 'expedido' && l.expedicao ? { st: 'feito', info: `${l.expedicao.fornecedor || ''}${l.expedicao.mtr ? ' · MTR ' + l.expedicao.mtr : ''}` } : l.status === 'finalizado' ? { st: 'atual', info: 'aguarda saída' } : { st: 'pendente', info: '' },
+    });
+  }
+  return linhas;
+}
+
+export function paginaMatriz(user, linhas) {
+  const cel = (c) => {
+    if (!c || c.st === 'pendente') return `<td style="padding:9px 10px;border-top:1px solid #EEF1F0;color:#c3cdca;font-size:12px">—${c && c.info ? ` <span style="color:#9aa7a4">${esc(c.info)}</span>` : ''}</td>`;
+    if (c.st === 'atual') return `<td style="padding:9px 10px;border-top:1px solid #EEF1F0;font-size:12px;color:#8A6A16;font-weight:700">● ${esc(c.info || 'em andamento')}</td>`;
+    return `<td style="padding:9px 10px;border-top:1px solid #EEF1F0;font-size:12px;color:#1E5B31;font-weight:700">✓ <span style="font-weight:600;color:#33564a">${esc(c.info || 'feito')}</span></td>`;
+  };
+  const rows = (linhas || []).map((l) => `<tr>
+    <td style="padding:9px 10px;border-top:1px solid #EEF1F0;white-space:nowrap"><a href="${esc(l.link)}" style="font-size:12.5px;font-weight:800;color:#0B5B66;text-decoration:none">${esc(l.id)} ↗</a><span style="display:block;font-size:10.5px;color:#8fa39f;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.quem)}</span></td>
+    ${cel(l.entrada)}${cel(l.remanufatura)}${cel(l.reciclagem)}${cel(l.destinacao)}
+  </tr>`).join('');
+  return `${head('Planilha do fluxo')}${topo('planilha', user)}
+<div class="wrap">
+  ${abasEquipe('matriz')}
+  <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+    <div><h1 style="font-size:22px;margin:0">📊 Planilha — fluxo de ponta a ponta</h1>
+    <p style="font-size:13px;color:#7c8a87;margin:4px 0 0">Cada linha é um lote (OS da doca ou lote de carga). Clique no código para abrir a ficha — tudo linkado.</p></div>
+    <a href="/cronograma" style="text-decoration:none;font-size:12.5px;font-weight:800;color:#0B5B66;background:#fff;border:1.5px solid #cfe0dd;border-radius:11px;padding:9px 13px">🗂️ Voltar ao Kanban</a>
+  </div>
+  <div class="card" style="padding:0;overflow-x:auto">
+    <table style="width:100%;min-width:860px;border-collapse:collapse">
+      <thead><tr>
+        <th style="text-align:left;padding:11px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#7c8a87">Lote / OS</th>
+        <th style="text-align:left;padding:11px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#0B5B66">1 · Entrada</th>
+        <th style="text-align:left;padding:11px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#8A6A16">2 · Remanufatura / Processamento</th>
+        <th style="text-align:left;padding:11px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#6B3FA0">3 · Reciclagem / Destino</th>
+        <th style="text-align:left;padding:11px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#1E5B31">4 · Destinação Final</th>
+      </tr></thead>
+      <tbody>${rows || '<tr><td colspan="5" style="padding:18px;color:#9aa7a4;font-size:13px;text-align:center">Nenhum lote no fluxo ainda.</td></tr>'}</tbody>
+    </table>
+  </div>
+  <div style="font-size:11px;color:#9aa7a4;text-align:center;margin-top:12px;line-height:1.6">✓ = etapa concluída · ● = em andamento · — = ainda não chegou lá. "Destinação Final" fecha com a validação da engenharia (CDF apto) ou com a saída expedida (fornecedor/MTR).</div>
+</div></body></html>`;
 }
 
 // --- Página ---
@@ -202,10 +280,11 @@ export function paginaCronograma(user, dados) {
     </div>`).join('') : `<div style="font-size:13px;color:#9aa7a4;text-align:center;padding:16px">Nenhum lote em andamento no momento.</div>`;
   return `${head('Cronograma')}${topo('Cronograma', user)}
 <div class="wrap">
+  ${abasEquipe('cronograma')}
   <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px;margin-bottom:16px">
     <div><h1 style="font-size:22px;margin:0">Cronograma & Kanban</h1>
     <p style="font-size:13px;color:#7c8a87;margin:4px 0 0">Acompanhe cada lote da doca até o destino. Prazo contado desde a recepção.</p></div>
-    <div style="display:flex;gap:8px"><a href="/operacao" style="text-decoration:none;font-size:12.5px;font-weight:800;color:#0B5B66;background:#fff;border:1.5px solid #cfe0dd;border-radius:11px;padding:10px 14px">🏭 Abrir Operação</a></div>
+    <div style="display:flex;gap:8px"><a href="/cronograma/matriz" style="text-decoration:none;font-size:12.5px;font-weight:800;color:#10262B;background:#92C430;border-radius:11px;padding:10px 14px">📊 Visão planilha</a><a href="/operacao" style="text-decoration:none;font-size:12.5px;font-weight:800;color:#0B5B66;background:#fff;border:1.5px solid #cfe0dd;border-radius:11px;padding:10px 14px">🏭 Abrir Operação</a></div>
   </div>
 
   <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px" class="tiles">
