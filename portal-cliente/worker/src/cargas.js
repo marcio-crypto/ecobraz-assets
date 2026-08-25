@@ -11,6 +11,7 @@
 
 import qrcode from 'qrcode-generator';
 import { abasEquipe } from './os-utils.js';
+import { lerOperacao, iniciarOperacao, atualizarEtapaOperacao } from './operacional.js';
 
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const limpar = (s) => String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
@@ -254,6 +255,9 @@ export async function expedirLote(env, user, id, dados) {
   const obs = limpar((dados && dados.obs) || '').slice(0, 300);
   const expedicao = { fornecedor, cnpj, cidadeUf, mtr, data: dataSaida, obs, por: (user && user.email) || '', em: new Date().toISOString() };
   await d.prepare('UPDATE op_lotes SET status=\'expedido\', expedicao_json=?2 WHERE id=?1').bind(l.id, JSON.stringify(expedicao)).run();
+  // Cinto de segurança: cargas antigas (finalizadas antes da ponte existir)
+  // entram na validação da engenharia na primeira expedição que acontecer.
+  try { await encaminharCargaParaValidacao(env, l.cargaId, user); } catch { /* não trava a saída */ }
   // Registra o fornecedor para as próximas expedições (lista de sugestão).
   try {
     const achou = cnpj
@@ -345,7 +349,7 @@ export async function cancelarCarga(env, user, id) {
   return { ok: true };
 }
 
-export async function mudarStatusLote(env, id, novo) {
+export async function mudarStatusLote(env, id, novo, user) {
   const d = await db(env); if (!d) return { ok: false, message: 'Banco indisponível.' };
   const l = await lerLote(env, id);
   if (!l) return { ok: false, message: 'Lote não encontrado.' };
@@ -353,7 +357,59 @@ export async function mudarStatusLote(env, id, novo) {
   const de = ordem.indexOf(l.status), para = ordem.indexOf(String(novo));
   if (para < 0 || para !== de + 1) return { ok: false, message: `Transição inválida (${l.status} → ${novo}).` };
   await d.prepare('UPDATE op_lotes SET status=?2 WHERE id=?1').bind(l.id, String(novo)).run();
+  // ELO com o certificado (pedido da equipe 25/08): ao FINALIZAR o último lote da
+  // carga, as OSs dela entram sozinhas na fila de VALIDAÇÃO da engenharia — sem
+  // isso o processo parava aqui e o CDF nunca ficava apto.
+  if (String(novo) === 'finalizado') {
+    try { await encaminharCargaParaValidacao(env, l.cargaId, user); } catch { /* não trava o lote */ }
+  }
   return { ok: true };
+}
+
+// A ponte entre os DOIS fluxos da doca: quando TODOS os lotes de uma carga estão
+// finalizados (ou expedidos), cada OS da carga ganha/avança sua operação direto
+// para 'validacao' — a fila da engenharia enche sozinha e, validada, o CDF libera.
+// Peso de entrada: carga de 1 OS herda o líquido; com várias OSs é RATEADO em
+// partes iguais e marcado (a Débora confere/ajusta o peso real antes de emitir).
+const MAPA_DESTINO_OP = { laudo: 'reciclagem', remanufatura: 'reuso', reciclagem: 'reciclagem', destinacao: 'reciclagem' };
+export async function encaminharCargaParaValidacao(env, cargaId, user) {
+  const c = await lerCarga(env, cargaId);
+  if (!c || c.status === 'cancelada' || !(c.oss || []).length) return { ok: false, motivo: 'carga' };
+  const lotes = await lotesDaCarga(env, c.id);
+  if (!lotes.length || !lotes.every((l) => l.status === 'finalizado' || l.status === 'expedido')) return { ok: false, motivo: 'lotes_abertos' };
+  const em = new Date().toISOString();
+  const quem = (user && user.email) || 'doca';
+  const materiais = lotes.map((l) => ({ rotulo: `${l.categoria} · ${l.id}`.slice(0, 60), ibama: '', classe: 'II-A', qtd: Number(l.peso) || 0, destino: MAPA_DESTINO_OP[l.destino] || 'reciclagem', por: quem, em }));
+  const n = (c.oss || []).length;
+  let movidas = 0;
+  for (const o of c.oss) {
+    let op = null;
+    try { op = await lerOperacao(env, o.id); } catch { op = null; }
+    if (!op) { try { op = await iniciarOperacao(env, o.id, { email: quem }); } catch { op = null; } }
+    if (!op || op.etapa === 'validacao' || op.etapa === 'concluida') continue;
+    const patch = { materiais, viaCarga: c.id };
+    const pesoOS = n === 1 ? (Number(c.pesoLiquido) || 0) : Math.round(((Number(c.pesoLiquido) || 0) / n) * 100) / 100;
+    if (!(op.entrada && op.entrada.pesoKg > 0) && pesoOS > 0) patch.entrada = { pesoKg: pesoOS, em, por: quem, origem: 'carga', rateado: n > 1 };
+    await atualizarEtapaOperacao(env, o.id, 'validacao', patch);
+    movidas++;
+  }
+  return { ok: true, movidas };
+}
+
+// Varredura retroativa (idempotente): pega cargas que JÁ estavam com tudo
+// finalizado antes desta ponte existir e as encaminha para a validação. Roda
+// quando a engenharia abre a fila ou alguém abre o cronograma — só lê quando
+// não há nada a mover.
+export async function sincronizarCargasComValidacao(env, user) {
+  let enviadas = 0;
+  try {
+    const cargas = await listarCargas(env);
+    for (const c of cargas) {
+      if (c.status === 'cancelada' || c.status === 'aberta') continue;
+      try { const r = await encaminharCargaParaValidacao(env, c.id, user); if (r && r.ok) enviadas += r.movidas || 0; } catch { /* segue para a próxima */ }
+    }
+  } catch { /* varredura é best-effort */ }
+  return { enviadas };
 }
 
 // --- QR ------------------------------------------------------------------------

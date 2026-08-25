@@ -55,7 +55,7 @@ import { paginaAcompanhamento, colunaClienteDe, lerGestores, gestorPorEmail, sal
 import { DEMO_CLIENTE_HTML, DEMO_OG_PNG_B64 } from './demo-cliente.js';
 import { listarPropostas, lerProposta, salvarProposta, paginaPropostas, paginaPropostaForm, paginaPropostaVer, paginaContratoVer, garantirTokenAceite, registrarAceite, paginaAceite, paginaAceiteVerificar } from './proposta.js';
 import { lerEmpresaDocs, salvarEmpresaDoc, anexarEmpresaDoc, paginaEmpresaDocs, alertasEmpresaDocs } from './empresa-docs.js';
-import { listarCargas, lerCarga, lotesDaCarga, lerLote, listarLotesPorDestino, novaCarga, pesarCarga, fotoCarga, criarLote, excluirLote, editarLote, cancelarCarga, mudarStatusLote, expedirLote, listarFornecedores, paginaExpedirLote, seloLote, qrLoteGif, paginaCargas, paginaNovaCarga, paginaCarga, paginaEtiqueta, paginaFilas, paginaValidarLote } from './cargas.js';
+import { listarCargas, lerCarga, lotesDaCarga, lerLote, listarLotesPorDestino, novaCarga, pesarCarga, fotoCarga, criarLote, excluirLote, editarLote, cancelarCarga, mudarStatusLote, expedirLote, sincronizarCargasComValidacao, listarFornecedores, paginaExpedirLote, seloLote, qrLoteGif, paginaCargas, paginaNovaCarga, paginaCarga, paginaEtiqueta, paginaFilas, paginaValidarLote } from './cargas.js';
 import { acharPacote, precoPacote, acharModuloAdote, precoModuloAdote, paginaLojaAdote, paginaObrigadoAdote, paginaDiagnostico, lerCredito, salvarCredito, novoCredito, aplicarCompra, aplicarRecarga, precisaRecarga, listarPatrocinadores, resumoPatrocinio, lerCreditoPorDoc } from './adote.js';
 import { paginaLojaESG, paginaESGContato, paginaESGObrigado, relatorioESG, precoRelatorioESG } from './esg.js';
 import { statusDaEtapa, valorProp, CAMPOS_OS } from './os-utils.js';
@@ -1663,6 +1663,9 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
       // --- CRONOGRAMA / KANBAN (visão do fluxo operacional; pedido do Marcelo) ---
       if (pathname === '/cronograma' && request.method === 'GET') {
         if (!escOuEng) return html(paginaLoginEscritorio(googleConfigurado(env)));
+        // Mantém o Kanban de cima vivo: cargas 100% finalizadas movem as OSs
+        // delas para a coluna Laudo/Validação antes de montar a tela.
+        try { await sincronizarCargasComValidacao(env, escOuEng); } catch { /* tela abre mesmo assim */ }
         const dados = await dadosCronograma(env);
         return html(paginaCronograma(escOuEng, dados));
       }
@@ -2652,7 +2655,7 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
       if (pathname === '/api/cargas/lote-status' && request.method === 'POST') {
         if (!docaOk) return json({ ok: false, message: 'nao_autenticado' }, 401);
         let b; try { b = await request.json(); } catch { b = {}; }
-        return json(await mudarStatusLote(env, b && b.id, b && b.novo));
+        return json(await mudarStatusLote(env, b && b.id, b && b.novo, docaOk));
       }
       if (pathname === '/api/cargas/cancelar' && request.method === 'POST') {
         if (!docaOk) return json({ ok: false, message: 'nao_autenticado' }, 401);
@@ -2810,6 +2813,9 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
       // Módulo ENGENHARIA AMBIENTAL (validação técnica). Exige sessão de engenheiro.
       if (pathname === '/eng' && request.method === 'GET') {
         if (!eng) return html(paginaLoginEng(googleConfigurado(env)));
+        // A fila enche sozinha: cargas com todos os lotes finalizados entram na
+        // validação aqui (cobre também as finalizadas antes da ponte existir).
+        try { await sincronizarCargasComValidacao(env, eng); } catch { /* fila abre mesmo assim */ }
         return html(paginaFilaEng(eng, await filaValidacao(env), await operacoesValidadas(env)));
       }
       if (pathname === '/eng/lote' && request.method === 'GET') {

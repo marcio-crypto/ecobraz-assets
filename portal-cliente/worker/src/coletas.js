@@ -565,6 +565,7 @@ export function paginaColetaOSDetalhe(user, os, acomp, extras) {
         <button class="btn btn-d" style="padding:8px 13px;font-size:12px" onclick="salvarPesoReal()">Salvar peso</button>
         <span id="pesoMsg" style="font-size:12px;color:#4F6469"></span>`}
       </div>
+      ${opDoca.entrada && opDoca.entrada.rateado ? '<div style="font-size:11px;color:#B26A16;font-weight:700;margin-top:7px">⚠️ Peso RATEADO em partes iguais entre as OSs da mesma carga — confira e ajuste antes de emitir o certificado.</div>' : ''}
       ${Array.isArray(opDoca.pesoAjustes) && opDoca.pesoAjustes.length ? `<div style="font-size:11px;color:#8A6A16;margin-top:7px">✎ ajustado ${opDoca.pesoAjustes.length}× — último: ${esc(String(opDoca.pesoAjustes[opDoca.pesoAjustes.length - 1].de).replace('.', ','))} → ${esc(String(opDoca.pesoAjustes[opDoca.pesoAjustes.length - 1].para).replace('.', ','))} kg por ${esc(opDoca.pesoAjustes[opDoca.pesoAjustes.length - 1].por || '—')}</div>` : ''}
       ${ro ? '' : '<div style="font-size:11px;color:#9aa7a4;margin-top:6px">Confira e ajuste o peso real ANTES de emitir o certificado — o valor salvo aqui é o que vale no CDF e no balanço de massa.</div>'}
     </div>` : `<div class="sec">🏭 Operação na doca</div>
