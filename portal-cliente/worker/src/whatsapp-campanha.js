@@ -35,6 +35,10 @@ async function db(env) {
     await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS wa_optout (tel TEXT PRIMARY KEY, motivo TEXT, em TEXT)').run();
     await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS wa_excluidos (doc TEXT PRIMARY KEY, nome TEXT, por TEXT, em TEXT)').run();
     await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS wa_tel_invalido (tel TEXT PRIMARY KEY, motivo TEXT, em TEXT)').run();
+    // O TEXTO das respostas (27/08): antes só marcávamos "respondeu" e jogávamos o
+    // texto fora — e o Marcio descobriu que a maioria era robô. Agora cada resposta
+    // fica guardada e classificada (gente × automática) para a tela mostrar.
+    await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS wa_respostas (id INTEGER PRIMARY KEY AUTOINCREMENT, tel TEXT, texto TEXT, em TEXT, automatica INTEGER DEFAULT 0)').run();
   } catch { return null; }
   // Medição (13/08): colunas novas nas tabelas que já existem em produção.
   if (!migrouWa) {
@@ -514,6 +518,14 @@ const RANK_ENTREGA = { '': 0, 'enviada': 1, 'entregue': 2, 'lida': 3, 'falhou': 
 // Gupshup / 131026 da Meta): o número entra sozinho em wa_tel_invalido e some
 // das próximas listas — não adianta gastar disparo com número morto.
 const SEM_ZAP_RE = /\b(1002|131026)\b|not exist|undeliverable|(no|not|sem|nao|não)[^a-z0-9]{0,3}whatsapp|invalid[^a-z0-9]{0,3}(number|destination|phone)/i;
+// Resposta AUTOMÁTICA (saudação de robô/WhatsApp Business): heurística aberta
+// pelas frases clássicas. Não é perfeita — a tela mostra o texto para conferência.
+export const ehRespostaAutomatica = (t) => {
+  const s = String(t || '');
+  if (!s.trim()) return false;
+  return /autom[aá]tic|assistente virtual|atendimento (virtual|digital)|hor[aá]rio de (atendimento|funcionamento)|fora do (nosso )?(hor[aá]rio|expediente)|recebemos (a )?sua mensagem|sua mensagem [eé] (muito )?importante|em breve (um de nossos|entraremos|retornaremos|responderemos|falaremos)|logo (retornaremos|responderemos)|assim que poss[ií]vel (retornaremos|responderemos)|aguarde (um momento|s[oó] um instante|nosso contato)|digite (o n[uú]mero|uma? op[cç])|escolha uma op[cç]|selecione uma op[cç]|menu de (atendimento|op[cç])|op[cç][aã]o desejada|n[aã]o [eé] monitorad|caixa postal|retornaremos (o|assim|em)|responderemos (o mais|assim)|obrigad[oa] por entrar em contato|agradecemos (o |seu )?contato/i.test(s);
+};
+
 export async function processarWebhookWA(env, corpo) {
   const d = await db(env); if (!d) return { ok: false };
   const b = corpo || {};
@@ -557,6 +569,10 @@ export async function processarWebhookWA(env, corpo) {
       const texto = limpar((p.payload && (p.payload.text || p.payload.title)) || p.text || '').slice(0, 200);
       const dest = await d.prepare('SELECT id FROM wa_destinatarios WHERE tel=?1 ORDER BY id DESC LIMIT 1').bind(tel).first();
       if (dest) await d.prepare('UPDATE wa_destinatarios SET respondeu=1 WHERE id=?1').bind(dest.id).run();
+      // Guarda o texto classificado — é ele que separa gente de robô nos Resultados.
+      if (texto) {
+        try { await d.prepare('INSERT INTO wa_respostas (tel, texto, em, automatica) VALUES (?1,?2,?3,?4)').bind(tel, texto, new Date().toISOString(), ehRespostaAutomatica(texto) ? 1 : 0).run(); } catch { /* medição nunca derruba o webhook */ }
+      }
       // SAIR → entra sozinho na lista de saída (nunca mais recebe campanha).
       if (/^\s*sair\s*[.!]?\s*$/i.test(texto)) {
         try { await d.prepare('INSERT INTO wa_optout (tel, motivo, em) VALUES (?1,?2,?3)').bind(tel, 'respondeu SAIR no WhatsApp', new Date().toISOString()).run(); } catch { /* já está */ }
@@ -608,6 +624,22 @@ export async function metricasCampanhaWA(env, campanhaId) {
   const porMotivo = new Map();
   for (const f of falhouLista) porMotivo.set(f.motivoTexto, (porMotivo.get(f.motivoTexto) || 0) + 1);
   const falhouResumo = [...porMotivo.entries()].map(([motivo, n]) => ({ motivo, n })).sort((a, b) => b.n - a.n);
+  // O QUE responderam (27/08): separa gente de robô. "respGente" = pelo menos uma
+  // resposta que NÃO parece automática; "respAuto" = só respostas de robô;
+  // "respSemTexto" = respondeu antes de a medição de texto existir.
+  let respostas = [];
+  try {
+    const telsCamp = new Map(rows.map((x) => [String(x.tel || ''), String(x.nome || '')]));
+    const rr = await d.prepare('SELECT tel, texto, em, automatica FROM wa_respostas WHERE em >= ?1 ORDER BY id DESC LIMIT 500').bind(dataCorte).all();
+    respostas = (rr.results || [])
+      .filter((r) => telsCamp.has(String(r.tel)))
+      .map((r) => ({ nome: telsCamp.get(String(r.tel)) || '', tel: String(r.tel), texto: String(r.texto || ''), em: String(r.em || ''), automatica: !!Number(r.automatica) }));
+  } catch { respostas = []; }
+  const telsGente = new Set(respostas.filter((r) => !r.automatica).map((r) => r.tel));
+  const telsComTexto = new Set(respostas.map((r) => r.tel));
+  canal.respGente = telsGente.size;
+  canal.respAuto = [...telsComTexto].filter((t) => !telsGente.has(t)).length;
+  canal.respSemTexto = Math.max(0, canal.responderam - telsComTexto.size);
   let sairam = 0;
   try {
     const tels = new Set(rows.map((x) => x.tel));
@@ -641,6 +673,7 @@ export async function metricasCampanhaWA(env, campanhaId) {
     ok: true, titulo: camp.titulo, desde: dataCorte,
     enviadas: Number(camp.enviados) || 0, falhasEnvio: Number(camp.falhas) || 0,
     canal, sairam, falhouResumo, falhouLista: falhouLista.slice(0, 300),
+    respostas: respostas.slice(0, 120),
     conversao: { portal: portal.size, solicitacoes, novasOS },
   };
 }
@@ -968,6 +1001,15 @@ async function verResultados(id){
     var tile=function(n,rot,cor){return '<div style="flex:1;min-width:90px;background:#F7FAF9;border:1px solid #E4EBE9;border-radius:10px;padding:9px;text-align:center"><b style="font-size:18px;color:'+(cor||'#00333B')+';display:block">'+n+'</b><span style="font-size:10px;color:#7c8a87;font-weight:700">'+rot+'</span></div>';};
     var eh=function(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
     var semRetorno=!c.comRetorno;
+    var blocoResp='';
+    if(j.respostas&&j.respostas.length){
+      blocoResp='<div style="background:#F1F8EC;border:1px solid #cfe6b8;border-radius:10px;padding:9px 11px;margin-top:8px">'
+        +'<div style="font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#1E5B31;margin-bottom:4px">💬 O que responderam</div>'
+        +'<div style="font-size:11px;color:#3f6b1e;margin-bottom:6px">'+(c.respGente||0)+' parecem GENTE · '+(c.respAuto||0)+' só robô/saudação automática'+(c.respSemTexto?' · '+c.respSemTexto+' sem texto guardado (chegaram antes desta medição, 27/08)':'')+'. A classificação é automática — confira o texto.</div>'
+        +'<details><summary style="font-size:11.5px;font-weight:700;color:#2f5b1e;cursor:pointer">📄 Ver as respostas ('+j.respostas.length+')</summary>'
+        +'<div style="max-height:240px;overflow:auto;margin-top:6px">'+j.respostas.map(function(x){return '<div style="font-size:11.5px;color:#28413f;border-top:1px solid #dcebd0;padding:4px 0"><b>'+eh(x.nome||x.tel)+'</b> <span style="color:#9aa7a4">· '+eh(x.tel)+'</span> '+(x.automatica?'<span style="font-size:9.5px;font-weight:800;color:#6B7B78;background:#EEF1F0;border-radius:20px;padding:1px 7px">🤖 automática</span>':'<span style="font-size:9.5px;font-weight:800;color:#1E5B31;background:#E4F3E6;border-radius:20px;padding:1px 7px">💬 parece gente</span>')+'<span style="display:block;font-size:11px;color:#4F6469;margin-top:1px">“'+eh(x.texto)+'”</span></div>';}).join('')+'</div></details>'
+        +'</div>';
+    }
     var blocoFalhas='';
     if(j.falhouResumo&&j.falhouResumo.length){
       var fl=j.falhouLista||[];
@@ -981,8 +1023,9 @@ async function verResultados(id){
     }
     box.innerHTML=
       '<div style="font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#7c8a87;margin-bottom:6px">Canal (WhatsApp)'+(semRetorno?' — <span style="color:#8A6A16">sem retorno ainda: configure o webhook abaixo</span>':'')+'</div>'
-      +'<div style="display:flex;gap:8px;flex-wrap:wrap">'+tile(j.enviadas,'aceitas')+tile(c.entregues,'entregues','#0B5B66')+tile(c.lidas,'lidas','#1E5B31')+tile(c.responderam,'responderam','#1E5B31')+tile(c.falharam,'falhou entrega','#B23A2E')+tile(Math.max(0,(j.enviadas||0)-((c&&c.comRetorno)||0)),'sem confirmação ainda','#6B7B78')+tile(j.sairam,'pediram SAIR','#8A6A16')+'</div>'
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap">'+tile(j.enviadas,'aceitas')+tile(c.entregues,'entregues','#0B5B66')+tile(c.lidas,'lidas','#1E5B31')+((c.respGente!=null&&((c.respGente||0)+(c.respAuto||0))>0)?(tile(c.respGente,'respostas de GENTE','#1E5B31')+tile(c.respAuto,'🤖 só robô','#6B7B78')):tile(c.responderam,'responderam','#1E5B31'))+tile(c.falharam,'falhou entrega','#B23A2E')+tile(Math.max(0,(j.enviadas||0)-((c&&c.comRetorno)||0)),'sem confirmação ainda','#6B7B78')+tile(j.sairam,'pediram SAIR','#8A6A16')+'</div>'
       +((j.enviadas||0)-((c&&c.comRetorno)||0)>0?'<div style="font-size:10.5px;color:#7c8a87;margin-top:6px">"Sem confirmação ainda" = a Meta aceitou e ainda não devolveu o recibo de entrega — as falhas de número morto voltam na hora, mas as entregas podem levar horas para confirmar. O número cai sozinho conforme os recibos chegam.</div>':'')
+      +blocoResp
       +blocoFalhas
       +'<div style="font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#7c8a87;margin:10px 0 6px">Conversão no portal (desde '+j.desde.split('-').reverse().join('/')+')</div>'
       +'<div style="display:flex;gap:8px;flex-wrap:wrap">'+tile(v.portal,'entraram no portal','#0B5B66')+tile(v.solicitacoes,'pediram coleta','#1E5B31')+tile(v.novasOS,'viraram OS','#1E5B31')+'</div>'
