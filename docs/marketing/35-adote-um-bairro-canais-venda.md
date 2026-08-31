@@ -384,6 +384,28 @@ proposta antes de qualquer compromisso.
   Salvador Arena, Porto Social, VW, Whirlpool, Renner, Anglo American,
   ArcelorMittal, LAMSA, EAF e-lixo.
 
+**31/08/2026 (3ª execução):**
+- **Prazos do dia (sem prorrogação):** Salone della CSR (credenciamento grátis
+  encerra hoje) e Chamada EDP (18h, Prosas); iCS comunicação climática fecha
+  hoje 16h. Após hoje, saem do radar.
+- **⚠️ Eco Expo Brasil:** divergência de datas nas fontes — 20–22/10 (Expo
+  Center Norte) vs 21–23/10 (páginas do próprio ecoexpo.com.br); gratuidade da
+  edição 2026 não confirmada. Conferir em ecoexpo.com.br/visitar antes de
+  agendar.
+- **Novos:** **Instituto ACP** — chamada aberta contínua (via Simbi/Prosas),
+  até R$ 100 mil por projeto para fortalecimento institucional de OSCs
+  (preferência a cofinanciamento) — encaixe possível para estruturar o próprio
+  programa (ex.: plataforma de dados do Adote); regulamento a confirmar.
+  Ambev Brasilidades 2026 (até 30/09): só cultura/esporte já incentivados —
+  não serve.
+- **De olho:** Braskem "Ações que Transformam" (SP capital/zona leste + ABC,
+  economia circular, prêmios R$ 5–15 mil) fechou 28/08, mas houve prorrogação
+  em 2025 — verificar na próxima semana.
+- **Sem novidade:** IEWD (aberto, sem data-limite), PL 1.361/2025 (Senado),
+  Von Martius e Benchmarking (não confirmados), Melhores ONGs (top 100 sai em
+  outubro). Semana fraca: ciclos de setembro dos grandes financiadores (Itaú
+  Social, B3 Social, FBB) ainda não abriram.
+
 ## 8. Balanço honesto deste dossiê
 
 **Feito:** ~40 canais avaliados nas 3 pesquisas; 30+ documentados acima com
