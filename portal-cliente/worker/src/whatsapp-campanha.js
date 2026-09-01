@@ -730,6 +730,66 @@ export async function metricasCampanhaWA(env, campanhaId) {
   };
 }
 
+// 🗺️ MAPA DA BASE (pergunta do Marcio 31/08: "quantos contatos temos válidos?
+// falta mais algum?"): o retrato completo, ao vivo, do que as ondas revelaram.
+// Cada número tentado é classificado pelo MELHOR resultado entre todas as ondas.
+export async function mapaBaseWA(env) {
+  const d = await db(env); if (!d) return { ok: false };
+  const q1 = async (sql) => { try { const r = await d.prepare(sql).first(); return Number(r && Object.values(r)[0]) || 0; } catch { return 0; } };
+  let universo = 0, universoFixos = 0;
+  try {
+    const r = await d.prepare("SELECT telefone FROM contatos WHERE COALESCE(telefone,'')<>'' LIMIT 30000").all();
+    const tels = new Set();
+    for (const l of (r.results || [])) { const t = telWhatsApp(l.telefone); if (t && !tels.has(t)) { tels.add(t); if (ehFixoBR(t)) universoFixos++; } }
+    universo = tels.size;
+  } catch { universo = 0; }
+  let tentados = 0, vivos = 0, falharam = 0, semRecibo = 0;
+  try {
+    const r = await d.prepare("SELECT tel, MAX(CASE WHEN entrega IN ('entregue','lida') THEN 2 WHEN entrega='falhou' THEN 1 ELSE 0 END) AS st FROM wa_destinatarios WHERE status='enviado' GROUP BY tel").all();
+    for (const x of (r.results || [])) { tentados++; const st = Number(x.st); if (st === 2) vivos++; else if (st === 1) falharam++; else semRecibo++; }
+  } catch { /* zeros honestos */ }
+  const respGente = await q1('SELECT COUNT(DISTINCT tel) FROM wa_respostas WHERE automatica=0');
+  const mortosBanidos = await q1('SELECT COUNT(*) FROM wa_tel_invalido');
+  const optout = await q1('SELECT COUNT(*) FROM wa_optout');
+  const removidas = await q1('SELECT COUNT(*) FROM wa_excluidos');
+  let faltam = 0, faltamFixos = 0;
+  try { const resto = await publicoRestoBase(env, 30000); faltam = resto.length; faltamFixos = resto.filter((c) => /só fixo/.test(c.motivo || '')).length; } catch { faltam = 0; }
+  return { ok: true, universo, universoFixos, tentados, vivos, falharam, semRecibo, respGente, mortosBanidos, optout, removidas, faltam, faltamFixos };
+}
+
+export function paginaMapaBaseWA(m) {
+  const t = (n, rot, cor, sub) => `<div style="flex:1;min-width:150px;background:#fff;border:1px solid #E4EBE9;border-radius:14px;padding:16px;text-align:center"><b style="font-size:26px;color:${cor || '#00333B'};display:block">${n}</b><span style="font-size:11px;color:#7c8a87;font-weight:700">${rot}</span>${sub ? `<span style="display:block;font-size:10px;color:#9aa7a4;margin-top:3px">${sub}</span>` : ''}</div>`;
+  const fim = !m.faltam;
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Mapa da base — Ecobraz</title></head>
+<body style="margin:0;font-family:Montserrat,'Segoe UI',Arial,sans-serif;background:#F2F6F4;color:#10262B">
+<div style="background:#00333B;padding:15px 20px"><div style="max-width:940px;margin:0 auto;display:flex;justify-content:space-between;align-items:center">
+  <a href="/diretoria/whatsapp" style="text-decoration:none"><span style="color:#fff;font-size:16px;font-weight:800">ecobraz</span><span style="color:#92C430;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin-left:8px">mapa da base</span></a>
+  <a href="/diretoria/whatsapp" style="color:#cfe3e0;font-size:12px;font-weight:700;text-decoration:none">← Campanhas</a>
+</div></div>
+<div style="max-width:940px;margin:0 auto;padding:20px 18px 56px">
+  <h1 style="font-size:21px;margin:0 0 4px">🗺️ Mapa da base — o que as ondas revelaram</h1>
+  <p style="font-size:12.5px;color:#7c8a87;margin:0 0 16px">Cada número é contado UMA vez, pelo melhor resultado entre todas as campanhas. Ao vivo, direto do banco.</p>
+  ${fim ? '<div style="background:#E4F3E6;border:1.5px solid #9CCB9C;border-radius:14px;padding:14px 16px;margin-bottom:14px;font-size:13.5px;font-weight:800;color:#1E5B31">✅ BASE 100% MAPEADA — não falta ninguém: todo contato com telefone já foi tentado e está classificado abaixo.</div>' : `<div style="background:#FFF4DE;border:1.5px solid #E8C87A;border-radius:14px;padding:14px 16px;margin-bottom:14px;font-size:13.5px;color:#6b6046"><b>⏳ Faltam ${m.faltam} contato(s)</b> que nunca receberam (${m.faltamFixos} são fixos, com pouca chance de entrega). Continue as ondas da LIMPEZA FINAL até este número zerar.</div>`}
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+    ${t(m.vivos, '✅ VÁLIDOS — receberam de verdade', '#1E5B31', 'o ativo real para futuras campanhas')}
+    ${t(m.respGente, '💬 responderam (gente)', '#0B5B66', 'conversas reais no histórico')}
+    ${t(m.faltam, '⏳ faltam enviar', m.faltam ? '#8A6A16' : '#1E5B31', m.faltam ? `${m.faltamFixos} fixos` : 'ninguém — mapa completo')}
+  </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+    ${t(m.mortosBanidos, '☠️ mortos banidos (sem WhatsApp)', '#B23A2E', 'nunca mais entram em lista')}
+    ${t(m.falharam, 'falharam (não receberam)', '#B23A2E', 'podem voltar em nova onda')}
+    ${t(m.semRecibo, 'sem recibo', '#6B7B78', 'enviado, canal não confirmou')}
+    ${t(m.optout, '🚪 pediram SAIR', '#8A6A16')}
+    ${t(m.removidas, '🚫 removidas', '#8A6A16', 'tiradas pela Diretoria')}
+  </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    ${t(m.universo, '📇 base única com telefone', '#00333B', `${m.universoFixos} são fixos`)}
+    ${t(m.tentados, '📤 números já tentados', '#00333B', 'em todas as ondas somadas')}
+  </div>
+  <div style="font-size:11px;color:#9aa7a4;margin-top:16px;line-height:1.7"><b>Como ler com honestidade:</b> "VÁLIDOS" = entrega confirmada pela Meta ao menos uma vez — é o número que importa. "Sem recibo" pode conter vivos (o canal só não confirmou). "Falharam" inclui limites temporários da Meta — esses podem receber numa próxima onda. A soma dos grupos pode passar do universo porque a base tem números fora do cadastro atual (contatos apagados/alterados no CRM depois do envio).</div>
+</div></body></html>`;
+}
+
 // Traduz o motivo técnico da falha de entrega para o time (código Meta/Gupshup → português).
 export function traduzirFalhaWA(motivo) {
   const m = String(motivo || '');
@@ -874,7 +934,8 @@ input,select,textarea{width:100%;border:1px solid #DDE1E6;border-radius:10px;pad
 </div></div>
 <div class="wrap">
   <h1 style="font-size:21px;margin:0 0 4px">📣 Campanhas de WhatsApp</h1>
-  <p style="font-size:12.5px;color:#7c8a87;margin:0 0 14px">Divulgação e oferta de coleta pelo canal <b>oficial</b> (WhatsApp Business API / Gupshup), sempre com template aprovado pela Meta.</p>
+  <p style="font-size:12.5px;color:#7c8a87;margin:0 0 10px">Divulgação e oferta de coleta pelo canal <b>oficial</b> (WhatsApp Business API / Gupshup), sempre com template aprovado pela Meta.</p>
+  <div style="margin:0 0 14px"><a href="/diretoria/whatsapp/mapa" style="display:inline-block;background:#00333B;color:#fff;border-radius:11px;padding:10px 14px;font-size:12.5px;font-weight:800;text-decoration:none">🗺️ Mapa da base — quantos válidos, quantos mortos, quanto falta →</a></div>
 
   <div style="background:#FFFAEC;border:1.5px solid #E8C87A;border-radius:14px;padding:13px 16px;margin-bottom:14px;font-size:12px;color:#6b6046;line-height:1.7">
     <b>Regras do canal (importante):</b> ① só é possível enviar <b>texto pré-aprovado pela Meta</b> (template criado no painel do Gupshup — aprovação costuma sair em minutos/horas); ② cada mensagem de marketing é <b>cobrada</b> (Brasil: tipicamente entre R$ 0,30 e R$ 0,50 — confirme o valor do contrato no painel do Gupshup); ③ se muita gente bloquear, a Meta <b>reduz a qualidade do número</b> e limita envios — por isso o limite de ${LIMITE_CAMPANHA} por campanha, a lista de saída e a dica: comece pequeno; ④ inclua no texto do template a frase para sair (ex.: "responda SAIR para não receber avisos").

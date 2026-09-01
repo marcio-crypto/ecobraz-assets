@@ -41,7 +41,7 @@ import { gerarPixCopiaECola, pixConfig, paginaPix } from './pix.js';
 import { paginaColetaExpressa } from './coleta-expressa.js';
 import { enviarSMS, smsConfigurado } from './sms.js';
 import { whatsappConfigurado, templateColeta, templateInfo, enviarWhatsAppTemplate, enviarWhatsAppDiag, listarTemplatesGupshup, saldoGupshup } from './whatsapp.js';
-import { paginaCampanhasWA, listarCampanhasWA, listarOptoutWA, previaPublicoWA, prepararCampanhaWA, enviarLoteWA, falhasDaCampanhaWA, mudarOptoutWA, listaDetalhadaPublicoWA, paginaListaPublicoWA, PUBLICOS_WA, mudarExclusaoEmpresaWA, listarExcluidasWA, chaveWebhookWA, processarWebhookWA, metricasCampanhaWA, salvarSaldoBaseWA, lerSaldoBaseWA, saldoEstimadoWA } from './whatsapp-campanha.js';
+import { paginaCampanhasWA, listarCampanhasWA, listarOptoutWA, previaPublicoWA, prepararCampanhaWA, enviarLoteWA, falhasDaCampanhaWA, mudarOptoutWA, listaDetalhadaPublicoWA, paginaListaPublicoWA, PUBLICOS_WA, mudarExclusaoEmpresaWA, listarExcluidasWA, chaveWebhookWA, processarWebhookWA, metricasCampanhaWA, salvarSaldoBaseWA, lerSaldoBaseWA, saldoEstimadoWA, mapaBaseWA, paginaMapaBaseWA } from './whatsapp-campanha.js';
 import { paginaAcompanhar, paginaAcompanharErro } from './acompanhar.js';
 import { registrarFalha, receberErroCliente, listarFalhas } from './monitor.js';
 import { segmentoDoCliente, definirSegmento, SEGMENTOS, fluxoDeVendas, ultimosPedidos, paginaPagamentos, avisoResgatePendentes } from './premium.js';
@@ -1122,6 +1122,13 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         const nomes = new Set(daLista.map((t) => t.nome));
         const templates = daLista.concat(doCofre.filter((t) => !nomes.has(t.nome)));
         return json({ ok: templates.length > 0, motivo: lst.ok ? '' : 'sem_listagem', aviso: lst.ok ? '' : 'Não consegui listar do Gupshup — mostrando os templates do cofre. Dá para digitar nome + id manualmente (opção ✍️).', templates, tentativas: lst.ok ? [] : (lst.tentativas || []) });
+      }
+      // 🗺️ Mapa da base (pergunta do Marcio 31/08): válidos × mortos × faltam, ao vivo.
+      if (pathname === '/diretoria/whatsapp/mapa' && request.method === 'GET') {
+        if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
+        const mapa = await mapaBaseWA(env);
+        if (!mapa.ok) return html(paginaMensagem('Mapa indisponível', 'Não consegui ler o banco agora — tente de novo em instantes.', '/diretoria/whatsapp'), 503);
+        return html(paginaMapaBaseWA(mapa));
       }
       if (pathname === '/diretoria/whatsapp/lista' && request.method === 'GET') {
         if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
