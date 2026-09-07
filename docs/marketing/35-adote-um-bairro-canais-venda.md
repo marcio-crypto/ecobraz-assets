@@ -406,6 +406,25 @@ proposta antes de qualquer compromisso.
   outubro). Semana fraca: ciclos de setembro dos grandes financiadores (Itaú
   Social, B3 Social, FBB) ainda não abriram.
 
+**07/09/2026 (4ª execução):**
+- **Nenhum edital novo elegível.** Ciclos verificados um a um: FBB Tecnologia
+  Social 14ª ainda não abriu (13ª abriu em out/2025 — **monitorar outubro**);
+  Itaú Social com edital FIA suspenso por revisão interna; B3 Social sem
+  edital aberto; Localiza/Votorantim nada; Telefônica/Vivo só incentivados;
+  Braskem sem prorrogação anunciada (em 2025 prorrogaram até novembro —
+  rechecar); Renner "Encantando Comunidades" (até 13/09) exclui a capital.
+- **Eco Expo:** gratuidade do credenciamento de visitante **confirmada**
+  (formulário "Quero Visitar", 16+); divergência de datas persiste (Expo
+  Center Norte e versão PT: 20–22/10 · versão EN: 21–23/10) — credenciar e
+  planejar por 20–22 com margem para o dia 23.
+- **IEWD:** segue aberto sem data-limite; faltam 5 semanas — **registrar logo**
+  (prompt 15 do doc 38), o prazo pode surgir sem aviso.
+- **Salone della CSR:** janela gratuita encerrou 31/08 sem alternativa tardia
+  anunciada — **fora do radar 2026** (fica para 2027 via Villanova).
+- Alerta anti-confusão: notícias de maio sobre "logística reversa de
+  eletroeletrônicos à sanção" referem-se a projeto **distrital do DF**, não ao
+  PL federal 1.361/2025 (que segue no Senado).
+
 ## 8. Balanço honesto deste dossiê
 
 **Feito:** ~40 canais avaliados nas 3 pesquisas; 30+ documentados acima com
