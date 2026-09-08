@@ -1,0 +1,59 @@
+name: Villanova — auditoria no navegador de verdade
+
+# Abre o site publicado num Chromium real e anota tudo que quebra: erro de
+# JavaScript, requisição falhada, rolagem horizontal no celular, imagem que não
+# carrega, link interno quebrado e o que parece botão sem ser.
+#
+# Existe porque uma gravação do Microsoft Clarity não pode ser aberta por fora
+# da conta, e porque olhar só o código-fonte já me fez errar antes: o que vale é
+# o que o navegador faz com a página SERVIDA.
+#
+# Também roda a "jornada": o desvio automático de idioma e o banner de cookies,
+# que são os dois primeiros segundos de qualquer visita.
+
+on:
+  workflow_dispatch:
+    inputs:
+      urls:
+        description: 'URLs separadas por espaço (vazio = lê o sitemap inteiro)'
+        type: string
+        default: ''
+      jornada:
+        description: 'Rodar também o teste de jornada (idioma + cookies)'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  auditar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Instalar o Playwright e o Chromium
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.56.1 --no-audit --no-fund
+          npx playwright install --with-deps chromium
+
+      - name: Auditar as páginas
+        run: node site-villanova/scripts/auditoria-navegador.mjs ${{ inputs.urls }}
+
+      - name: Jornada de entrada (idioma + consentimento)
+        if: ${{ inputs.jornada }}
+        run: node site-villanova/scripts/auditoria-jornada.mjs
+
+      - name: Guardar as telas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: telas
+          path: auditoria-navegador/
+          retention-days: 14
