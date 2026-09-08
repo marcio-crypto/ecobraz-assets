@@ -15,9 +15,13 @@ on:
   workflow_dispatch:
     inputs:
       urls:
-        description: 'URLs separadas por espaço (vazio = lê o sitemap inteiro)'
+        description: 'URLs separadas por espaço (vazio = amostra do sitemap)'
         type: string
         default: ''
+      limite:
+        description: 'Quantas páginas na amostra (o site tem mais de 500 URLs; tudo não cabe no tempo)'
+        type: string
+        default: '24'
       jornada:
         description: 'Rodar também o teste de jornada (idioma + cookies)'
         type: boolean
@@ -29,7 +33,7 @@ permissions:
 jobs:
   auditar:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
 
@@ -44,6 +48,8 @@ jobs:
           npx playwright install --with-deps chromium
 
       - name: Auditar as páginas
+        env:
+          LIMITE_PAGINAS: ${{ inputs.limite }}
         run: node site-villanova/scripts/auditoria-navegador.mjs ${{ inputs.urls }}
 
       - name: Jornada de entrada (idioma + consentimento)
