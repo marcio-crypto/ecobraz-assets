@@ -16,8 +16,15 @@
 //                              e repetido vira "rage click"
 //   link interno 4xx/5xx ..... a pessoa clica e cai em erro
 //
+// TAMANHO IMPORTA, E EU ERREI ISSO NA PRIMEIRA VERSÃO. O site tem mais de 500
+// URLs. Varrer todas em duas telas leva mais de uma hora e o workflow morre no
+// tempo limite — e como a primeira versão só imprimia o relatório NO FIM, morrer
+// no limite significava perder tudo. Agora: (a) há um limite de páginas, com as
+// páginas institucionais antes dos posts, e (b) cada página é relatada assim que
+// termina. Se der tempo limite no meio, o que já foi medido está no log.
+//
 // Uso: node auditoria-navegador.mjs [url1 url2 ...]
-//      Sem argumentos, lê o sitemap do site.
+//      Sem argumentos, lê o sitemap e respeita LIMITE_PAGINAS (padrão 24).
 import { chromium } from 'playwright';
 import fs from 'node:fs';
 
@@ -31,17 +38,40 @@ const TELAS = [
 ];
 
 // ---------------------------------------------------------------- lista de páginas
+const LIMITE = Number(process.env.LIMITE_PAGINAS || 24);
+
+const doSitemap = async (mapa) => {
+  const out = [];
+  try {
+    const r = await fetch(`${BASE}/${mapa}`, { signal: AbortSignal.timeout(30000) });
+    if (!r.ok) { console.log(`aviso: ${mapa} respondeu ${r.status}`); return out; }
+    for (const m of (await r.text()).matchAll(/<loc>([^<]+)<\/loc>/g)) out.push(m[1].trim());
+  } catch (e) { console.log(`aviso: não consegui ler ${mapa}: ${e.message}`); }
+  return out;
+};
+
 const paginas = async () => {
   if (process.argv.length > 2) return process.argv.slice(2);
-  const urls = new Set();
-  for (const mapa of ['sitemap-pages.xml', 'sitemap-posts.xml']) {
-    try {
-      const r = await fetch(`${BASE}/${mapa}`, { signal: AbortSignal.timeout(30000) });
-      if (!r.ok) { console.log(`aviso: ${mapa} respondeu ${r.status}`); continue; }
-      for (const m of (await r.text()).matchAll(/<loc>([^<]+)<\/loc>/g)) urls.add(m[1].trim());
-    } catch (e) { console.log(`aviso: não consegui ler ${mapa}: ${e.message}`); }
+
+  const inst = await doSitemap('sitemap-pages.xml');
+  const posts = await doSitemap('sitemap-posts.xml');
+  console.log(`Sitemap: ${inst.length} páginas institucionais, ${posts.length} posts.`);
+
+  // As páginas institucionais vêm primeiro: são elas que recebem o tráfego pago
+  // e a entrada pela home. Dos posts entra só uma amostra espalhada, porque
+  // todos saem do mesmo template — um post quebrado quase sempre significa que
+  // o template está quebrado, não aquele post.
+  const escolhidas = inst.slice(0, LIMITE);
+  const sobra = LIMITE - escolhidas.length;
+  if (sobra > 0 && posts.length) {
+    const passo = Math.max(1, Math.floor(posts.length / sobra));
+    for (let i = 0; i < posts.length && escolhidas.length < LIMITE; i += passo) escolhidas.push(posts[i]);
   }
-  return [...urls];
+  if (inst.length + posts.length > LIMITE) {
+    console.log(`ATENÇÃO: existem ${inst.length + posts.length} URLs e o limite desta rodada é ${LIMITE}.`);
+    console.log('Isto NÃO é uma varredura completa do site. É uma amostra.');
+  }
+  return escolhidas;
 };
 
 // ------------------------------------------------------------- checagem de uma tela
@@ -79,7 +109,7 @@ async function auditaPagina(navegador, url, tela) {
   let resposta = null;
   try {
     resposta = await pg.goto(url, { waitUntil: 'load', timeout: 60000 });
-    await pg.waitForTimeout(2500); // deixa o JS de consentimento/idioma agir
+    await pg.waitForTimeout(1800); // deixa o JS de consentimento/idioma agir
   } catch (e) {
     achados.erros.push(`NAVEGAÇÃO FALHOU: ${e.message.slice(0, 200)}`);
     const r = { url, tela: tela.nome, status: 0, ...achados };
@@ -182,41 +212,12 @@ async function auditaPagina(navegador, url, tela) {
   return r;
 }
 
-// ------------------------------------------------------------------------ execução
-const lista = await paginas();
-console.log(`Páginas a auditar: ${lista.length}`);
-if (!lista.length) { console.log('Nenhuma URL. Sitemap vazio ou inacessível.'); process.exit(1); }
+// ------------------------------------------------------- relato de UMA página
+// Fica antes da execução de propósito: cada página é relatada assim que
+// termina, para que um tempo limite no meio não apague o que já foi medido.
+const linha = (t) => console.log(t);
 
-const navegador = await chromium.launch({ args: ['--no-sandbox'] });
-const resultados = [];
-for (const url of lista) {
-  for (const tela of TELAS) {
-    process.stdout.write(`. ${tela.nome} ${url}\n`);
-    resultados.push(await auditaPagina(navegador, url, tela));
-  }
-}
-
-// Links internos: junta todos e confere o status de cada um, uma vez só.
-const todosInternos = new Set();
-for (const r of resultados) for (const u of (r.internos || [])) todosInternos.add(u);
-console.log(`\nConferindo ${todosInternos.size} links internos distintos...`);
-const linksRuins = [];
-for (const u of todosInternos) {
-  try {
-    const r = await fetch(u, { redirect: 'follow', signal: AbortSignal.timeout(20000) });
-    if (r.status >= 400) linksRuins.push(`HTTP ${r.status} — ${u}`);
-  } catch (e) { linksRuins.push(`ERRO ${e.message.slice(0, 60)} — ${u}`); }
-}
-
-// ------------------------------------------------------------------------ relatório
-const linha = (s) => console.log(s);
-linha('\n\n############################################################');
-linha('#   RELATÓRIO — o que o navegador encontrou no site ao vivo');
-linha('############################################################');
-
-let totalErros = 0, totalRede = 0, totalOverflow = 0, totalImg = 0;
-
-for (const r of resultados) {
+function relataPagina(r) {
   const problemas = [];
   if (r.status >= 400 || r.status === 0) problemas.push(`status HTTP ${r.status}`);
   if (r.erros?.length) problemas.push(`${r.erros.length} erro(s) de JavaScript`);
@@ -224,12 +225,7 @@ for (const r of resultados) {
   if (r.vazandoLado?.length) problemas.push('rolagem horizontal');
   if (r.imagensQuebradas?.length) problemas.push(`${r.imagensQuebradas.length} imagem(ns) quebrada(s)`);
   if (r.linksMortos?.length) problemas.push(`${r.linksMortos.length} link(s) sem destino`);
-  if (!problemas.length) continue;
-
-  totalErros += r.erros?.length || 0;
-  totalRede += r.rede?.length || 0;
-  totalImg += r.imagensQuebradas?.length || 0;
-  if (r.vazandoLado?.length) totalOverflow++;
+  if (!problemas.length) return false;
 
   linha(`\n──────────────────────────────────────────────`);
   linha(`${r.tela.toUpperCase()}  ${r.url}`);
@@ -248,14 +244,53 @@ for (const r of resultados) {
   for (const l of (r.linksMortos || [])) linha(`   ! link sem destino (href vazio ou "#"): "${l}"`);
   for (const p of (r.pareceClicavel || [])) linha(`   ? parece clicável e talvez não seja: <${p.tag} class="${p.classe}"> "${p.texto}"`);
   for (const a of (r.alvosPequenos || [])) linha(`   ? alvo de toque menor que 24px: ${a}`);
+  return true;
 }
 
-linha('\n\n=================== LINKS INTERNOS QUEBRADOS ===================');
+// ------------------------------------------------------------------------ execução
+const lista = await paginas();
+console.log(`Páginas a auditar nesta rodada: ${lista.length}`);
+if (!lista.length) { console.log('Nenhuma URL. Sitemap vazio ou inacessível.'); process.exit(1); }
+
+const navegador = await chromium.launch({ args: ['--no-sandbox'] });
+const resultados = [];
+let totalErros = 0, totalRede = 0, totalOverflow = 0, totalImg = 0, paginasComProblema = 0;
+
+for (const url of lista) {
+  for (const tela of TELAS) {
+    const r = await auditaPagina(navegador, url, tela);
+    resultados.push(r);
+    totalErros += r.erros?.length || 0;
+    totalRede += r.rede?.length || 0;
+    totalImg += r.imagensQuebradas?.length || 0;
+    if (r.vazandoLado?.length) totalOverflow++;
+    if (relataPagina(r)) paginasComProblema++;
+  }
+}
+
+// Links internos: junta todos e confere o status de cada um, uma vez só, em
+// paralelo — em série isto sozinho estourava o tempo do workflow.
+const todosInternos = [...new Set(resultados.flatMap((r) => r.internos || []))];
+linha(`\n\nConferindo ${todosInternos.length} links internos distintos...`);
+const linksRuins = [];
+const confere = async (u) => {
+  try {
+    const r = await fetch(u, { redirect: 'follow', signal: AbortSignal.timeout(20000) });
+    if (r.status >= 400) linksRuins.push(`HTTP ${r.status} — ${u}`);
+  } catch (e) { linksRuins.push(`ERRO ${e.message.slice(0, 60)} — ${u}`); }
+};
+for (let i = 0; i < todosInternos.length; i += 8) {
+  await Promise.all(todosInternos.slice(i, i + 8).map(confere));
+}
+
+// ------------------------------------------------------------------------ resumo
+linha('\n=================== LINKS INTERNOS QUEBRADOS ===================');
 if (!linksRuins.length) linha('Nenhum. Todos os links internos responderam abaixo de 400.');
 for (const l of linksRuins) linha(`  ✗ ${l}`);
 
 linha('\n\n=========================== RESUMO ============================');
-linha(`Páginas auditadas .................. ${lista.length} (x2 telas)`);
+linha(`Páginas auditadas .................. ${lista.length} (x2 telas = ${resultados.length} carregamentos)`);
+linha(`Carregamentos com algum problema ... ${paginasComProblema}`);
 linha(`Erros de JavaScript ................ ${totalErros}`);
 linha(`Requisições com falha .............. ${totalRede}`);
 linha(`Telas com rolagem horizontal ....... ${totalOverflow}`);
@@ -264,5 +299,4 @@ linha(`Links internos quebrados ........... ${linksRuins.length}`);
 linha('\nAs telas cheias de cada página estão no artefato "telas" deste workflow.');
 
 fs.writeFileSync(`${PASTA}/resultado.json`, JSON.stringify(resultados, null, 2));
-
 await navegador.close();
