@@ -1,0 +1,92 @@
+name: Ecobraz — de onde vem um asset do tema (Ghost x borda)
+
+# Pergunta única: o arquivo servido em /assets/<nome> é o do tema publicado hoje,
+# ou uma cópia velha presa em alguma camada de cache?
+#
+# Compara TRÊS leituras do mesmo arquivo:
+#   1. o que está no repositório (verdade do que deveria estar no ar);
+#   2. o que o Ghost serve DIRETO, no domínio .ghost.io, sem passar pelo
+#      Cloudflare do cliente;
+#   3. o que o domínio público serve.
+#
+# Se (2) e (3) divergirem, o problema está entre o Ghost e o visitante.
+# Se (2) já vier velho, o arquivo não chegou ao tema publicado — e aí purgar
+# cache nunca resolveria, por mais vezes que se tentasse.
+#
+# O endereço do Ghost é segredo e NÃO é impresso: só o veredito.
+
+on:
+  workflow_dispatch:
+    inputs:
+      caminho:
+        description: 'Caminho do asset (ex.: assets/llms.txt)'
+        required: true
+        default: 'assets/llms.txt'
+      padrao:
+        description: 'Trecho a procurar dentro do arquivo'
+        required: true
+        default: 'Avaliação pública'
+      publico:
+        description: 'URL pública do mesmo arquivo'
+        required: true
+        default: 'https://ecobraz.org/assets/llms.txt'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnosticar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Comparar repositório, Ghost e domínio público
+        env:
+          GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
+          CAMINHO: ${{ inputs.caminho }}
+          PADRAO: ${{ inputs.padrao }}
+          PUBLICO: ${{ inputs.publico }}
+        run: |
+          set -uo pipefail
+          titulo () { echo; echo "================ $1 ================"; }
+
+          titulo "1. NO REPOSITÓRIO"
+          if [ -f "site-ghost/theme/$CAMINHO" ]; then
+            grep -F "$PADRAO" "site-ghost/theme/$CAMINHO" || echo "(padrão não encontrado no arquivo do repositório)"
+          else
+            echo "AVISO: site-ghost/theme/$CAMINHO não existe no repositório."
+          fi
+
+          titulo "2. DIRETO NO GHOST (sem passar pelo Cloudflare)"
+          base="${GHOST_ADMIN_URL%/}"
+          if [ -z "$base" ]; then
+            echo "Sem GHOST_ADMIN_URL configurado — não dá para consultar o Ghost direto."
+          else
+            # -sS sem -v: a URL contém o segredo e não pode aparecer no log.
+            curl -sS --max-time 25 -D /tmp/h_ghost "$base/$CAMINHO" -o /tmp/b_ghost || echo "FALHA de conexão"
+            echo "status/idade/modificação:"
+            grep -iE '^(HTTP/|age|last-modified|cache-control|cf-cache-status|x-cache)' /tmp/h_ghost || true
+            echo "conteúdo:"
+            grep -F "$PADRAO" /tmp/b_ghost || echo "(padrão não encontrado)"
+          fi
+
+          titulo "3. NO DOMÍNIO PÚBLICO"
+          curl -sS --max-time 25 -D /tmp/h_pub "$PUBLICO" -o /tmp/b_pub || echo "FALHA de conexão"
+          echo "status/idade/modificação:"
+          grep -iE '^(HTTP/|age|last-modified|cache-control|cf-cache-status|x-cache)' /tmp/h_pub || true
+          echo "conteúdo:"
+          grep -F "$PADRAO" /tmp/b_pub || echo "(padrão não encontrado)"
+
+          titulo "VEREDITO"
+          if [ -s /tmp/b_ghost ] && [ -s /tmp/b_pub ]; then
+            if diff -q /tmp/b_ghost /tmp/b_pub >/dev/null; then
+              echo "Ghost e domínio público servem o MESMO conteúdo."
+              echo "Se ele está velho, o arquivo novo não chegou ao tema publicado —"
+              echo "purgar cache não resolveria."
+            else
+              echo "Ghost e domínio público servem conteúdos DIFERENTES."
+              echo "O arquivo novo existe no Ghost e algo entre ele e o visitante"
+              echo "está entregando cópia velha."
+            fi
+          else
+            echo "Não deu para comparar: uma das leituras veio vazia."
+          fi
