@@ -3,6 +3,14 @@ name: Ferramenta — apagar lead do cofre KV (Villanova)
 # Apaga chaves específicas do cofre de leads. Feita para remover os leads de
 # TESTE sem tocar em lead real.
 #
+# ATENÇÃO ao escopo: este cofre é o KV de leads da VILLANOVA. Os leads
+# chamados "TESTE AUTOMATIZADO <carimbo>" NÃO nascem aqui — eles vêm dos
+# scripts do site da Ecobraz (test-collection-endpoint.mjs, e2e-click-test.mjs
+# e auditoria-ecobraz.mjs) e caem no Ploomes (funis INTEGRAÇÃO SITE e
+# [PJ] VENDAS) e na lista do E-goi. Apagar esses é no Ploomes/E-goi, não aqui.
+# Conferido em 08/09/2026: as 8 chaves deste cofre são de 30/07 e nenhuma
+# contém "TESTE AUTOMATIZADO".
+#
 # Três modos:
 #   listar   -> imprime só os NOMES das chaves (nunca o conteúdo)
 #   procurar -> imprime só os NOMES das chaves cujo valor contém o termo

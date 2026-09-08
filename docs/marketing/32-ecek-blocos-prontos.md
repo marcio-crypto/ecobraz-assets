@@ -1,16 +1,49 @@
-# 32 — ECEK: blocos de autoridade PRONTOS (aguardando gatilhos)
+# 32 — ECEK: blocos de autoridade PRONTOS (texto liberado; selo travado)
 
-Data: 30/07/2026 · Base: ECEK Mentoring Agreement (assinado pelo Marcio em
-30/07; **aguardando via contra-assinada da AM Maltaccelerate Limited**) e
-ECEK Comms Guidelines v0.1 (lidas na íntegra).
+Data: 30/07/2026 · Atualizado em 08/09/2026 · Base: ECEK Mentoring Agreement
+e ECEK Comms Guidelines v0.1 (lidas na íntegra; versão do Drive revista em
+02/09/2026).
 
-## Gatilhos para publicar (NENHUM bloco entra antes)
+## Situação dos gatilhos em 08/09/2026
 
-1. **Texto** → quando chegar a via contra-assinada (o contrato "entra em
-   vigor quando a última parte assinar").
-2. **Selo com logos** → quando a organização enviar o arquivo do badge
-   (marcado "TO BE ADDED" nas guidelines) — e aí é obrigatório o disclaimer
-   da UE colado ao selo + avisar a URL para eles.
+1. **Texto → LIBERADO.** A via contra-assinada chegou em **31/07/2026**, no
+   e-mail de alex@maltaccelerate.com ("Please, find attached countersigned
+   copy"), na mesma conversa em que o Marcio devolveu o acordo assinado. O
+   contrato entrou em vigor. Este gatilho estava marcado como pendente aqui
+   por engano — ficou pendente no papel, não na realidade.
+
+2. **Selo → AINDA NÃO.** Falta o arquivo, e falta uma resposta.
+   - O "TO BE ADDED" saiu das guidelines: a seção 4 agora descreve o selo e
+     diz que ele está na pasta do Comms & Media Pack no Drive
+     (compartilhada em 30/07, atualizada em 02/09).
+   - **O arquivo em si nunca foi aberto pela conta do Marcio** — só o
+     documento de guidelines aparece no Drive dele. Enquanto ele não abrir a
+     pasta, o selo não existe para nós.
+   - **A pendência de conteúdo é maior que a do arquivo.** A linha que o selo
+     carrega é *"Selected for the European Circular Electronics Kickstart
+     Acceleration Program"* — que é a frase das **startups selecionadas**. A
+     seção 1 das mesmas guidelines manda o mentor dizer *"Mentor at the
+     ECEK"*. Pôr esse selo em villanovaesg.com afirmaria um papel que não é o
+     do Marcio. **Antes de publicar, perguntar a Eleonora/Mauro (IRIDE) se
+     mentor pode usar o selo e com que texto.**
+
+3. **Regra que continua valendo para os dois blocos de texto:** a seção 7 diz
+   que todo texto que *explica o que é o ECEK ou qual é o papel da União
+   Europeia* deve ser enviado a IRIDE antes de publicar. Os BLOCOS 1 e 2
+   abaixo explicam as duas coisas. Então o passo antes de publicar não é
+   técnico: é mandar o texto para eleonora@irideconsulting.com e
+   mauro@irideconsulting.com e esperar o retorno. Post que só menciona a
+   seleção/participação não precisa disso — o nosso não é esse caso.
+
+## Se o selo for autorizado, exigências das guidelines
+
+- Disclaimer da UE (abaixo, verbatim) ao lado do selo ou na página para onde
+  ele leva.
+- Link clicável para o site do EVEN CLOSER.
+- Não cortar, dividir nem tirar o emblema da UE: o selo funciona como peça
+  única. Largura mínima na tela: 120 px.
+- Avisar IRIDE com a URL depois de publicado (cláusula 3.2(c) do Award
+  Letter).
 
 ## Regras de redação (das Comms Guidelines — obrigatórias)
 
@@ -62,3 +95,5 @@ em inglês entre aspas.)
 - Villanova: /marcio-villanova/ (EN/PT) + one-pager do kit Europa.
 - LinkedIn (já autorizado no e-mail de boas-vindas — o Marcio adiciona
   "Mentor — ECEK Acceleration Program, MALTAccelerate (Freelance)").
+  Já feito: em 02/09/2026 o Marcio publicou o post de mentor e avisou IRIDE
+  do uso do logo, como manda a cláusula 3.2(c).
