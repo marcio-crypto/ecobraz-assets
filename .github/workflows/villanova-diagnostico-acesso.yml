@@ -1,0 +1,20 @@
+name: Villanova ESG — diagnóstico de acesso (bloqueios, robôs, indexação)
+
+on:
+  workflow_dispatch:
+    inputs:
+      urls:
+        description: 'URLs separadas por espaço (vazio = conjunto padrão)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  diagnosticar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Testar acesso com vários robôs
+        run: node site-villanova/scripts/diagnostico-acesso.mjs ${{ inputs.urls }}
