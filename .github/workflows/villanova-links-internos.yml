@@ -1,0 +1,26 @@
+name: Villanova ESG — corrigir links internos que apontam para redirect
+
+on:
+  workflow_dispatch:
+    inputs:
+      modo:
+        description: 'simular (só relatório) ou aplicar (grava no Ghost)'
+        type: choice
+        options:
+          - simular
+          - aplicar
+        default: simular
+
+permissions:
+  contents: read
+
+jobs:
+  corrigir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trocar os href pelos destinos finais
+        env:
+          VILLANOVA_GHOST_ADMIN_URL: ${{ secrets.VILLANOVA_GHOST_ADMIN_URL }}
+          VILLANOVA_GHOST_ADMIN_API_KEY: ${{ secrets.VILLANOVA_GHOST_ADMIN_API_KEY }}
+        run: node site-villanova/scripts/corrige-links-internos.mjs "${{ inputs.modo }}"
