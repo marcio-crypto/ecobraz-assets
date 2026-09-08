@@ -56,7 +56,7 @@ jobs:
       - name: Listar, procurar ou apagar
         run: |
           set -euo pipefail
-          npx wrangler@latest kv key list --namespace-id="$NS" > /tmp/chaves.json
+          npx wrangler@latest kv key list --namespace-id="$NS" --remote > /tmp/chaves.json
           python3 - <<'EOF'
           import json, os, subprocess, sys
 
@@ -68,10 +68,14 @@ jobs:
 
           todas = sorted((k['name'] for k in json.load(open('/tmp/chaves.json'))), reverse=True)
           print(f'Total de chaves no cofre: {len(todas)}')
+          if not todas:
+              sys.exit('O cofre voltou VAZIO. Quase sempre isso quer dizer que o wrangler leu o\n'
+                       'armazenamento local em vez do namespace de verdade (o wrangler 4 exige\n'
+                       '--remote nos comandos de KV), e nao que nao ha lead. Nao trate como cofre vazio.')
 
           def ler(nome):
               r = subprocess.run(
-                  ['npx', 'wrangler@latest', 'kv', 'key', 'get', nome, '--namespace-id', NS],
+                  ['npx', 'wrangler@latest', 'kv', 'key', 'get', nome, '--namespace-id', NS, '--remote'],
                   capture_output=True, text=True)
               return r.stdout
 
@@ -100,7 +104,7 @@ jobs:
                   puladas.append((n, f'valor não contém {exige!r} — trava de segurança'))
                   continue
               r = subprocess.run(
-                  ['npx', 'wrangler@latest', 'kv', 'key', 'delete', n, '--namespace-id', NS],
+                  ['npx', 'wrangler@latest', 'kv', 'key', 'delete', n, '--namespace-id', NS, '--remote', '--force'],
                   capture_output=True, text=True)
               if r.returncode == 0:
                   apagadas.append(n)
