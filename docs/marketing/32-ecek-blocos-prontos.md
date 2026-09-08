@@ -35,6 +35,40 @@ e ECEK Comms Guidelines v0.1 (lidas na íntegra; versão do Drive revista em
    mauro@irideconsulting.com e esperar o retorno. Post que só menciona a
    seleção/participação não precisa disso — o nosso não é esse caso.
 
+## O que o pacote realmente tem (conferido em 08/09/2026)
+
+O Marcio baixou o Comms & Media Pack e subiu no Drive dele. Conteudo:
+
+| Arquivo | O que é |
+| --- | --- |
+| `ECEK_post visual template_Mentors.png` | template de post **de mentor** |
+| `ECEK_post visual template_Startups.png` | template de post de startup |
+| `Banner ECEK - Desktop*.zip` | banner do site, versão desktop |
+| `Banner ECEK - Mobile*.zip` | banner do site, versão mobile |
+| `Logos*.zip` | os cinco logos |
+| `Backgrounds for online meetings*.zip` | fundos de videochamada |
+| `ECEK_Comms_Guidelines.docx` | as diretrizes |
+
+**O template de mentor traz a redação certa**, lida no próprio arquivo:
+"Mentoring for the European Circular Electronics Kickstart Acceleration
+Program", com o disclaimer da UE já impresso na peça.
+
+### O ponto que reforça a dúvida sobre o selo do site
+
+Eles **separaram os papéis no post** (`_Startups` e `_Mentors`) e **não
+separaram no banner do site** — há só "Desktop" e "Mobile", sem divisão. E a
+seção 4 das diretrizes diz que a linha do banner é "**Selected for** the
+European Circular Electronics Kickstart Acceleration Program", que é a frase
+de startup selecionada.
+
+Ou seja: pensaram na distinção para o post e não para o site. Não é descuido
+nosso presumir que um mentor não pode usar o banner como está — é uma lacuna
+real da peça, e por isso a pergunta vai para a IRIDE em vez de virar decisão
+nossa.
+
+Falta ler a frase impressa no banner para confirmar. Os arquivos estão
+zipados; quando a imagem estiver solta no Drive, dá para conferir.
+
 ## Se o selo for autorizado, exigências das guidelines
 
 - Disclaimer da UE (abaixo, verbatim) ao lado do selo ou na página para onde
