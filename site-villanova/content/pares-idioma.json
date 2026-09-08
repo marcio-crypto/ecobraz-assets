@@ -12,7 +12,8 @@
  "pages": [
   {
    "en": "",
-   "pt": "pt"
+   "pt": "pt",
+   "it": "it"
   },
   {
    "en": "what-villanova-esg-reviews",
@@ -162,10 +163,6 @@
   {
    "en": "eu-buyer-ready-supplier-evidence-review",
    "pt": "revisao-evidencias-prontas-para-o-comprador"
-  },
-  {
-   "en": "eu-brazil-supply-chain-risk-review",
-   "pt": "revisao-risco-cadeia-ue-brasil"
   },
   {
    "en": "cbam-compliance",

@@ -1,0 +1,21 @@
+name: Villanova ESG — conferir títulos e descrições no ar
+
+on:
+  workflow_dispatch:
+    inputs:
+      arquivo:
+        description: 'Caminho do JSON de metas a conferir'
+        required: false
+        default: 'site-villanova/content/metas-descricao-curta.json'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  conferir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Medir o que o site está servindo
+        run: node site-villanova/scripts/verifica-metas.mjs "${{ inputs.arquivo }}"

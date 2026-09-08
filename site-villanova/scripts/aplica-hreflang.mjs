@@ -62,16 +62,31 @@ const DUPS_LIMPAR = [
   'matriz-de-prontidao-de-evidencias-ue-brasil',
   'lei-materias-primas-criticas-ue-risco-cadeia-terras-raras',
   'regulacao-textil-ue-prova-dados-produto-risco-acesso-mercado',
+  // Caso diferente, mesmo efeito: a irmã em português desta página foi
+  // despublicada e redirecionada na consolidação de agosto, mas a página em
+  // inglês continuou publicada declarando hreflang para ela. O resultado ao
+  // vivo era um hreflang pt-BR apontando para um 301 cujo destino final
+  // pertence a OUTRO par — encontrado na auditoria de 01/09/2026. Sem irmã
+  // viva, a página não precisa de hreflang nenhum.
+  'eu-brazil-supply-chain-risk-review',
 ];
+// Procura em posts e depois em pages: a lista começou só com duplicatas de
+// artigo, mas o mesmo problema aparece em página — e antes disso a limpeza
+// falhava calada, dizendo que o slug "não existe".
 const limparHreflang = async (slug) => {
-  const item = (await api('GET', `posts/?filter=slug:${slug}&limit=1`)).posts?.[0];
-  if (!item) { console.log(`AVISO (limpar): posts/${slug} não existe — pulado`); return; }
+  let tipo = null;
+  let item = null;
+  for (const t of ['posts', 'pages']) {
+    item = (await api('GET', `${t}/?filter=slug:${slug}&limit=1`))[t]?.[0];
+    if (item) { tipo = t; break; }
+  }
+  if (!item) { console.log(`AVISO (limpar): ${slug} não existe nem em posts nem em pages — pulado`); return; }
   const antes = item.codeinjection_head || '';
   const re = new RegExp(`${INI}[\\s\\S]*?${FIM}\\n?`, 'g');
   const depois = antes.replace(re, '').trim();
-  if (antes.trim() === depois) { console.log(`ok (sem hreflang p/ limpar): posts/${slug}`); return; }
-  await api('PUT', `posts/${item.id}/`, {posts: [{codeinjection_head: depois, updated_at: item.updated_at}]});
-  console.log(`hreflang REMOVIDO (duplicata): posts/${slug}`);
+  if (antes.trim() === depois) { console.log(`ok (sem hreflang p/ limpar): ${tipo}/${slug}`); return; }
+  await api('PUT', `${tipo}/${item.id}/`, {[tipo]: [{codeinjection_head: depois, updated_at: item.updated_at}]});
+  console.log(`hreflang REMOVIDO: ${tipo}/${slug}`);
   await espera(200);
 };
 
