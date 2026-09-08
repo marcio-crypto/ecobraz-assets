@@ -91,9 +91,17 @@ for (const item of itens) {
   if (item.meta_description) payload[tipo][0].meta_description = item.meta_description;
   await api('PUT', `${tipo}/${atual.id}/`, payload);
 
+  // Mostra só o campo que mudou: quando a lista traz apenas a descrição, o
+  // log do título saía como "depois: undefined" e parecia erro sem ser.
   console.log(`atualizado: ${tipo}/${item.slug}`);
-  console.log(`   antes: ${atual.meta_title}`);
-  console.log(`  depois: ${item.meta_title}`);
+  if (item.meta_title) {
+    console.log(`   título antes: ${atual.meta_title}`);
+    console.log(`  título depois: ${item.meta_title}`);
+  }
+  if (item.meta_description) {
+    console.log(`   descrição antes (${(atual.meta_description || '').length}): ${atual.meta_description}`);
+    console.log(`  descrição depois (${item.meta_description.length}): ${item.meta_description}`);
+  }
   alterados++;
   await espera(200);
 }
