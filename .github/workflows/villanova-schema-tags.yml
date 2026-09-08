@@ -1,0 +1,26 @@
+name: Villanova ESG — corrigir o schema das páginas de tag
+
+on:
+  workflow_dispatch:
+    inputs:
+      modo:
+        description: 'simular (só relatório) ou aplicar (grava no Ghost)'
+        type: choice
+        options:
+          - simular
+          - aplicar
+        default: simular
+
+permissions:
+  contents: read
+
+jobs:
+  corrigir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trocar o tipo abstrato Series por CollectionPage
+        env:
+          VILLANOVA_GHOST_ADMIN_URL: ${{ secrets.VILLANOVA_GHOST_ADMIN_URL }}
+          VILLANOVA_GHOST_ADMIN_API_KEY: ${{ secrets.VILLANOVA_GHOST_ADMIN_API_KEY }}
+        run: node site-villanova/scripts/corrige-schema-tags.mjs "${{ inputs.modo }}"
