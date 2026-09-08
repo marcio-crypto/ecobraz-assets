@@ -1,0 +1,26 @@
+name: Villanova ESG — a medição dispara? (navegador real)
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'URL base'
+        required: false
+        default: 'https://www.villanovaesg.com'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  medir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instala Playwright + Chromium
+        run: |
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund playwright >/dev/null
+          npx playwright install --with-deps chromium
+      - name: Abrir o site e escutar as requisições de medição
+        run: node site-villanova/scripts/verifica-medicao.mjs "${{ inputs.base_url || 'https://www.villanovaesg.com' }}"
