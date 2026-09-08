@@ -94,7 +94,11 @@ const pares = JSON.parse(await fs.readFile('site-villanova/content/pares-idioma.
 let aplicados = 0;
 for (const par of pares.pages) {
   const b = bloco(par.en, par.pt, par.it);
-  if (par.en !== '') aplicados += (await aplicar('pages', par.en, b)) ? 1 : 0;
+  // en '' é a raiz do site. O routes.yaml manda "/" para a página de slug
+  // "home", então é nela que o bloco precisa ser gravado. Antes o laço só
+  // pulava esse caso: a home nunca recebia hreflang por aqui, e a linha do
+  // italiano acrescentada ao par nunca chegava em "/".
+  aplicados += (await aplicar('pages', par.en === '' ? 'home' : par.en, b)) ? 1 : 0;
   aplicados += (await aplicar('pages', par.pt, b)) ? 1 : 0;
   if (par.it) aplicados += (await aplicar('pages', par.it, b)) ? 1 : 0;
 }
