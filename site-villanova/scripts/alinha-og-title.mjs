@@ -13,15 +13,27 @@
 // Uso: node alinha-og-title.mjs simular|aplicar slug1 slug2 ...
 //      (sem slugs, varre todas as páginas e relata quem tem og_title próprio)
 //
-// A HOME É EXCEÇÃO, CONFIRMADO EM 08/09/2026. Rodado em 11 páginas: dez
-// passaram a servir og:title igual ao título; a home continuou divergindo
-// ("Villanova ESG — EU Buyer Evidence, Brazilian Suppliers" no <title> contra
-// "EU-Brazil Supplier Evidence Reviews | Villanova ESG" no og:title). A causa
-// é a rota "/" do routes.yaml, que cai no template home e resolve pelas
-// CONFIGURAÇÕES do site, não pela página. Limpar o og_title da página não
-// alcança isso, e o endpoint /settings/ recusa escrita por token de
-// integração (403 comprovado). Só no painel:
-//   Settings → General → Facebook card → apagar o título de lá.
+// A HOME É EXCEÇÃO, E A REGRA DELA É OUTRA. Não repita o que eu escrevi aqui
+// antes: mandei ESVAZIAR o Facebook card das configurações, esperando que o
+// Ghost caísse no meta_title como faz no nível de página. NÃO CAI. No nível do
+// SITE a reserva é o TÍTULO DO SITE — o campo ficou vazio e o og:title virou
+// "Villanova ESG", pior do que estava. Medido no HTML servido em 08/09/2026.
+//
+// Resumo do que vale onde:
+//
+//   nível de PÁGINA  og_title → meta_title → title   (vazio se resolve sozinho)
+//   nível de SITE    og_title → title do site        (vazio PIORA)
+//
+// Por isso a home precisa de valor explícito nos dois cartões, e não de campo
+// vazio. Estado atual, conferido no HTML servido: <title>, og:title e
+// twitter:title servem os três "Villanova ESG — EU Buyer Evidence, Brazilian
+// Suppliers".
+//
+// A home não é alcançável por este script: a rota "/" do routes.yaml cai no
+// template home, que resolve pelas configurações do site, e /settings/ recusa
+// escrita por token de integração (403 comprovado). Se um dia o título de
+// busca da home mudar, os dois cartões têm de ser reescritos à mão em
+// Settings → General → Meta data → abas "Facebook card" e "X card".
 import crypto from 'node:crypto';
 
 const modo = process.argv[2] === 'aplicar' ? 'aplicar' : 'simular';

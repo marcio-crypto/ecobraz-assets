@@ -1,4 +1,19 @@
 /* Villanova v2 — direcionamento automático de idioma na entrada.
+
+   ESTE ARQUIVO NÃO MEXE EM META TAG NENHUMA. Ele REDIRECIONA, e só.
+   Registrado aqui porque em 08/09/2026 a confusão apareceu duas vezes: quem
+   abre a home com o navegador em português cai em /pt/, vê o título em
+   português na aba e conclui que algum script reescreveu document.title e as
+   meta tags no navegador. Não reescreve — é outra página.
+
+   A consequência prática é a mesma nos dois casos, e vale lembrar: a aba do
+   navegador não serve para conferir cartão social. O robô lê o HTML servido em
+   "/", que é o inglês. Confira sempre no código fonte, e de preferência com o
+   idioma do navegador em inglês ou numa janela anônima.
+
+   Conferido no arquivo SERVIDO (não só no repositório) em 08/09/2026:
+   quatro location.replace, zero document.title, zero og:title/twitter:title,
+   zero setAttribute, zero querySelector.
    Regra: só age na HOME em inglês ("/"), uma vez, pelo idioma do NAVEGADOR
    (o que a pessoa lê — mais confiável que IP/região e imune a VPN):
    pt* -> /pt/ · it* -> /it/ · resto fica em inglês.
