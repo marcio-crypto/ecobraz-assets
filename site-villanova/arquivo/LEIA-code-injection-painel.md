@@ -2,6 +2,14 @@
 
 Cópia literal do que estava em **Settings → Code injection → Site header** do
 Ghost da Villanova em **08/09/2026**, guardada antes de o Marcio apagar.
+
+> **Situação: REMOVIDO.** O Marcio apagou o bloco no painel em 08/09/2026.
+> Conferido logo depois, pela API e no HTML servido de três páginas (home,
+> /pt/ e um artigo): painel com 0 caracteres no cabeçalho e no rodapé; nenhuma
+> ocorrência do marcador `VILLANOVA ESG — CLEAN` no HTML; `main.css`, `v2.css`
+> e `lang.css` carregando; `topbar` e `site-footer` presentes; GA4 e a
+> verificação do Ahrefs presentes; e — o ganho — apenas **um** `@graph` e
+> **um** `supplier-evidence-review-service`, contra dois antes. Nada quebrou.
 O arquivo ao lado (`code-injection-painel-2026-09-08.html`) é o bloco inteiro,
 sem uma vírgula alterada.
 
