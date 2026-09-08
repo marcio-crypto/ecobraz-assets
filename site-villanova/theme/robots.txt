@@ -2,16 +2,22 @@
 # blocks AI crawlers). Policy: site OPEN to search engines and AI assistants.
 # Only administrative/technical areas are disallowed.
 
+# NAO BLOQUEIE /cdn-cgi/ AQUI. Em 08/09/2026 eu adicionei "Disallow: /cdn-cgi/"
+# para calar um 404 que o Search Console reporta em /cdn-cgi/l/email-protection,
+# e estava errado: medido no HTML servido, TODA pagina carrega
+# /cdn-cgi/scripts/.../email-decode.min.js, e todo e-mail do site foi reescrito
+# pela Cloudflare para /cdn-cgi/l/email-protection. Bloquear isso impede o
+# Googlebot de buscar o decodificador, e os enderecos passam a aparecer como
+# "[email protected]" na pagina renderizada — inclusive nos botoes de contato
+# de /the-firm/. O 404 daquela URL e da propria Cloudflare, e cosmetico, e nao
+# justifica degradar a renderizacao do site inteiro.
+
 User-agent: *
 Disallow: /ghost/
 Disallow: /email/
 Disallow: /r/
 Disallow: /webmentions/receive/
 Disallow: /p/
-# /cdn-cgi/ is Cloudflare's own endpoint, not ours. Its email-protection URL
-# answers 404 with Cloudflare's page and shows up in Search Console as a site
-# error that no redirect of ours can fix. Blocking it stops the crawl.
-Disallow: /cdn-cgi/
 
 # Search and AI crawlers — explicitly allowed
 # (same administrative exceptions as the general group)
@@ -39,6 +45,5 @@ Disallow: /email/
 Disallow: /r/
 Disallow: /webmentions/receive/
 Disallow: /p/
-Disallow: /cdn-cgi/
 
 Sitemap: https://www.villanovaesg.com/sitemap.xml
