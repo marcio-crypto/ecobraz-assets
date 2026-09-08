@@ -1,0 +1,775 @@
+<!-- VILLANOVA ESG — CLEAN CODE INJECTION -->
+
+<style>
+:root {
+  --ve-charcoal: #111821;
+  --ve-charcoal-2: #121923;
+  --ve-ink: #151A21;
+  --ve-ink-2: #1B2430;
+  --ve-gold: #C9A45C;
+  --ve-gold-dark: #8A6A21;
+  --ve-cream: #F8F5EC;
+  --ve-border: #D8C895;
+  --ve-white: #FFFFFF;
+  --ve-soft: #EEF2F6;
+}
+
+html,
+body {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: hidden !important;
+}
+
+body {
+  background: #FFFFFF !important;
+  color: var(--ve-ink) !important;
+}
+
+/* HEADER E NAVEGAÇÃO */
+
+.gh-head {
+  position: relative !important;
+  z-index: 100 !important;
+  background: #FFFFFF !important;
+  border-bottom: 1px solid #E5E2D8 !important;
+  padding: 18px 4vw !important;
+  box-shadow: 0 10px 28px rgba(17, 24, 33, 0.05) !important;
+}
+
+.gh-head-inner {
+  max-width: 1280px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.gh-head-logo {
+  display: flex !important;
+  align-items: center !important;
+}
+
+.gh-head-logo img {
+  max-height: 72px !important;
+  width: auto !important;
+  height: auto !important;
+  display: block !important;
+}
+
+.gh-head-menu .nav {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0 !important;
+}
+
+.gh-head-menu .nav li a {
+  font-size: 12px !important;
+  font-weight: 750 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  color: var(--ve-ink) !important;
+  padding: 0 13px !important;
+  white-space: nowrap !important;
+  text-decoration: none !important;
+}
+
+.gh-head-menu .nav li a:hover {
+  color: var(--ve-gold-dark) !important;
+}
+
+.gh-search,
+.gh-search svg,
+.gh-head-actions,
+.gh-head-actions a {
+  color: var(--ve-ink) !important;
+}
+
+/* OCULTAR PORTAL, LOGIN E ASSINATURA */
+
+.gh-portal-triggerbtn,
+.gh-head-actions a[href="#/portal/signin"],
+.gh-head-actions a[href="#/portal/signup"],
+.gh-head-actions a[href="#/portal/"],
+a[href="#/portal/signin"],
+a[href="#/portal/signup"],
+a[href="#/portal/"],
+button[data-portal="signin"],
+button[data-portal="signup"],
+button[data-portal="portal"],
+.subscribe,
+.subscribe-form,
+.signin,
+.sign-in,
+.member-cta,
+.members-cta,
+.gh-post-upgrade-cta {
+  display: none !important;
+}
+
+/* LIMPEZA */
+
+time,
+.feed-date,
+.feed-meta,
+.feed-length,
+.post-meta,
+.article-byline-meta,
+.post-card-meta,
+.gh-article-meta,
+.gh-article-byline,
+.byline,
+.author,
+.share,
+.share-button,
+.post-share,
+.article-share {
+  display: none !important;
+}
+
+.gh-cover,
+.gh-cover-image,
+.gh-cover-content,
+.site-header-content,
+.site-header-cover {
+  display: none !important;
+}
+
+main,
+.gh-main,
+.site-main,
+.gh-canvas,
+.gh-content,
+.post-content,
+.page-content,
+.article-content {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* LARGURA DAS PÁGINAS */
+
+.gh-content,
+.post-content,
+.page-content,
+.article-content {
+  max-width: 1180px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  box-sizing: border-box !important;
+}
+
+.gh-content article,
+.post-content article,
+.page-content article,
+.article-content article {
+  max-width: 1180px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  box-sizing: border-box !important;
+}
+
+.gh-content table,
+.post-content table,
+.page-content table,
+.article-content table {
+  max-width: 100% !important;
+}
+
+/* TIPOGRAFIA */
+
+.gh-content article p,
+.post-content article p,
+.page-content article p,
+.article-content article p,
+.gh-content article li,
+.post-content article li,
+.page-content article li,
+.article-content article li {
+  font-size: 17px !important;
+  line-height: 1.72 !important;
+}
+
+.gh-content article h2,
+.post-content article h2,
+.page-content article h2,
+.article-content article h2 {
+  margin: 44px 0 16px !important;
+  color: var(--ve-ink) !important;
+  font-size: 30px !important;
+  line-height: 1.22 !important;
+  font-weight: 850 !important;
+  letter-spacing: -0.02em !important;
+}
+
+.gh-content article ul,
+.post-content article ul,
+.page-content article ul,
+.article-content article ul {
+  margin: 18px 0 32px !important;
+}
+
+.gh-content article li,
+.post-content article li,
+.page-content article li,
+.article-content article li {
+  margin: 8px 0 !important;
+}
+
+.gh-content article section[style*="background:#111821"] h1,
+.gh-content article section[style*="background:#111821"] h2,
+.gh-content article section[style*="background:#121923"] h1,
+.gh-content article section[style*="background:#121923"] h2,
+.post-content article section[style*="background:#111821"] h1,
+.post-content article section[style*="background:#111821"] h2,
+.post-content article section[style*="background:#121923"] h1,
+.post-content article section[style*="background:#121923"] h2,
+.page-content article section[style*="background:#111821"] h1,
+.page-content article section[style*="background:#111821"] h2,
+.page-content article section[style*="background:#121923"] h1,
+.page-content article section[style*="background:#121923"] h2,
+.article-content article section[style*="background:#111821"] h1,
+.article-content article section[style*="background:#111821"] h2,
+.article-content article section[style*="background:#121923"] h1,
+.article-content article section[style*="background:#121923"] h2 {
+  color: #FFFFFF !important;
+}
+
+/* HOMEPAGE */
+
+body:has(article.ve-homepage) main > header,
+body:has(article.ve-homepage) .gh-article-header,
+body:has(article.ve-homepage) .gh-canvas-header,
+body:has(article.ve-homepage) .gh-pagehead,
+body:has(article.ve-homepage) .page-header,
+body:has(article.ve-homepage) .post-header,
+body:has(article.ve-homepage) .article-header,
+body:has(article.ve-homepage) .kg-header-card,
+body:has(article.ve-homepage) .gh-feature-image,
+body:has(article.ve-homepage) .post-image,
+body:has(article.ve-homepage) .page-image,
+body:has(article.ve-homepage) .article-image {
+  display: none !important;
+}
+
+body:has(article.ve-homepage) .gh-content > h1:first-child,
+body:has(article.ve-homepage) .page-content > h1:first-child,
+body:has(article.ve-homepage) .post-content > h1:first-child,
+body:has(article.ve-homepage) .article-content > h1:first-child,
+body:has(article.ve-homepage) main > h1:first-child,
+body:has(article.ve-homepage) .gh-page-title,
+body:has(article.ve-homepage) .page-title,
+body:has(article.ve-homepage) .post-title,
+body:has(article.ve-homepage) .article-title {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  max-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+article.ve-homepage {
+  width: 100% !important;
+  max-width: 1180px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  box-sizing: border-box !important;
+}
+
+article.ve-homepage > section:first-of-type {
+  background: #111821 !important;
+  border: 1px solid #C9A45C !important;
+  border-radius: 28px !important;
+  box-shadow: 0 30px 80px rgba(0,0,0,.28) !important;
+}
+
+article.ve-homepage > section:first-of-type h1 {
+  color: #FFFFFF !important;
+}
+
+article.ve-homepage > section:first-of-type p {
+  color: #EEF2F6 !important;
+}
+
+/* PÁGINAS DE PDF E RECURSOS */
+
+body:has(article.ve-resource-page) .kg-html-card {
+  width: 100% !important;
+  max-width: 1120px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  box-sizing: border-box !important;
+}
+
+article.ve-resource-page {
+  display: block !important;
+  width: 100% !important;
+  max-width: 1120px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  box-sizing: border-box !important;
+}
+
+article.ve-resource-page * {
+  box-sizing: border-box !important;
+}
+
+article.ve-resource-page table {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+body:has(article.ve-resource-page) .kg-file-card {
+  max-width: 1120px !important;
+  margin: 34px auto !important;
+}
+
+/* POSTS */
+
+body.post-template .gh-main,
+body.post-template .site-main,
+body.post-template main {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  overflow-x: hidden !important;
+}
+
+body.post-template .gh-article-header,
+body.post-template .gh-post-header,
+body.post-template .post-header,
+body.post-template .article-header {
+  width: min(1120px, calc(100vw - 48px)) !important;
+  max-width: 1120px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  box-sizing: border-box !important;
+}
+
+body.post-template .gh-content,
+body.post-template .post-content,
+body.post-template .article-content {
+  display: block !important;
+  width: min(1120px, calc(100vw - 48px)) !important;
+  max-width: 1120px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  box-sizing: border-box !important;
+}
+
+body.post-template .kg-card,
+body.post-template .kg-html-card,
+body.post-template .kg-file-card,
+body.post-template .kg-image-card {
+  width: 100% !important;
+  max-width: 1120px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  box-sizing: border-box !important;
+}
+
+body.post-template article.ve-resource-page {
+  display: block !important;
+  width: 100% !important;
+  max-width: 1120px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  box-sizing: border-box !important;
+  position: relative !important;
+  left: auto !important;
+  right: auto !important;
+  transform: none !important;
+}
+
+body.post-template article.ve-resource-page *,
+body.post-template .kg-html-card * {
+  box-sizing: border-box !important;
+}
+
+body.post-template article.ve-resource-page table,
+body.post-template .kg-html-card table {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+body.post-template .kg-file-card {
+  margin-top: 34px !important;
+  margin-bottom: 34px !important;
+}
+
+/* RODAPÉ */
+
+footer.gh-foot,
+.gh-foot,
+.site footer.gh-foot {
+  background: #111821 !important;
+  color: #FFFFFF !important;
+  border-top: 1px solid #C9A45C !important;
+}
+
+footer.gh-foot .gh-foot-inner,
+.gh-foot .gh-foot-inner {
+  color: #FFFFFF !important;
+}
+
+footer.gh-foot .gh-copyright,
+.gh-foot .gh-copyright {
+  color: #FFFFFF !important;
+  opacity: 1 !important;
+  font-weight: 600 !important;
+}
+
+footer.gh-foot a,
+.gh-foot a,
+footer.gh-foot .nav a,
+.gh-foot .nav a,
+footer.gh-foot nav a,
+.gh-foot nav a {
+  color: #FFFFFF !important;
+  opacity: 1 !important;
+  font-weight: 600 !important;
+  text-decoration: none !important;
+}
+
+footer.gh-foot a:hover,
+.gh-foot a:hover,
+footer.gh-foot .nav a:hover,
+.gh-foot .nav a:hover,
+footer.gh-foot nav a:hover,
+.gh-foot nav a:hover {
+  color: #D8C895 !important;
+  opacity: 1 !important;
+}
+
+footer.gh-foot p,
+.gh-foot p,
+footer.gh-foot span,
+.gh-foot span,
+footer.gh-foot div,
+.gh-foot div {
+  color: inherit;
+}
+
+.gh-foot-menu,
+.gh-foot-menu .nav,
+.gh-foot-menu .nav li,
+.gh-foot-menu .nav li a {
+  color: #FFFFFF !important;
+  opacity: 1 !important;
+}
+
+/* FONTES */
+
+html,
+body,
+button,
+input,
+textarea,
+select {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, Helvetica, sans-serif !important;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.gh-head-logo,
+.gh-head-menu,
+.gh-head-menu .nav li a,
+.gh-copyright {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, Helvetica, sans-serif !important;
+}
+
+/* RESPONSIVIDADE */
+
+@media (max-width: 980px) {
+  .gh-head {
+    padding: 14px 20px !important;
+  }
+
+  .gh-head-logo img {
+    max-height: 58px !important;
+  }
+
+  .gh-head-menu .nav li a {
+    font-size: 11px !important;
+    padding: 0 8px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .gh-content,
+  .post-content,
+  .page-content,
+  .article-content {
+    max-width: 100% !important;
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+
+  article.ve-homepage,
+  article.ve-resource-page {
+    max-width: 100% !important;
+  }
+
+  .gh-content article h1,
+  .post-content article h1,
+  .page-content article h1,
+  .article-content article h1 {
+    font-size: 32px !important;
+    line-height: 1.12 !important;
+  }
+
+  .gh-content article h2,
+  .post-content article h2,
+  .page-content article h2,
+  .article-content article h2 {
+    font-size: 25px !important;
+  }
+
+  .gh-content article p,
+  .post-content article p,
+  .page-content article p,
+  .article-content article p,
+  .gh-content article li,
+  .post-content article li,
+  .page-content article li,
+  .article-content article li {
+    font-size: 16px !important;
+  }
+
+  article.ve-resource-page section,
+  article.ve-homepage section {
+    padding-left: 22px !important;
+    padding-right: 22px !important;
+  }
+
+  body.post-template .gh-article-header,
+  body.post-template .gh-post-header,
+  body.post-template .post-header,
+  body.post-template .article-header,
+  body.post-template .gh-content,
+  body.post-template .post-content,
+  body.post-template .article-content,
+  body.post-template .kg-card,
+  body.post-template .kg-html-card,
+  body.post-template .kg-file-card,
+  body.post-template .kg-image-card,
+  body.post-template article.ve-resource-page {
+    width: calc(100vw - 28px) !important;
+    max-width: calc(100vw - 28px) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  body.post-template article.ve-resource-page section {
+    padding-left: 22px !important;
+    padding-right: 22px !important;
+  }
+
+  body.post-template article.ve-resource-page h1 {
+    font-size: 32px !important;
+    line-height: 1.15 !important;
+  }
+
+  body.post-template article.ve-resource-page h2 {
+    font-size: 25px !important;
+    line-height: 1.2 !important;
+  }
+
+  footer.gh-foot,
+  .gh-foot {
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+  }
+
+  footer.gh-foot .gh-copyright,
+  .gh-foot .gh-copyright,
+  footer.gh-foot a,
+  .gh-foot a {
+    font-size: 14px !important;
+    line-height: 1.6 !important;
+  }
+}
+</style>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": ["Organization", "ProfessionalService"],
+      "@id": "https://www.villanovaesg.com/#organization",
+      "name": "Villanova ESG",
+      "url": "https://www.villanovaesg.com/",
+      "email": "contact@villanovaesg.com",
+      "foundingDate": "2026",
+      "slogan": "Brazilian execution must become European regulatory defensibility.",
+      "description": "Villanova ESG is an EU-Brazil regulatory risk advisory firm focused on supplier evidence, buyer-readiness, audit-grade documentation and regulatory defensibility for companies exposed to European buyers, procurement scrutiny, contract risk and P&L exposure.",
+      "disambiguatingDescription": "Villanova ESG is an independent EU-Brazil regulatory risk and supplier evidence advisory founded by Marcio Villanova. It is not affiliated with, connected to, or endorsed by Villanova University or any academic institution.",
+      "founder": {
+        "@id": "https://www.villanovaesg.com/#marcio-villanova"
+      },
+      "sameAs": [
+        "https://www.linkedin.com/company/villanova-esg/",
+        "https://www.linkedin.com/in/marcio-villanova",
+        "https://orcid.org/0009-0001-8072-6287",
+        "https://www.f6s.com/company/villanova-esg",
+        "https://zenodo.org/records/20317248",
+        "https://zenodo.org/records/20346263",
+        "https://zenodo.org/records/20371672"
+      ],
+      "knowsAbout": [
+        "EU-Brazil supplier evidence",
+        "supplier evidence review",
+        "buyer-readiness",
+        "audit-grade documentation",
+        "regulatory defensibility",
+        "supply chain evidence risk",
+        "procurement risk",
+        "contract risk",
+        "P&L exposure",
+        "CBAM evidence",
+        "EUDR traceability evidence",
+        "CSDDD supplier due diligence",
+        "CSRD value-chain evidence",
+        "Digital Product Passport readiness",
+        "reverse logistics evidence",
+        "Brazil-Europe supply chain risk"
+      ],
+      "areaServed": [
+        {
+          "@type": "Country",
+          "name": "Brazil"
+        },
+        {
+          "@type": "AdministrativeArea",
+          "name": "European Union"
+        },
+        {
+          "@type": "Place",
+          "name": "Europe"
+        }
+      ],
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "email": "contact@villanovaesg.com",
+        "contactType": "commercial inquiry",
+        "availableLanguage": ["English", "Portuguese"]
+      }
+    },
+    {
+      "@type": "Person",
+      "@id": "https://www.villanovaesg.com/#marcio-villanova",
+      "name": "Marcio Villanova",
+      "givenName": "Marcio",
+      "familyName": "Villanova",
+      "url": "https://www.villanovaesg.com/marcio-villanovas-evidence-architecture/",
+      "jobTitle": [
+        "Founder of Villanova ESG",
+        "CEO of Ecobraz"
+      ],
+      "description": "Marcio Villanova is the Founder of Villanova ESG and CEO of Ecobraz, positioned around EU-Brazil supplier evidence, reverse logistics evidence, buyer-readiness and regulatory defensibility for cross-border supply chains.",
+      "disambiguatingDescription": "Marcio Villanova is a Brazilian executive, Founder of Villanova ESG and CEO of Ecobraz. He is not affiliated with Villanova University.",
+      "affiliation": [
+        {
+          "@id": "https://www.villanovaesg.com/#organization"
+        },
+        {
+          "@type": "Organization",
+          "name": "Ecobraz",
+          "url": "https://ecobraz.org/"
+        }
+      ],
+      "identifier": [
+        {
+          "@type": "PropertyValue",
+          "propertyID": "ORCID",
+          "value": "0009-0001-8072-6287"
+        },
+        {
+          "@type": "PropertyValue",
+          "propertyID": "European Commission Expert Database registration number",
+          "value": "EX2026D1439124",
+          "description": "Registration record only. Not an endorsement, appointment, certification or approval by the European Commission."
+        }
+      ],
+      "sameAs": [
+        "https://www.linkedin.com/in/marcio-villanova",
+        "https://orcid.org/0009-0001-8072-6287",
+        "https://www.villanovaesg.com/who-is-marcio-villanova/",
+        "https://zenodo.org/records/20317248",
+        "https://zenodo.org/records/20346263",
+        "https://zenodo.org/records/20371672"
+      ],
+      "knowsAbout": [
+        "supplier evidence",
+        "EU-Brazil regulatory risk",
+        "reverse logistics",
+        "electronic waste",
+        "environmental documentation",
+        "traceability",
+        "audit-grade evidence",
+        "buyer-readiness",
+        "regulatory defensibility",
+        "P&L exposure"
+      ]
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://www.villanovaesg.com/#website",
+      "name": "Villanova ESG",
+      "url": "https://www.villanovaesg.com/",
+      "publisher": {
+        "@id": "https://www.villanovaesg.com/#organization"
+      },
+      "inLanguage": "en"
+    },
+    {
+      "@type": "Service",
+      "@id": "https://www.villanovaesg.com/#supplier-evidence-review-service",
+      "name": "EU Buyer-Ready Supplier Evidence Review",
+      "serviceType": "Supplier evidence review and buyer-readiness assessment",
+      "url": "https://www.villanovaesg.com/eu-buyer-ready-supplier-evidence-review/",
+      "provider": {
+        "@id": "https://www.villanovaesg.com/#organization"
+      },
+      "areaServed": [
+        {
+          "@type": "Country",
+          "name": "Brazil"
+        },
+        {
+          "@type": "AdministrativeArea",
+          "name": "European Union"
+        }
+      ],
+      "audience": [
+        {
+          "@type": "Audience",
+          "audienceType": "Brazilian suppliers exposed to European buyers"
+        },
+        {
+          "@type": "Audience",
+          "audienceType": "CFOs, boards, procurement teams, compliance teams and legal teams"
+        }
+      ],
+      "description": "The EU Buyer-Ready Supplier Evidence Review identifies supplier evidence gaps, buyer-readiness issues, documentation priorities and commercial defensibility risks for companies exposed to European buyer scrutiny."
+    }
+  ]
+}
+</script>
+
+<!-- END VILLANOVA ESG — CLEAN CODE INJECTION -->
