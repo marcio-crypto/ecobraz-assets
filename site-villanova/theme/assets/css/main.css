@@ -186,6 +186,13 @@ nav.main a:hover{color:#fff}
 .site-footer a:hover{color:#fff}
 .site-footer .entity{max-width:56ch;line-height:1.7}
 .site-footer .legal{border-top:1px solid #1C2E47;padding-top:22px;font-size:12px}
+/* Índice de temas: os sete arquivos de tag não eram linkados de lugar nenhum do
+   site — só a própria paginação apontava para eles, e a tag com poucos posts,
+   que não gera página 2, ficava sem link nenhum. Aqui eles ganham um link fixo
+   em todas as páginas. Linha corrida, não coluna, para não competir com a
+   navegação do rodapé. */
+.site-footer .foot-topics{border-top:1px solid #1C2E47;padding-top:22px;margin-bottom:28px}
+.site-footer .foot-topics a{display:inline-block;margin:0 22px 8px 0}
 
 @media (max-width:900px){
   nav.main{display:none}
