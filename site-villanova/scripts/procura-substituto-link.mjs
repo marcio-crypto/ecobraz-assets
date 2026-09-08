@@ -27,14 +27,20 @@ const titulo = (html) => {
 // Responder 200 não basta. Muitos sites institucionais mandam o endereço que
 // não existe mais para a home ou para um seletor de idioma, e isso volta 200 —
 // é o "soft 404". Como fonte de citação não serve para nada: o leitor cai na
-// capa do site e não encontra o documento. Aqui isso é detectado comparando o
-// caminho pedido com o caminho onde a resposta realmente parou.
+// capa do site e não encontra o documento.
+//
+// A primeira versão disto também marcava como soft 404 qualquer redirect que
+// mudasse o primeiro segmento do caminho. Regra boa na intenção e errada na
+// prática: a página da ESPR na Comissão Europeia vai de commission.europa.eu
+// para environment.ec.europa.eu/strategy/circular-economy/... — mudança de
+// subdomínio e de caminho inteiro, e mesmo assim chega numa página real e no
+// assunto certo. Reprovar essa seria descartar um substituto bom. Ficam só os
+// três sinais que de fato significam "não achei": a raiz, o index_en e o
+// seletor de idioma.
 const capaOuSeletor = (pedido, final) => {
-  let p, f;
-  try { p = new URL(pedido); f = new URL(final); } catch { return false; }
-  if (f.pathname === '/' || /select-language|index_en$/.test(f.pathname + f.search)) return true;
-  const primeiro = (u) => u.pathname.split('/').filter(Boolean)[0] || '';
-  return Boolean(primeiro(p)) && primeiro(p) !== primeiro(f);
+  let f;
+  try { f = new URL(final); } catch { return false; }
+  return f.pathname === '/' || /select-language|index_en$/.test(f.pathname + f.search);
 };
 
 const testa = async (url) => {

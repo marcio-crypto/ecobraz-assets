@@ -1,0 +1,26 @@
+[
+ {
+  "motivo": "A SBTi reorganizou o site: /net-zero passou a redirecionar para /corporate-net-zero, que é exatamente o documento citado na âncora. Testado ao vivo: 200, título 'The Corporate Net-Zero Standard'.",
+  "de_url": "https://sciencebasedtargets.org/net-zero",
+  "para_url": "https://sciencebasedtargets.org/corporate-net-zero",
+  "textos": []
+ },
+ {
+  "motivo": "A página do Plano de Trabalho ESPR no green-forum saiu do ar (404). O substituto vivo é a página da própria ESPR na Comissão — testado ao vivo: 200, título 'Ecodesign for Sustainable Products Regulation'. Como ela NÃO é o plano de trabalho, a âncora muda junto: citação não pode prometer mais do que entrega.",
+  "de_url": "https://green-forum.ec.europa.eu/implementing-ecodesign-sustainable-products-regulation/working-plan_en",
+  "para_url": "https://environment.ec.europa.eu/strategy/circular-economy/ecodesign-sustainable-products-regulation_en",
+  "textos": [
+   {"de": "European Commission — ESPR Working Plan 2025–2030", "para": "European Commission — Ecodesign for Sustainable Products Regulation"},
+   {"de": "Comissão Europeia — Plano de Trabalho ESPR 2025–2030", "para": "Comissão Europeia — Regulamento de Ecodesign para Produtos Sustentáveis"}
+  ]
+ },
+ {
+  "motivo": "A página de implementação do EUDR saiu do ar (404). O substituto vivo é a página oficial do regulamento — testado ao vivo: 200, título 'Regulation on Deforestation-free products'. A âncora muda para o nome real da página.",
+  "de_url": "https://environment.ec.europa.eu/topics/forests/deforestation/implementation-deforestation-regulation_en",
+  "para_url": "https://environment.ec.europa.eu/topics/forests/deforestation/regulation-deforestation-free-products_en",
+  "textos": [
+   {"de": "European Commission — Implementation of the Deforestation Regulation", "para": "European Commission — Regulation on Deforestation-free products"},
+   {"de": "Comissão Europeia — Implementação do Regulamento de Desmatamento", "para": "Comissão Europeia — Regulamento de Produtos Livres de Desmatamento"}
+  ]
+ }
+]
