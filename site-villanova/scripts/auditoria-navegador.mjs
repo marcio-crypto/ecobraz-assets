@@ -1,0 +1,268 @@
+// Auditoria da Villanova ESG num navegador de verdade (Chromium via Playwright).
+//
+// POR QUE ESTE ARQUIVO EXISTE. Em 08/09/2026 o Marcio mandou uma gravação do
+// Microsoft Clarity dizendo que o site estava "cheio de erros". Uma gravação do
+// Clarity não abre fora da conta dele, e o ambiente onde eu rodo tem o domínio
+// bloqueado por política de saída. Então em vez de adivinhar pelo código, este
+// script ABRE o site publicado no mesmo motor que a pessoa usou (Chromium) e
+// anota o que de fato quebra.
+//
+// O que ele mede, e por que cada coisa aparece numa gravação do Clarity:
+//   erro de JavaScript ....... o Clarity marca a sessão com "JS error"
+//   requisição falhada ....... imagem/script que não carrega = buraco na tela
+//   rolagem horizontal ....... no celular vira aquele arrasta-para-o-lado
+//   imagem quebrada .......... ícone de imagem partida na gravação
+//   clique morto (candidato) . o que parece botão e não faz nada = "dead click",
+//                              e repetido vira "rage click"
+//   link interno 4xx/5xx ..... a pessoa clica e cai em erro
+//
+// Uso: node auditoria-navegador.mjs [url1 url2 ...]
+//      Sem argumentos, lê o sitemap do site.
+import { chromium } from 'playwright';
+import fs from 'node:fs';
+
+const BASE = 'https://www.villanovaesg.com';
+const PASTA = process.env.PASTA_SAIDA || 'auditoria-navegador';
+fs.mkdirSync(PASTA, { recursive: true });
+
+const TELAS = [
+  { nome: 'celular', viewport: { width: 390, height: 844 }, movel: true },
+  { nome: 'desktop', viewport: { width: 1366, height: 768 }, movel: false },
+];
+
+// ---------------------------------------------------------------- lista de páginas
+const paginas = async () => {
+  if (process.argv.length > 2) return process.argv.slice(2);
+  const urls = new Set();
+  for (const mapa of ['sitemap-pages.xml', 'sitemap-posts.xml']) {
+    try {
+      const r = await fetch(`${BASE}/${mapa}`, { signal: AbortSignal.timeout(30000) });
+      if (!r.ok) { console.log(`aviso: ${mapa} respondeu ${r.status}`); continue; }
+      for (const m of (await r.text()).matchAll(/<loc>([^<]+)<\/loc>/g)) urls.add(m[1].trim());
+    } catch (e) { console.log(`aviso: não consegui ler ${mapa}: ${e.message}`); }
+  }
+  return [...urls];
+};
+
+// ------------------------------------------------------------- checagem de uma tela
+async function auditaPagina(navegador, url, tela) {
+  const ctx = await navegador.newContext({
+    viewport: tela.viewport,
+    isMobile: tela.movel,
+    hasTouch: tela.movel,
+    locale: 'en-US',
+    userAgent: tela.movel
+      ? 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+      : undefined,
+  });
+
+  const achados = { erros: [], console: [], rede: [], };
+  const pg = await ctx.newPage();
+
+  pg.on('pageerror', (e) => achados.erros.push(String(e && e.message || e).slice(0, 300)));
+  pg.on('console', (m) => {
+    if (m.type() !== 'error' && m.type() !== 'warning') return;
+    const t = m.text();
+    // O aviso de cookie de terceiro do próprio Google/Clarity polui e não é do site.
+    if (/third-party cookie|SameSite|Tracking Prevention/i.test(t)) return;
+    achados.console.push(`[${m.type()}] ${t.slice(0, 300)}`);
+  });
+  pg.on('requestfailed', (r) => {
+    const err = r.failure()?.errorText || '';
+    if (/ERR_ABORTED/.test(err)) return; // navegação cancelada por redirect, não é falha
+    achados.rede.push(`FALHOU ${r.url().slice(0, 160)} — ${err}`);
+  });
+  pg.on('response', (r) => {
+    if (r.status() >= 400) achados.rede.push(`HTTP ${r.status()} ${r.url().slice(0, 160)}`);
+  });
+
+  let resposta = null;
+  try {
+    resposta = await pg.goto(url, { waitUntil: 'load', timeout: 60000 });
+    await pg.waitForTimeout(2500); // deixa o JS de consentimento/idioma agir
+  } catch (e) {
+    achados.erros.push(`NAVEGAÇÃO FALHOU: ${e.message.slice(0, 200)}`);
+    const r = { url, tela: tela.nome, status: 0, ...achados };
+    await ctx.close();
+    return r;
+  }
+
+  const medidas = await pg.evaluate(() => {
+    const out = {};
+    const de = document.documentElement;
+
+    // Rolagem horizontal e quem a causa.
+    const larguraVisivel = window.innerWidth;
+    out.scrollWidth = de.scrollWidth;
+    out.innerWidth = larguraVisivel;
+    out.vazandoLado = [];
+    if (de.scrollWidth > larguraVisivel + 1) {
+      for (const el of document.querySelectorAll('body *')) {
+        const r = el.getBoundingClientRect();
+        if (r.width === 0 || r.height === 0) continue;
+        if (r.right > larguraVisivel + 1 || r.left < -1) {
+          out.vazandoLado.push({
+            tag: el.tagName.toLowerCase(),
+            classe: (el.className && String(el.className).slice(0, 60)) || '',
+            esq: Math.round(r.left), dir: Math.round(r.right), larg: Math.round(r.width),
+            texto: (el.textContent || '').trim().slice(0, 50),
+          });
+        }
+      }
+      // Só os externos interessam: se um pai vaza, todo filho vaza junto.
+      out.vazandoLado = out.vazandoLado.slice(0, 12);
+    }
+
+    // Imagens que não carregaram.
+    out.imagensQuebradas = [...document.images]
+      .filter((i) => i.complete && i.naturalWidth === 0)
+      .map((i) => (i.currentSrc || i.src || '(sem src)').slice(0, 160));
+
+    // Links: âncoras vazias e destinos internos, para checar depois.
+    out.linksMortos = [];
+    out.internos = [];
+    for (const a of document.querySelectorAll('a')) {
+      const h = a.getAttribute('href');
+      const rotulo = (a.textContent || '').trim().slice(0, 60);
+      if (h === null || h === '' || h === '#') { out.linksMortos.push(rotulo || '(sem texto)'); continue; }
+      if (/^(mailto:|tel:|javascript:)/i.test(h)) continue;
+      try {
+        const u = new URL(a.href, location.href);
+        if (u.origin === location.origin) out.internos.push(u.href.split('#')[0]);
+      } catch (e) {}
+    }
+    out.internos = [...new Set(out.internos)];
+
+    // Candidatos a clique morto: parece clicável, não é link nem botão.
+    out.pareceClicavel = [];
+    for (const el of document.querySelectorAll('body *')) {
+      if (el.closest('a,button,label,summary,select,input,textarea')) continue;
+      if (getComputedStyle(el).cursor !== 'pointer') continue;
+      if (el.getAttribute('role') === 'button' || el.onclick) continue;
+      const r = el.getBoundingClientRect();
+      if (r.width < 20 || r.height < 12) continue;
+      out.pareceClicavel.push({
+        tag: el.tagName.toLowerCase(),
+        classe: (el.className && String(el.className).slice(0, 60)) || '',
+        texto: (el.textContent || '').trim().slice(0, 50),
+      });
+    }
+    out.pareceClicavel = out.pareceClicavel.slice(0, 10);
+
+    // Banner de consentimento presente?
+    out.temBanner = !!document.querySelector('.vn-consent');
+
+    // Alvos de toque pequenos demais (regra do Google: 24px).
+    out.alvosPequenos = [];
+    for (const el of document.querySelectorAll('a,button')) {
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) continue;
+      if (r.height < 24 || r.width < 24) {
+        out.alvosPequenos.push(`${el.tagName.toLowerCase()} "${(el.textContent || '').trim().slice(0, 30)}" ${Math.round(r.width)}x${Math.round(r.height)}`);
+      }
+    }
+    out.alvosPequenos = out.alvosPequenos.slice(0, 10);
+
+    out.titulo = document.title;
+    out.lang = de.getAttribute('lang');
+    return out;
+  });
+
+  const arquivoTela = `${PASTA}/${tela.nome}-${url.replace(/https?:\/\//, '').replace(/[^a-z0-9]+/gi, '_').slice(0, 80)}.png`;
+  try { await pg.screenshot({ path: arquivoTela, fullPage: true }); } catch (e) {}
+
+  const r = {
+    url, tela: tela.nome,
+    status: resposta ? resposta.status() : 0,
+    urlFinal: pg.url(),
+    ...achados, ...medidas,
+    imagem: arquivoTela,
+  };
+  await ctx.close();
+  return r;
+}
+
+// ------------------------------------------------------------------------ execução
+const lista = await paginas();
+console.log(`Páginas a auditar: ${lista.length}`);
+if (!lista.length) { console.log('Nenhuma URL. Sitemap vazio ou inacessível.'); process.exit(1); }
+
+const navegador = await chromium.launch({ args: ['--no-sandbox'] });
+const resultados = [];
+for (const url of lista) {
+  for (const tela of TELAS) {
+    process.stdout.write(`. ${tela.nome} ${url}\n`);
+    resultados.push(await auditaPagina(navegador, url, tela));
+  }
+}
+
+// Links internos: junta todos e confere o status de cada um, uma vez só.
+const todosInternos = new Set();
+for (const r of resultados) for (const u of (r.internos || [])) todosInternos.add(u);
+console.log(`\nConferindo ${todosInternos.size} links internos distintos...`);
+const linksRuins = [];
+for (const u of todosInternos) {
+  try {
+    const r = await fetch(u, { redirect: 'follow', signal: AbortSignal.timeout(20000) });
+    if (r.status >= 400) linksRuins.push(`HTTP ${r.status} — ${u}`);
+  } catch (e) { linksRuins.push(`ERRO ${e.message.slice(0, 60)} — ${u}`); }
+}
+
+// ------------------------------------------------------------------------ relatório
+const linha = (s) => console.log(s);
+linha('\n\n############################################################');
+linha('#   RELATÓRIO — o que o navegador encontrou no site ao vivo');
+linha('############################################################');
+
+let totalErros = 0, totalRede = 0, totalOverflow = 0, totalImg = 0;
+
+for (const r of resultados) {
+  const problemas = [];
+  if (r.status >= 400 || r.status === 0) problemas.push(`status HTTP ${r.status}`);
+  if (r.erros?.length) problemas.push(`${r.erros.length} erro(s) de JavaScript`);
+  if (r.rede?.length) problemas.push(`${r.rede.length} requisição(ões) com falha`);
+  if (r.vazandoLado?.length) problemas.push('rolagem horizontal');
+  if (r.imagensQuebradas?.length) problemas.push(`${r.imagensQuebradas.length} imagem(ns) quebrada(s)`);
+  if (r.linksMortos?.length) problemas.push(`${r.linksMortos.length} link(s) sem destino`);
+  if (!problemas.length) continue;
+
+  totalErros += r.erros?.length || 0;
+  totalRede += r.rede?.length || 0;
+  totalImg += r.imagensQuebradas?.length || 0;
+  if (r.vazandoLado?.length) totalOverflow++;
+
+  linha(`\n──────────────────────────────────────────────`);
+  linha(`${r.tela.toUpperCase()}  ${r.url}`);
+  if (r.urlFinal && r.urlFinal !== r.url) linha(`  (terminou em ${r.urlFinal})`);
+  linha(`  título: ${r.titulo}   lang: ${r.lang}   HTTP ${r.status}`);
+  linha(`  PROBLEMAS: ${problemas.join(' · ')}`);
+
+  for (const e of (r.erros || [])) linha(`   ✗ JS: ${e}`);
+  for (const e of (r.console || []).slice(0, 6)) linha(`   ! console: ${e}`);
+  for (const e of (r.rede || []).slice(0, 8)) linha(`   ✗ rede: ${e}`);
+  for (const i of (r.imagensQuebradas || [])) linha(`   ✗ imagem não carregou: ${i}`);
+  if (r.vazandoLado?.length) {
+    linha(`   ✗ a página é mais larga que a tela: ${r.scrollWidth}px de conteúdo para ${r.innerWidth}px de tela`);
+    for (const v of r.vazandoLado) linha(`       <${v.tag} class="${v.classe}"> vai de ${v.esq}px a ${v.dir}px — "${v.texto}"`);
+  }
+  for (const l of (r.linksMortos || [])) linha(`   ! link sem destino (href vazio ou "#"): "${l}"`);
+  for (const p of (r.pareceClicavel || [])) linha(`   ? parece clicável e talvez não seja: <${p.tag} class="${p.classe}"> "${p.texto}"`);
+  for (const a of (r.alvosPequenos || [])) linha(`   ? alvo de toque menor que 24px: ${a}`);
+}
+
+linha('\n\n=================== LINKS INTERNOS QUEBRADOS ===================');
+if (!linksRuins.length) linha('Nenhum. Todos os links internos responderam abaixo de 400.');
+for (const l of linksRuins) linha(`  ✗ ${l}`);
+
+linha('\n\n=========================== RESUMO ============================');
+linha(`Páginas auditadas .................. ${lista.length} (x2 telas)`);
+linha(`Erros de JavaScript ................ ${totalErros}`);
+linha(`Requisições com falha .............. ${totalRede}`);
+linha(`Telas com rolagem horizontal ....... ${totalOverflow}`);
+linha(`Imagens quebradas .................. ${totalImg}`);
+linha(`Links internos quebrados ........... ${linksRuins.length}`);
+linha('\nAs telas cheias de cada página estão no artefato "telas" deste workflow.');
+
+fs.writeFileSync(`${PASTA}/resultado.json`, JSON.stringify(resultados, null, 2));
+
+await navegador.close();
