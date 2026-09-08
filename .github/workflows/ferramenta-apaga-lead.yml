@@ -131,7 +131,7 @@ jobs:
                   puladas.append((n, f'valor não contém {exige!r} — trava de segurança'))
                   continue
               r = subprocess.run(
-                  ['npx', 'wrangler@latest', 'kv', 'key', 'delete', n, '--namespace-id', NS, '--remote', '--force'],
+                  ['npx', 'wrangler@latest', 'kv', 'key', 'delete', n, '--namespace-id', NS, '--remote'],
                   capture_output=True, text=True)
               if r.returncode == 0:
                   apagadas.append(n)
