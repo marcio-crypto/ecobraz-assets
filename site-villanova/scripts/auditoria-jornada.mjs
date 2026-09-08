@@ -5,6 +5,13 @@
 // agem nos primeiros segundos e são exatamente os dois primeiros segundos que
 // aparecem numa gravação do Clarity.
 //
+// SEGUNDO DETALHE, DESCOBERTO DEPOIS E CARO: nada de isMobile. Com ele, este
+// Chromium sem interface ignora a tela pedida (390x844 virou 500x1080) e o
+// clique normal no banner de cookies falha por artefato da emulação — o que me
+// fez quase relatar que o botão de aceitar não funcionava no celular. Não
+// funcionava era o meu teste. A largura da janela basta: todo o CSS do tema
+// decide por media query de largura.
+//
 // DETALHE QUE INVALIDA O TESTE SE FOR ESQUECIDO: o idioma-auto.js tem
 // "if (navigator.webdriver) return;" — ou seja, ele NÃO desvia quando um robô
 // abre a página. O Playwright é um robô. Sem falsear navigator.webdriver este
@@ -36,7 +43,7 @@ for (const caso of [
   { nome: 'navegador em inglês', locale: 'en-US' },
   { nome: 'navegador em alemão', locale: 'de-DE' },
 ]) {
-  const ctx = await comoPessoa({ locale: caso.locale, viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const ctx = await comoPessoa({ locale: caso.locale, viewport: { width: 390, height: 844 } });
   const pg = await ctx.newPage();
   const saltos = [];
   pg.on('framenavigated', (f) => { if (f === pg.mainFrame()) saltos.push(f.url()); });
@@ -59,7 +66,7 @@ for (const caso of [
 relata('\n\n============ 2. O VISITANTE QUE VOLTA ============');
 relata('Guarda a preferência, fecha, e abre a home de novo — é o caso mais comum\ne o que mais aparece nas gravações, porque a gravação só existe depois do aceite.\n');
 {
-  const ctx = await comoPessoa({ locale: 'pt-BR', viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const ctx = await comoPessoa({ locale: 'pt-BR', viewport: { width: 390, height: 844 } });
   const pg = await ctx.newPage();
   await pg.goto(`${BASE}/`, { waitUntil: 'load', timeout: 60000 });
   await pg.waitForTimeout(2500);
@@ -79,10 +86,10 @@ relata('Guarda a preferência, fecha, e abre a home de novo — é o caso mais c
 // --------------------------------------------- 3. banner de consentimento e Clarity
 relata('\n\n============ 3. BANNER DE COOKIES E O PRÓPRIO CLARITY ============');
 for (const tela of [
-  { nome: 'celular', viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true },
-  { nome: 'desktop', viewport: { width: 1366, height: 768 }, isMobile: false, hasTouch: false },
+  { nome: 'celular', viewport: { width: 390, height: 844 } },
+  { nome: 'desktop', viewport: { width: 1366, height: 768 } },
 ]) {
-  const ctx = await comoPessoa({ locale: 'en-US', viewport: tela.viewport, isMobile: tela.isMobile, hasTouch: tela.hasTouch });
+  const ctx = await comoPessoa({ locale: 'en-US', viewport: tela.viewport });
   const pg = await ctx.newPage();
   const pedidosClarity = [];
   pg.on('request', (r) => { if (r.url().includes('clarity.ms')) pedidosClarity.push(r.url().slice(0, 120)); });
