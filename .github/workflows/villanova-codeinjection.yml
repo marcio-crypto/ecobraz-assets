@@ -1,0 +1,122 @@
+name: Villanova — ler/limpar a injeção de código do painel
+
+# O bloco de "Code injection" do painel do Ghost da Villanova nasceu antes de o
+# tema estar versionado: ele carregava hreflang, JSON-LD da marca e o registro
+# de perito. Tudo isso hoje está no repositório (theme/default.hbs e o
+# aplica-hreflang.mjs), servido em TODAS as páginas. O bloco do painel virou
+# duplicata — e duplicata de JSON-LD foi justamente um dos erros da auditoria
+# de 01/09/2026.
+#
+#   modo=ler    -> só imprime o cabeçalho e o rodapé atuais. NÃO altera nada.
+#   modo=limpar -> imprime o estado atual e depois esvazia os dois campos.
+#
+# O modo "limpar" imprime o conteúdo ANTES de apagar, então o log do run fica
+# sendo a cópia de segurança do que existia. Rode "ler" primeiro, sempre.
+#
+# Se o Ghost Pro recusar a escrita pelo token de integração (403), o log diz
+# isso com todas as letras e o passo passa a ser manual, no painel.
+
+on:
+  workflow_dispatch:
+    inputs:
+      modo:
+        description: 'ler (só mostra) ou limpar (esvazia os dois campos)'
+        type: choice
+        options: [ler, limpar]
+        default: ler
+
+permissions:
+  contents: read
+
+jobs:
+  codeinjection:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ler / limpar a injeção de código
+        env:
+          GHOST_ADMIN_URL: ${{ secrets.VILLANOVA_GHOST_ADMIN_URL }}
+          GHOST_ADMIN_API_KEY: ${{ secrets.VILLANOVA_GHOST_ADMIN_API_KEY }}
+          MODO: ${{ inputs.modo }}
+        run: |
+          node --input-type=module <<'NODE'
+          import crypto from 'node:crypto';
+
+          const adminUrl = String(process.env.GHOST_ADMIN_URL || '').replace(/\/$/, '');
+          const adminKey = String(process.env.GHOST_ADMIN_API_KEY || '');
+          const modo = process.env.MODO === 'limpar' ? 'limpar' : 'ler';
+          if (!adminUrl || !adminKey.includes(':')) throw new Error('Faltam credenciais do Ghost da Villanova.');
+
+          // Token novo a cada chamada: o JWT do Ghost vale 5 minutos.
+          const token = () => {
+            const [id, secret] = adminKey.split(':');
+            const agora = Math.floor(Date.now() / 1000);
+            const enc = (v) => Buffer.from(JSON.stringify(v)).toString('base64url');
+            const base = `${enc({alg:'HS256',typ:'JWT',kid:id})}.${enc({iat:agora,exp:agora+300,aud:'/admin/'})}`;
+            const assin = crypto.createHmac('sha256', Buffer.from(secret, 'hex')).update(base).digest('base64url');
+            return `${base}.${assin}`;
+          };
+          const cabecalhos = () => ({
+            Authorization: `Ghost ${token()}`,
+            'Accept-Version': 'v5.0',
+            'Content-Type': 'application/json',
+          });
+          const titulo = (t) => console.log(`\n================ ${t} ================`);
+
+          const res = await fetch(`${adminUrl}/ghost/api/admin/settings/`, {
+            headers: cabecalhos(), signal: AbortSignal.timeout(30000),
+          });
+          if (res.status === 403) {
+            titulo('SEM PERMISSÃO DE LEITURA (403)');
+            console.log('O Ghost Pro não deixa este token de integração LER as configurações.');
+            console.log('Nada pode ser feito por aqui: o bloco tem de ser lido e apagado no painel,');
+            console.log('em Settings -> Code injection.');
+            process.exit(1);
+          }
+          if (!res.ok) throw new Error(`GET /settings/ falhou (${res.status}): ${(await res.text()).slice(0, 400)}`);
+
+          const settings = (await res.json()).settings || [];
+          const valor = (k) => (settings.find((s) => s.key === k) || {}).value || '';
+          const cabeca = valor('codeinjection_head');
+          const rodape = valor('codeinjection_foot');
+
+          titulo('CABEÇALHO ATUAL (codeinjection_head)');
+          console.log(cabeca || '(vazio)');
+          titulo('RODAPÉ ATUAL (codeinjection_foot)');
+          console.log(rodape || '(vazio)');
+          console.log(`\nTamanho: cabeçalho ${cabeca.length} caracteres, rodapé ${rodape.length}.`);
+
+          if (modo === 'ler') {
+            titulo('MODO LER — nada foi alterado');
+            process.exit(0);
+          }
+
+          if (!cabeca && !rodape) {
+            titulo('JÁ ESTÁ LIMPO');
+            console.log('Os dois campos já estão vazios — nada a fazer.');
+            process.exit(0);
+          }
+
+          const put = await fetch(`${adminUrl}/ghost/api/admin/settings/`, {
+            method: 'PUT',
+            headers: cabecalhos(),
+            body: JSON.stringify({settings: [
+              {key: 'codeinjection_head', value: ''},
+              {key: 'codeinjection_foot', value: ''},
+            ]}),
+            signal: AbortSignal.timeout(30000),
+          });
+          if (put.ok) {
+            titulo('LIMPO');
+            console.log('Os dois campos foram esvaziados. O conteúdo anterior está impresso acima,');
+            console.log('neste mesmo log, caso precise voltar atrás.');
+            process.exit(0);
+          }
+          const txt = await put.text();
+          if (put.status === 403) {
+            titulo('SEM PERMISSÃO DE ESCRITA (403)');
+            console.log('A leitura funcionou, mas o Ghost Pro recusa a escrita por token de integração.');
+            console.log('O conteúdo atual está impresso acima. Apagar no painel: Settings -> Code injection.');
+            process.exit(1);
+          }
+          throw new Error(`PUT /settings/ falhou (${put.status}): ${txt.slice(0, 400)}`);
+          NODE
