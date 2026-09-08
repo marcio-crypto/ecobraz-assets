@@ -1,0 +1,20 @@
+name: Villanova ESG — procurar substituto para link externo morto
+
+on:
+  workflow_dispatch:
+    inputs:
+      urls:
+        description: 'URLs mortas, separadas por espaço'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  procurar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Subir na árvore do site citado até achar página viva
+        run: node site-villanova/scripts/procura-substituto-link.mjs ${{ inputs.urls }}
