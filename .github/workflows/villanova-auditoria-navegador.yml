@@ -26,6 +26,10 @@ on:
         description: 'Rodar também o teste de jornada (idioma + cookies)'
         type: boolean
         default: true
+      banner:
+        description: 'Rodar o diagnóstico do banner de cookies no celular'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -55,6 +59,10 @@ jobs:
       - name: Jornada de entrada (idioma + consentimento)
         if: ${{ inputs.jornada }}
         run: node site-villanova/scripts/auditoria-jornada.mjs
+
+      - name: Diagnóstico do banner no celular
+        if: ${{ inputs.banner }}
+        run: node site-villanova/scripts/diag-banner-celular.mjs
 
       - name: Guardar as telas
         if: always()
