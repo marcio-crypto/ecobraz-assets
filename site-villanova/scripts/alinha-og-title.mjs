@@ -12,6 +12,16 @@
 //
 // Uso: node alinha-og-title.mjs simular|aplicar slug1 slug2 ...
 //      (sem slugs, varre todas as páginas e relata quem tem og_title próprio)
+//
+// A HOME É EXCEÇÃO, CONFIRMADO EM 08/09/2026. Rodado em 11 páginas: dez
+// passaram a servir og:title igual ao título; a home continuou divergindo
+// ("Villanova ESG — EU Buyer Evidence, Brazilian Suppliers" no <title> contra
+// "EU-Brazil Supplier Evidence Reviews | Villanova ESG" no og:title). A causa
+// é a rota "/" do routes.yaml, que cai no template home e resolve pelas
+// CONFIGURAÇÕES do site, não pela página. Limpar o og_title da página não
+// alcança isso, e o endpoint /settings/ recusa escrita por token de
+// integração (403 comprovado). Só no painel:
+//   Settings → General → Facebook card → apagar o título de lá.
 import crypto from 'node:crypto';
 
 const modo = process.argv[2] === 'aplicar' ? 'aplicar' : 'simular';
