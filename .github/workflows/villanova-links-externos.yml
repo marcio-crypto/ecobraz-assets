@@ -1,0 +1,21 @@
+name: Villanova ESG — testar os links externos marcados como 4XX
+
+on:
+  workflow_dispatch:
+    inputs:
+      arquivo:
+        description: 'JSON com os endereços externos a testar'
+        required: false
+        default: 'site-villanova/content/links-externos-4xx.json'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  testar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Separar link morto de bloqueio a robô
+        run: node site-villanova/scripts/verifica-links-externos.mjs "${{ inputs.arquivo }}"

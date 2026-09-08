@@ -1,0 +1,20 @@
+name: Villanova ESG — mostrar os dados estruturados de uma página
+
+on:
+  workflow_dispatch:
+    inputs:
+      urls:
+        description: 'URLs separadas por espaço'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  mostrar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Imprimir todos os blocos de JSON-LD servidos
+        run: node site-villanova/scripts/mostra-schema.mjs ${{ inputs.urls }}
