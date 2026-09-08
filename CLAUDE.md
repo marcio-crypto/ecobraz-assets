@@ -18,6 +18,12 @@ Leia isto no início de toda sessão. É um compromisso permanente, não uma pre
   endereços residenciais, telefones particulares), nem chaves de autenticação
   ou códigos verificadores de documentos oficiais — mesmo que o Marcio envie os
   PDFs. Os originais ficam no Google Drive dele; aqui só a ficha institucional.
+- Exceção única, autorizada pelo Marcio em 08/09/2026: o número de registro dele
+  na base de peritos da Comissão Europeia (`EX2026…`) pode ficar versionado no
+  `site-villanova/theme/default.hbs`, dentro do JSON-LD da marca. É registro
+  público, já servido no site, e não abre acesso a nada. Está lá com a ressalva
+  de que é só registro — não é aval, nomeação nem certificação da Comissão. Não
+  remova por causa da regra acima; se for para sair, o Marcio decide.
 
 ## Documentação institucional da Ecobraz
 
