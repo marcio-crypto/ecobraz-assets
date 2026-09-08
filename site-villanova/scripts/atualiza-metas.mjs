@@ -62,9 +62,16 @@ for (const item of itens) {
     continue;
   }
 
-  const tipo = item.tipo === 'post' ? 'posts' : 'pages';
-  const atual = (await api('GET', `${tipo}/?filter=slug:${item.slug}&limit=1`))[tipo]?.[0];
-  if (!atual) { console.log(`AVISO: ${tipo}/${item.slug} não existe — pulado`); avisos++; continue; }
+  // Sem "tipo" declarado, procura primeiro em pages e depois em posts: assim a
+  // lista de slugs não precisa saber de antemão o que é página e o que é artigo.
+  const candidatos = item.tipo === 'post' ? ['posts'] : item.tipo === 'page' ? ['pages'] : ['pages', 'posts'];
+  let tipo = null;
+  let atual = null;
+  for (const t of candidatos) {
+    atual = (await api('GET', `${t}/?filter=slug:${item.slug}&limit=1`))[t]?.[0];
+    if (atual) { tipo = t; break; }
+  }
+  if (!atual) { console.log(`AVISO: ${item.slug} não existe nem em pages nem em posts — pulado`); avisos++; continue; }
 
   if (item.meta_title && item.meta_title.length > LIM_TITULO) {
     console.log(`AVISO: título com ${item.meta_title.length} caracteres (>${LIM_TITULO}) em ${item.slug}`);
