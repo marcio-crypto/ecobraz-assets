@@ -13,6 +13,10 @@ on:
       padrao:
         description: 'Padrão (grep -E) a procurar no HTML'
         required: true
+      linhas:
+        description: 'Quantos trechos mostrar por URL (padrão 4)'
+        required: false
+        default: '4'
 
 permissions:
   contents: read
@@ -28,5 +32,5 @@ jobs:
             curl -sS -L --max-time 20 "$u" -o /tmp/body || { echo "FALHA de conexão"; continue; }
             n=$(grep -Eo '${{ inputs.padrao }}' /tmp/body | wc -l)
             echo "ocorrências de '${{ inputs.padrao }}': $n"
-            grep -Eo '.{0,60}${{ inputs.padrao }}.{0,60}' /tmp/body | head -4 || true
+            grep -Eo '.{0,60}${{ inputs.padrao }}.{0,60}' /tmp/body | head -"${{ inputs.linhas }}" || true
           done
