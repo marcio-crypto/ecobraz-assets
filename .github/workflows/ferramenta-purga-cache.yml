@@ -1,0 +1,114 @@
+name: Ferramenta — purgar cache do Cloudflare
+
+# Limpa do cache do Cloudflare URLs específicas. Serve para quando um arquivo
+# do tema muda no Ghost mas continua sendo servido velho — caso do
+# /assets/llms.txt, que é buscado por caminho fixo e não ganha o "?v=" que
+# renova os outros assets a cada deploy.
+#
+#   modo=simular -> descobre a zona e mostra o que SERIA purgado. Não altera.
+#   modo=purgar  -> purga de verdade.
+#
+# O token de API usado aqui foi criado para Workers e KV. Se ele não tiver a
+# permissão "Cache Purge" da zona, a API recusa e o log diz isso com todas as
+# letras — aí a limpeza é no painel do Cloudflare, não aqui. Purgar cache é
+# reversível por natureza (o conteúdo volta a ser buscado na origem), então o
+# risco é de custo, não de perda.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dominio:
+        description: 'Domínio da zona (ex.: ecobraz.org)'
+        required: true
+        default: 'ecobraz.org'
+      urls:
+        description: 'URLs completas a purgar, separadas por espaço'
+        required: true
+        default: 'https://ecobraz.org/assets/llms.txt https://ecobraz.org/llms.txt'
+      modo:
+        description: 'simular (só mostra) ou purgar'
+        type: choice
+        options: [simular, purgar]
+        default: simular
+
+permissions:
+  contents: read
+
+jobs:
+  purgar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descobrir a zona e purgar
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          DOMINIO: ${{ inputs.dominio }}
+          URLS: ${{ inputs.urls }}
+          MODO: ${{ inputs.modo }}
+        run: |
+          node --input-type=module <<'NODE'
+          const token = String(process.env.CLOUDFLARE_API_TOKEN || '');
+          const dominio = String(process.env.DOMINIO || '').trim();
+          const urls = String(process.env.URLS || '').split(/\s+/).filter(Boolean);
+          const modo = process.env.MODO === 'purgar' ? 'purgar' : 'simular';
+          if (!token) throw new Error('Falta o CLOUDFLARE_API_TOKEN.');
+          if (!dominio) throw new Error('Falta o domínio da zona.');
+          if (!urls.length) throw new Error('Nenhuma URL informada.');
+
+          const cabecalhos = {Authorization: `Bearer ${token}`, 'Content-Type': 'application/json'};
+          const titulo = (t) => console.log(`\n================ ${t} ================`);
+
+          // Erro de permissão tem tratamento próprio: o que importa para quem lê
+          // o log não é o código, é saber que o passo virou manual.
+          const semPermissao = (res, corpo) => {
+            if (res.status !== 403 && res.status !== 401) return false;
+            titulo(`SEM PERMISSÃO (${res.status})`);
+            console.log('O token de API não tem permissão para esta operação na zona.');
+            console.log('Ele foi criado para Workers e KV; purgar cache exige a permissão');
+            console.log('"Zone → Cache Purge → Purge".');
+            console.log('');
+            console.log('Saída manual, no painel do Cloudflare:');
+            console.log('  Caching → Configuration → Purge Cache → Custom Purge → colar as URLs.');
+            console.log('');
+            console.log('Resposta da API:', corpo.slice(0, 300));
+            return true;
+          };
+
+          titulo('ZONA');
+          const rz = await fetch(
+            `https://api.cloudflare.com/client/v4/zones?name=${encodeURIComponent(dominio)}`,
+            {headers: cabecalhos, signal: AbortSignal.timeout(30000)});
+          const tz = await rz.text();
+          if (semPermissao(rz, tz)) process.exit(1);
+          if (!rz.ok) throw new Error(`Busca da zona falhou (${rz.status}): ${tz.slice(0, 300)}`);
+
+          const zonas = (JSON.parse(tz).result) || [];
+          if (!zonas.length) {
+            titulo('ZONA NÃO ENCONTRADA');
+            console.log(`Nenhuma zona chamada "${dominio}" visível para este token.`);
+            console.log('Ou o domínio está escrito diferente, ou o token não enxerga essa zona.');
+            process.exit(1);
+          }
+          const zona = zonas[0];
+          console.log(`${zona.name} → ${zona.id}`);
+
+          titulo('URLS');
+          for (const u of urls) console.log(' -', u);
+
+          if (modo === 'simular') {
+            titulo('MODO SIMULAR — nada foi purgado');
+            process.exit(0);
+          }
+
+          const rp = await fetch(
+            `https://api.cloudflare.com/client/v4/zones/${zona.id}/purge_cache`,
+            {method: 'POST', headers: cabecalhos, body: JSON.stringify({files: urls}),
+             signal: AbortSignal.timeout(30000)});
+          const tp = await rp.text();
+          if (semPermissao(rp, tp)) process.exit(1);
+          if (!rp.ok) throw new Error(`Purge falhou (${rp.status}): ${tp.slice(0, 300)}`);
+
+          titulo('PURGADO');
+          console.log(`${urls.length} URL(s) removida(s) do cache.`);
+          console.log('A próxima visita busca na origem. Pode levar alguns segundos para');
+          console.log('propagar entre os pontos de presença.');
+          NODE

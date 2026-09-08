@@ -9,9 +9,10 @@ account_id = "0ab0573840927669f3bb3666d63cc023"
 # atualiza o CÓDIGO — não apaga nenhuma configuração existente.
 keep_vars = true
 
-# Cofre de leads (KV): toda solicitação recebida é gravada aqui ANTES de ir ao
-# CRM. Se o Ploomes estiver fora do ar, o lead fica preservado no cofre e o
-# visitante recebe confirmação normal — nenhum lead se perde.
+# Cofre de leads (KV): toda solicitação recebida é gravada aqui ANTES de seguir
+# para o destino. Se o portal (sistema.ecobraz.org) estiver fora do ar, o lead
+# fica preservado no cofre e o visitante recebe confirmação normal — nenhum
+# lead se perde. (O Ploomes foi desativado em 30/07/2026.)
 [[kv_namespaces]]
 binding = "LEADS_COFRE"
 id = "5b56276238f8492fb78d7a4d7d215f85"

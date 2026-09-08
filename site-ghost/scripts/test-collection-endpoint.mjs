@@ -39,14 +39,20 @@ if (response.status !== 201 || body.ok !== true) {
   console.error(`ERROR: submission failed (${response.status}): ${JSON.stringify(body).slice(0, 500)}`);
   process.exit(1);
 }
-if (!body.crm?.ok || !body.crm.contact_id || !body.crm.deal_id) {
-  console.error(`ERROR: Ploomes did not confirm contact/deal: ${JSON.stringify(body.crm)}`);
+// O destino do lead mudou em 30/07/2026: o Ploomes foi desativado e o Worker
+// passou a gravar no sistema próprio (portal). Ele agora responde
+// crm:{ok, via:'portal', saved_id} — e não mais contact_id/deal_id. Este teste
+// continuou exigindo os campos antigos, então acusava falha mesmo com a
+// integração inteira funcionando. Como ele só roda sob pedido, o defeito
+// passou despercebido.
+if (!body.crm?.ok || body.crm.via !== 'portal') {
+  console.error(`ERROR: the portal did not confirm the lead: ${JSON.stringify(body.crm)}`);
   process.exit(1);
 }
-console.log(`Ploomes ok: contact ${body.crm.contact_id}, deal ${body.crm.deal_id}.`);
+console.log(`Portal ok: lead saved${body.crm.saved_id ? ` as ${body.crm.saved_id}` : ''}.`);
 if (body.marketing?.ok) console.log('E-goi ok: contact accepted with marketing consent.');
 else {
   console.error(`ERROR: E-goi did not accept the consented test contact: ${JSON.stringify(body.marketing)}`);
   process.exit(1);
 }
-console.log(`Integration test passed. Test lead labelled "TESTE AUTOMATIZADO ${stamp}" — delete it from Ploomes (funil [PJ] VENDAS) and from the E-goi list.`);
+console.log(`Integration test passed. Test lead labelled "TESTE AUTOMATIZADO ${stamp}" — delete it in three places: the portal (sistema.ecobraz.org), the E-goi list, and the KV vault "ecobraz-leads-cofre" (workflow "Ferramenta — apagar lead do cofre KV", cofre=ecobraz).`);

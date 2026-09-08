@@ -3,13 +3,22 @@ name: Ferramenta — apagar lead do cofre KV (Villanova)
 # Apaga chaves específicas do cofre de leads. Feita para remover os leads de
 # TESTE sem tocar em lead real.
 #
-# ATENÇÃO ao escopo: este cofre é o KV de leads da VILLANOVA. Os leads
-# chamados "TESTE AUTOMATIZADO <carimbo>" NÃO nascem aqui — eles vêm dos
-# scripts do site da Ecobraz (test-collection-endpoint.mjs, e2e-click-test.mjs
-# e auditoria-ecobraz.mjs) e caem no Ploomes (funis INTEGRAÇÃO SITE e
-# [PJ] VENDAS) e na lista do E-goi. Apagar esses é no Ploomes/E-goi, não aqui.
-# Conferido em 08/09/2026: as 8 chaves deste cofre são de 30/07 e nenhuma
-# contém "TESTE AUTOMATIZADO".
+# ESCOLHA O COFRE. Há dois, e confundir os dois faz procurar no lugar errado:
+#
+#   villanova -> KV de leads do villanovaesg.com
+#   ecobraz   -> KV "ecobraz-leads-cofre", onde o Worker ecobraz-coletas grava
+#                TODO lead antes de mandar ao portal
+#
+# Os leads "TESTE AUTOMATIZADO <carimbo>" nascem dos scripts do site da Ecobraz
+# (test-collection-endpoint.mjs, e2e-click-test.mjs, auditoria-ecobraz.mjs) e
+# portanto vivem no cofre ECOBRAZ, no portal (sistema.ecobraz.org) e, havendo
+# consentimento, na lista do E-goi.
+#
+# NÃO estão no Ploomes: ele foi desativado em 30/07/2026 e o destino passou a
+# ser o sistema próprio. A função sendToPloomes segue no Worker apenas como
+# rede de emergência, sem ser chamada.
+#
+# Esta ferramenta alcança só o KV. O portal e o E-goi são fora do alcance dela.
 #
 # Três modos:
 #   listar   -> imprime só os NOMES das chaves (nunca o conteúdo)
@@ -28,6 +37,11 @@ name: Ferramenta — apagar lead do cofre KV (Villanova)
 on:
   workflow_dispatch:
     inputs:
+      cofre:
+        description: 'Qual cofre: villanova ou ecobraz'
+        type: choice
+        options: [villanova, ecobraz]
+        default: ecobraz
       modo:
         description: 'listar | procurar | apagar'
         type: choice
@@ -55,7 +69,9 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      NS: dbcea79a0fee420d873c313a7a2acf50
+      NS_VILLANOVA: dbcea79a0fee420d873c313a7a2acf50
+      NS_ECOBRAZ: 5b56276238f8492fb78d7a4d7d215f85
+      COFRE: ${{ inputs.cofre }}
       MODO: ${{ inputs.modo }}
       TERMO: ${{ inputs.termo }}
       CHAVES: ${{ inputs.chaves }}
@@ -64,6 +80,9 @@ jobs:
       - name: Listar, procurar ou apagar
         run: |
           set -euo pipefail
+          if [ "$COFRE" = "villanova" ]; then NS="$NS_VILLANOVA"; else NS="$NS_ECOBRAZ"; fi
+          export NS
+          echo "Cofre: $COFRE"
           npx wrangler@latest kv key list --namespace-id="$NS" --remote > /tmp/chaves.json
           python3 - <<'EOF'
           import json, os, subprocess, sys

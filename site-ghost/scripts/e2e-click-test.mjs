@@ -132,7 +132,7 @@ await check('formulário completo envia e mostra a tela de sucesso', async () =>
   await page.locator('.form-done').waitFor({state: 'visible', timeout: 20000});
   const text = await page.locator('.form-done').innerText();
   assert(/Solicita[çc][aã]o recebida/i.test(text), 'texto de sucesso ausente');
-  notes.push(`lead de teste criado: "TESTE AUTOMATIZADO ${stamp}" (excluir no funil INTEGRAÇÃO SITE)`);
+  notes.push(`lead de teste criado: "TESTE AUTOMATIZADO ${stamp}" (excluir no portal sistema.ecobraz.org, no E-goi e no cofre KV ecobraz-leads-cofre)`);
 });
 
 // 7. Landing: FAQ sanfona e âncora "Como funciona"
