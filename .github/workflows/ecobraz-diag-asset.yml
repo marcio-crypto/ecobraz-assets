@@ -65,8 +65,20 @@ jobs:
             curl -sS --max-time 25 -D /tmp/h_ghost "$base/$CAMINHO" -o /tmp/b_ghost || echo "FALHA de conexão"
             echo "status/idade/modificação:"
             grep -iE '^(HTTP/|age|last-modified|cache-control|cf-cache-status|x-cache)' /tmp/h_ghost || true
-            echo "conteúdo:"
-            grep -F "$PADRAO" /tmp/b_ghost || echo "(padrão não encontrado)"
+            # Um 3xx aqui não é o arquivo: o Ghost Pro manda o domínio .ghost.io
+            # para o domínio próprio, e seguir esse redirecionamento voltaria
+            # pela mesma borda que estamos tentando contornar. Sem 200, esta
+            # leitura não serve de comparação — e comparar assim mesmo foi o
+            # erro da primeira versão desta ferramenta.
+            if grep -qiE '^HTTP/[0-9.]+ 200' /tmp/h_ghost; then
+              echo "conteúdo:"
+              grep -F "$PADRAO" /tmp/b_ghost || echo "(padrão não encontrado)"
+            else
+              echo "conteúdo: NÃO LIDO — a resposta não foi 200."
+              echo "Provavelmente um redirecionamento do .ghost.io para o domínio próprio."
+              echo "Esta leitura fica INCONCLUSIVA e não entra no veredito."
+              rm -f /tmp/b_ghost
+            fi
           fi
 
           titulo "3. NO DOMÍNIO PÚBLICO"
@@ -77,16 +89,26 @@ jobs:
           grep -F "$PADRAO" /tmp/b_pub || echo "(padrão não encontrado)"
 
           titulo "VEREDITO"
-          if [ -s /tmp/b_ghost ] && [ -s /tmp/b_pub ]; then
-            if diff -q /tmp/b_ghost /tmp/b_pub >/dev/null; then
-              echo "Ghost e domínio público servem o MESMO conteúdo."
-              echo "Se ele está velho, o arquivo novo não chegou ao tema publicado —"
-              echo "purgar cache não resolveria."
-            else
-              echo "Ghost e domínio público servem conteúdos DIFERENTES."
-              echo "O arquivo novo existe no Ghost e algo entre ele e o visitante"
-              echo "está entregando cópia velha."
-            fi
+          if [ ! -s /tmp/b_pub ]; then
+            echo "Sem veredito: a leitura pública veio vazia."
+          elif [ ! -s /tmp/b_ghost ]; then
+            echo "Sem veredito pela comparação: a leitura do Ghost não foi 200."
+            echo
+            echo "O que dá para afirmar mesmo assim, pelos cabeçalhos públicos acima:"
+            echo "  - 'age' alto com 'x-cache: HIT' significa cópia guardada por uma"
+            echo "    camada ANTES do Cloudflare (o cf-cache-status é sobre a borda"
+            echo "    do cliente, não sobre essa)."
+            echo "  - um 'cache-control: max-age' de meses ou de um ano quer dizer que"
+            echo "    essa cópia NÃO vai expirar sozinha em tempo útil."
+            echo "  - se o repositório (leitura 1) e o público (leitura 3) divergem"
+            echo "    nesse cenário, purgar a borda não resolve: o caminho precisa"
+            echo "    mudar de nome, ou alguém com acesso àquela camada precisa limpá-la."
+          elif diff -q /tmp/b_ghost /tmp/b_pub >/dev/null; then
+            echo "Ghost e domínio público servem o MESMO conteúdo."
+            echo "Se ele está velho, o arquivo novo não chegou ao tema publicado —"
+            echo "purgar cache não resolveria."
           else
-            echo "Não deu para comparar: uma das leituras veio vazia."
+            echo "Ghost e domínio público servem conteúdos DIFERENTES."
+            echo "O arquivo novo existe no Ghost e algo entre ele e o visitante"
+            echo "está entregando cópia velha."
           fi
