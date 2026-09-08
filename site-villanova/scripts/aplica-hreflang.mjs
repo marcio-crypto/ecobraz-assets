@@ -11,14 +11,27 @@ const FIM = '<!--/vn-hreflang-->';
 const adminUrl = String(process.env.VILLANOVA_GHOST_ADMIN_URL || '').replace(/\/$/, '');
 const adminKey = String(process.env.VILLANOVA_GHOST_ADMIN_API_KEY || '');
 const [id, secret] = adminKey.split(':');
-const agora = Math.floor(Date.now() / 1000);
 const enc = (v) => Buffer.from(JSON.stringify(v)).toString('base64url');
-const unsigned = `${enc({alg: 'HS256', typ: 'JWT', kid: id})}.${enc({iat: agora, exp: agora + 300, aud: '/admin/'})}`;
-const token = `${unsigned}.${crypto.createHmac('sha256', Buffer.from(secret, 'hex')).update(unsigned).digest('base64url')}`;
-const headers = {Authorization: `Ghost ${token}`, 'Accept-Version': 'v5.0', 'Content-Type': 'application/json'};
+// Token novo a cada chamada: o JWT do Ghost vale 5 minutos e esta rotina faz
+// centenas de chamadas. Um token unico gerado no inicio funciona enquanto a
+// rodada e rapida e passa a devolver 401 no meio assim que ela demora — falha
+// silenciosa que so aparece na metade do trabalho feito.
+const headers = () => {
+  const agora = Math.floor(Date.now() / 1000);
+  const base = `${enc({alg: 'HS256', typ: 'JWT', kid: id})}.${enc({iat: agora, exp: agora + 300, aud: '/admin/'})}`;
+  const token = `${base}.${crypto.createHmac('sha256', Buffer.from(secret, 'hex')).update(base).digest('base64url')}`;
+  return {Authorization: `Ghost ${token}`, 'Accept-Version': 'v5.0', 'Content-Type': 'application/json'};
+};
 
+// Sem timeout, uma chamada que nao responde trava a rodada inteira sem dizer
+// nada. 30 segundos e folgado para a API do Ghost e curto para nao pendurar.
 const api = async (method, path, body) => {
-  const r = await fetch(`${adminUrl}/ghost/api/admin/${path}`, {method, headers, body: body ? JSON.stringify(body) : undefined});
+  const r = await fetch(`${adminUrl}/ghost/api/admin/${path}`, {
+    method,
+    headers: headers(),
+    body: body ? JSON.stringify(body) : undefined,
+    signal: AbortSignal.timeout(30000),
+  });
   if (!r.ok) throw new Error(`${method} ${path}: ${r.status} ${(await r.text()).slice(0, 300)}`);
   return r.json();
 };
