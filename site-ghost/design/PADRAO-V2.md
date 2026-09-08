@@ -58,7 +58,9 @@ NF, cadeia de custódia) com B2C (geladeira, "a gente busca") no mesmo fluxo.
    mudar, **não corrija só a página que você está olhando**: rode o workflow
    "Ferramenta — coleta pública de avaliações do Google" para ler o valor atual
    no perfil, e troque número **e** mês em todo o `site-ghost/` de uma vez.
-   Último acerto: 354 (ago/2026) → 357 (set/2026), em 08/09/2026.
+   Último acerto: 354 (ago/2026) → 357 (set/2026), em 08/09/2026 —
+   nota **4,9** e total **357** conferidos na tela do próprio Perfil da
+   Empresa no Google ("Ecobraz Emigre · 4,9 ★ (357)"), não só informados.
 6. Timeline "Como funciona" em 4 passos numerados (não cards).
 7. FAQ em `details/summary` — "sem letra miúda" como tom.
 
