@@ -8,6 +8,10 @@ Disallow: /email/
 Disallow: /r/
 Disallow: /webmentions/receive/
 Disallow: /p/
+# /cdn-cgi/ is Cloudflare's own endpoint, not ours. Its email-protection URL
+# answers 404 with Cloudflare's page and shows up in Search Console as a site
+# error that no redirect of ours can fix. Blocking it stops the crawl.
+Disallow: /cdn-cgi/
 
 # Search and AI crawlers — explicitly allowed
 # (same administrative exceptions as the general group)
@@ -35,5 +39,6 @@ Disallow: /email/
 Disallow: /r/
 Disallow: /webmentions/receive/
 Disallow: /p/
+Disallow: /cdn-cgi/
 
 Sitemap: https://www.villanovaesg.com/sitemap.xml

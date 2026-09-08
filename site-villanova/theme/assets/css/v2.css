@@ -281,3 +281,90 @@ details[open] summary::after{content:"–"}
    duas das seis páginas em italiano — as outras quatro serviam o rodapé em
    inglês. Não recoloque a lista aqui. */
 .only-it{display:none !important}
+
+/* ============================ MENU DE CELULAR ============================
+   Medido em 08/09/2026 num Chromium real, em 24 páginas x 3 telas: TODA página
+   rolava para o lado no celular, e nenhuma no desktop. Duas causas.
+
+   1) A barra do topo nunca teve regra de celular. Sobravam a marca e o
+      .top-right lado a lado: 508px de conteúdo para 390px de tela. O .top-cta
+      tem white-space:nowrap, então não quebrava nem encolhia.
+
+   2) Pior nas páginas em português e italiano: o lang.css liga o menu do idioma
+      com display:revert/flex !important, e isso VENCE a regra
+      @media(max-width:900px){nav.main{display:none}} do main.css, que não é
+      !important. Resultado medido em /it/ a 360px: 825px de conteúdo, com o
+      menu inteiro esparramado na barra.
+
+   3) O cabeçalho em inglês não cabe entre 901px e 1024px: precisa de 1026px e
+      só passa a caber a partir de 1025px, medido de pixel em pixel. Isso é
+      anterior a esta mudança — está igual na versão de antes — e 1024x768 é o
+      iPad deitado. Por isso o corte aqui é 1024px e não 900px: é a largura
+      medida em que a barra volta a caber, não um número redondo escolhido.
+
+   E o menu sumia no celular sem nada no lugar: Serviços, Base de conhecimento,
+   Publicações, SEMM e A firma só eram alcançáveis rolando até o rodapé.
+
+   A REGRA QUE NÃO PODE SER ESQUECIDA AQUI: quem decide qual idioma aparece é o
+   lang.css, com !important. Nenhuma regra deste bloco disputa display com ele
+   em classe que ele conheça — .nav-wrap, .menu-cta-wrap, .menu-btn e .menu-cta
+   são classes que ele nunca viu. A única exceção é esconder o .top-cta no
+   celular, e ali a especificidade é maior de propósito (três classes contra
+   duas classes e um elemento), senão nas páginas PT/IT o botão ficaria. */
+
+.nav-wrap{display:contents}
+.menu-cta-wrap{display:none}
+.menu-btn{display:none}
+
+/* O desenho decorativo é feito para sangrar pela borda da faixa escura, mas sem
+   isto ele empurra a página em vez de ser cortado: .h2arc está em right:-60px
+   com 560px de largura, e .article-icon em right:30px. É clip e não hidden de
+   propósito — clip corta sem virar caixa de rolagem, e assim não quebra nenhum
+   position:sticky de dentro. */
+.hero,.page-hero,.article-head,.final{overflow-x:clip}
+
+@media(max-width:1024px){
+  .topbar{position:relative}
+  .topbar .wrap{gap:12px}
+  /* Fluido em vez de um valor fixo: em 360px "VILLANOVA ESG" a 17px pede 175px
+     e só sobram 167px ao lado do seletor de idioma e do botão do menu, então
+     quebrava em duas linhas — e a referência aprovada tem a marca em uma linha
+     só. Medido com o próprio Chromium em 320, 360 e 390. */
+  .brand-name{font-size:clamp(15.5px,4.4vw,17px)}
+
+  /* Especificidade alta e !important porque nas páginas PT/IT o lang.css
+     manda o .top-cta aparecer. Ele desce para dentro do painel. */
+  .topbar .top-right .top-cta{display:none!important}
+
+  .menu-btn{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:5px;
+    width:42px;height:42px;flex-shrink:0;padding:0;cursor:pointer;
+    background:transparent;border:1px solid #2C4162}
+  .menu-btn span{display:block;width:20px;height:2px;background:#C9D4E4;
+    transition:transform .18s ease,opacity .18s ease}
+  .menu-btn[aria-expanded="true"] span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+  .menu-btn[aria-expanded="true"] span:nth-child(2){opacity:0}
+  .menu-btn[aria-expanded="true"] span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+
+  .nav-wrap{display:none;position:absolute;left:0;right:0;top:100%;z-index:60;
+    padding:6px 20px 20px;background:var(--navy);border-top:1px solid #2C4162;
+    box-shadow:0 18px 44px rgba(4,12,24,.45)}
+  .nav-wrap.is-open{display:flex;flex-direction:column}
+
+  /* display:flex aqui vence o nav.main{display:none} do main.css por
+     especificidade. Onde o lang.css manda (PT com revert, IT com flex), ele
+     continua ganhando por !important — e o flex-direction:column vale nos dois,
+     porque o lang.css não mexe em flex-direction. */
+  .nav-wrap nav.main{display:flex;flex-direction:column;gap:0;width:100%}
+  .nav-wrap nav.main a{display:block;padding:14px 2px;font-size:15px;color:#C9D4E4;
+    border-bottom:1px solid rgba(255,255,255,.09)}
+  .nav-wrap nav.main a:hover{color:#fff}
+
+  /* O <a> herda display:inline!important do lang.css nas páginas PT/IT, mas um
+     filho de flex é blocado pela própria especificação — por isso o botão fica
+     de largura cheia sem eu precisar disputar display com o lang.css. */
+  .menu-cta-wrap{display:flex;flex-direction:column;margin-top:16px}
+  .menu-cta{background:linear-gradient(135deg,var(--gold),#a2762c);color:#fff;
+    text-decoration:none;text-align:center;padding:14px 18px;font-size:13.5px;
+    font-weight:600;letter-spacing:.04em}
+  .menu-cta:hover{filter:brightness(1.08)}
+}

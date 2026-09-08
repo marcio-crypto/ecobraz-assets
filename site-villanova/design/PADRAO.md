@@ -74,6 +74,34 @@ NUNCA usar emoji nem bibliotecas externas de ícones.
   sem clientes nomeados sem autorização escrita · prova social só com
   fato verificável (18 DOIs, ECESP, desde 2011, 1 dia útil)
 
+## Celular (acrescentado em 08/09/2026, medido)
+
+O padrão não tinha nenhuma regra de celular até aqui, e a falta custou caro:
+toda página do site rolava para o lado no telefone, em todos os idiomas, e o
+menu do topo desaparecia abaixo de 900px sem nada no lugar — as páginas de
+serviço só eram alcançáveis rolando até o rodapé.
+
+- **A barra do topo tem de caber.** Abaixo de 1025px: marca + seletor de idioma
+  + botão do menu, e nada mais. O botão de pedido desce para dentro do painel.
+  1025px não é número redondo: é a largura, medida de pixel em pixel, em que o
+  cabeçalho em inglês (que precisa de 1026px) volta a caber.
+- **Menu sanfona** abaixo de 1025px, painel navy abaixo da barra, links em
+  linhas separadas por filete, e o botão dourado do padrão como último item.
+- **Quem decide o idioma é o `lang.css`**, com `!important`. Nenhuma regra nova
+  deve disputar `display` com ele em classe `only-en/only-pt/only-it` — perde.
+  Use classe própria no recipiente. Foi assim que o menu apareceu esparramado
+  na barra nas páginas PT e IT: `display:revert !important` venceu a regra de
+  celular do `main.css`, que não era `!important`.
+- **Desenho decorativo que sangra** (`.h2arc`, `.article-icon`) exige
+  `overflow-x:clip` na faixa que o contém, senão ele empurra a página. É `clip`
+  e não `hidden`: `clip` corta sem virar caixa de rolagem e não quebra
+  `position:sticky` de dentro.
+- **Conferir antes de publicar** em 320, 360, 390, 768, 900, 1024 e 1025px, nos
+  três idiomas, com o menu fechado e aberto. `scripts/auditoria-navegador.mjs`
+  faz isso no site publicado; a prévia local roda com o Chromium do ambiente.
+- **NUNCA usar `isMobile` do Playwright** para essa conferência: ele ignora a
+  tela pedida (390x844 vira 500x1080) e devolve resultado limpo e falso.
+
 ## Idiomas (adaptação, não tradução)
 
 - **PT**: setores nomeados (aço, alumínio, café, soja, carne, couro,

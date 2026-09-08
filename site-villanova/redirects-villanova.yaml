@@ -18,6 +18,7 @@
   "^\\/tag\\/esg-capital-strategy\\/?$": "/eu-brazil-supplier-evidence-knowledge-base/"
   "^\\/tag\\/eu-regulatory-risk\\/?$": "/eu-brazil-supplier-evidence-knowledge-base/"
   "^\\/page\\/2\\/?$": "/"
+  "^\\/tag\\/cbam-carbon-exposure\\/page\\/2\\/?$": "/tag/cbam-carbon-exposure/"
   "^\\/the-cfo-checklist-for-eu-brazil-supplier-evidence-2\\/?$": "/the-cfo-checklist-for-eu-brazil-supplier-evidence/"
   "^\\/the-eu-brazil-evidence-readiness-matrix-2\\/?$": "/the-eu-brazil-evidence-readiness-matrix/"
   "^\\/eu-textile-regulation-product-data-market-access-risk-2\\/?$": "/eu-textile-regulation-product-data-market-access-risk/"
