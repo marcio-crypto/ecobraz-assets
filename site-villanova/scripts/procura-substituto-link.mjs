@@ -24,13 +24,26 @@ const titulo = (html) => {
   return t.replace(/\s+/g, ' ').slice(0, 110);
 };
 
+// Responder 200 não basta. Muitos sites institucionais mandam o endereço que
+// não existe mais para a home ou para um seletor de idioma, e isso volta 200 —
+// é o "soft 404". Como fonte de citação não serve para nada: o leitor cai na
+// capa do site e não encontra o documento. Aqui isso é detectado comparando o
+// caminho pedido com o caminho onde a resposta realmente parou.
+const capaOuSeletor = (pedido, final) => {
+  let p, f;
+  try { p = new URL(pedido); f = new URL(final); } catch { return false; }
+  if (f.pathname === '/' || /select-language|index_en$/.test(f.pathname + f.search)) return true;
+  const primeiro = (u) => u.pathname.split('/').filter(Boolean)[0] || '';
+  return Boolean(primeiro(p)) && primeiro(p) !== primeiro(f);
+};
+
 const testa = async (url) => {
   try {
     const r = await fetch(url, {headers: NAVEGADOR, redirect: 'follow', signal: AbortSignal.timeout(25000)});
     const corpo = r.ok ? await r.text() : '';
-    return {status: r.status, final: r.url, titulo: r.ok ? titulo(corpo) : ''};
+    return {status: r.status, final: r.url, titulo: r.ok ? titulo(corpo) : '', desviado: r.ok && capaOuSeletor(url, r.url)};
   } catch (e) {
-    return {status: `erro: ${String(e.message || e).slice(0, 40)}`, final: url, titulo: ''};
+    return {status: `erro: ${String(e.message || e).slice(0, 40)}`, final: url, titulo: '', desviado: false};
   }
 };
 
@@ -48,11 +61,14 @@ for (const alvo of alvos) {
   for (const c of [...new Set(candidatos)]) {
     const r = await testa(c);
     const ok = typeof r.status === 'number' && r.status >= 200 && r.status < 300;
-    console.log(`  [${String(r.status).padStart(3)}] ${ok ? 'VIVO ' : '     '} ${c}`);
+    const marca = !ok ? '     ' : r.desviado ? 'SOFT ' : 'VIVO ';
+    console.log(`  [${String(r.status).padStart(3)}] ${marca} ${c}`);
     if (ok) {
       if (r.final !== c) console.log(`         chega em: ${r.final}`);
       if (r.titulo) console.log(`         título:   ${r.titulo}`);
+      if (r.desviado) console.log('         NÃO SERVE: caiu na capa ou no seletor de idioma (soft 404).');
     }
   }
 }
-console.log('\nNada foi alterado — este script só lê. A escolha da nova fonte é editorial.');
+console.log('\nVIVO = serve como fonte. SOFT = responde 200 mas joga o leitor na capa: não serve.');
+console.log('Nada foi alterado — este script só lê. A escolha da nova fonte é editorial.');
