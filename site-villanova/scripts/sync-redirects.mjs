@@ -34,22 +34,38 @@ const regras = (texto) => {
 const local = await fs.readFile(ARQUIVO, 'utf8');
 const rLocal = regras(local);
 
+// A Integration Key nao tem permissao de leitura em redirects/download/
+// (403 NoPermissionError): esse endpoint exige token de usuario. Antes isso
+// derrubava o script inteiro — inclusive no modo enviar, que nem chegava a
+// tentar gravar. Comparar e util, mas nao e pre-requisito para enviar: as duas
+// permissoes sao separadas na API do Ghost, e so tentando da para saber.
 const baixa = await fetch(`${adminUrl}/ghost/api/admin/redirects/download/`, {
   headers: {Authorization: `Ghost ${token}`, 'Accept-Version': 'v5.0'},
 });
-if (!baixa.ok) throw new Error(`Download de redirects falhou: ${baixa.status}`);
-const remoto = await baixa.text();
+if (!baixa.ok) {
+  console.log(`AVISO: nao foi possivel BAIXAR os redirects ativos (${baixa.status}).`);
+  console.log('       Sem isso nao da para comparar repo e site.');
+  if (MODO === 'comparar') {
+    console.log(`\nRegras no repositorio: ${rLocal.size}`);
+    console.log('Modo comparar sem leitura: nada a relatar. Rode em modo enviar para tentar gravar.');
+    process.exit(0);
+  }
+  console.log('       Seguindo mesmo assim para TENTAR o envio.\n');
+}
+const remoto = baixa.ok ? await baixa.text() : '';
 // O Ghost devolve JSON quando o site foi configurado pelo formato antigo.
-const rRemoto = remoto.trimStart().startsWith('[')
-  ? new Map(JSON.parse(remoto).map((r) => [r.from, r.to]))
-  : regras(remoto);
+const rRemoto = !remoto ? new Map()
+  : remoto.trimStart().startsWith('[')
+    ? new Map(JSON.parse(remoto).map((r) => [r.from, r.to]))
+    : regras(remoto);
 
 console.log(`Regras no repositório: ${rLocal.size}`);
-console.log(`Regras ativas no Ghost: ${rRemoto.size}`);
+console.log(`Regras ativas no Ghost: ${baixa.ok ? rRemoto.size : 'desconhecido (sem permissão de leitura)'}`);
 
-const faltando = [...rLocal].filter(([de]) => !rRemoto.has(de));
-const sobrando = [...rRemoto].filter(([de]) => !rLocal.has(de));
-const diferentes = [...rLocal].filter(([de, para]) => rRemoto.has(de) && rRemoto.get(de) !== para);
+// Sem leitura, toda regra pareceria "faltando" — seria relatorio inventado.
+const faltando = baixa.ok ? [...rLocal].filter(([de]) => !rRemoto.has(de)) : [];
+const sobrando = baixa.ok ? [...rRemoto].filter(([de]) => !rLocal.has(de)) : [];
+const diferentes = baixa.ok ? [...rLocal].filter(([de, para]) => rRemoto.has(de) && rRemoto.get(de) !== para) : [];
 
 console.log(`\nNo repo e NÃO no site: ${faltando.length}`);
 faltando.slice(0, 20).forEach(([de, para]) => console.log(`   + ${de} -> ${para}`));
@@ -70,5 +86,15 @@ const envio = await fetch(`${adminUrl}/ghost/api/admin/redirects/upload/`, {
   headers: {Authorization: `Ghost ${token}`, 'Accept-Version': 'v5.0'},
   body: corpo,
 });
-if (!envio.ok) throw new Error(`Upload de redirects falhou: ${envio.status} ${(await envio.text()).slice(0, 400)}`);
+if (!envio.ok) {
+  const detalhe = (await envio.text()).slice(0, 400);
+  if (envio.status === 403) {
+    console.log(`\nUpload recusado (403): a Integration Key tambem nao grava redirects.`);
+    console.log('Este endpoint so aceita token de usuario — e trabalho de painel:');
+    console.log('  Ghost > Settings > Labs > Redirects > Upload redirects');
+    console.log(`  arquivo: ${ARQUIVO} (${rLocal.size} regras)`);
+    process.exit(1);
+  }
+  throw new Error(`Upload de redirects falhou: ${envio.status} ${detalhe}`);
+}
 console.log(`\nArquivo enviado ao Ghost: ${rLocal.size} regras agora ativas.`);
