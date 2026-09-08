@@ -52,6 +52,19 @@
     <script src="https://analytics.ahrefs.com/analytics.js" data-key="pyjZvQbqtsTMr2VxxHE5Uw" async></script>
     <!-- Ahrefs — verificação de propriedade do site (método HTML tag) -->
     <meta name="ahrefs-site-verification" content="414fe2eda6a9d59fe6d45ee353290f541eb057edd819f1a7db4e0aca809687c5">
+    {{!-- Cartão social dos arquivos de tag e de autor. O Ghost não gera og:image
+         nem cartão do X para essas páginas quando não há imagem de capa, e a
+         auditoria de 01/09/2026 apontou as oito como "Open Graph incompleto" e
+         "sem cartão do X". A arte é design/og-default.html, gerada em PNG por
+         scripts/renderiza-og.mjs — não editar o PNG à mão. --}}
+    {{#is "tag, author"}}
+    <meta property="og:image" content="{{asset "images/og-default.png" absolute="true"}}">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Villanova ESG — EU–Brazil supplier evidence">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="{{asset "images/og-default.png" absolute="true"}}">
+    {{/is}}
     {{!-- Identidade da marca em dados estruturados (schema.org), em todas as
          páginas. Serve para o Google e os chats de IA entenderem que "Villanova
          ESG" e "Marcio Villanova" são entidades definidas, com página oficial,
@@ -74,7 +87,20 @@
             "height": 180
           },
           "description": "EU–Brazil supplier evidence advisory: reviews whether supplier documentation stands up as buyer-readable evidence for European procurement, compliance, legal and finance teams. Advisory work only — not audit, certification or verification.",
+          "disambiguatingDescription": "Villanova ESG is an independent EU–Brazil supplier evidence and regulatory risk advisory founded by Marcio Villanova. It is not affiliated with, connected to, or endorsed by Villanova University or any academic institution.",
+          "slogan": "Brazilian execution must become European regulatory defensibility.",
+          "foundingDate": "2026",
           "founder": {"@id": "https://www.villanovaesg.com/#marcio-villanova"},
+          "sameAs": [
+            "https://www.linkedin.com/company/villanova-esg/",
+            "https://www.f6s.com/company/villanova-esg"
+          ],
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "email": "contact@villanovaesg.com",
+            "contactType": "commercial inquiry",
+            "availableLanguage": ["English", "Portuguese", "Italian"]
+          },
           "mainEntityOfPage": {"@id": "https://www.villanovaesg.com/the-firm/"},
           "areaServed": [
             {"@type": "Place", "name": "European Union"},
@@ -95,12 +121,21 @@
           "@type": "Person",
           "@id": "https://www.villanovaesg.com/#marcio-villanova",
           "name": "Marcio Villanova",
+          "givenName": "Marcio",
+          "familyName": "Villanova",
+          "disambiguatingDescription": "Marcio Villanova is a Brazilian executive, founder of Villanova ESG and CEO of Ecobraz. He is not affiliated with Villanova University.",
           "url": "https://www.villanovaesg.com/marcio-villanova/",
           "mainEntityOfPage": {"@id": "https://www.villanovaesg.com/marcio-villanova/"},
           "image": "https://www.villanovaesg.com/assets/images/marcio-retrato.jpg",
           "jobTitle": ["Founder, Villanova ESG", "CEO, Ecobraz"],
           "description": "Founder of Villanova ESG and CEO of Ecobraz since 2011. Author of the Supplier Evidence Maturity Model (SEMM). Works on turning Brazilian operational proof into evidence a European buyer can read, test, archive and defend.",
-          "sameAs": ["https://orcid.org/0009-0001-8072-6287"],
+          "sameAs": [
+            "https://orcid.org/0009-0001-8072-6287",
+            "https://www.linkedin.com/in/marcio-villanova",
+            "https://zenodo.org/records/20317248",
+            "https://zenodo.org/records/20346263",
+            "https://zenodo.org/records/20371672"
+          ],
           "identifier": {
             "@type": "PropertyValue",
             "propertyID": "ORCID",
@@ -126,6 +161,23 @@
           "url": "https://ecobraz.org/",
           "description": "Brazilian reverse-logistics and e-waste management operation serving corporate clients since 2011: collection, custody, treatment, destination and the traceability records those activities generate. Separate organisation from Villanova ESG, connected by one person.",
           "foundingDate": "2011"
+        },
+        {
+          "@type": "Service",
+          "@id": "https://www.villanovaesg.com/#supplier-evidence-review-service",
+          "name": "Supplier Evidence File Assessment",
+          "serviceType": "Supplier evidence review and buyer-readiness assessment",
+          "url": "https://www.villanovaesg.com/supplier-evidence-file-assessment/",
+          "provider": {"@id": "https://www.villanovaesg.com/#organization"},
+          "areaServed": [
+            {"@type": "Country", "name": "Brazil"},
+            {"@type": "AdministrativeArea", "name": "European Union"}
+          ],
+          "audience": [
+            {"@type": "Audience", "audienceType": "Brazilian suppliers exposed to European buyers"},
+            {"@type": "Audience", "audienceType": "CFOs, boards, procurement, compliance and legal teams"}
+          ],
+          "description": "Advisory review that identifies supplier evidence gaps, buyer-readiness issues and documentation priorities for companies exposed to European buyer scrutiny."
         },
         {
           "@type": "WebSite",

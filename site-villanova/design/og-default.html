@@ -1,0 +1,66 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  /* Cartão social padrão — tokens do PADRAO.md (v2, aprovado 30/07/2026).
+     1200x630 é o tamanho que Google, LinkedIn e X esperam. */
+  :root{--navy:#061426;--navy2:#0b2a52;--gold:#b88a3d;--gold-l:#d9b573;--paper:#faf8f4}
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:1200px;height:630px;overflow:hidden}
+  html{background:var(--navy)}
+  body{
+       font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+       background:
+         radial-gradient(900px 520px at 78% 22%, #123a6b 0%, rgba(18,58,107,0) 62%),
+         linear-gradient(160deg, var(--navy) 55%, var(--navy2));
+       color:#fff;position:relative}
+  /* rota Brasil -> Europa, pontilhada, como no herói */
+  .rota{position:absolute;inset:0}
+  .wrap{position:relative;height:100%;display:flex;flex-direction:column;
+        justify-content:space-between;padding:54px 68px}
+  .marca{display:flex;align-items:center;gap:18px}
+  .marca .nome{font-size:26px;letter-spacing:.03em;font-weight:700}
+  .marca .nome span{color:var(--gold-l)}
+  .marca .tag{font-size:10.5px;letter-spacing:.26em;color:#8FA0B6;margin-top:5px}
+  .eyebrow{display:flex;align-items:center;gap:12px;font-size:14px;
+           letter-spacing:.2em;text-transform:uppercase;color:var(--gold-l)}
+  .eyebrow::before{content:"";width:26px;height:2px;background:var(--gold)}
+  h1{font-family:Georgia,"Times New Roman",serif;font-weight:600;
+     font-size:52px;line-height:1.14;margin:18px 0 16px;max-width:19ch}
+  .sub{font-size:19.5px;line-height:1.5;color:#C9D4E4;max-width:46ch}
+  .rodape{display:flex;align-items:center;justify-content:space-between;
+          border-top:1px solid rgba(255,255,255,.14);padding-top:18px}
+  .rodape .site{font-size:17px;color:#AEBDD2;letter-spacing:.02em}
+  .rodape .aviso{font-size:13.5px;color:#7E93B5}
+</style></head>
+<body>
+  <svg class="rota" width="1200" height="630" viewBox="0 0 1200 630" fill="none" aria-hidden="true">
+    <path d="M735 505 Q 900 330 1105 300" stroke="#b88a3d" stroke-width="2.2"
+          stroke-dasharray="1 9" stroke-linecap="round" opacity=".7"/>
+    <circle cx="735" cy="505" r="7" fill="#b88a3d"/>
+    <circle cx="1105" cy="300" r="7" fill="#d9b573"/>
+    <circle cx="1035" cy="250" r="215" stroke="rgba(255,255,255,.055)" stroke-width="1.5"/>
+    <circle cx="1035" cy="250" r="140" stroke="rgba(255,255,255,.04)" stroke-width="1.5"/>
+  </svg>
+  <div class="wrap">
+    <div class="marca">
+      <svg width="52" height="59" viewBox="0 0 60 68" aria-hidden="true">
+        <path d="M30 2 56 12v26c0 14-12 22-26 28C16 60 4 52 4 38V12Z" fill="#16324F" stroke="#2C4162"/>
+        <path d="M30 2 56 12v26c0 14-12 22-26 28V2Z" fill="#3E6B4A"/>
+        <path d="M30 40l7 8-7 8-7-8Z" fill="#C9A24B"/>
+      </svg>
+      <div>
+        <div class="nome">VILLANOVA <span>ESG</span></div>
+        <div class="tag">EU&ndash;BRAZIL SUPPLIER EVIDENCE</div>
+      </div>
+    </div>
+    <div>
+      <div class="eyebrow">Supplier evidence</div>
+      <h1>Evidence a European buyer can read, test and defend.</h1>
+      <p class="sub">Advisory review of Brazilian supplier documentation for CBAM, EUDR, CSDDD and contract risk.</p>
+    </div>
+    <div class="rodape">
+      <div class="site">villanovaesg.com</div>
+      <div class="aviso">Advisory only &mdash; not audit, certification or assurance.</div>
+    </div>
+  </div>
+</body></html>
