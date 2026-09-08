@@ -1,0 +1,37 @@
+name: Villanova — alinhar og:title ao título
+
+# O <title> e o og:title divergiam em algumas páginas. Não é erro por si só (um
+# é o do Google, o outro o do LinkedIn/WhatsApp), mas no villanovaesg.com a
+# maioria das páginas já os tem iguais — as divergentes eram exceção sem
+# decisão por trás.
+#
+# O conserto não copia o título para dentro do og_title: APAGA o og_title. O
+# Ghost então deriva o og:title do próprio título, e os dois não podem mais
+# divergir sozinhos quando alguém ajustar o título para o Google.
+
+on:
+  workflow_dispatch:
+    inputs:
+      modo:
+        description: 'simular (só mostra) ou aplicar'
+        type: choice
+        options: [simular, aplicar]
+        default: simular
+      slugs:
+        description: 'Slugs separados por espaço (vazio = todos os divergentes)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  alinhar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Alinhar og:title
+        env:
+          VILLANOVA_GHOST_ADMIN_URL: ${{ secrets.VILLANOVA_GHOST_ADMIN_URL }}
+          VILLANOVA_GHOST_ADMIN_API_KEY: ${{ secrets.VILLANOVA_GHOST_ADMIN_API_KEY }}
+        run: node site-villanova/scripts/alinha-og-title.mjs ${{ inputs.modo }} ${{ inputs.slugs }}

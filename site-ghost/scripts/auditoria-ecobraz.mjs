@@ -221,7 +221,7 @@ if (ENVIAR_LEAD) {
     await ga.locator('.form-done').waitFor({state: 'visible', timeout: 25000});
     if (await esperaEvento(ga, 'generate_lead')) ok('evento generate_lead registrado no envio do formulário');
     else falha('envio do formulário NÃO registrou generate_lead');
-    notas.push(`lead de teste criado: "TESTE AUTOMATIZADO ${stamp}" — excluir no funil INTEGRAÇÃO SITE`);
+    notas.push(`lead de teste criado: "TESTE AUTOMATIZADO ${stamp}" — excluir no portal (sistema.ecobraz.org), no E-goi e no cofre KV ecobraz-leads-cofre`);
   } catch (e) { falha(`fluxo de envio do formulário falhou: ${String(e.message).slice(0, 160)}`); }
 } else {
   notas.push('envio real do formulário NÃO executado (sem --enviar-lead); generate_lead não verificado ao vivo');
