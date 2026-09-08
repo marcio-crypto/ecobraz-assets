@@ -32,8 +32,20 @@ const BASE = 'https://www.villanovaesg.com';
 const PASTA = process.env.PASTA_SAIDA || 'auditoria-navegador';
 fs.mkdirSync(PASTA, { recursive: true });
 
+// NÃO PONHA isMobile DE VOLTA AQUI. Medido em 08/09/2026 pelo
+// diag-banner-celular.mjs: com isMobile:true neste Chromium sem interface a
+// tela pedida É IGNORADA — pedi 390x844 e a janela virou 500x1080, e um clique
+// normal no banner de cookies passou a falhar por causa disso. A primeira
+// rodada desta auditoria mediu o celular a 500x1080 sem eu perceber, e o
+// "zero rolagem horizontal no celular" que ela produziu não valia nada.
+//
+// Sem isMobile a tela é respeitada (conferido: 390x844 e 360x640 saem certos).
+// O que decide rolagem lateral e quebra de layout aqui é a LARGURA da janela,
+// porque todo o CSS do tema usa media query de largura — nada depende de
+// touch nem do user agent.
 const TELAS = [
   { nome: 'celular', viewport: { width: 390, height: 844 }, movel: true },
+  { nome: 'celular pequeno', viewport: { width: 360, height: 640 }, movel: true },
   { nome: 'desktop', viewport: { width: 1366, height: 768 }, movel: false },
 ];
 
@@ -78,8 +90,6 @@ const paginas = async () => {
 async function auditaPagina(navegador, url, tela) {
   const ctx = await navegador.newContext({
     viewport: tela.viewport,
-    isMobile: tela.movel,
-    hasTouch: tela.movel,
     locale: 'en-US',
     userAgent: tela.movel
       ? 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
