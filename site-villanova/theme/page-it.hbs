@@ -2,12 +2,11 @@
 {{! Home IT v2 — sezione italiana (Lote 5). Prospettiva del compratore. }}
 {{#contentFor "htmlLang"}}it{{/contentFor}}
 
-{{#contentFor "hreflang"}}
-<link rel="alternate" hreflang="en" href="{{@site.url}}/">
-<link rel="alternate" hreflang="pt-BR" href="{{@site.url}}/pt/">
-<link rel="alternate" hreflang="it" href="{{@site.url}}/it/">
-<link rel="alternate" hreflang="x-default" href="{{@site.url}}/">
-{{/contentFor}}
+{{! O hreflang destas três páginas vem do code injection, gerado a partir de
+    content/pares-idioma.json pelo aplica-hreflang.mjs — mesma fonte de todo o
+    resto do site. Havia um bloco fixo aqui no template: o resultado era hreflang
+    DUPLICADO e divergente na home, em /pt/ e em /it/, e o bloco do template não
+    declarava o italiano. Não recoloque o bloco aqui. }}
 
 <section class="hero h2hero">
   <svg class="h2arc" width="560" height="420" viewBox="0 0 560 420" fill="none" aria-hidden="true">
