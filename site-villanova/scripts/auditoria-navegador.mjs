@@ -23,6 +23,21 @@
 // páginas institucionais antes dos posts, e (b) cada página é relatada assim que
 // termina. Se der tempo limite no meio, o que já foi medido está no log.
 //
+// O QUE ELA JÁ ENCONTROU (08/09/2026, 24 páginas x 3 telas = 72 carregamentos):
+// zero erro de JavaScript, zero requisição falhada, zero imagem quebrada, zero
+// link interno quebrado — e 48 de 72 com ROLAGEM HORIZONTAL. Os 48 são as 24
+// páginas nas duas telas de celular; nenhuma no desktop. Sempre os mesmos
+// 508px de conteúdo, em toda página, porque a causa está no cabeçalho:
+//
+//   <div class="top-right">      227px → 508px
+//   <a class="top-cta only-en">  285px → 508px   "Submit a buyer request"
+//
+// .topbar .wrap é flex com space-between e NÃO TEM regra de celular — o bloco
+// @media(max-width:900px) do main.css só esconde nav.main e .brand-tag. O botão
+// tem white-space:nowrap, então não quebra nem encolhe. Segunda fonte, menor:
+// os SVGs decorativos absolutos (.h2arc na home/pt/it, .article-icon nas
+// internas) sem overflow:hidden na seção que os contém.
+//
 // Uso: node auditoria-navegador.mjs [url1 url2 ...]
 //      Sem argumentos, lê o sitemap e respeita LIMITE_PAGINAS (padrão 24).
 import { chromium } from 'playwright';
@@ -299,7 +314,7 @@ if (!linksRuins.length) linha('Nenhum. Todos os links internos responderam abaix
 for (const l of linksRuins) linha(`  ✗ ${l}`);
 
 linha('\n\n=========================== RESUMO ============================');
-linha(`Páginas auditadas .................. ${lista.length} (x2 telas = ${resultados.length} carregamentos)`);
+linha(`Páginas auditadas .................. ${lista.length} (x${TELAS.length} telas = ${resultados.length} carregamentos)`);
 linha(`Carregamentos com algum problema ... ${paginasComProblema}`);
 linha(`Erros de JavaScript ................ ${totalErros}`);
 linha(`Requisições com falha .............. ${totalRede}`);
