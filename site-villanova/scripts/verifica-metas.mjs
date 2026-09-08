@@ -25,9 +25,14 @@ const meta = (html, nome) => {
   if (!tag) return null;
   return tag.match(/content=["']([\s\S]*?)["']/i)?.[1] ?? null;
 };
+// O Ghost escapa o apóstrofo como &#x27; (hexadecimal), não como &#39;. Sem
+// tratar as duas formas, uma descrição idêntica à pedida era acusada de
+// divergente — falso alarme meu, não problema do site.
 const decodifica = (s) => (s || '')
-  .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&')
-  .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ');
+  .replace(/&quot;/g, '"').replace(/&amp;/g, '&')
+  .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ')
+  .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
+  .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)));
 
 const itens = JSON.parse(await fs.readFile(ARQUIVO, 'utf8'));
 let longos = 0, divergentes = 0, ausentes = 0;
@@ -54,7 +59,7 @@ for (const item of itens) {
     if (desc.length > LIM_DESC) { marcas.push(`descrição ${desc.length} (>${LIM_DESC})`); longos++; }
     if (item.meta_description && desc !== item.meta_description) { marcas.push('descrição DIFERENTE do pedido'); divergentes++; }
   }
-  if (titulo && titulo.length > LIM_TITULO) marcas.push(`título ${titulo.length} (>${LIM_TITULO})`);
+  if (titulo && titulo.length > LIM_TITULO) marcas.push(`título ${titulo.length} (>${LIM_TITULO}): ${titulo}`);
   if (item.meta_title && titulo !== item.meta_title) { marcas.push('título DIFERENTE do pedido'); divergentes++; }
 
   const sinal = marcas.length ? 'ATENÇÃO' : 'ok     ';
