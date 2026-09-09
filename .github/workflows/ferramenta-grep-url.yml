@@ -25,12 +25,22 @@ jobs:
   procurar:
     runs-on: ubuntu-latest
     steps:
+      # O padrão e as URLs entram por VARIÁVEL DE AMBIENTE, não interpolados
+      # direto no shell. Em 09/09/2026 eu pedi um padrão que continha aspas
+      # duplas e o passo morreu com "syntax error near unexpected token" — o
+      # texto do padrão estava sendo colado dentro de um echo com aspas duplas
+      # e fechava a string. O mesmo buraco aceitaria qualquer comando embutido
+      # num padrão. Assim o shell nunca vê o conteúdo, só o nome da variável.
       - name: Contagem e trechos do padrão em cada URL
+        env:
+          URLS: ${{ inputs.urls }}
+          PADRAO: ${{ inputs.padrao }}
+          LINHAS: ${{ inputs.linhas }}
         run: |
-          for u in ${{ inputs.urls }}; do
+          for u in $URLS; do
             echo "=== $u ==="
             curl -sS -L --max-time 20 "$u" -o /tmp/body || { echo "FALHA de conexão"; continue; }
-            n=$(grep -Eo '${{ inputs.padrao }}' /tmp/body | wc -l)
-            echo "ocorrências de '${{ inputs.padrao }}': $n"
-            grep -Eo '.{0,60}${{ inputs.padrao }}.{0,60}' /tmp/body | head -"${{ inputs.linhas }}" || true
+            n=$(grep -Eo "$PADRAO" /tmp/body | wc -l)
+            printf 'ocorrências de %s: %s\n' "$PADRAO" "$n"
+            grep -Eo ".{0,60}$PADRAO.{0,60}" /tmp/body | head -"${LINHAS:-4}" || true
           done
