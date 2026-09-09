@@ -1,0 +1,27 @@
+name: Villanova — procurar markdown cru publicado
+
+# Diz em quais posts/páginas sobrou sintaxe de Markdown como TEXTO visível,
+# do tipo "([site.com](https://site.com/pagina))" no meio do parágrafo.
+# Descoberto em 09/09/2026 caçando rolagem lateral no celular: o trecho é
+# indivisível e chega a 400px, mas o problema principal é que o leitor vê a
+# sintaxe crua. SÓ LÊ — não altera nada no Ghost.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  procurar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Procurar markdown cru
+        env:
+          VILLANOVA_GHOST_ADMIN_URL: ${{ secrets.VILLANOVA_GHOST_ADMIN_URL }}
+          VILLANOVA_GHOST_ADMIN_API_KEY: ${{ secrets.VILLANOVA_GHOST_ADMIN_API_KEY }}
+        run: node site-villanova/scripts/procura-markdown-cru.mjs

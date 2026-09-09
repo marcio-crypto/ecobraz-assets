@@ -94,7 +94,30 @@ details[open] summary::after{content:"–"}
 .article-icon{position:absolute;right:30px;bottom:-36px;opacity:.13;pointer-events:none}
 
 .article-layout{display:flex;gap:46px;align-items:flex-start;padding:46px 0}
-.article-body{flex:1;max-width:700px;font-size:16.5px;line-height:1.7}
+/* O min-width:0 aqui nao e enfeite: sem ele esta linha era a causa da rolagem
+   lateral que sobrou em dois posts depois do conserto do cabecalho. Medido em
+   09/09/2026, no site publicado e depois reproduzido local.
+
+   O .article-layout e criado em tempo de execucao pelo artigo.js (nao existe no
+   post.hbs) e e display:flex. Um item de flex nasce com min-width:auto, que
+   quer dizer "nao encolho abaixo da largura minima do meu conteudo". Bastava
+   UMA coisa larga e indivisivel dentro do post — uma tabela, uma URL colada —
+   para o .article-body parar de encolher e empurrar a pagina inteira: 438px de
+   conteudo numa tela de 360px. No desktop nunca apareceu porque sobra espaco.
+   E o mesmo remendo que o .intake-main ja usa mais abaixo (v2.css:235).
+
+   O overflow-wrap:break-word cuida do resto: com o corpo encolhendo, uma
+   palavra indivisivel maior que a coluna passaria a furar a caixa. Um dos
+   posts tem markdown cru publicado — "([energy.ec.europa.eu](https://...)" —
+   que e exatamente isso.
+
+   Medido no repro local a 360px:
+     como estava ............................ documento 385px, rolagem lateral
+     so com min-width:0 ..................... corpo volta a 320px
+     sem break-word, so a URL crua .......... documento 378px, ainda rola
+     com os dois ............................ documento 360px, sem rolagem
+   A 1366px nada muda: corpo 700px, igual a antes. */
+.article-body{flex:1;min-width:0;max-width:700px;font-size:16.5px;line-height:1.7;overflow-wrap:break-word}
 .article-body p{margin-bottom:20px;color:#2a3846}
 .article-body h2{font-size:24px;margin:36px 0 14px;padding-left:16px;border-left:4px solid var(--gold);line-height:1.25}
 .article-body h3{font-size:18px;margin:26px 0 10px}
@@ -102,6 +125,18 @@ details[open] summary::after{content:"–"}
 .article-body li{margin-bottom:8px}
 .article-body blockquote{font-family:var(--serif);font-style:italic;font-size:21px;line-height:1.45;color:var(--navy);border:none;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:20px 8px;margin:28px 0;text-align:center}
 .article-body table{width:100%;border-collapse:collapse;margin:24px 0;font-size:14px;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 8px 22px rgba(20,32,46,.06)}
+/* A tabela precisa de tratamento proprio, e isto eu descobri medindo, nao
+   deduzindo: com o min-width:0 acima o corpo do artigo passa a encolher, mas a
+   TABELA nao encolhe junto — nenhuma tabela fica menor que a largura minima das
+   suas colunas. Ela voltava a esticar a pagina sozinha (365px de tabela para
+   320px de coluna). O overflow:hidden da linha de cima corta as celulas, mas
+   nao segura a caixa da tabela.
+   Aqui ela vira uma caixa que rola por dentro. So abaixo de 700px: acima disso
+   a coluna tem 620px ou mais, a tabela continua esticada a 100% e o desenho
+   aprovado do padrao v2 fica intacto (conferido a 1366px: 700px, identica).
+   LIMITE CONHECIDO: entre 701px e 980px nao ha regra nenhuma. Nao vi tabela
+   larga o bastante para vazar nessa faixa, mas tambem nao testei todas. */
+@media(max-width:700px){.article-body table{display:block;width:100%;overflow-x:auto;overflow-y:hidden}}
 .article-body th{background:var(--navy);color:#fff;text-align:left;padding:11px 15px;font-size:12px;letter-spacing:.06em;text-transform:uppercase}
 .article-body td{padding:11px 15px;border-bottom:1px solid var(--line)}
 .article-body hr{border:none;border-top:1px solid var(--line);margin:30px 0}

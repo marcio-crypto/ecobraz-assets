@@ -128,6 +128,30 @@ serviço só eram alcançáveis rolando até o rodapé.
   faz isso no site publicado; a prévia local roda com o Chromium do ambiente.
 - **NUNCA usar `isMobile` do Playwright** para essa conferência: ele ignora a
   tela pedida (390x844 vira 500x1080) e devolve resultado limpo e falso.
+- **Item de flex não encolhe sozinho: sem `min-width:0` ele para na largura
+  mínima do próprio conteúdo.** Esta foi a causa da última rolagem lateral que
+  sobrou, medida em 09/09/2026. O `.article-layout` é criado em tempo de
+  execução pelo `artigo.js` (não existe no `post.hbs`) e é `display:flex`; o
+  `.article-body` é `flex:1` e nasce com `min-width:auto`. Bastava **uma** coisa
+  larga e indivisível dentro do post — uma tabela, uma URL colada — para o corpo
+  do artigo parar de encolher e empurrar a página inteira: 438px de conteúdo
+  numa tela de 360. **No desktop nunca aparece**, porque sobra espaço, e por
+  isso passou por todas as revisões anteriores. Todo item de flex que recebe
+  conteúdo de terceiros precisa de `min-width:0` (o `.intake-main` já usava,
+  `v2.css:235`).
+- **Tabela nunca encolhe abaixo da largura mínima das colunas**, e `overflow`
+  nela corta as células sem segurar a caixa. Depois do `min-width:0` a tabela
+  voltou a esticar a página sozinha (365px de tabela para 320px de coluna). A
+  regra que resolve é transformá-la em caixa que rola por dentro, e **só abaixo
+  de 700px** — acima disso a coluna tem 620px ou mais e o desenho aprovado fica
+  intacto: `@media(max-width:700px){.article-body table{display:block;width:100%;overflow-x:auto;overflow-y:hidden}}`.
+  Limite conhecido: entre 701px e 980px não há regra; a tela de tablet em pé
+  (768x1024) entrou na auditoria justamente para vigiar essa faixa.
+- **Markdown cru publicado como texto é problema de layout, não só de revisão.**
+  Um `([site.com](https://site.com/pagina/muito/longa))` no meio do parágrafo é
+  um trecho indivisível de quase 400px. O `overflow-wrap:break-word` do
+  `.article-body` impede o estrago, mas o leitor continua vendo a sintaxe.
+  `scripts/procura-markdown-cru.mjs` encontra esses casos (só leitura).
 
 ## Idiomas (adaptação, não tradução)
 
