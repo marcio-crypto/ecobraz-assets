@@ -84,9 +84,43 @@ jobs:
           titulo "3. NO DOMÍNIO PÚBLICO"
           curl -sS --max-time 25 -D /tmp/h_pub "$PUBLICO" -o /tmp/b_pub || echo "FALHA de conexão"
           echo "status/idade/modificação:"
-          grep -iE '^(HTTP/|age|last-modified|cache-control|cf-cache-status|x-cache)' /tmp/h_pub || true
+          grep -iE '^(HTTP/|age|etag|last-modified|cache-control|cf-cache-status|x-cache)' /tmp/h_pub || true
           echo "conteúdo:"
           grep -F "$PADRAO" /tmp/b_pub || echo "(padrão não encontrado)"
+
+          # AS DUAS TENTATIVAS QUE UM SUPORTE VAI PEDIR ANTES DE ACREDITAR.
+          # Sem elas a conversa vira "limpei o seu navegador?" — e nenhuma das
+          # duas passa pelo navegador de ninguem: rodam de um runner limpo.
+          titulo "3b. MESMA URL COM PARAMETRO NOVO (fura cache por chave de URL)"
+          curl -sS --max-time 25 -D /tmp/h_bust "${PUBLICO}?diag=$(date +%s)$RANDOM" -o /tmp/b_bust || echo "FALHA de conexão"
+          grep -iE '^(HTTP/|age|etag|last-modified|x-cache)' /tmp/h_bust || true
+          grep -F "$PADRAO" /tmp/b_bust || echo "(padrão não encontrado)"
+
+          titulo "3c. MESMA URL PEDINDO COPIA FRESCA (Cache-Control: no-cache)"
+          curl -sS --max-time 25 -H 'Cache-Control: no-cache' -H 'Pragma: no-cache' \
+               -D /tmp/h_nc "$PUBLICO" -o /tmp/b_nc || echo "FALHA de conexão"
+          grep -iE '^(HTTP/|age|etag|last-modified|x-cache)' /tmp/h_nc || true
+          grep -F "$PADRAO" /tmp/b_nc || echo "(padrão não encontrado)"
+
+          titulo "3d. AS TRES LEITURAS PUBLICAS SAO IGUAIS ENTRE SI?"
+          if diff -q /tmp/b_pub /tmp/b_bust >/dev/null 2>&1 && diff -q /tmp/b_pub /tmp/b_nc >/dev/null 2>&1; then
+            echo "SIM — normal, com parametro novo e pedindo copia fresca devolvem o MESMO byte."
+            echo "Ou seja: nao e cache por chave de URL, e a camada ignora o pedido de revalidacao."
+          else
+            echo "NAO — alguma das tres devolveu conteudo diferente. Detalhe:"
+            diff -q /tmp/b_pub /tmp/b_bust >/dev/null 2>&1 || echo "  o parametro novo devolveu OUTRO conteudo (cache por chave de URL)"
+            diff -q /tmp/b_pub /tmp/b_nc  >/dev/null 2>&1 || echo "  o no-cache devolveu OUTRO conteudo (a camada respeita revalidacao)"
+          fi
+
+          titulo "3e. CONFERE COM O REPOSITORIO?"
+          if [ -f "site-ghost/theme/$CAMINHO" ]; then
+            if diff -q "site-ghost/theme/$CAMINHO" /tmp/b_pub >/dev/null 2>&1; then
+              echo "IGUAL byte a byte ao arquivo do repositorio."
+            else
+              echo "DIFERENTE do arquivo do repositorio. Primeiras diferencas:"
+              diff "site-ghost/theme/$CAMINHO" /tmp/b_pub | head -10 || true
+            fi
+          fi
 
           titulo "VEREDITO"
           if [ ! -s /tmp/b_pub ]; then
