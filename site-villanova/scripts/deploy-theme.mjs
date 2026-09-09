@@ -34,9 +34,22 @@ if (activate) {
   const actText = await act.text();
   if (!act.ok) throw new Error(`Ativação falhou (${act.status}): ${actText.slice(0, 600)}`);
   console.log(`TEMA ATIVADO: ${nome} ✔`);
+  // O QUE ESTA CHECAGEM PROVA, E O QUE NAO PROVA. Ela procurava "VILLANOVA" e
+  // "main.css" no HTML — duas coisas que estao no ar desde sempre e continuariam
+  // ali com o tema ANTIGO ativo. Passava sem provar nada. Agora ela imprime o
+  // hash de asset do Ghost (?v=...), que muda a cada ativacao de tema: se o hash
+  // for o mesmo de antes da ativacao, o tema novo NAO esta sendo servido.
+  // Mesmo assim, isto prova ativacao, nao que uma mudanca especifica chegou —
+  // para isso rode o workflow "Villanova — auditoria no navegador de verdade".
   const home = await fetch('https://www.villanovaesg.com/', {redirect: 'follow'});
   const html = await home.text();
-  console.log(`Home ao vivo: HTTP ${home.status} | marca no HTML: ${html.includes('VILLANOVA') ? 'sim' : 'NÃO'} | css do tema: ${html.includes('villanova-institutional') || html.includes('main.css') ? 'sim' : 'NÃO'}`);
+  const hash = (html.match(/assets\/css\/main\.css\?v=([A-Za-z0-9]+)/) || [])[1] || '(não encontrado)';
+  console.log(`Home ao vivo: HTTP ${home.status}`);
+  console.log(`Hash de asset servido agora: ${hash}`);
+  console.log('Este hash muda a cada ativação de tema. Anote-o: se depois de um');
+  console.log('deploy ele continuar igual, o tema novo não subiu.');
+  console.log('ATENÇÃO: isto confirma ATIVAÇÃO, não confirma que uma mudança');
+  console.log('específica está no ar. Para isso, rode a auditoria no navegador.');
 } else {
   console.log('Tema apenas enviado (não ativado). Ative com o parâmetro "activate".');
 }
