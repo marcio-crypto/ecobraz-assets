@@ -603,7 +603,7 @@ function relataPagina(r) {
     }
   }
   if (!problemas.length) return false;
-  COM_PROBLEMA.push({ tela: r.tela, url: r.url, problemas: problemas.slice() });
+  COM_PROBLEMA.push({ tela: r.tela, url: r.url, problemas: problemas.slice(), rede: r.rede || [], erros: r.erros || [] });
 
   linha(`\n──────────────────────────────────────────────`);
   linha(`${r.tela.toUpperCase()}  ${r.url}`);
@@ -731,7 +731,15 @@ if (exemploDeContraste.size) {
 }
 if (COM_PROBLEMA.length) {
   digesto.push('ONDE DOEU:');
-  for (const p2 of COM_PROBLEMA.slice(0, 40)) digesto.push(`  [${p2.tela}] ${p2.url} :: ${p2.problemas.join(' · ')}`);
+  for (const p2 of COM_PROBLEMA.slice(0, 40)) {
+    digesto.push(`  [${p2.tela}] ${p2.url} :: ${p2.problemas.join(' · ')}`);
+    // QUAL recurso falhou, e nao so quantos. Em 09/09/2026 a varredura acusou
+    // "1 requisicao com falha" em duas paginas e o resumo nao dizia qual — tive
+    // de rodar de novo so para descobrir que nao reproduzia. Sem o endereco nao
+    // da para separar recurso quebrado de rede instavel do runner.
+    for (const e of (p2.rede || []).slice(0, 3)) digesto.push(`      ${e}`);
+    for (const e of (p2.erros || []).slice(0, 3)) digesto.push(`      JS: ${e}`);
+  }
   if (COM_PROBLEMA.length > 40) digesto.push(`  ... e mais ${COM_PROBLEMA.length - 40}`);
 }
 try { fs.writeFileSync(`${PASTA}/RESUMO.txt`, digesto.join('\n') + '\n'); } catch (e) {}
