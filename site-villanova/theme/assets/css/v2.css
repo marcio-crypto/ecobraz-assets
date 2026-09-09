@@ -359,8 +359,11 @@ details[open] summary::after{content:"–"}
      conseguia tocar no botao principal de conversao. O .topbar e position:
      relative sem z-index, entao nao cria contexto de empilhamento e este 1000
      disputa direto com o 999 do banner. Fechar o menu devolve o banner. */
+  /* O recuo acompanha o .wrap: 40px acima de 700px e 20px abaixo (v2.css:20-21).
+     Com 20px fixos, entre 701 e 1024px os links do painel ficavam 20px a
+     esquerda da marca — desalinhamento visivel. */
   .nav-wrap{display:none;position:absolute;left:0;right:0;top:100%;z-index:1000;
-    padding:6px 20px 20px;background:var(--navy);border-top:1px solid #2C4162;
+    padding:6px 40px 20px;background:var(--navy);border-top:1px solid #2C4162;
     box-shadow:0 18px 44px rgba(4,12,24,.45)}
   /* Teto de altura com rolagem propria: em celular deitado (740x360) o painel
      inteiro nao cabe e os ultimos itens ficariam inalcancaveis.
@@ -390,8 +393,26 @@ details[open] summary::after{content:"–"}
   /* A cor precisa de tres classes: .topbar a (v2.css:28) e (0,1,1) e vencia um
      .menu-cta simples, que e (0,1,0) — medido, o texto do botao dourado saia
      rgb(185,198,216) em vez de branco, com contraste ruim sobre o dourado. */
+  /* Raio de 6px e sombra para seguir o botao canonico do padrao (v2.css:30),
+     que e o mesmo gradiente. Sem isso o botao do painel saia de canto vivo,
+     diferente de todos os outros CTA do site. */
   .topbar .nav-wrap .menu-cta{background:linear-gradient(135deg,var(--gold),#a2762c);
     color:#fff;text-decoration:none;text-align:center;padding:14px 18px;
-    font-size:13.5px;font-weight:600;letter-spacing:.04em}
+    font-size:13.5px;font-weight:600;letter-spacing:.04em;border-radius:6px;
+    box-shadow:0 6px 18px rgba(184,138,61,.35)}
   .topbar .nav-wrap .menu-cta:hover{filter:brightness(1.08)}
+}
+
+@media(max-width:700px){
+  .nav-wrap{padding-left:20px;padding-right:20px}
+}
+
+/* Modo de alto contraste do Windows: o navegador descarta background-color, e as
+   tres barras do hamburguer sao pintadas justamente com background — o botao
+   ficava um retangulo vazio. Com borda em vez de fundo, e usando as cores do
+   sistema, ele continua visivel. */
+@media (forced-colors: active){
+  .menu-btn{border-color:ButtonBorder}
+  .menu-btn span{background:ButtonText;forced-color-adjust:none;border-top:2px solid ButtonText;height:0}
+  .topbar .nav-wrap .menu-cta{border:1px solid ButtonBorder}
 }

@@ -9,6 +9,24 @@
     <link rel="stylesheet" href="{{asset "css/main.css"}}">
     <link rel="stylesheet" href="{{asset "css/v2.css"}}">
     <link rel="stylesheet" href="{{asset "css/lang.css"}}">
+    {{!-- SEM JAVASCRIPT NAO PODE SOBRAR ZERO NAVEGACAO. O menu sanfona depende do
+         menu.js; se ele falhar (bloqueador, rede ruim, erro), abaixo de 1025px o
+         painel fica escondido e o hamburguer vira clique morto — e ate 1024px
+         nem o menu antigo aparece mais. Este bloco mostra o menu empilhado
+         embaixo da barra quando nao ha JavaScript.
+         Nenhuma regra aqui disputa display com o lang.css: .nav-wrap,
+         .menu-btn e .menu-cta-wrap sao classes que ele nao conhece, e quem
+         aparece dentro delas continua sendo decidido por ele. --}}
+    <noscript><style>
+      @media(max-width:1024px){
+        .menu-btn{display:none!important}
+        .topbar .wrap{flex-wrap:wrap}
+        .nav-wrap{display:block!important;position:static!important;width:100%;
+          flex-basis:100%;padding:0 0 8px!important;background:transparent!important;
+          box-shadow:none!important;border-top:1px solid rgba(255,255,255,.14);margin-top:8px}
+        .menu-cta-wrap{display:flex!important;flex-direction:column;margin-top:12px}
+      }
+    </style></noscript>
     <link rel="icon" type="image/png" href="{{asset "favicon.png"}}">
     <link rel="apple-touch-icon" href="{{asset "apple-touch-icon.png"}}">
     <script src="{{asset "js/idioma-auto.js"}}"></script>
