@@ -67,6 +67,11 @@ fs.mkdirSync(PASTA, { recursive: true });
 const TELAS = [
   { nome: 'celular', viewport: { width: 390, height: 844 }, movel: true },
   { nome: 'celular pequeno', viewport: { width: 360, height: 640 }, movel: true },
+  // Tablet EM PE entrou em 09/09/2026 porque era um buraco de medicao: entre
+  // 701px e 980px nao havia nenhuma tela na lista, e e justamente a faixa onde
+  // a regra de tabela do celular (max-width:700px) ja nao vale e a barra lateral
+  // do artigo ainda esta escondida (max-width:980px).
+  { nome: 'tablet em pe', viewport: { width: 768, height: 1024 }, movel: false },
   { nome: 'tablet deitado', viewport: { width: 1024, height: 768 }, movel: false },
   { nome: 'desktop', viewport: { width: 1366, height: 768 }, movel: false },
 ];
@@ -265,7 +270,15 @@ async function auditaPagina(navegador, url, tela) {
               const rg = document.createRange();
               rg.setStart(n, m.index);
               rg.setEnd(n, m.index + m[0].length);
-              const w = Math.round(rg.getBoundingClientRect().width);
+              // O RETANGULO UNICO MENTE, e me enganou uma vez: se a palavra
+              // quebra (o navegador quebra depois de hifen e depois de barra),
+              // getBoundingClientRect devolve a UNIAO dos pedacos, que tem a
+              // largura da linha inteira. Foi assim que "preferred-supplier"
+              // apareceu com 330px, quando o pedaco indivisivel dela e bem
+              // menor. O que interessa e o MAIOR PEDACO que nao quebra, que e
+              // o que de fato impede a caixa de encolher.
+              const pedacos = [...rg.getClientRects()].map((k) => k.width);
+              const w = Math.round(pedacos.length ? Math.max(...pedacos) : 0);
               if (!melhor || w > melhor.px) melhor = { palavra: m[0].slice(0, 60), px: w };
             }
           }
@@ -474,7 +487,7 @@ function relataPagina(r) {
     if (r.naoEncolhe?.length) {
       linha('     QUEM NÃO ENCOLHE (apertei o body a 120px e estes continuaram largos):');
       for (const v of r.naoEncolhe) {
-        const pal = v.palavra ? `  ·  palavra mais longa: "${v.palavra.palavra}" (${v.palavra.px}px)` : '';
+        const pal = v.palavra ? `  ·  maior pedaco indivisivel: "${v.palavra.palavra}" (${v.palavra.px}px)` : '';
         linha(`       ${v.larg}px  ${v.caminho}${pal}`);
         if (v.texto) linha(`              "${v.texto}"`);
       }
