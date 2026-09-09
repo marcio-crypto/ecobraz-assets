@@ -21,14 +21,41 @@ const auth = {Authorization: `Ghost ${token}`, 'Accept-Version': 'v5.0'};
 // Hash de asset ANTES de mexer em nada: e a unica forma de a checagem depois
 // significar alguma coisa. Sem o "antes", um hash qualquer no "depois" nao
 // prova se mudou.
-const leHash = async () => {
+// O HASH DO GHOST E POR ARQUIVO, NAO DO SITE. Medido em 09/09/2026 no HTML
+// servido:  main.css?v=mgeUqhCpucRBJtt6 · v2.css?v=IZlqYv_BDew-xOV6 ·
+// menu.js?v=SAEskuSEW6JEGsYD — tres valores diferentes na mesma pagina.
+//
+// A primeira versao desta checagem olhava so o main.css, que e justamente um
+// arquivo que quase nunca muda: o hash dele ficava igual em todo deploy e o
+// script anunciava "o hash nao mudou" mesmo quando o tema tinha subido
+// perfeitamente. Deu alarme falso duas vezes na mesma madrugada, e eu cheguei a
+// escrever num commit que a causa era cache de borda do CDN. Nao era. Era eu
+// vigiando o arquivo errado.
+//
+// Agora recolhe TODOS os pares arquivo->hash da pagina. Se qualquer um mudou,
+// coisa nova esta sendo servida — e o log diz quais mudaram, que e a informacao
+// util. O parametro unico na URL fica, porque nao custa nada e afasta a duvida
+// de cache de borda.
+const leHashes = async () => {
   try {
-    const r = await fetch('https://www.villanovaesg.com/', {redirect: 'follow', cache: 'no-store'});
-    return ((await r.text()).match(/assets\/css\/main\.css\?v=([A-Za-z0-9]+)/) || [])[1] || null;
+    const r = await fetch(`https://www.villanovaesg.com/?_cache=${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      {redirect: 'follow', cache: 'no-store', headers: {'Cache-Control': 'no-cache', Pragma: 'no-cache'}});
+    const html = await r.text();
+    const mapa = {};
+    for (const m of html.matchAll(/assets\/(?:css|js)\/([A-Za-z0-9._-]+)\?v=([A-Za-z0-9_-]+)/g)) mapa[m[1]] = m[2];
+    return Object.keys(mapa).length ? mapa : null;
   } catch (e) { return null; }
 };
-const hashAntes = activate ? await leHash() : null;
-if (activate) console.log(`Hash de asset ANTES da ativação: ${hashAntes || '(não lido)'}`);
+const mudaram = (a, b) => {
+  if (!a || !b) return null;
+  const out = [];
+  for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) {
+    if (a[k] !== b[k]) out.push(`${k}: ${a[k] || '(ausente)'} -> ${b[k] || '(ausente)'}`);
+  }
+  return out;
+};
+const hashAntes = activate ? await leHashes() : null;
+if (activate) console.log(`Hashes de asset ANTES da ativação: ${hashAntes ? JSON.stringify(hashAntes) : '(não lidos)'}`);
 
 const bytes = await fs.readFile(themePath);
 const form = new FormData();
@@ -55,20 +82,24 @@ if (activate) {
   // pegou uma copia de cache do CDN e reportou o hash ANTIGO — eu quase conclui
   // que o tema nao tinha subido, quando tinha. Dois minutos depois o hash ja
   // era outro. Por isso o laco abaixo tenta por ate um minuto.
-  let hashDepois = null;
+  let hashDepois = null, diferencas = null;
   for (let i = 0; i < 12; i++) {
-    hashDepois = await leHash();
-    if (hashDepois && hashDepois !== hashAntes) break;
+    hashDepois = await leHashes();
+    diferencas = mudaram(hashAntes, hashDepois);
+    if (diferencas && diferencas.length) break;
     await new Promise((r) => setTimeout(r, 5000));
   }
-  console.log(`Hash de asset ANTES : ${hashAntes || '(não lido)'}`);
-  console.log(`Hash de asset DEPOIS: ${hashDepois || '(não lido)'}`);
-  if (hashAntes && hashDepois && hashAntes === hashDepois) {
-    console.log('AVISO: o hash não mudou em um minuto. Pode ser cache do CDN ainda');
-    console.log('servindo o HTML antigo, ou o tema realmente não subiu. Confirme');
-    console.log('buscando no HTML servido um trecho que só exista na versão nova.');
-  } else if (hashDepois && hashAntes) {
-    console.log('O hash mudou: o HTML servido já é o do tema recém-ativado.');
+  if (diferencas && diferencas.length) {
+    console.log('Arquivos com hash novo no HTML servido:');
+    for (const d of diferencas) console.log(`   ${d}`);
+    console.log('Ou seja: o tema recém-ativado já está sendo servido.');
+  } else if (hashAntes && hashDepois) {
+    console.log('INCONCLUSIVO: nenhum hash de asset mudou em um minuto.');
+    console.log('Isso é ESPERADO quando o deploy não alterou nenhum CSS nem JS —');
+    console.log('mudança só em .hbs não muda hash de asset. Também pode ser cache');
+    console.log('de borda. Este script NÃO distingue os casos: não trate como');
+    console.log('falha de publicação sem procurar no HTML servido um trecho que');
+    console.log('só exista na versão nova.');
   }
   console.log('ATENÇÃO: isto confirma ATIVAÇÃO, não confirma que uma mudança');
   console.log('específica está no ar. Para isso, rode o workflow');
