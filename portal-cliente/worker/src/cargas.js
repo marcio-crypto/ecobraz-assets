@@ -55,6 +55,7 @@ async function db(env) {
       'ALTER TABLE op_lotes ADD COLUMN expedicao_json TEXT DEFAULT \'\'',
       'ALTER TABLE op_cargas ADD COLUMN especial INTEGER DEFAULT 0',
       'ALTER TABLE op_cargas ADD COLUMN especial_obs TEXT DEFAULT \'\'',
+      'ALTER TABLE op_cargas ADD COLUMN validacao_enviada INTEGER DEFAULT 0',
     ]) {
       try { await env.DB_PLOOMES.prepare(sql).run(); } catch { /* coluna já existe */ }
     }
@@ -518,6 +519,9 @@ export async function encaminharCargaParaValidacao(env, cargaId, user) {
     await atualizarEtapaOperacao(env, o.id, 'validacao', patch);
     movidas++;
   }
+  // Marca a carga como processada — a varredura diária nunca mais a revisita
+  // (correção de lentidão 09/09: era isso que deixava as telas lentas).
+  try { const dm = await db(env); if (dm) await dm.prepare('UPDATE op_cargas SET validacao_enviada=1 WHERE id=?1').bind(c.id).run(); } catch { /* varredura ainda cobre */ }
   return { ok: true, movidas };
 }
 
@@ -525,14 +529,25 @@ export async function encaminharCargaParaValidacao(env, cargaId, user) {
 // finalizado antes desta ponte existir e as encaminha para a validação. Roda
 // quando a engenharia abre a fila ou alguém abre o cronograma — só lê quando
 // não há nada a mover.
+// Correção de lentidão (queixa da equipe 09/09): a versão anterior varria carga
+// por carga A CADA abertura de tela (centenas de consultas). Agora: no máximo
+// 1× por dia (trava no KV), com UMA consulta agregada que só devolve cargas
+// 100% finalizadas ainda não processadas (validacao_enviada=0). A ponte no
+// finalizar-lote continua cobrindo o dia a dia na hora.
 export async function sincronizarCargasComValidacao(env, user) {
   let enviadas = 0;
   try {
-    const cargas = await listarCargas(env);
-    for (const c of cargas) {
-      if (c.status === 'cancelada' || c.status === 'aberta') continue;
-      try { const r = await encaminharCargaParaValidacao(env, c.id, user); if (r && r.ok) enviadas += r.movidas || 0; } catch { /* segue para a próxima */ }
+    try { if (env.PORTAL_KV && await env.PORTAL_KV.get('cargas:varredura:feita')) return { enviadas: 0, pulada: true }; } catch { /* segue */ }
+    const d = await db(env); if (!d) return { enviadas: 0 };
+    let prontas = [];
+    try {
+      const r = await d.prepare("SELECT l.carga_id AS cid FROM op_lotes l JOIN op_cargas c ON c.id = l.carga_id WHERE COALESCE(c.validacao_enviada,0)=0 AND c.status <> 'cancelada' GROUP BY l.carga_id HAVING SUM(CASE WHEN l.status IN ('finalizado','expedido') THEN 0 ELSE 1 END) = 0").all();
+      prontas = (r.results || []).map((x) => x.cid);
+    } catch { prontas = []; }
+    for (const cid of prontas) {
+      try { const r = await encaminharCargaParaValidacao(env, cid, user); if (r && r.ok) enviadas += r.movidas || 0; } catch { /* próxima */ }
     }
+    try { if (env.PORTAL_KV) await env.PORTAL_KV.put('cargas:varredura:feita', new Date().toISOString(), { expirationTtl: 86400 }); } catch { /* segue */ }
   } catch { /* varredura é best-effort */ }
   return { enviadas };
 }

@@ -121,10 +121,30 @@ export function paginaFilaEng(eng, fila, validadas) {
     <a href="/eng/destinos" class="btn ghost" style="margin:0">🏭 Destinos finais (usinas) →</a>
   </div>
   <div style="font-size:13px;font-weight:800;margin-bottom:12px">Aguardando validação <span class="pill" style="background:#FFF4DE;color:#8A6A16">${fila.length}</span></div>
+  ${fila.length >= 2 ? `<div class="card" style="border-color:#cfe6b8;background:#F5FBF1">
+    <div style="font-size:12.5px;font-weight:800;color:#1E5B31;margin-bottom:4px">⚡ Validar a fila inteira (${fila.length}) de uma vez</div>
+    <div style="font-size:11.5px;color:#4F6469;line-height:1.6;margin-bottom:10px">Seu nome e registro saem como <b>Responsável Técnico em cada certificado</b> — este clique é a sua assinatura. Para validar uma a uma (com parecer ou devolução), abra o dossiê normalmente.</div>
+    <input id="vl-registro" class="txt" placeholder="Registro profissional (ex.: CREA-SP 000000)">
+    <button class="btn dark" style="margin:10px 0 0" onclick="validarFila()">✓ Validar todas como RT</button>
+    <div id="vl-msg" style="font-size:12px;color:#4F6469;margin-top:8px;text-align:center;min-height:15px"></div>
+  </div>` : ''}
   ${filaHtml}
   ${validHtml ? `<div style="font-size:13px;font-weight:800;margin:22px 0 12px">Validadas recentemente</div>${validHtml}` : ''}
   <div style="text-align:center;margin-top:16px"><a href="/manual-engenharia.pdf" target="_blank" rel="noopener" style="color:#0B5B66;font-size:12px;font-weight:700;text-decoration:none">📄 Manual da engenharia (PDF)</a></div>
-</div></body></html>`;
+</div>
+<script>
+async function validarFila(){
+  var reg=(document.getElementById('vl-registro').value||'').trim(),m=document.getElementById('vl-msg');
+  if(!reg){m.textContent='Informe seu registro profissional (CREA/CRQ).';return;}
+  if(!confirm('Validar TODAS as operações da fila como Responsável Técnico? Seu nome e o registro '+reg+' sairão em cada certificado (CDF).'))return;
+  m.textContent='Validando…';
+  try{var r=await fetch('/api/eng/validar-fila',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({registro:reg})});
+    var j=await r.json();
+    if(j.ok){m.textContent='✓ '+j.validadas+' operação(ões) validada(s) — os certificados já estão liberados.';setTimeout(function(){location.reload();},1100);}
+    else{m.textContent=j.message||'Não deu certo.';}}
+  catch(e){m.textContent='Sem conexão.';}
+}
+</script></body></html>`;
 }
 
 function kpi(v, s) { return `<div class="kpi"><b>${esc(v)}</b><span>${esc(s)}</span></div>`; }

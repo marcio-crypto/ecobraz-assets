@@ -2845,6 +2845,21 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         const osRec = await lerColetaOS(env, op.osId);
         return html(paginaDossie(eng, op, val, seloUrl, (osRec && osRec.anexos) || []));
       }
+      // ⚡ Validação em LOTE pelo RT (pedido da equipe 09/09, sem tirar o RT do
+      // comando): um clique do engenheiro valida toda a fila — o nome e o registro
+      // dele saem em cada CDF, então a ação é dele, nunca automática.
+      if (pathname === '/api/eng/validar-fila' && request.method === 'POST') {
+        if (!eng) return json({ ok: false, message: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = {}; }
+        const registroRT = String((b && b.registro) || '').trim().slice(0, 40);
+        if (registroRT.length < 3) return json({ ok: false, message: 'Informe o registro profissional (CREA/CRQ).' });
+        const fila = await filaValidacao(env);
+        let validadas = 0;
+        for (const o of fila.slice(0, 100)) {
+          try { const r = await registrarValidacaoOp(env, o.osId, eng, { decisao: 'validar', rt: eng.nome || '', registro: registroRT, comentario: 'Validação em lote pela fila' }); if (r) validadas++; } catch { /* próxima */ }
+        }
+        return json({ ok: true, validadas });
+      }
       if (pathname === '/eng/foto' && request.method === 'GET') {
         if (!eng) return json({ ok: false, error: 'nao_autenticado' }, 401);
         return await servirFotoOperacao(env, url.searchParams.get('id') || '', url.searchParams.get('fase') || '', url.searchParams.get('cat') || '');
