@@ -343,6 +343,8 @@ async function auditaPagina(navegador, url, tela) {
 // termina, para que um tempo limite no meio não apague o que já foi medido.
 const linha = (t) => console.log(t);
 
+const COM_PROBLEMA = [];
+
 function relataPagina(r) {
   const problemas = [];
   if (r.navegacao) problemas.push('a página não carregou');
@@ -365,6 +367,7 @@ function relataPagina(r) {
     }
   }
   if (!problemas.length) return false;
+  COM_PROBLEMA.push({ tela: r.tela, url: r.url, problemas: problemas.slice() });
 
   linha(`\n──────────────────────────────────────────────`);
   linha(`${r.tela.toUpperCase()}  ${r.url}`);
@@ -449,6 +452,17 @@ linha(`Requisições com falha .............. ${totalRede}`);
 linha(`Telas com rolagem horizontal ....... ${totalOverflow}`);
 linha(`Imagens quebradas .................. ${totalImg}`);
 linha(`Links internos quebrados ........... ${linksRuins.length}`);
+if (COM_PROBLEMA.length) {
+  // Esta lista existe porque em 09/09/2026 o resumo disse "3 telas com rolagem
+  // horizontal" e nao havia como saber QUAIS sem baixar o log inteiro. Um
+  // relatorio que obriga a reler o proprio relatorio nao serve.
+  linha('\n=================== ONDE ESTAO OS PROBLEMAS ===================');
+  for (const p of COM_PROBLEMA) {
+    linha(`  [${p.tela}] ${p.url}`);
+    linha(`      ${p.problemas.join(' · ')}`);
+  }
+}
+
 linha('\nAs telas cheias de cada página estão no artefato "telas" deste workflow.');
 
 fs.writeFileSync(`${PASTA}/resultado.json`, JSON.stringify(resultados, null, 2));
