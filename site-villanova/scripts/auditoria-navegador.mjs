@@ -145,103 +145,121 @@ async function auditaPagina(navegador, url, tela) {
     return r;
   }
 
-  const medidas = await pg.evaluate(() => {
-    const out = {};
-    const de = document.documentElement;
+  // A medição fica em try/catch e o fechamento do contexto acontece depois, no
+  // caminho normal: antes, se o evaluate lançasse, a exceção subia, o contexto
+  // do navegador ficava aberto e uma varredura longa ia acumulando processos.
+  // Agora a página entra no relatório com "MEDIÇÃO FALHOU" em vez de sumir.
+  let medidas = {};
+  try {
+    medidas = await pg.evaluate(() => {
+      const out = {};
+      const de = document.documentElement;
 
-    // Rolagem horizontal e quem a causa.
-    const larguraVisivel = window.innerWidth;
-    out.scrollWidth = de.scrollWidth;
-    out.innerWidth = larguraVisivel;
-    // PASSAR DA TELA NAO E O MESMO QUE CAUSAR ROLAGEM. Esta distincao custou
-    // caro em 08/09/2026: a lista acusava os SVGs decorativos (.h2arc, .mark)
-    // como culpados, e eu acreditei e escrevi uma regra de overflow para eles.
-    // Os dois ja estavam dentro de secoes com overflow:hidden — passavam da
-    // tela, sim, mas nao esticavam o documento em um pixel. A causa real era
-    // so o cabecalho. Agora quem tem ancestral que corta entra em "contidos",
-    // separado, e nunca mais e apresentado como culpado.
-    const cortaOEixoX = (el) => {
-      const o = getComputedStyle(el).overflowX;
-      return o === 'hidden' || o === 'clip' || o === 'auto' || o === 'scroll';
-    };
-    out.vazandoLado = [];
-    out.vazandoContido = [];
-    if (de.scrollWidth > larguraVisivel + 1) {
-      for (const el of document.querySelectorAll('body *')) {
-        const r = el.getBoundingClientRect();
-        if (r.width === 0 || r.height === 0) continue;
-        if (r.right <= larguraVisivel + 1 && r.left >= -1) continue;
-        let contidoPor = null;
-        for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
-          if (cortaOEixoX(p)) { contidoPor = `${p.tagName.toLowerCase()}.${String(p.className || '').trim().slice(0, 40)}`; break; }
+      // Rolagem horizontal e quem a causa.
+      const larguraVisivel = window.innerWidth;
+      out.scrollWidth = de.scrollWidth;
+      out.innerWidth = larguraVisivel;
+      // PASSAR DA TELA NAO E O MESMO QUE CAUSAR ROLAGEM. Esta distincao custou
+      // caro em 08/09/2026: a lista acusava os SVGs decorativos (.h2arc, .mark)
+      // como culpados, e eu acreditei e escrevi uma regra de overflow para eles.
+      // Os dois ja estavam dentro de secoes com overflow:hidden — passavam da
+      // tela, sim, mas nao esticavam o documento em um pixel. A causa real era
+      // so o cabecalho. Agora quem tem ancestral que corta entra em "contidos",
+      // separado, e nunca mais e apresentado como culpado.
+      const cortaOEixoX = (el) => {
+        const o = getComputedStyle(el).overflowX;
+        return o === 'hidden' || o === 'clip' || o === 'auto' || o === 'scroll';
+      };
+      out.vazandoLado = [];
+      out.vazandoContido = [];
+      if (de.scrollWidth > larguraVisivel + 1) {
+        for (const el of document.querySelectorAll('body *')) {
+          const r = el.getBoundingClientRect();
+          if (r.width === 0 || r.height === 0) continue;
+          if (r.right <= larguraVisivel + 1 && r.left >= -1) continue;
+          let contidoPor = null;
+          for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+            if (cortaOEixoX(p)) { contidoPor = `${p.tagName.toLowerCase()}.${String(p.className || '').trim().slice(0, 40)}`; break; }
+          }
+          const item = {
+            tag: el.tagName.toLowerCase(),
+            classe: (el.className && String(el.className).slice(0, 60)) || '',
+            esq: Math.round(r.left), dir: Math.round(r.right), larg: Math.round(r.width),
+            texto: (el.textContent || '').trim().slice(0, 50),
+            contidoPor,
+          };
+          (contidoPor ? out.vazandoContido : out.vazandoLado).push(item);
         }
-        const item = {
+        out.vazandoLado = out.vazandoLado.slice(0, 12);
+        out.vazandoContido = out.vazandoContido.slice(0, 6);
+      }
+
+      // Imagens que não carregaram.
+      out.imagensQuebradas = [...document.images]
+        .filter((i) => i.complete && i.naturalWidth === 0)
+        .map((i) => (i.currentSrc || i.src || '(sem src)').slice(0, 160));
+
+      // Links: âncoras vazias e destinos internos, para checar depois.
+      out.linksMortos = [];
+      out.internos = [];
+      for (const a of document.querySelectorAll('a')) {
+        const h = a.getAttribute('href');
+        const rotulo = (a.textContent || '').trim().slice(0, 60);
+        if (h === null || h === '' || h === '#') { out.linksMortos.push(rotulo || '(sem texto)'); continue; }
+        if (/^(mailto:|tel:|javascript:)/i.test(h)) continue;
+        try {
+          const u = new URL(a.href, location.href);
+          if (u.origin === location.origin) out.internos.push(u.href.split('#')[0]);
+        } catch (e) {}
+      }
+      out.internos = [...new Set(out.internos)];
+
+      // Candidatos a clique morto: parece clicável, não é link nem botão.
+      // LIMITE CONHECIDO: só enxerga onclick embutido. Um elemento com
+      // addEventListener passa por aqui como suspeito mesmo funcionando, por isso
+      // a linha sai marcada com "?" e nunca conta como problema no resumo.
+      out.pareceClicavel = [];
+      for (const el of document.querySelectorAll('body *')) {
+        if (el.closest('a,button,label,summary,select,input,textarea')) continue;
+        if (getComputedStyle(el).cursor !== 'pointer') continue;
+        if (el.getAttribute('role') === 'button' || el.onclick) continue;
+        const r = el.getBoundingClientRect();
+        if (r.width < 20 || r.height < 12) continue;
+        out.pareceClicavel.push({
           tag: el.tagName.toLowerCase(),
           classe: (el.className && String(el.className).slice(0, 60)) || '',
-          esq: Math.round(r.left), dir: Math.round(r.right), larg: Math.round(r.width),
           texto: (el.textContent || '').trim().slice(0, 50),
-          contidoPor,
-        };
-        (contidoPor ? out.vazandoContido : out.vazandoLado).push(item);
+        });
       }
-      out.vazandoLado = out.vazandoLado.slice(0, 12);
-      out.vazandoContido = out.vazandoContido.slice(0, 6);
-    }
+      out.pareceClicavel = out.pareceClicavel.slice(0, 10);
 
-    // Imagens que não carregaram.
-    out.imagensQuebradas = [...document.images]
-      .filter((i) => i.complete && i.naturalWidth === 0)
-      .map((i) => (i.currentSrc || i.src || '(sem src)').slice(0, 160));
+      // Banner de consentimento presente?
+      out.temBanner = !!document.querySelector('.vn-consent');
 
-    // Links: âncoras vazias e destinos internos, para checar depois.
-    out.linksMortos = [];
-    out.internos = [];
-    for (const a of document.querySelectorAll('a')) {
-      const h = a.getAttribute('href');
-      const rotulo = (a.textContent || '').trim().slice(0, 60);
-      if (h === null || h === '' || h === '#') { out.linksMortos.push(rotulo || '(sem texto)'); continue; }
-      if (/^(mailto:|tel:|javascript:)/i.test(h)) continue;
-      try {
-        const u = new URL(a.href, location.href);
-        if (u.origin === location.origin) out.internos.push(u.href.split('#')[0]);
-      } catch (e) {}
-    }
-    out.internos = [...new Set(out.internos)];
-
-    // Candidatos a clique morto: parece clicável, não é link nem botão.
-    out.pareceClicavel = [];
-    for (const el of document.querySelectorAll('body *')) {
-      if (el.closest('a,button,label,summary,select,input,textarea')) continue;
-      if (getComputedStyle(el).cursor !== 'pointer') continue;
-      if (el.getAttribute('role') === 'button' || el.onclick) continue;
-      const r = el.getBoundingClientRect();
-      if (r.width < 20 || r.height < 12) continue;
-      out.pareceClicavel.push({
-        tag: el.tagName.toLowerCase(),
-        classe: (el.className && String(el.className).slice(0, 60)) || '',
-        texto: (el.textContent || '').trim().slice(0, 50),
-      });
-    }
-    out.pareceClicavel = out.pareceClicavel.slice(0, 10);
-
-    // Banner de consentimento presente?
-    out.temBanner = !!document.querySelector('.vn-consent');
-
-    // Alvos de toque pequenos demais (regra do Google: 24px).
-    out.alvosPequenos = [];
-    for (const el of document.querySelectorAll('a,button')) {
-      const r = el.getBoundingClientRect();
-      if (r.width === 0 || r.height === 0) continue;
-      if (r.height < 24 || r.width < 24) {
-        out.alvosPequenos.push(`${el.tagName.toLowerCase()} "${(el.textContent || '').trim().slice(0, 30)}" ${Math.round(r.width)}x${Math.round(r.height)}`);
+      // Alvos de toque pequenos demais (WCAG 2.2, 2.5.8: 24px).
+      // A REGRA TEM EXCECAO PARA LINK EM TEXTO CORRIDO, e sem ela esta lista
+      // enchia de falso positivo: "contact page" no meio de um paragrafo saia
+      // como 104x20 e parecia defeito. Link dentro de <p>, <li> ou do corpo do
+      // artigo fica de fora; botao e link de navegacao continuam valendo.
+      const emTextoCorrido = (el) => !!el.closest('p, li, .article-body, .lead, blockquote');
+      out.alvosPequenos = [];
+      for (const el of document.querySelectorAll('a,button')) {
+        if (el.tagName === 'A' && emTextoCorrido(el)) continue;
+        const r = el.getBoundingClientRect();
+        if (r.width === 0 || r.height === 0) continue;
+        if (r.height < 24 || r.width < 24) {
+          out.alvosPequenos.push(`${el.tagName.toLowerCase()} "${(el.textContent || '').trim().slice(0, 30)}" ${Math.round(r.width)}x${Math.round(r.height)}`);
+        }
       }
-    }
-    out.alvosPequenos = out.alvosPequenos.slice(0, 10);
+      out.alvosPequenos = out.alvosPequenos.slice(0, 10);
 
-    out.titulo = document.title;
-    out.lang = de.getAttribute('lang');
-    return out;
-  });
+      out.titulo = document.title;
+      out.lang = de.getAttribute('lang');
+      return out;
+    });
+  } catch (e) {
+    achados.erros.push(`MEDIÇÃO FALHOU: ${String(e && e.message || e).slice(0, 200)}`);
+  }
 
   const arquivoTela = `${PASTA}/${tela.nome}-${url.replace(/https?:\/\//, '').replace(/[^a-z0-9]+/gi, '_').slice(0, 80)}.png`;
   try { await pg.screenshot({ path: arquivoTela, fullPage: true }); } catch (e) {}
@@ -253,7 +271,7 @@ async function auditaPagina(navegador, url, tela) {
     ...achados, ...medidas,
     imagem: arquivoTela,
   };
-  await ctx.close();
+  try { await ctx.close(); } catch (e) {}
   return r;
 }
 

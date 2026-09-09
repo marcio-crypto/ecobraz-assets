@@ -93,6 +93,13 @@ serviço só eram alcançáveis rolando até o rodapé.
   altura com rolagem própria, medido pelo JavaScript e não chutado: a barra tem
   96px (padding 14 + 68 + 14), e um valor fixo errado deixou o último item 28px
   abaixo da tela no celular deitado.
+- **Contraste do botão dourado (medido, e vale para o site inteiro):** `#fff`
+  sobre `linear-gradient(135deg, gold, #a2762c)` dá **3,12** na ponta clara e
+  **4,07** na escura. O WCAG AA pede 4,5 para texto normal, e o texto do botão
+  (13,5–14px, peso 600–700) não conta como "texto grande". Isto **não é defeito
+  de uma página**: é o botão canônico do padrão, usado em todo CTA do site
+  (`v2.css:30`). Corrigir exige escurecer o dourado ou engrossar/aumentar o
+  texto, e é decisão de marca do Marcio — não mexa por conta própria.
 - **Cor sobre o botão dourado precisa de três classes.** `.topbar a` é
   `(0,1,1)` e vence um seletor de uma classe só; o texto saía cinza-azulado em
   vez de branco.
