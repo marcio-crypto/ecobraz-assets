@@ -1,5 +1,20 @@
-/* GERADO por scripts/gera-idioma.mjs a partir de content/pares-idioma.json — não edite à mão. */
-.only-pt{display:none !important}
+/* GERADO por scripts/gera-idioma.mjs a partir de content/pares-idioma.json — não edite à mão.
+
+   ATENÇÃO ao ler: aqui só existe REGRA DE ESCONDER. O idioma que está ligado
+   não recebe nenhuma declaração de display — ele fica com o que o main.css e o
+   v2.css deram, igual ao inglês. Foi assim que quatro defeitos silenciosos
+   morreram de uma vez (menu PT em duas linhas, rodapé PT empilhado, botão
+   principal PT/IT sem inline-flex, .legal italiano virando flex). Se você
+   sentir vontade de escrever display:algo aqui para "religar" um idioma, é
+   sinal de que o CSS de verdade está faltando — conserte lá, não aqui. */
+
+/* Português aparece só em página portuguesa. */
+body:not(.tag-hash-pt):not(.page-pt):not(.page-o-que-analisamos):not(.page-revisao-evidencias-eudr-cbam-csddd-exportadores):not(.page-preparacao-fornecedores-brasileiros-compradores-europeus):not(.page-solicitar-analise):not(.page-revisao-evidencias-cbam):not(.page-revisao-prontidao-evidencias-eudr):not(.page-revisao-risco-clausulas-contratuais):not(.page-revisao-evidencias-para-diretoria):not(.page-due-diligence-csddd):not(.page-a-firma):not(.page-sobre-marcio-villanova):not(.page-publicacoes):not(.page-contato):not(.page-base-de-conhecimento):not(.page-perguntas-frequentes):not(.page-glossario-de-evidencias):not(.page-privacidade):not(.page-termos):not(.page-politica-de-cookies):not(.page-fontes-regulatorias):not(.page-trilha-de-fontes):not(.page-passaporte-produto-europeu):not(.page-o-problema-de-evidencia-dos-fornecedores-brasileiros):not(.page-estrutura-de-evidencias-legiveis-para-o-comprador-europeu):not(.page-kit-de-evidencias-cadeia-circular):not(.page-arquivo-de-evidencias-2026):not(.page-quando-o-comprador-europeu-pede-evidencias):not(.page-risco-da-cadeia-de-suprimentos):not(.page-mercado-de-evidencias-ue-brasil):not(.page-modelo-de-maturidade-de-evidencias-semm):not(.page-para-compradores-europeus):not(.page-gestao-continua-de-evidencias):not(.page-programa-escopo-3-brasil):not(.page-revisao-rastreabilidade-eudr-fornecedores):not(.page-compradores-europeus-precisam-de-evidencias):not(.page-revisao-evidencias-prontas-para-o-comprador):not(.page-conformidade-cbam):not(.page-ponte-conformidade-brasil-europa):not(.page-revisao-prontidao-evidencias-30-dias):not(.tag-risco-contratual-e-compras):not(.tag-cbam-e-exposicao-de-carbono):not(.tag-eudr-e-rastreabilidade):not(.tag-evidencia-de-fornecedor):not(.tag-financas-e-risco-de-diretoria):not(.tag-due-diligence-da-cadeia):not(.tag-dados-de-produto-e-evidencia-circular) .only-pt{display:none !important}
+
+/* Italiano aparece só em página italiana. */
+body:not(.tag-hash-it):not(.page-it):not(.page-richiedi-analisi):not(.page-revisione-evidenze-cbam):not(.page-revisione-evidenze-eudr):not(.page-revisione-clausole-due-diligence):not(.page-analisi-evidenze-fornitori-brasiliani) .only-it{display:none !important}
+
+/* Inglês some nas páginas dos outros dois. */
 body.tag-hash-pt .only-en,
 body.page-pt .only-en,
 body.page-o-que-analisamos .only-en,
@@ -47,97 +62,11 @@ body.tag-eudr-e-rastreabilidade .only-en,
 body.tag-evidencia-de-fornecedor .only-en,
 body.tag-financas-e-risco-de-diretoria .only-en,
 body.tag-due-diligence-da-cadeia .only-en,
-body.tag-dados-de-produto-e-evidencia-circular .only-en{display:none !important}
-body.tag-hash-pt .only-pt,
-body.page-pt .only-pt,
-body.page-o-que-analisamos .only-pt,
-body.page-revisao-evidencias-eudr-cbam-csddd-exportadores .only-pt,
-body.page-preparacao-fornecedores-brasileiros-compradores-europeus .only-pt,
-body.page-solicitar-analise .only-pt,
-body.page-revisao-evidencias-cbam .only-pt,
-body.page-revisao-prontidao-evidencias-eudr .only-pt,
-body.page-revisao-risco-clausulas-contratuais .only-pt,
-body.page-revisao-evidencias-para-diretoria .only-pt,
-body.page-due-diligence-csddd .only-pt,
-body.page-a-firma .only-pt,
-body.page-sobre-marcio-villanova .only-pt,
-body.page-publicacoes .only-pt,
-body.page-contato .only-pt,
-body.page-base-de-conhecimento .only-pt,
-body.page-perguntas-frequentes .only-pt,
-body.page-glossario-de-evidencias .only-pt,
-body.page-privacidade .only-pt,
-body.page-termos .only-pt,
-body.page-politica-de-cookies .only-pt,
-body.page-fontes-regulatorias .only-pt,
-body.page-trilha-de-fontes .only-pt,
-body.page-passaporte-produto-europeu .only-pt,
-body.page-o-problema-de-evidencia-dos-fornecedores-brasileiros .only-pt,
-body.page-estrutura-de-evidencias-legiveis-para-o-comprador-europeu .only-pt,
-body.page-kit-de-evidencias-cadeia-circular .only-pt,
-body.page-arquivo-de-evidencias-2026 .only-pt,
-body.page-quando-o-comprador-europeu-pede-evidencias .only-pt,
-body.page-risco-da-cadeia-de-suprimentos .only-pt,
-body.page-mercado-de-evidencias-ue-brasil .only-pt,
-body.page-modelo-de-maturidade-de-evidencias-semm .only-pt,
-body.page-para-compradores-europeus .only-pt,
-body.page-gestao-continua-de-evidencias .only-pt,
-body.page-programa-escopo-3-brasil .only-pt,
-body.page-revisao-rastreabilidade-eudr-fornecedores .only-pt,
-body.page-compradores-europeus-precisam-de-evidencias .only-pt,
-body.page-revisao-evidencias-prontas-para-o-comprador .only-pt,
-body.page-conformidade-cbam .only-pt,
-body.page-ponte-conformidade-brasil-europa .only-pt,
-body.page-revisao-prontidao-evidencias-30-dias .only-pt,
-body.tag-risco-contratual-e-compras .only-pt,
-body.tag-cbam-e-exposicao-de-carbono .only-pt,
-body.tag-eudr-e-rastreabilidade .only-pt,
-body.tag-evidencia-de-fornecedor .only-pt,
-body.tag-financas-e-risco-de-diretoria .only-pt,
-body.tag-due-diligence-da-cadeia .only-pt,
-body.tag-dados-de-produto-e-evidencia-circular .only-pt{display:revert !important}
-
-/* Italiano: esconde os outros dois idiomas e liga o próprio, respeitando o tipo
-   de caixa de cada elemento (linha, flex e grade). */
+body.tag-dados-de-produto-e-evidencia-circular .only-en,
 body.tag-hash-it .only-en,
 body.page-it .only-en,
 body.page-richiedi-analisi .only-en,
 body.page-revisione-evidenze-cbam .only-en,
 body.page-revisione-evidenze-eudr .only-en,
 body.page-revisione-clausole-due-diligence .only-en,
-body.page-analisi-evidenze-fornitori-brasiliani .only-en,
-body.tag-hash-it .only-pt,
-body.page-it .only-pt,
-body.page-richiedi-analisi .only-pt,
-body.page-revisione-evidenze-cbam .only-pt,
-body.page-revisione-evidenze-eudr .only-pt,
-body.page-revisione-clausole-due-diligence .only-pt,
-body.page-analisi-evidenze-fornitori-brasiliani .only-pt{display:none !important}
-body.tag-hash-it .only-it,
-body.page-it .only-it,
-body.page-richiedi-analisi .only-it,
-body.page-revisione-evidenze-cbam .only-it,
-body.page-revisione-evidenze-eudr .only-it,
-body.page-revisione-clausole-due-diligence .only-it,
-body.page-analisi-evidenze-fornitori-brasiliani .only-it{display:inline !important}
-body.tag-hash-it nav.only-it,
-body.page-it nav.only-it,
-body.page-richiedi-analisi nav.only-it,
-body.page-revisione-evidenze-cbam nav.only-it,
-body.page-revisione-evidenze-eudr nav.only-it,
-body.page-revisione-clausole-due-diligence nav.only-it,
-body.page-analisi-evidenze-fornitori-brasiliani nav.only-it,
-body.tag-hash-it div.only-it,
-body.page-it div.only-it,
-body.page-richiedi-analisi div.only-it,
-body.page-revisione-evidenze-cbam div.only-it,
-body.page-revisione-evidenze-eudr div.only-it,
-body.page-revisione-clausole-due-diligence div.only-it,
-body.page-analisi-evidenze-fornitori-brasiliani div.only-it{display:flex !important}
-body.tag-hash-it .cols.only-it,
-body.page-it .cols.only-it,
-body.page-richiedi-analisi .cols.only-it,
-body.page-revisione-evidenze-cbam .cols.only-it,
-body.page-revisione-evidenze-eudr .cols.only-it,
-body.page-revisione-clausole-due-diligence .cols.only-it,
-body.page-analisi-evidenze-fornitori-brasiliani .cols.only-it{display:grid !important}
+body.page-analisi-evidenze-fornitori-brasiliani .only-en{display:none !important}
