@@ -74,6 +74,61 @@ NUNCA usar emoji nem bibliotecas externas de ícones.
   sem clientes nomeados sem autorização escrita · prova social só com
   fato verificável (18 DOIs, ECESP, desde 2011, 1 dia útil)
 
+## Celular (acrescentado em 08/09/2026, medido)
+
+O padrão não tinha nenhuma regra de celular até aqui, e a falta custou caro:
+toda página do site rolava para o lado no telefone, em todos os idiomas, e o
+menu do topo desaparecia abaixo de 900px sem nada no lugar — as páginas de
+serviço só eram alcançáveis rolando até o rodapé.
+
+- **A barra do topo tem de caber.** Abaixo de 1025px: marca + seletor de idioma
+  + botão do menu, e nada mais. O botão de pedido desce para dentro do painel.
+  1025px não é número redondo: é a largura, medida de pixel em pixel, em que o
+  cabeçalho em inglês (que precisa de 1026px) volta a caber.
+- **Menu sanfona** abaixo de 1025px, painel navy abaixo da barra, links em
+  linhas separadas por filete, e o botão dourado do padrão como último item.
+  O painel precisa de `z-index` **acima de 999**: o banner de cookies é
+  `position:fixed; z-index:999` e, medido em 360x640, cobria exatamente o botão
+  dourado — a pessoa não conseguia tocar no CTA principal. E precisa de teto de
+  altura com rolagem própria, medido pelo JavaScript e não chutado: a barra tem
+  96px (padding 14 + 68 + 14), e um valor fixo errado deixou o último item 28px
+  abaixo da tela no celular deitado.
+- **Contraste do botão dourado (medido, e vale para o site inteiro):** `#fff`
+  sobre `linear-gradient(135deg, gold, #a2762c)` dá **3,12** na ponta clara e
+  **4,07** na escura. O WCAG AA pede 4,5 para texto normal, e o texto do botão
+  (13,5–14px, peso 600–700) não conta como "texto grande". Isto **não é defeito
+  de uma página**: é o botão canônico do padrão, usado em todo CTA do site
+  (`v2.css:30`). Corrigir exige escurecer o dourado ou engrossar/aumentar o
+  texto, e é decisão de marca do Marcio — não mexa por conta própria.
+- **Cor sobre o botão dourado precisa de três classes.** `.topbar a` é
+  `(0,1,1)` e vence um seletor de uma classe só; o texto saía cinza-azulado em
+  vez de branco.
+- **Foco de teclado:** o painel vem ANTES do botão no HTML, então abrir e
+  apertar Tab pularia os links. Abrir manda o foco ao primeiro link; `Esc` e o
+  fim da lista devolvem o foco ao botão.
+- **Quem decide o idioma é o `lang.css`**, com `!important`. Nenhuma regra nova
+  deve disputar `display` com ele em classe `only-en/only-pt/only-it` — perde.
+  Use classe própria no recipiente. Foi assim que o menu apareceu esparramado
+  na barra nas páginas PT e IT: `display:revert !important` venceu a regra de
+  celular do `main.css`, que não era `!important`.
+- **Desenho decorativo que sangra** (`.h2arc` na home, `.mark` no `page.hbs`)
+  **já está resolvido e não precisa de regra nova**: `.hero` tem
+  `overflow:hidden` (`main.css:45`) e `.article-head` também (`v2.css:87`), e as
+  duas faixas do site são `<section class="hero h2hero">` e
+  `<section class="hero page-hero">`. Em 08/09/2026 eu acrescentei um
+  `overflow-x:clip` achando que esses SVGs empurravam a página; medi com e sem a
+  regra e o resultado foi idêntico. Era inerte, e foi removida. (`.article-icon`
+  existe no CSS mas **não tem markup** — é classe morta; não use esse nome.)
+- **Passar da tela não é o mesmo que causar rolagem.** Um elemento pode
+  ultrapassar a borda e não esticar o documento, se um ancestral o corta. Antes
+  de culpar um elemento, confira se algum pai tem `overflow-x` diferente de
+  `visible`. A `auditoria-navegador.mjs` já separa "culpados" de "contidos".
+- **Conferir antes de publicar** em 320, 360, 390, 768, 900, 1024 e 1025px, nos
+  três idiomas, com o menu fechado e aberto. `scripts/auditoria-navegador.mjs`
+  faz isso no site publicado; a prévia local roda com o Chromium do ambiente.
+- **NUNCA usar `isMobile` do Playwright** para essa conferência: ele ignora a
+  tela pedida (390x844 vira 500x1080) e devolve resultado limpo e falso.
+
 ## Idiomas (adaptação, não tradução)
 
 - **PT**: setores nomeados (aço, alumínio, café, soja, carne, couro,
