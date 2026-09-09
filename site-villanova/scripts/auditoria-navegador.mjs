@@ -207,6 +207,85 @@ async function auditaPagina(navegador, url, tela) {
         }
         out.vazandoLado = out.vazandoLado.slice(0, 12);
         out.vazandoContido = out.vazandoContido.slice(0, 6);
+
+        // QUEM NAO ENCOLHE. A lista acima nao basta, e isso apareceu em
+        // 09/09/2026 nos dois posts que sobraram com rolagem: ela mostrou
+        // <div class="article-body"> e depois TODO paragrafo dentro dele com
+        // exatamente a mesma faixa (20px a 438px). E obvio depois de ver: um
+        // filho de bloco herda a largura do pai, entao a lista repete o bloco
+        // inteiro e nao diz de ONDE vem o 438.
+        //
+        // Este teste responde isso fisicamente, sem teoria: aperta o <body>
+        // para 120px e pergunta quem CONTINUA largo. Quem nao encolhe e quem
+        // empurra a pagina. Depois fica so o mais fundo de cada ramo (o que
+        // nao tem outro teimoso dentro), que e a causa de verdade — e, se for
+        // texto, tambem a palavra mais comprida dele, que e o motivo classico
+        // de uma caixa nao encolher (URL sem hifen, codigo, nome colado).
+        //
+        // Fixos e absolutos ficam de fora: nao dependem da largura do pai e so
+        // fariam ruido. O estilo do body e restaurado logo em seguida, antes de
+        // qualquer outra medida desta mesma passagem.
+        const APERTO = 120;
+        const estiloAntes = document.body.getAttribute('style');
+        document.body.style.width = APERTO + 'px';
+        document.body.style.minWidth = '0';
+        void document.body.offsetWidth;
+        const teimosos = [];
+        for (const el of document.querySelectorAll('body *')) {
+          const cs = getComputedStyle(el);
+          if (cs.position === 'fixed' || cs.position === 'absolute') continue;
+          if (cs.display === 'none') continue;
+          const r = el.getBoundingClientRect();
+          if (r.height === 0) continue;
+          if (r.width <= APERTO + 8) continue;
+          teimosos.push({ el, larg: Math.round(r.width) });
+        }
+        if (estiloAntes === null) document.body.removeAttribute('style');
+        else document.body.setAttribute('style', estiloAntes);
+        void document.body.offsetWidth;
+
+        const caminhoDe = (el) => {
+          const partes = [];
+          for (let n = el; n && n !== document.body; n = n.parentElement) {
+            const c = String(n.className || '').trim().split(/\s+/)[0];
+            partes.unshift(n.tagName.toLowerCase() + (c ? '.' + c : ''));
+            if (partes.length >= 5) break;
+          }
+          return partes.join(' > ');
+        };
+        const palavraMaisLonga = (el) => {
+          let melhor = null;
+          const it = document.createNodeIterator(el, NodeFilter.SHOW_TEXT);
+          let n;
+          while ((n = it.nextNode())) {
+            const re = /\S+/g;
+            let m;
+            while ((m = re.exec(n.nodeValue))) {
+              if (m[0].length < 12) continue;
+              const rg = document.createRange();
+              rg.setStart(n, m.index);
+              rg.setEnd(n, m.index + m[0].length);
+              const w = Math.round(rg.getBoundingClientRect().width);
+              if (!melhor || w > melhor.px) melhor = { palavra: m[0].slice(0, 60), px: w };
+            }
+          }
+          return melhor;
+        };
+
+        out.naoEncolhe = [];
+        for (const t of teimosos) {
+          if (teimosos.some((o) => o !== t && t.el.contains(o.el))) continue;
+          out.naoEncolhe.push({
+            tag: t.el.tagName.toLowerCase(),
+            classe: (t.el.className && String(t.el.className).slice(0, 60)) || '',
+            larg: t.larg,
+            caminho: caminhoDe(t.el),
+            texto: (t.el.textContent || '').trim().slice(0, 50),
+            palavra: palavraMaisLonga(t.el),
+          });
+        }
+        out.naoEncolhe.sort((a, b) => b.larg - a.larg);
+        out.naoEncolhe = out.naoEncolhe.slice(0, 10);
       }
 
       // Imagens que não carregaram.
@@ -391,6 +470,14 @@ function relataPagina(r) {
     }
     for (const v of (r.vazandoContido || [])) {
       linha(`       (passa da tela mas NÃO é culpado: <${v.tag} class="${v.classe}"> já é cortado por ${v.contidoPor})`);
+    }
+    if (r.naoEncolhe?.length) {
+      linha('     QUEM NÃO ENCOLHE (apertei o body a 120px e estes continuaram largos):');
+      for (const v of r.naoEncolhe) {
+        const pal = v.palavra ? `  ·  palavra mais longa: "${v.palavra.palavra}" (${v.palavra.px}px)` : '';
+        linha(`       ${v.larg}px  ${v.caminho}${pal}`);
+        if (v.texto) linha(`              "${v.texto}"`);
+      }
     }
   }
   for (const l of (r.linksMortos || [])) linha(`   ! link sem destino (href vazio ou "#"): "${l}"`);
