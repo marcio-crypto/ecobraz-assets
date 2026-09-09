@@ -1,5 +1,11 @@
+<!-- ATUALIZADO em 09/09/2026: cores de contraste alinhadas ao tema.
+     O dourado de ORNAMENTO (--gold #b88a3d) continua o da marca; o que mudou e
+     o dourado quando ele e TEXTO (--gold-txt #8a6224) e o gradiente do botao
+     (#966d2b -> #7d5920). Tambem escureceram os cinzas apagados que ficavam
+     abaixo do minimo do WCAG AA. Conferido com o mesmo medidor da auditoria:
+     zero regra abaixo do minimo nos dois arquivos. Ver design/PADRAO.md. -->
 <!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{margin:0;padding:0;box-sizing:border-box}
-:root{--navy:#061426;--navy2:#0b2a52;--gold:#b88a3d;--gold-l:#d9b573;--paper:#faf8f4;--ink:#1a2634;--mut:#5b6b7c;--line:#e6e0d4}
+:root{--navy:#061426;--navy2:#0b2a52;--gold:#b88a3d;--gold-txt:#8a6224;--gold-l:#d9b573;--paper:#faf8f4;--ink:#1a2634;--mut:#5b6b7c;--line:#e6e0d4}
 body{font-family:'Inter','Segoe UI',system-ui,sans-serif;color:var(--ink);background:var(--paper);line-height:1.7}
 .serif{font-family:Georgia,serif}
 .wrap{max-width:1140px;margin:0 auto;padding:0 40px}
@@ -9,9 +15,9 @@ body{font-family:'Inter','Segoe UI',system-ui,sans-serif;color:var(--ink);backgr
 .brand span{color:#d9b573}
 .nav{display:flex;gap:22px;align-items:center}
 .nav a{color:#b9c6d8;text-decoration:none;font-size:13px}
-.btn{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#b88a3d,#a2762c);color:#fff;font-weight:700;padding:11px 22px;border-radius:6px;text-decoration:none;font-size:13.5px}
+.btn{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#966d2b,#7d5920);color:#fff;font-weight:700;padding:11px 22px;border-radius:6px;text-decoration:none;font-size:13.5px}
 .ahero{background:radial-gradient(900px 420px at 90% -20%,#123a6b 0%,transparent 55%),linear-gradient(160deg,#061426 60%,#0b2a52);color:#fff;padding:58px 0 46px;position:relative;overflow:hidden}
-.bcrumb{color:#7d90a8;font-size:12px;margin-bottom:18px}
+.bcrumb{color:#b3c0ce;font-size:12px;margin-bottom:18px}
 .bcrumb b{color:#d9b573}
 .chips{display:flex;gap:10px;margin-bottom:18px}
 .chip{display:inline-flex;align-items:center;gap:7px;background:rgba(184,138,61,.15);border:1px solid rgba(217,181,115,.4);color:#d9b573;font-size:11px;font-weight:700;letter-spacing:.1em;padding:6px 13px;border-radius:20px;text-transform:uppercase}
@@ -29,7 +35,7 @@ body{font-family:'Inter','Segoe UI',system-ui,sans-serif;color:var(--ink);backgr
 .kbox b{color:#d9b573;display:block;font-size:13px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px}
 .kbox p{color:#c6d2e0;font-size:14.5px;margin:0}
 .pull{font-family:Georgia,serif;font-style:italic;font-size:22px;line-height:1.45;color:var(--navy);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:22px 8px;margin:30px 0;text-align:center}
-.pull b{color:var(--gold)}
+.pull b{color:var(--gold-txt)}
 .lista{list-style:none;margin:0 0 22px}
 .lista li{padding:9px 0 9px 34px;position:relative;font-size:15.5px;border-bottom:1px dashed var(--line)}
 .lista li svg{position:absolute;left:0;top:11px}
@@ -37,8 +43,8 @@ body{font-family:'Inter','Segoe UI',system-ui,sans-serif;color:var(--ink);backgr
 .tabela th{background:var(--navy);color:#fff;text-align:left;padding:12px 16px;font-size:12px;letter-spacing:.08em;text-transform:uppercase}
 .tabela td{padding:12px 16px;border-bottom:1px solid var(--line)}
 .tabela tr:last-child td{border:none}
-.tabela td:last-child{color:var(--gold);font-weight:700}
-.ctaband{background:linear-gradient(135deg,var(--gold),#a2762c);border-radius:12px;padding:24px 28px;margin:34px 0;display:flex;justify-content:space-between;align-items:center;gap:20px;color:#fff;box-shadow:0 14px 34px rgba(184,138,61,.3)}
+.tabela td:last-child{color:var(--gold-txt);font-weight:700}
+.ctaband{background:linear-gradient(135deg,#966d2b,#7d5920);border-radius:12px;padding:24px 28px;margin:34px 0;display:flex;justify-content:space-between;align-items:center;gap:20px;color:#fff;box-shadow:0 14px 34px rgba(184,138,61,.3)}
 .ctaband b{font-size:17px;display:block}
 .ctaband small{font-size:13px;opacity:.9}
 .ctaband a{background:#061426;color:#fff;font-weight:700;padding:12px 22px;border-radius:6px;text-decoration:none;font-size:13.5px;white-space:nowrap}
@@ -53,12 +59,12 @@ body{font-family:'Inter','Segoe UI',system-ui,sans-serif;color:var(--ink);backgr
 .scard{background:#fff;border:1px solid var(--line);border-radius:12px;padding:22px;margin-bottom:20px;box-shadow:0 8px 22px rgba(20,32,46,.05)}
 .scard h4{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);margin-bottom:14px;display:flex;gap:8px;align-items:center}
 .toc a{display:block;color:#2a3846;font-size:13.5px;text-decoration:none;padding:7px 0 7px 14px;border-left:2px solid var(--line)}
-.toc a.on{border-color:var(--gold);color:var(--gold);font-weight:700}
+.toc a.on{border-color:var(--gold);color:var(--gold-txt);font-weight:700}
 .scta{background:linear-gradient(160deg,#061426,#0b2a52);color:#fff;border-radius:12px;padding:24px;margin-bottom:20px}
 .scta b{font-size:16px;display:block;margin-bottom:8px;font-family:Georgia,serif}
 .scta p{font-size:13px;color:#c6d2e0;margin-bottom:16px}
 .rel{padding:56px 0;background:linear-gradient(180deg,#f2eee6,#faf8f4)}
-.label{color:var(--gold);letter-spacing:.2em;font-size:11px;font-weight:700;text-transform:uppercase;display:flex;align-items:center;gap:10px}
+.label{color:var(--gold-txt);letter-spacing:.2em;font-size:11px;font-weight:700;text-transform:uppercase;display:flex;align-items:center;gap:10px}
 .label::before{content:"";width:26px;height:1px;background:var(--gold)}
 h2.sec{font-family:Georgia,serif;font-size:28px;margin:12px 0 28px}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
@@ -68,10 +74,13 @@ h2.sec{font-family:Georgia,serif;font-size:28px;margin:12px 0 28px}
 .rcap.c2{background:linear-gradient(135deg,#143c2a,#061426)}
 .rcap.c3{background:linear-gradient(135deg,#4a3413,#061426)}
 .rbody{padding:18px 20px 20px}
-.rtag{font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--gold);text-transform:uppercase}
+.rtag{font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--gold-txt);text-transform:uppercase}
 .rbody h3{font-size:15.5px;line-height:1.4;margin:6px 0 10px}
-.rbody a{color:var(--gold);font-weight:700;font-size:12.5px;text-decoration:none}
+.rbody a{color:var(--gold-txt);font-weight:700;font-size:12.5px;text-decoration:none}
 footer{background:#04101f;color:#8fa0b5;font-size:12px;padding:24px 0;text-align:center}
+/* .nav a tem especificidade 0,1,1 e ganha de .btn 0,1,0: sem esta linha o
+   botao da barra herda o azul apagado do menu. Mesmo erro ja visto no tema. */
+.nav a.btn{color:#fff}
 </style></head><body>
 <div class="topbar"><div class="wrap"><div class="brand">VILLANOVA <span>ESG</span></div><div class="nav"><a href="#">Serviços</a><a href="#">SEMM</a><a href="#">Biblioteca</a><a href="#">A firma</a><a class="btn" href="#">Começar →</a></div></div></div>
 

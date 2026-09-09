@@ -533,3 +533,18 @@ html:not(.vn-tabela-embrulhada) .article-body table{max-width:100%}
    fundo claro dele fica errado e a cor apagada some: branco resolve os dois
    (12,3 sobre o navy, 4,65 sobre o dourado). */
 .vn-cta .vn-boundary{background:transparent;color:#fff}
+
+/* --- os dois ultimos casos, achados na varredura COMPLETA das 232 URLs --- */
+
+/* 1) O eyebrow do bloco de materiais fica sobre o PAPEL, e o .eyebrow do v2
+      pinta de --gold-l com !important — cor de fundo escuro. Dava 1,83.
+      Precisa de !important porque !important ganha de especificidade: a regra
+      `.magnets .eyebrow` sem ele perdia para `.eyebrow{...!important}` mesmo
+      sendo mais especifica. Isso me custou uma rodada. */
+.magnets .eyebrow{color:var(--gold-txt)!important}
+
+/* 2) O aviso de escopo no hero das tres paginas de pedido fica sobre o
+      gradiente escuro, e o cinza #8fa0b5 dava 4,27 — reprovava por pouco na
+      parada mais clara do gradiente (#123a6b). Sobe para a mesma cor do texto
+      de apoio do hero, que da 7,4 la. */
+.hero .boundary,.page-hero .boundary,.h2hero .boundary{color:#c6d2e0}
