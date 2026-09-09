@@ -166,6 +166,20 @@ oferece rota nos três idiomas. Numa URL que não existe não há slug nem tag,
 então nenhuma regra do `lang.css` casa e **o inglês é o que aparece** — isso é
 proposital: é a língua padrão do site, e o seletor da barra continua ali.
 
+## Referências renderizadas desta pasta
+
+| arquivo | o que mostra | como se mantém |
+|---|---|---|
+| `referencia-home-v2.html` | home, desktop | CSS **copiado** por dentro — pode envelhecer |
+| `referencia-artigo-v2.html` | artigo, desktop | CSS **copiado** por dentro — pode envelhecer |
+| `referencia-celular-v2.html` | **celular e tablet**, com menu, tabela, nota, avisos | **linka** `../theme/assets/css` — não tem como envelhecer |
+| `celular/*.png` | as fotos a 360, 390 e 768px, com o menu fechado e aberto | geradas do arquivo acima |
+
+As duas primeiras tinham o CSS copiado, e em 09/09/2026 isso cobrou a conta:
+continuavam com o dourado antigo, já reprovado no contraste, e quem desenhasse
+uma página nova olhando para elas reintroduziria o erro. Foram alinhadas e
+medidas até zerar. **Para referência nova, prefira linkar o CSS do tema.**
+
 ## Celular (acrescentado em 08/09/2026, medido)
 
 O padrão não tinha nenhuma regra de celular até aqui, e a falta custou caro:
