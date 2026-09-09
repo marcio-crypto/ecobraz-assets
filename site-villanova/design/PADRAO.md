@@ -1,5 +1,11 @@
 # Padrão de Design Villanova v2 — APROVADO pelo Marcio em 30/07/2026
 
+> **Alteração aprovada em 09/09/2026 (Marcio, opção C): o dourado de TEXTO
+> escureceu.** O dourado da marca continua o mesmo no ornamento; o que mudou é
+> a cor do dourado quando ele é *texto*, porque a antiga reprovava no contraste
+> mínimo do WCAG AA. Ver a seção "Cor e contraste" abaixo. As referências
+> renderizadas desta pasta já estão com os valores novos.
+
 > REGRA PERMANENTE: toda página, template ou material novo da Villanova ESG
 > segue este padrão. As referências renderizadas e aprovadas estão nesta
 > pasta: `referencia-home-v2.html` (home) e `referencia-artigo-v2.html`
@@ -73,6 +79,106 @@ NUNCA usar emoji nem bibliotecas externas de ícones.
 - Sem preços (caso a caso) · sem WhatsApp (formulário é o canal) ·
   sem clientes nomeados sem autorização escrita · prova social só com
   fato verificável (18 DOIs, ECESP, desde 2011, 1 dia útil)
+
+## Cor e contraste (acrescentado em 09/09/2026, medido no site publicado)
+
+**Existem TRÊS dourados, e confundi-los é o erro que já aconteceu.**
+
+| token | valor | onde usar |
+|---|---|---|
+| `--gold` | `#b88a3d` | **ornamento**: filete, losango, borda de `h2`, contorno de foto, borda de card. Não é texto, o WCAG não pede contraste. É o dourado da marca e não mudou. |
+| `--gold-txt` | `#8a6224` | **texto** sobre fundo claro: link, `.go`, `.rel-tag`, eyebrow em seção clara. |
+| `--gold-b1` / `--gold-b2` | `#966d2b` / `#7d5920` | **gradiente de botão** com texto branco. |
+| `--gold-l` | `#d9b573` | **só sobre fundo escuro** (hero, cartão navy). Nunca em caixa clara. |
+
+**As duas referências de fundo, e elas não são as óbvias:**
+
+- fundo claro de referência = **`#f2eee6`** (o bege do `.vn-boundary`), não o branco.
+  É o mais escuro dos claros; quem passa nele passa em todos.
+- fundo escuro de referência = **`#123a6b`** (a parada mais clara do gradiente do
+  hero), não o navy. Mesma lógica, ao contrário.
+
+**A regra que resume tudo:** cor de texto anda junto com o fundo em que ela vai
+cair. Se você mudar o fundo de um componente, **redeclare a cor**.
+
+**O erro real que isso já causou**, e vale ler porque nenhuma revisão de código
+pega: o `v2.css` define `.vn-note` como cartão escuro (fundo navy, texto
+`#c6d2e0`); o `main.css` define que dentro do artigo ele é cartão claro
+(`#F4F6F2`) e **ganha por especificidade** — mas não redeclara a cor do texto.
+Resultado servido: texto `#c6d2e0` sobre `#F4F6F2`, contraste **1,41**,
+praticamente invisível, em toda página com nota. Só medindo a página montada.
+
+**Não confie em promessa, inclusive na minha.** Eu havia reportado ao Marcio
+"botão 3,12" como se fosse o único ponto abaixo do mínimo. Eram **dez regras**,
+e o dourado explicava três. A `auditoria-navegador.mjs` agora mede o contraste
+de todo texto da página, lê também as paradas de gradiente e fica com a pior, e
+conta o resultado **por regra de CSS** (uma linha errada pinta dezenas de
+elementos; o número por elemento assustaria sem informar).
+
+Limites conhecidos do medidor, para ninguém tratar como laudo: texto sobre
+**imagem** de fundo não é medido; opacidade e mistura de camadas não entram na
+conta; fundo semitransparente é resolvido pelo primeiro ancestral opaco.
+
+## Idioma: o `lang.css` só ESCONDE (regra reescrita em 09/09/2026)
+
+O `lang.css` é gerado por `scripts/gera-idioma.mjs`. **Ele nunca declara
+`display` no idioma que está ligado — só esconde os outros.**
+
+Antes ele fazia o contrário: escondia tudo e religava o idioma da página com
+`display:revert` (PT) ou `display:inline` (IT). Para isso funcionar era preciso
+adivinhar o tipo de caixa de cada elemento, e vinham as exceções à mão
+(`nav.only-it` vira flex, `div.only-it` vira flex, `.cols.only-it` vira grade).
+Medindo o `display` calculado dos três idiomas na mesma página apareceram
+**quatro defeitos de uma causa só, nenhum visível em inglês**:
+
+| elemento | EN | PT | IT | efeito |
+|---|---|---|---|---|
+| `nav.main` | flex | **block** | flex | menu PT em duas linhas, em toda largura |
+| `div.cols` | grid | **block** | grid | colunas do rodapé PT empilhadas |
+| `a.top-cta` | flex | **block** | **block** | botão principal sem `inline-flex` |
+| `div.legal` | block | block | **flex** | regra `div.only-it{flex}` ampla demais |
+
+Se você sentir vontade de escrever `display:algo` no `lang.css` para "religar"
+um idioma, é sinal de que o CSS de verdade está faltando — conserte lá.
+
+**E não deixe regra de idioma fora do arquivo gerado.** Havia um
+`.only-it{display:none!important}` escrito à mão no `v2.css`; com a lógica nova
+nada religava o italiano e o site inteiro em italiano teria sumido. Quem pegou
+foi a conferência de `display` nos três idiomas, não a leitura do código. Por
+isso ela virou teste permanente da auditoria, junto com a de vazamento (um
+idioma aparecendo na página do outro) e a de idioma vazio.
+
+## Tabela dentro de artigo
+
+Uma tabela **nunca** fica menor que a largura mínima das suas colunas, e
+`overflow` nela corta a célula sem segurar a caixa. O `artigo.js` envolve toda
+tabela num `<div class="tabela-rolavel">` que rola por dentro, em **qualquer**
+largura — inclusive na faixa de 701px a 980px, que antes ficava sem regra. A
+tabela continua com `width:100%` dentro do contêiner, então tabela estreita
+continua esticando. Quem está sem JavaScript cai numa reserva em CSS que só
+vale abaixo de 700px.
+
+## Página de erro
+
+`theme/error.hbs` existe desde 09/09/2026. Antes o Ghost servia a página de
+erro dele: sem barra, sem rodapé, sem saída. A nova herda o `default.hbs` e
+oferece rota nos três idiomas. Numa URL que não existe não há slug nem tag,
+então nenhuma regra do `lang.css` casa e **o inglês é o que aparece** — isso é
+proposital: é a língua padrão do site, e o seletor da barra continua ali.
+
+## Referências renderizadas desta pasta
+
+| arquivo | o que mostra | como se mantém |
+|---|---|---|
+| `referencia-home-v2.html` | home, desktop | CSS **copiado** por dentro — pode envelhecer |
+| `referencia-artigo-v2.html` | artigo, desktop | CSS **copiado** por dentro — pode envelhecer |
+| `referencia-celular-v2.html` | **celular e tablet**, com menu, tabela, nota, avisos | **linka** `../theme/assets/css` — não tem como envelhecer |
+| `celular/*.png` | as fotos a 360, 390 e 768px, com o menu fechado e aberto | geradas do arquivo acima |
+
+As duas primeiras tinham o CSS copiado, e em 09/09/2026 isso cobrou a conta:
+continuavam com o dourado antigo, já reprovado no contraste, e quem desenhasse
+uma página nova olhando para elas reintroduziria o erro. Foram alinhadas e
+medidas até zerar. **Para referência nova, prefira linkar o CSS do tema.**
 
 ## Celular (acrescentado em 08/09/2026, medido)
 

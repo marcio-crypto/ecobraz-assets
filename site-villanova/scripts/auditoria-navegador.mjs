@@ -78,6 +78,18 @@ const TELAS = [
 
 // ---------------------------------------------------------------- lista de páginas
 const LIMITE = Number(process.env.LIMITE_PAGINAS || 24);
+
+// FATIAMENTO, para a varredura COMPLETA caber no tempo.
+// O site tem 232 URLs; a 5 telas por página dá 1160 carregamentos, e a ~3,3s
+// cada isso passa de uma hora — mais que o limite do workflow. Fatiar reparte
+// as URLs entre rodadas paralelas: FATIAS=4 e FATIA=0..3 divide em quatro, e
+// cada uma leva um quarto do tempo. A repartição é por resto de divisão do
+// índice, e não por blocos contíguos, para que cada fatia pegue páginas
+// institucionais e posts misturados — um bloco contíguo daria a uma fatia só
+// página institucional e a outra só post, e um erro que só existe em post
+// apareceria em uma fatia e sumiria nas outras.
+const FATIAS = Math.max(1, Number(process.env.FATIAS || 1));
+const FATIA = Math.min(FATIAS - 1, Math.max(0, Number(process.env.FATIA || 0)));
 let TOTAL_URLS = 0;
 
 const doSitemap = async (mapa) => {
@@ -89,6 +101,8 @@ const doSitemap = async (mapa) => {
   } catch (e) { console.log(`aviso: não consegui ler ${mapa}: ${e.message}`); }
   return out;
 };
+
+const fatiar = (lista) => (FATIAS === 1 ? lista : lista.filter((_, i) => i % FATIAS === FATIA));
 
 const paginas = async () => {
   if (process.argv.length > 2) return process.argv.slice(2);
@@ -115,6 +129,13 @@ const paginas = async () => {
   const nInst = Math.min(inst.length, cotaInst);
   console.log(`Amostra: ${nInst} página(s) institucional(is) + ${escolhidas.length - nInst} post(s).`);
   TOTAL_URLS = inst.length + posts.length;
+  if (FATIAS > 1) {
+    const antes = escolhidas.length;
+    const desta = fatiar(escolhidas);
+    console.log(`FATIA ${FATIA + 1} de ${FATIAS}: ${desta.length} das ${antes} URLs desta rodada.`);
+    console.log('O total do site só fecha somando TODAS as fatias.');
+    return desta;
+  }
   if (inst.length + posts.length > LIMITE) {
     console.log(`ATENÇÃO: existem ${inst.length + posts.length} URLs e o limite desta rodada é ${LIMITE}.`);
     console.log('Isto NÃO é uma varredura completa do site. É uma amostra.');
@@ -360,6 +381,127 @@ async function auditaPagina(navegador, url, tela) {
       }
       out.alvosPequenos = out.alvosPequenos.slice(0, 10);
 
+      // CONTRASTE DE TEXTO (WCAG 2.1 AA: 4,5 para texto normal, 3 para texto
+      // grande — 24px, ou 18,66px em negrito).
+      //
+      // Entrou em 09/09/2026 porque eu tinha reportado ao Marcio "botao 3,12"
+      // como se fosse o unico ponto abaixo do minimo, e nao era: os LINKS em
+      // dourado sobre o papel davam 2,94, pior que o botao, e eu so descobri
+      // porque fui calcular a mao para montar as opcoes. Promessa minha nao e
+      // verificacao. Agora a maquina mede a pagina inteira, toda rodada.
+      //
+      // O FUNDO EM GRADIENTE E O CASO QUE IMPORTA AQUI, e por isso ele nao e
+      // pulado: o botao da marca e um gradiente, e um gradiente tem uma ponta
+      // clara e uma escura. Medir so uma engana. O codigo abaixo extrai TODAS
+      // as paradas de cor do gradiente e fica com a PIOR razao — que e a que o
+      // leitor encontra em algum ponto do botao.
+      //
+      // LIMITES CONHECIDOS, para ninguem tratar isto como laudo: texto sobre
+      // IMAGEM de fundo nao e medido (sai marcado como nao medido); opacidade
+      // e mistura de camadas nao entram na conta; e um fundo semitransparente
+      // e resolvido pelo primeiro ancestral opaco, sem compor os alfas.
+      const canal = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+      const lum = (rgb) => 0.2126 * canal(rgb[0]) + 0.7152 * canal(rgb[1]) + 0.0722 * canal(rgb[2]);
+      const razao = (a, b) => { const la = lum(a), lb = lum(b); const hi = Math.max(la, lb), lo = Math.min(la, lb); return (hi + 0.05) / (lo + 0.05); };
+      const leRgb = (txt) => { const m = /rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/.exec(txt || ''); return m ? { rgb: [ +m[1], +m[2], +m[3] ], a: m[4] === undefined ? 1 : +m[4] } : null; };
+      const paradasDoGradiente = (bg) => {
+        const saida = [];
+        const re = /rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/g;
+        let m;
+        while ((m = re.exec(bg))) { if (m[4] === undefined || +m[4] > 0.5) saida.push([ +m[1], +m[2], +m[3] ]); }
+        return saida;
+      };
+      const temTextoProprio = (el) => {
+        for (const n of el.childNodes) if (n.nodeType === 3 && n.nodeValue.trim().length > 1) return true;
+        return false;
+      };
+
+      out.contraste = [];
+      out.contrasteNaoMedido = 0;
+      for (const el of document.querySelectorAll('body *')) {
+        if (!temTextoProprio(el)) continue;
+        const cs = getComputedStyle(el);
+        if (cs.visibility === 'hidden' || cs.display === 'none' || +cs.opacity === 0) continue;
+        const r = el.getBoundingClientRect();
+        if (r.width < 4 || r.height < 4) continue;
+        const frente = leRgb(cs.color);
+        if (!frente || frente.a < 0.5) continue;
+
+        let fundos = null, viaGradiente = false, imagem = false;
+        for (let n = el; n; n = n.parentElement) {
+          const c = getComputedStyle(n);
+          const bi = c.backgroundImage;
+          if (bi && bi !== 'none') {
+            if (/gradient/.test(bi)) { const g = paradasDoGradiente(bi); if (g.length) { fundos = g; viaGradiente = true; break; } }
+            else { imagem = true; break; }
+          }
+          const b = leRgb(c.backgroundColor);
+          if (b && b.a > 0.9) { fundos = [ b.rgb ]; break; }
+        }
+        if (imagem || !fundos) { out.contrasteNaoMedido++; continue; }
+
+        let pior = Infinity;
+        for (const f of fundos) pior = Math.min(pior, razao(frente.rgb, f));
+        const tam = parseFloat(cs.fontSize) || 16;
+        const peso = parseInt(cs.fontWeight, 10) || 400;
+        const grande = tam >= 24 || (tam >= 18.66 && peso >= 700);
+        const minimo = grande ? 3 : 4.5;
+        if (pior + 0.005 < minimo) {
+          out.contraste.push({
+            tag: el.tagName.toLowerCase(),
+            classe: (el.className && String(el.className).slice(0, 40)) || '',
+            texto: (el.textContent || '').trim().slice(0, 40),
+            razao: Math.round(pior * 100) / 100,
+            minimo,
+            cor: cs.color,
+            fundo: viaGradiente ? 'gradiente (pior parada)' : `rgb(${fundos[0].join(',')})`,
+          });
+        }
+      }
+      // Agrupa por (cor, fundo, minimo): a mesma regra de CSS aparece em
+      // dezenas de elementos, e listar todos vira ruido sem informacao nova.
+      const porRegra = new Map();
+      for (const c of out.contraste) {
+        const chave = `${c.cor}|${c.fundo}|${c.minimo}`;
+        const j = porRegra.get(chave);
+        if (j) { j.quantos++; continue; }
+        porRegra.set(chave, { ...c, quantos: 1 });
+      }
+      out.contraste = [...porRegra.values()].sort((a, b) => a.razao - b.razao).slice(0, 12);
+
+      // VAZAMENTO DE IDIOMA. A pior regressão possível neste site é a página
+      // aparecer em dois idiomas ao mesmo tempo, ou no idioma errado — e ela é
+      // silenciosa: nada quebra, nada some do log, a página carrega bonita.
+      //
+      // Entrou em 09/09/2026 junto com a reescrita do lang.css. Naquele mesmo
+      // dia, remover um `.only-it{display:none}` que vivia escrito à mão no
+      // v2.css era suficiente para o site italiano inteiro sumir, e nenhuma
+      // das medições que eu já tinha (rolagem, erro de JS, requisição falha)
+      // teria acusado. Só uma conferência específica pega isso.
+      //
+      // A referência é o lang do <html>, que o default.hbs define pelo par de
+      // idiomas — a mesma fonte que gera o lang.css.
+      const idiomaDaPagina = (() => {
+        const l = String(de.getAttribute('lang') || 'en').toLowerCase();
+        if (l.startsWith('pt')) return 'pt';
+        if (l.startsWith('it')) return 'it';
+        return 'en';
+      })();
+      out.idioma = idiomaDaPagina;
+      out.vazamentoIdioma = [];
+      out.blocosDoIdioma = 0;
+      for (const lg of ['en', 'pt', 'it']) {
+        const visiveis = [...document.querySelectorAll('.only-' + lg)]
+          .filter((el) => getComputedStyle(el).display !== 'none');
+        if (lg === idiomaDaPagina) { out.blocosDoIdioma = visiveis.length; continue; }
+        for (const el of visiveis.slice(0, 5)) {
+          out.vazamentoIdioma.push(`${lg} aparecendo em página ${idiomaDaPagina}: <${el.tagName.toLowerCase()} class="${String(el.className).slice(0, 40)}"> "${(el.textContent || '').trim().slice(0, 40)}"`);
+        }
+      }
+      // Página do idioma X sem NENHUM bloco de X visível também é defeito: é o
+      // caso de o idioma inteiro ter sumido, que é o oposto do vazamento.
+      out.idiomaVazio = out.blocosDoIdioma === 0;
+
       out.titulo = document.title;
       out.lang = de.getAttribute('lang');
       return out;
@@ -444,6 +586,8 @@ function relataPagina(r) {
   if (r.erros?.length) problemas.push(`${r.erros.length} erro(s) de JavaScript`);
   if (r.rede?.length) problemas.push(`${r.rede.length} requisição(ões) com falha`);
   if (r.scrollWidth > r.innerWidth + 1) problemas.push('rolagem horizontal');
+  if (r.vazamentoIdioma?.length) problemas.push('vazamento de idioma');
+  if (r.idiomaVazio) problemas.push('nenhum bloco do idioma da página aparece');
   if (r.imagensQuebradas?.length) problemas.push(`${r.imagensQuebradas.length} imagem(ns) quebrada(s)`);
   if (r.linksMortos?.length) problemas.push(`${r.linksMortos.length} link(s) sem destino`);
   const m = r.menu;
@@ -459,7 +603,7 @@ function relataPagina(r) {
     }
   }
   if (!problemas.length) return false;
-  COM_PROBLEMA.push({ tela: r.tela, url: r.url, problemas: problemas.slice() });
+  COM_PROBLEMA.push({ tela: r.tela, url: r.url, problemas: problemas.slice(), rede: r.rede || [], erros: r.erros || [] });
 
   linha(`\n──────────────────────────────────────────────`);
   linha(`${r.tela.toUpperCase()}  ${r.url}`);
@@ -495,7 +639,12 @@ function relataPagina(r) {
   }
   for (const l of (r.linksMortos || [])) linha(`   ! link sem destino (href vazio ou "#"): "${l}"`);
   for (const p of (r.pareceClicavel || [])) linha(`   ? parece clicável e talvez não seja: <${p.tag} class="${p.classe}"> "${p.texto}"`);
+  for (const v of (r.vazamentoIdioma || [])) linha(`   ✗ IDIOMA VAZOU: ${v}`);
+  if (r.idiomaVazio) linha(`   ✗ IDIOMA VAZIO: a página diz lang="${r.lang}" mas nenhum bloco .only-${r.idioma} aparece`);
   for (const a of (r.alvosPequenos || [])) linha(`   ? alvo de toque menor que 24px: ${a}`);
+  for (const c of (r.contraste || [])) {
+    linha(`   ! contraste ${c.razao} (mínimo ${c.minimo}): <${c.tag} class="${c.classe}"> ${c.cor} sobre ${c.fundo} — ${c.quantos}x — "${c.texto}"`);
+  }
   return true;
 }
 
@@ -507,6 +656,9 @@ if (!lista.length) { console.log('Nenhuma URL. Sitemap vazio ou inacessível.');
 const navegador = await chromium.launch({ args: ['--no-sandbox'] });
 const resultados = [];
 let totalErros = 0, totalRede = 0, totalOverflow = 0, totalImg = 0, paginasComProblema = 0;
+const regrasDeContraste = new Set();
+const exemploDeContraste = new Map();
+let totalIdioma = 0;
 
 for (const url of lista) {
   for (const tela of TELAS) {
@@ -516,6 +668,12 @@ for (const url of lista) {
     totalRede += r.rede?.length || 0;
     totalImg += r.imagensQuebradas?.length || 0;
     if (r.scrollWidth > r.innerWidth + 1) totalOverflow++;
+    if (r.vazamentoIdioma?.length || r.idiomaVazio) totalIdioma++;
+    for (const c of (r.contraste || [])) {
+      const chave = `${c.cor}|${c.fundo}|${c.minimo}`;
+      regrasDeContraste.add(chave);
+      if (!exemploDeContraste.has(chave)) exemploDeContraste.set(chave, c);
+    }
     if (relataPagina(r)) paginasComProblema++;
   }
 }
@@ -552,6 +710,39 @@ linha(`Requisições com falha .............. ${totalRede}`);
 linha(`Telas com rolagem horizontal ....... ${totalOverflow}`);
 linha(`Imagens quebradas .................. ${totalImg}`);
 linha(`Links internos quebrados ........... ${linksRuins.length}`);
+// Contado por REGRA, nao por elemento: uma unica linha de CSS errada pinta
+// dezenas de elementos, e o numero grande daria uma impressao de desastre que
+// nao corresponde ao trabalho de conserto (que e mexer numa linha).
+linha(`Regras de cor abaixo do contraste AA  ${regrasDeContraste.size}`);
+linha(`Carregamentos com idioma errado .... ${totalIdioma}`);
+
+// RESUMO EM ARQUIVO, e a razao e prosaica: o log do Actions termina com dezenas
+// de linhas de upload de artefato, e ler o resumo por cima delas custa caro e
+// atrapalha. Este arquivo e impresso pelo ultimo passo do workflow, depois do
+// upload, entao fica sempre nas ultimas linhas do log.
+const digesto = [];
+digesto.push(`FATIA ${FATIA + 1}/${FATIAS} · ${lista.length} pagina(s) x ${TELAS.length} tela(s) = ${resultados.length} carregamento(s)`);
+digesto.push(`problemas:${paginasComProblema} js:${totalErros} rede:${totalRede} rolagem:${totalOverflow} imagem:${totalImg} link:${linksRuins.length} idioma:${totalIdioma} contraste-regras:${regrasDeContraste.size}`);
+if (exemploDeContraste.size) {
+  digesto.push('REGRAS DE COR ABAIXO DO MINIMO (uma linha por regra, com um exemplo):');
+  for (const ex of [...exemploDeContraste.values()].sort((x, y) => x.razao - y.razao)) {
+    digesto.push(`  ${ex.razao} (min ${ex.minimo})  <${ex.tag} class="${ex.classe}">  ${ex.cor} sobre ${ex.fundo}  "${ex.texto}"`);
+  }
+}
+if (COM_PROBLEMA.length) {
+  digesto.push('ONDE DOEU:');
+  for (const p2 of COM_PROBLEMA.slice(0, 40)) {
+    digesto.push(`  [${p2.tela}] ${p2.url} :: ${p2.problemas.join(' · ')}`);
+    // QUAL recurso falhou, e nao so quantos. Em 09/09/2026 a varredura acusou
+    // "1 requisicao com falha" em duas paginas e o resumo nao dizia qual — tive
+    // de rodar de novo so para descobrir que nao reproduzia. Sem o endereco nao
+    // da para separar recurso quebrado de rede instavel do runner.
+    for (const e of (p2.rede || []).slice(0, 3)) digesto.push(`      ${e}`);
+    for (const e of (p2.erros || []).slice(0, 3)) digesto.push(`      JS: ${e}`);
+  }
+  if (COM_PROBLEMA.length > 40) digesto.push(`  ... e mais ${COM_PROBLEMA.length - 40}`);
+}
+try { fs.writeFileSync(`${PASTA}/RESUMO.txt`, digesto.join('\n') + '\n'); } catch (e) {}
 if (COM_PROBLEMA.length) {
   // Esta lista existe porque em 09/09/2026 o resumo disse "3 telas com rolagem
   // horizontal" e nao havia como saber QUAIS sem baixar o log inteiro. Um

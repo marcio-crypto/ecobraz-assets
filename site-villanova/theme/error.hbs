@@ -1,0 +1,104 @@
+{{!< default}}
+{{!-- Pagina de erro do Ghost (404 e os outros).
+
+     POR QUE ELA EXISTE. Ate 09/09/2026 o tema NAO tinha error.hbs, entao o
+     Ghost servia a pagina de erro padrao dele: fundo branco, sem cabecalho,
+     sem rodape, sem idioma, sem jeito de voltar. Quem caia num link velho —
+     e o Search Console mostra que isso acontece — batia numa pagina que nem
+     parecia ser do site, e a unica saida era o botao voltar do navegador.
+
+     Ela herda o default.hbs, entao ganha barra, menu, rodape e consentimento
+     de graca, e usa as classes ja aprovadas do padrao v2 (hero page-hero,
+     eyebrow, btn). Nada de componente novo.
+
+     Os tres idiomas ficam no HTML e quem decide qual aparece e o lang.css,
+     como em toda pagina do site. Mas ATENCAO ao caso especifico daqui: numa
+     pagina de erro nao existe slug de pagina nem tag, entao nenhuma das
+     regras do lang.css casa e o INGLES e o que aparece. Isso e proposital e e
+     o comportamento certo: numa URL que nao existe nao ha como saber o idioma
+     pretendido, e o ingles e a lingua padrao do site (a home "/" e inglesa).
+     O visitante troca no seletor da barra, que continua ali. --}}
+<article class="article page-article">
+  <section class="hero page-hero">
+    <svg class="mark" width="460" height="520" viewBox="0 0 60 68" aria-hidden="true"><path d="M30 2 56 12v26c0 14-12 22-26 28C16 60 4 52 4 38V12Z" fill="none" stroke="#8FA8CC" stroke-width="1.4"/><path d="M30 2v64" stroke="#8FA8CC" stroke-width="1.1"/><path d="M30 40l7 8-7 8-7-8Z" fill="#C9A24B"/></svg>
+    <div class="wrap">
+      <div class="eyebrow">{{code}}</div>
+      <h1>
+        <span class="only-en">This page is not here</span>
+        <span class="only-pt">Esta página não está aqui</span>
+        <span class="only-it">Questa pagina non esiste</span>
+      </h1>
+      <p class="lead">
+        <span class="only-en">The address may have changed, or the link that brought you here may be out of date. The pages below cover what most people arrive looking for.</span>
+        <span class="only-pt">O endereço pode ter mudado, ou o link que trouxe você pode estar desatualizado. As páginas abaixo cobrem o que a maioria das pessoas vem procurar.</span>
+        <span class="only-it">L&rsquo;indirizzo può essere cambiato, oppure il link che vi ha portato qui non è più aggiornato. Le pagine qui sotto coprono ciò che la maggior parte dei visitatori cerca.</span>
+      </p>
+      <div class="cta-row">
+        <a class="btn btn-primary only-en" href="{{@site.url}}/">Go to the home page</a>
+        <a class="btn btn-primary only-pt" href="{{@site.url}}/pt/">Ir para a página inicial</a>
+        <a class="btn btn-primary only-it" href="{{@site.url}}/it/">Vai alla pagina iniziale</a>
+        <a class="btn btn-ghost only-en" href="{{@site.url}}/publications/">Browse the publications</a>
+        <a class="btn btn-ghost only-pt" href="{{@site.url}}/publicacoes/">Ver as publicações</a>
+        <a class="btn btn-ghost only-it" href="{{@site.url}}/it/">Vedi il sito in italiano</a>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap">
+    <div class="article-body">
+      <div class="vn-cards">
+        <div class="vn-card only-en">
+          <h3>For European buyers</h3>
+          <p>What a supplier evidence file has to answer, and how it is assessed.</p>
+          <p><a class="go" href="{{@site.url}}/for-european-buyers/">Open the page →</a></p>
+        </div>
+        <div class="vn-card only-en">
+          <h3>Services</h3>
+          <p>The Evidence File Assessment and the reviews built on it.</p>
+          <p><a class="go" href="{{@site.url}}/supplier-evidence-file-assessment/">Open the page →</a></p>
+        </div>
+        <div class="vn-card only-en">
+          <h3>Knowledge base</h3>
+          <p>EUDR, CBAM and CSDDD explained from the evidence side.</p>
+          <p><a class="go" href="{{@site.url}}/eu-brazil-supplier-evidence-knowledge-base/">Open the page →</a></p>
+        </div>
+
+        <div class="vn-card only-pt">
+          <h3>Para compradores europeus</h3>
+          <p>O que um dossiê de evidências precisa responder, e como ele é avaliado.</p>
+          <p><a class="go" href="{{@site.url}}/para-compradores-europeus/">Abrir a página →</a></p>
+        </div>
+        <div class="vn-card only-pt">
+          <h3>Serviços</h3>
+          <p>A avaliação do dossiê de evidências e as revisões construídas sobre ela.</p>
+          <p><a class="go" href="{{@site.url}}/revisao-evidencias-eudr-cbam-csddd-exportadores/">Abrir a página →</a></p>
+        </div>
+        <div class="vn-card only-pt">
+          <h3>Base de conhecimento</h3>
+          <p>EUDR, CBAM e CSDDD explicados pelo lado da evidência.</p>
+          <p><a class="go" href="{{@site.url}}/base-de-conhecimento/">Abrir a página →</a></p>
+        </div>
+
+        <div class="vn-card only-it">
+          <h3>Per aziende italiane</h3>
+          <p>Che cosa deve dimostrare un fornitore brasiliano, e come si verifica.</p>
+          <p><a class="go" href="{{@site.url}}/it/">Apri la pagina →</a></p>
+        </div>
+        <div class="vn-card only-it">
+          <h3>Analisi fornitori</h3>
+          <p>La revisione delle evidenze dei fornitori brasiliani.</p>
+          <p><a class="go" href="{{@site.url}}/analisi-evidenze-fornitori-brasiliani/">Apri la pagina →</a></p>
+        </div>
+        <div class="vn-card only-it">
+          <h3>CBAM ed EUDR</h3>
+          <p>Le due revisioni più richieste dalle filiere italiane.</p>
+          <p><a class="go" href="{{@site.url}}/revisione-evidenze-cbam/">Apri la pagina →</a></p>
+        </div>
+      </div>
+
+      <p class="vn-boundary only-en">If you followed a link from another site and it should work, write to us at <a href="mailto:contact@villanovaesg.com">contact@villanovaesg.com</a> and we will fix it.</p>
+      <p class="vn-boundary only-pt">Se você seguiu um link de outro site e ele deveria funcionar, escreva para <a href="mailto:contact@villanovaesg.com">contact@villanovaesg.com</a> que nós corrigimos.</p>
+      <p class="vn-boundary only-it">Se avete seguito un link da un altro sito e dovrebbe funzionare, scriveteci a <a href="mailto:contact@villanovaesg.com">contact@villanovaesg.com</a> e lo correggiamo.</p>
+    </div>
+  </div>
+</article>

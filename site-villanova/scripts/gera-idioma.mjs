@@ -30,19 +30,55 @@ for (const tag of pares.it_tags || []) seletoresIt.push(`body.tag-${tag}`);
 
 const lista = (sel, sufixo) => sel.map((s) => `${s} ${sufixo}`).join(',\n');
 
-const css = `/* GERADO por scripts/gera-idioma.mjs a partir de content/pares-idioma.json — não edite à mão. */
-.only-pt{display:none !important}
-${lista(seletoresPt, '.only-en')}{display:none !important}
-${lista(seletoresPt, '.only-pt')}{display:revert !important}
+// A REGRA DE OURO DESTE ARQUIVO, e ela mudou em 09/09/2026 depois de medir:
+// NUNCA declare display no idioma que está LIGADO. Só esconda os outros.
+//
+// A versão anterior fazia o contrário: escondia tudo e depois religava o
+// idioma da página com display:revert (PT) ou display:inline (IT). Para isso
+// funcionar era preciso adivinhar o tipo de caixa de cada elemento, e vinham
+// as remendagens: nav.only-it vira flex, div.only-it vira flex, .cols.only-it
+// vira grade. Uma lista de exceções escrita à mão nunca alcança o CSS que
+// cresce do lado.
+//
+// Medido em 09/09/2026, comparando o display calculado de cada elemento nos
+// três idiomas na mesma página:
+//   nav.main .... EN flex   PT block  IT flex   -> menu PT quebrava em 2 linhas
+//   div.cols .... EN grid   PT block  IT grid   -> colunas do rodapé PT empilhavam
+//   a.top-cta ... EN flex   PT block  IT block  -> botão principal perdia o inline-flex
+//   div.legal ... EN block  PT block  IT flex   -> a regra div.only-it{flex} era ampla demais
+// Quatro defeitos, uma causa só, e nenhum deles aparecia em inglês — que é
+// justamente onde a gente sempre olha primeiro.
+//
+// A inversão: o idioma ligado não recebe declaração nenhuma de display, então
+// ele herda exatamente o que o main.css e o v2.css mandam, igualzinho ao
+// inglês. Some a adivinhação, somem as exceções, e some a classe inteira de
+// bug. O preço é um seletor comprido de :not() encadeado — que não custa nada
+// porque este arquivo é gerado.
+//
+// Uso :not(.a):not(.b) encadeado, e não :not(.a, .b): a forma com lista dentro
+// do :not() é mais nova e não quero depender dela para uma regra que decide se
+// a página aparece no idioma certo.
+const naoE = (sel) => sel.map((s) => `:not(.${s.replace('body.', '')})`).join('');
 
-/* Italiano: esconde os outros dois idiomas e liga o próprio, respeitando o tipo
-   de caixa de cada elemento (linha, flex e grade). */
-${lista(seletoresIt, '.only-en')},
-${lista(seletoresIt, '.only-pt')}{display:none !important}
-${lista(seletoresIt, '.only-it')}{display:inline !important}
-${lista(seletoresIt, 'nav.only-it')},
-${lista(seletoresIt, 'div.only-it')}{display:flex !important}
-${lista(seletoresIt, '.cols.only-it')}{display:grid !important}
+const css = `/* GERADO por scripts/gera-idioma.mjs a partir de content/pares-idioma.json — não edite à mão.
+
+   ATENÇÃO ao ler: aqui só existe REGRA DE ESCONDER. O idioma que está ligado
+   não recebe nenhuma declaração de display — ele fica com o que o main.css e o
+   v2.css deram, igual ao inglês. Foi assim que quatro defeitos silenciosos
+   morreram de uma vez (menu PT em duas linhas, rodapé PT empilhado, botão
+   principal PT/IT sem inline-flex, .legal italiano virando flex). Se você
+   sentir vontade de escrever display:algo aqui para "religar" um idioma, é
+   sinal de que o CSS de verdade está faltando — conserte lá, não aqui. */
+
+/* Português aparece só em página portuguesa. */
+body${naoE(seletoresPt)} .only-pt{display:none !important}
+
+/* Italiano aparece só em página italiana. */
+body${naoE(seletoresIt)} .only-it{display:none !important}
+
+/* Inglês some nas páginas dos outros dois. */
+${lista(seletoresPt, '.only-en')},
+${lista(seletoresIt, '.only-en')}{display:none !important}
 `;
 await fs.writeFile('site-villanova/theme/assets/css/lang.css', css);
-console.log(`lang.css gerado: ${seletoresPt.length} seletores PT, ${seletoresIt.length} seletores IT.`);
+console.log(`lang.css gerado: ${seletoresPt.length} seletores PT, ${seletoresIt.length} seletores IT — só regras de esconder.`);

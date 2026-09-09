@@ -19,9 +19,14 @@ on:
         type: string
         default: ''
       limite:
-        description: 'Quantas páginas na amostra (o site tem mais de 500 URLs; tudo não cabe no tempo)'
+        description: 'Quantas páginas na amostra (232 = site inteiro)'
         type: string
         default: '24'
+      fatias:
+        description: 'Em quantas rodadas paralelas dividir (4 = varredura completa em ~1/4 do tempo)'
+        type: choice
+        options: ['1', '2', '4', '6']
+        default: '1'
       jornada:
         description: 'Rodar também o teste de jornada (idioma + cookies)'
         type: boolean
@@ -35,9 +40,32 @@ permissions:
   contents: read
 
 jobs:
+  # A matriz existe para a varredura COMPLETA caber no tempo: 232 URLs x 5 telas
+  # passa de uma hora numa rodada só. Com fatias=4 cada job pega um quarto das
+  # URLs (por resto de divisão, então cada fatia mistura página institucional e
+  # post) e o conjunto termina em ~1/4 do tempo. Com fatias=1 nada muda.
+  preparar:
+    runs-on: ubuntu-latest
+    outputs:
+      fatias: ${{ steps.montar.outputs.fatias }}
+    steps:
+      - id: montar
+        env:
+          N: ${{ inputs.fatias }}
+        run: |
+          n="${N:-1}"
+          lista=$(seq 0 $((n - 1)) | paste -sd, -)
+          echo "fatias=[$lista]" >> "$GITHUB_OUTPUT"
+          echo "vai rodar as fatias [$lista]"
+
   auditar:
+    needs: preparar
     runs-on: ubuntu-latest
     timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        fatia: ${{ fromJSON(needs.preparar.outputs.fatias) }}
     steps:
       - uses: actions/checkout@v4
 
@@ -54,20 +82,28 @@ jobs:
       - name: Auditar as páginas
         env:
           LIMITE_PAGINAS: ${{ inputs.limite }}
+          FATIAS: ${{ inputs.fatias }}
+          FATIA: ${{ matrix.fatia }}
         run: node site-villanova/scripts/auditoria-navegador.mjs ${{ inputs.urls }}
 
       - name: Jornada de entrada (idioma + consentimento)
-        if: ${{ inputs.jornada }}
+        if: ${{ inputs.jornada && matrix.fatia == 0 }}
         run: node site-villanova/scripts/auditoria-jornada.mjs
 
       - name: Diagnóstico do banner no celular
-        if: ${{ inputs.banner }}
+        if: ${{ inputs.banner && matrix.fatia == 0 }}
         run: node site-villanova/scripts/diag-banner-celular.mjs
 
       - name: Guardar as telas
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: telas
+          name: telas-fatia-${{ matrix.fatia }}
           path: auditoria-navegador/
           retention-days: 14
+
+      # Por ultimo de proposito: o passo de upload despeja dezenas de linhas de
+      # "Uploaded bytes", e o resumo ficava enterrado no meio do log.
+      - name: Resumo desta fatia
+        if: always()
+        run: cat auditoria-navegador/RESUMO.txt || echo "sem RESUMO.txt"

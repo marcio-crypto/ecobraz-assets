@@ -7,6 +7,24 @@
 
 :root{
   --navy:#061426; --navy2:#0b2a52; --gold:#b88a3d; --gold-l:#d9b573;
+  /* TRES DOURADOS, E A DIFERENCA ENTRE ELES IMPORTA (medido em 09/09/2026,
+     escolha do Marcio: opcao C).
+       --gold      #b88a3d  ORNAMENTO. Filete, losango, borda de h2, contorno
+                            de foto, borda de card. Nao e texto, logo o WCAG
+                            nao pede contraste dele. Fica exatamente como era:
+                            e o dourado da marca.
+       --gold-txt  #8a6224  TEXTO sobre fundo claro. O #b88a3d dava 2,94 sobre
+                            o papel — reprovava ate no minimo de 3. Comecou em
+                            #8f6727 (4,79 no papel) e escureceu mais um passo
+                            porque o fundo claro MAIS ESCURO do site nao e o
+                            papel, e o bege #f2eee6 do .vn-boundary: la o
+                            #8f6727 dava 4,39 e reprovava por pouco. O #8a6224
+                            da 4,71 no pior fundo claro e 5,45 no branco.
+       --gold-b1/b2         BOTAO com texto branco. O gradiente antigo dava
+                            3,12 na ponta clara; este da 4,65.
+       --gold-l    #d9b573  So aparece sobre fundo ESCURO (hero navy, cards
+                            escuros), onde o contraste ja e alto. Nao mexer. */
+  --gold-txt:#8a6224; --gold-b1:#966d2b; --gold-b2:#7d5920;
   --paper:#faf8f4; --ink:#1a2634; --mut:#5b6b7c; --line:#e6e0d4;
   --serif:'Fraunces',Georgia,'Times New Roman',serif;
   --sans:'Inter','Segoe UI',system-ui,sans-serif;
@@ -16,7 +34,7 @@
 body{font-family:var(--sans);color:var(--ink);background:var(--paper);line-height:1.65}
 h1,h2,h3.serif,.serif{font-family:var(--serif)}
 h1{letter-spacing:-.01em}
-a{color:var(--gold)}
+a{color:var(--gold-txt)}
 .wrap{max-width:1140px;margin:0 auto;padding:0 40px}
 @media(max-width:700px){.wrap{padding:0 20px}}
 
@@ -27,7 +45,7 @@ a{color:var(--gold)}
 .brand-tag{color:#7d90a8;font-size:9px;letter-spacing:.28em}
 .topbar a{color:#b9c6d8;text-decoration:none;font-size:13.5px}
 .topbar .lang-switch{color:#7d90a8}
-.btn,.btn-primary,.top-cta{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,var(--gold),#a2762c)!important;color:#fff!important;font-weight:700;padding:12px 24px;border-radius:6px;text-decoration:none;font-size:14px;border:none;box-shadow:0 6px 18px rgba(184,138,61,.35)}
+.btn,.btn-primary,.top-cta{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,var(--gold-b1),var(--gold-b2))!important;color:#fff!important;font-weight:700;padding:12px 24px;border-radius:6px;text-decoration:none;font-size:14px;border:none;box-shadow:0 6px 18px rgba(184,138,61,.35)}
 .btn-ghost{background:transparent!important;color:#fff!important;border:1px solid rgba(255,255,255,.35)!important;box-shadow:none}
 .btn-ink{background:var(--navy)!important;box-shadow:0 6px 18px rgba(6,20,38,.25)}
 
@@ -61,15 +79,15 @@ h2{font-family:var(--serif);font-size:clamp(24px,3vw,32px);line-height:1.22}
 /* passos numerados (tema .steps e conteúdo vn-steps) */
 .vn-steps{counter-reset:vn;display:grid;gap:12px;margin:22px 0;padding:0;list-style:none}
 .vn-steps li,.vn-steps>div{counter-increment:vn;background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px 18px 14px 60px;position:relative;box-shadow:0 6px 16px rgba(20,32,46,.05)}
-.vn-steps li::before,.vn-steps>div::before{content:counter(vn);position:absolute;left:16px;top:50%;transform:translateY(-50%);width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--gold),#a2762c);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px}
+.vn-steps li::before,.vn-steps>div::before{content:counter(vn);position:absolute;left:16px;top:50%;transform:translateY(-50%);width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--gold-b1),var(--gold-b2));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px}
 /* vence a regra mais específica do main.css (numeral romano dourado sobre círculo dourado = invisível) */
 .article-body ol.vn-steps>li::before{content:counter(vnstep);font-family:var(--sans);font-weight:800;font-size:13px;color:#fff;border-bottom:0;padding-bottom:0;min-width:0;width:32px;height:32px;left:20px;top:18px;display:flex;align-items:center;justify-content:center}
-.step .n{background:linear-gradient(135deg,var(--gold),#a2762c);color:#fff;border-radius:50%}
+.step .n{background:linear-gradient(135deg,var(--gold-b1),var(--gold-b2));color:#fff;border-radius:50%}
 
 /* callouts do conteúdo legado */
 .vn-note{background:linear-gradient(160deg,var(--navy),var(--navy2));color:#c6d2e0;border-radius:12px;padding:20px 24px;margin:24px 0}
 .vn-note b,.vn-note strong{color:var(--gold-l)}
-.vn-cta{background:linear-gradient(135deg,var(--gold),#a2762c);border-radius:12px;padding:22px 26px;margin:28px 0;color:#fff;box-shadow:0 14px 34px rgba(184,138,61,.3)}
+.vn-cta{background:linear-gradient(135deg,var(--gold-b1),var(--gold-b2));border-radius:12px;padding:22px 26px;margin:28px 0;color:#fff;box-shadow:0 14px 34px rgba(184,138,61,.3)}
 .vn-cta a{background:var(--navy);color:#fff!important;font-weight:700;padding:11px 20px;border-radius:6px;text-decoration:none;display:inline-block;margin-top:10px}
 .vn-cta p{margin:0 0 4px}
 .vn-isnot{color:var(--mut);font-size:12.5px;border-left:3px solid var(--line);padding:6px 0 6px 14px;margin:18px 0;font-style:italic}
@@ -79,7 +97,7 @@ h2{font-family:var(--serif);font-size:clamp(24px,3vw,32px);line-height:1.22}
 .vn-faq details,details{background:#fff;border:1px solid var(--line);border-radius:10px;padding:0;margin:10px 0;box-shadow:0 6px 16px rgba(20,32,46,.04)}
 .vn-faq summary,summary{cursor:pointer;font-weight:700;font-size:15px;padding:16px 20px;list-style:none;position:relative}
 summary::-webkit-details-marker{display:none}
-summary::after{content:"+";position:absolute;right:18px;top:14px;color:var(--gold);font-size:20px;font-weight:400}
+summary::after{content:"+";position:absolute;right:18px;top:14px;color:var(--gold-txt);font-size:20px;font-weight:400}
 details[open] summary::after{content:"–"}
 .vn-faq details p,details p{padding:0 20px 16px;margin:0;color:var(--mut);font-size:14.5px}
 
@@ -136,7 +154,19 @@ details[open] summary::after{content:"–"}
    aprovado do padrao v2 fica intacto (conferido a 1366px: 700px, identica).
    LIMITE CONHECIDO: entre 701px e 980px nao ha regra nenhuma. Nao vi tabela
    larga o bastante para vazar nessa faixa, mas tambem nao testei todas. */
-@media(max-width:700px){.article-body table{display:block;width:100%;overflow-x:auto;overflow-y:hidden}}
+/* O contêiner é criado pelo artigo.js e vale em QUALQUER largura — inclusive
+   na faixa de 701px a 980px, que antes ficava sem regra. Quem rola é ele; a
+   tabela continua com width:100% por dentro, então tabela estreita continua
+   esticando, no celular e no desktop. */
+.tabela-rolavel{overflow-x:auto;overflow-y:hidden;max-width:100%}
+.tabela-rolavel:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.tabela-rolavel>table{margin-top:0;margin-bottom:0}
+.tabela-rolavel{margin:24px 0}
+/* Reserva de quem está sem JavaScript: aí não há contêiner, e a tabela vira
+   ela mesma uma caixa que rola. Só abaixo de 700px, e só quando o embrulho
+   NÃO aconteceu — as duas soluções somadas encolheriam a tabela estreita. */
+html:not(.vn-tabela-embrulhada) .article-body table{max-width:100%}
+@media(max-width:700px){html:not(.vn-tabela-embrulhada) .article-body table{display:block;width:100%;overflow-x:auto;overflow-y:hidden}}
 .article-body th{background:var(--navy);color:#fff;text-align:left;padding:11px 15px;font-size:12px;letter-spacing:.06em;text-transform:uppercase}
 .article-body td{padding:11px 15px;border-bottom:1px solid var(--line)}
 .article-body hr{border:none;border-top:1px solid var(--line);margin:30px 0}
@@ -145,14 +175,14 @@ details[open] summary::after{content:"–"}
 .side-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:18px;box-shadow:0 8px 22px rgba(20,32,46,.05)}
 .side-card h4{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);margin:0 0 12px}
 .side-toc a{display:block;color:#2a3846;font-size:13px;text-decoration:none;padding:6px 0 6px 12px;border-left:2px solid var(--line);line-height:1.4}
-.side-toc a:hover{border-color:var(--gold);color:var(--gold)}
+.side-toc a:hover{border-color:var(--gold);color:var(--gold-txt)}
 .side-cta{background:linear-gradient(160deg,var(--navy),var(--navy2));color:#fff;border-radius:12px;padding:22px;margin-bottom:18px}
 .side-cta b{font-family:var(--serif);font-size:16px;display:block;margin-bottom:8px}
 .side-cta p{font-size:12.5px;color:#c6d2e0;margin:0 0 14px}
 .side-trust{font-size:12.5px;color:var(--mut);line-height:1.9}
 @media(max-width:980px){.article-side{display:none}}
 
-.article-ctaband{background:linear-gradient(135deg,var(--gold),#a2762c);border-radius:12px;padding:22px 26px;margin:32px 0;display:flex;justify-content:space-between;align-items:center;gap:18px;color:#fff;box-shadow:0 14px 34px rgba(184,138,61,.3);flex-wrap:wrap}
+.article-ctaband{background:linear-gradient(135deg,var(--gold-b1),var(--gold-b2));border-radius:12px;padding:22px 26px;margin:32px 0;display:flex;justify-content:space-between;align-items:center;gap:18px;color:#fff;box-shadow:0 14px 34px rgba(184,138,61,.3);flex-wrap:wrap}
 .article-ctaband b{font-size:16px;display:block}
 .article-ctaband small{font-size:12.5px;opacity:.92}
 .article-ctaband a{background:var(--navy);color:#fff;font-weight:700;padding:11px 20px;border-radius:6px;text-decoration:none;font-size:13px;white-space:nowrap}
@@ -171,7 +201,7 @@ details[open] summary::after{content:"–"}
 .rel-card{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 8px 22px rgba(20,32,46,.05);text-decoration:none;display:block}
 .rel-cap{height:96px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--navy2),var(--navy))}
 .rel-body{padding:16px 18px 18px}
-.rel-tag{font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--gold);text-transform:uppercase}
+.rel-tag{font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--gold-txt);text-transform:uppercase}
 .rel-body h3{font-size:14.5px;line-height:1.4;margin:5px 0 0;color:var(--ink)}
 
 /* listagens do blog */
@@ -179,8 +209,8 @@ details[open] summary::after{content:"–"}
 .listing-head{background:radial-gradient(900px 420px at 88% -12%,#123a6b 0%,transparent 55%),linear-gradient(160deg,var(--navy),var(--navy2));color:#fff}
 
 /* faixa de números / registry */
-.registry .num,.stat .big{font-family:var(--serif);color:var(--gold)}
-.reg .big{font-family:var(--serif);color:var(--gold);font-size:40px}
+.registry .num,.stat .big{font-family:var(--serif);color:var(--gold-txt)}
+.reg .big{font-family:var(--serif);color:var(--gold-txt);font-size:40px}
 
 /* rodapé */
 .site-footer{background:#04101f!important;color:#8fa0b5}
@@ -191,7 +221,7 @@ details[open] summary::after{content:"–"}
 
 /* formulário intake */
 .vn-form input,.vn-form textarea,.vn-form select{border:1px solid var(--line);border-radius:8px;padding:12px 14px;font-family:var(--sans);font-size:14.5px;background:#fff}
-.vn-form button{background:linear-gradient(135deg,var(--gold),#a2762c);color:#fff;font-weight:700;border:none;border-radius:6px;padding:13px 26px;cursor:pointer}
+.vn-form button{background:linear-gradient(135deg,var(--gold-b1),var(--gold-b2));color:#fff;font-weight:700;border:none;border-radius:6px;padding:13px 26px;cursor:pointer}
 
 /* ---------- componentes da home v2 ---------- */
 .h2hero{padding:70px 0 0}
@@ -216,26 +246,26 @@ details[open] summary::after{content:"–"}
 .estrip b{display:block;color:#fff;font-size:14px}
 .cic{width:50px;height:50px;border-radius:12px;background:linear-gradient(135deg,#f6efe2,#efe2c8);display:flex;align-items:center;justify-content:center;margin-bottom:14px}
 .card-tag{position:absolute;top:24px;right:22px;background:#f4ecdd;color:#7a5a1e;font-size:10px;font-weight:700;letter-spacing:.08em;padding:4px 9px;border-radius:20px;text-transform:uppercase}
-.go{color:var(--gold);font-weight:700;font-size:13px;text-decoration:none;display:inline-block;margin-top:12px}
+.go{color:var(--gold-txt);font-weight:700;font-size:13px;text-decoration:none;display:inline-block;margin-top:12px}
 .semm2{display:flex;gap:50px;align-items:center}
 .semm2 .txt{flex:1}.semm2 .dia{flex:1.15;position:relative}
 .semm2 .dia::before{content:"";position:absolute;left:25px;top:20px;bottom:20px;width:2px;background:linear-gradient(180deg,var(--line),var(--gold))}
 .sstep{display:flex;align-items:center;gap:14px;margin:11px 0;background:#fff;border:1px solid var(--line);padding:13px 16px;border-radius:10px;position:relative;box-shadow:0 6px 16px rgba(20,32,46,.05)}
 .sstep .n{width:32px;height:32px;border-radius:50%;background:#e9e2d2;color:#6b5b36;display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0;font-size:13px}
 .sstep.on{border-color:var(--gold);box-shadow:0 10px 24px rgba(184,138,61,.18)}
-.sstep.on .n{background:linear-gradient(135deg,var(--gold),#a2762c);color:#fff}
+.sstep.on .n{background:linear-gradient(135deg,var(--gold-b1),var(--gold-b2));color:#fff}
 .sstep b{font-size:13.5px}.sstep small{color:var(--mut);display:block;font-size:11.5px}
 .bridge{display:flex;align-items:stretch;margin-top:38px;flex-wrap:wrap}
 .bnode{flex:1 1 220px;background:#fff;border:1px solid var(--line);padding:24px;border-radius:12px;text-align:center;box-shadow:0 10px 26px rgba(20,32,46,.06)}
 .bnode.mid{background:linear-gradient(160deg,var(--navy),var(--navy2));color:#fff;border:none}
 .bnode .bic{width:54px;height:54px;margin:0 auto 10px;border-radius:50%;background:#f6efe2;display:flex;align-items:center;justify-content:center}
 .bnode.mid .bic{background:rgba(255,255,255,.1)}
-.bnode .who{font-weight:800;letter-spacing:.1em;font-size:10.5px;text-transform:uppercase;color:var(--gold)}
+.bnode .who{font-weight:800;letter-spacing:.1em;font-size:10.5px;text-transform:uppercase;color:var(--gold-txt)}
 .bnode.mid .who{color:var(--gold-l)}
 .bnode b{font-size:16px;display:block;margin-top:3px}
 .bnode p{font-size:12.5px;color:var(--mut);margin-top:6px}
 .bnode.mid p{color:#c6d2e0}
-.barrow{display:flex;align-items:center;padding:0 8px;color:var(--gold);font-size:22px;font-weight:800}
+.barrow{display:flex;align-items:center;padding:0 8px;color:var(--gold-txt);font-size:22px;font-weight:800}
 .stats2{background:linear-gradient(160deg,var(--navy),var(--navy2));color:#fff;padding:48px 0}
 .stats2 .wrap{display:flex;text-align:center;flex-wrap:wrap}
 .stat{flex:1 1 140px;padding:8px}
@@ -262,7 +292,7 @@ details[open] summary::after{content:"–"}
 .steps-band{background:var(--paper);border-bottom:1px solid var(--line);padding:34px 0}
 .sband{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
 .snode{background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px 20px;position:relative;box-shadow:0 8px 20px rgba(20,32,46,.05)}
-.snode .snum{position:absolute;top:-14px;left:18px;width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--gold),#a2762c);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;box-shadow:0 4px 10px rgba(184,138,61,.4)}
+.snode .snum{position:absolute;top:-14px;left:18px;width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--gold-b1),var(--gold-b2));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;box-shadow:0 4px 10px rgba(184,138,61,.4)}
 .snode b{display:block;color:var(--navy);margin:4px 0 4px;font-size:15px}
 .snode p{color:var(--mut);font-size:13.5px;margin:0;line-height:1.5}
 .intake{padding:46px 0 8px;background:transparent!important;color:var(--ink)}
@@ -286,15 +316,15 @@ details[open] summary::after{content:"–"}
 .vn-form-status.is-ok{color:#1c7a44;font-weight:600}
 .vn-form-status.is-err{color:#a33a2e;font-weight:600}
 .vn-hp{position:absolute!important;left:-9999px!important;opacity:0;height:0;width:0}
-.btn-cal{display:inline-block;background:linear-gradient(135deg,var(--gold),#a2762c);color:#fff!important;border-radius:9px;padding:11px 18px;font-weight:700;font-size:14px;text-decoration:none}
+.btn-cal{display:inline-block;background:linear-gradient(135deg,var(--gold-b1),var(--gold-b2));color:#fff!important;border-radius:9px;padding:11px 18px;font-weight:700;font-size:14px;text-decoration:none}
 .intake-side .side-card p{color:var(--mut);font-size:13.5px;margin:0 0 10px}
 /* materiais gateados */
 .magnets{padding:38px 0 30px;border-top:1px solid var(--line);margin-top:34px}
-.magnets .eyebrow{color:var(--gold);letter-spacing:.18em;font-size:12px;font-weight:700;text-transform:uppercase}
+.magnets .eyebrow{color:var(--gold-txt);letter-spacing:.18em;font-size:12px;font-weight:700;text-transform:uppercase}
 .magnets h2{font-family:var(--serif);color:var(--navy);font-size:24px;margin:6px 0 20px}
 .magnet-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
 .magnet-card{background:#fff;border:1px solid var(--line);border-top:3px solid var(--gold);border-radius:12px;padding:20px;box-shadow:0 10px 26px rgba(20,32,46,.06)}
-.magnet-tag{display:inline-block;background:var(--paper);border:1px solid var(--line);color:var(--gold);border-radius:999px;font-size:10.5px;font-weight:800;letter-spacing:.14em;padding:3px 10px;margin-bottom:8px}
+.magnet-tag{display:inline-block;background:var(--paper);border:1px solid var(--line);color:var(--gold-txt);border-radius:999px;font-size:10.5px;font-weight:800;letter-spacing:.14em;padding:3px 10px;margin-bottom:8px}
 .magnet-card h3{color:var(--navy);font-size:17px;margin:0 0 6px}
 .magnet-card>p{color:var(--mut);font-size:13.5px;line-height:1.5;margin-bottom:12px}
 .magnet-card form{display:flex;flex-direction:column;gap:8px}
@@ -304,18 +334,23 @@ details[open] summary::after{content:"–"}
 /* conteúdo institucional preservado, recolhido */
 .page-more{margin:26px 0 50px;border:1px solid var(--line);border-radius:10px;background:#fff}
 .page-more summary{cursor:pointer;padding:16px 20px;font-weight:600;color:var(--navy2);list-style:none}
-.page-more summary::before{content:'▸ ';color:var(--gold)}
+.page-more summary::before{content:'▸ ';color:var(--gold-txt)}
 .page-more[open] summary::before{content:'▾ '}
 .page-more .article-body{padding:0 22px 20px}
 @media(max-width:900px){.sband{grid-template-columns:1fr}.intake-grid{flex-direction:column}.intake-side{width:100%;position:static}.magnet-cards{grid-template-columns:1fr}.vn-fields2{grid-template-columns:1fr}}
 
-/* ===== idioma italiano =====
-   Só a regra base fica aqui. Quais páginas são italianas é decidido em
-   content/pares-idioma.json e sai gerado em lang.css (scripts/gera-idioma.mjs),
-   junto com o português. Antes esta lista era escrita à mão e cobria apenas
-   duas das seis páginas em italiano — as outras quatro serviam o rodapé em
-   inglês. Não recoloque a lista aqui. */
-.only-it{display:none !important}
+/* ===== idioma =====
+   NÃO EXISTE MAIS REGRA DE IDIOMA NESTE ARQUIVO, e o lugar vazio é de
+   propósito. Até 09/09/2026 morava aqui um `.only-it{display:none!important}`
+   escrito à mão, enquanto o resto da decisão de idioma saía gerado no
+   lang.css. Duas fontes para a mesma decisão, e a que estava aqui era
+   invisível para quem mexia lá.
+   Isso quase custou caro no mesmo dia: ao reescrever o gera-idioma.mjs para
+   só ESCONDER (e nunca religar display), esta linha continuou escondendo o
+   italiano e nada mais o religava — o site inteiro em italiano teria sumido.
+   Foi a conferência de display nos três idiomas que pegou, não a leitura.
+   Quem decide o que aparece em cada idioma é o lang.css, gerado a partir de
+   content/pares-idioma.json. Não traga regra de idioma de volta para cá. */
 
 /* ============================ MENU DE CELULAR ============================
    Medido em 08/09/2026 num Chromium real, em 24 páginas x 3 telas: TODA página
@@ -431,7 +466,7 @@ details[open] summary::after{content:"–"}
   /* Raio de 6px e sombra para seguir o botao canonico do padrao (v2.css:30),
      que e o mesmo gradiente. Sem isso o botao do painel saia de canto vivo,
      diferente de todos os outros CTA do site. */
-  .topbar .nav-wrap .menu-cta{background:linear-gradient(135deg,var(--gold),#a2762c);
+  .topbar .nav-wrap .menu-cta{background:linear-gradient(135deg,var(--gold-b1),var(--gold-b2));
     color:#fff;text-decoration:none;text-align:center;padding:14px 18px;
     font-size:13.5px;font-weight:600;letter-spacing:.04em;border-radius:6px;
     box-shadow:0 6px 18px rgba(184,138,61,.35)}
@@ -451,3 +486,77 @@ details[open] summary::after{content:"–"}
   .menu-btn span{background:ButtonText;forced-color-adjust:none;border-top:2px solid ButtonText;height:0}
   .topbar .nav-wrap .menu-cta{border:1px solid ButtonBorder}
 }
+
+
+/* ==================== CONTRASTE: FUNDO CLARO x FUNDO ESCURO ====================
+   Medido no site publicado em 09/09/2026 pelo medidor de contraste da
+   auditoria, e o resultado foi maior do que eu esperava: o dourado era só a
+   ponta. Dez regras de cor abaixo do mínimo do WCAG AA, e o padrão por trás de
+   quase todas é o mesmo — COR PENSADA PARA FUNDO ESCURO APLICADA EM CAIXA
+   CLARA, por colisão entre o main.css e o v2.css.
+
+   O caso mais didático é o .vn-note. O v2.css diz que ele é um cartão escuro
+   (fundo navy, texto #c6d2e0). O main.css diz que dentro do artigo ele é um
+   cartão claro (fundo #F4F6F2) — e ganha, porque .article-body .vn-note tem
+   especificidade maior. Só que o main.css não redeclara a COR do texto. O
+   resultado é texto #c6d2e0 sobre #F4F6F2: contraste 1,41. Praticamente
+   invisível, em toda página com nota. Nenhuma revisão de código pega isso;
+   é preciso medir a página montada.
+
+   A referência de fundo claro NÃO é o branco: é o bege #f2eee6 do .vn-boundary,
+   que é o mais escuro dos claros. Quem passa nele passa em todos.
+   A referência de fundo escuro é #123a6b, a parada mais clara do gradiente do
+   hero — pela mesma lógica, ao contrário.
+
+   Regra para daqui em diante: cor de texto anda junto com o fundo em que ela
+   vai cair. Se você mudar o fundo de um componente, redeclare a cor. */
+
+/* --- caixa CLARA: cinza apagado precisa de --mut (#5b6b7c, 4,73 no pior) --- */
+.article-body .vn-boundary,
+.article-body .vn-isnot,
+.article-body .vn-src,
+.article-body figcaption,
+.article-close .boundary,
+.author-line,
+.row-meta,
+.svc .isnot{color:var(--mut)}
+
+/* --- caixa clara: a nota dentro do artigo é clara (main.css:239), então o
+       texto dela não pode ser a cor do cartão escuro do v2 --- */
+.article-body .vn-note{color:var(--ink)}
+.article-body .vn-note b,.article-body .vn-note strong{color:var(--gold-txt)}
+
+/* --- caixa ESCURA: aqui é o contrário, o cinza apagado some --- */
+.final .boundary{color:#c6d2e0}
+/* O .vn-boundary ganha fundo bege do v2.css, mas dentro de um .vn-cta ele está
+   sobre navy (main.css) ou sobre o dourado do botão (v2.css). Nos dois casos o
+   fundo claro dele fica errado e a cor apagada some: branco resolve os dois
+   (12,3 sobre o navy, 4,65 sobre o dourado). */
+.vn-cta .vn-boundary{background:transparent;color:#fff}
+
+/* --- os dois ultimos casos, achados na varredura COMPLETA das 232 URLs --- */
+
+/* 1) O EYEBROW TINHA O PADRAO INVERTIDO, e eu levei duas rodadas para aceitar
+      isso. O `.eyebrow{color:var(--gold-l)!important}` pintava TODO eyebrow do
+      site com uma cor de fundo ESCURO — e ainda com !important, que ganha de
+      especificidade. Sobre o papel dava 1,83.
+
+      Na primeira tentativa eu corrigi caso a caso (`.magnets .eyebrow`), e nao
+      funcionou por duas razoes: !important ganha de especificidade, e sempre
+      aparecia outro container claro que eu nao tinha visto — o ultimo foi o
+      .listing da base de conhecimento.
+
+      Agora o padrao e o SEGURO (cor de fundo claro) e o escuro e declarado so
+      onde o fundo e escuro de verdade. Se aparecer um container escuro novo,
+      o defeito e visivel na hora (dourado escuro em fundo escuro) em vez de
+      silencioso, que e o jeito certo de errar. */
+.eyebrow{color:var(--gold-txt)!important}
+.hero .eyebrow,.page-hero .eyebrow,.h2hero .eyebrow,.article-head .eyebrow,
+.listing-head .eyebrow,.final .eyebrow,.site-footer .eyebrow,
+.dossier .eyebrow{color:var(--gold-l)!important}
+
+/* 2) O aviso de escopo no hero das tres paginas de pedido fica sobre o
+      gradiente escuro, e o cinza #8fa0b5 dava 4,27 — reprovava por pouco na
+      parada mais clara do gradiente (#123a6b). Sobe para a mesma cor do texto
+      de apoio do hero, que da 7,4 la. */
+.hero .boundary,.page-hero .boundary,.h2hero .boundary{color:#c6d2e0}

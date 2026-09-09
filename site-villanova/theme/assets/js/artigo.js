@@ -60,7 +60,38 @@
     alvo.parentNode.insertBefore(faixa, alvo);
   }
 
-  /* 5) Caixa do autor com foto */
+  /* 5) Tabela que rola por dentro, em QUALQUER largura.
+
+     Por que aqui e não só no CSS: uma tabela nunca fica menor que a largura
+     mínima das suas colunas, então basta uma tabela larga para esticar a
+     página inteira. O CSS resolve isso abaixo de 700px transformando a tabela
+     em bloco com rolagem — mas esse truque tem um custo: a tabela deixa de
+     esticar até 100% e uma tabela estreita passa a parecer encolhida. Por isso
+     ele só vale no celular, onde toda tabela é larga demais mesmo, e sobrava a
+     faixa de 701px a 980px sem regra nenhuma.
+
+     Envolver num contêiner resolve os dois casos de uma vez: quem rola é o
+     contêiner, a tabela continua com width:100% por dentro dele, e a estreita
+     continua esticando. Vale em toda largura, inclusive no desktop.
+
+     A marca no <html> avisa o CSS de que o embrulho aconteceu, para as duas
+     soluções não se somarem (tabela em bloco dentro de contêiner que rola
+     voltaria a encolher a estreita). Sem JS, o CSS de celular assume. */
+  var tabelas = body.querySelectorAll('table');
+  for (var t = 0; t < tabelas.length; t++) {
+    var tab = tabelas[t];
+    if (tab.parentNode && tab.parentNode.className === 'tabela-rolavel') continue;
+    var caixa = document.createElement('div');
+    caixa.className = 'tabela-rolavel';
+    caixa.setAttribute('tabindex', '0');
+    caixa.setAttribute('role', 'region');
+    caixa.setAttribute('aria-label', isPT ? 'Tabela, role para o lado' : 'Table, scroll sideways');
+    tab.parentNode.insertBefore(caixa, tab);
+    caixa.appendChild(tab);
+  }
+  if (tabelas.length) document.documentElement.className += ' vn-tabela-embrulhada';
+
+  /* 6) Caixa do autor com foto */
   var autor = document.createElement('div');
   autor.className = 'article-author';
   var av = document.querySelector('link[rel="stylesheet"][href*="v2.css"]');
