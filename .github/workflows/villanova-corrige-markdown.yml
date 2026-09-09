@@ -1,0 +1,38 @@
+name: Villanova — corrigir markdown cru (link de verdade)
+
+# Transforma "([site.com](https://...))" publicado como TEXTO em link de
+# verdade, mexendo na árvore lexical do Ghost. O formato do nó de link é
+# copiado de um link que já existe no mesmo documento, para não inventar
+# formato; se não houver nenhum, o item é pulado.
+#
+# Em modo aplicar, cada post é conferido logo depois de gravado — se sobrar
+# sintaxe crua ou o endereço não virar <a href>, o script REGRAVA O ORIGINAL
+# e falha. Ou fica certo, ou volta a ser exatamente o que era.
+#
+# Padrão é SIMULAR. Não grava nada sem escolher "aplicar".
+
+on:
+  workflow_dispatch:
+    inputs:
+      modo:
+        description: 'simular (não grava) ou aplicar'
+        type: choice
+        options: [simular, aplicar]
+        default: simular
+
+permissions:
+  contents: read
+
+jobs:
+  corrigir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Corrigir markdown cru
+        env:
+          VILLANOVA_GHOST_ADMIN_URL: ${{ secrets.VILLANOVA_GHOST_ADMIN_URL }}
+          VILLANOVA_GHOST_ADMIN_API_KEY: ${{ secrets.VILLANOVA_GHOST_ADMIN_API_KEY }}
+        run: node site-villanova/scripts/corrige-markdown-cru.mjs ${{ inputs.modo }}
