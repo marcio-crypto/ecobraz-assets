@@ -69,9 +69,16 @@
     if (e.target && e.target.closest('a')) fecha();
   });
 
-  document.addEventListener('click', function (e) {
+  // Dois ouvintes de proposito. No Safari do iPhone, clique em elemento que nao
+  // e interativo nao borbulha ate o document — o classico "fechar tocando fora"
+  // simplesmente nao funciona la com 'click'. O 'pointerdown' funciona, e o
+  // 'click' fica para navegador antigo sem Pointer Events. Fechar duas vezes
+  // nao faz mal: fecha() sai logo no comeco se o painel ja estiver fechado.
+  var foraDaqui = function (e) {
     if (!painel.contains(e.target) && !botao.contains(e.target)) fecha(false);
-  });
+  };
+  document.addEventListener('pointerdown', foraDaqui);
+  document.addEventListener('click', foraDaqui);
 
   // Escape devolve o foco ao botao: quem fechou com o teclado precisa continuar
   // de algum lugar, e o <body> nao e lugar.
@@ -79,14 +86,21 @@
     if (e.key === 'Escape' || e.key === 'Esc') fecha(true);
   });
 
-  // Tab saindo do ultimo link do painel fecha o menu e segue a pagina, em vez
-  // de deixar um painel aberto por cima do conteudo com o foco ja fora dele.
+  // Sair do painel pelo teclado fecha o menu, nos DOIS sentidos: Tab depois do
+  // ultimo link segue a pagina, e Shift+Tab antes do primeiro volta ao botao.
+  // Sem o segundo, quem voltasse com Shift+Tab deixava um painel aberto por
+  // cima do conteudo com o foco ja fora dele.
   painel.addEventListener('keydown', function (e) {
-    if (e.key !== 'Tab' || e.shiftKey) return;
+    if (e.key !== 'Tab') return;
     var links = painel.querySelectorAll('a');
-    var ultimo = null;
-    for (var i = 0; i < links.length; i++) if (links[i].offsetParent !== null) ultimo = links[i];
-    if (ultimo && e.target === ultimo) fecha(false);
+    var primeiro = null, ultimo = null;
+    for (var i = 0; i < links.length; i++) {
+      if (links[i].offsetParent === null) continue;
+      if (!primeiro) primeiro = links[i];
+      ultimo = links[i];
+    }
+    if (e.shiftKey) { if (primeiro && e.target === primeiro) fecha(true); }
+    else if (ultimo && e.target === ultimo) fecha(false);
   });
 
   // Ao voltar para largura de desktop o painel some pelo CSS, mas o

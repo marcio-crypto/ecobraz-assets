@@ -61,14 +61,19 @@ fs.mkdirSync(PASTA, { recursive: true });
 // O que decide rolagem lateral e quebra de layout aqui é a LARGURA da janela,
 // porque todo o CSS do tema usa media query de largura — nada depende de
 // touch nem do user agent.
+// 1024 esta aqui de proposito: e o limite superior da faixa em que o menu
+// sanfona passa a valer, e a auditoria nao testava nenhuma largura entre 901 e
+// 1024 — justamente a faixa que a mudanca do menu criou. iPad deitado.
 const TELAS = [
   { nome: 'celular', viewport: { width: 390, height: 844 }, movel: true },
   { nome: 'celular pequeno', viewport: { width: 360, height: 640 }, movel: true },
+  { nome: 'tablet deitado', viewport: { width: 1024, height: 768 }, movel: false },
   { nome: 'desktop', viewport: { width: 1366, height: 768 }, movel: false },
 ];
 
 // ---------------------------------------------------------------- lista de páginas
 const LIMITE = Number(process.env.LIMITE_PAGINAS || 24);
+let TOTAL_URLS = 0;
 
 const doSitemap = async (mapa) => {
   const out = [];
@@ -87,16 +92,24 @@ const paginas = async () => {
   const posts = await doSitemap('sitemap-posts.xml');
   console.log(`Sitemap: ${inst.length} páginas institucionais, ${posts.length} posts.`);
 
-  // As páginas institucionais vêm primeiro: são elas que recebem o tráfego pago
-  // e a entrada pela home. Dos posts entra só uma amostra espalhada, porque
-  // todos saem do mesmo template — um post quebrado quase sempre significa que
-  // o template está quebrado, não aquele post.
-  const escolhidas = inst.slice(0, LIMITE);
-  const sobra = LIMITE - escolhidas.length;
-  if (sobra > 0 && posts.length) {
-    const passo = Math.max(1, Math.floor(posts.length / sobra));
+  // COTA GARANTIDA PARA POST, E ESTA E UMA CORRECAO DE ERRO GRAVE. Antes a
+  // conta era inst.slice(0, LIMITE) e so DEPOIS sobrava vaga para post. Com 44
+  // paginas institucionais no sitemap e o limite padrao de 24, sobrava ZERO:
+  // nenhum post entrava, e o template post.hbs — que serve 188 das 232 URLs do
+  // site — nunca foi auditado uma vez sequer. O relatorio dizia "24 paginas" e
+  // parecia amostra do site; era amostra so das paginas institucionais.
+  // Agora pelo menos um terco da amostra e reservado a post, e o log diz
+  // quantos de cada tipo entraram.
+  const cotaPosts = posts.length ? Math.max(1, Math.floor(LIMITE / 3)) : 0;
+  const cotaInst = LIMITE - cotaPosts;
+  const escolhidas = inst.slice(0, cotaInst);
+  if (cotaPosts) {
+    const passo = Math.max(1, Math.floor(posts.length / cotaPosts));
     for (let i = 0; i < posts.length && escolhidas.length < LIMITE; i += passo) escolhidas.push(posts[i]);
   }
+  const nInst = Math.min(inst.length, cotaInst);
+  console.log(`Amostra: ${nInst} página(s) institucional(is) + ${escolhidas.length - nInst} post(s).`);
+  TOTAL_URLS = inst.length + posts.length;
   if (inst.length + posts.length > LIMITE) {
     console.log(`ATENÇÃO: existem ${inst.length + posts.length} URLs e o limite desta rodada é ${LIMITE}.`);
     console.log('Isto NÃO é uma varredura completa do site. É uma amostra.');
@@ -114,7 +127,7 @@ async function auditaPagina(navegador, url, tela) {
       : undefined,
   });
 
-  const achados = { erros: [], console: [], rede: [], };
+  const achados = { erros: [], console: [], rede: [], navegacao: null };
   const pg = await ctx.newPage();
 
   pg.on('pageerror', (e) => achados.erros.push(String(e && e.message || e).slice(0, 300)));
@@ -139,9 +152,11 @@ async function auditaPagina(navegador, url, tela) {
     resposta = await pg.goto(url, { waitUntil: 'load', timeout: 60000 });
     await pg.waitForTimeout(1800); // deixa o JS de consentimento/idioma agir
   } catch (e) {
-    achados.erros.push(`NAVEGAÇÃO FALHOU: ${e.message.slice(0, 200)}`);
+    // Em campo separado: somado a "erros", a falha de rede aparecia no resumo
+    // como se fosse erro de JavaScript da pagina, que e outra coisa.
+    achados.navegacao = `NAVEGAÇÃO FALHOU: ${e.message.slice(0, 200)}`;
     const r = { url, tela: tela.nome, status: 0, ...achados };
-    await ctx.close();
+    try { await ctx.close(); } catch (e2) {}
     return r;
   }
 
@@ -261,6 +276,54 @@ async function auditaPagina(navegador, url, tela) {
     achados.erros.push(`MEDIÇÃO FALHOU: ${String(e && e.message || e).slice(0, 200)}`);
   }
 
+  // O MENU SANFONA PRECISA SER ABERTO AQUI. Ate 09/09/2026 esta auditoria nunca
+  // clicava no hamburguer: o painel inteiro — que e a mudanca que ela existe
+  // para verificar — so tinha sido testado na previa local, nunca no site
+  // publicado. Abaixo de 1025px, abre e confere o que a pessoa veria.
+  if (tela.viewport.width <= 1024) {
+    try {
+      const temBotao = await pg.$('.menu-btn');
+      if (!temBotao) {
+        medidas.menu = { erro: 'não existe .menu-btn nesta largura' };
+      } else {
+        await pg.click('.menu-btn', { timeout: 5000 });
+        await pg.waitForTimeout(400);
+        medidas.menu = await pg.evaluate(() => {
+          const p = document.getElementById('menu-villanova');
+          if (!p) return { erro: 'painel #menu-villanova não existe' };
+          const navs = [...p.querySelectorAll('nav.main')].filter((n) => getComputedStyle(n).display !== 'none');
+          const ctas = [...p.querySelectorAll('.menu-cta')].filter((a) => getComputedStyle(a).display !== 'none');
+          const cta = ctas[0];
+          let alcance = null;
+          if (cta) {
+            cta.scrollIntoView({ block: 'nearest' });
+            const r = cta.getBoundingClientRect();
+            const el = (r.top >= 0 && r.bottom <= window.innerHeight)
+              ? document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) : null;
+            alcance = el ? `${el.tagName.toLowerCase()}.${String(el.className || '').trim().slice(0, 30)}` : '(fora da tela)';
+          }
+          return {
+            aberto: p.classList.contains('is-open'),
+            aria: document.querySelector('.menu-btn').getAttribute('aria-expanded'),
+            idiomasVisiveis: navs.length,
+            links: navs[0] ? navs[0].querySelectorAll('a').length : 0,
+            botoesVisiveis: ctas.length,
+            corDoBotao: cta ? getComputedStyle(cta).color : null,
+            toqueChegaNoBotao: alcance,
+            painelCabe: p.getBoundingClientRect().bottom <= window.innerHeight + 1,
+            vazaComMenuAberto: document.documentElement.scrollWidth > window.innerWidth + 1,
+            foco: document.activeElement ? document.activeElement.tagName.toLowerCase() : null,
+          };
+        });
+      }
+      // Fecha antes da foto: a tela guardada tem de mostrar a pagina como a
+      // pessoa a encontra, nao o menu que este teste acabou de abrir.
+      try { await pg.keyboard.press('Escape'); await pg.waitForTimeout(200); } catch (e) {}
+    } catch (e) {
+      medidas.menu = { erro: String(e && e.message || e).slice(0, 160) };
+    }
+  }
+
   const arquivoTela = `${PASTA}/${tela.nome}-${url.replace(/https?:\/\//, '').replace(/[^a-z0-9]+/gi, '_').slice(0, 80)}.png`;
   try { await pg.screenshot({ path: arquivoTela, fullPage: true }); } catch (e) {}
 
@@ -282,12 +345,25 @@ const linha = (t) => console.log(t);
 
 function relataPagina(r) {
   const problemas = [];
-  if (r.status >= 400 || r.status === 0) problemas.push(`status HTTP ${r.status}`);
+  if (r.navegacao) problemas.push('a página não carregou');
+  else if (r.status >= 400 || r.status === 0) problemas.push(`status HTTP ${r.status}`);
   if (r.erros?.length) problemas.push(`${r.erros.length} erro(s) de JavaScript`);
   if (r.rede?.length) problemas.push(`${r.rede.length} requisição(ões) com falha`);
   if (r.scrollWidth > r.innerWidth + 1) problemas.push('rolagem horizontal');
   if (r.imagensQuebradas?.length) problemas.push(`${r.imagensQuebradas.length} imagem(ns) quebrada(s)`);
   if (r.linksMortos?.length) problemas.push(`${r.linksMortos.length} link(s) sem destino`);
+  const m = r.menu;
+  if (m) {
+    if (m.erro) problemas.push(`menu: ${m.erro}`);
+    else {
+      if (!m.aberto || m.aria !== 'true') problemas.push('o menu não abriu');
+      if (m.idiomasVisiveis !== 1) problemas.push(`${m.idiomasVisiveis} menus de idioma visíveis (deveria ser 1)`);
+      if (m.botoesVisiveis !== 1) problemas.push(`${m.botoesVisiveis} botões no painel (deveria ser 1)`);
+      if (m.corDoBotao && m.corDoBotao !== 'rgb(255, 255, 255)') problemas.push(`botão do painel com texto ${m.corDoBotao}`);
+      if (m.toqueChegaNoBotao && m.toqueChegaNoBotao.indexOf('menu-cta') < 0) problemas.push(`algo cobre o botão do painel: ${m.toqueChegaNoBotao}`);
+      if (m.vazaComMenuAberto) problemas.push('rolagem horizontal com o menu aberto');
+    }
+  }
   if (!problemas.length) return false;
 
   linha(`\n──────────────────────────────────────────────`);
@@ -296,6 +372,7 @@ function relataPagina(r) {
   linha(`  título: ${r.titulo}   lang: ${r.lang}   HTTP ${r.status}`);
   linha(`  PROBLEMAS: ${problemas.join(' · ')}`);
 
+  if (r.navegacao) linha(`   ✗ ${r.navegacao}`);
   for (const e of (r.erros || [])) linha(`   ✗ JS: ${e}`);
   for (const e of (r.console || []).slice(0, 6)) linha(`   ! console: ${e}`);
   for (const e of (r.rede || []).slice(0, 8)) linha(`   ✗ rede: ${e}`);
@@ -362,6 +439,10 @@ for (const l of linksRuins) linha(`  ✗ ${l}`);
 
 linha('\n\n=========================== RESUMO ============================');
 linha(`Páginas auditadas .................. ${lista.length} (x${TELAS.length} telas = ${resultados.length} carregamentos)`);
+if (!process.argv[2] && TOTAL_URLS > lista.length) {
+  linha(`ISTO É UMA AMOSTRA de ${lista.length} das ${TOTAL_URLS} URLs do site.`);
+  linha('Nenhum número abaixo cobre o site inteiro.');
+}
 linha(`Carregamentos com algum problema ... ${paginasComProblema}`);
 linha(`Erros de JavaScript ................ ${totalErros}`);
 linha(`Requisições com falha .............. ${totalRede}`);
