@@ -12,7 +12,9 @@ e ECEK Comms Guidelines v0.1 (lidas na íntegra; versão do Drive revista em
    contrato entrou em vigor. Este gatilho estava marcado como pendente aqui
    por engano — ficou pendente no papel, não na realidade.
 
-2. **Selo → AINDA NÃO.** Falta o arquivo, e falta uma resposta.
+2. **Selo → O ARQUIVO CHEGOU (09/09/2026); falta só a resposta da IRIDE.**
+   O que segue descreve a situação até 08/09; a atualização de 09/09 está
+   na seção "LIDO EM 09/09/2026" mais abaixo.
    - O "TO BE ADDED" saiu das guidelines: a seção 4 agora descreve o selo e
      diz que ele está na pasta do Comms & Media Pack no Drive
      (compartilhada em 30/07, atualizada em 02/09).
@@ -68,6 +70,44 @@ nossa.
 
 Falta ler a frase impressa no banner para confirmar. Os arquivos estão
 zipados; quando a imagem estiver solta no Drive, dá para conferir.
+
+### LIDO EM 09/09/2026 — e a lacuna era só do banner antigo
+
+O Marcio mandou os arquivos soltos. Li a frase impressa em cada um, e a
+distinção que faltava EXISTE:
+
+| arquivo | frase impressa na peça |
+| --- | --- |
+| `Banner 600x800 dark_mentors` / `light_mentors` | **"Mentoring for the** European Circular Electronics Kickstart Acceleration Program" |
+| `Banner 600x800 dark_startups` / `light_startups` | "**Selected for the** …" |
+
+Ou seja: eles separaram os papéis também no banner — o pacote lido em
+08/09 é que não tinha essa versão, ou ela estava dentro do zip fechado.
+**A dúvida de conteúdo está resolvida: existe peça de mentor, com a redação
+certa.** As duas de mentor ficaram guardadas em `docs/marketing/ecek-selo/`;
+as de startup NÃO foram guardadas, de propósito, para ninguém pegar o
+arquivo errado — a frase delas afirmaria um papel que não é o do Marcio.
+
+Outras conferências feitas no próprio arquivo:
+- 7 arquivos no zip, **4 únicos** (3 são cópias byte a byte).
+- Tamanho real **900x1200 px**, apesar de o nome dizer "600x800" — exportado
+  a 1,5x. A largura mínima em tela exigida pelas diretrizes é 120 px.
+- O **emblema da UE e o disclaimer verbatim já vêm impressos na peça**, o que
+  sozinho atende à exigência de disclaimer "ao lado do selo".
+
+**O que NÃO ficou resolvido, e não vou dizer que ficou:**
+1. **Continua faltando a confirmação da IRIDE.** A seção 4 das diretrizes
+   segue dizendo que a linha do banner do site é "Selected for the …". A
+   existência de uma peça de mentor é evidência forte, não autorização
+   escrita. A pergunta agora é bem mais estreita: *"recebemos um banner
+   'Mentoring for the ECEK' no pacote; confirmam que é este que o mentor usa
+   no site?"*
+2. **Não sei dizer se esta peça é o "banner do site"** ou outra do pacote. A
+   proporção 3:4 (retrato) é de post ou coluna lateral, não de faixa de topo.
+   Pelo nome é banner; pela forma, não parece. Vai na mesma pergunta.
+3. As demais exigências continuam de pé se for autorizado: link clicável para
+   o EVEN CLOSER, não cortar nem dividir a peça, e avisar a IRIDE com a URL
+   depois de publicado (cláusula 3.2(c)).
 
 ## Se o selo for autorizado, exigências das guidelines
 
