@@ -101,3 +101,9 @@ jobs:
           name: telas-fatia-${{ matrix.fatia }}
           path: auditoria-navegador/
           retention-days: 14
+
+      # Por ultimo de proposito: o passo de upload despeja dezenas de linhas de
+      # "Uploaded bytes", e o resumo ficava enterrado no meio do log.
+      - name: Resumo desta fatia
+        if: always()
+        run: cat auditoria-navegador/RESUMO.txt || echo "sem RESUMO.txt"

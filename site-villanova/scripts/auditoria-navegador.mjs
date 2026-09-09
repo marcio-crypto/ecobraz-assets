@@ -657,6 +657,7 @@ const navegador = await chromium.launch({ args: ['--no-sandbox'] });
 const resultados = [];
 let totalErros = 0, totalRede = 0, totalOverflow = 0, totalImg = 0, paginasComProblema = 0;
 const regrasDeContraste = new Set();
+const exemploDeContraste = new Map();
 let totalIdioma = 0;
 
 for (const url of lista) {
@@ -668,7 +669,11 @@ for (const url of lista) {
     totalImg += r.imagensQuebradas?.length || 0;
     if (r.scrollWidth > r.innerWidth + 1) totalOverflow++;
     if (r.vazamentoIdioma?.length || r.idiomaVazio) totalIdioma++;
-    for (const c of (r.contraste || [])) regrasDeContraste.add(`${c.cor}|${c.fundo}|${c.minimo}`);
+    for (const c of (r.contraste || [])) {
+      const chave = `${c.cor}|${c.fundo}|${c.minimo}`;
+      regrasDeContraste.add(chave);
+      if (!exemploDeContraste.has(chave)) exemploDeContraste.set(chave, c);
+    }
     if (relataPagina(r)) paginasComProblema++;
   }
 }
@@ -710,6 +715,26 @@ linha(`Links internos quebrados ........... ${linksRuins.length}`);
 // nao corresponde ao trabalho de conserto (que e mexer numa linha).
 linha(`Regras de cor abaixo do contraste AA  ${regrasDeContraste.size}`);
 linha(`Carregamentos com idioma errado .... ${totalIdioma}`);
+
+// RESUMO EM ARQUIVO, e a razao e prosaica: o log do Actions termina com dezenas
+// de linhas de upload de artefato, e ler o resumo por cima delas custa caro e
+// atrapalha. Este arquivo e impresso pelo ultimo passo do workflow, depois do
+// upload, entao fica sempre nas ultimas linhas do log.
+const digesto = [];
+digesto.push(`FATIA ${FATIA + 1}/${FATIAS} · ${lista.length} pagina(s) x ${TELAS.length} tela(s) = ${resultados.length} carregamento(s)`);
+digesto.push(`problemas:${paginasComProblema} js:${totalErros} rede:${totalRede} rolagem:${totalOverflow} imagem:${totalImg} link:${linksRuins.length} idioma:${totalIdioma} contraste-regras:${regrasDeContraste.size}`);
+if (exemploDeContraste.size) {
+  digesto.push('REGRAS DE COR ABAIXO DO MINIMO (uma linha por regra, com um exemplo):');
+  for (const ex of [...exemploDeContraste.values()].sort((x, y) => x.razao - y.razao)) {
+    digesto.push(`  ${ex.razao} (min ${ex.minimo})  <${ex.tag} class="${ex.classe}">  ${ex.cor} sobre ${ex.fundo}  "${ex.texto}"`);
+  }
+}
+if (COM_PROBLEMA.length) {
+  digesto.push('ONDE DOEU:');
+  for (const p2 of COM_PROBLEMA.slice(0, 40)) digesto.push(`  [${p2.tela}] ${p2.url} :: ${p2.problemas.join(' · ')}`);
+  if (COM_PROBLEMA.length > 40) digesto.push(`  ... e mais ${COM_PROBLEMA.length - 40}`);
+}
+try { fs.writeFileSync(`${PASTA}/RESUMO.txt`, digesto.join('\n') + '\n'); } catch (e) {}
 if (COM_PROBLEMA.length) {
   // Esta lista existe porque em 09/09/2026 o resumo disse "3 telas com rolagem
   // horizontal" e nao havia como saber QUAIS sem baixar o log inteiro. Um
