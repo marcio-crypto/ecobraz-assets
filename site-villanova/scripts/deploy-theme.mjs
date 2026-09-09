@@ -21,9 +21,16 @@ const auth = {Authorization: `Ghost ${token}`, 'Accept-Version': 'v5.0'};
 // Hash de asset ANTES de mexer em nada: e a unica forma de a checagem depois
 // significar alguma coisa. Sem o "antes", um hash qualquer no "depois" nao
 // prova se mudou.
+// O cache: 'no-store' NAO basta, e isso foi medido em 09/09/2026: o runner
+// leu "mgeUqhCpucRBJtt6" como valor de ANTES quando o hash ao vivo ja era
+// "GpUWyUNT0pFdgprN" havia uma hora. E hint para o cliente; o CDN a ignora, e
+// cada borda tem a sua copia. Um parametro unico na URL e o que faz a borda
+// buscar de novo. Se nem assim mudar, o script diz que e inconclusivo em vez de
+// afirmar que o deploy falhou.
 const leHash = async () => {
   try {
-    const r = await fetch('https://www.villanovaesg.com/', {redirect: 'follow', cache: 'no-store'});
+    const r = await fetch(`https://www.villanovaesg.com/?_cache=${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      {redirect: 'follow', cache: 'no-store', headers: {'Cache-Control': 'no-cache', Pragma: 'no-cache'}});
     return ((await r.text()).match(/assets\/css\/main\.css\?v=([A-Za-z0-9]+)/) || [])[1] || null;
   } catch (e) { return null; }
 };
@@ -64,8 +71,10 @@ if (activate) {
   console.log(`Hash de asset ANTES : ${hashAntes || '(não lido)'}`);
   console.log(`Hash de asset DEPOIS: ${hashDepois || '(não lido)'}`);
   if (hashAntes && hashDepois && hashAntes === hashDepois) {
-    console.log('AVISO: o hash não mudou em um minuto. Pode ser cache do CDN ainda');
-    console.log('servindo o HTML antigo, ou o tema realmente não subiu. Confirme');
+    console.log('INCONCLUSIVO: o hash não mudou em um minuto. As duas leituras');
+    console.log('possíveis são cache de borda do CDN ainda servindo o HTML antigo,');
+    console.log('ou o tema realmente não ter subido — e este script NÃO distingue');
+    console.log('as duas. Não trate como falha de publicação sem confirmar');
     console.log('buscando no HTML servido um trecho que só exista na versão nova.');
   } else if (hashDepois && hashAntes) {
     console.log('O hash mudou: o HTML servido já é o do tema recém-ativado.');
