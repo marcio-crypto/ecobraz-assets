@@ -46,6 +46,7 @@ export function abasEquipe(atual) {
     ['matriz', '/cronograma/matriz', '📊 Planilha'],
     ['cargas', '/cargas', '🚛 Cargas'],
     ['filas', '/cargas/filas', '📦 Filas'],
+    ['estoque', '/cargas/estoque', '⚖️ Estoque'],
     ['operacao', '/operacao', '🏭 Operação'],
   ];
   const item = ([id, href, rot]) => id === atual

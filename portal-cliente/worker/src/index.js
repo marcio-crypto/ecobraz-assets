@@ -55,7 +55,7 @@ import { paginaAcompanhamento, colunaClienteDe, lerGestores, gestorPorEmail, sal
 import { DEMO_CLIENTE_HTML, DEMO_OG_PNG_B64 } from './demo-cliente.js';
 import { listarPropostas, lerProposta, salvarProposta, paginaPropostas, paginaPropostaForm, paginaPropostaVer, paginaContratoVer, garantirTokenAceite, registrarAceite, paginaAceite, paginaAceiteVerificar } from './proposta.js';
 import { lerEmpresaDocs, salvarEmpresaDoc, anexarEmpresaDoc, paginaEmpresaDocs, alertasEmpresaDocs } from './empresa-docs.js';
-import { listarCargas, lerCarga, lotesDaCarga, lerLote, listarLotesPorDestino, novaCarga, pesarCarga, fotoCarga, criarLote, excluirLote, editarLote, cancelarCarga, mudarStatusLote, expedirLote, sincronizarCargasComValidacao, listarFornecedores, paginaExpedirLote, seloLote, qrLoteGif, paginaCargas, paginaNovaCarga, paginaCarga, paginaEtiqueta, paginaFilas, paginaValidarLote } from './cargas.js';
+import { listarCargas, lerCarga, lotesDaCarga, lerLote, listarLotesPorDestino, novaCarga, pesarCarga, fotoCarga, criarLote, excluirLote, editarLote, cancelarCarga, mudarStatusLote, expedirLote, sincronizarCargasComValidacao, estoqueDestinacao, registrarSaidaEstoque, listarSaidasEstoque, paginaEstoqueDestinacao, listarFornecedores, paginaExpedirLote, seloLote, qrLoteGif, paginaCargas, paginaNovaCarga, paginaCarga, paginaEtiqueta, paginaFilas, paginaValidarLote } from './cargas.js';
 import { acharPacote, precoPacote, acharModuloAdote, precoModuloAdote, paginaLojaAdote, paginaObrigadoAdote, paginaDiagnostico, lerCredito, salvarCredito, novoCredito, aplicarCompra, aplicarRecarga, precisaRecarga, listarPatrocinadores, resumoPatrocinio, lerCreditoPorDoc } from './adote.js';
 import { paginaLojaESG, paginaESGContato, paginaESGObrigado, relatorioESG, precoRelatorioESG } from './esg.js';
 import { statusDaEtapa, valorProp, CAMPOS_OS } from './os-utils.js';
@@ -2604,6 +2604,17 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         if (!docaOk) return html(paginaLoginOperacao(googleConfigurado(env)));
         const dest = ['laudo', 'remanufatura', 'reciclagem', 'destinacao'].includes(url.searchParams.get('destino')) ? url.searchParams.get('destino') : 'laudo';
         return html(paginaFilas(docaOk, dest, await listarLotesPorDestino(env, dest)));
+      }
+      // ⚖️ Estoque de destinação (pedido da equipe 09/09): saldo por material e
+      // baixa parcial por MTR de saída.
+      if (pathname === '/cargas/estoque' && request.method === 'GET') {
+        if (!docaOk) return html(paginaLoginOperacao(googleConfigurado(env)));
+        return html(paginaEstoqueDestinacao(docaOk, await estoqueDestinacao(env), await listarSaidasEstoque(env)));
+      }
+      if (pathname === '/api/cargas/saida-estoque' && request.method === 'POST') {
+        if (!docaOk) return json({ ok: false, message: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = {}; }
+        return json(await registrarSaidaEstoque(env, docaOk, b));
       }
       if (pathname === '/cargas/foto' && request.method === 'GET') {
         if (!docaOk) return json({ ok: false }, 401);

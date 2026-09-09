@@ -42,6 +42,9 @@ async function db(env) {
     await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS op_cargas (id TEXT PRIMARY KEY, criado_em TEXT, criado_por TEXT, cliente_nome TEXT, cliente_doc TEXT, os_json TEXT, exclusiva_laudo INTEGER DEFAULT 0, peso_bruto REAL, tara REAL, peso_liquido REAL, fotos_json TEXT, status TEXT, cancelada_json TEXT DEFAULT \'\', edicoes_json TEXT DEFAULT \'\')').run();
     await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS op_lotes (id TEXT PRIMARY KEY, carga_id TEXT, categoria TEXT, peso REAL, qtd TEXT, destino TEXT, status TEXT, criado_em TEXT, criado_por TEXT, edicoes_json TEXT DEFAULT \'\', expedicao_json TEXT DEFAULT \'\')').run();
     await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS op_fornecedores (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT, cnpj TEXT, cidade_uf TEXT, criado_em TEXT)').run();
+    // Estoque de destinação (pedido da equipe 09/09): baixas PARCIAIS por material,
+    // conforme MTR de saída (ex.: 800 kg de metal − MTR de 300 kg = 500 kg no saldo).
+    await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS op_saidas_estoque (id INTEGER PRIMARY KEY AUTOINCREMENT, categoria TEXT, peso REAL, fornecedor TEXT, cnpj TEXT, mtr TEXT, data TEXT, obs TEXT, por TEXT, em TEXT)').run();
   } catch { return null; }
   // Tabelas criadas antes de cancelar/editar/expedir existirem não têm as colunas — completa uma vez.
   if (!migrouColunas) {
@@ -266,6 +269,124 @@ export async function expedirLote(env, user, id, dados) {
     if (!achou) await d.prepare('INSERT INTO op_fornecedores (nome, cnpj, cidade_uf, criado_em) VALUES (?1,?2,?3,?4)').bind(fornecedor, cnpj, cidadeUf, new Date().toISOString()).run();
   } catch { /* sugestão é best-effort */ }
   return { ok: true };
+}
+
+// --- ESTOQUE DE DESTINAÇÃO (pedido da equipe 09/09) ------------------------------
+// Lote FINALIZADO entra no estoque do seu material; a baixa sai de dois jeitos:
+// (a) expedição do lote inteiro (Registrar saída, já existia) e (b) baixa PARCIAL
+// por MTR de saída, registrada na aba nova. Saldo = finalizados − expedidos − parciais.
+const kgNum = (v) => {
+  let s = String(v == null ? '' : v).trim().replace(/[^0-9.,-]/g, '');
+  if (!s) return 0;
+  if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+  else if ((s.match(/\./g) || []).length > 1) s = s.replace(/\./g, '');
+  else if (/^\d{1,3}\.\d{3}$/.test(s)) s = s.replace('.', '');
+  const n = Number(s);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+};
+
+export async function estoqueDestinacao(env) {
+  const d = await db(env); if (!d) return { ok: false, materiais: [] };
+  let lotes = []; try { lotes = await listarLotesComCarga(env); } catch { lotes = []; }
+  const chave = (c) => limpar(c || '') || 'Sem categoria';
+  const mat = new Map();
+  const pega = (k) => { const m = mat.get(k) || { categoria: k, entradaKg: 0, lotesProntos: 0, expedidoLotesKg: 0, saidasKg: 0 }; mat.set(k, m); return m; };
+  for (const l of lotes) {
+    if (l.cargaStatus === 'cancelada') continue;
+    if (l.status !== 'finalizado' && l.status !== 'expedido') continue;
+    const m = pega(chave(l.categoria));
+    m.entradaKg += Number(l.peso) || 0;
+    if (l.status === 'expedido') m.expedidoLotesKg += Number(l.peso) || 0; else m.lotesProntos++;
+  }
+  try {
+    const r = await d.prepare('SELECT categoria, SUM(peso) AS kg FROM op_saidas_estoque GROUP BY categoria').all();
+    for (const s of (r.results || [])) pega(chave(s.categoria)).saidasKg += Number(s.kg) || 0;
+  } catch { /* sem saídas ainda */ }
+  const arred = (n) => Math.round(n * 100) / 100;
+  const materiais = [...mat.values()].map((m) => ({ ...m, entradaKg: arred(m.entradaKg), expedidoLotesKg: arred(m.expedidoLotesKg), saidasKg: arred(m.saidasKg), saldoKg: arred(m.entradaKg - m.expedidoLotesKg - m.saidasKg) })).sort((a, b) => b.saldoKg - a.saldoKg);
+  return { ok: true, materiais };
+}
+
+export async function registrarSaidaEstoque(env, user, dados) {
+  const d = await db(env); if (!d) return { ok: false, message: 'Banco indisponível.' };
+  const categoria = limpar((dados && dados.categoria) || '').slice(0, 80);
+  if (!categoria) return { ok: false, message: 'Escolha o material.' };
+  const peso = kgNum(dados && dados.peso);
+  if (!peso) return { ok: false, message: 'Informe o peso da saída em kg (ex.: 300 ou 300,5).' };
+  const fornecedor = limpar((dados && dados.fornecedor) || '').slice(0, 160);
+  if (fornecedor.length < 3) return { ok: false, message: 'Informe o fornecedor/destinatário que recebe.' };
+  const cnpj = String((dados && dados.cnpj) || '').replace(/\D/g, '');
+  if (cnpj && cnpj.length !== 14) return { ok: false, message: 'CNPJ incompleto — confira (ou deixe em branco).' };
+  const mtr = String((dados && dados.mtr) || '').replace(/\D/g, '').slice(0, 20);
+  if (mtr.length < 4) return { ok: false, message: 'Informe o número da MTR de saída — é ela que justifica a baixa.' };
+  const dataSaida = String((dados && dados.data) || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dataSaida) || Number.isNaN(Date.parse(dataSaida))) return { ok: false, message: 'Informe a data da saída.' };
+  // Trava honesta: não deixa baixar mais do que existe no saldo do material.
+  const est = await estoqueDestinacao(env);
+  const m = (est.materiais || []).find((x) => x.categoria === categoria);
+  const saldo = m ? m.saldoKg : 0;
+  if (peso > saldo + 0.009) return { ok: false, message: `Só há ${String(saldo).replace('.', ',')} kg de "${categoria}" no estoque — não dá para baixar ${String(peso).replace('.', ',')} kg. Confira a balança ou o material.` };
+  await d.prepare('INSERT INTO op_saidas_estoque (categoria, peso, fornecedor, cnpj, mtr, data, obs, por, em) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9)')
+    .bind(categoria, peso, fornecedor, cnpj, mtr, dataSaida, limpar((dados && dados.obs) || '').slice(0, 300), (user && user.email) || '', new Date().toISOString()).run();
+  return { ok: true, saldoNovo: Math.round((saldo - peso) * 100) / 100 };
+}
+
+export async function listarSaidasEstoque(env, limite = 40) {
+  const d = await db(env); if (!d) return [];
+  try { const r = await d.prepare('SELECT * FROM op_saidas_estoque ORDER BY id DESC LIMIT ?1').bind(Math.max(1, Math.min(200, Number(limite) || 40))).all(); return r.results || []; } catch { return []; }
+}
+
+export function paginaEstoqueDestinacao(user, est, saidas) {
+  const materiais = (est && est.materiais) || [];
+  const cardMat = (m) => `<div style="flex:1;min-width:220px;background:#fff;border:1px solid ${m.saldoKg < 0 ? '#E8B9B2' : '#E4EBE9'};border-radius:14px;padding:16px">
+    <div style="font-size:13px;font-weight:800;color:#10262B">${esc(m.categoria)}</div>
+    <div style="font-size:26px;font-weight:800;color:${m.saldoKg < 0 ? '#B23A2E' : m.saldoKg > 0 ? '#1E5B31' : '#7c8a87'};margin:6px 0 2px">${esc(kg(m.saldoKg))}</div>
+    <div style="font-size:10.5px;color:#7c8a87">no estoque para emissão</div>
+    <div style="font-size:11px;color:#8fa39f;margin-top:8px">entrou ${esc(kg(m.entradaKg))} · saiu ${esc(kg(m.expedidoLotesKg + m.saidasKg))} (${esc(kg(m.expedidoLotesKg))} em lotes expedidos + ${esc(kg(m.saidasKg))} em baixas por MTR)</div>
+    ${m.saldoKg < 0 ? '<div style="font-size:11px;color:#B23A2E;font-weight:700;margin-top:6px">⚠️ saldo negativo — saiu mais do que entrou; confira lançamentos</div>' : ''}
+  </div>`;
+  const rowSaida = (s) => `<div class="row"><span style="min-width:0"><b style="font-size:12.5px">${esc(String(s.data || '').split('-').reverse().join('/'))}</b> · ${esc(s.categoria)} · <b>${esc(kg(s.peso))}</b>
+      <span style="display:block;font-size:11px;color:#8fa39f">→ ${esc(s.fornecedor)}${s.mtr ? ' · MTR ' + esc(s.mtr) : ''}${s.obs ? ' · ' + esc(s.obs) : ''}</span></span>
+    <span style="flex:none;font-size:10.5px;color:#9aa7a4">${esc(String(s.por || '').split('@')[0])}</span></div>`;
+  const opts = materiais.filter((m) => m.saldoKg > 0).map((m) => `<option value="${esc(m.categoria)}">${esc(m.categoria)} — ${esc(kg(m.saldoKg))} disponíveis</option>`).join('');
+  return `${head('Estoque destinação')}${topo('entrada · estoque')}
+<div class="wrap">
+  ${abasEquipe('estoque')}
+  <h1 style="font-size:21px;margin:0 0 4px">⚖️ Estoque de destinação</h1>
+  <p style="font-size:12.5px;color:#7c8a87;margin:0 0 14px">Cada lote <b>finalizado</b> entra aqui no saldo do seu material. A baixa sai pela <b>MTR de saída</b> (parcial, abaixo) ou pela expedição do lote inteiro na fila. Ex.: 800 kg de metal − MTR de 300 kg = <b>500 kg ainda no estoque para emissão</b>.</p>
+  ${materiais.length ? `<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">${materiais.map(cardMat).join('')}</div>` : '<div class="card" style="font-size:12.5px;color:#8fa39f;margin-bottom:16px">Nenhum material em estoque ainda — finalize lotes na fila para eles entrarem aqui.</div>'}
+  <div class="card" style="margin-bottom:16px">
+    <div class="sec" style="margin-top:0">📤 Registrar SAÍDA por MTR (baixa parcial)</div>
+    <div class="g2">
+      <div><label>Material *</label><select id="se-cat">${opts || '<option value="">— sem saldo disponível —</option>'}</select></div>
+      <div><label>Peso da saída (kg) *</label><input id="se-peso" inputmode="decimal" placeholder="ex.: 300"></div>
+      <div><label>Fornecedor / destinatário *</label><input id="se-forn" placeholder="ex.: Palmares Reciclagem"></div>
+      <div><label>CNPJ (opcional)</label><input id="se-cnpj" inputmode="numeric" placeholder="somente números"></div>
+      <div><label>Nº da MTR de saída *</label><input id="se-mtr" inputmode="numeric" placeholder="somente números"></div>
+      <div><label>Data da saída *</label><input id="se-data" type="date"></div>
+    </div>
+    <label>Observação (opcional)</label><input id="se-obs" maxlength="300">
+    <button class="btn btn-p" style="width:100%;margin-top:12px" onclick="baixarEstoque()">Dar baixa no estoque</button>
+    <div class="msg" id="se-msg"></div>
+  </div>
+  <div class="card">
+    <div class="sec" style="margin-top:0">Últimas saídas registradas</div>
+    ${(saidas || []).length ? (saidas || []).map(rowSaida).join('') : '<div style="font-size:12.5px;color:#8fa39f">Nenhuma baixa por MTR ainda.</div>'}
+  </div>
+</div>
+<script>
+document.getElementById('se-data').value = new Date().toISOString().slice(0,10);
+async function baixarEstoque(){
+  var g=function(id){var el=document.getElementById(id);return el?el.value.trim():'';};
+  var msg=document.getElementById('se-msg');
+  msg.textContent='Registrando…';
+  try{var r=await fetch('/api/cargas/saida-estoque',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({categoria:g('se-cat'),peso:g('se-peso'),fornecedor:g('se-forn'),cnpj:g('se-cnpj'),mtr:g('se-mtr'),data:g('se-data'),obs:g('se-obs')})});
+    var j=await r.json();
+    if(j.ok){msg.style.color='#1E7A3D';msg.textContent='✓ Baixa registrada — restam '+String(j.saldoNovo).replace('.',',')+' kg no estoque.';setTimeout(function(){location.reload();},900);}
+    else{msg.style.color='#a04030';msg.textContent=j.message||'Não deu certo.';}}
+  catch(e){msg.style.color='#a04030';msg.textContent='Falha de rede.';}
+}
+</script></body></html>`;
 }
 
 export async function listarFornecedores(env) {
