@@ -63,6 +63,7 @@ export const PUBLICOS_WA = {
   'frios-500': 'BASE FRIA — 500 mais contatáveis que nunca receberam (sem histórico; celular primeiro)',
   'melhores-1000': 'MELHORES 1000 — quem mais descarta primeiro (inéditos com histórico), completando com a base fria mais contatável',
   'resto-base': 'LIMPEZA FINAL — todo o resto que nunca recebeu (inclui pessoa física e fixos) · 1000 por onda até zerar',
+  'coleta-1000': 'AGENDAR COLETA — 1000 números VIVOS mais promissores (base já alcançada; exige template NOVO de coleta)',
   'reativacao-200': `Top 200 para REATIVAR — já descartaram com a Ecobraz, mas estão paradas há ${MESES_REATIVACAO}+ meses`,
   'clientes-os': 'Clientes que já têm OS no sistema (com telefone)',
   'sem-coleta-6m': 'Clientes com OS, mas SEM coleta nos últimos 6 meses (oferecer coleta)',
@@ -369,7 +370,65 @@ export async function publicoRestoBase(env, n = 1000) {
   return itens.slice(0, n);
 }
 
-const ALVO_PUBLICO = { 'top-450': TOP_N, 'top-200': TOP_N, 'top-500-novos': 500, 'frios-500': 500, 'melhores-1000': 1000, 'resto-base': 1000, 'reativacao-200': 200 };
+// AGENDAR COLETA — 1000 VIVOS (pedido do Marcio 11/09: "estamos quase sem
+// material"): a COLHEITA. Universo = números comprovadamente vivos (entrega
+// confirmada em alguma onda). A trava anti-repetição é por TEMPLATE — com um
+// template NOVO de "agende sua coleta", toda a base viva pode receber de novo.
+// Pontos (critério aberto): respondeu como GENTE +30 · leu +15 / recebeu +10 ·
+// descartes no histórico até +20 · tem OS +5 · parado há 6+ meses +8 (provável
+// material acumulado). Cada linha da lista explica o porquê.
+export async function publicoColetaVivos(env, n = 1000) {
+  const d = await db(env); if (!d) return [];
+  let vivos = [];
+  try {
+    const r = await d.prepare("SELECT tel, MAX(CASE WHEN entrega='lida' THEN 2 WHEN entrega='entregue' THEN 1 ELSE 0 END) AS nivel FROM wa_destinatarios WHERE status='enviado' GROUP BY tel HAVING MAX(CASE WHEN entrega='lida' THEN 2 WHEN entrega='entregue' THEN 1 ELSE 0 END) >= 1").all();
+    vivos = r.results || [];
+  } catch { vivos = []; }
+  if (!vivos.length) return [];
+  const infoTel = new Map();
+  try {
+    const r = await d.prepare('SELECT id, tel, nome, doc FROM wa_destinatarios ORDER BY id').all();
+    for (const x of (r.results || [])) infoTel.set(String(x.tel), { nome: limpar(x.nome), doc: String(x.doc || '').replace(/\D/g, '') });
+  } catch { /* nomes podem faltar; a lista segue */ }
+  let gente = new Set();
+  try { const r = await d.prepare('SELECT DISTINCT tel FROM wa_respostas WHERE automatica=0').all(); gente = new Set((r.results || []).map((x) => String(x.tel))); } catch { gente = new Set(); }
+  const negPorDoc = new Map();
+  try {
+    const r = await d.prepare("SELECT REPLACE(REPLACE(REPLACE(COALESCE(c.documento,''),'.',''),'/',''),'-','') AS doc, COUNT(*) AS n, MAX(g.criado_em) AS ult FROM negocios g JOIN contatos c ON c.ploomes_id = g.contact_id WHERE g.status_id = 2 AND COALESCE(c.documento,'') <> '' GROUP BY 1").all();
+    for (const x of (r.results || [])) negPorDoc.set(String(x.doc), { n: Number(x.n) || 0, ult: String(x.ult || '') });
+  } catch { /* sem histórico de negócios */ }
+  const osPorDoc = new Map();
+  try {
+    for (const c of (await listarColetasOS(env))) {
+      if (!c || c.status === 'cancelada') continue;
+      const doc = String(c.clienteDoc || '').replace(/\D/g, ''); if (!doc) continue;
+      const atual = osPorDoc.get(doc) || { n: 0, ult: '' };
+      atual.n++; if (String(c.criadoEm || '') > atual.ult) atual.ult = String(c.criadoEm || '');
+      osPorDoc.set(doc, atual);
+    }
+  } catch { /* sem OSs */ }
+  const seisMeses = new Date(Date.now() - 183 * 86400e3).toISOString();
+  const itens = [];
+  for (const v of vivos) {
+    const tel = String(v.tel);
+    const inf = infoTel.get(tel) || { nome: '', doc: '' };
+    const neg = inf.doc ? negPorDoc.get(inf.doc) : null;
+    const os = inf.doc ? osPorDoc.get(inf.doc) : null;
+    const nivel = Number(v.nivel) || 1;
+    let pontos = nivel === 2 ? 15 : 10;
+    const motivos = [nivel === 2 ? '👁 leu campanha' : '✅ recebeu campanha'];
+    if (gente.has(tel)) { pontos += 30; motivos.push('💬 já respondeu (gente)'); }
+    if (neg && neg.n) { pontos += Math.min(neg.n * 3, 20); motivos.push(`🏭 ${neg.n} descarte(s) no histórico`); }
+    if (os && os.n) { pontos += 5; motivos.push(`📋 ${os.n} OS no sistema`); }
+    const ultAtividade = [neg && neg.ult, os && os.ult].filter(Boolean).sort().pop() || '';
+    if (ultAtividade && ultAtividade < seisMeses) { pontos += 8; motivos.push('⏳ parado há 6+ meses — provável material acumulado'); }
+    itens.push({ tel, nome: inf.nome, doc: inf.doc, pontos, motivo: motivos.join(' · ') });
+  }
+  itens.sort((a, b) => (b.pontos - a.pontos) || String(a.nome).localeCompare(String(b.nome), 'pt-BR'));
+  return itens.slice(0, n);
+}
+
+const ALVO_PUBLICO = { 'top-450': TOP_N, 'top-200': TOP_N, 'top-500-novos': 500, 'frios-500': 500, 'melhores-1000': 1000, 'resto-base': 1000, 'coleta-1000': 1000, 'reativacao-200': 200 };
 
 // Monta o público (antes de dedupe/supressão). Devolve [{tel, nome, doc}].
 // nMaior: pede uma fila maior que o alvo (usado na preparação, para repor vagas).
@@ -383,6 +442,7 @@ export async function montarPublicoWA(env, publico, telTeste, nMaior) {
   if (publico === 'frios-500') return publicoBaseFria(env, nMaior || 500);
   if (publico === 'melhores-1000') return publicoMelhores1000(env, nMaior || 1000);
   if (publico === 'resto-base') return publicoRestoBase(env, nMaior || 1000);
+  if (publico === 'coleta-1000') return publicoColetaVivos(env, nMaior || 1000);
   if (publico === 'reativacao-200') return publicoReativacao(env, nMaior || 200);
   if (publico === 'base-pj') {
     const d = await db(env); if (!d) return [];
@@ -835,7 +895,7 @@ td{padding:9px 10px;border-bottom:1px solid #EEF1F0;vertical-align:top}
 <div style="max-width:940px;margin:0 auto;padding:20px 18px 56px">
   <h1 style="font-size:19px;margin:0 0 4px">📋 ${esc(rotulo)}</h1>
   <p style="font-size:12.5px;color:#7c8a87;margin:0 0 6px"><b>${(itens || []).length}</b> empresa(s), já sem repetidos, sem quem pediu para sair, sem números que a Meta devolveu como "sem WhatsApp" e sem as removidas. Ao tirar uma, a próxima da fila entra no lugar. <b>☎️ provável fixo</b> = o cadastro só tem telefone de linha fixa (dificilmente recebe WhatsApp) — vale a equipe atualizar o contato dessa empresa.</p>
-  ${publico === 'resto-base' ? `<p style="font-size:11.5px;color:#9aa7a4;margin:0 0 14px">Critério (aberto): <b>varredura final da base</b> — TODO contato com telefone que <b>nunca entrou em nenhuma campanha</b>, incluindo pessoa física e números fixos (PJ na frente, celular na frente, e-mail desempata). O público é dinâmico: cada onda leva até 1000 e a próxima preparação traz os 1000 seguintes, até a contagem zerar. Objetivo honesto: <b>mapear e limpar a base</b> — aqui a entrega tende a ser baixa e resposta quase nenhuma; falha não é cobrada e cada número morto sai banido de graça.</p>` : publico === 'melhores-1000' ? `<p style="font-size:11.5px;color:#9aa7a4;margin:0 0 14px">Critério (aberto): <b>quem mais descarta primeiro</b> — empresas com histórico de negócio que <b>nunca receberam campanha</b> entram na frente (pontuação do Top: concluídas ×3 · volume · OS ×5 · recência); as vagas restantes vêm da <b>base fria</b> mais contatável (📱 celular vale 10, e-mail vale 3). Qualquer tentativa anterior (mesmo falha aceita) deixa a empresa de fora; números "sem WhatsApp", SAIR e removidas idem. Honestidade: os grandes descartadores inéditos são poucos — a maior parte desta lista vem da base fria, que responde menos.</p>` : publico === 'frios-500' ? `<p style="font-size:11.5px;color:#9aa7a4;margin:0 0 14px">Critério (aberto): contatos PJ <b>sem histórico de negócio</b> que <b>nunca receberam campanha</b> — ranqueados pela contatabilidade: 📱 celular vale 10 (fixo quase nunca tem WhatsApp), ter e-mail vale 3; mesmo CNPJ com fixo e celular fica com o celular. Já enviados, números devolvidos pela Meta, SAIR e removidas ficam de fora. É base fria: espere resposta menor que a dos clientes com histórico.</p>` : publico === 'top-500-novos' ? `<p style="font-size:11.5px;color:#9aa7a4;margin:0 0 14px">Critério (aberto): mesma pontuação do Top (concluídas ×3 · volume até 20 · OS ×5 · recência) — mas <b>só entra quem NUNCA recebeu campanha</b>: qualquer tentativa anterior (mesmo as que falharam) deixa a empresa de fora. Números que a Meta devolveu como "sem WhatsApp", quem pediu SAIR e as removidas também ficam de fora. Empresa parada há ${MESES_REATIVACAO}+ meses pertence à lista de Reativação. Se a base tiver menos de 500 empresas inéditas com histórico, a lista vem com o que existe de verdade.</p>` : String(publico).startsWith('top-') ? `<p style="font-size:11.5px;color:#9aa7a4;margin:0 0 14px">Critério da pontuação (aberto): negócio concluído ×3 · volume de negócios (até 20) · OS no sistema novo ×5 · atividade nos últimos 12 meses +10 (24 meses +5). Desempate por valor concluído. <b>Sem repetição entre listas:</b> empresa parada há ${MESES_REATIVACAO}+ meses pertence à lista de Reativação e fica fora daqui.</p>` : publico === 'reativacao-200' ? `<p style="font-size:11.5px;color:#9aa7a4;margin:0 0 14px">Critério (aberto): entra quem tem pelo menos 1 descarte CONCLUÍDO no histórico e NENHUMA atividade (negócio ou OS) nos últimos ${MESES_REATIVACAO} meses. Pontos: concluídas ×3 + volume (até 20), desempate por valor. Cada linha mostra desde quando a empresa está parada. <b>Sem repetição entre listas:</b> quem está aqui fica fora do Top ${TOP_N} — e, ao preparar a campanha, quem já recebeu o template escolhido em qualquer disparo anterior fica de fora automaticamente e a próxima empresa da fila entra no lugar (a campanha tenta completar as 200 vagas). Quem teve FALHA de entrega não conta como "recebeu" e pode entrar de novo.</p>` : '<div style="margin-bottom:14px"></div>'}
+  ${publico === 'coleta-1000' ? `<p style="font-size:11.5px;color:#9aa7a4;margin:0 0 14px">Critério (aberto): só entram números <b>comprovadamente VIVOS</b> (entrega confirmada em alguma onda). Pontos: 💬 respondeu como gente +30 · 👁 leu +15 / ✅ recebeu +10 · 🏭 descartes no histórico até +20 · 📋 tem OS +5 · ⏳ parado há 6+ meses +8 (provável material acumulado). <b>Atenção:</b> esta base JÁ recebeu campanhas — a trava anti-repetição é por template, então use um <b>template NOVO de coleta</b> (com o antigo, todos seriam cortados na preparação). Quem pediu SAIR e as removidas ficam de fora.</p>` : publico === 'resto-base' ? `<p style="font-size:11.5px;color:#9aa7a4;margin:0 0 14px">Critério (aberto): <b>varredura final da base</b> — TODO contato com telefone que <b>nunca entrou em nenhuma campanha</b>, incluindo pessoa física e números fixos (PJ na frente, celular na frente, e-mail desempata). O público é dinâmico: cada onda leva até 1000 e a próxima preparação traz os 1000 seguintes, até a contagem zerar. Objetivo honesto: <b>mapear e limpar a base</b> — aqui a entrega tende a ser baixa e resposta quase nenhuma; falha não é cobrada e cada número morto sai banido de graça.</p>` : publico === 'melhores-1000' ? `<p style="font-size:11.5px;color:#9aa7a4;margin:0 0 14px">Critério (aberto): <b>quem mais descarta primeiro</b> — empresas com histórico de negócio que <b>nunca receberam campanha</b> entram na frente (pontuação do Top: concluídas ×3 · volume · OS ×5 · recência); as vagas restantes vêm da <b>base fria</b> mais contatável (📱 celular vale 10, e-mail vale 3). Qualquer tentativa anterior (mesmo falha aceita) deixa a empresa de fora; números "sem WhatsApp", SAIR e removidas idem. Honestidade: os grandes descartadores inéditos são poucos — a maior parte desta lista vem da base fria, que responde menos.</p>` : publico === 'frios-500' ? `<p style="font-size:11.5px;color:#9aa7a4;margin:0 0 14px">Critério (aberto): contatos PJ <b>sem histórico de negócio</b> que <b>nunca receberam campanha</b> — ranqueados pela contatabilidade: 📱 celular vale 10 (fixo quase nunca tem WhatsApp), ter e-mail vale 3; mesmo CNPJ com fixo e celular fica com o celular. Já enviados, números devolvidos pela Meta, SAIR e removidas ficam de fora. É base fria: espere resposta menor que a dos clientes com histórico.</p>` : publico === 'top-500-novos' ? `<p style="font-size:11.5px;color:#9aa7a4;margin:0 0 14px">Critério (aberto): mesma pontuação do Top (concluídas ×3 · volume até 20 · OS ×5 · recência) — mas <b>só entra quem NUNCA recebeu campanha</b>: qualquer tentativa anterior (mesmo as que falharam) deixa a empresa de fora. Números que a Meta devolveu como "sem WhatsApp", quem pediu SAIR e as removidas também ficam de fora. Empresa parada há ${MESES_REATIVACAO}+ meses pertence à lista de Reativação. Se a base tiver menos de 500 empresas inéditas com histórico, a lista vem com o que existe de verdade.</p>` : String(publico).startsWith('top-') ? `<p style="font-size:11.5px;color:#9aa7a4;margin:0 0 14px">Critério da pontuação (aberto): negócio concluído ×3 · volume de negócios (até 20) · OS no sistema novo ×5 · atividade nos últimos 12 meses +10 (24 meses +5). Desempate por valor concluído. <b>Sem repetição entre listas:</b> empresa parada há ${MESES_REATIVACAO}+ meses pertence à lista de Reativação e fica fora daqui.</p>` : publico === 'reativacao-200' ? `<p style="font-size:11.5px;color:#9aa7a4;margin:0 0 14px">Critério (aberto): entra quem tem pelo menos 1 descarte CONCLUÍDO no histórico e NENHUMA atividade (negócio ou OS) nos últimos ${MESES_REATIVACAO} meses. Pontos: concluídas ×3 + volume (até 20), desempate por valor. Cada linha mostra desde quando a empresa está parada. <b>Sem repetição entre listas:</b> quem está aqui fica fora do Top ${TOP_N} — e, ao preparar a campanha, quem já recebeu o template escolhido em qualquer disparo anterior fica de fora automaticamente e a próxima empresa da fila entra no lugar (a campanha tenta completar as 200 vagas). Quem teve FALHA de entrega não conta como "recebeu" e pode entrar de novo.</p>` : '<div style="margin-bottom:14px"></div>'}
   <div style="background:#fff;border:1px solid #E4EBE9;border-radius:14px;overflow:auto;max-height:70vh">
   <table><thead><tr><th>#</th><th>Empresa</th><th>CNPJ/CPF</th><th>WhatsApp</th><th style="text-align:center">Pontos</th><th></th></tr></thead><tbody>${rows}</tbody></table>
   </div>
