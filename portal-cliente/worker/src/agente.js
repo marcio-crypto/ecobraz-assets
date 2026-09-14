@@ -25,17 +25,32 @@ function origemPortal(env, url) { return String(env.PORTAL_BASE_URL || env.PORTA
 const dataHoraBR = (iso) => { const d = new Date(iso); if (!iso || isNaN(d.getTime())) return ''; d.setUTCHours(d.getUTCHours() - 3); const p = (n) => String(n).padStart(2, '0'); return `${p(d.getUTCDate())}/${p(d.getUTCMonth() + 1)}/${d.getUTCFullYear()} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`; };
 
 // Registro de agentes (nome por e-mail). Fonte única: env AGENTE_EMAILS.
-export function agentesDe(env) {
+function parseEmailsNome(str) {
   const out = new Map();
-  for (const par of String(env.AGENTE_EMAILS || '').split(/[,;]+/)) {
+  for (const par of String(str || '').split(/[,;]+/)) {
     const [em, nome] = par.split('|');
     const e = (em || '').trim().toLowerCase();
     if (e) out.set(e, (nome || '').trim() || e.split('@')[0]);
   }
   return out;
 }
+export function agentesDe(env) { return parseEmailsNome(env.AGENTE_EMAILS); }
 export function agentePermitido(email, env) { return agentesDe(env).has(String(email || '').trim().toLowerCase()); }
 export function nomeAgente(email, env) { return agentesDe(env).get(String(email || '').trim().toLowerCase()) || String(email || '').split('@')[0]; }
+// AJUDANTES de coleta (pedido do Paulo, 14/09): quem vai na rota JUNTO com um motorista
+// — em lugares onde o caminhão não estaciona, é o ajudante que desce, colhe a assinatura
+// e tira a foto no endereço certo. Fonte: env AJUDANTE_EMAILS ("email|Nome"), alimentada
+// pelo papel "Ajudante de coleta" na tela /equipe. O ajudante entra no MESMO app com o
+// PRÓPRIO e-mail, escolhe de qual motorista é ajudante e enxerga a rota dele; tudo o que
+// registra (check-in, foto, assinatura, encerramento) fica gravado no nome do AJUDANTE.
+export function ajudantesDe(env) { return parseEmailsNome(env.AJUDANTE_EMAILS); }
+export function ajudantePermitido(email, env) { return ajudantesDe(env).has(String(email || '').trim().toLowerCase()); }
+// Quem pode ENTRAR no app de coletas: motorista OU ajudante (o papel é decidido depois).
+export function equipeColetasPermitida(email, env) { return agentePermitido(email, env) || ajudantePermitido(email, env); }
+export function nomeEquipeColetas(email, env) {
+  const e = String(email || '').trim().toLowerCase();
+  return agentesDe(env).get(e) || ajudantesDe(env).get(e) || e.split('@')[0];
+}
 
 // Lê as coletas que o escritório JÁ LIBEROU para a rua ("Em transporte") e que estão
 // ATRIBUÍDAS a ESTE motorista. Uma OS recém-criada fica "Agendada" e só entra aqui quando o
@@ -81,6 +96,53 @@ export function paginaLoginAgente(googleOn) {
   e.addEventListener('keydown',ev=>{if(ev.key==='Enter')b.click();});
 </script>
 </body></html>`;
+}
+
+// Tela do AJUDANTE ao entrar sem motorista escolhido (ou ao tocar em "trocar"):
+// escolhe de qual motorista ele é ajudante hoje — e passa a ver a rota daquele motorista.
+export function paginaEscolherMotorista(agente, motoristas) {
+  const lista = (motoristas || []).length ? motoristas.map((m) => `
+    <button class="mot" data-email="${esc(m.email)}" style="display:block;width:100%;box-sizing:border-box;text-align:left;background:#fff;border:1px solid #E4EBE9;border-radius:14px;padding:15px 16px;margin-bottom:10px;font-family:inherit;cursor:pointer;">
+      <span style="font-size:14.5px;font-weight:800;color:#10262B;">🚚 ${esc(m.nome)}</span>
+      <span style="display:block;font-size:11.5px;color:#8fa39f;margin-top:3px;">${esc(m.email)}</span>
+    </button>`).join('') : '<div style="background:#fff;border:1px solid #E4EBE9;border-radius:14px;padding:20px;text-align:center;color:#8fa39f;font-size:13px;">Nenhum motorista cadastrado ainda.</div>';
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex">${tagsPWA('agente')}<title>De quem você é ajudante? — Ecobraz</title></head>
+<body style="margin:0;background:#F2F6F4;min-height:100vh;font-family:Montserrat,'Segoe UI',Arial,Helvetica,sans-serif;color:#10262B;">
+<div style="background:#00333B;padding:16px 18px 14px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;">
+    <div><span style="color:#fff;font-size:15px;font-weight:800;">Olá, ${esc((agente.nome || '').split(/\s+/)[0] || 'ajudante')} 👋</span><div style="color:#9FC6C1;font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;margin-top:4px;">Ecobraz · Coletas · Ajudante</div></div>
+    <form method="post" action="/api/agente/sair" style="margin:0;"><button style="background:#0e4651;color:#cfe3e0;border:1px solid #1c5b66;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;">Sair</button></form>
+  </div>
+</div>
+<div style="max-width:520px;margin:0 auto;padding:18px 16px 40px;">
+  <div style="font-size:16px;font-weight:800;margin-bottom:4px;">De qual motorista você é ajudante?</div>
+  <div style="font-size:12.5px;color:#4F6469;line-height:1.6;margin-bottom:14px;">Você vai ver a mesma rota dele e pode fazer o check-in, a foto e a assinatura quando ele não conseguir descer. Tudo fica registrado no <b>seu</b> nome.</div>
+  ${lista}
+  <div id="m" style="text-align:center;font-size:12px;color:#4F6469;min-height:16px;margin-top:6px;"></div>
+</div>
+<script>
+  [].slice.call(document.querySelectorAll('.mot')).forEach(function(b){
+    b.onclick=async function(){
+      b.disabled=true; document.getElementById('m').textContent='Salvando…';
+      try{ const r=await fetch('/api/agente/motorista',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:b.getAttribute('data-email')})});
+        if(r.ok){ location.href='/agente'; } else { document.getElementById('m').textContent='Falha ao salvar. Tente de novo.'; b.disabled=false; } }
+      catch{ document.getElementById('m').textContent='Sem conexão. Tente de novo com sinal.'; b.disabled=false; }
+    };
+  });
+</script>
+</body></html>`;
+}
+
+// Faixa no topo do app quando quem entrou é um AJUDANTE: mostra de quem é a rota
+// (e o veículo, se o motorista já abriu o dia) — com atalho para trocar de motorista.
+export function bannerAjudante(agente, jornadaMot) {
+  const placa = jornadaMot && jornadaMot.placa ? ` · veículo <b>${esc(jornadaMot.placa)}</b>` : '';
+  return `<div style="background:#062f36;border:1px solid #12525d;border-radius:16px;padding:13px 16px;margin-bottom:14px;color:#eaf5f3;">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+      <div style="font-size:12.5px;line-height:1.55;">🤝 Você é <b>ajudante</b> na rota de <b>${esc(agente.ajudanteDeNome || agente.ajudanteDe || '')}</b>${placa}</div>
+      <a href="/agente/motorista" style="flex:none;font-size:11px;font-weight:800;color:#9FC6C1;text-decoration:none;border:1px solid #1c5b66;border-radius:8px;padding:6px 10px;">trocar</a>
+    </div>
+  </div>`;
 }
 
 export function paginaAppAgente(agente, coletas, banner) {
@@ -229,8 +291,10 @@ export async function registrarEncerramento(env, id, agente, dados) {
   await salvarEstadoColeta(env, id, e);
   // O motorista concluiu a coleta no cliente → a OS fica CONCLUÍDA e, com isso, entra
   // automaticamente na fila da doca (listarColetasRecebiveis lê status 'concluida').
+  // Se esta gravação falhar, a lista do app e a fila da recepção se curam sozinhas
+  // (listarColetasComStatus / listarColetasRecebiveis) — mas deixamos o rastro no log.
   try { await limparReagendarOS(env, id); } catch { /* ok */ }
-  try { await atualizarStatusOS(env, id, 'concluida'); } catch { /* ok */ }
+  try { await atualizarStatusOS(env, id, 'concluida'); } catch (err) { console.error('encerrar_conclui_os_falhou', id, String((err && err.message) || err).slice(0, 140)); }
   return e;
 }
 export async function registrarReagendamento(env, id, agente, dados) {
@@ -253,8 +317,17 @@ export async function listarColetasComStatus(env, agenteEmail) {
   for (const c of arr) {
     let e = {};
     try { e = await lerEstadoColeta(env, c.id); } catch { e = {}; }
+    if (e.status === 'encerrada') {
+      // Coleta JÁ ENCERRADA que ainda consta "em transporte" no índice (caso real
+      // OS-2026-0124, 14/09: o motorista encerrou, mas a OS não virou "concluída" —
+      // ex.: gravações concorrentes no índice se atropelaram). Cura na hora: conclui
+      // a OS de novo — some da lista do motorista e entra na fila da recepção.
+      try { await atualizarStatusOS(env, c.id, 'concluida'); }
+      catch (err) { console.error('app_cura_encerrada_falhou', c.id, String((err && err.message) || err).slice(0, 140)); }
+      continue;
+    }
     const status = e.status || ((e.checkin || e.foto) ? 'andamento' : 'pendente');
-    out.push({ ...c, status, encerrada: e.status === 'encerrada', reagendar: e.status === 'reagendar' });
+    out.push({ ...c, status, encerrada: false, reagendar: e.status === 'reagendar' });
   }
   return out;
 }

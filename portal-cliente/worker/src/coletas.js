@@ -71,6 +71,39 @@ export async function lerColetaOS(env, id) {
   const raw = await env.PORTAL_KV.get(`os:${String(id).replace(/[^a-zA-Z0-9_-]/g, '')}`);
   return raw ? JSON.parse(raw) : null;
 }
+// Entrada do índice (os:index) reconstruída a partir do registro completo — usada
+// quando uma OS existe em os:{id} mas sumiu do índice (ex.: gravações concorrentes
+// se atropelaram): em vez de divergir para sempre, a OS re-entra no índice.
+function resumoIndiceOS(rec) {
+  const r = { id: rec.id, numero: rec.numero, status: rec.status, clienteId: rec.clienteId || '', clienteDoc: rec.clienteDoc || '', clienteNome: rec.clienteNome || '', cidade: cidadeDoEndereco(rec.endereco), dataAgendada: rec.dataAgendada || '', agenteNome: rec.agenteNome || '', agenteEmail: rec.agenteEmail || '', criadoEm: rec.criadoEm || '' };
+  if (rec.reagendar) r.reagendar = 1;
+  if (rec.mtr && rec.mtr.numero) r.mtr = rec.mtr.numero;
+  if (rec.cobranca) r.cobranca = { valor: rec.cobranca.valor, status: rec.cobranca.status, link: rec.cobranca.link };
+  return r;
+}
+// Grava o índice de OS. O antigo `.slice(0, 900000)` CORTAVA O JSON NO MEIO quando o
+// índice crescesse além do limite — o texto viraria JSON inválido e TODAS as listas
+// (escritório, app do motorista, recepção) quebrariam de uma vez. Aqui, se passar do
+// limite, PODAMOS entradas inteiras: primeiro as mais antigas já fechadas (concluída/
+// cancelada — o registro completo os:{id} continua intacto), e só em último caso as
+// mais antigas restantes. O texto gravado é sempre JSON válido.
+const LIMITE_INDICE_OS = 900000;
+async function salvarIndiceOS(env, idx) {
+  if (!env.PORTAL_KV) return;
+  let arr = Array.isArray(idx) ? idx : [];
+  let json = JSON.stringify(arr);
+  if (json.length > LIMITE_INDICE_OS) {
+    let excesso = json.length - LIMITE_INDICE_OS;
+    const vitimas = new Set();
+    for (let i = arr.length - 1; i >= 0 && excesso > 0; i--) {
+      const x = arr[i];
+      if (x && (x.status === 'concluida' || x.status === 'cancelada')) { vitimas.add(x); excesso -= JSON.stringify(x).length + 1; }
+    }
+    if (vitimas.size) { arr = arr.filter((x) => !vitimas.has(x)); json = JSON.stringify(arr); }
+    while (json.length > LIMITE_INDICE_OS && arr.length) { arr = arr.slice(0, Math.max(1, Math.floor(arr.length * 0.9)) - 1); json = JSON.stringify(arr); }
+  }
+  await env.PORTAL_KV.put('os:index', json);
+}
 async function proximoNumero(env) {
   const ano = anoAtual();
   let seq = 1;
@@ -117,7 +150,7 @@ export async function criarColetaOS(env, dados, criadoPor) {
     await env.PORTAL_KV.put(`os:${id}`, JSON.stringify(rec));
     const idx = await listarColetasOS(env);
     idx.unshift({ id, numero, status: 'agendada', clienteId: rec.clienteId || '', clienteDoc: rec.clienteDoc || '', clienteNome: rec.clienteNome, cidade: cidadeDoEndereco(rec.endereco), dataAgendada: rec.dataAgendada, agenteNome: rec.agenteNome, agenteEmail: rec.agenteEmail, criadoEm: rec.criadoEm });
-    await env.PORTAL_KV.put('os:index', JSON.stringify(idx).slice(0, 900000));
+    await salvarIndiceOS(env, idx);
   }
   return rec;
 }
@@ -127,7 +160,9 @@ export async function atualizarStatusOS(env, id, status) {
   if (env.PORTAL_KV) {
     await env.PORTAL_KV.put(`os:${id}`, JSON.stringify(rec));
     const idx = await listarColetasOS(env); const i = idx.findIndex((x) => x.id === id);
-    if (i >= 0) { idx[i].status = status; if (!idx[i].clienteDoc && rec.clienteDoc) idx[i].clienteDoc = rec.clienteDoc; await env.PORTAL_KV.put('os:index', JSON.stringify(idx).slice(0, 900000)); }
+    if (i >= 0) { idx[i].status = status; if (!idx[i].clienteDoc && rec.clienteDoc) idx[i].clienteDoc = rec.clienteDoc; }
+    else idx.unshift(resumoIndiceOS(rec)); // sumiu do índice? re-entra, em vez de ficar invisível para as listas
+    await salvarIndiceOS(env, idx);
   }
   return rec;
 }
@@ -149,7 +184,7 @@ export async function marcarReagendarOS(env, id, info) {
   if (env.PORTAL_KV) {
     await env.PORTAL_KV.put(`os:${id}`, JSON.stringify(rec));
     const idx = await listarColetasOS(env); const i = idx.findIndex((x) => x.id === id);
-    if (i >= 0) { idx[i].status = 'agendada'; idx[i].reagendar = 1; await env.PORTAL_KV.put('os:index', JSON.stringify(idx).slice(0, 900000)); }
+    if (i >= 0) { idx[i].status = 'agendada'; idx[i].reagendar = 1; await salvarIndiceOS(env, idx); }
   }
   return rec;
 }
@@ -159,7 +194,7 @@ export async function limparReagendarOS(env, id) {
   if (env.PORTAL_KV) {
     await env.PORTAL_KV.put(`os:${id}`, JSON.stringify(rec));
     const idx = await listarColetasOS(env); const i = idx.findIndex((x) => x.id === id);
-    if (i >= 0 && idx[i].reagendar) { delete idx[i].reagendar; await env.PORTAL_KV.put('os:index', JSON.stringify(idx).slice(0, 900000)); }
+    if (i >= 0 && idx[i].reagendar) { delete idx[i].reagendar; await salvarIndiceOS(env, idx); }
   }
   return rec;
 }
@@ -193,7 +228,7 @@ export async function definirCobrancaOS(env, id, cobranca) {
     if (i >= 0) {
       if (rec.cobranca) idx[i].cobranca = { valor: rec.cobranca.valor, status: rec.cobranca.status, link: rec.cobranca.link };
       else delete idx[i].cobranca;
-      await env.PORTAL_KV.put('os:index', JSON.stringify(idx).slice(0, 900000));
+      await salvarIndiceOS(env, idx);
     }
   }
   return rec;
@@ -213,7 +248,7 @@ export async function marcarCobrancaPagaOS(env, id, pagamento) {
   if (env.PORTAL_KV) {
     await env.PORTAL_KV.put(`os:${rec.id}`, JSON.stringify(rec));
     const idx = await listarColetasOS(env); const i = idx.findIndex((x) => x.id === rec.id);
-    if (i >= 0) { if (idx[i].cobranca) idx[i].cobranca.status = 'pago'; idx[i].status = rec.status; await env.PORTAL_KV.put('os:index', JSON.stringify(idx).slice(0, 900000)); }
+    if (i >= 0) { if (idx[i].cobranca) idx[i].cobranca.status = 'pago'; idx[i].status = rec.status; await salvarIndiceOS(env, idx); }
   }
   return rec;
 }
@@ -227,7 +262,7 @@ export async function definirMtrOS(env, id, mtr) {
   if (env.PORTAL_KV) {
     await env.PORTAL_KV.put(`os:${rec.id}`, JSON.stringify(rec));
     const idx = await listarColetasOS(env); const i = idx.findIndex((x) => x.id === rec.id);
-    if (i >= 0) { if (mtr && mtr.numero) idx[i].mtr = mtr.numero; else delete idx[i].mtr; await env.PORTAL_KV.put('os:index', JSON.stringify(idx).slice(0, 900000)); }
+    if (i >= 0) { if (mtr && mtr.numero) idx[i].mtr = mtr.numero; else delete idx[i].mtr; await salvarIndiceOS(env, idx); }
   }
   return rec;
 }
@@ -255,7 +290,7 @@ export async function atualizarColetaOS(env, id, dados) {
   if (env.PORTAL_KV) {
     await env.PORTAL_KV.put(`os:${id}`, JSON.stringify(rec));
     const idx = await listarColetasOS(env); const i = idx.findIndex((x) => x.id === id);
-    if (i >= 0) { idx[i].cidade = cidadeDoEndereco(rec.endereco); idx[i].dataAgendada = rec.dataAgendada; idx[i].agenteNome = rec.agenteNome; idx[i].agenteEmail = rec.agenteEmail; if (!idx[i].clienteDoc && rec.clienteDoc) idx[i].clienteDoc = rec.clienteDoc; await env.PORTAL_KV.put('os:index', JSON.stringify(idx).slice(0, 900000)); }
+    if (i >= 0) { idx[i].cidade = cidadeDoEndereco(rec.endereco); idx[i].dataAgendada = rec.dataAgendada; idx[i].agenteNome = rec.agenteNome; idx[i].agenteEmail = rec.agenteEmail; if (!idx[i].clienteDoc && rec.clienteDoc) idx[i].clienteDoc = rec.clienteDoc; await salvarIndiceOS(env, idx); }
   }
   return rec;
 }

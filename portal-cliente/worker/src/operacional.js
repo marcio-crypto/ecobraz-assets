@@ -98,6 +98,21 @@ export async function atualizarEtapaOperacao(env, osId, etapa, patch) {
 export async function listarColetasRecebiveis(env) {
   const todas = await listarColetasOS(env);
   const concluidas = todas.filter((c) => c.status === 'concluida');
+  // Rede de segurança (caso real OS-2026-0124, 14/09): o motorista ENCERROU a coleta
+  // (estado coleta:{id} = "encerrada"), mas o índice ficou preso em "em transporte" —
+  // e a carga sumia da fila da recepção. Aqui conferimos o estado das poucas coletas
+  // "em transporte": se já foi encerrada, ela ENTRA na fila e o índice é corrigido.
+  for (const c of todas.filter((x) => x.status === 'em_transporte')) {
+    try {
+      const raw = env.PORTAL_KV ? await env.PORTAL_KV.get(`coleta:${c.id}`) : null;
+      const e = raw ? JSON.parse(raw) : null;
+      if (e && e.status === 'encerrada') {
+        concluidas.push(c);
+        try { await atualizarStatusOS(env, c.id, 'concluida'); }
+        catch (err) { console.error('doca_cura_encerrada_falhou', c.id, String((err && err.message) || err).slice(0, 140)); }
+      }
+    } catch { /* estado ilegível: fica como está */ }
+  }
   const out = [];
   for (const c of concluidas) {
     let jaNaDoca = false;

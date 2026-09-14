@@ -24,6 +24,7 @@ const fmtCPF = (s) => { const d = soDigitos(s).slice(0, 11); return d.length ===
 export const PAPEIS = {
   escritorio: { label: 'Escritório / Comercial', env: 'ESCRITORIO_EMAILS', fmt: 'nome', desc: 'Cadastro de clientes, coletas, leads, frota.' },
   motorista: { label: 'Motorista (coletas)', env: 'AGENTE_EMAILS', fmt: 'nome', desc: 'App de campo: checklist do veículo e coletas.' },
+  ajudante: { label: 'Ajudante de coleta', env: 'AJUDANTE_EMAILS', fmt: 'nome', desc: 'Entra no app de coletas, escolhe o motorista que acompanha e vê a rota dele; fotos e assinaturas ficam no nome do ajudante.' },
   operacao: { label: 'Operação (doca)', env: 'OPERACAO_EMAILS', fmt: 'nome', desc: 'Recepção, triagem, processamento e saída.' },
   engenharia: { label: 'Engenharia Ambiental', env: 'ENG_EMAILS', fmt: 'nome', desc: 'Validação técnica (RT), destinos e relatórios.' },
   diretoria: { label: 'Diretoria (visão macro)', env: 'DIRETORIA_EMAILS', fmt: 'nome', desc: 'Painel executivo: volume, prazos, alertas.' },
@@ -67,6 +68,7 @@ export async function salvarUsuario(env, dados, criadoPor) {
 // Traduz nomes amigáveis de papel (em português) para as chaves internas.
 const APELIDOS_PAPEL = {
   motorista: 'motorista', agente: 'motorista', 'agente de coleta': 'motorista', 'agente de coletas': 'motorista', coletas: 'motorista',
+  ajudante: 'ajudante', 'ajudante de coleta': 'ajudante', 'ajudante de coletas': 'ajudante', auxiliar: 'ajudante', 'auxiliar de coleta': 'ajudante',
   escritorio: 'escritorio', 'escritório': 'escritorio', comercial: 'escritorio', cadastro: 'escritorio',
   operacao: 'operacao', 'operação': 'operacao', operacional: 'operacao', doca: 'operacao',
   engenharia: 'engenharia', 'engenharia ambiental': 'engenharia', engenheiro: 'engenharia', 'engenheiro ambiental': 'engenharia', rt: 'engenharia',

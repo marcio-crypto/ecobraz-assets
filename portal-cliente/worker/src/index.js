@@ -68,7 +68,7 @@ import { sondaRotaExata, paginaSondaRotaExata, paginaRastreio, posicaoDoVeiculo,
 import { lerValidacao, registrarValidacao, paginaAreaValidacao, qrMetodologia, validarMetodologiaPublico, homologarFatorAcao } from './validacao-metodologia.js';
 import { paginaPainelCarbono } from './carbono-painel.js';
 import { clientesComOperacoes, carbonoDoCliente, paginaCarbonoAnalista, paginaCarbonoAuditor } from './carbono-motor.js';
-import { agentePermitido, nomeAgente, listarColetasComStatus, enriquecerProximidade, coordDoEndereco, paginaLoginAgente, paginaAppAgente, detalheColeta, lerEstadoColeta, registrarCheckin, registrarACaminho, registrarFoto, servirFotoColeta, registrarFotoReagendar, servirFotoReagendar, registrarAssinatura, servirAssinaturaColeta, paginaColetaDetalhe, registrarEncerramento, registrarReagendamento, qrColeta, validarColetaPublico, paginaComprovante } from './agente.js';
+import { agentePermitido, nomeAgente, ajudantePermitido, equipeColetasPermitida, nomeEquipeColetas, bannerAjudante, paginaEscolherMotorista, listarColetasComStatus, enriquecerProximidade, coordDoEndereco, paginaLoginAgente, paginaAppAgente, detalheColeta, lerEstadoColeta, registrarCheckin, registrarACaminho, registrarFoto, servirFotoColeta, registrarFotoReagendar, servirFotoReagendar, registrarAssinatura, servirAssinaturaColeta, paginaColetaDetalhe, registrarEncerramento, registrarReagendamento, qrColeta, validarColetaPublico, paginaComprovante } from './agente.js';
 import { operadorPermitido, nomeOperador, listarOperacoes, listarColetasRecebiveis, iniciarOperacao, lerOperacao, definirTipoOperacao, registrarPesoEntrada, ajustarPesoReal, registrarFotoOperacao, servirFotoOperacao, paginaLoginOperacao, paginaAppOperacao, paginaReceberLote, paginaLoteDetalhe, adicionarMaterial, removerMaterial, concluirTriagem, paginaTriagem, paginaProcessamento, concluirProcessamento, paginaSaida, registrarSaida, concluirSaida } from './operacional.js';
 import { engenheiroPermitido, nomeEngenheiro, filaValidacao, operacoesValidadas, lerValidacaoOp, registrarValidacaoOp, paginaLoginEng, paginaFilaEng, paginaDossie, qrOperacao, validarOperacaoPublico, listarDestinos, lerDestino, salvarDestino, paginaDestinos, paginaDestinoForm, paginaRelatorio, paginaCDF } from './engenharia.js';
 import { diretorPermitido, nomeDiretor, reunirDados, paginaLoginDiretoria, paginaPainelDiretoria } from './diretoria.js';
@@ -155,6 +155,7 @@ export default {
           avisoModoTeste: env.NOTIF_MODO_TESTE === '1', // true = só contato de teste; false = vale p/ todos
           validacaoCDF: true, // /qr e /validar (QR anti-fraude no CDF)
           agenteColetas: !!env.AGENTE_EMAILS, // app do agente ligado (há agentes cadastrados)
+          ajudantes: !!env.AJUDANTE_EMAILS, // ajudantes de coleta (papel "Ajudante" na tela /equipe)
           operacao: !!env.OPERACAO_EMAILS, // módulo operacional (doca) ligado
           engenharia: !!env.ENG_EMAILS, // módulo de validação da Engenharia Ambiental ligado
           diretoria: !!env.DIRETORIA_EMAILS, // painel da diretoria ligado
@@ -775,7 +776,7 @@ export default {
           const s = await criarToken({ em: g.email, tipo: 'sessao_fiscal' }, SESSAO_TTL_S, env);
           return new Response(null, { status: 302, headers: { Location: '/fiscal', 'Set-Cookie': cookieFiscal(s.valor, SESSAO_TTL_S) } });
         }
-        if (g.ctx === 'agente' && agentePermitido(g.email, env)) {
+        if (g.ctx === 'agente' && equipeColetasPermitida(g.email, env)) {
           const s = await criarToken({ em: g.email, tipo: 'sessao_agente' }, APP_SESSAO_TTL_S, env);
           return new Response(null, { status: 302, headers: { Location: '/agente', 'Set-Cookie': cookieAgente(s.valor, APP_SESSAO_TTL_S) } });
         }
@@ -794,7 +795,7 @@ export default {
             if (diretorPermitido(g.email, env)) { const s = await criarToken({ em: g.email, tipo: 'sessao_diretoria' }, SESSAO_TTL_S, env); headers.append('Set-Cookie', cookieDiretoria(s.valor, SESSAO_TTL_S)); destinos.push(['Diretoria', '/diretoria']); }
             if (engenheiroPermitido(g.email, env)) { const s = await criarToken({ em: g.email, tipo: 'sessao_eng' }, SESSAO_TTL_S, env); headers.append('Set-Cookie', cookieEng(s.valor, SESSAO_TTL_S)); destinos.push(['Engenharia Ambiental', '/eng']); }
             if (operadorPermitido(g.email, env)) { const s = await criarToken({ em: g.email, tipo: 'sessao_operacao' }, APP_SESSAO_TTL_S, env); headers.append('Set-Cookie', cookieOperacao(s.valor, APP_SESSAO_TTL_S)); destinos.push(['Operação (doca)', '/operacao']); }
-            if (agentePermitido(g.email, env)) { const s = await criarToken({ em: g.email, tipo: 'sessao_agente' }, APP_SESSAO_TTL_S, env); headers.append('Set-Cookie', cookieAgente(s.valor, APP_SESSAO_TTL_S)); destinos.push(['Coletas (motorista)', '/agente']); }
+            if (equipeColetasPermitida(g.email, env)) { const s = await criarToken({ em: g.email, tipo: 'sessao_agente' }, APP_SESSAO_TTL_S, env); headers.append('Set-Cookie', cookieAgente(s.valor, APP_SESSAO_TTL_S)); destinos.push([agentePermitido(g.email, env) ? 'Coletas (motorista)' : 'Coletas (ajudante)', '/agente']); }
             if (fiscalPermitido(g.email, env)) { const s = await criarToken({ em: g.email, tipo: 'sessao_fiscal' }, SESSAO_TTL_S, env); headers.append('Set-Cookie', cookieFiscal(s.valor, SESSAO_TTL_S)); destinos.push(['Fiscal (notas)', '/fiscal']); }
             if (emailValidadorPermitido(g.email, env)) { const s = await criarToken({ em: g.email, tipo: 'sessao_validador' }, SESSAO_TTL_S, env); headers.append('Set-Cookie', cookieValidador(s.valor, SESSAO_TTL_S)); destinos.push(['Validação (Villanova ESG)', '/validacao']); }
           }
@@ -2391,20 +2392,43 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
       // App do agente de coletas.
       if (pathname === '/agente' && request.method === 'GET') {
         if (!agente) return html(paginaLoginAgente(googleConfigurado(env)));
+        // AJUDANTE (pedido do Paulo, 14/09): não abre jornada (o veículo é do motorista).
+        // Escolhe de qual motorista é ajudante e vê a MESMA rota dele; o que registrar
+        // (check-in, foto, assinatura, encerramento) fica gravado no nome do ajudante.
+        if (agente.papel === 'ajudante') {
+          if (!agente.ajudanteDe) return html(paginaEscolherMotorista(agente, [...agentesDe(env).entries()].map(([email, nome]) => ({ email, nome }))));
+          const jornadaMot = await lerJornadaAtiva(env, agente.ajudanteDe);
+          const coletasAgente = await enriquecerProximidade(env, await listarColetasComStatus(env, agente.ajudanteDe));
+          return html(paginaAppAgente(agente, coletasAgente, bannerAjudante(agente, jornadaMot)));
+        }
         // Abrir o dia é OBRIGATÓRIO: sem jornada aberta, mostra o checklist do veículo.
         const jornada = await lerJornadaAtiva(env, agente.email);
         if (!jornada) return html(paginaAbrirDia(agente, await listarVeiculos(env), ''));
         const coletasAgente = await enriquecerProximidade(env, await listarColetasComStatus(env, agente.email));
         return html(paginaAppAgente(agente, coletasAgente, bannerJornada(jornada)));
       }
+      // Ajudante: escolher (ou trocar) o motorista que ele acompanha.
+      if (pathname === '/agente/motorista' && request.method === 'GET') {
+        if (!agente || agente.papel !== 'ajudante') return new Response(null, { status: 302, headers: { Location: '/agente', 'cache-control': 'no-store' } });
+        return html(paginaEscolherMotorista(agente, [...agentesDe(env).entries()].map(([email, nome]) => ({ email, nome }))));
+      }
+      if (pathname === '/api/agente/motorista' && request.method === 'POST') {
+        if (!agente) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        if (agente.papel !== 'ajudante') return json({ ok: false, error: 'somente_ajudante' }, 403);
+        const b = await request.json().catch(() => ({}));
+        const m = String(b.email || '').trim().toLowerCase();
+        if (!agentePermitido(m, env)) return json({ ok: false, error: 'motorista_invalido' }, 400);
+        if (env.PORTAL_KV) await env.PORTAL_KV.put(`ajudante:de:${agente.email}`, m, { expirationTtl: 60 * 60 * 24 * 60 });
+        return json({ ok: true });
+      }
       if (pathname === '/agente/dia/fechar' && request.method === 'GET') {
-        if (!agente) return new Response(null, { status: 302, headers: { Location: '/agente', 'cache-control': 'no-store' } });
+        if (!agente || agente.papel === 'ajudante') return new Response(null, { status: 302, headers: { Location: '/agente', 'cache-control': 'no-store' } });
         const jornada = await lerJornadaAtiva(env, agente.email);
         if (!jornada) return new Response(null, { status: 302, headers: { Location: '/agente', 'cache-control': 'no-store' } });
         return html(paginaFecharDia(agente, jornada));
       }
       if (pathname === '/agente/dia/abastecer' && request.method === 'GET') {
-        if (!agente) return new Response(null, { status: 302, headers: { Location: '/agente', 'cache-control': 'no-store' } });
+        if (!agente || agente.papel === 'ajudante') return new Response(null, { status: 302, headers: { Location: '/agente', 'cache-control': 'no-store' } });
         const jornada = await lerJornadaAtiva(env, agente.email);
         if (!jornada) return new Response(null, { status: 302, headers: { Location: '/agente', 'cache-control': 'no-store' } });
         return html(paginaAbastecer(agente, jornada));
@@ -2415,6 +2439,7 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
       }
       if (pathname === '/api/agente/jornada/abrir' && request.method === 'POST') {
         if (!agente) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        if (agente.papel === 'ajudante') return json({ ok: false, error: 'somente_motorista' }, 403);
         let b; try { b = await request.json(); } catch { b = null; }
         if (!b) return json({ ok: false, error: 'dados' }, 400);
         const r = await abrirJornada(env, agente, b);
@@ -2423,6 +2448,7 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
       }
       if (pathname === '/api/agente/jornada/fechar' && request.method === 'POST') {
         if (!agente) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        if (agente.papel === 'ajudante') return json({ ok: false, error: 'somente_motorista' }, 403);
         let b; try { b = await request.json(); } catch { b = null; }
         if (!b) return json({ ok: false, error: 'dados' }, 400);
         const r = await fecharJornada(env, agente, b);
@@ -2431,6 +2457,7 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
       }
       if (pathname === '/api/agente/jornada/abastecer' && request.method === 'POST') {
         if (!agente) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        if (agente.papel === 'ajudante') return json({ ok: false, error: 'somente_motorista' }, 403);
         let b; try { b = await request.json(); } catch { b = null; }
         if (!b) return json({ ok: false, error: 'dados' }, 400);
         const r = await registrarAbastecimento(env, agente, b);
@@ -2467,7 +2494,7 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         let b; try { b = await request.json(); } catch { b = null; }
         if (!b || !b.id) return json({ ok: false, error: 'dados' }, 400);
         await registrarACaminho(env, b.id, agente);
-        try { await tagColetaComVeiculo(env, agente.email, b.id); } catch { /* jornada opcional */ }
+        try { await tagColetaComVeiculo(env, agente.ajudanteDe || agente.email, b.id); } catch { /* jornada opcional */ }
         try { const c0 = await lerColetaOS(env, b.id); if (c0 && c0.veiculoPlaca) { const t = await capturarTelemetria(env, c0.veiculoPlaca, 'a_caminho'); if (t) await anexarTelemetriaOS(env, b.id, t); } } catch { /* telemetria é best-effort */ }
         try {
           const col = await lerColetaOS(env, b.id);
@@ -2494,7 +2521,7 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         let b; try { b = await request.json(); } catch { b = null; }
         if (!b || !b.id || b.lat == null || b.lon == null) return json({ ok: false, error: 'dados' }, 400);
         await registrarCheckin(env, b.id, agente, { lat: b.lat, lon: b.lon, acc: b.acc });
-        try { await tagColetaComVeiculo(env, agente.email, b.id); } catch { /* jornada opcional no vínculo */ }
+        try { await tagColetaComVeiculo(env, agente.ajudanteDe || agente.email, b.id); } catch { /* jornada opcional no vínculo */ }
         try { const c0 = await lerColetaOS(env, b.id); if (c0 && c0.veiculoPlaca) { const t = await capturarTelemetria(env, c0.veiculoPlaca, 'checkin'); if (t) await anexarTelemetriaOS(env, b.id, t); } } catch { /* telemetria é best-effort */ }
         // Cliente é avisado que o coletor CHEGOU (SMS preferido, e-mail de reserva) — uma vez só.
         try {
@@ -3110,7 +3137,7 @@ async function solicitarLinkUnificado(request, env) {
     if (diretorPermitido(email, env)) { await solicitarLinkDiretoria(reenc, env); return generica; }
     if (engenheiroPermitido(email, env)) { await solicitarLinkEng(reenc, env); return generica; }
     if (operadorPermitido(email, env)) { await solicitarLinkOperacao(reenc, env); return generica; }
-    if (agentePermitido(email, env)) { await solicitarLinkAgente(reenc, env); return generica; }
+    if (equipeColetasPermitida(email, env)) { await solicitarLinkAgente(reenc, env); return generica; }
     if (fiscalPermitido(email, env)) { await solicitarLinkFiscal(reenc, env); return generica; }
     if (emailValidadorPermitido(email, env)) { await solicitarLinkValidador(reenc, env); return generica; }
     await solicitarLink(reenc, env); // cliente — fluxo atual (throttle + Turnstile)
@@ -3288,13 +3315,13 @@ async function solicitarLinkAgente(request, env) {
   const generica = json({ ok: true, message: 'Se o e-mail estiver cadastrado, enviamos um link de acesso.' });
   let input; try { input = await request.json(); } catch { return generica; }
   const email = String(input?.email || '').trim().toLowerCase();
-  if (!/^\S+@\S+\.\S+$/.test(email) || !agentePermitido(email, env)) { console.log('agente_barrado'); return generica; }
+  if (!/^\S+@\S+\.\S+$/.test(email) || !equipeColetasPermitida(email, env)) { console.log('agente_barrado'); return generica; }
   if (env.PORTAL_KV) { const chave = `throttle:ag:${email}`; if (await env.PORTAL_KV.get(chave)) return generica; await env.PORTAL_KV.put(chave, '1', { expirationTtl: 60 }); }
   const token = await criarToken({ em: email, tipo: 'login_agente' }, LINK_TTL_S, env);
   if (env.PORTAL_KV) await env.PORTAL_KV.put(`nonce:${token.nonce}`, '1', { expirationTtl: LINK_TTL_S });
   const linkBase = env.PORTAL_BASE_URL || new URL(request.url).origin;
   const link = `${linkBase.replace(/\/+$/, '')}/entrar-agente?token=${encodeURIComponent(token.valor)}`;
-  try { await enviarEmailLogin({ nome: nomeAgente(email, env), email }, link, env); console.log('agente_email_ok'); }
+  try { await enviarEmailLogin({ nome: nomeEquipeColetas(email, env), email }, link, env); console.log('agente_email_ok'); }
   catch (error) { console.error('agente_email_falhou', safeError(error)); }
   return generica;
 }
@@ -3306,7 +3333,7 @@ async function entrarComTokenAgente(request, env, url) {
     if (!existe) return html(paginaMensagem('Este link já foi usado', 'Por segurança, cada link vale uma vez. Peça um novo.'), 400);
     await env.PORTAL_KV.delete(`nonce:${payload.n}`);
   }
-  if (!agentePermitido(payload.em, env)) return html(paginaMensagem('Acesso indisponível', 'E-mail não cadastrado como agente.'), 403);
+  if (!equipeColetasPermitida(payload.em, env)) return html(paginaMensagem('Acesso indisponível', 'E-mail não cadastrado como agente ou ajudante.'), 403);
   const sessao = await criarToken({ em: payload.em, tipo: 'sessao_agente' }, APP_SESSAO_TTL_S, env);
   return new Response(null, { status: 302, headers: { Location: '/agente', 'Set-Cookie': cookieAgente(sessao.valor, APP_SESSAO_TTL_S) } });
 }
@@ -3315,8 +3342,21 @@ async function lerSessaoAgente(request, env) {
   const cookie = (request.headers.get('Cookie') || '').split(';').map((s) => s.trim()).find((s) => s.startsWith(`${AGENTE_COOKIE}=`));
   if (!cookie) return null;
   const payload = await verificarToken(decodeURIComponent(cookie.slice(AGENTE_COOKIE.length + 1)), env);
-  if (!payload || payload.tipo !== 'sessao_agente' || !agentePermitido(payload.em, env)) return null;
-  return { email: payload.em, nome: nomeAgente(payload.em, env), role: 'agente' };
+  if (!payload || payload.tipo !== 'sessao_agente') return null;
+  const em = String(payload.em || '').trim().toLowerCase();
+  // MOTORISTA: sessão como sempre foi. Se o e-mail estiver nas duas listas, motorista vence.
+  if (agentePermitido(em, env)) return { email: em, nome: nomeAgente(em, env), role: 'agente', papel: 'motorista' };
+  // AJUDANTE (pedido do Paulo, 14/09): mesma sessão/app, mas o papel muda o que ele vê.
+  // O motorista que ele acompanha fica no KV (escolhido no app); sem escolha, o app pede.
+  if (ajudantePermitido(em, env)) {
+    const sess = { email: em, nome: nomeEquipeColetas(em, env), role: 'agente', papel: 'ajudante' };
+    try {
+      const m = env.PORTAL_KV ? await env.PORTAL_KV.get(`ajudante:de:${em}`) : null;
+      if (m && agentePermitido(m, env)) { sess.ajudanteDe = String(m).trim().toLowerCase(); sess.ajudanteDeNome = nomeAgente(m, env); }
+    } catch { /* sem escolha salva: o app pede de novo */ }
+    return sess;
+  }
+  return null;
 }
 function cookieAgente(valor, maxAge) { return `${AGENTE_COOKIE}=${encodeURIComponent(valor)}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${maxAge}`; }
 
