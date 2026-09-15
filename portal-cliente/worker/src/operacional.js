@@ -96,30 +96,37 @@ export async function atualizarEtapaOperacao(env, osId, etapa, patch) {
 // Assim, ao motorista encerrar a coleta, ela entra sozinha na fila da doca; ao a doca
 // receber (cria a operação), ela sai da fila. Lê a NOSSA base (KV), não o Ploomes.
 export async function listarColetasRecebiveis(env) {
-  const todas = await listarColetasOS(env);
+  // 2 leituras de índice em vez de 1 leitura POR OS concluída (a lentidão da tela
+  // "Receber lote" crescia com o histórico — dezenas de idas ao KV em série).
+  const [todas, ops] = await Promise.all([listarColetasOS(env), listarOperacoes(env)]);
+  const jaNoIndiceDoca = new Set(ops.map((o) => String(o.osId)));
   const concluidas = todas.filter((c) => c.status === 'concluida');
   // Rede de segurança (caso real OS-2026-0124, 14/09): o motorista ENCERROU a coleta
   // (estado coleta:{id} = "encerrada"), mas o índice ficou preso em "em transporte" —
-  // e a carga sumia da fila da recepção. Aqui conferimos o estado das poucas coletas
-  // "em transporte": se já foi encerrada, ela ENTRA na fila e o índice é corrigido.
-  for (const c of todas.filter((x) => x.status === 'em_transporte')) {
+  // e a carga sumia da fila da recepção. Confere o estado das poucas coletas
+  // "em transporte" (em paralelo): se já foi encerrada, ENTRA na fila e o índice é corrigido.
+  const emTransporte = todas.filter((x) => x.status === 'em_transporte');
+  const presas = (await Promise.all(emTransporte.map(async (c) => {
     try {
       const raw = env.PORTAL_KV ? await env.PORTAL_KV.get(`coleta:${c.id}`) : null;
       const e = raw ? JSON.parse(raw) : null;
-      if (e && e.status === 'encerrada') {
-        concluidas.push(c);
-        try { await atualizarStatusOS(env, c.id, 'concluida'); }
-        catch (err) { console.error('doca_cura_encerrada_falhou', c.id, String((err && err.message) || err).slice(0, 140)); }
-      }
-    } catch { /* estado ilegível: fica como está */ }
+      return (e && e.status === 'encerrada') ? c : null;
+    } catch { return null; /* estado ilegível: fica como está */ }
+  }))).filter(Boolean);
+  for (const c of presas) {
+    concluidas.push(c);
+    try { await atualizarStatusOS(env, c.id, 'concluida'); }
+    catch (err) { console.error('doca_cura_encerrada_falhou', c.id, String((err && err.message) || err).slice(0, 140)); }
   }
-  const out = [];
-  for (const c of concluidas) {
-    let jaNaDoca = false;
-    try { jaNaDoca = !!(await lerOperacao(env, c.id)); } catch { jaNaDoca = false; }
-    if (!jaNaDoca) out.push({ osId: c.id, numero: c.numero, cliente: c.clienteNome || '' });
-  }
-  return out;
+  // Quem está no índice da doca (op:index) já foi recebida — filtra em memória.
+  // Só as POUCAS fora do índice recebem a conferência direta (e em paralelo), porque
+  // o índice guarda as 300 operações mais recentes: uma operação antiga fora dele
+  // ainda é encontrada pela leitura direta (nada re-aparece indevidamente na fila).
+  const candidatas = concluidas.filter((c) => !jaNoIndiceDoca.has(String(c.id)));
+  const livres = (await Promise.all(candidatas.map(async (c) => {
+    try { return (await lerOperacao(env, c.id)) ? null : c; } catch { return c; }
+  }))).filter(Boolean);
+  return livres.map((c) => ({ osId: c.id, numero: c.numero, cliente: c.clienteNome || '' }));
 }
 
 async function buscarColeta(env, osId) {

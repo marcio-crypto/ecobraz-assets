@@ -114,11 +114,14 @@ export async function linhasMatriz(env) {
     listarLotesComCarga(env).catch(() => []),
   ]);
   const linhas = [];
-  for (const o of ops) {
-    let val = null;
-    if (o.etapa === 'concluida' || o.etapa === 'validacao') {
-      try { val = await lerValidacaoOp(env, o.osId); } catch { val = null; }
-    }
+  // Validações lidas em PARALELO (antes era uma ida ao KV por operação, em série —
+  // a planilha demorava proporcionalmente ao histórico).
+  const vals = await Promise.all(ops.map((o) => (o.etapa === 'concluida' || o.etapa === 'validacao')
+    ? lerValidacaoOp(env, o.osId).catch(() => null)
+    : Promise.resolve(null)));
+  for (let oi = 0; oi < ops.length; oi++) {
+    const o = ops[oi];
+    const val = vals[oi];
     const idx = ORDEM_ETAPAS.indexOf(o.etapa);
     const validada = o.etapa === 'concluida' && val && val.decisao === 'validada';
     linhas.push({

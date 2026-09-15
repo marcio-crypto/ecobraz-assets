@@ -35,9 +35,15 @@ export const TOLERANCIA = 1.05; // 5% sobre o peso líquido
 export const exigeLaudoExclusivo = (os) => (((os && os.certificados) || []).includes('Laudo de Sanitização'));
 
 // --- Banco (D1) ----------------------------------------------------------------
+// Os CREATE/ALTER de preparo rodam UMA vez por processo do Worker (flags abaixo),
+// não a cada chamada: antes, cada db(env) refazia 4 CREATEs no D1 — e uma página
+// de Cargas chama db() várias vezes, somando dezenas de idas ao banco à toa
+// (lentidão sentida pela equipe, 09-14/09).
+let criouTabelas = false;
 let migrouColunas = false;
 async function db(env) {
   if (!env.DB_PLOOMES) return null;
+  if (criouTabelas && migrouColunas) return env.DB_PLOOMES;
   try {
     await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS op_cargas (id TEXT PRIMARY KEY, criado_em TEXT, criado_por TEXT, cliente_nome TEXT, cliente_doc TEXT, os_json TEXT, exclusiva_laudo INTEGER DEFAULT 0, peso_bruto REAL, tara REAL, peso_liquido REAL, fotos_json TEXT, status TEXT, cancelada_json TEXT DEFAULT \'\', edicoes_json TEXT DEFAULT \'\')').run();
     await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS op_lotes (id TEXT PRIMARY KEY, carga_id TEXT, categoria TEXT, peso REAL, qtd TEXT, destino TEXT, status TEXT, criado_em TEXT, criado_por TEXT, edicoes_json TEXT DEFAULT \'\', expedicao_json TEXT DEFAULT \'\')').run();
@@ -45,6 +51,7 @@ async function db(env) {
     // Estoque de destinação (pedido da equipe 09/09): baixas PARCIAIS por material,
     // conforme MTR de saída (ex.: 800 kg de metal − MTR de 300 kg = 500 kg no saldo).
     await env.DB_PLOOMES.prepare('CREATE TABLE IF NOT EXISTS op_saidas_estoque (id INTEGER PRIMARY KEY AUTOINCREMENT, categoria TEXT, peso REAL, fornecedor TEXT, cnpj TEXT, mtr TEXT, data TEXT, obs TEXT, por TEXT, em TEXT)').run();
+    criouTabelas = true;
   } catch { return null; }
   // Tabelas criadas antes de cancelar/editar/expedir existirem não têm as colunas — completa uma vez.
   if (!migrouColunas) {

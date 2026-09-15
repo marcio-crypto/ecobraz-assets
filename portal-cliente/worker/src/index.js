@@ -2594,17 +2594,17 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         // coletas concluídas, fora de outras cargas; o fluxo antigo da doca só
         // bloqueia se tiver dado real (peso/fotos/etapa avançada) — um clique
         // acidental em "receber" não esconde a OS daqui.
-        const todasOS = await listarColetasOS(env);
+        const [todasOS, cargasTodas] = await Promise.all([listarColetasOS(env), listarCargas(env)]);
         const emCargas = new Set();
         // Carga CANCELADA devolve as OSs para cá (não trava mais ninguém).
-        (await listarCargas(env)).forEach((cg) => { if (cg.status === 'cancelada') return; (cg.oss || []).forEach((o) => emCargas.add(o.id)); });
-        const livres = [];
-        for (const c of todasOS.filter((x) => x.status === 'concluida')) {
-          if (emCargas.has(c.id)) continue;
+        cargasTodas.forEach((cg) => { if (cg.status === 'cancelada') return; (cg.oss || []).forEach((o) => emCargas.add(o.id)); });
+        // Conferência do fluxo antigo da doca em PARALELO (antes: uma ida ao KV por OS, em série).
+        const candidatas = todasOS.filter((x) => x.status === 'concluida' && !emCargas.has(x.id));
+        const livres = (await Promise.all(candidatas.map(async (c) => {
           let opAntiga = null; try { opAntiga = await lerOperacao(env, c.id); } catch { opAntiga = null; }
-          if (opAntiga && (opAntiga.entrada || (opAntiga.fotos && Object.keys(opAntiga.fotos).length) || (opAntiga.etapa && opAntiga.etapa !== 'recepcao'))) continue;
-          livres.push(c);
-        }
+          if (opAntiga && (opAntiga.entrada || (opAntiga.fotos && Object.keys(opAntiga.fotos).length) || (opAntiga.etapa && opAntiga.etapa !== 'recepcao'))) return null;
+          return c;
+        }))).filter(Boolean);
         return html(paginaNovaCarga(docaOk, livres));
       }
       if (pathname === '/cargas/carga' && request.method === 'GET') {
@@ -2657,8 +2657,7 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         if (!docaOk) return json({ ok: false, message: 'nao_autenticado' }, 401);
         let b; try { b = await request.json(); } catch { b = {}; }
         const ids = Array.isArray(b && b.osIds) ? b.osIds.slice(0, 20) : [];
-        const oss = [];
-        for (const osId of ids) { const o = await lerColetaOS(env, String(osId).replace(/[^a-zA-Z0-9_-]/g, '')); if (o) oss.push(o); }
+        const oss = (await Promise.all(ids.map((osId) => lerColetaOS(env, String(osId).replace(/[^a-zA-Z0-9_-]/g, '')).catch(() => null)))).filter(Boolean);
         return json(await novaCarga(env, docaOk, oss, { especial: !!(b && b.especial), especialObs: (b && b.especialObs) || '' }));
       }
       if (pathname === '/api/cargas/pesar' && request.method === 'POST') {
@@ -3752,14 +3751,20 @@ async function dadosAcompanhamentoCliente(sessao, env) {
   const iconeLaudo = (t) => /Destruição de Dados/i.test(t) ? '🔒' : /Descaracterização/i.test(t) ? '🧰' : /Análise Química/i.test(t) ? '🧪' : /fotográfico|Foto/i.test(t) ? '🖼️' : /Sanitiza/i.test(t) ? '🧼' : /Certificado/i.test(t) ? '🏅' : '📋';
   if (!env.PORTAL_KV || !doc) return { empresa, doc, cards, resumo };
   let idx = []; try { idx = await listarColetasOS(env); } catch { idx = []; }
-  for (const c of idx) {
-    if (String(c.clienteDoc || '').replace(/\D/g, '') !== doc) continue;
-    if (c.status === 'cancelada') continue;
+  const minhas = idx.filter((c) => String(c.clienteDoc || '').replace(/\D/g, '') === doc && c.status !== 'cancelada');
+  // Leituras por coleta em PARALELO (antes: 3 idas ao KV por coleta, em série — o
+  // painel do cliente demorava proporcionalmente ao histórico dele).
+  const lidas = await Promise.all(minhas.map(async (c) => {
     let os = null, op = null, val = null;
     try { os = await lerColetaOS(env, c.id); } catch { /* pula */ }
-    if (!os) continue;
+    if (!os) return null;
     try { op = await lerOperacao(env, os.id); } catch { /* sem operação ainda */ }
     try { if (op) val = await lerValidacaoOp(env, os.id); } catch { /* ok */ }
+    return { os, op, val };
+  }));
+  for (const lida of lidas) {
+    if (!lida) continue;
+    const { os, op, val } = lida;
     const validado = !!(op && op.etapa === 'concluida' && val && val.decisao === 'validada');
     const coluna = colunaClienteDe(os.status, op && op.etapa, validado);
     resumo.total++; resumo[coluna] = (resumo[coluna] || 0) + 1;

@@ -62,6 +62,7 @@ export async function salvarUsuario(env, dados, criadoPor) {
   };
   if (i >= 0) lista[i] = rec; else lista.unshift(rec);
   if (env.PORTAL_KV) await env.PORTAL_KV.put('usuarios:index', JSON.stringify(lista).slice(0, 600000));
+  invalidarCacheEquipe(); // acesso novo/alterado vale JÁ neste processo
   return rec;
 }
 
@@ -131,12 +132,23 @@ async function semearFaltantes(env, usuarios) {
 // Coração da integração aditiva: devolve um env com as listas de acesso de cada
 // papel acrescidas dos usuários ativos cadastrados. Defensivo: qualquer falha
 // devolve o env original (mantém o acesso atual intacto).
+//
+// CACHE por processo (60 s): isto roda em TODA requisição — sem cache era uma ida
+// ao KV por página, para uma lista que quase nunca muda. Salvar alguém em /equipe
+// zera o cache do próprio processo na hora; nos demais, a mudança pega em até 1 min.
+let equipeCache = { ate: 0, usuarios: null };
+export function invalidarCacheEquipe() { equipeCache = { ate: 0, usuarios: null }; }
 export async function carregarEquipeNoEnv(env) {
   if (!env || !env.PORTAL_KV) return env;
   let usuarios;
-  try { usuarios = await listarUsuarios(env); } catch { return env; }
-  usuarios = usuarios || [];
-  try { usuarios = await semearFaltantes(env, usuarios); } catch { /* semente é best-effort — nunca derruba o acesso */ }
+  if (equipeCache.usuarios && Date.now() < equipeCache.ate) {
+    usuarios = equipeCache.usuarios;
+  } else {
+    try { usuarios = await listarUsuarios(env); } catch { return env; }
+    usuarios = usuarios || [];
+    try { usuarios = await semearFaltantes(env, usuarios); } catch { /* semente é best-effort — nunca derruba o acesso */ }
+    equipeCache = { ate: Date.now() + 60000, usuarios };
+  }
   if (!usuarios || !usuarios.length) return env;
   const add = {};
   for (const u of usuarios) {
