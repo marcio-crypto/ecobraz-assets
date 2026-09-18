@@ -68,7 +68,7 @@ import { sondaRotaExata, paginaSondaRotaExata, paginaRastreio, posicaoDoVeiculo,
 import { lerValidacao, registrarValidacao, paginaAreaValidacao, qrMetodologia, validarMetodologiaPublico, homologarFatorAcao } from './validacao-metodologia.js';
 import { paginaPainelCarbono } from './carbono-painel.js';
 import { clientesComOperacoes, carbonoDoCliente, paginaCarbonoAnalista, paginaCarbonoAuditor } from './carbono-motor.js';
-import { agentePermitido, nomeAgente, ajudantePermitido, equipeColetasPermitida, nomeEquipeColetas, bannerAjudante, paginaEscolherMotorista, listarColetasComStatus, enriquecerProximidade, coordDoEndereco, paginaLoginAgente, paginaAppAgente, detalheColeta, lerEstadoColeta, registrarCheckin, registrarACaminho, registrarFoto, servirFotoColeta, registrarFotoReagendar, servirFotoReagendar, registrarAssinatura, servirAssinaturaColeta, paginaColetaDetalhe, registrarEncerramento, registrarReagendamento, qrColeta, validarColetaPublico, paginaComprovante } from './agente.js';
+import { agentePermitido, nomeAgente, ajudantePermitido, equipeColetasPermitida, nomeEquipeColetas, bannerAjudante, paginaEscolherMotorista, listarColetasComStatus, enriquecerProximidade, coordDoEndereco, paginaLoginAgente, paginaAppAgente, detalheColeta, lerEstadoColeta, prepararNovaTentativa, registrarCheckin, registrarACaminho, registrarFoto, servirFotoColeta, registrarFotoReagendar, servirFotoReagendar, registrarAssinatura, servirAssinaturaColeta, paginaColetaDetalhe, registrarEncerramento, registrarReagendamento, qrColeta, validarColetaPublico, paginaComprovante } from './agente.js';
 import { operadorPermitido, nomeOperador, listarOperacoes, listarColetasRecebiveis, iniciarOperacao, lerOperacao, definirTipoOperacao, registrarPesoEntrada, ajustarPesoReal, registrarFotoOperacao, servirFotoOperacao, paginaLoginOperacao, paginaAppOperacao, paginaReceberLote, paginaLoteDetalhe, adicionarMaterial, removerMaterial, concluirTriagem, paginaTriagem, paginaProcessamento, concluirProcessamento, paginaSaida, registrarSaida, concluirSaida } from './operacional.js';
 import { engenheiroPermitido, nomeEngenheiro, filaValidacao, operacoesValidadas, lerValidacaoOp, registrarValidacaoOp, paginaLoginEng, paginaFilaEng, paginaDossie, qrOperacao, validarOperacaoPublico, listarDestinos, lerDestino, salvarDestino, paginaDestinos, paginaDestinoForm, paginaRelatorio, paginaCDF } from './engenharia.js';
 import { diretorPermitido, nomeDiretor, reunirDados, paginaLoginDiretoria, paginaPainelDiretoria } from './diretoria.js';
@@ -2268,6 +2268,10 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
         let b; try { b = await request.json(); } catch { b = null; }
         if (!b || !b.id || !b.status) return json({ ok: false, error: 'dados' }, 400);
+        // Voltando para a rota depois de um REAGENDAMENTO: os registros da visita
+        // anterior ("estou indo"/check-in/foto) vão para o histórico — o app do
+        // motorista abre com os botões liberados (caso OS-2026-0046, 15/09).
+        if (b.status === 'em_transporte') { try { await prepararNovaTentativa(env, b.id); } catch (error) { console.error('preparar_tentativa_falhou', safeError(error)); } }
         const os = await atualizarStatusOS(env, b.id, b.status);
         // Aviso "coleta realizada" ao cliente na conclusão — do SISTEMA NOVO (sem Ploomes).
         // Best-effort, de-dup por KV, nunca bloqueia a mudança de status.

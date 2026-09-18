@@ -23,6 +23,8 @@ export async function seloColeta(id, env) {
 function origemPortal(env, url) { return String(env.PORTAL_BASE_URL || env.PORTAL_URL || `${url.origin}/`).replace(/\/+$/, ''); }
 // Fuso de Brasília (UTC-3, sem horário de verão) a partir do instante ISO (UTC).
 const dataHoraBR = (iso) => { const d = new Date(iso); if (!iso || isNaN(d.getTime())) return ''; d.setUTCHours(d.getUTCHours() - 3); const p = (n) => String(n).padStart(2, '0'); return `${p(d.getUTCDate())}/${p(d.getUTCMonth() + 1)}/${d.getUTCFullYear()} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`; };
+// Data agendada (só-dia, "AAAA-MM-DD") → "DD/MM" para o card do app.
+const dataCurtaBR = (d) => { const m = String(d || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}` : ''; };
 
 // Registro de agentes (nome por e-mail). Fonte única: env AGENTE_EMAILS.
 function parseEmailsNome(str) {
@@ -63,7 +65,7 @@ export async function listarColetas(env, agenteEmail) {
   const todas = await listarColetasOS(env);
   return todas
     .filter((c) => COLETAS_ATIVAS.has(c.status) && String(c.agenteEmail || '').trim().toLowerCase() === email)
-    .map((c) => ({ id: c.id, numero: c.numero, cliente: c.clienteNome || '' }));
+    .map((c) => ({ id: c.id, numero: c.numero, cliente: c.clienteNome || '', dataAgendada: c.dataAgendada || '' }));
 }
 
 export function paginaLoginAgente(googleOn) {
@@ -158,7 +160,7 @@ export function paginaAppAgente(agente, coletas, banner) {
     const cta = c.encerrada ? 'Ver comprovante →' : 'Abrir coleta →';
     return `<a href="${href}" class="coleta-card" data-lat="${c.lat != null ? c.lat : ''}" data-lon="${c.lon != null ? c.lon : ''}" style="display:block;text-decoration:none;background:#fff;border:1px solid #E4EBE9;border-radius:16px;padding:15px 16px;margin-bottom:12px;">
       <div style="display:flex;justify-content:space-between;align-items:center;"><div style="font-size:14px;font-weight:800;color:#10262B;">${esc(c.numero)}</div>${badgeDe(c)}</div>
-      <div style="font-size:13px;color:#4F6469;margin-top:7px;">${esc(c.cliente || 'Cliente')}</div>
+      <div style="font-size:13px;color:#4F6469;margin-top:7px;">${esc(c.cliente || 'Cliente')}${dataCurtaBR(c.dataAgendada) ? ` <span style="font-size:11px;font-weight:800;color:#0B5B66;">· 📅 ${dataCurtaBR(c.dataAgendada)}</span>` : ''}</div>
       <div class="km" style="font-size:11.5px;color:#0B5B66;font-weight:700;margin-top:4px;display:none;"></div>
       <div style="font-size:12px;color:#3f8f3a;font-weight:700;margin-top:10px;">${cta}</div>
     </a>`;
@@ -216,16 +218,50 @@ export async function detalheColeta(env, id) {
   return { id: os.id, numero: os.numero, cliente: os.clienteNome || '', endereco: os.endereco || '', stageId: os.status };
 }
 export async function lerEstadoColeta(env, id) { if (!env.PORTAL_KV) return {}; const raw = await env.PORTAL_KV.get(`coleta:${id}`); return raw ? JSON.parse(raw) : {}; }
-async function salvarEstadoColeta(env, id, e) { if (env.PORTAL_KV) await env.PORTAL_KV.put(`coleta:${id}`, JSON.stringify(e).slice(0, 4000), { expirationTtl: 60 * 60 * 24 * 120 }); }
+async function salvarEstadoColeta(env, id, e) {
+  if (!env.PORTAL_KV) return;
+  // Nunca corta o JSON no meio (corromperia o estado inteiro): se passar do teto,
+  // descarta primeiro o histórico de tentativas — o resto dos campos é todo limitado.
+  let json = JSON.stringify(e);
+  if (json.length > 4000 && Array.isArray(e.tentativas)) { const c = { ...e }; delete c.tentativas; json = JSON.stringify(c); }
+  await env.PORTAL_KV.put(`coleta:${id}`, json, { expirationTtl: 60 * 60 * 24 * 120 });
+}
+// Tentativa que NÃO deu certo (reagendamento) vai para o histórico e sai da frente.
+// Sem isso, o "Estou indo"/"Cheguei" da 1ª visita ficava travando os botões da nova
+// (caso OS-2026-0046, 15/09: o Paulo não conseguia avisar o cliente na 2ª visita).
+function arquivarTentativa(e) {
+  if (!e.acaminho && !e.checkin && !e.foto && !e.assinatura) return false;
+  e.tentativas = Array.isArray(e.tentativas) ? e.tentativas : [];
+  e.tentativas.push({
+    em: agora(),
+    acaminhoEm: (e.acaminho && e.acaminho.em) || '',
+    checkinEm: (e.checkin && e.checkin.em) || '',
+    teveFoto: !!e.foto,
+    motivo: String((e.reagendar && e.reagendar.motivo) || '').slice(0, 120),
+  });
+  if (e.tentativas.length > 5) e.tentativas = e.tentativas.slice(-5);
+  delete e.acaminho; delete e.checkin; delete e.foto; delete e.assinatura;
+  return true;
+}
+// Chamada pelo ESCRITÓRIO ao devolver a coleta para a rota depois de um reagendamento:
+// limpa os registros da visita anterior para o app abrir com os botões liberados.
+// (Cura também casos já presos, como a OS-2026-0046.)
+export async function prepararNovaTentativa(env, id) {
+  const e = await lerEstadoColeta(env, id);
+  if (e.status !== 'reagendar') return e;
+  if (arquivarTentativa(e)) await salvarEstadoColeta(env, id, e);
+  return e;
+}
 // "Estou indo": marca a coleta como em transporte e registra o momento — o cliente é
 // avisado por e-mail (feito no index) e passa a acompanhar o caminhão ao vivo.
 export async function registrarACaminho(env, id, agente) {
   const e = await lerEstadoColeta(env, id);
-  const jaAvisado = !!e.acaminho;
   let mudou = false;
+  // Nova tentativa depois de um reagendamento: o pedido de reagendar se encerra e os
+  // registros da visita anterior vão para o histórico — o cliente é avisado DE NOVO.
+  if (e.status === 'reagendar') { arquivarTentativa(e); e.status = ''; mudou = true; }
+  const jaAvisado = !!e.acaminho;
   if (!jaAvisado) { e.acaminho = { em: agora(), agente: agente.email }; mudou = true; }
-  // Nova tentativa depois de um reagendamento: o pedido de reagendar se encerra.
-  if (e.status === 'reagendar') { e.status = ''; mudou = true; }
   if (mudou) await salvarEstadoColeta(env, id, e);
   try { await atualizarStatusOS(env, id, 'em_transporte'); } catch { /* ok */ }
   try { await limparReagendarOS(env, id); } catch { /* ok */ }
@@ -303,6 +339,9 @@ export async function registrarReagendamento(env, id, agente, dados) {
   e.os = { numero: d.numero || (e.os && e.os.numero) || '', cliente: d.cliente || (e.os && e.os.cliente) || '', endereco: d.endereco || (e.os && e.os.endereco) || '' };
   e.reagendar = { em: agora(), agente: agente.email, motivo: String(d.motivo || '').slice(0, 300) };
   e.status = 'reagendar';
+  // A visita que não deu certo vai para o histórico: a próxima começa com os botões
+  // ("Estou indo", "Cheguei", foto, assinatura) zerados — não presos no "✓ feito".
+  arquivarTentativa(e);
   await salvarEstadoColeta(env, id, e);
   // Deixa o pedido À MOSTRA no escritório: a OS volta para "agendada" com o
   // motivo em destaque e o selo ↩︎ REAGENDAR nas listas (pedido da equipe 18/08).

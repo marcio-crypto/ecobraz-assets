@@ -519,7 +519,11 @@ export function paginaColetaOSDetalhe(user, os, acomp, extras) {
     <div style="font-size:15px;font-weight:800;color:#10262B;margin-top:8px">${esc(rea.motivo || 'Sem motivo informado')}</div>
     <div style="font-size:12.5px;color:#8A6A16;margin-top:6px">${(rea.agenteNome || rea.agente) ? '🚚 ' + esc(rea.agenteNome || rea.agente) + ' · ' : ''}${esc(dataBR(rea.em))}${hhmm(rea.em) ? ' às ' + hhmm(rea.em) : ''}</div>
     ${rea.foto ? `<div style="font-size:11.5px;font-weight:800;color:#8A6A16;margin-top:10px">📷 Foto do motivo, enviada pelo motorista:</div><img src="/coletas/foto-reagendar?id=${esc(os.id)}" alt="Foto do motivo do reagendamento" style="width:100%;max-width:420px;border-radius:12px;margin-top:6px;border:1px solid #E8D9A8">` : ''}
-    <div style="font-size:12px;color:#4F6469;margin-top:8px">O que fazer: combinar a nova data com o cliente e ajustar em <b>✏️ Editar</b>. Este aviso some sozinho quando o motorista sair para a nova tentativa.</div>
+    <div style="font-size:12px;color:#4F6469;margin-top:8px">O que fazer: <b>1)</b> combine a nova data com o cliente e ajuste em <b>✏️ Editar</b>; <b>2)</b> toque no botão abaixo para a coleta <b>voltar ao app do motorista</b> — sem isso ela fica invisível para ele. Este aviso some sozinho quando o motorista sair para a nova tentativa.</div>
+    ${!ro && os.status === 'agendada' ? (os.agenteEmail
+      ? `<button class="btn btn-p" style="margin-top:10px;padding:12px 16px" onclick="setStatus('em_transporte')">🚚 Nova data combinada — devolver para a rota${os.agenteNome ? ' de ' + esc(os.agenteNome) : ' do motorista'}</button>`
+      : `<div style="font-size:12px;font-weight:800;color:#8A6A16;margin-top:10px">⚠️ Sem motorista escolhido — <a href="/coletas/editar?id=${esc(os.id)}" style="color:#0B5B66">escolha em Editar</a> antes de devolver para a rota.</div>`) : ''}
+    ${!ro && os.status === 'em_transporte' ? `<div style="font-size:12px;font-weight:800;color:#1E5B31;margin-top:10px">✓ Já está na rota do motorista — vai aparecer no app dele${os.agenteNome ? ` (${esc(os.agenteNome)})` : ''}.</div>` : ''}
   </div>` : '';
   const registroHTML = blocoRegistroMotorista(acomp && acomp.registro, `/coletas/foto-motorista?id=${esc(os.id)}`, `/coletas/assinatura-motorista?id=${esc(os.id)}`);
   const anexosArr = Array.isArray(os.anexos) ? os.anexos : [];
