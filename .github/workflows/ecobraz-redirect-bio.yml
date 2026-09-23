@@ -1,0 +1,53 @@
+name: Ecobraz — redirect do /bio (link da bio das redes)
+
+# O link da bio do Instagram e do TikTok aponta para /bio, que devolve 404.
+# Todo post agendado diz "detalhes no link da bio": cada clique cai em erro.
+#
+# CUIDADO AO MEXER AQUI. O upload de redirects do Ghost SUBSTITUI O CONJUNTO
+# INTEIRO — sao ~9.085 regras. Nao existe "acrescentar uma"; existe "mandar o
+# arquivo todo de novo". Um erro aqui nao perde uma regra, perde nove mil.
+# Por isso o script baixa e guarda backup datado ANTES de tudo, para se o
+# download falhar, confere byte a byte que o original continua inteiro, e faz
+# rollback sozinho se qualquer verificacao falhar.
+#
+# O padrao e CONFERIR (nao muda nada).
+
+on:
+  workflow_dispatch:
+    inputs:
+      modo:
+        description: 'conferir (nao muda nada) ou aplicar'
+        type: choice
+        options: [conferir, aplicar]
+        default: conferir
+
+permissions:
+  contents: read
+
+jobs:
+  bio:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Redirect do /bio
+        env:
+          GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
+          GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
+        run: node site-ghost/scripts/redirect-bio.mjs ${{ inputs.modo }}
+
+      # if: always() de proposito — o backup e o mais importante da execucao e
+      # precisa sobreviver mesmo quando o passo acima falha ou faz rollback.
+      - name: Guardar o backup (e o arquivo pronto, se o envio for bloqueado)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: redirects-backup-e-arquivo-pronto
+          path: |
+            redirects-backup-*.yaml
+            redirects-com-bio.yaml
+          retention-days: 90
+          if-no-files-found: warn
