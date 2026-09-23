@@ -10,7 +10,7 @@
 ## Principais páginas (PT)
 
 - [Início](https://ecobraz.org/): visão geral, coleta gratuita e sistema de rastreabilidade
-- [Agendar coleta](https://ecobraz.org/agendamento/): formulário de tela única; coleta expressa em até 24h por R$ 55
+- [Agendar coleta](https://ecobraz.org/agendamento/): formulário de tela única; coleta expressa em até 72h por R$ 55
 - [Como funciona](https://ecobraz.org/como-funciona/): do pedido ao certificado
 - [Para empresas](https://ecobraz.org/para-empresas/): descarte corporativo com evidência auditável
 - [Grandes empresas e multinacionais](https://ecobraz.org/grandes-empresas-e-multinacionais/): multissite, recorrência, Escopo 3

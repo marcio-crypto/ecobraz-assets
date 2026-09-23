@@ -51,7 +51,7 @@ tema no código (47 templates, 36 landings, formulário, worker), dados reais
 - **Grátis**: coleta padrão (prazo de 1 a 7 dias úteis) · sistema/portal
   completo para todo cliente (login com e-mail cadastrado) · todo o resto
   que não estiver listado abaixo.
-- **Pago, à parte**: coleta expressa em até 24h (R$ 55) · laudos
+- **Pago, à parte**: coleta expressa em até 72h (R$ 55) · laudos
   específicos · sanitização de dados com laudo · descarte de equipamentos
   médicos e laboratoriais · programa Adote um Bairro (para quem contratar) ·
   relatórios ESG.

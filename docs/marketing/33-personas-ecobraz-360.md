@@ -126,7 +126,7 @@ Gerente de TI/facilities de média empresa. Dono do problema físico (depósito 
 1. **Documento que "encerra a discussão"**: na pesquisa 24 ele escolheu a BrasilReverso porque R2v3 + ISO 14001 + laudo de engenheiro dispensam defesa interna. Prova assinada por terceiro > texto persuasivo.
 2. **Certificado QR validável na hora** — ele mesmo chamou de "o melhor produto de evidência dos cinco" (doc 24). É o que quase salvou a venda.
 3. **Números abertos antes da reunião**: "sem número, o comparativo é opinião"; "não agendo reunião para descobrir preço" (doc 22, rodadas 1 e 2).
-4. **Velocidade com data**: "primeira coleta documentada em X dias" — o comprador com deadline é o gatilho mais comum (doc 24, Faixa 3). Hoje: sem contrato, 1–7 dias úteis, expressa 24h — dizer isso cedo.
+4. **Velocidade com data**: "primeira coleta documentada em X dias" — o comprador com deadline é o gatilho mais comum (doc 24, Faixa 3). Hoje: sem contrato, 1–7 dias úteis, expressa 72h — dizer isso cedo.
 5. **Eliminação de risco, não ganho** (doc 13): "quem responde se um HD aparecer onde não devia" fala direto com ele — LGPD pergunta pelo CNPJ dele.
 
 ## O que faz DESISTIR no meio do caminho (top 5, com o momento exato do abandono)

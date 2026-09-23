@@ -2893,7 +2893,7 @@
    "sub": "Sem letra miúda: o descarte documentado e o sistema são grátis. Serviços específicos são pagos, à parte, sempre com condições por escrito.",
    "inTitle": "Pagos, à parte — quando você precisar",
    "in": [
-    "Coleta expressa em até 24h (R$ 55)",
+    "Coleta expressa em até 72h (R$ 55)",
     "Laudos específicos por material ou processo",
     "Sanitização de dados com laudo",
     "Equipamentos médicos e laboratoriais",
@@ -2958,11 +2958,11 @@
    },
    {
     "q": "O que é pago?",
-    "a": "O descarte documentado, o certificado com QR e o portal são grátis. São pagos, à parte e sempre com condições por escrito: coleta expressa em até 24h (R$ 55), laudos específicos, sanitização de dados com laudo, equipamentos médicos e laboratoriais, relatórios ESG prontos e o programa Adote um Bairro. Nenhum deles é obrigatório."
+    "a": "O descarte documentado, o certificado com QR e o portal são grátis. São pagos, à parte e sempre com condições por escrito: coleta expressa em até 72h (R$ 55), laudos específicos, sanitização de dados com laudo, equipamentos médicos e laboratoriais, relatórios ESG prontos e o programa Adote um Bairro. Nenhum deles é obrigatório."
    },
    {
     "q": "Qual é o prazo da coleta?",
-    "a": "O padrão é de 1 a 7 dias úteis após a avaliação técnica. Precisa para amanhã? Existe a coleta expressa, em até 24h, por R$ 55 — com as condições apresentadas antes da confirmação."
+    "a": "O padrão é de 1 a 7 dias úteis após a avaliação técnica. Precisa com mais urgência? Existe a coleta expressa, em até 72h, por R$ 55 — com as condições apresentadas antes da confirmação."
    },
    {
     "q": "O que vocês não retiram?",
