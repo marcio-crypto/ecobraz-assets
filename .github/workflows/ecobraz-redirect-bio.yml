@@ -16,10 +16,10 @@ on:
   workflow_dispatch:
     inputs:
       modo:
-        description: 'conferir (nao muda nada) ou aplicar'
+        description: 'verificar (so mede o site) · conferir (tenta baixar backup) · aplicar (muda o Ghost)'
         type: choice
-        options: [conferir, aplicar]
-        default: conferir
+        options: [verificar, conferir, aplicar]
+        default: verificar
 
 permissions:
   contents: read
@@ -37,7 +37,7 @@ jobs:
         env:
           GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
           GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
-        run: node site-ghost/scripts/redirect-bio.mjs ${{ inputs.modo }}
+        run: node site-ghost/scripts/redirect-bio.mjs ${{ inputs.modo }} site-ghost/theme/redirects.yaml
 
       # if: always() de proposito — o backup e o mais importante da execucao e
       # precisa sobreviver mesmo quando o passo acima falha ou faz rollback.
