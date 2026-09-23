@@ -1,0 +1,43 @@
+name: Ecobraz — varrer (e corrigir) o prazo da coleta expressa
+
+# O prazo da coleta expressa passou de 24h para 72h. O repositorio governa o
+# tema e as paginas de content/ e landing/, mas NAO governa os posts do blog
+# nem paginas criadas direto no painel. Esta ferramenta varre tudo o que o
+# Ghost serve e mostra onde a promessa velha ainda esta no ar.
+#
+#   listar   (padrao) so LE e imprime o relatorio. Nao escreve nada.
+#   corrigir aplica as trocas via API e confere item por item.
+#
+# O relatorio separa o PRAZO DA COLETA ("expressa em ate 24h", que muda) do
+# PRAZO DE RESPOSTA ("resposta em ate 24h uteis", que NAO muda).
+
+on:
+  workflow_dispatch:
+    inputs:
+      modo:
+        description: 'listar (so mostra) | corrigir (altera no Ghost)'
+        type: choice
+        options: [listar, corrigir]
+        default: listar
+
+permissions:
+  contents: read
+
+jobs:
+  varrer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Varredura do prazo da expressa
+        env:
+          GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
+          GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
+          MODO: ${{ inputs.modo }}
+        run: node site-ghost/scripts/varre-prazo-expressa.mjs "${MODO:-listar}" | tee varredura.txt
+      - name: Guardar o relatorio
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ecobraz-prazo-expressa
+          path: varredura.txt
+          if-no-files-found: warn
