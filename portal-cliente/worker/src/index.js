@@ -1730,6 +1730,38 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         } catch { cardTarefas = ''; }
         return html(paginaClienteDetalhe(escritorio, cli, arquivos, negocios, segmento, cardTarefas));
       }
+      // Acesso ao portal — ferramentas da EQUIPE na ficha do cliente (caso ROCKY, 23/09:
+      // cliente trocou o e-mail e "não recebia o acesso"; a equipe não tinha como conferir).
+      // Teste: roda EXATAMENTE o mesmo reconhecimento do login e diz se o e-mail entra.
+      if (pathname === '/api/cadastro/acesso-teste' && request.method === 'POST') {
+        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        const b = await request.json().catch(() => ({}));
+        const em = String(b.email || '').trim().toLowerCase();
+        if (!/^\S+@\S+\.\S+$/.test(em)) return json({ ok: false, motivo: 'E-mail inválido — confira a digitação.' });
+        const cli = await buscarClienteBase(em, env).catch(() => null);
+        if (!cli || !cli.liberado) return json({ ok: true, entra: false });
+        const fonte = cli.contactId ? 'base migrada' : (cli.nivel && cli.nivel !== 'admin' ? 'gestores do cliente' : 'cadastro do sistema');
+        return json({ ok: true, entra: true, nome: cli.nome || '', doc: cli.documento || '', fonte });
+      }
+      // Envio do link de acesso PELA EQUIPE (sem throttle/Turnstile do fluxo público;
+      // erro de envio é informado — dentro do sistema não há risco de enumeração).
+      if (pathname === '/api/cadastro/enviar-acesso' && request.method === 'POST') {
+        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        const b = await request.json().catch(() => ({}));
+        const em = String(b.email || '').trim().toLowerCase();
+        if (!/^\S+@\S+\.\S+$/.test(em)) return json({ ok: true, enviado: false, motivo: 'E-mail inválido — confira a digitação.' });
+        const cli = await buscarClienteBase(em, env).catch(() => null);
+        if (!cli || !cli.liberado) return json({ ok: true, enviado: false, motivo: 'Este e-mail não é reconhecido como cliente — o login nem gera link. Confira se ele está salvo na ficha (empresa ou contato) e salve de novo.' });
+        try { if (env.PORTAL_KV) await env.PORTAL_KV.delete(`throttle:${em}`); } catch { /* segue */ }
+        const token = await criarToken({ cid: cli.contactId, emp: cli.empresaId, em: cli.email, nome: cli.nome, fim: cli.dataFim || '', doc: cli.documento || '', tipo: 'login' }, LINK_TTL_S, env);
+        if (env.PORTAL_KV) await env.PORTAL_KV.put(`nonce:${token.nonce}`, '1', { expirationTtl: LINK_TTL_S });
+        const linkBase = env.PORTAL_BASE_URL || new URL(request.url).origin;
+        const link = `${linkBase.replace(/\/+$/, '')}/entrar?token=${encodeURIComponent(token.valor)}`;
+        try { await enviarEmailLogin(cli, link, env); }
+        catch (error) { console.error('acesso_equipe_email_falhou', safeError(error)); return json({ ok: true, enviado: false, motivo: 'O provedor de e-mail FALHOU no envio agora. Tente de novo em instantes.' }); }
+        console.log('acesso_enviado_pela_equipe', { por: escritorio.email, dominio: em.split('@')[1] || '', empresaId: cli.empresaId });
+        return json({ ok: true, enviado: true, nome: cli.nome || '' });
+      }
       // Tarefas por cliente (pedido da Débora): criar na ficha; quando o dia chega,
       // a tarefa fica "em atenção" na ficha, no topo do Cadastro e nesta página.
       if (pathname === '/cadastro/tarefas' && request.method === 'GET') {
@@ -3577,7 +3609,7 @@ async function buscarClienteBase(email, env) {
                 e.ploomes_id AS emp_id, e.nome AS emp_nome, e.documento AS emp_doc
            FROM contatos c
            LEFT JOIN contatos e ON e.ploomes_id = c.company_id
-          WHERE c.email = ?1
+          WHERE c.email = ?1 COLLATE NOCASE
           ORDER BY (CASE WHEN c.company_id IS NOT NULL AND c.company_id <> 0 THEN 0 ELSE 1 END), c.ploomes_id DESC
           LIMIT 1`
       ).bind(em).all();

@@ -276,7 +276,8 @@ export async function espelharClienteD1(env, rec) {
   const fantasia = tipo === 'PJ' ? (rec.nomeFantasia || '') : '';
   const e = rec.endereco || {};
   const endStr = JSON.stringify({ cep: e.cep || '', logradouro: e.logradouro || '', numero: e.numero || '', complemento: e.complemento || '', bairro: e.bairro || '', cidade: e.cidade || '', uf: e.uf || '' });
-  const email = tipo === 'PJ' ? ((rec.contatos && rec.contatos[0] && rec.contatos[0].email) || rec.email || '') : (rec.email || '');
+  // Minúsculo/limpo: o login procura o e-mail exato — "Maria@" gravado no D1 nunca casaria.
+  const email = String(tipo === 'PJ' ? ((rec.contatos && rec.contatos[0] && rec.contatos[0].email) || rec.email || '') : (rec.email || '')).trim().toLowerCase();
   const fone = tipo === 'PJ' ? ((rec.contatos && rec.contatos[0] && rec.contatos[0].fone) || '') : (rec.fone || '');
   let pid = Number(rec.ploomesId) || 0;
   if (!pid && doc) { const ex = await env.DB_PLOOMES.prepare('SELECT ploomes_id FROM contatos WHERE documento=?1 LIMIT 1').bind(doc).first(); if (ex) pid = Number(ex.ploomes_id); }
@@ -820,6 +821,44 @@ export async function arquivosDoCliente(env, cli) {
 
 export function paginaClienteDetalhe(user, cli, arquivos, negocios, segmento, cardTarefas) {
   const negs = negocios || [];
+  // 🔑 Acesso ao portal (caso ROCKY, 23/09): a equipe TESTA na hora se um e-mail é
+  // reconhecido pelo login (mesmo caminho do login de verdade) e ENVIA o link de
+  // acesso dali mesmo — sem depender de o cliente pedir e sem adivinhar o problema.
+  const emailsAcesso = emailsDoCliente(cli);
+  const linhaEmail = (em) => `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;border:1px solid #EEF1F0;border-radius:10px;padding:8px 12px;margin-bottom:7px">
+      <span style="font-size:13px;font-weight:600;color:#10262B;word-break:break-all;flex:1;min-width:180px">${esc(em)}</span>
+      <button class="btn btn-g" style="padding:7px 12px;font-size:12px" onclick="acTestar('${esc(em)}')">Testar</button>
+      <button class="btn btn-p" style="padding:7px 12px;font-size:12px" onclick="acEnviar('${esc(em)}')">✉️ Enviar link</button>
+    </div>`;
+  const cardAcesso = `<div class="card" style="margin-top:14px">
+    <div class="sec" style="margin-top:0">🔑 Acesso ao portal</div>
+    <div style="font-size:12.5px;color:#4F6469;line-height:1.6;margin:-2px 0 10px">O cliente entra em <b>sistema.ecobraz.org</b> com o e-mail dele (link por e-mail ou Google). <b>Testar</b> confere na hora se o e-mail é reconhecido pelo login; <b>Enviar link</b> manda o e-mail de acesso agora, sem esperar o cliente pedir.</div>
+    ${emailsAcesso.length ? emailsAcesso.map(linhaEmail).join('') : '<div style="font-size:12.5px;color:#8fa39f;margin-bottom:8px">Nenhum e-mail na ficha ainda — cadastre em ✏️ Editar (no cliente ou nos contatos).</div>'}
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:4px">
+      <input id="acEmail" placeholder="ou digite um e-mail para conferir…" style="flex:1;min-width:200px">
+      <button class="btn btn-g" style="padding:9px 12px;font-size:12px" onclick="acTestar()">Testar</button>
+      <button class="btn btn-p" style="padding:9px 12px;font-size:12px" onclick="acEnviar()">✉️ Enviar link</button>
+    </div>
+    <div id="acRes" style="font-size:12.5px;margin-top:10px;line-height:1.6"></div>
+  </div>
+  <script>
+  function acPega(em){ if(em) return em; var i=document.getElementById('acEmail'); return i?i.value.trim():''; }
+  function acMsg(h){ document.getElementById('acRes').innerHTML=h; }
+  function acEsc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+  function acTestar(em){ em=acPega(em); if(!em){acMsg('Digite um e-mail.');return;}
+    acMsg('Testando '+acEsc(em)+'…');
+    fetch('/api/cadastro/acesso-teste',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:em})}).then(function(r){return r.json();}).then(function(j){
+      if(!j.ok){acMsg(acEsc(j.motivo)||'Falha no teste.');return;}
+      if(j.entra){acMsg('<span style="color:#1E5B31;font-weight:800">✓ Este e-mail ENTRA no portal</span> — reconhecido como <b>'+acEsc(j.nome||'cliente')+'</b>'+(j.doc?' · doc '+acEsc(j.doc):'')+' · fonte: '+acEsc(j.fonte||'base')+'.<br>Confira se o nome acima é o cliente CERTO. Se ele não recebe o e-mail, use <b>Enviar link</b> e peça para olhar o spam/lixo eletrônico.');}
+      else{acMsg('<span style="color:#B23A2E;font-weight:800">✕ Este e-mail NÃO entra</span> — o login não o reconhece, então o link nem chega a ser gerado.<br>Confira se ele está salvo na ficha (no cliente ou num contato) exatamente assim, sem erro de digitação, e salve o cadastro de novo.');}
+    }).catch(function(){acMsg('Sem conexão.');});}
+  function acEnviar(em){ em=acPega(em); if(!em){acMsg('Digite um e-mail.');return;}
+    acMsg('Enviando link para '+acEsc(em)+'…');
+    fetch('/api/cadastro/enviar-acesso',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:em})}).then(function(r){return r.json();}).then(function(j){
+      if(j.enviado){acMsg('<span style="color:#1E5B31;font-weight:800">✉️ Link de acesso enviado agora</span> para '+acEsc(em)+' — vale uma vez, por 15 minutos. Peça para conferir também o spam/lixo eletrônico.');}
+      else{acMsg('<span style="color:#B23A2E;font-weight:800">Não enviei:</span> '+acEsc(j.motivo||'falha'));}
+    }).catch(function(){acMsg('Sem conexão.');});}
+  </script>`;
   const segDoc = String((cli.tipo === 'PJ' ? cli.cnpj : cli.cpf) || '').replace(/\D/g, '');
   const seg = segmento || { efetivo: 'tradicional', manual: '', auto: 'tradicional', stats: { coletas: 0 }, rotulo: 'Tradicional' };
   const opt = (v, r) => `<option value="${v}"${seg.manual === v ? ' selected' : ''}>${r}</option>`;
@@ -908,6 +947,7 @@ export function paginaClienteDetalhe(user, cli, arquivos, negocios, segmento, ca
   </div>
   <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap"><a href="/coletas/nova?cliente=${esc(cli.id)}" class="btn btn-p">＋ Gerar coleta</a>
     <a href="/coletas?cliente=${esc(cli.id)}" class="btn btn-g">Ver coletas deste cliente</a></div>
+  ${cardAcesso}
 </div>
 <script>
 function salvarSegmento(){var s=document.getElementById('segSel'),m=document.getElementById('segMsg');if(!s)return;
