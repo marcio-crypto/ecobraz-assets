@@ -76,6 +76,7 @@ export async function lerColetaOS(env, id) {
 // se atropelaram): em vez de divergir para sempre, a OS re-entra no índice.
 function resumoIndiceOS(rec) {
   const r = { id: rec.id, numero: rec.numero, status: rec.status, clienteId: rec.clienteId || '', clienteDoc: rec.clienteDoc || '', clienteNome: rec.clienteNome || '', cidade: cidadeDoEndereco(rec.endereco), dataAgendada: rec.dataAgendada || '', agenteNome: rec.agenteNome || '', agenteEmail: rec.agenteEmail || '', criadoEm: rec.criadoEm || '' };
+  if (rec.transportadora) r.transp = rec.transportadora.nome;
   if (rec.reagendar) r.reagendar = 1;
   if (rec.mtr && rec.mtr.numero) r.mtr = rec.mtr.numero;
   if (rec.cobranca) r.cobranca = { valor: rec.cobranca.valor, status: rec.cobranca.status, link: rec.cobranca.link };
@@ -126,6 +127,21 @@ export function parseItensColeta(texto) {
   }).filter((it) => it.nome);
 }
 
+// TRANSPORTADORA terceirizada (pedido da Débora, 28/09): quando a coleta não é
+// feita por motorista da Ecobraz, a OS guarda quem transporta. Ela NÃO entra no
+// app dos motoristas (não tem agenteEmail) e o Manifesto passa a apontar a
+// transportadora como Transportador (não a Ecobraz).
+function limparTransportadora(t) {
+  if (!t || !String(t.nome || '').trim()) return null;
+  return {
+    nome: String(t.nome).trim().slice(0, 120),
+    cnpj: String(t.cnpj || '').trim().slice(0, 20),
+    placa: String(t.placa || '').trim().toUpperCase().slice(0, 12),
+    motorista: String(t.motorista || '').trim().slice(0, 100),
+    fone: String(t.fone || '').trim().slice(0, 30),
+  };
+}
+
 export async function criarColetaOS(env, dados, criadoPor) {
   const d = dados || {};
   const numero = await proximoNumero(env);
@@ -138,6 +154,7 @@ export async function criarColetaOS(env, dados, criadoPor) {
     dataAgendada: String(d.dataAgendada || '').slice(0, 10), janela: String(d.janela || '').slice(0, 40),
     agenteEmail: String(d.agenteEmail || '').trim().toLowerCase(), agenteNome: d.agenteNome || '',
     veiculoPlaca: String(d.veiculoPlaca || '').slice(0, 12),
+    transportadora: limparTransportadora(d.transportadora),
     material: String(d.material || '').slice(0, 500), quantidade: String(d.quantidade || '').slice(0, 100),
     itens: Array.isArray(d.itens) ? d.itens.slice(0, 80).map((it) => { const o = { nome: String(it.nome || '').slice(0, 140), qtd: String(it.qtd || '1').slice(0, 12) }; const v = numValor(it.valor); if (v > 0) o.valor = v; return o; }).filter((it) => it.nome) : parseItensColeta(d.itensTexto),
     acondicionamento: String(d.acondicionamento || '').slice(0, 120), obs: String(d.obs || '').slice(0, 4000),
@@ -146,10 +163,15 @@ export async function criarColetaOS(env, dados, criadoPor) {
     certificados: normalizarCertificados(d.certificados),
     criadoEm: agora(), criadoPor: criadoPor || '',
   };
+  // Transportadora e motorista próprio são excludentes: com transportadora, a OS
+  // não pertence à rota de nenhum motorista (e não aparece no app de ninguém).
+  if (rec.transportadora) { rec.agenteEmail = ''; rec.agenteNome = ''; }
   if (env.PORTAL_KV) {
     await env.PORTAL_KV.put(`os:${id}`, JSON.stringify(rec));
     const idx = await listarColetasOS(env);
-    idx.unshift({ id, numero, status: 'agendada', clienteId: rec.clienteId || '', clienteDoc: rec.clienteDoc || '', clienteNome: rec.clienteNome, cidade: cidadeDoEndereco(rec.endereco), dataAgendada: rec.dataAgendada, agenteNome: rec.agenteNome, agenteEmail: rec.agenteEmail, criadoEm: rec.criadoEm });
+    const resumo = { id, numero, status: 'agendada', clienteId: rec.clienteId || '', clienteDoc: rec.clienteDoc || '', clienteNome: rec.clienteNome, cidade: cidadeDoEndereco(rec.endereco), dataAgendada: rec.dataAgendada, agenteNome: rec.agenteNome, agenteEmail: rec.agenteEmail, criadoEm: rec.criadoEm };
+    if (rec.transportadora) resumo.transp = rec.transportadora.nome;
+    idx.unshift(resumo);
     await salvarIndiceOS(env, idx);
   }
   return rec;
@@ -286,11 +308,17 @@ export async function atualizarColetaOS(env, id, dados) {
   if (d.itensTexto != null) rec.itens = parseItensColeta(d.itensTexto);
   if (d.certificados != null) rec.certificados = normalizarCertificados(d.certificados);
   if (d.agenteEmail != null) { rec.agenteEmail = String(d.agenteEmail || '').trim().toLowerCase(); rec.agenteNome = d.agenteNome || ''; }
+  // Transportadora: presente no payload → define/troca (e tira o motorista); null → volta a motorista próprio.
+  if (d.transportadora !== undefined) {
+    rec.transportadora = limparTransportadora(d.transportadora);
+    if (rec.transportadora) { rec.agenteEmail = ''; rec.agenteNome = ''; }
+    else delete rec.transportadora;
+  }
   rec.atualizadoEm = agora();
   if (env.PORTAL_KV) {
     await env.PORTAL_KV.put(`os:${id}`, JSON.stringify(rec));
     const idx = await listarColetasOS(env); const i = idx.findIndex((x) => x.id === id);
-    if (i >= 0) { idx[i].cidade = cidadeDoEndereco(rec.endereco); idx[i].dataAgendada = rec.dataAgendada; idx[i].agenteNome = rec.agenteNome; idx[i].agenteEmail = rec.agenteEmail; if (!idx[i].clienteDoc && rec.clienteDoc) idx[i].clienteDoc = rec.clienteDoc; await salvarIndiceOS(env, idx); }
+    if (i >= 0) { idx[i].cidade = cidadeDoEndereco(rec.endereco); idx[i].dataAgendada = rec.dataAgendada; idx[i].agenteNome = rec.agenteNome; idx[i].agenteEmail = rec.agenteEmail; if (rec.transportadora) idx[i].transp = rec.transportadora.nome; else delete idx[i].transp; if (!idx[i].clienteDoc && rec.clienteDoc) idx[i].clienteDoc = rec.clienteDoc; await salvarIndiceOS(env, idx); }
   }
   return rec;
 }
@@ -366,7 +394,7 @@ export function paginaColetasLista(user, coletas, q, cliCtx, negocios, aba) {
   const vazioMsg = comAbas ? (q ? `Nenhuma coleta ${rotuloAba} encontrada para “${esc(q)}”.` : `Nenhuma coleta ${rotuloAba} no momento.`) : (q ? 'Nenhuma coleta encontrada para essa busca.' : 'Nenhuma coleta ainda.<br>Abra uma coleta a partir de um cliente no Cadastro.');
   const linhas = lista.length ? lista.map((c) => `<a href="/coletas/os?id=${esc(c.id)}" style="display:flex;justify-content:space-between;align-items:center;gap:12px;text-decoration:none;background:#fff;border:1px solid #E4EBE9;border-radius:12px;padding:13px 15px;margin-bottom:9px">
       <div style="min-width:0"><div style="font-size:14px;font-weight:800;color:#10262B">${esc(c.numero)} <span style="font-weight:600;color:#7c8a87">· ${esc(c.clienteNome || '')}</span></div>
-      <div style="font-size:12px;color:#7c8a87;margin-top:3px">${c.dataAgendada ? '📅 ' + esc(dataBR(c.dataAgendada)) : 'sem data'}${c.agenteNome ? ' · 🚚 ' + esc(c.agenteNome) : ''}${c.cidade ? ' · ' + esc(c.cidade) : ''}</div></div>
+      <div style="font-size:12px;color:#7c8a87;margin-top:3px">${c.dataAgendada ? '📅 ' + esc(dataBR(c.dataAgendada)) : 'sem data'}${c.agenteNome ? ' · 🚚 ' + esc(c.agenteNome) : ''}${c.transp ? ' · 🚛 ' + esc(c.transp) : ''}${c.cidade ? ' · ' + esc(c.cidade) : ''}</div></div>
       <span style="flex:none;display:flex;align-items:center;gap:6px">${c.reagendar ? '<span style="font-size:10px;font-weight:800;color:#8A6A16;background:#FFF4DE;border-radius:20px;padding:3px 9px">↩︎ REAGENDAR</span>' : ''}${pill(c.status)}</span>
     </a>`).join('') : `<div class="card" style="text-align:center;color:#8fa39f;font-size:13.5px">${vazioMsg}</div>`;
   return `${head('Coletas')}<body>${topo('coletas')}
@@ -422,7 +450,18 @@ export function paginaGerarColeta(user, cliente, agentes, patrocinadores, veicul
     <div style="font-size:11px;color:#9aa7a4;margin:-4px 0 4px">Aparece item a item na Carta de Descarte e no Manifesto. Formato: <b>nome ; quantidade ; valor</b> — o <b>valor (R$) é opcional</b> e sai discriminado no documento (ex.: <i>Pilhas ; 50 ; 120,00</i>). Se deixar em branco, usa o material declarado.</div>
     <div class="g2"><div><label>Quantidade estimada</label><input id="quantidade" placeholder="ex.: ~500 kg (3 pallets)"></div>
     <div><label>Acondicionamento</label><input id="acondicionamento" placeholder="ex.: paletizado / caixas"></div></div>
-    <div class="g2"><div><label>Motorista</label><select id="agente">${optAgentes}</select></div><div><label>Veículo</label><select id="veiculo">${optVeiculos}</select></div></div>
+    <label>Quem faz a coleta?</label>
+    <select id="quemColeta" onchange="toggleTransp()">
+      <option value="motorista">🚚 Motorista da Ecobraz</option>
+      <option value="transportadora">🚛 Transportadora (terceirizada)</option>
+    </select>
+    <div id="boxMotorista" class="g2" style="margin-top:8px"><div><label>Motorista</label><select id="agente">${optAgentes}</select></div><div><label>Veículo</label><select id="veiculo">${optVeiculos}</select></div></div>
+    <div id="boxTransp" style="display:none;margin-top:8px;border:1px solid #cfe0dd;border-radius:12px;padding:12px 14px;background:#FBFDFC">
+      <div class="g2"><div><label>Transportadora *</label><input id="tNome" placeholder="Razão social da transportadora"></div><div><label>CNPJ (opcional)</label><input id="tCnpj" placeholder="00.000.000/0000-00"></div></div>
+      <div class="g2"><div><label>Placa do veículo (opcional)</label><input id="tPlaca" placeholder="ABC-1D23"></div><div><label>Motorista da transportadora (opcional)</label><input id="tMot" placeholder="Nome de quem dirige"></div></div>
+      <label>Telefone (opcional)</label><input id="tFone" placeholder="(11) 90000-0000">
+      <div style="font-size:11px;color:#9aa7a4;margin-top:6px">Coleta por transportadora <b>não aparece no app dos motoristas</b>. Nos documentos (Manifesto), o <b>Transportador</b> sai com os dados dela.</div>
+    </div>
     <label>Observações / instruções de acesso</label><textarea id="obs" rows="5">${esc(cliente.obsColeta || '')}</textarea>
     <div style="font-size:11px;color:#9aa7a4;margin:-4px 0 4px">Pode colar texto longo (até 4.000 caracteres) — as quebras de linha são preservadas no documento da OS. Planilha/PDF do cliente: anexe na tela da OS depois de criar (aparece no documento).</div>
     <label style="color:#8a6a16">🔒 Observação interna (só a equipe vê)</label><textarea id="obsInterna" rows="3" style="border-color:#eadfb0;background:#FFFDF5"></textarea>
@@ -445,13 +484,16 @@ export function paginaGerarColeta(user, cliente, agentes, patrocinadores, veicul
 <script>
 function g(id){var el=document.getElementById(id);return el?el.value.trim():'';}
 function togglePatro(){var on=document.getElementById('patroOn').checked;document.getElementById('patroBox').style.display=on?'block':'none';}
-function gerar(){var ag=g('agente').split('|');
+function toggleTransp(){var t=g('quemColeta')==='transportadora';document.getElementById('boxMotorista').style.display=t?'none':'grid';document.getElementById('boxTransp').style.display=t?'block':'none';}
+function gerar(){var ag=g('agente').split('|');var ehTransp=g('quemColeta')==='transportadora';
+  if(ehTransp&&!g('tNome')){document.getElementById('m').textContent='Informe o nome da transportadora.';return;}
   var certs=[].slice.call(document.querySelectorAll('.cert:checked')).map(function(c){return c.value;});
   var rec={clienteId:'${esc(cliente.id)}',clienteNome:${JSON.stringify(nome)},clienteDoc:${JSON.stringify(cliente.tipo === 'PJ' ? (cliente.cnpj || '') : (cliente.cpf || ''))},
     endereco:g('endereco'),dataAgendada:g('data'),janela:g('janela'),contato:g('contato'),
     material:g('material'),quantidade:g('quantidade'),acondicionamento:g('acondicionamento'),obs:g('obs'),obsInterna:g('obsInterna'),
-    itensTexto:g('itens'),veiculoPlaca:g('veiculo'),certificados:certs,
-    agenteEmail:ag[0]||'',agenteNome:ag[1]||''};
+    itensTexto:g('itens'),veiculoPlaca:ehTransp?'':g('veiculo'),certificados:certs,
+    agenteEmail:ehTransp?'':(ag[0]||''),agenteNome:ehTransp?'':(ag[1]||''),
+    transportadora:ehTransp?{nome:g('tNome'),cnpj:g('tCnpj'),placa:g('tPlaca'),motorista:g('tMot'),fone:g('tFone')}:null};
   var pOn=document.getElementById('patroOn');
   if(pOn&&pOn.checked){var pp=g('patro').split('|');if(!pp[0]){document.getElementById('m').textContent='Escolha a empresa patrocinadora ou desmarque o patrocínio.';return;}rec.patrocinadorId=pp[0];rec.patrocinadorNome=pp[1]||'';}
   if(!rec.endereco){document.getElementById('m').textContent='Informe o endereço da coleta.';return;}
@@ -556,7 +598,9 @@ export function paginaColetaOSDetalhe(user, os, acomp, extras) {
       ${linha('Endereço da coleta', os.endereco)}
       ${linha('Data da coleta', [dataBR(os.dataAgendada), os.janela].filter(Boolean).join(' · '))}
       ${linha('Contato no local', os.contato)}
-      ${linha('Motorista', os.agenteNome)}
+      ${os.transportadora
+        ? linha('Transportadora', [os.transportadora.nome, os.transportadora.cnpj ? 'CNPJ ' + os.transportadora.cnpj : '', os.transportadora.placa ? 'placa ' + os.transportadora.placa : '', os.transportadora.motorista ? 'motorista ' + os.transportadora.motorista : '', os.transportadora.fone].filter(Boolean).join(' · '))
+        : linha('Motorista', os.agenteNome)}
       ${linha('Material', os.material)}${(os.itens && os.itens.length) ? linha('Equipamentos', os.itens.map((i) => `${i.nome} (${i.qtd})${Number(i.valor) > 0 ? ' — R$ ' + brl(i.valor) : ''}`).join(' · ')) : ''}${linha('Quantidade', os.quantidade)}${linha('Acondicionamento', os.acondicionamento)}
       ${linha('Observações', os.obs)}
       ${os.obsInterna ? `<tr><td style="padding:8px 0;border-top:1px solid #EEF1F0;color:#8a6a16;width:38%;font-weight:700">🔒 Interna (equipe)</td><td style="padding:8px 0;border-top:1px solid #EEF1F0;font-weight:600;white-space:pre-wrap;word-break:break-word;color:#7a5f13">${esc(os.obsInterna)}</td></tr>` : ''}
@@ -623,7 +667,12 @@ export function paginaColetaOSDetalhe(user, os, acomp, extras) {
     </div>
     <div style="font-size:11px;color:#9aa7a4;margin-top:5px">Escolha o <b>tipo</b> (laudo de descaracterização, destruição de dados, análise química…) antes de anexar — assim o documento fica identificado na auditoria.</div>
     ${ro ? '<div class="sec">Situação</div><div style="font-size:12.5px;color:#8fa39f">👁 Modo consulta (engenharia): você vê tudo desta OS e pode anexar laudos — mudanças de status e edição ficam com o escritório.</div>' : `<div class="sec">Situação</div>
-    ${os.status === 'agendada' ? (os.agenteEmail ? `<div style="background:#EAF2E6;border:1px solid #cfe6b8;border-radius:12px;padding:14px 16px;margin-bottom:10px">
+    ${os.status === 'agendada' && os.transportadora ? `<div style="background:#EAF2E6;border:1px solid #cfe6b8;border-radius:12px;padding:14px 16px;margin-bottom:10px">
+      <div style="font-size:13.5px;font-weight:800;color:#28413f">🚛 Coleta por transportadora — ${esc(os.transportadora.nome)}</div>
+      <div style="font-size:12.5px;color:#4F6469;margin:5px 0 11px">Ela <b>não aparece</b> no app dos motoristas. Quando a transportadora <b>sair para coletar</b>, coloque <b>Em transporte</b>; quando o material <b>chegar na Ecobraz</b>, marque <b>Concluída</b> — aí ela entra sozinha na fila da doca (Receber lote).</div>
+      <button class="btn btn-p" style="padding:11px 16px" onclick="setStatus('em_transporte')">Colocar em transporte →</button>
+    </div>` : ''}
+    ${os.status === 'agendada' && !os.transportadora ? (os.agenteEmail ? `<div style="background:#EAF2E6;border:1px solid #cfe6b8;border-radius:12px;padding:14px 16px;margin-bottom:10px">
       <div style="font-size:13.5px;font-weight:800;color:#28413f">🚚 Liberar para o motorista${os.agenteNome ? ` — ${esc(os.agenteNome)}` : ''}</div>
       <div style="font-size:12.5px;color:#4F6469;margin:5px 0 11px">Enquanto está <b>Agendada</b>, esta coleta <b>não aparece</b> no app do motorista. Coloque <b>Em transporte</b> para ela entrar só na tela dele.</div>
       <button class="btn btn-p" style="padding:11px 16px" onclick="setStatus('em_transporte')">Colocar em transporte →</button>
@@ -639,9 +688,9 @@ export function paginaColetaOSDetalhe(user, os, acomp, extras) {
     <div id="m" style="font-size:12.5px;color:#4F6469;margin-top:10px"></div>`}
   </div>
 </div>
-<script>var TEM_MOTORISTA=${os.agenteEmail ? 'true' : 'false'};
+<script>var TEM_MOTORISTA=${os.agenteEmail ? 'true' : 'false'};var TEM_TRANSP=${os.transportadora ? 'true' : 'false'};
 function salvarPesoReal(){var i=document.getElementById('pesoReal'),m=document.getElementById('pesoMsg');if(!i)return;if(!i.value.trim()){if(m)m.textContent='Digite o peso.';return;}if(m)m.textContent='Salvando…';
-  fetch('/api/coletas/peso-real',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({osId:'${esc(os.id)}',kg:i.value})}).then(function(r){return r.json();}).then(function(j){if(j.ok){if(m)m.textContent='✓ salvo';setTimeout(function(){location.reload();},600);}else{if(m)m.textContent=j.message||'Falha ao salvar.';}}).catch(function(){if(m)m.textContent='Sem conexão.';});}function setStatus(s){if(s==='em_transporte'&&!TEM_MOTORISTA&&!confirm('Esta coleta não tem motorista escolhido. Se colocar em transporte assim, ela NÃO vai aparecer para nenhum motorista. O ideal é Editar e escolher o motorista antes. Continuar mesmo assim?'))return;if(s==='cancelada'&&!confirm('Cancelar esta coleta? Ela sai da lista principal, mas fica guardada no histórico (dá pra reativar depois).'))return;document.getElementById('m').textContent='Salvando…';fetch('/api/coletas/status',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:'${esc(os.id)}',status:s})}).then(r=>r.json()).then(j=>{if(j.ok){location.reload();}else{document.getElementById('m').textContent='Falha.';}}).catch(()=>document.getElementById('m').textContent='Sem conexão.');}
+  fetch('/api/coletas/peso-real',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({osId:'${esc(os.id)}',kg:i.value})}).then(function(r){return r.json();}).then(function(j){if(j.ok){if(m)m.textContent='✓ salvo';setTimeout(function(){location.reload();},600);}else{if(m)m.textContent=j.message||'Falha ao salvar.';}}).catch(function(){if(m)m.textContent='Sem conexão.';});}function setStatus(s){if(s==='em_transporte'&&!TEM_MOTORISTA&&!TEM_TRANSP&&!confirm('Esta coleta não tem motorista escolhido. Se colocar em transporte assim, ela NÃO vai aparecer para nenhum motorista. O ideal é Editar e escolher o motorista (ou marcar a transportadora) antes. Continuar mesmo assim?'))return;if(s==='cancelada'&&!confirm('Cancelar esta coleta? Ela sai da lista principal, mas fica guardada no histórico (dá pra reativar depois).'))return;document.getElementById('m').textContent='Salvando…';fetch('/api/coletas/status',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:'${esc(os.id)}',status:s})}).then(r=>r.json()).then(j=>{if(j.ok){location.reload();}else{document.getElementById('m').textContent='Falha.';}}).catch(()=>document.getElementById('m').textContent='Sem conexão.');}
 function enviarAnexo(){var f=document.getElementById('arqFile'),tp=document.getElementById('arqTipo'),msg=document.getElementById('anexoMsg');if(!f.files||!f.files[0]){msg.textContent='Escolha um arquivo.';return;}if(f.files[0].size>15728640){msg.textContent='Arquivo muito grande (máx. 15 MB).';return;}if(!tp.value){msg.textContent='Escolha o tipo do documento.';return;}var fd=new FormData();fd.append('arquivo',f.files[0]);msg.textContent='Enviando…';fetch('/api/coletas/anexo?id=${esc(os.id)}&tipo='+encodeURIComponent(tp.value),{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(j){if(j.ok){location.reload();}else{msg.textContent=j.error||'Falha ao enviar.';}}).catch(function(){msg.textContent='Sem conexão.';});}
 function removerAnexo(k){if(!confirm('Remover este anexo?'))return;fetch('/api/coletas/anexo-remover',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:'${esc(os.id)}',key:k})}).then(function(r){return r.json();}).then(function(j){if(j.ok)location.reload();}).catch(function(){});}</script>
 </body></html>`;
@@ -671,7 +720,18 @@ export function paginaEditarColeta(user, os, contatos, agentes, veiculos) {
     <label>Material declarado</label><textarea id="material" rows="2">${esc(os.material || '')}</textarea>
     <label>Equipamentos item a item <span style="color:#9aa7a4;font-weight:400">(um por linha — ex.: Monitor LCD ; 5 ; 120,00)</span></label><textarea id="itens" rows="4">${esc(itensTxt)}</textarea>
     <div class="g2"><div><label>Quantidade estimada</label><input id="quantidade" value="${esc(os.quantidade || '')}"></div><div><label>Acondicionamento</label><input id="acondicionamento" value="${esc(os.acondicionamento || '')}"></div></div>
-    <div class="g2"><div><label>Motorista</label><select id="agente">${optAgentes}</select></div><div><label>Veículo</label><select id="veiculo">${optVeiculos}</select></div></div>
+    <label>Quem faz a coleta?</label>
+    <select id="quemColeta" onchange="toggleTransp()">
+      <option value="motorista"${os.transportadora ? '' : ' selected'}>🚚 Motorista da Ecobraz</option>
+      <option value="transportadora"${os.transportadora ? ' selected' : ''}>🚛 Transportadora (terceirizada)</option>
+    </select>
+    <div id="boxMotorista" class="g2" style="margin-top:8px;${os.transportadora ? 'display:none' : ''}"><div><label>Motorista</label><select id="agente">${optAgentes}</select></div><div><label>Veículo</label><select id="veiculo">${optVeiculos}</select></div></div>
+    <div id="boxTransp" style="${os.transportadora ? '' : 'display:none;'}margin-top:8px;border:1px solid #cfe0dd;border-radius:12px;padding:12px 14px;background:#FBFDFC">
+      <div class="g2"><div><label>Transportadora *</label><input id="tNome" value="${esc((os.transportadora && os.transportadora.nome) || '')}" placeholder="Razão social da transportadora"></div><div><label>CNPJ (opcional)</label><input id="tCnpj" value="${esc((os.transportadora && os.transportadora.cnpj) || '')}" placeholder="00.000.000/0000-00"></div></div>
+      <div class="g2"><div><label>Placa do veículo (opcional)</label><input id="tPlaca" value="${esc((os.transportadora && os.transportadora.placa) || '')}" placeholder="ABC-1D23"></div><div><label>Motorista da transportadora (opcional)</label><input id="tMot" value="${esc((os.transportadora && os.transportadora.motorista) || '')}" placeholder="Nome de quem dirige"></div></div>
+      <label>Telefone (opcional)</label><input id="tFone" value="${esc((os.transportadora && os.transportadora.fone) || '')}" placeholder="(11) 90000-0000">
+      <div style="font-size:11px;color:#9aa7a4;margin-top:6px">Coleta por transportadora <b>não aparece no app dos motoristas</b>. Nos documentos (Manifesto), o <b>Transportador</b> sai com os dados dela.</div>
+    </div>
     <label>Observações / instruções de acesso</label><textarea id="obs" rows="5">${esc(os.obs || '')}</textarea>
     <div style="font-size:11px;color:#9aa7a4;margin:-4px 0 4px">Pode colar texto longo (até 4.000 caracteres) — as quebras de linha são preservadas no documento da OS.</div>
     <label style="color:#8a6a16">🔒 Observação interna (só a equipe vê)</label><textarea id="obsInterna" rows="3" style="border-color:#eadfb0;background:#FFFDF5">${esc(os.obsInterna || '')}</textarea>
@@ -723,9 +783,13 @@ export function paginaEditarColeta(user, os, contatos, agentes, veiculos) {
 </div>
 <script>
 function g(id){var el=document.getElementById(id);return el?el.value.trim():'';}
+function toggleTransp(){var t=g('quemColeta')==='transportadora';document.getElementById('boxMotorista').style.display=t?'none':'grid';document.getElementById('boxTransp').style.display=t?'block':'none';}
 function salvar(){var ag=g('agente').split('|');
   var certs=[].slice.call(document.querySelectorAll('.cert:checked')).map(function(c){return c.value;});
-  var rec={id:'${esc(os.id)}',endereco:g('endereco'),dataAgendada:g('data'),janela:g('janela'),contato:g('contato'),material:g('material'),quantidade:g('quantidade'),acondicionamento:g('acondicionamento'),obs:g('obs'),obsInterna:g('obsInterna'),itensTexto:g('itens'),veiculoPlaca:g('veiculo'),certificados:certs,agenteEmail:ag[0]||'',agenteNome:ag[1]||''};
+  var ehTransp=g('quemColeta')==='transportadora';
+  if(ehTransp&&!g('tNome')){document.getElementById('m').textContent='Informe o nome da transportadora.';return;}
+  var rec={id:'${esc(os.id)}',endereco:g('endereco'),dataAgendada:g('data'),janela:g('janela'),contato:g('contato'),material:g('material'),quantidade:g('quantidade'),acondicionamento:g('acondicionamento'),obs:g('obs'),obsInterna:g('obsInterna'),itensTexto:g('itens'),veiculoPlaca:ehTransp?'':g('veiculo'),certificados:certs,agenteEmail:ehTransp?'':(ag[0]||''),agenteNome:ehTransp?'':(ag[1]||''),
+    transportadora:ehTransp?{nome:g('tNome'),cnpj:g('tCnpj'),placa:g('tPlaca'),motorista:g('tMot'),fone:g('tFone')}:null};
   if(!rec.endereco){document.getElementById('m').textContent='Informe o endereço da coleta.';return;}
   document.getElementById('m').textContent='Salvando…';
   fetch('/api/coletas/editar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(rec)}).then(function(r){return r.json();}).then(function(j){if(j.ok){location.href='/coletas/os?id=${esc(os.id)}';}else{document.getElementById('m').textContent=j.message||j.error||'Erro ao salvar.';}}).catch(function(){document.getElementById('m').textContent='Sem conexão.';});}
@@ -858,7 +922,10 @@ function docHTML(titulo, os, seloUrl, corpo) {
 const avisoRascunho = (os) => (!os.status || os.status === 'agendada') ? `<div style="background:#FFF4DE;border:1px solid #f0dca6;border-radius:10px;padding:11px 14px;margin-bottom:10px;font-size:12px;color:#7a5a12;line-height:1.5"><b>⚠ Rascunho — não liberar ao cliente.</b> Este documento só deve ser entregue ao cliente quando a coleta estiver <b>“Em transporte”</b>.</div>` : '';
 
 export function paginaCartaDescarte(os, seloUrl, registro, fotoUrl, assinaturaUrl) {
-  const veic = `Placa: ${esc(os.veiculoPlaca || '________________')}   ·   Motorista: ${esc(os.agenteNome || '________________')}`;
+  const tp = os.transportadora;
+  const veic = tp
+    ? `Transportadora: ${esc(tp.nome)}${tp.cnpj ? ` (CNPJ ${esc(tp.cnpj)})` : ''}   ·   Placa: ${esc(tp.placa || os.veiculoPlaca || '________________')}   ·   Motorista: ${esc(tp.motorista || '________________')}`
+    : `Placa: ${esc(os.veiculoPlaca || '________________')}   ·   Motorista: ${esc(os.agenteNome || '________________')}`;
   const r = registro || {};
   // Hora no fuso de Brasília (UTC-3, sem horário de verão).
   const hhd = (x) => { const d = new Date(x); if (!x || isNaN(d.getTime())) return ''; d.setUTCHours(d.getUTCHours() - 3); const p = (n) => String(n).padStart(2, '0'); return `${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`; };
@@ -885,11 +952,16 @@ export function paginaCartaDescarte(os, seloUrl, registro, fotoUrl, assinaturaUr
 
 export function paginaManifestoCarga(os, seloUrl) {
   const parte = (rot) => `<div style="flex:1;min-width:230px"><div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#93a6a2;margin-bottom:4px">${esc(rot)}</div><div style="font-size:12px;color:#28413f;line-height:1.5"><b>${esc(EMPRESA.razao)}</b><br>CNPJ ${esc(EMPRESA.cnpj)} · ${esc(EMPRESA.fone)}<br>${esc(EMPRESA.endereco)}</div></div>`;
+  // Com TRANSPORTADORA terceirizada, o Transportador do Manifesto é ELA (não a Ecobraz).
+  const tp = os.transportadora;
+  const parteTransp = tp
+    ? `<div style="flex:1;min-width:230px"><div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#93a6a2;margin-bottom:4px">Transportador</div><div style="font-size:12px;color:#28413f;line-height:1.5"><b>${esc(tp.nome)}</b>${tp.cnpj ? `<br>CNPJ ${esc(tp.cnpj)}` : ''}${tp.fone ? ` · ${esc(tp.fone)}` : ''}${tp.motorista ? `<br>Motorista: ${esc(tp.motorista)}` : ''}</div></div>`
+    : parte('Transportador');
   const corpo = `${avisoRascunho(os)}${blocoGerador(os)}
     ${eyebrowDoc('Descrição do material')}${tabelaItens(os)}
     ${eyebrowDoc('Transporte')}
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px 26px">${campoDoc('Veículo (placa)', os.veiculoPlaca)}${campoDoc('Motorista', os.agenteNome)}</div>
-    <div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:18px">${parte('Transportador')}${parte('Receptor')}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px 26px">${campoDoc('Veículo (placa)', tp ? (tp.placa || os.veiculoPlaca) : os.veiculoPlaca)}${campoDoc('Motorista', tp ? tp.motorista : os.agenteNome)}</div>
+    <div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:18px">${parteTransp}${parte('Receptor')}</div>
     ${os.patrocinadorNome ? blocoPatrocinioDoc(os) : ''}
     ${assinaturasDoc(os, [{ label: 'Gerador', slug: 'gerador' }, { label: 'Transportador', slug: 'transportador' }, { label: 'Receptor', slug: 'receptor' }])}`;
   return docHTML('Manifesto de Carga', os, seloUrl, corpo);
@@ -999,7 +1071,7 @@ export function paginaComprovanteOS(os, seloUrl) {
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:13px 26px">
         ${f('Cliente', os.clienteNome)}${f('Documento', os.clienteDoc)}
         ${f('Endereço da coleta', os.endereco, true)}
-        ${f('Contato no local', os.contato)}${f('Motorista', os.agenteNome)}
+        ${f('Contato no local', os.contato)}${os.transportadora ? f('Transportadora', os.transportadora.nome + (os.transportadora.cnpj ? ' · CNPJ ' + os.transportadora.cnpj : '') + (os.transportadora.motorista ? ' · ' + os.transportadora.motorista : '')) : f('Motorista', os.agenteNome)}
       </div>
       <div style="display:flex;align-items:center;gap:9px;margin:22px 0 12px"><span style="width:4px;height:16px;background:#92C430;border-radius:2px"></span><span style="font-size:12px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:#00333B">Coleta</span></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:13px 26px">
