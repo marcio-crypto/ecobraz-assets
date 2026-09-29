@@ -102,6 +102,45 @@ export async function resumoUso(env) {
   } catch { return vazio; }
 }
 
+// Estatística de ADOÇÃO do portal pelos clientes — para a diretoria e a conexão
+// com o Claude. Deriva tudo das marcas uso:c:{dia}:{doc} (janela de 60 dias) e,
+// como denominador, a BASE ATIVA (clientes com coleta/atendimento concluído nos
+// últimos 12 meses — Ploomes migrado + OSs novas), passada por quem chama.
+export async function estatisticaAdocao(env, baseAtiva12m) {
+  const out = { janelaDias: 60, distintos: 0, hoje: 0, semana: 0, mes: 0, recorrentes30: 0, rotina4sem: 0, novosSemana: 0, semanas: [], baseAtiva12m: baseAtiva12m ?? null, taxa30dPct: null };
+  if (!env.PORTAL_KV) return out;
+  try {
+    const hoje = dataBrasil();
+    const d7 = new Set(seq(7)), d30 = new Set(seq(30));
+    const hojeMs = Date.parse(hoje + 'T00:00:00Z');
+    const semanaDe = (dia) => Math.floor((hojeMs - Date.parse(dia + 'T00:00:00Z')) / (7 * 86400e3)); // 0 = últimos 7 dias
+    const porDoc = new Map();
+    for (const k of await listarPrefixo(env, 'uso:c:')) {
+      const m = k.name.match(/^uso:c:(\d{4}-\d{2}-\d{2}):(.+)$/);
+      if (!m) continue;
+      const c = porDoc.get(m[2]) || [];
+      c.push(m[1]); porDoc.set(m[2], c);
+    }
+    const porSemana = new Map(); // 0..7 → Set de docs
+    for (const [doc, dias] of porDoc) {
+      out.distintos++;
+      dias.sort();
+      if (dias[dias.length - 1] === hoje) out.hoje++;
+      const em7 = dias.some((d) => d7.has(d)); if (em7) out.semana++;
+      const dias30 = dias.filter((d) => d30.has(d));
+      if (dias30.length) out.mes++;
+      if (dias30.length >= 3) out.recorrentes30++;
+      const semanasDoDoc = new Set(dias.map(semanaDe).filter((s) => s >= 0 && s <= 3));
+      if (semanasDoDoc.size >= 2) out.rotina4sem++; // entrou em 2+ das últimas 4 semanas
+      if (d7.has(dias[0])) out.novosSemana++; // primeiro registro (na janela) nesta semana
+      for (const d of dias) { const s = semanaDe(d); if (s >= 0 && s <= 7) { if (!porSemana.has(s)) porSemana.set(s, new Set()); porSemana.get(s).add(doc); } }
+    }
+    out.semanas = Array.from({ length: 8 }, (_, s) => ({ semanasAtras: s, clientes: (porSemana.get(s) || new Set()).size })).reverse();
+    if (Number(baseAtiva12m) > 0) out.taxa30dPct = Math.round((out.mes / Number(baseAtiva12m)) * 1000) / 10;
+  } catch { /* devolve o que tiver */ }
+  return out;
+}
+
 // Conta itens (leads, OS…) por período pelo campo de data + série dos últimos 14 dias.
 export function contarPorPeriodo(itens = [], campo = 'criadoEm') {
   const hoje = dataBrasil();

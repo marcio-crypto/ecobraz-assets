@@ -13,6 +13,7 @@
 // Protocolo: MCP "Streamable HTTP" (JSON-RPC 2.0 via POST; resposta JSON única).
 
 import { listarColetasOS } from './coletas.js';
+import { estatisticaAdocao } from './uso.js';
 
 const digits = (s) => String(s || '').replace(/\D/g, '');
 const fmtCNPJ = (d) => d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
@@ -170,6 +171,27 @@ async function ferrColetas(env, args) {
   return oss.slice(0, limite).map((o) => `• ${o.numero} — ${o.clienteNome || '—'} — ${STATUS_ROTULO[o.status] || o.status}${o.dataAgendada ? ` — ${dataBR(o.dataAgendada)}` : ''}${o.transp ? ` — 🚛 ${o.transp}` : (o.agenteNome ? ` — 🚚 ${o.agenteNome}` : '')}`).join('\n');
 }
 
+// Base ATIVA: clientes (PJ e PF) com coleta/atendimento CONCLUÍDO nos últimos 12
+// meses — denominador honesto para a taxa de adoção do portal.
+async function baseAtiva12m(env) {
+  const docs = new Set();
+  const corte = new Date(Date.now() - 365 * 86400e3).toISOString().slice(0, 10);
+  if (env.DB_PLOOMES) {
+    try {
+      const r = await env.DB_PLOOMES.prepare(
+        `SELECT DISTINCT REPLACE(REPLACE(REPLACE(COALESCE(e.documento,''),'.',''),'/',''),'-','') AS doc
+           FROM negocios g
+           JOIN contatos c ON c.ploomes_id = g.contact_id
+           JOIN contatos e ON e.ploomes_id = COALESCE(NULLIF(c.company_id, 0), c.ploomes_id)
+          WHERE g.status_id = 2 AND g.criado_em >= ?1 AND COALESCE(e.documento,'') <> ''`
+      ).bind(corte).all();
+      for (const row of (r && r.results) || []) { const d = digits(row.doc); if (d.length === 11 || d.length === 14) docs.add(d); }
+    } catch { /* segue com as OSs */ }
+  }
+  try { for (const o of await listarColetasOS(env)) { if (o.status !== 'concluida') continue; const d = digits(o.clienteDoc); const q = String(o.dataAgendada || o.criadoEm || '').slice(0, 10); if ((d.length === 11 || d.length === 14) && q >= corte) docs.add(d); } } catch { /* segue */ }
+  return docs.size;
+}
+
 async function ferrVisaoGeral(env) {
   const linhas = [];
   try {
@@ -182,6 +204,16 @@ async function ferrVisaoGeral(env) {
     for (const o of oss) porStatus[o.status] = (porStatus[o.status] || 0) + 1;
     linhas.push(`Ordens de Coleta no sistema: ${oss.length}` + (oss.length ? ' — ' + Object.entries(porStatus).map(([s, q]) => `${STATUS_ROTULO[s] || s}: ${q}`).join(' · ') : ''));
   } catch { linhas.push('Contagem de coletas indisponível.'); }
+  // Adoção do portal pelos CLIENTES (medição ligada em ~09/08/2026; janela 60 dias;
+  // "dia ativo" = abriu o portal logado naquele dia, contado 1x/dia).
+  try {
+    const base = await baseAtiva12m(env);
+    const a = await estatisticaAdocao(env, base);
+    linhas.push(`\n📈 ADOÇÃO DO PORTAL (clientes): hoje ${a.hoje} · últimos 7 dias ${a.semana} · últimos 30 dias ${a.mes} clientes distintos · ${a.distintos} distintos na janela de ${a.janelaDias} dias`);
+    linhas.push(`Base ativa (12 meses): ${base} clientes${a.taxa30dPct != null ? ` → taxa de adoção 30d: ${String(a.taxa30dPct).replace('.', ',')}%` : ''}`);
+    linhas.push(`Rotina: ${a.rotina4sem} clientes entraram em 2+ das últimas 4 semanas · ${a.recorrentes30} recorrentes (3+ dias ativos no mês) · ${a.novosSemana} entraram pela 1ª vez (na janela) nesta semana`);
+    linhas.push('Clientes distintos por semana (da mais antiga p/ a atual): ' + a.semanas.map((s) => s.clientes).join(' → '));
+  } catch { linhas.push('Adoção do portal: medição indisponível agora.'); }
   return linhas.join('\n');
 }
 
