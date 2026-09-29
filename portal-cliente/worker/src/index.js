@@ -82,6 +82,7 @@ import { listarColetasOS, lerColetaOS, seloOS, criarColetaOS, atualizarStatusOS,
 import { listarVeiculos, lerVeiculo, salvarVeiculo, paginaFrota, paginaVeiculoForm, lerJornadaAtiva, abrirJornada, fecharJornada, registrarAbastecimento, tagColetaComVeiculo, servirFotoJornada, bannerJornada, paginaAbrirDia, paginaFecharDia, paginaAbastecer, placaDaColeta } from './frota.js';
 import { carregarEquipeNoEnv, listarUsuarios, lerUsuario, salvarUsuario, importarUsuarios, paginaEquipe, paginaUsuarioForm, paginaEquipeImportar } from './equipe.js';
 import { agentesDe } from './agente.js';
+import { atenderMcpClaude, lerConexaoClaude, gerarConexaoClaude, revogarConexaoClaude, paginaConexaoClaude } from './mcp-claude.js';
 import { servirIcone, servirManifest, servirServiceWorker } from './pwa.js';
 import { googleConfigurado, iniciarGoogle, callbackGoogle, botaoGoogle } from './google-auth.js';
 
@@ -839,6 +840,25 @@ export default {
       }
 
       // Painel da Diretoria (visão macro). Exige sessão de diretoria.
+      // Conexão da base de clientes com o Claude (claude.ai) — endpoint MCP (só
+      // leitura, chave na URL validada por hash) + tela da diretoria para gerar/revogar.
+      if (pathname.startsWith('/mcp-claude/')) return await atenderMcpClaude(request, env, url);
+      if (pathname === '/diretoria/conexao-claude' && request.method === 'GET') {
+        if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
+        return html(paginaConexaoClaude(diretoria, await lerConexaoClaude(env)));
+      }
+      if (pathname === '/api/diretoria/conexao-claude' && request.method === 'POST') {
+        if (!diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        const b = await request.json().catch(() => ({}));
+        if (b.acao === 'revogar') { await revogarConexaoClaude(env); console.log('mcp_claude_revogado', { por: diretoria.email }); return json({ ok: true }); }
+        if (b.acao === 'gerar') {
+          const chave = await gerarConexaoClaude(env, diretoria.email);
+          const base = String(env.PORTAL_BASE_URL || `${url.origin}/`).replace(/\/+$/, '');
+          console.log('mcp_claude_gerado', { por: diretoria.email }); // nunca a chave
+          return json({ ok: true, url: `${base}/mcp-claude/${chave}` });
+        }
+        return json({ ok: false, error: 'acao' }, 400);
+      }
       if (pathname === '/diretoria' && request.method === 'GET') {
         if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
         const [dados, leadsIdx, coletasIdx, uso] = await Promise.all([reunirDados(env), listarLeads(env), listarColetasOS(env), resumoUso(env)]);
