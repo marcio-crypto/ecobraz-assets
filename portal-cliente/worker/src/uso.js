@@ -137,6 +137,9 @@ export async function estatisticaAdocao(env, baseAtiva12m) {
     }
     out.semanas = Array.from({ length: 8 }, (_, s) => ({ semanasAtras: s, clientes: (porSemana.get(s) || new Set()).size })).reverse();
     if (Number(baseAtiva12m) > 0) out.taxa30dPct = Math.round((out.mes / Number(baseAtiva12m)) * 1000) / 10;
+    // Documentos (CNPJ/CPF) que acessaram nos últimos 30 dias — para cruzar com
+    // quem TEVE coleta no mês (adoção por episódio; serviço por demanda).
+    out.docsMes = [...porDoc.entries()].filter(([, dias]) => dias.some((d) => d30.has(d))).map(([doc]) => doc);
   } catch { /* devolve o que tiver */ }
   return out;
 }

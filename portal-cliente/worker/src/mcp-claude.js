@@ -213,6 +213,24 @@ async function ferrVisaoGeral(env) {
     linhas.push(`Base ativa (12 meses): ${base} clientes${a.taxa30dPct != null ? ` → taxa de adoção 30d: ${String(a.taxa30dPct).replace('.', ',')}%` : ''}`);
     linhas.push(`Rotina: ${a.rotina4sem} clientes entraram em 2+ das últimas 4 semanas · ${a.recorrentes30} recorrentes (3+ dias ativos no mês) · ${a.novosSemana} entraram pela 1ª vez (na janela) nesta semana`);
     linhas.push('Clientes distintos por semana (da mais antiga p/ a atual): ' + a.semanas.map((s) => s.clientes).join(' → '));
+    // ADOÇÃO POR EPISÓDIO — a régua certa para serviço por demanda (o cliente só
+    // tem motivo de entrar quando TEM coleta): dos clientes com OS no mês, quantos
+    // usaram o portal?
+    try {
+      const corte30 = new Date(Date.now() - 30 * 86400e3).toISOString().slice(0, 10);
+      const comColetaMes = new Set();
+      for (const o of await listarColetasOS(env)) {
+        if (o.status === 'cancelada') continue;
+        const d = digits(o.clienteDoc);
+        if (d.length !== 11 && d.length !== 14) continue;
+        const quando = String(o.dataAgendada || o.criadoEm || '').slice(0, 10);
+        if (quando >= corte30) comColetaMes.add(d);
+      }
+      const acessaram = new Set(a.docsMes || []);
+      const usaram = [...comColetaMes].filter((d) => acessaram.has(d)).length;
+      const pct = comColetaMes.size ? Math.round((usaram / comColetaMes.size) * 1000) / 10 : null;
+      linhas.push(`🎯 ADOÇÃO POR EPISÓDIO: dos ${comColetaMes.size} clientes COM coleta nos últimos 30 dias, ${usaram} entraram no portal${pct != null ? ` (${String(pct).replace('.', ',')}%)` : ''} — régua certa para serviço por demanda.`);
+    } catch { /* segue sem o corte por episódio */ }
   } catch { linhas.push('Adoção do portal: medição indisponível agora.'); }
   return linhas.join('\n');
 }
