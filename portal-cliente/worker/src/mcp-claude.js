@@ -49,7 +49,68 @@ const FERRAMENTAS = [
   { name: 'detalhe_cliente', description: 'Ficha de um cliente pelo CNPJ (ou CPF): dados cadastrais, contatos vinculados e as últimas Ordens de Coleta.', inputSchema: { type: 'object', properties: { documento: { type: 'string', description: 'CNPJ ou CPF, com ou sem pontuação' } }, required: ['documento'] } },
   { name: 'coletas', description: 'Lista Ordens de Coleta (OS) recentes. Filtros opcionais: status (agendada, em_transporte, concluida, cancelada) e nome do cliente.', inputSchema: { type: 'object', properties: { status: { type: 'string' }, cliente: { type: 'string' }, limite: { type: 'number', description: 'máx. 20' } } } },
   { name: 'visao_geral', description: 'Números gerais da base da Ecobraz: total de clientes (empresas e pessoas) e coletas por status.', inputSchema: { type: 'object', properties: {} } },
+  { name: 'clientes_pj_por_ultima_coleta', description: 'REATIVAÇÃO: empresas (PJ) cuja ÚLTIMA coleta/atendimento concluído caiu entre duas datas. Considera as Ordens de Coleta do sistema novo E o histórico migrado do Ploomes. Paginada (50 por página), da mais recente para a mais antiga, com razão social, CNPJ, contato e a data da última atividade.', inputSchema: { type: 'object', properties: { de: { type: 'string', description: 'data inicial (AAAA-MM-DD ou AAAA-MM)' }, ate: { type: 'string', description: 'data final (AAAA-MM-DD ou AAAA-MM)' }, pagina: { type: 'number', description: 'página, a partir de 1 (50 por página)' } }, required: ['de', 'ate'] } },
 ];
+
+async function ferrPjUltimaColeta(env, args) {
+  const a = args || {};
+  const norm = (v, fim) => { const s = String(v || '').trim(); if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s; if (/^\d{4}-\d{2}$/.test(s)) return s + (fim ? '-31' : '-01'); return ''; };
+  const de = norm(a.de, false), ate = norm(a.ate, true);
+  if (!de || !ate) return 'Informe as datas como AAAA-MM-DD (ou AAAA-MM), ex.: de "2024-01" ate "2025-12".';
+  const pagina = Math.max(1, Math.floor(Number(a.pagina) || 1));
+  const POR_PAGINA = 50;
+  // Última atividade concluída por CNPJ: histórico Ploomes (negócios ganhos) + OSs novas.
+  const ultima = new Map(); // cnpj(14 díg.) → { quando: 'AAAA-MM-DD', origem }
+  const anota = (doc, quando, origem) => {
+    const d = digits(doc); const q = String(quando || '').slice(0, 10);
+    if (d.length !== 14 || !/^\d{4}-\d{2}-\d{2}$/.test(q)) return;
+    const atual = ultima.get(d);
+    if (!atual || q > atual.quando) ultima.set(d, { quando: q, origem });
+  };
+  if (env.DB_PLOOMES) {
+    try {
+      const r = await env.DB_PLOOMES.prepare(
+        `SELECT REPLACE(REPLACE(REPLACE(COALESCE(e.documento,''),'.',''),'/',''),'-','') AS doc, MAX(g.criado_em) AS ult
+           FROM negocios g
+           JOIN contatos c ON c.ploomes_id = g.contact_id
+           JOIN contatos e ON e.ploomes_id = COALESCE(NULLIF(c.company_id, 0), c.ploomes_id)
+          WHERE g.status_id = 2 AND COALESCE(e.documento,'') <> ''
+          GROUP BY 1`
+      ).all();
+      for (const row of (r && r.results) || []) anota(row.doc, row.ult, 'histórico');
+    } catch { /* histórico indisponível: segue só com as OSs */ }
+  }
+  try { for (const o of await listarColetasOS(env)) if (o.status === 'concluida') anota(o.clienteDoc, o.dataAgendada || o.criadoEm, o.numero || 'OS'); } catch { /* segue */ }
+  const alvo = [...ultima.entries()].filter(([, u]) => u.quando >= de && u.quando <= ate).sort((x, y) => y[1].quando.localeCompare(x[1].quando));
+  if (!alvo.length) return `Nenhuma empresa com última coleta/atendimento concluído entre ${de} e ${ate}.`;
+  const paginas = Math.ceil(alvo.length / POR_PAGINA);
+  const fatia = alvo.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA);
+  if (!fatia.length) return `Só existem ${paginas} página(s) para esse período (${alvo.length} empresas).`;
+  // Enriquecer a página com razão social e contato (empresa e, se faltar, uma pessoa vinculada).
+  const info = new Map();
+  if (env.DB_PLOOMES && fatia.length) {
+    try {
+      const docs = fatia.map(([d]) => d);
+      const ph = docs.map((_, i) => `?${i + 1}`).join(',');
+      const r = await env.DB_PLOOMES.prepare(`SELECT ploomes_id, documento, nome, nome_fantasia, email, telefone, cidade, uf FROM contatos WHERE REPLACE(REPLACE(REPLACE(COALESCE(documento,''),'.',''),'/',''),'-','') IN (${ph})`).bind(...docs).all();
+      for (const c of (r && r.results) || []) { const d = digits(c.documento); if (!info.has(d)) info.set(d, c); }
+      const semContato = [...info.values()].filter((c) => !c.email && !c.telefone).map((c) => c.ploomes_id);
+      if (semContato.length) {
+        const ph2 = semContato.map((_, i) => `?${i + 1}`).join(',');
+        const p = await env.DB_PLOOMES.prepare(`SELECT company_id, nome, email, telefone FROM contatos WHERE company_id IN (${ph2}) AND (COALESCE(email,'')<>'' OR COALESCE(telefone,'')<>'')`).bind(...semContato).all();
+        for (const pes of (p && p.results) || []) { const emp = [...info.values()].find((c) => c.ploomes_id === pes.company_id); if (emp && !emp._pessoa) emp._pessoa = pes; }
+      }
+    } catch { /* sem enriquecimento, lista mesmo assim */ }
+  }
+  const linhas = fatia.map(([d, u]) => {
+    const c = info.get(d);
+    const nome = (c && (c.nome || c.nome_fantasia)) || '(razão social não localizada)';
+    const pes = c && c._pessoa;
+    const contato = [c && c.email, c && c.telefone, pes && `contato: ${[pes.nome, pes.email, pes.telefone].filter(Boolean).join(' ')}`, c && c.cidade ? `${c.cidade}${c.uf ? '/' + c.uf : ''}` : ''].filter(Boolean).join(' · ');
+    return `• ${nome} — CNPJ ${fmtCNPJ(d)} — última: ${dataBR(u.quando)} (${u.origem})${contato ? ` — ${contato}` : ''}`;
+  });
+  return `${alvo.length} empresa(s) com última coleta/atendimento entre ${dataBR(de)} e ${dataBR(ate)} — página ${pagina} de ${paginas} (${POR_PAGINA}/página):\n` + linhas.join('\n') + (pagina < paginas ? `\n… peça a página ${pagina + 1} para continuar.` : '');
+}
 
 async function ferrBuscarClientes(env, args) {
   const termo = String((args && args.termo) || '').trim();
@@ -129,6 +190,7 @@ async function execFerramenta(env, nome, args) {
   if (nome === 'detalhe_cliente') return await ferrDetalheCliente(env, args);
   if (nome === 'coletas') return await ferrColetas(env, args);
   if (nome === 'visao_geral') return await ferrVisaoGeral(env);
+  if (nome === 'clientes_pj_por_ultima_coleta') return await ferrPjUltimaColeta(env, args);
   throw new Error(`Ferramenta desconhecida: ${nome}`);
 }
 
