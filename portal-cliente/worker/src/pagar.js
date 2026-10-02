@@ -47,7 +47,14 @@ input{width:100%;box-sizing:border-box;border:1px solid #DDE1E6;border-radius:10
   <div style="text-align:center;margin-bottom:14px"><span style="font-size:24px;font-weight:800;color:#00333B">ecobraz</span><span style="color:#92C430;font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin-left:8px">pagamento</span></div>
   ${corpo}
   <p style="text-align:center;font-size:11px;color:#9aa7a4;margin-top:16px">Pagamento processado por Mercado Pago e Stripe. A Ecobraz não vê os dados do seu cartão.</p>
-</div></body></html>`;
+</div>
+<script>/* Dedo-duro de erros (caso PROCISA 02/10: "deu erro" sem registro nenhum): erro
+de JavaScript na tela de pagamento vai para o monitor, mesmo sem o cliente reclamar. */
+(function(){function manda(o){try{var x=new XMLHttpRequest();x.open('POST','/api/monitor/erro',true);x.setRequestHeader('content-type','application/json');x.send(JSON.stringify(o));}catch(e){}}
+window.addEventListener('error',function(e){manda({pagina:location.pathname+location.search,onde:'js-pagar',mensagem:String((e&&e.message)||''),stack:String(e&&e.error&&e.error.stack||'').slice(0,800)});});
+window.addEventListener('unhandledrejection',function(e){manda({pagina:location.pathname+location.search,onde:'promise-pagar',mensagem:String((e&&e.reason&&e.reason.message)||(e&&e.reason)||'').slice(0,500)});});
+})();</script>
+</body></html>`;
 
 // Tela de escolha: Pix em destaque (aprovação na hora), cartão e boleto.
 export function paginaEscolherPagamento({ ref, valor, descricao, pixDisponivel, cartaoDisponivel }) {
