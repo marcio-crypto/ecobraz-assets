@@ -14,6 +14,7 @@
 
 import { listarColetasOS } from './coletas.js';
 import { estatisticaAdocao } from './uso.js';
+import { listarFalhas } from './monitor.js';
 
 const digits = (s) => String(s || '').replace(/\D/g, '');
 const fmtCNPJ = (d) => d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
@@ -231,6 +232,20 @@ async function ferrVisaoGeral(env) {
       const pct = comColetaMes.size ? Math.round((usaram / comColetaMes.size) * 1000) / 10 : null;
       linhas.push(`🎯 ADOÇÃO POR EPISÓDIO: dos ${comColetaMes.size} clientes COM coleta nos últimos 30 dias, ${usaram} entraram no portal${pct != null ? ` (${String(pct).replace('.', ',')}%)` : ''} — régua certa para serviço por demanda.`);
     } catch { /* segue sem o corte por episódio */ }
+  // Falhas recentes do monitor (sistema + navegador do cliente) — diagnóstico de
+  // problemas de pagamento/jornada sem esperar print. E-mail do cliente sai mascarado.
+  try {
+    const corte72 = Date.now() - 72 * 3600e3;
+    const recentes = (await listarFalhas(env, 20)).filter((f) => Date.parse(f.em || 0) >= corte72).slice(0, 8);
+    if (recentes.length) {
+      linhas.push('\n⚠️ FALHAS RECENTES (72h) — monitor do sistema:');
+      for (const f of recentes) {
+        const quando = String(f.em || '').replace('T', ' ').slice(0, 16) + ' UTC';
+        const quem = f.cliente ? ` · cliente @${String(f.cliente).split('@')[1] || '—'}` : '';
+        linhas.push(`• ${quando} · ${f.onde || f.tipo}${quem} — ${String(f.mensagem || f.detalhe || '').slice(0, 220)}${f.extra ? ` · ${String(f.extra).slice(0, 140)}` : ''}${f.pagina ? ` · pág.: ${String(f.pagina).slice(0, 80)}` : ''}`);
+      }
+    } else linhas.push('\n⚠️ Falhas recentes (72h): nenhuma registrada pelo monitor.');
+  } catch { /* monitor indisponível */ }
   } catch { linhas.push('Adoção do portal: medição indisponível agora.'); }
   return linhas.join('\n');
 }
