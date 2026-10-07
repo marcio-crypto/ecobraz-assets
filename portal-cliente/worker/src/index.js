@@ -78,7 +78,7 @@ import { amostraContatosPloomes, paginaAmostraContatos, importarLoteContatos, es
 import { importarLoteAnexos, importarLoteAnexosContatos, completarAnexos, importarAnexosJanela, reprocessarFalhas, importarLoteDocumentos, recuperarDocumentos, estatisticasArquivos, paginaMigrarArquivos, diagnosticoAnexos, paginaDiagAnexos } from './ploomes-arquivos.js';
 import { fiscalPermitido, nomeFiscal, listarNotas, lerNota, importarLote, vincularNota, sugerirVinculoSync, paginaFiscalLogin, paginaFiscalHome, paginaFiscalResultado, paginaFiscalNota } from './fiscal.js';
 import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, emailsDoCliente, reindexarEmailsClientes, backfillEnderecos, paginaManutencao, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, clienteDeLead, arquivosDoCliente, paginaLeads, paginaLeadDetalhe, paginaInicio, listarClientesD1, contagensClientesD1, lerClienteD1, negociosDoCliente, espelharClienteD1, sincronizarKVparaD1, lerNegocioDetalheD1, paginaOSDetalhe, curarContatosKV, classificarPedido, atualizarIndexLead, excluirLead } from './cadastro.js';
-import { listarColetasOS, lerColetaOS, seloOS, criarColetaOS, atualizarStatusOS, atualizarColetaOS, anexarTelemetriaOS, registrarAnexoColeta, removerAnexoColeta, paginaColetasLista, paginaGerarColeta, paginaEditarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga, definirCobrancaOS, marcarCobrancaPagaOS, definirMtrOS } from './coletas.js';
+import { listarColetasOS, lerColetaOS, seloOS, criarColetaOS, atualizarStatusOS, atualizarColetaOS, anexarTelemetriaOS, registrarAnexoColeta, removerAnexoColeta, alvoAvisoColeta, paginaColetasLista, paginaGerarColeta, paginaEditarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga, definirCobrancaOS, marcarCobrancaPagaOS, definirMtrOS } from './coletas.js';
 import { listarVeiculos, lerVeiculo, salvarVeiculo, paginaFrota, paginaVeiculoForm, lerJornadaAtiva, abrirJornada, fecharJornada, registrarAbastecimento, tagColetaComVeiculo, servirFotoJornada, bannerJornada, paginaAbrirDia, paginaFecharDia, paginaAbastecer, placaDaColeta } from './frota.js';
 import { carregarEquipeNoEnv, listarUsuarios, lerUsuario, salvarUsuario, importarUsuarios, paginaEquipe, paginaUsuarioForm, paginaEquipeImportar } from './equipe.js';
 import { agentesDe } from './agente.js';
@@ -2558,14 +2558,14 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
             const chave = `notif:coleta:${col.id}:a_caminho`;
             const ja = env.PORTAL_KV ? await env.PORTAL_KV.get(chave) : null;
             if (!ja) {
+              // Aviso vai para o CONTATO DA OS (quem espera o caminhão); cadastro é reserva.
               const cli = col.clienteId ? await lerCliente(env, col.clienteId) : null;
-              const emailCli = (cli && (cli.email || (Array.isArray(cli.contatos) && cli.contatos[0] && cli.contatos[0].email))) || '';
-              const foneCli = (cli && (cli.fone || cli.telefone || cli.celular || (Array.isArray(cli.contatos) && cli.contatos[0] && (cli.contatos[0].fone || cli.contatos[0].telefone)))) || col.clienteFone || col.telefone || '';
-              if (emailCli || foneCli) {
+              const alvo = alvoAvisoColeta(col, cli);
+              if (alvo.email || alvo.telefone) {
                 const baseWA = String(env.PORTAL_BASE_URL || env.PORTAL_URL || url.origin).replace(/\/+$/, '');
                 const linkRota = `${baseWA}/acompanhar?c=${encodeURIComponent(col.id)}&t=${await seloOS(col.id, env)}`;
-                const av = await avisarColeta(env, { email: emailCli, telefone: foneCli, nome: col.clienteNome, linkRota }, 'a_caminho');
-                if (av.via !== 'nenhum' && env.PORTAL_KV) await env.PORTAL_KV.put(chave, JSON.stringify({ via: av.via, em: new Date().toISOString() }), { expirationTtl: 60 * 60 * 24 * 90 });
+                const av = await avisarColeta(env, { email: alvo.email, telefone: alvo.telefone, nome: alvo.nome, linkRota }, 'a_caminho');
+                if (av.via !== 'nenhum' && env.PORTAL_KV) await env.PORTAL_KV.put(chave, JSON.stringify({ via: av.via, em: new Date().toISOString(), quem: alvo.quem || '' }), { expirationTtl: 60 * 60 * 24 * 90 });
               }
             }
           }
@@ -2586,10 +2586,10 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
             const chave = `notif:coleta:${col.id}:chegou`;
             const ja = env.PORTAL_KV ? await env.PORTAL_KV.get(chave) : null;
             if (!ja) {
+              // Aviso vai para o CONTATO DA OS (quem espera o caminhão); cadastro é reserva.
               const cli = col.clienteId ? await lerCliente(env, col.clienteId) : null;
-              const emailCli = (cli && (cli.email || (Array.isArray(cli.contatos) && cli.contatos[0] && cli.contatos[0].email))) || '';
-              const foneCli = (cli && (cli.fone || cli.telefone || cli.celular || (Array.isArray(cli.contatos) && cli.contatos[0] && (cli.contatos[0].fone || cli.contatos[0].telefone)))) || col.clienteFone || col.telefone || '';
-              if (emailCli || foneCli) { const av = await avisarColeta(env, { email: emailCli, telefone: foneCli, nome: col.clienteNome }, 'chegou'); if (av.via !== 'nenhum' && env.PORTAL_KV) await env.PORTAL_KV.put(chave, JSON.stringify({ via: av.via, em: new Date().toISOString() }), { expirationTtl: 60 * 60 * 24 * 90 }); }
+              const alvo = alvoAvisoColeta(col, cli);
+              if (alvo.email || alvo.telefone) { const av = await avisarColeta(env, { email: alvo.email, telefone: alvo.telefone, nome: alvo.nome }, 'chegou'); if (av.via !== 'nenhum' && env.PORTAL_KV) await env.PORTAL_KV.put(chave, JSON.stringify({ via: av.via, em: new Date().toISOString(), quem: alvo.quem || '' }), { expirationTtl: 60 * 60 * 24 * 90 }); }
             }
           }
         } catch (error) { console.error('chegou_aviso_falhou', safeError(error)); }

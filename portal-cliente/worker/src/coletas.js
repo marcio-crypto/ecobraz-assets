@@ -176,6 +176,31 @@ export async function criarColetaOS(env, dados, criadoPor) {
   }
   return rec;
 }
+// Destinatário dos avisos da coleta ("a caminho"/"chegou"): o CONTATO DA ORDEM DE
+// SERVIÇO vem primeiro — é quem está no local esperando o caminhão; o cadastro da
+// empresa entra só como reserva, porque o 1º contato de lá muitas vezes nem trabalha
+// mais no lugar (pedido da Débora, 07/10, caso OS-2026-0229 Votorantim).
+// os.contato é texto livre ("Alyne Rakoer · 11 98868-7256"): extraímos nome/fone/e-mail.
+export function alvoAvisoColeta(os, cli) {
+  const txt = String((os && os.contato) || '');
+  const telBruto = ((txt.match(/\+?\d[\d() .\-\/]{7,}\d/) || [''])[0]).replace(/\D/g, '');
+  const telOs = (telBruto.length >= 10 && telBruto.length <= 13) ? telBruto : '';
+  const emailOs = (((txt.match(/[^\s·;,|]+@[^\s·;,|]+\.[^\s·;,|]+/) || [''])[0]) || '').toLowerCase();
+  let nomeOs = txt.split(/[·|,;]/)[0].replace(/[^\p{L} .'’-]+/gu, ' ').replace(/\s+/g, ' ').trim();
+  if (nomeOs.length < 2) nomeOs = '';
+  const emailCad = (cli && (cli.email || (Array.isArray(cli.contatos) && cli.contatos[0] && cli.contatos[0].email))) || '';
+  const foneCad = (cli && (cli.fone || cli.telefone || cli.celular || (Array.isArray(cli.contatos) && cli.contatos[0] && (cli.contatos[0].fone || cli.contatos[0].telefone)))) || (os && (os.clienteFone || os.telefone)) || '';
+  const usouOs = !!(telOs || emailOs);
+  return {
+    telefone: telOs || String(foneCad || ''),
+    email: emailOs || String(emailCad || ''),
+    nome: (usouOs && nomeOs) ? nomeOs : ((os && os.clienteNome) || nomeOs || ''),
+    origem: usouOs ? 'contato-da-os' : 'cadastro',
+    // "quem" aparece na tela da OS para a equipe CONFERIR o destinatário do aviso.
+    quem: usouOs ? [nomeOs || 'contato da OS', telOs ? '…' + telOs.slice(-4) : ''].filter(Boolean).join(' ') : '',
+  };
+}
+
 export async function atualizarStatusOS(env, id, status) {
   const rec = await lerColetaOS(env, id); if (!rec) return null;
   rec.status = status; rec.atualizadoEm = agora();
@@ -534,7 +559,7 @@ export function paginaColetaOSDetalhe(user, os, acomp, extras) {
   const cdfApto = !!(extras && extras.cdfApto);
   const linha = (l, v) => v ? `<tr><td style="padding:8px 0;border-top:1px solid #EEF1F0;color:#6B7B78;width:38%">${esc(l)}</td><td style="padding:8px 0;border-top:1px solid #EEF1F0;font-weight:600;white-space:pre-wrap;word-break:break-word">${esc(v)}</td></tr>` : '';
   const hhmm = (x) => { const d = new Date(x); if (!x || isNaN(d.getTime())) return ''; d.setUTCHours(d.getUTCHours() - 3); const p = (n) => String(n).padStart(2, '0'); return `${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`; };
-  const canalAviso = (a) => (a && a.via === 'whatsapp') ? ' (WhatsApp)' : ((a && a.via === 'sms') ? ' (SMS)' : ((a && a.via === 'email') ? ' (e-mail)' : ''));
+  const canalAviso = (a) => { const c = (a && a.via === 'whatsapp') ? 'WhatsApp' : ((a && a.via === 'sms') ? 'SMS' : ((a && a.via === 'email') ? 'e-mail' : '')); return c ? ` (${c}${a && a.quem ? ' → ' + esc(a.quem) : ''})` : ''; };
   const acompHTML = (() => {
     const a = acomp || {};
     if (!a.saiu && !a.chegou) return '';
