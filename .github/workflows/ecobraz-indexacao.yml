@@ -14,7 +14,16 @@ permissions:
 jobs:
   indexacao:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - name: Auditoria de indexabilidade e hreflang
         run: node site-ghost/scripts/auditoria-indexacao.mjs '${{ inputs.base_url }}'
+      # Diagnóstico dirigido aos avisos do Search Console de 15/10/2026.
+      # Roda sempre, mesmo se a auditoria acima falhar, porque é o que localiza
+      # as URLs de cada motivo (5xx, 404, redirect, canônica).
+      - name: Diagnóstico Search Console (5xx, 404, redirects, canônicas)
+        if: always()
+        env:
+          LIMITE_SITEMAP: '600'
+        run: node site-ghost/scripts/diagnostico-search-console.mjs '${{ inputs.base_url }}'
