@@ -51,7 +51,19 @@ console.log(`regras literais no arquivo: ${regras.size}`);
 
 // ---------- 2. sitemap ao vivo ----------
 const vivas = new Set();
-const fila = [`${base}/sitemap.xml`];
+// SITEMAP_LOCAL permite rodar sem rede: um arquivo com uma URL por linha, obtido
+// de uma execucao anterior no runner. Sem ele, busca o sitemap ao vivo.
+const sitemapLocal = process.env.SITEMAP_LOCAL;
+if (sitemapLocal) {
+  const txt = await fs.readFile(sitemapLocal, 'utf8');
+  for (const linha of txt.split('\n')) {
+    const l = linha.trim();
+    if (!l) continue;
+    try { vivas.add(semBarra(new URL(l).pathname)); } catch { vivas.add(semBarra(l)); }
+  }
+  console.log(`sitemap lido de arquivo local: ${sitemapLocal}`);
+}
+const fila = sitemapLocal ? [] : [`${base}/sitemap.xml`];
 const vistos = new Set();
 while (fila.length) {
   const sm = fila.shift();
@@ -70,7 +82,8 @@ while (fila.length) {
 }
 console.log(`paginas vivas no sitemap: ${vivas.size}`);
 if (vivas.size === 0) {
-  console.log('FALHA: sitemap vazio — sem ele a classificacao (b) nao e confiavel. Abortando.');
+  console.log('FALHA: sitemap vazio — sem ele a classificacao (b) nao e confiavel.');
+  console.log('Rode num runner com rede, ou passe SITEMAP_LOCAL=<arquivo com uma URL por linha>.');
   process.exit(1);
 }
 
