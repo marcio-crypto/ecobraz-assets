@@ -25,8 +25,17 @@ jobs:
             # comeco do corpo — senao a ferramenta fica cega para respostas
             # que nao tem <title>, como consultas RDAP de dominio.
             if [ -s /tmp/body ] && ! grep -qi '<html' /tmp/body; then
-              echo "--- corpo (primeiros 1200 caracteres) ---"
-              head -c 1200 /tmp/body
-              echo
+              if jq -e . /tmp/body >/dev/null 2>&1; then
+                # Resposta JSON. Mostra os campos que interessam numa consulta
+                # de dominio (RDAP) e, se nao houver, as chaves de topo — o
+                # corpo cru costuma comecar com paginas de aviso legal.
+                echo "--- JSON: campos de registro ---"
+                jq -c '{ldhName, status, events, nameservers: [.nameservers[]?.ldhName]}' /tmp/body 2>/dev/null \
+                  || jq -c 'keys' /tmp/body
+              else
+                echo "--- corpo (primeiros 1200 caracteres) ---"
+                head -c 1200 /tmp/body
+                echo
+              fi
             fi
           done
