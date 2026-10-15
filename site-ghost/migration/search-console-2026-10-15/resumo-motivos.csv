@@ -1,0 +1,11 @@
+Motivo,Fonte,Validação,Páginas
+Página com redirecionamento,Site,Não foi iniciado,3922
+Página alternativa com tag canônica adequada,Site,Não foi iniciado,603
+Erro no servidor (5xx),Site,Não foi iniciado,14
+"Excluída pela tag ""noindex""",Site,Não foi iniciado,2
+"Rastreada, mas não indexada no momento",Sistemas do Google,Não foi iniciado,3926
+"Cópia, o Google e o usuário selecionaram uma página canônica diferente",Sistemas do Google,Não foi iniciado,374
+Não encontrado (404),Site,Iniciado,4814
+Cópia sem página canônica selecionada pelo usuário,Site,Aprovado,4
+Bloqueada devido a outro problema 4xx,Site,Aprovado,1
+"Detectada, mas não indexada no momento",Sistemas do Google,Aprovado,2

@@ -37,3 +37,16 @@ jobs:
           CONCORRENCIA: '5'
           PAUSA_MS: '150'
         run: node site-ghost/scripts/caca-5xx-legadas.mjs '${{ inputs.base_url }}'
+      # Plano de correcao dos 404 do Search Console (export de 15/10/2026).
+      # Precisa do sitemap ao vivo para saber quais paginas ainda existem, por isso
+      # roda aqui e nao na maquina do assistente (sem rede para o site).
+      - name: Plano de correcao dos 404 (cruza export do Google x regras x sitemap)
+        if: always()
+        run: node site-ghost/scripts/plano-404-search-console.mjs '${{ inputs.base_url }}'
+      - name: Publica as regras propostas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: regras-propostas
+          path: regras-propostas.yaml
+          if-no-files-found: warn
