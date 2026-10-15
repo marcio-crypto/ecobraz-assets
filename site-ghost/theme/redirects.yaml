@@ -9135,3 +9135,7 @@
   "^/relatorios/?$": "/documentacao-e-rastreabilidade/"
   "^/baterias/?$": "/descarte-de-baterias-e-nobreaks/"
   "^/projetos/?$": "/sobre/"
+  "^/pt_BR/seja-um-/contato/?$": "/contato/"
+  "^/solucoes-odontologicas/?$": "/descarte-de-equipamentos-hospitalares/"
+  "^/seja-um-/contato/?$": "/contato/"
+  "^/seja-um-/?$": "/"
