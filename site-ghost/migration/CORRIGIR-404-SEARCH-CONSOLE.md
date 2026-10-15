@@ -116,6 +116,76 @@ genérica como *soft 404* — ou seja, não espere que esses endereços passem f
 de link para o `/sobre/`. A troca é deliberada: 404 limpo virou redirect limpo,
 o que é melhor para quem clica num link antigo, mas não é ganho de SEO.
 
+## Caça ao 5xx fora do sitemap — feita, e não achou 5xx
+
+A medição do sitemap (288 URLs, todas 200) não reproduz o 5xx. A hipótese era
+que as URLs afetadas estivessem **fora** do sitemap: endereços legados que o
+Google conhece por links externos. Então medi o conjunto que o Googlebot
+realmente bate — as próprias fontes de redirect.
+
+`site-ghost/scripts/caca-5xx-legadas.mjs`, run `38742794432` (15/10 13:28 UTC):
+amostra determinista de **400 URLs legadas** (1 a cada 22, espalhada pelas 9.123),
+com UA de Googlebot, conferindo o redirect **e** o destino.
+
+| Medida | Resultado |
+|---|---|
+| Fontes que responderam 301 | **400 de 400** |
+| Destinos em 200 | 399 |
+| Destinos em 404 | 1 |
+| HTTP 5xx | **0** |
+| HTTP 429 (limite de taxa) | **0** |
+| Sem resposta / erro de rede | 0 |
+
+Ritmo contido de propósito: 5 em paralelo, pausa de 150 ms. A ideia era medir o
+site, não derrubá-lo.
+
+**Isso não prova que o 5xx não existe.** Prova que não aparece em 400 URLs
+legadas lidas nesse ritmo. Continua sendo preciso o CSV do painel para fechar.
+
+### Efeito colateral útil: 400/400 das fontes legadas em 301
+
+Somando com as verificações anteriores, são **458 URLs medidas ao vivo** depois
+da importação, todas coerentes com o arquivo. É a evidência mais forte de que o
+conjunto no ar é o conjunto do repositório.
+
+### Achado novo: 8 regras que nunca podem funcionar
+
+A única URL com destino quebrado revelou um bug independente do Search Console:
+
+```
+/es_br/blog/apoe ecobraz  ->  301  ->  /es_br/blog/apoe%20ecobraz/  ->  404
+```
+
+Esse 301 **não veio do `redirects.yaml`** — veio da normalização de barra final
+do próprio Ghost. A regra não casou. Motivo: o padrão tem um **espaço literal**
+no meio, e requisição real chega com o espaço codificado como `%20`. O padrão
+`^/es_br/blog/apoe ecobraz/?$` nunca casa com o caminho `/es_br/blog/apoe%20ecobraz`.
+
+São **8 regras** nessa situação, todas variantes de `apoe ecobraz`, e **nenhuma
+tem a variante `%20` equivalente no arquivo** — ou seja, as 8 são regras mortas:
+
+```
+^/blog/apoe ecobraz/?$          ^/de_BR/blog/apoe ecobraz/?$
+^/de_br/blog/apoe ecobraz/?$    ^/en_BR/blog/apoe ecobraz/?$
+^/en_br/blog/apoe ecobraz/?$    ^/es_BR/blog/apoe ecobraz/?$
+^/es_br/blog/apoe ecobraz/?$    ^/fr/blog/apoe ecobraz/?$
+```
+
+Todas apontariam para `/coleta-de-lixo-eletronico/`.
+
+**Não corrigi ainda, de propósito.** Hoje o `redirects.yaml` do repositório é
+exatamente o que está em produção — isso foi medido e tem valor próprio.
+Acrescentar as 8 variantes `%20` recriaria a divergência de que acabamos de sair
+e exigiria um segundo upload manual do Marcio. A correção é trivial (duplicar as
+8 linhas trocando o espaço por `%20`) e vale fazer **em lote** com o `/bio`, se o
+Marcio quiser as duas coisas num upload só. A decisão é dele.
+
+Valor realista disso: baixo. São endereços malformados de links externos
+quebrados. Fecham 8 404 reais, mas sem tráfego relevante.
+
+Na mesma família está o `/blog/capos%20reci`, que deixei de fora por não saber
+qual post era — o slug está truncado, e chutar destino seria pior que o 404.
+
 ## O que continua em aberto
 
 **O "Erro no servidor (5xx)" não foi reproduzido e não está explicado.** O site
