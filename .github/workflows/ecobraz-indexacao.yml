@@ -27,3 +27,13 @@ jobs:
         env:
           LIMITE_SITEMAP: '600'
         run: node site-ghost/scripts/diagnostico-search-console.mjs '${{ inputs.base_url }}'
+      # Caça o 5xx que o Search Console relatou e que a varredura do sitemap
+      # não reproduziu: amostra as URLs legadas do redirects.yaml, que é o
+      # conjunto que o Googlebot realmente bate via links externos.
+      - name: Caça 5xx nas URLs legadas (fora do sitemap)
+        if: always()
+        env:
+          AMOSTRA: '400'
+          CONCORRENCIA: '5'
+          PAUSA_MS: '150'
+        run: node site-ghost/scripts/caca-5xx-legadas.mjs '${{ inputs.base_url }}'
