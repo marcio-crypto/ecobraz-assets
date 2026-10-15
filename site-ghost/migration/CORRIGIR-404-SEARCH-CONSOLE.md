@@ -68,28 +68,53 @@ continua no arquivo.
 Uma URL ficou de fora de propósito: `/blog/capos%20reci`, que tem um espaço
 codificado no meio — é endereço malformado, e 404 é a resposta certa para ele.
 
-## A única ação manual (Ghost não deixa automatizar)
+## A importação foi feita — e verificada ao vivo
 
-O arquivo no repositório **não é o que está no ar**. Prova: a regra
-`^/llms\.txt$` → `/assets/llms-2026-09.txt` está no arquivo desde `ebeb27b`,
-mas `https://ecobraz.org/llms.txt` ainda entrega `/assets/llms.txt`. A chave de
-integração recebe 403 para baixar e para subir redirects; só uma sessão de
-proprietário no painel consegue.
+O Marcio subiu o arquivo no Ghost Admin em 15/10/2026, por volta de 13:15 UTC.
+A partir daí **não acreditei na palavra de ninguém: medi**. Três execuções do
+workflow `ferramenta-checa-url.yml` em runners do GitHub, 58 URLs ao vivo.
 
-1. Baixe `site-ghost/theme/redirects.yaml` deste repositório.
-2. Abra o Ghost Admin da Ecobraz.
-3. **Settings → Labs → Redirects**.
-4. **Upload redirects** e escolha o arquivo baixado.
-5. Espere a mensagem de sucesso.
+**As 40 regras novas: 40/40 em HTTP 200**, cada uma caindo no destino previsto
+(runs `38741959743` e `38741978580`, 15/10 13:21 UTC).
 
-Essa importação **substitui o conjunto inteiro** de redirects — por isso o
-arquivo precisa ser o completo, com as 9.123 regras, e não um pedaço.
+| Grupo | Quantidade | Destino | Resultado |
+|---|---|---|---|
+| Posts de cripto/token (`/de/`, `/en/`, `/es/`, `/fr/`, `/blog/`) | 31 | `/sobre/` | 31/31 em 200 |
+| `/pt_BR/blog/5-razoes…` e `/pt_BR/blog/apoie-a-ecobraz…` | 2 | `/sobre/` | 2/2 em 200 |
+| `/pt_BR/blog/a-importancia-da-logistica-reversa…` | 1 | `/logistica-reversa/` | 200 |
+| `/pt_BR/blog/a-importancia-do-descarte-correto-de-cabos…` | 1 | `/descarte-de-cabos-e-fios/` | 200 |
+| `/pt_BR/blog/certificacao…` e `/pt_BR/blog/certificado-de-descarte…` | 2 | `/documentacao-e-rastreabilidade/` | 2/2 em 200 |
+| `/pt_BR/blog/descartar-com-a-ecobraz…` | 1 | `/descarte-corporativo-de-ti/` | 200 |
+| `/pt_BR/blog/descarte-de-cabos-e-fios-em-data-centers…` | 1 | `/descarte-de-servidores-e-data-center/` | 200 |
+| `/blog/meioambiente` | 1 | `/blog/` | 200 |
 
-Um único upload resolve três coisas de uma vez:
+**As 9.083 regras antigas sobreviveram.** Esse era o risco real da importação:
+ela substitui o conjunto inteiro, então um arquivo errado teria apagado tudo.
+Amostra determinista de 18 regras espalhadas por todo o arquivo (do índice 0 ao
+9.082), testadas ao vivo no run `38742162922`: **18/18 caem no destino exato que
+o arquivo prescreve**.
 
-- os 404 das 40 URLs legadas (o que o Google reclamou);
-- o `/llms.txt`, que serve conteúdo velho desde setembro;
-- a base para o `/bio`, se a regra dele for acrescentada antes.
+As duas URLs de maior valor de links foram verificadas numa checagem anterior
+(run `38741350496`): `/pt_BR/blog/ecobraz-emigre-lanca-servico-exclusivo-…`, a de
+158 domínios de referência, continua em `/descarte-de-cabos-e-fios/`, e
+`/projetos/para-voce/coleta-gratuita-de-e-lixo`, o link de 2013 do techtudo.com.br,
+continua em `/pontos-de-coleta/`. A home e o `/agendamento/` também seguem em 200.
+
+**O `/llms.txt` foi resolvido.** Era o problema aberto desde setembro: o arquivo
+tinha a regra desde `ebeb27b`, mas o site continuava entregando o conteúdo velho.
+Agora `https://ecobraz.org/llms.txt` devolve 200 em
+`https://ecobraz.org/assets/llms-2026-09.txt`. O cache de um ano a montante do
+Cloudflare não bloqueou o redirect novo — isso era uma dúvida real e foi medida,
+não suposta.
+
+### Ressalva honesta sobre os 31 redirects para `/sobre/`
+
+Os posts de cripto/token foram todos para `/sobre/` porque não existe página
+equivalente no site atual. Isso **resolve o 404** que o Google reclamou, mas o
+Google pode classificar redirect de muitas URLs distintas para uma única página
+genérica como *soft 404* — ou seja, não espere que esses endereços passem força
+de link para o `/sobre/`. A troca é deliberada: 404 limpo virou redirect limpo,
+o que é melhor para quem clica num link antigo, mas não é ganho de SEO.
 
 ## O que continua em aberto
 
@@ -106,10 +131,25 @@ Para fechar isso é preciso a lista de URLs afetadas, que só existe dentro do
 painel: Search Console → Indexação de páginas → "Erro no servidor (5xx)" →
 botão de exportar. Com esse CSV dá para medir exatamente as URLs certas.
 
-## Nota de manutenção
+## Nota de manutenção — corrigida
 
-As regras novas foram escritas à mão no fim do `redirects.yaml`, do mesmo jeito
-que a regra do `/llms.txt` foi em `ebeb27b`. `site-ghost/scripts/build-redirects.py`
-regenera o arquivo a partir de um CSV de inventário e **apagaria** essas
-adições. Antes de rodar o gerador de novo, leve as linhas novas para o
-inventário.
+A versão anterior desta nota dizia que `site-ghost/scripts/build-redirects.py`
+regeneraria o `redirects.yaml` a partir de um CSV de inventário e apagaria as
+regras acrescentadas à mão. **Isso estava impreciso, e a situação real é mais
+delicada:**
+
+- `build-redirects.py` espera um CSV com a coluna `caminho_original`. O único CSV
+  do repositório, `site-ghost/migration/redirect-map.csv`, tem 87 linhas e usa
+  `url_antiga` — **o gerador não roda contra ele**, quebraria na primeira linha.
+- O CSV com as ~9.000 linhas era produzido por `build-legacy-inventory.py`, que
+  exige uma planilha `.xlsx` e um arquivo de crawl **que não estão no
+  repositório** (vieram de exportações externas, de fora do Git).
+
+Conclusão prática: **o `redirects.yaml` é a única cópia das 9.123 regras.** Não
+existe como regerá-lo a partir do que está versionado aqui. Portanto:
+
+1. Trate esse arquivo como fonte de verdade, não como artefato gerado.
+2. Nunca suba no Ghost um arquivo que não seja o completo — a importação
+   substitui o conjunto inteiro.
+3. Se algum dia for preciso rodar o gerador de novo, primeiro reconstrua o
+   inventário a partir do próprio `redirects.yaml`, não o contrário.

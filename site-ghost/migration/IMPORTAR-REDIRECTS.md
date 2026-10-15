@@ -1,6 +1,12 @@
 # Ecobraz — única ação manual para proteger backlinks
 
-O novo site possui **7.913 redirecionamentos** preparados para preservar URLs antigas, backlinks e tráfego orgânico. O Ghost permite importar esse arquivo somente por uma sessão de proprietário no painel; a chave de integração usada na automação não possui essa permissão.
+O novo site possui **9.123 redirecionamentos** preparados para preservar URLs antigas, backlinks e tráfego orgânico. O Ghost permite importar esse arquivo somente por uma sessão de proprietário no painel; a chave de integração usada na automação não possui essa permissão.
+
+> Contagem atualizada em 15/10/2026. Eram 7.913 quando este documento foi
+> escrito; hoje são 9.123, e o conjunto completo foi importado e verificado
+> ao vivo nessa data (ver `CORRIGIR-404-SEARCH-CONSOLE.md`). O arquivo
+> `site-ghost/theme/redirects.yaml` é a **única cópia** dessas regras: não
+> existe como regerá-lo a partir do que está no repositório.
 
 Esta importação não altera o DNS e não tira o site atual do ar.
 
