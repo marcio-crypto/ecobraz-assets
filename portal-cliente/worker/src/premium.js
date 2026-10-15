@@ -117,6 +117,59 @@ export async function fluxoDeVendas(env) {
   return out;
 }
 
+// BALANÇO DE VENDAS pelo sistema (pedido do Marcio, 15/10): quanto foi gerado,
+// quanto foi PAGO de verdade e a desistência. LIMITES HONESTOS do que o sistema
+// guarda: pedidos PAGOS duram ~400 dias (histórico quase completo); pedidos NÃO
+// pagos expiram em 35–90 dias — então a taxa de desistência só é confiável na
+// janela recente. Cobranças de OS não expiram (ficam na própria OS) e entram em
+// bloco separado — os pedidos "oscobranca" do KV são EXCLUÍDOS daqui para não
+// contar a mesma cobrança duas vezes. Pedido aberto há menos de 7 dias ainda não
+// é desistência (está em negociação).
+export async function balancoVendas(env, cobrancasOS) {
+  const r2 = (n) => Math.round(n * 100) / 100;
+  const out = {
+    pedidos: { pagos: 0, pagosValor: 0, abertosRecentes: 0, abertosRecentesValor: 0, desistiu: 0, desistiuValor: 0, porProdutoPago: {}, porMesPago: {}, primeiraVenda: '', truncado: false },
+    os: { geradas: 0, geradasValor: 0, pagas: 0, pagasValor: 0, aguardando: 0, aguardandoValor: 0 },
+  };
+  if (env.PORTAL_KV) {
+    const keys = [];
+    try {
+      let cursor, guard = 0;
+      do { const r = await env.PORTAL_KV.list({ prefix: 'pedido:', cursor, limit: 1000 }); keys.push(...(r.keys || [])); cursor = r.list_complete ? null : r.cursor; } while (cursor && ++guard < 5);
+      if (keys.length > 1200) out.pedidos.truncado = true;
+    } catch { /* segue com o que tiver */ }
+    const corte7 = new Date(Date.now() - 7 * 86400e3).toISOString().slice(0, 10);
+    for (const k of keys.slice(0, 1200)) {
+      let ped; try { ped = JSON.parse((await env.PORTAL_KV.get(k.name)) || '{}'); } catch { continue; }
+      if (!ped || ped.produto === 'teste' || ped.produto === 'oscobranca') continue;
+      const valor = Number(ped.valor) || 0;
+      if (ped.status === 'pago') {
+        out.pedidos.pagos++; out.pedidos.pagosValor += valor;
+        const prod = ped.produto || 'outro';
+        out.pedidos.porProdutoPago[prod] = r2((out.pedidos.porProdutoPago[prod] || 0) + valor);
+        const mes = dataPedido(ped.pagoEm || ped.criadoEm).slice(0, 7);
+        if (mes) out.pedidos.porMesPago[mes] = r2((out.pedidos.porMesPago[mes] || 0) + valor);
+        const dia = dataPedido(ped.pagoEm || ped.criadoEm);
+        if (dia && (!out.pedidos.primeiraVenda || dia < out.pedidos.primeiraVenda)) out.pedidos.primeiraVenda = dia;
+      } else {
+        const dc = dataPedido(ped.criadoEm);
+        if (dc && dc >= corte7) { out.pedidos.abertosRecentes++; out.pedidos.abertosRecentesValor += valor; }
+        else { out.pedidos.desistiu++; out.pedidos.desistiuValor += valor; }
+      }
+    }
+    out.pedidos.pagosValor = r2(out.pedidos.pagosValor); out.pedidos.abertosRecentesValor = r2(out.pedidos.abertosRecentesValor); out.pedidos.desistiuValor = r2(out.pedidos.desistiuValor);
+  }
+  for (const c of (cobrancasOS || [])) {
+    if (!c || !c.cobranca) continue;
+    const v = Number(c.cobranca.valor) || 0;
+    out.os.geradas++; out.os.geradasValor += v;
+    if (c.cobranca.status === 'pago') { out.os.pagas++; out.os.pagasValor += v; }
+    else { out.os.aguardando++; out.os.aguardandoValor += v; }
+  }
+  out.os.geradasValor = r2(out.os.geradasValor); out.os.pagasValor = r2(out.os.pagasValor); out.os.aguardandoValor = r2(out.os.aguardandoValor);
+  return out;
+}
+
 // ---------------------------------------------------------------------------
 // LOG DE PAGAMENTOS (diretoria): últimos pedidos (KV pedido:*) com o status
 // REAL que o sistema tem — pago (confirmado) ou pendente. Prova visível de que

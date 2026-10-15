@@ -15,6 +15,7 @@
 import { listarColetasOS } from './coletas.js';
 import { estatisticaAdocao } from './uso.js';
 import { listarFalhas } from './monitor.js';
+import { balancoVendas } from './premium.js';
 
 const digits = (s) => String(s || '').replace(/\D/g, '');
 const fmtCNPJ = (d) => d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
@@ -232,6 +233,24 @@ async function ferrVisaoGeral(env) {
       const pct = comColetaMes.size ? Math.round((usaram / comColetaMes.size) * 1000) / 10 : null;
       linhas.push(`🎯 ADOÇÃO POR EPISÓDIO: dos ${comColetaMes.size} clientes COM coleta nos últimos 30 dias, ${usaram} entraram no portal${pct != null ? ` (${String(pct).replace('.', ',')}%)` : ''} — régua certa para serviço por demanda.`);
     } catch { /* segue sem o corte por episódio */ }
+  // 💰 Vendas pelo sistema — gerado × pago × desistência (limites de guarda dos
+  // dados explicados na própria resposta, para a leitura nunca enganar).
+  try {
+    const oss = await listarColetasOS(env);
+    const b = await balancoVendas(env, oss);
+    const brl = (n) => 'R$ ' + Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const pct = (parte, todo) => (todo > 0 ? String(Math.round((parte / todo) * 1000) / 10).replace('.', ',') + '%' : '—');
+    linhas.push('\n💰 VENDAS PELO SISTEMA:');
+    linhas.push(`Cobranças de coleta (OS): ${b.os.geradas} geradas = ${brl(b.os.geradasValor)} · pagas ${b.os.pagas} = ${brl(b.os.pagasValor)} (${pct(b.os.pagas, b.os.geradas)}) · em aberto ${b.os.aguardando} = ${brl(b.os.aguardandoValor)}`);
+    linhas.push(`Outras vendas do portal (coleta expressa, Adote, carbono, ESG): pagas ${b.pedidos.pagos} = ${brl(b.pedidos.pagosValor)}${b.pedidos.primeiraVenda ? ` (desde ${b.pedidos.primeiraVenda.split('-').reverse().join('/')})` : ''} · em negociação (≤7 dias) ${b.pedidos.abertosRecentes} = ${brl(b.pedidos.abertosRecentesValor)} · desistiram ${b.pedidos.desistiu} = ${brl(b.pedidos.desistiuValor)}`);
+    const totGer = b.os.geradas + b.pedidos.pagos + b.pedidos.abertosRecentes + b.pedidos.desistiu;
+    const totPagoV = b.os.pagasValor + b.pedidos.pagosValor;
+    const desQ = b.os.aguardando + b.pedidos.desistiu;
+    linhas.push(`TOTAL PAGO: ${brl(totPagoV)} · desistência/não pago: ${desQ} de ${totGer} cobranças (${pct(desQ, totGer)})`);
+    if (Object.keys(b.pedidos.porMesPago).length) linhas.push('Pagos por mês (portal): ' + Object.entries(b.pedidos.porMesPago).sort((x, y) => x[0].localeCompare(y[0])).map(([m, v]) => `${m.slice(5)}/${m.slice(2, 4)}: ${brl(v)}`).join(' · '));
+    if (Object.keys(b.pedidos.porProdutoPago).length) linhas.push('Pagos por produto (portal): ' + Object.entries(b.pedidos.porProdutoPago).sort((x, y) => y[1] - x[1]).map(([p, v]) => `${p}: ${brl(v)}`).join(' · '));
+    linhas.push('Nota de guarda dos dados: pedidos PAGOS ficam ~13 meses; NÃO pagos somem em 35–90 dias (a desistência de meses antigos não aparece mais); cobranças de OS ficam para sempre.');
+  } catch { linhas.push('\n💰 Vendas: balanço indisponível agora.'); }
   // Falhas recentes do monitor (sistema + navegador do cliente) — diagnóstico de
   // problemas de pagamento/jornada sem esperar print. E-mail do cliente sai mascarado.
   try {
