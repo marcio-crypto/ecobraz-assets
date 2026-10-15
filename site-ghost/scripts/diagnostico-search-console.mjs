@@ -277,6 +277,12 @@ for (const v of variantes) {
   const r = await pegar(v);
   const can = canonicalDe(r.corpo);
   const limpo = can && !/[?&]/.test(can);
+  // Redirect não tem corpo HTML, logo não tem canonical: é o esperado, não
+  // defeito. Marcar 3xx como "sem canonical" seria alarme falso.
+  if (r.status >= 300 && r.status < 400) {
+    console.log(`     ok    HTTP ${r.status}  ${v.replace(base, '')}  ->  ${r.location || '(sem Location)'}`);
+    continue;
+  }
   const marca = r.status >= 400 ? '!! ERRO' : can ? (limpo ? '   ok   ' : '!! SUJO') : '!! SEM ';
   console.log(`  ${marca} HTTP ${r.status}  ${v.replace(base, '')}`);
   console.log(`            canonical: ${can || '(nenhum)'}`);

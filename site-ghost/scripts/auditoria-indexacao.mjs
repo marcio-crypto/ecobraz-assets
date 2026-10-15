@@ -39,10 +39,41 @@ if (robots.status === 200) {
   else ok('robots.txt NÃO bloqueia o rastreamento geral');
   const smNoRobots = /Sitemap:\s*\S+sitemap\.xml/i.test(robots.body);
   if (smNoRobots) ok('robots.txt aponta o sitemap'); else console.log('NOTA: sitemap não declarado no robots.txt');
-  // rastreadores de IA (para chats): não devem estar bloqueados
+  // Rastreadores de IA (para chats): não devem estar bloqueados.
+  // Precisa ler o robots.txt POR GRUPO. A checagem antiga era um regex
+  // "User-agent: BOT ... Disallow: /" com [\s\S]*?, que atravessava linhas e
+  // casava com o "Disallow: /ghost/" seguinte — acusava bloqueio em bots que
+  // estão explicitamente liberados. Agora só acusa "Disallow: /" de caminho
+  // inteiro, dentro do grupo do próprio bot, e sem "Allow: /" no mesmo grupo.
+  const grupos = [];
+  let grupoAtual = null;
+  for (const linhaCrua of robots.body.split('\n')) {
+    const linha = linhaCrua.replace(/#.*$/, '').trim();
+    if (!linha) continue;
+    const sep = linha.indexOf(':');
+    if (sep < 0) continue;
+    const campo = linha.slice(0, sep).trim().toLowerCase();
+    const valor = linha.slice(sep + 1).trim();
+    if (campo === 'user-agent') {
+      // Linhas User-agent consecutivas compartilham as regras que vêm depois.
+      if (!grupoAtual || grupoAtual.temRegra) {
+        grupoAtual = {agentes: [], regras: [], temRegra: false};
+        grupos.push(grupoAtual);
+      }
+      grupoAtual.agentes.push(valor.toLowerCase());
+    } else if (grupoAtual && (campo === 'disallow' || campo === 'allow')) {
+      grupoAtual.regras.push({tipo: campo, valor});
+      grupoAtual.temRegra = true;
+    }
+  }
+  const grupoBloqueiaTudo = (g) =>
+    g.regras.some((r) => r.tipo === 'disallow' && r.valor === '/') &&
+    !g.regras.some((r) => r.tipo === 'allow' && r.valor === '/');
   for (const bot of ['GPTBot', 'ClaudeBot', 'PerplexityBot', 'Google-Extended', 'CCBot']) {
-    const re = new RegExp(`User-agent:\\s*${bot}[\\s\\S]*?Disallow:\\s*/`, 'i');
-    if (re.test(robots.body)) console.log(`NOTA: robots.txt bloqueia ${bot} (limita visibilidade em chats de IA)`);
+    const g = grupos.find((x) => x.agentes.includes(bot.toLowerCase()));
+    if (g && grupoBloqueiaTudo(g)) {
+      console.log(`NOTA: robots.txt bloqueia ${bot} (limita visibilidade em chats de IA)`);
+    }
   }
 } else falha(`robots.txt retornou ${robots.status}`);
 
