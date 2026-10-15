@@ -21,4 +21,12 @@ jobs:
             echo "=== $u ==="
             curl -sS -o /tmp/body -w "HTTP %{http_code} | efetiva: %{url_effective} | %{time_total}s\n" -L --max-time 20 "$u" || echo "FALHA de conexão"
             grep -o '<title>[^<]*</title>' /tmp/body | head -1 || true
+            # Se a resposta nao for HTML (JSON de API, texto puro), mostra o
+            # comeco do corpo — senao a ferramenta fica cega para respostas
+            # que nao tem <title>, como consultas RDAP de dominio.
+            if [ -s /tmp/body ] && ! grep -qi '<html' /tmp/body; then
+              echo "--- corpo (primeiros 1200 caracteres) ---"
+              head -c 1200 /tmp/body
+              echo
+            fi
           done
