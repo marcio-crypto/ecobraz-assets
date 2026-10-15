@@ -21,4 +21,21 @@ jobs:
             echo "=== $u ==="
             curl -sS -o /tmp/body -w "HTTP %{http_code} | efetiva: %{url_effective} | %{time_total}s\n" -L --max-time 20 "$u" || echo "FALHA de conexão"
             grep -o '<title>[^<]*</title>' /tmp/body | head -1 || true
+            # Se a resposta nao for HTML (JSON de API, texto puro), mostra o
+            # comeco do corpo — senao a ferramenta fica cega para respostas
+            # que nao tem <title>, como consultas RDAP de dominio.
+            if [ -s /tmp/body ] && ! grep -qi '<html' /tmp/body; then
+              if jq -e . /tmp/body >/dev/null 2>&1; then
+                # Resposta JSON. Mostra os campos que interessam numa consulta
+                # de dominio (RDAP) e, se nao houver, as chaves de topo — o
+                # corpo cru costuma comecar com paginas de aviso legal.
+                echo "--- JSON: campos de registro ---"
+                jq -c '{ldhName, status, events, nameservers: [.nameservers[]?.ldhName]}' /tmp/body 2>/dev/null \
+                  || jq -c 'keys' /tmp/body
+              else
+                echo "--- corpo (primeiros 1200 caracteres) ---"
+                head -c 1200 /tmp/body
+                echo
+              fi
+            fi
           done

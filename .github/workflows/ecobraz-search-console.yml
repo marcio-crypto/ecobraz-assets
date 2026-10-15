@@ -1,0 +1,31 @@
+name: Ecobraz — diagnóstico dos avisos do Search Console
+
+# Responde aos e-mails do Search Console de 15/10/2026 (5xx, 404, redirect,
+# canônica). Roda num runner do GitHub porque o ambiente do assistente é
+# bloqueado pelo Cloudflare. SÓ LEITURA — não altera o site.
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Site a diagnosticar'
+        type: string
+        default: 'https://ecobraz.org'
+      limite_sitemap:
+        description: 'Máximo de URLs do sitemap a varrer'
+        type: string
+        default: '600'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostico:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Diagnóstico dirigido (5xx, 404, redirects, canônicas)
+        env:
+          LIMITE_SITEMAP: ${{ inputs.limite_sitemap }}
+        run: node site-ghost/scripts/diagnostico-search-console.mjs '${{ inputs.base_url }}'
