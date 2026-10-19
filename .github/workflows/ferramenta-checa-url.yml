@@ -19,6 +19,12 @@ jobs:
         run: |
           for u in ${{ inputs.urls }}; do
             echo "=== $u ==="
+            # Apaga o corpo anterior ANTES de cada requisição. Sem isso, quando
+            # uma requisição falha (timeout, erro de TLS), o /tmp/body guarda a
+            # resposta da URL anterior e o resumo abaixo imprime dado VELHO como
+            # se fosse desta URL. Isso chegou a acontecer em 19/10 e quase levou
+            # a uma leitura errada.
+            rm -f /tmp/body
             curl -sS -o /tmp/body -w "HTTP %{http_code} | efetiva: %{url_effective} | %{time_total}s\n" -L --max-time 20 "$u" || echo "FALHA de conexão"
             grep -o '<title>[^<]*</title>' /tmp/body | head -1 || true
             # Se a resposta nao for HTML (JSON de API, texto puro), mostra o
