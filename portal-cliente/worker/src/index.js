@@ -78,7 +78,7 @@ import { amostraContatosPloomes, paginaAmostraContatos, importarLoteContatos, es
 import { importarLoteAnexos, importarLoteAnexosContatos, completarAnexos, importarAnexosJanela, reprocessarFalhas, importarLoteDocumentos, recuperarDocumentos, estatisticasArquivos, paginaMigrarArquivos, diagnosticoAnexos, paginaDiagAnexos } from './ploomes-arquivos.js';
 import { fiscalPermitido, nomeFiscal, listarNotas, lerNota, importarLote, vincularNota, sugerirVinculoSync, paginaFiscalLogin, paginaFiscalHome, paginaFiscalResultado, paginaFiscalNota } from './fiscal.js';
 import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, emailsDoCliente, reindexarEmailsClientes, backfillEnderecos, paginaManutencao, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, clienteDeLead, arquivosDoCliente, paginaLeads, paginaLeadDetalhe, paginaInicio, listarClientesD1, contagensClientesD1, lerClienteD1, negociosDoCliente, espelharClienteD1, sincronizarKVparaD1, lerNegocioDetalheD1, paginaOSDetalhe, curarContatosKV, classificarPedido, atualizarIndexLead, excluirLead } from './cadastro.js';
-import { listarColetasOS, lerColetaOS, seloOS, criarColetaOS, atualizarStatusOS, atualizarColetaOS, anexarTelemetriaOS, registrarAnexoColeta, removerAnexoColeta, alvoAvisoColeta, paginaColetasLista, paginaGerarColeta, paginaEditarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga, definirCobrancaOS, marcarCobrancaPagaOS, definirMtrOS } from './coletas.js';
+import { listarColetasOS, lerColetaOS, seloOS, criarColetaOS, atualizarStatusOS, atualizarColetaOS, anexarTelemetriaOS, registrarAnexoColeta, removerAnexoColeta, alvoAvisoColeta, salvarColetaOSDireto, paginaColetasLista, paginaGerarColeta, paginaEditarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga, definirCobrancaOS, marcarCobrancaPagaOS, definirMtrOS } from './coletas.js';
 import { listarVeiculos, lerVeiculo, salvarVeiculo, paginaFrota, paginaVeiculoForm, lerJornadaAtiva, abrirJornada, fecharJornada, registrarAbastecimento, tagColetaComVeiculo, servirFotoJornada, bannerJornada, paginaAbrirDia, paginaFecharDia, paginaAbastecer, placaDaColeta } from './frota.js';
 import { carregarEquipeNoEnv, listarUsuarios, lerUsuario, salvarUsuario, importarUsuarios, paginaEquipe, paginaUsuarioForm, paginaEquipeImportar } from './equipe.js';
 import { agentesDe } from './agente.js';
@@ -2124,6 +2124,15 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         if (!escOuEng) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
         const os = await lerColetaOS(env, url.searchParams.get('id') || '');
         if (!os) return html(paginaMensagem('Coleta não encontrada', 'Volte e tente de novo.'), 404);
+        // Cura dos links de cobrança antigos (eram a URL da sessão Stripe, que vence em
+        // 24 h): na primeira abertura, o link vira o /pagar estável — sem migração.
+        try {
+          if (os.cobranca && os.cobranca.ref && os.cobranca.status !== 'pago') {
+            const baseLk = String(env.PORTAL_BASE_URL || env.PORTAL_URL || url.origin).replace(/\/+$/, '');
+            const linkBom = `${baseLk}/pagar?pedido=${encodeURIComponent(os.cobranca.ref)}`;
+            if (os.cobranca.link !== linkBom) { os.cobranca.link = linkBom; await salvarColetaOSDireto(env, os); }
+          }
+        } catch { /* cura é best-effort */ }
         // Acompanhamento (best-effort): cliente avisado? distância do rastreador ao destino?
         let acomp = {};
         try {
@@ -2161,6 +2170,14 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
         const os = await lerColetaOS(env, url.searchParams.get('id') || '');
         if (!os) return html(paginaMensagem('Coleta não encontrada', 'Volte e tente de novo.'), 404);
+        // Mesma cura do link de cobrança da tela da OS (sessão Stripe vencida → /pagar).
+        try {
+          if (os.cobranca && os.cobranca.ref && os.cobranca.status !== 'pago') {
+            const baseLk = String(env.PORTAL_BASE_URL || env.PORTAL_URL || url.origin).replace(/\/+$/, '');
+            const linkBom = `${baseLk}/pagar?pedido=${encodeURIComponent(os.cobranca.ref)}`;
+            if (os.cobranca.link !== linkBom) { os.cobranca.link = linkBom; await salvarColetaOSDireto(env, os); }
+          }
+        } catch { /* cura é best-effort */ }
         let contatos = [];
         try { const cli = os.clienteId ? await curarContatosKV(env, await lerCliente(env, os.clienteId)) : null; if (cli) contatos = cli.tipo === 'PJ' ? (cli.contatos || []) : [{ nome: cli.nome, fone: cli.fone, email: cli.email }]; } catch { /* sem contatos do cliente, tudo bem */ }
         const agentes = [...agentesDe(env).entries()].map(([email, nome]) => ({ email, nome }));
@@ -2195,10 +2212,14 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
           try { const cli = os.clienteId ? await lerCliente(env, os.clienteId) : null; clienteEmail = (cli && (cli.email || (Array.isArray(cli.contatos) && cli.contatos[0] && cli.contatos[0].email))) || ''; } catch { /* segue sem e-mail */ }
           // O cadastro pode ter mais de um e-mail no campo — usa só o 1º válido (a Stripe e o Resend recusam lista).
           clienteEmail = String(clienteEmail).split(/[,;\s]+/).map((s) => s.trim()).find((s) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s)) || '';
-          const s = await criarPagamentoEscolha({ valor, descricao, externalReference: ref, baseUrl: base, backPath: '/pagamento/ok', clienteEmail, metodos: ['card', 'boleto'] }, env);
-          if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${ref}`, JSON.stringify({ produto: 'oscobranca', osId: id, numero: os.numero || '', valor, clienteEmail, clienteNome: os.clienteNome || '', status: 'pendente', gateway: 'stripe', criadoEm: nowS() }), { expirationTtl: 90 * 86400 });
-          await definirCobrancaOS(env, id, { valor, descricao, ref, link: s.url, criadoPor: escritorio.email || '' });
-          return json({ ok: true, link: s.url, valor });
+          // O link enviado ao cliente é o NOSSO /pagar (estável, nunca vence): a sessão
+          // de cartão/Pix nasce só na hora do clique. Gravar aqui a URL da sessão Stripe
+          // era o bug do "link might be expired" (sessão do Stripe vence em 24 h — caso
+          // 19/10): a Débora enviava num dia, o cliente clicava no outro, e dava erro.
+          const linkPagar = `${base}/pagar?pedido=${encodeURIComponent(ref)}`;
+          if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${ref}`, JSON.stringify({ produto: 'oscobranca', osId: id, numero: os.numero || '', valor, clienteEmail, clienteNome: os.clienteNome || '', status: 'pendente', criadoEm: nowS() }), { expirationTtl: 90 * 86400 });
+          await definirCobrancaOS(env, id, { valor, descricao, ref, link: linkPagar, criadoPor: escritorio.email || '' });
+          return json({ ok: true, link: linkPagar, valor });
         } catch (error) {
           console.error('oscobranca_mp', safeError(error));
           await registrarFalha(env, 'cobranca-os', safeError(error), { os: id });
