@@ -27,6 +27,14 @@ jobs:
             rm -f /tmp/body
             curl -sS -o /tmp/body -w "HTTP %{http_code} | efetiva: %{url_effective} | %{time_total}s\n" -L --max-time 20 "$u" || echo "FALHA de conexão"
             grep -o '<title>[^<]*</title>' /tmp/body | head -1 || true
+            # Primeiro salto, SEM seguir redirecionamento: mostra o status (301,
+            # 302, 200…) e o Location. Sem isso a ferramenta so' mostra onde a
+            # URL termina, e dois cenarios bem diferentes ficam identicos — um
+            # 301 para o caminho certo e um 301 que joga tudo na home chegam
+            # ambos com "HTTP 200". Foi o que aconteceu com ecobrazinforma.org
+            # em 22/10.
+            curl -sSI --max-time 20 "$u" 2>/dev/null \
+              | grep -iE '^(HTTP/|location:|server:|cf-cache-status:)' | sed 's/^/  1o salto: /' || true
             # Se a resposta nao for HTML (JSON de API, texto puro), mostra o
             # comeco do corpo — senao a ferramenta fica cega para respostas
             # que nao tem <title>, como consultas RDAP de dominio.
