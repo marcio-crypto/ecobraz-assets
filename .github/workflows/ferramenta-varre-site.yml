@@ -1,0 +1,96 @@
+name: Ferramenta — varrer TODO o site procurando um texto
+
+# Responde a pergunta "isso está no site?" sem depender de memória nem do
+# repositório. Pega o sitemap, abre PÁGINA POR PÁGINA e procura o padrão no
+# HTML servido. Imprime cada trecho encontrado e, no fim, a lista das URLs que
+# bateram — ou a afirmação de que nenhuma bateu, com o número de páginas
+# conferidas (sem o número, "não achei" não vale como prova).
+#
+# Diferença da ferramenta-grep-url: aquela procura em URLs que eu já conheço;
+# esta descobre as URLs no sitemap e não deixa página de fora.
+#
+# Limite honesto: o sitemap só lista o que o Ghost publica nele. Página
+# despublicada, com noindex ou fora do sitemap não entra na varredura, e o
+# relatório diz isso.
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Site a varrer'
+        required: false
+        default: 'https://ecobraz.org'
+      padrao:
+        description: 'Padrão (grep -E, sem diferenciar maiúsculas) a procurar no HTML'
+        required: true
+      linhas:
+        description: 'Quantos trechos mostrar por página (padrão 3)'
+        required: false
+        default: '3'
+
+permissions:
+  contents: read
+
+jobs:
+  varrer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      # O padrão entra por VARIÁVEL DE AMBIENTE, nunca interpolado no shell —
+      # mesma razão registrada na ferramenta-grep-url: um padrão com aspas
+      # quebrava o passo, e o mesmo buraco aceitaria comando embutido.
+      - name: Monta a lista de páginas a partir do sitemap
+        env:
+          BASE: ${{ inputs.base_url }}
+        run: |
+          set -e
+          curl -sSf --max-time 30 "$BASE/sitemap.xml" -o /tmp/index.xml
+          grep -o '<loc>[^<]*</loc>' /tmp/index.xml | sed 's/<[^>]*>//g' > /tmp/filhos.txt
+          echo "Sitemaps encontrados no índice:"
+          sed 's/^/  /' /tmp/filhos.txt
+          : > /tmp/urls.txt
+          while read -r filho; do
+            curl -sSf --max-time 30 "$filho" -o /tmp/filho.xml || continue
+            grep -o '<loc>[^<]*</loc>' /tmp/filho.xml | sed 's/<[^>]*>//g' \
+              | grep -vEi '\.(png|jpe?g|webp|gif|svg|ico|pdf)$' >> /tmp/urls.txt || true
+          done < /tmp/filhos.txt
+          sort -u /tmp/urls.txt -o /tmp/urls.txt
+          echo
+          echo "Total de páginas a conferir: $(wc -l < /tmp/urls.txt)"
+
+      - name: Procura o padrão em cada página
+        env:
+          PADRAO: ${{ inputs.padrao }}
+          LINHAS: ${{ inputs.linhas }}
+        run: |
+          total=0
+          comigo=0
+          : > /tmp/bateram.txt
+          while read -r u; do
+            total=$((total + 1))
+            if ! curl -sS -L --max-time 20 -A "Mozilla/5.0 (compatible; EcobrazVarredura/1.0)" "$u" -o /tmp/body; then
+              echo "FALHA de conexão: $u"
+              continue
+            fi
+            n=$(grep -Eoi "$PADRAO" /tmp/body | wc -l)
+            if [ "$n" -gt 0 ]; then
+              comigo=$((comigo + 1))
+              echo "$u" >> /tmp/bateram.txt
+              echo "=== $u — $n ocorrência(s) ==="
+              grep -Eoi ".{0,80}$PADRAO.{0,80}" /tmp/body | head -"${LINHAS:-3}"
+            fi
+            # Pausa curta: a varredura abre o site inteiro de uma vez e não
+            # vale derrubar o cache nem levar bloqueio por rajada.
+            sleep 0.3
+          done < /tmp/urls.txt
+          echo
+          echo "================ RESULTADO ================"
+          echo "Páginas conferidas: $total"
+          echo "Páginas com o padrão: $comigo"
+          if [ "$comigo" -eq 0 ]; then
+            echo "Nenhuma página do sitemap contém o padrão."
+          else
+            echo "URLs que bateram:"
+            sed 's/^/  /' /tmp/bateram.txt
+          fi
+          echo "Lembrete: o sitemap não lista página despublicada nem fora dele."
