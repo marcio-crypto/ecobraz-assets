@@ -153,7 +153,7 @@ export async function abrirPixDoPedido(env, ref, ped, aux, baseUrl, extra) {
 export async function abrirStripeDoPedido(env, ref, ped, aux, baseUrl, metodo) {
   const descricao = descricaoDoPedido(ped, aux);
   const clienteEmail = (aux && aux.clienteEmail) || ped.clienteEmail || ped.email || '';
-  const s = await criarCheckoutStripe({ valor: Number(ped.valor) || 0, descricao, externalReference: refLimpa(ref), baseUrl, backPath: '/pagamento/ok', clienteEmail, metodos: [metodo] }, env);
+  const s = await criarCheckoutStripe({ valor: Number(ped.valor) || 0, descricao, externalReference: refLimpa(ref), baseUrl, backPath: '/pagamento/ok', clienteEmail, metodos: [metodo], diasBoleto: ped.boletoDias }, env);
   try {
     ped.sessionId = s.id; ped.gateway = 'stripe';
     await env.PORTAL_KV.put(`pedido:${refLimpa(ref)}`, JSON.stringify(ped), { expirationTtl: 90 * 86400 });

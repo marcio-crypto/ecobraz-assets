@@ -267,6 +267,8 @@ export async function definirCobrancaOS(env, id, cobranca) {
   const rec = await lerColetaOS(env, id); if (!rec) return null;
   if (cobranca) {
     rec.cobranca = { valor: Number(cobranca.valor) || 0, descricao: String(cobranca.descricao || '').slice(0, 200), ref: String(cobranca.ref || ''), link: String(cobranca.link || ''), status: 'aguardando', criadoEm: agora(), criadoPor: String(cobranca.criadoPor || '') };
+    // Prazo do boleto escolhido pela equipe para ESTA cobrança (1–60 dias; vazio = padrão).
+    const dd = Math.floor(Number(cobranca.boletoDias)); if (dd >= 1) rec.cobranca.boletoDias = Math.min(60, dd);
   } else { delete rec.cobranca; }
   rec.atualizadoEm = agora();
   if (env.PORTAL_KV) {
@@ -278,6 +280,19 @@ export async function definirCobrancaOS(env, id, cobranca) {
       await salvarIndiceOS(env, idx);
     }
   }
+  return rec;
+}
+// BOLETO EMITIDO (caso AG Automação, 28/10): quando o cliente clica em "Boleto" no
+// link de pagamento, a Stripe emite o boleto e avisa pelo webhook — aqui ele fica
+// ANEXADO à cobrança da OS, para a equipe VER o boleto (link + vencimento) sem depender
+// de print do cliente. Se o cliente gerar outro boleto pelo mesmo link, o novo
+// substitui o anterior aqui; boleto não pago não precisa ser cancelado — expira sozinho.
+export async function anexarBoletoCobrancaOS(env, id, boleto) {
+  const rec = await lerColetaOS(env, id); if (!rec || !rec.cobranca) return null;
+  if (rec.cobranca.status === 'pago') return rec;
+  rec.cobranca.boleto = { url: String((boleto && boleto.url) || '').slice(0, 500), vence: String((boleto && boleto.vence) || ''), em: agora() };
+  rec.atualizadoEm = agora();
+  if (env.PORTAL_KV) await env.PORTAL_KV.put(`os:${rec.id}`, JSON.stringify(rec));
   return rec;
 }
 export async function marcarCobrancaPagaOS(env, id, pagamento) {
@@ -640,6 +655,8 @@ export function paginaColetaOSDetalhe(user, os, acomp, extras) {
       <div style="font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:${os.cobranca.status === 'pago' ? '#1E7A1E' : '#8A4B00'}">💰 Cobrança: R$ ${esc(String(os.cobranca.valor).replace('.', ','))} — ${os.cobranca.status === 'pago' ? '✅ PAGA' : 'aguardando pagamento'}</div>
       <div style="font-size:13px;color:#4F6469;margin-top:5px">${esc(os.cobranca.descricao || '')}${os.cobranca.status === 'pago' && os.cobranca.pagoEm ? ` · paga em ${esc(dataBR(os.cobranca.pagoEm))}` : ''}</div>
       ${os.cobranca.status === 'pago' && os.liberada ? `<div style="font-size:12.5px;color:#1E7A1E;font-weight:700;margin-top:5px">🔓 OS liberada${os.cobranca.liberouEmTransporte ? ' — colocada em transporte automaticamente' : (os.status === 'agendada' && !os.agenteEmail ? ' — escolha o motorista para liberar no app' : '')}</div>` : ''}
+      ${os.cobranca.status !== 'pago' && os.cobranca.boleto && os.cobranca.boleto.url ? `<div style="margin-top:8px;background:#fff;border:1px dashed #D8B46A;border-radius:8px;padding:9px 11px;font-size:12.5px;color:#4F6469">📄 <b>Boleto emitido pelo cliente</b>${os.cobranca.boleto.vence ? ` · vence em <b>${esc(dataBR(os.cobranca.boleto.vence))}</b>` : ''} — <a href="${esc(os.cobranca.boleto.url)}" target="_blank" rel="noopener" style="color:#0B5B66;font-weight:700">abrir boleto</a>
+      <div style="font-size:11px;color:#8a6a16;margin-top:3px">Precisa de outra data? O cliente abre o mesmo link de pagamento e clica em Boleto de novo — sai um boleto novo (o antigo expira sozinho, não precisa cancelar; só não pagar os dois).</div></div>` : ''}
       ${os.cobranca.status !== 'pago' && os.cobranca.link ? `<input readonly value="${esc(os.cobranca.link)}" onclick="this.select()" style="width:100%;font-size:12px;margin-top:8px;border:1px solid #DDE1E6;border-radius:8px;padding:8px 10px">
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
         <a href="https://wa.me/?text=${encodeURIComponent('Olá! Segue o link para pagamento da sua coleta Ecobraz (OS ' + os.numero + ') — R$ ' + String(os.cobranca.valor).replace('.', ',') + ': ' + os.cobranca.link)}" target="_blank" rel="noopener" class="btn" style="background:#25D366;color:#0b3d1e;padding:8px 12px;font-size:12.5px">📱 Enviar por WhatsApp</a>
@@ -769,6 +786,7 @@ export function paginaEditarColeta(user, os, contatos, agentes, veiculos) {
     <div style="border:1px solid ${os.cobranca.status === 'pago' ? '#CBE7CB;background:#F0FAF0' : '#F2C173;background:#FFF9EE'};border-radius:10px;padding:12px 14px;font-size:13.5px">
       <b>R$ ${esc(String(os.cobranca.valor).replace('.', ','))}</b> — ${esc(os.cobranca.descricao || 'cobrança da coleta')} ·
       <b>${os.cobranca.status === 'pago' ? '✅ PAGO' : '💳 aguardando pagamento'}</b>
+      ${os.cobranca.status !== 'pago' && os.cobranca.boleto && os.cobranca.boleto.url ? `<div style="margin-top:8px;background:#fff;border:1px dashed #D8B46A;border-radius:8px;padding:9px 11px;font-size:12.5px;color:#4F6469">📄 <b>Boleto emitido pelo cliente</b>${os.cobranca.boleto.vence ? ` · vence em <b>${esc(dataBR(os.cobranca.boleto.vence))}</b>` : ''} — <a href="${esc(os.cobranca.boleto.url)}" target="_blank" rel="noopener" style="color:#0B5B66;font-weight:700">abrir boleto</a></div>` : ''}
       ${os.cobranca.status !== 'pago' && os.cobranca.link ? `<div style="margin-top:8px"><input readonly value="${esc(os.cobranca.link)}" onclick="this.select()" style="font-size:12px">
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
           <a href="https://wa.me/?text=${encodeURIComponent('Olá! Segue o link para pagamento da sua coleta Ecobraz (OS ' + os.numero + ') — R$ ' + String(os.cobranca.valor).replace('.', ',') + ': ' + os.cobranca.link)}" target="_blank" rel="noopener" class="btn" style="background:#25D366;color:#0b3d1e;padding:8px 12px;font-size:12.5px">📱 Enviar por WhatsApp</a>
@@ -781,6 +799,10 @@ export function paginaEditarColeta(user, os, contatos, agentes, veiculos) {
     <div class="g2">
       <div><label>Valor (R$)</label><input id="cobValor" inputmode="decimal" placeholder="ex.: 150,00"></div>
       <div><label>Descrição (aparece para o cliente)</label><input id="cobDesc" maxlength="200" placeholder="ex.: Taxa de coleta — itens perigosos"></div>
+    </div>
+    <div class="g2" style="margin-top:8px">
+      <div><label>Boleto: vence em quantos dias? (opcional)</label><input id="cobBoletoDias" inputmode="numeric" maxlength="2" placeholder="vazio = 10 dias"></div>
+      <div style="align-self:center;font-size:11px;color:#9aa7a4">Vale para o boleto que o cliente gerar por este link (de 1 a 60 dias). Cartão e Pix não mudam.</div>
     </div>
     <div style="margin-top:10px"><button type="button" class="btn btn-d" onclick="gerarCobranca()">Gerar link de cobrança</button> <span id="mCob" style="font-size:13px;color:#4F6469"></span></div>`}
     <div class="sec">🏛️ MTR — Manifesto de Transporte de Resíduos (SIGOR/CETESB)</div>
@@ -820,7 +842,7 @@ function salvar(){var ag=g('agente').split('|');
   fetch('/api/coletas/editar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(rec)}).then(function(r){return r.json();}).then(function(j){if(j.ok){location.href='/coletas/os?id=${esc(os.id)}';}else{document.getElementById('m').textContent=j.message||j.error||'Erro ao salvar.';}}).catch(function(){document.getElementById('m').textContent='Sem conexão.';});}
 function gerarCobranca(){
   var m=document.getElementById('mCob'); m.textContent='Gerando link…';
-  fetch('/api/coletas/cobranca',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:'${esc(os.id)}',valor:g('cobValor'),descricao:g('cobDesc')})})
+  fetch('/api/coletas/cobranca',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:'${esc(os.id)}',valor:g('cobValor'),descricao:g('cobDesc'),boletoDias:g('cobBoletoDias')})})
     .then(function(r){return r.json();}).then(function(j){
       if(j.ok){ m.textContent='✅ Link gerado!'; location.reload(); }
       else if(j.error==='valor_invalido'){ m.textContent='Informe um valor válido (ex.: 150,00).'; }

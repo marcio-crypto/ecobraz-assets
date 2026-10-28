@@ -36,7 +36,7 @@ import { LOGO_ESCURO_B64, LOGO_CLARO_B64 } from './logos.js';
 import { paginaCalculadora, estimativaCarbono, paginaCalculoDetalhado, calculoDetalhadoGHG, paginaLojaCarbono, paginaCarbonoContato, paginaCarbonoObrigado, nivelCarbono, faixaValida, precoNivel } from './carbono.js';
 import { criarPreferencia, consultarPagamento, criarPixDireto, consultarMeiosPagamento, consultarContaMP } from './mercadopago.js';
 import { criarPagamentoEscolha, lerAuxPagar, descricaoDoPedido, paginaEscolherPagamento, paginaPixPagamento, statusPixPedido, abrirPixDoPedido, abrirStripeDoPedido, dadosPagadorDoPedido, paginaDadosPix, paginaPagamentoFalhou, pagamentosDisponiveis, refLimpa } from './pagar.js';
-import { criarCheckoutStripe, consultarCheckoutStripe, verificarEventoStripe, stripeConfigurado } from './stripe.js';
+import { criarCheckoutStripe, consultarCheckoutStripe, consultarPaymentIntentStripe, verificarEventoStripe, stripeConfigurado } from './stripe.js';
 import { gerarPixCopiaECola, pixConfig, paginaPix } from './pix.js';
 import { paginaColetaExpressa } from './coleta-expressa.js';
 import { enviarSMS, smsConfigurado } from './sms.js';
@@ -78,7 +78,7 @@ import { amostraContatosPloomes, paginaAmostraContatos, importarLoteContatos, es
 import { importarLoteAnexos, importarLoteAnexosContatos, completarAnexos, importarAnexosJanela, reprocessarFalhas, importarLoteDocumentos, recuperarDocumentos, estatisticasArquivos, paginaMigrarArquivos, diagnosticoAnexos, paginaDiagAnexos } from './ploomes-arquivos.js';
 import { fiscalPermitido, nomeFiscal, listarNotas, lerNota, importarLote, vincularNota, sugerirVinculoSync, paginaFiscalLogin, paginaFiscalHome, paginaFiscalResultado, paginaFiscalNota } from './fiscal.js';
 import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, emailsDoCliente, reindexarEmailsClientes, backfillEnderecos, paginaManutencao, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, clienteDeLead, arquivosDoCliente, paginaLeads, paginaLeadDetalhe, paginaInicio, listarClientesD1, contagensClientesD1, lerClienteD1, negociosDoCliente, espelharClienteD1, sincronizarKVparaD1, lerNegocioDetalheD1, paginaOSDetalhe, curarContatosKV, classificarPedido, atualizarIndexLead, excluirLead } from './cadastro.js';
-import { listarColetasOS, lerColetaOS, seloOS, criarColetaOS, atualizarStatusOS, atualizarColetaOS, anexarTelemetriaOS, registrarAnexoColeta, removerAnexoColeta, alvoAvisoColeta, salvarColetaOSDireto, paginaColetasLista, paginaGerarColeta, paginaEditarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga, definirCobrancaOS, marcarCobrancaPagaOS, definirMtrOS } from './coletas.js';
+import { listarColetasOS, lerColetaOS, seloOS, criarColetaOS, atualizarStatusOS, atualizarColetaOS, anexarTelemetriaOS, registrarAnexoColeta, removerAnexoColeta, alvoAvisoColeta, salvarColetaOSDireto, paginaColetasLista, paginaGerarColeta, paginaEditarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga, definirCobrancaOS, anexarBoletoCobrancaOS, marcarCobrancaPagaOS, definirMtrOS } from './coletas.js';
 import { listarVeiculos, lerVeiculo, salvarVeiculo, paginaFrota, paginaVeiculoForm, lerJornadaAtiva, abrirJornada, fecharJornada, registrarAbastecimento, tagColetaComVeiculo, servirFotoJornada, bannerJornada, paginaAbrirDia, paginaFecharDia, paginaAbastecer, placaDaColeta } from './frota.js';
 import { carregarEquipeNoEnv, listarUsuarios, lerUsuario, salvarUsuario, importarUsuarios, paginaEquipe, paginaUsuarioForm, paginaEquipeImportar } from './equipe.js';
 import { agentesDe } from './agente.js';
@@ -1333,6 +1333,23 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
               }
             } catch (error) { console.error('stripe_webhook_falhou', safeError(error)); await registrarFalha(env, 'stripe-webhook', safeError(error), { ref: s.ref }); }
           }
+          // BOLETO EMITIDO, ainda não pago (sessão completa + payment_status 'unpaid'):
+          // guarda o boleto no pedido e anexa à OS — a equipe passa a VER o boleto que o
+          // cliente gerou (link + vencimento), em vez de depender de print (caso 28/10).
+          if (s && !s.pago && s.ref && s.paymentIntent && env.PORTAL_KV) {
+            try {
+              const pi = await consultarPaymentIntentStripe(s.paymentIntent, env);
+              if (pi && pi.boletoUrl) {
+                const chave = `pedido:${s.ref}`; const rawp = await env.PORTAL_KV.get(chave); const ped = rawp ? JSON.parse(rawp) : null;
+                if (ped && ped.status !== 'pago') {
+                  ped.boleto = { url: pi.boletoUrl, vence: pi.boletoVence || '', em: nowS() };
+                  await env.PORTAL_KV.put(chave, JSON.stringify(ped), { expirationTtl: 90 * 86400 });
+                  if (ped.produto === 'oscobranca' && ped.osId) await anexarBoletoCobrancaOS(env, ped.osId, ped.boleto);
+                  console.log('stripe_boleto_emitido', { ref: s.ref });
+                }
+              }
+            } catch (error) { console.error('stripe_boleto_falhou', safeError(error)); await registrarFalha(env, 'stripe-boleto-emitido', safeError(error), { ref: s.ref }); }
+          }
         }
         return json({ received: true });
       }
@@ -2217,8 +2234,11 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
           // era o bug do "link might be expired" (sessão do Stripe vence em 24 h — caso
           // 19/10): a Débora enviava num dia, o cliente clicava no outro, e dava erro.
           const linkPagar = `${base}/pagar?pedido=${encodeURIComponent(ref)}`;
-          if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${ref}`, JSON.stringify({ produto: 'oscobranca', osId: id, numero: os.numero || '', valor, clienteEmail, clienteNome: os.clienteNome || '', status: 'pendente', criadoEm: nowS() }), { expirationTtl: 90 * 86400 });
-          await definirCobrancaOS(env, id, { valor, descricao, ref, link: linkPagar, criadoPor: escritorio.email || '' });
+          // Prazo do boleto desta cobrança (opcional, 1–60 dias; vazio = padrão de 10).
+          const diasB = Math.floor(Number((b && b.boletoDias) || 0));
+          const boletoDias = diasB >= 1 ? Math.min(60, diasB) : 0;
+          if (env.PORTAL_KV) await env.PORTAL_KV.put(`pedido:${ref}`, JSON.stringify({ produto: 'oscobranca', osId: id, numero: os.numero || '', valor, clienteEmail, clienteNome: os.clienteNome || '', status: 'pendente', criadoEm: nowS(), ...(boletoDias ? { boletoDias } : {}) }), { expirationTtl: 90 * 86400 });
+          await definirCobrancaOS(env, id, { valor, descricao, ref, link: linkPagar, criadoPor: escritorio.email || '', boletoDias });
           return json({ ok: true, link: linkPagar, valor });
         } catch (error) {
           console.error('oscobranca_mp', safeError(error));

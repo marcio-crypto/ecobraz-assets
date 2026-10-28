@@ -11,7 +11,7 @@ const STRIPE_API = 'https://api.stripe.com/v1';
 export const stripeConfigurado = (env) => !!env.STRIPE_SECRET_KEY;
 
 // Cria uma sessão de Checkout (Pix + cartão) e devolve a URL hospedada da Stripe.
-export async function criarCheckoutStripe({ valor, descricao, externalReference, baseUrl, backPath, metodos, clienteEmail }, env) {
+export async function criarCheckoutStripe({ valor, descricao, externalReference, baseUrl, backPath, metodos, clienteEmail, diasBoleto }, env) {
   const key = env.STRIPE_SECRET_KEY;
   if (!key) throw new Error('sem_stripe_key');
   const base = String(baseUrl || '').replace(/\/+$/, '');
@@ -33,8 +33,11 @@ export async function criarCheckoutStripe({ valor, descricao, externalReference,
     p.set('line_items[0][price_data][product_data][name]', String(descricao || 'Cobrança Ecobraz').slice(0, 250));
     mm.forEach((m, i) => p.set(`payment_method_types[${i}]`, m));
     if (comBoleto && mm.includes('boleto')) {
-      const diasBoleto = Math.min(60, Math.max(0, Math.floor(Number(env.BOLETO_EXPIRES_DAYS) || 10)));
-      p.set('payment_method_options[boleto][expires_after_days]', String(diasBoleto));
+      // Prazo do boleto: o da cobrança (diasBoleto, quando a equipe escolheu na OS)
+      // vence o padrão da conta (BOLETO_EXPIRES_DAYS ou 10). Sempre entre 1 e 60 dias.
+      const escolhido = Math.floor(Number(diasBoleto));
+      const dias = escolhido >= 1 ? Math.min(60, escolhido) : Math.min(60, Math.max(0, Math.floor(Number(env.BOLETO_EXPIRES_DAYS) || 10)));
+      p.set('payment_method_options[boleto][expires_after_days]', String(dias));
     }
     // O campo de e-mail do cliente pode ter VÁRIOS e-mails (ex.: "a@x.com, b@y.com").
     // A Stripe recusa isso. Usa só o PRIMEIRO e-mail válido; se não houver, omite.
@@ -90,6 +93,24 @@ export async function consultarCheckoutStripe(sessionId, env) {
       valor: (Number(d.amount_total) || 0) / 100,
       email: (d.customer_details && d.customer_details.email) || '',
       paymentIntent: d.payment_intent || '',
+    };
+  } catch { return null; }
+}
+
+// Consulta um PaymentIntent — serve para pegar o BOLETO emitido: enquanto aguarda
+// pagamento, a URL do boleto e o vencimento ficam em next_action.boleto_display_details.
+export async function consultarPaymentIntentStripe(paymentIntentId, env) {
+  const key = env.STRIPE_SECRET_KEY;
+  if (!key || !paymentIntentId) return null;
+  const r = await fetch(`${STRIPE_API}/payment_intents/${encodeURIComponent(paymentIntentId)}`, { headers: { authorization: `Bearer ${key}` } });
+  if (!r.ok) return null;
+  try {
+    const d = await r.json();
+    const b = (d.next_action && d.next_action.boleto_display_details) || {};
+    return {
+      id: d.id, status: d.status || '',
+      boletoUrl: b.hosted_voucher_url || '',
+      boletoVence: b.expires_at ? new Date(Number(b.expires_at) * 1000).toISOString() : '',
     };
   } catch { return null; }
 }
