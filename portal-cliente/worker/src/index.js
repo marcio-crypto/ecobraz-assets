@@ -2010,8 +2010,12 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
       }
       if (pathname === '/api/cadastro/cnpj' && request.method === 'GET') {
         if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
-        const d = await consultarCNPJ(url.searchParams.get('n') || '');
-        return d ? json({ ok: true, ...d }) : json({ ok: false });
+        const res = await consultarCNPJ(url.searchParams.get('n') || '', env);
+        if (res && res.dados) return json({ ok: true, ...res.dados });
+        const erro = (res && res.erro) || 'indisponivel';
+        // Fontes fora do ar fica REGISTRADO no monitor — "às vezes não funciona" vira evidência.
+        if (erro === 'indisponivel') await registrarFalha(env, 'cnpj-busca', (res && res.detalhe) || 'todas as fontes falharam', {});
+        return json({ ok: false, error: erro });
       }
       // Caixa de entrada de leads do site (escritório/comercial — Débora).
       if (pathname === '/leads' && request.method === 'GET') {

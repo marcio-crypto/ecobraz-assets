@@ -604,37 +604,55 @@ async function rodarSync(){
 }
 
 // Busca dados públicos do CNPJ para pré-preencher o cadastro (menos digitação).
-// Robusto: tenta a BrasilAPI e, se falhar/estiver fora, cai para a publica.cnpj.ws.
-export async function consultarCNPJ(cnpj) {
-  const n = digits(cnpj); if (n.length !== 14) return null;
-  // Fonte 1 — BrasilAPI
-  try {
-    const r = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${n}`, { headers: { accept: 'application/json' }, signal: AbortSignal.timeout(9000) });
-    if (r.ok) {
-      const d = await r.json();
-      if (d && (d.razao_social || d.cep || d.municipio)) return {
-        razaoSocial: d.razao_social || '', nomeFantasia: d.nome_fantasia || '',
-        cep: d.cep ? String(d.cep) : '', logradouro: d.logradouro || '', numero: d.numero ? String(d.numero) : '',
-        complemento: d.complemento || '', bairro: d.bairro || '', cidade: d.municipio || '', uf: d.uf || '',
-        email: d.email || '', fone: d.ddd_telefone_1 || '',
-      };
-    }
-  } catch { /* cai para a fonte 2 */ }
-  // Fonte 2 — publica.cnpj.ws (formato diferente)
-  try {
-    const r = await fetch(`https://publica.cnpj.ws/cnpj/${n}`, { headers: { accept: 'application/json' }, signal: AbortSignal.timeout(9000) });
-    if (r.ok) {
-      const d = await r.json();
-      const est = d && d.estabelecimento;
-      if (est) return {
-        razaoSocial: d.razao_social || '', nomeFantasia: est.nome_fantasia || '',
-        cep: est.cep ? String(est.cep) : '', logradouro: [est.tipo_logradouro, est.logradouro].filter(Boolean).join(' ').trim(), numero: est.numero ? String(est.numero) : '',
-        complemento: est.complemento || '', bairro: est.bairro || '', cidade: (est.cidade && est.cidade.nome) || '', uf: (est.estado && est.estado.sigla) || '',
-        email: est.email || '', fone: [est.ddd1, est.telefone1].filter(Boolean).join(' ').trim(),
-      };
-    }
-  } catch { /* ambas falharam */ }
-  return null;
+// "Tem vezes que funciona e tem vezes que não" (Débora, 28/10): as fontes públicas
+// oscilam — a BrasilAPI recusa requisição SEM User-Agent (mesma lição do CEP) e a
+// publica.cnpj.ws limita 3 consultas/minuto POR IP (e o IP do Cloudflare é
+// compartilhado, então o limite vive estourado). Por isso: TRÊS fontes em sequência
+// (BrasilAPI → minhareceita.org, que é a origem dos dados da BrasilAPI → publica.cnpj.ws),
+// todas com User-Agent e timeout curto, e o acerto fica 30 dias em cache no KV —
+// repetir a busca do mesmo CNPJ passa a ser instantâneo e não gasta as fontes.
+// Devolve { dados } no acerto, ou { erro: 'nao_encontrado'|'indisponivel', detalhe }.
+export async function consultarCNPJ(cnpj, env) {
+  const n = digits(cnpj); if (n.length !== 14) return { erro: 'nao_encontrado', detalhe: 'cnpj com menos de 14 dígitos' };
+  if (env && env.PORTAL_KV) {
+    try { const c = await env.PORTAL_KV.get(`cnpj:${n}`); if (c) return { dados: JSON.parse(c) }; } catch { /* cache é atalho, nunca trava */ }
+  }
+  const ua = { 'user-agent': 'EcobrazPortal/1.0', accept: 'application/json' };
+  // BrasilAPI e minhareceita devolvem o MESMO formato (a BrasilAPI repassa a minhareceita).
+  const formatoReceita = (d) => (d && (d.razao_social || d.cep || d.municipio)) ? {
+    razaoSocial: d.razao_social || '', nomeFantasia: d.nome_fantasia || '',
+    cep: d.cep ? String(d.cep) : '', logradouro: d.logradouro || '', numero: d.numero ? String(d.numero) : '',
+    complemento: d.complemento || '', bairro: d.bairro || '', cidade: d.municipio || '', uf: d.uf || '',
+    email: d.email || '', fone: d.ddd_telefone_1 || '',
+  } : null;
+  const formatoCnpjWs = (d) => {
+    const est = d && d.estabelecimento;
+    return est ? {
+      razaoSocial: d.razao_social || '', nomeFantasia: est.nome_fantasia || '',
+      cep: est.cep ? String(est.cep) : '', logradouro: [est.tipo_logradouro, est.logradouro].filter(Boolean).join(' ').trim(), numero: est.numero ? String(est.numero) : '',
+      complemento: est.complemento || '', bairro: est.bairro || '', cidade: (est.cidade && est.cidade.nome) || '', uf: (est.estado && est.estado.sigla) || '',
+      email: est.email || '', fone: [est.ddd1, est.telefone1].filter(Boolean).join(' ').trim(),
+    } : null;
+  };
+  const fontes = [
+    { nome: 'brasilapi', url: `https://brasilapi.com.br/api/cnpj/v1/${n}`, ler: formatoReceita },
+    { nome: 'minhareceita', url: `https://minhareceita.org/${n}`, ler: formatoReceita },
+    { nome: 'cnpj.ws', url: `https://publica.cnpj.ws/cnpj/${n}`, ler: formatoCnpjWs },
+  ];
+  let naoExiste = false; const motivos = [];
+  for (const f of fontes) {
+    try {
+      const r = await fetch(f.url, { headers: ua, signal: AbortSignal.timeout(6000) });
+      if (r.status === 404) { naoExiste = true; motivos.push(`${f.nome}: 404`); continue; }
+      if (!r.ok) { motivos.push(`${f.nome}: HTTP ${r.status}`); continue; }
+      const dados = f.ler(await r.json());
+      if (!dados) { motivos.push(`${f.nome}: resposta sem dados`); continue; }
+      if (env && env.PORTAL_KV) { try { await env.PORTAL_KV.put(`cnpj:${n}`, JSON.stringify(dados), { expirationTtl: 30 * 86400 }); } catch { /* segue */ } }
+      return { dados };
+    } catch (e) { motivos.push(`${f.nome}: ${String((e && e.name) || e).slice(0, 40)}`); }
+  }
+  // 404 em alguma fonte = o CNPJ não existe mesmo; o resto é instabilidade (vale re-tentar).
+  return { erro: naoExiste ? 'nao_encontrado' : 'indisponivel', detalhe: motivos.join(' · ').slice(0, 300) };
 }
 
 // --- Páginas ---
@@ -783,7 +801,7 @@ function addContato(){var w=document.getElementById('contatos');var d=document.c
   w.appendChild(d);}
 document.addEventListener('click',function(ev){if(ev.target&&ev.target.classList.contains('rm-contato')){var c=ev.target.closest('.contato');if(c)c.remove();}});
 function buscarCNPJ(){var n=(document.getElementById('cnpj').value||'').replace(/\\D/g,'');if(n.length!==14){msg('CNPJ deve ter 14 dígitos.');return;}msg('Buscando dados do CNPJ…');
-  fetch('/api/cadastro/cnpj?n='+n).then(r=>r.json()).then(d=>{if(!d||!d.ok){msg('Não encontrei esse CNPJ — preencha manualmente.');return;}var s=function(id,v){if(v&&document.getElementById(id)&&!document.getElementById(id).value)document.getElementById(id).value=v;};s('razaoSocial',d.razaoSocial);s('nomeFantasia',d.nomeFantasia);s('cep',d.cep);s('logradouro',d.logradouro);s('numero',d.numero);s('complemento',d.complemento);s('bairro',d.bairro);s('cidade',d.cidade);s('uf',d.uf);msg('Dados preenchidos ✓ confira e complete.');}).catch(()=>msg('Sem conexão — preencha manualmente.'));}
+  fetch('/api/cadastro/cnpj?n='+n).then(r=>r.json()).then(d=>{if(!d||!d.ok){msg(d&&d.error==='indisponivel'?'As fontes públicas de CNPJ estão instáveis agora — espere 1 minuto e clique em "Buscar dados" de novo (ou preencha manualmente).':'Não encontrei esse CNPJ na Receita — confira os números (ou preencha manualmente).');return;}var s=function(id,v){if(v&&document.getElementById(id)&&!document.getElementById(id).value)document.getElementById(id).value=v;};s('razaoSocial',d.razaoSocial);s('nomeFantasia',d.nomeFantasia);s('cep',d.cep);s('logradouro',d.logradouro);s('numero',d.numero);s('complemento',d.complemento);s('bairro',d.bairro);s('cidade',d.cidade);s('uf',d.uf);msg('Dados preenchidos ✓ confira e complete.');}).catch(()=>msg('Sem conexão — preencha manualmente.'));}
 function buscarCEP(sfx){sfx=sfx||'';var c=document.getElementById('cep'+sfx);if(!c)return;var n=(c.value||'').replace(/\\D/g,'');if(n.length!==8)return;
   fetch('https://viacep.com.br/ws/'+n+'/json/').then(function(r){return r.json();}).then(function(d){if(!d||d.erro)return;var s=function(id,v){var el=document.getElementById(id+sfx);if(el&&v)el.value=v;};s('logradouro',d.logradouro);s('bairro',d.bairro);s('cidade',d.localidade);s('uf',d.uf);var comp=document.getElementById('complemento'+sfx);if(comp&&!comp.value&&d.complemento)comp.value=d.complemento;var num=document.getElementById('numero'+sfx);if(num&&!num.value)num.focus();}).catch(function(){});}
 function cpfValido(v){var s=0,r,i;for(i=0;i<9;i++)s+=parseInt(v.charAt(i),10)*(10-i);r=(s*10)%11;if(r===10)r=0;if(r!==parseInt(v.charAt(9),10))return false;s=0;for(i=0;i<10;i++)s+=parseInt(v.charAt(i),10)*(11-i);r=(s*10)%11;if(r===10)r=0;return r===parseInt(v.charAt(10),10);}
