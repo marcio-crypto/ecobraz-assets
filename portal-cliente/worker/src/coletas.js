@@ -403,7 +403,11 @@ function topo(sub) {
     <form method="post" action="/api/cadastro/sair" style="margin:0"><button class="btn" style="background:#0e4651;color:#cfe3e0;border:1px solid #1c5b66;padding:8px 12px;font-size:12px">Sair</button></form>
   </div></div>`;
 }
-const pill = (status) => `<span style="flex:none;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;color:${STATUS_COR[status] || '#7c8a87;background:#EEF1F0'}">${esc((STATUS[status] || status).toUpperCase())}</span>`;
+// Rótulo de EXIBIÇÃO do status: OS "agendada" SEM data ainda está na fila do roteiro —
+// mostrar "Agendada" fazia parecer que já tinha dia marcado e o cliente cobrava a
+// equipe dentro do prazo (pedido da Débora, 29/10). Com data marcada, segue "Agendada".
+const rotuloStatus = (status, dataAgendada) => (status === 'agendada' && !dataAgendada) ? 'Aguardando roteiro' : (STATUS[status] || status);
+const pill = (status, dataAgendada) => `<span style="flex:none;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;color:${STATUS_COR[status] || '#7c8a87;background:#EEF1F0'}">${esc(rotuloStatus(status, dataAgendada).toUpperCase())}</span>`;
 
 export function paginaColetasLista(user, coletas, q, cliCtx, negocios, aba) {
   q = q || '';
@@ -435,7 +439,7 @@ export function paginaColetasLista(user, coletas, q, cliCtx, negocios, aba) {
   const linhas = lista.length ? lista.map((c) => `<a href="/coletas/os?id=${esc(c.id)}" style="display:flex;justify-content:space-between;align-items:center;gap:12px;text-decoration:none;background:#fff;border:1px solid #E4EBE9;border-radius:12px;padding:13px 15px;margin-bottom:9px">
       <div style="min-width:0"><div style="font-size:14px;font-weight:800;color:#10262B">${esc(c.numero)} <span style="font-weight:600;color:#7c8a87">· ${esc(c.clienteNome || '')}</span></div>
       <div style="font-size:12px;color:#7c8a87;margin-top:3px">${c.dataAgendada ? '📅 ' + esc(dataBR(c.dataAgendada)) : 'sem data'}${c.agenteNome ? ' · 🚚 ' + esc(c.agenteNome) : ''}${c.transp ? ' · 🚛 ' + esc(c.transp) : ''}${c.cidade ? ' · ' + esc(c.cidade) : ''}</div></div>
-      <span style="flex:none;display:flex;align-items:center;gap:6px">${c.reagendar ? '<span style="font-size:10px;font-weight:800;color:#8A6A16;background:#FFF4DE;border-radius:20px;padding:3px 9px">↩︎ REAGENDAR</span>' : ''}${pill(c.status)}</span>
+      <span style="flex:none;display:flex;align-items:center;gap:6px">${c.reagendar ? '<span style="font-size:10px;font-weight:800;color:#8A6A16;background:#FFF4DE;border-radius:20px;padding:3px 9px">↩︎ REAGENDAR</span>' : ''}${pill(c.status, c.dataAgendada)}</span>
     </a>`).join('') : `<div class="card" style="text-align:center;color:#8fa39f;font-size:13.5px">${vazioMsg}</div>`;
   return `${head('Coletas')}<body>${topo('coletas')}
 <div class="wrap">
@@ -618,7 +622,7 @@ export function paginaColetaOSDetalhe(user, os, acomp, extras) {
 <div class="wrap">
   <a href="/coletas" style="font-size:13px;font-weight:800;text-decoration:none;color:#4F6469">← Todas as coletas</a>
   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin:12px 0 16px">
-    <div>${pill(os.status)}<h1 style="font-size:22px;margin:8px 0 0">${esc(os.numero)}</h1>
+    <div>${pill(os.status, os.dataAgendada)}<h1 style="font-size:22px;margin:8px 0 0">${esc(os.numero)}</h1>
     <div style="font-size:13px;color:#7c8a87;margin-top:2px">${os.clienteId ? `<a href="/cadastro/cliente?id=${esc(os.clienteId)}" style="color:#0B5B66;font-weight:700;text-decoration:none">${esc(os.clienteNome || 'Cliente')} ↗</a>` : esc(os.clienteNome || '')}</div></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;flex:none;justify-content:flex-end">
       ${os.clienteId && !ro ? `<a href="/cadastro/cliente?id=${esc(os.clienteId)}" class="btn btn-g" style="padding:9px 12px;font-size:12.5px">👤 Abrir cliente</a>` : ''}
@@ -1042,7 +1046,7 @@ export async function validarOSPublico(request, env, url) {
     <table role="presentation" style="width:100%;border-collapse:collapse;margin-top:20px;font-size:14px">
       <tr><td style="padding:9px 0;border-top:1px solid #E4EBE9;color:#6B7B78">Ordem de Coleta</td><td style="padding:9px 0;border-top:1px solid #E4EBE9;text-align:right;font-weight:800">${esc(os.numero)}</td></tr>
       <tr><td style="padding:9px 0;border-top:1px solid #E4EBE9;color:#6B7B78">Cliente</td><td style="padding:9px 0;border-top:1px solid #E4EBE9;text-align:right;font-weight:700">${esc(os.clienteNome || '—')}</td></tr>
-      <tr><td style="padding:9px 0;border-top:1px solid #E4EBE9;color:#6B7B78">Situação</td><td style="padding:9px 0;border-top:1px solid #E4EBE9;text-align:right;font-weight:700">${esc(STATUS[os.status] || os.status)}</td></tr>
+      <tr><td style="padding:9px 0;border-top:1px solid #E4EBE9;color:#6B7B78">Situação</td><td style="padding:9px 0;border-top:1px solid #E4EBE9;text-align:right;font-weight:700">${esc(rotuloStatus(os.status, os.dataAgendada))}</td></tr>
       <tr><td style="padding:9px 0;border-top:1px solid #E4EBE9;color:#6B7B78">Data</td><td style="padding:9px 0;border-top:1px solid #E4EBE9;text-align:right;font-weight:700">${esc(dataBR(os.dataAgendada) || dataBR(os.criadoEm))}</td></tr>
       ${papel ? `<tr><td style="padding:9px 0;border-top:1px solid #E4EBE9;color:#6B7B78">Assinatura verificada</td><td style="padding:9px 0;border-top:1px solid #E4EBE9;text-align:right;font-weight:700">${esc(papel)}</td></tr>` : ''}
     </table>` : '';
@@ -1124,7 +1128,7 @@ export function paginaComprovanteOS(os, seloUrl) {
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:13px 26px">
         ${f('Data da coleta', [dataBR(os.dataAgendada), os.janela].filter(Boolean).join(' · '))}${f('Quantidade estimada', os.quantidade)}
         ${f('Material declarado', os.material, true)}
-        ${f('Acondicionamento', os.acondicionamento)}${f('Situação', STATUS[os.status] || os.status)}
+        ${f('Acondicionamento', os.acondicionamento)}${f('Situação', rotuloStatus(os.status, os.dataAgendada))}
         ${os.obs ? f('Observações', os.obs, true, true) : ''}
         ${(os.certificados && os.certificados.length) ? f('Certificados solicitados', os.certificados.join(' · '), true) : ''}
       </div>

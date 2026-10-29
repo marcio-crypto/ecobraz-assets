@@ -2353,11 +2353,13 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         let b; try { b = await request.json(); } catch { b = null; }
         if (!b || !String(b.endereco || '').trim()) return json({ ok: false, error: 'Informe o endereço da coleta.' }, 400);
         const os = await criarColetaOS(env, b, escritorio.email);
-        // Avisa o cliente que a coleta foi agendada (best-effort: nunca bloqueia a criação).
+        // Avisa o cliente (best-effort: nunca bloqueia a criação). SEM data marcada o
+        // e-mail diz "aguardando roteiro" — dizer "agendada" fazia o cliente achar que
+        // já tinha dia e cobrar a equipe dentro do prazo (pedido da Débora, 29/10).
         try {
           const cli = os.clienteId ? await lerCliente(env, os.clienteId) : null;
           const emailCli = cli && (cli.email || (Array.isArray(cli.contatos) && cli.contatos[0] && cli.contatos[0].email) || '');
-          if (emailCli && env.RESEND_API_KEY) await enviarEmailStatus(emailCli, os.clienteNome, 'coleta_agendada', env);
+          if (emailCli && env.RESEND_API_KEY) await enviarEmailStatus(emailCli, os.clienteNome, os.dataAgendada ? 'coleta_agendada' : 'coleta_recebida', env);
         } catch (error) { console.error('coleta_agendada_email_falhou', safeError(error)); }
         return json({ ok: true, id: os.id, numero: os.numero });
       }
@@ -3812,7 +3814,9 @@ async function listarOS(sessao, env) {
         if (String(c.clienteDoc || '').replace(/\D/g, '') !== doc) continue;
         if (c.status === 'cancelada') continue;
         out.push({
-          id: 'k' + c.id, numeroOS: c.numero || '', titulo: 'Ordem de Coleta', status: ROT[c.status] || 'Em atendimento', dataColeta: c.dataAgendada || '', aberturaISO: c.criadoEm || null, peso: '', rastreavel: rastreioDisponivel(env) && c.status === 'em_transporte',
+          // "Agendada" SEM data virava cobrança ao escritório ("cadê o dia?") — sem data
+          // marcada o cliente vê "Aguardando roteiro" (pedido da Débora, 29/10).
+          id: 'k' + c.id, numeroOS: c.numero || '', titulo: 'Ordem de Coleta', status: (c.status === 'agendada' && !c.dataAgendada) ? 'Aguardando roteiro' : (ROT[c.status] || 'Em atendimento'), dataColeta: c.dataAgendada || '', aberturaISO: c.criadoEm || null, peso: '', rastreavel: rastreioDisponivel(env) && c.status === 'em_transporte',
           // Cobrança da OS (OS paga): o cliente vê "Pagar" enquanto aguarda; "Pago ✓" depois.
           cobranca: c.cobranca ? { valor: c.cobranca.valor, status: c.cobranca.status, link: c.cobranca.status === 'pago' ? '' : (c.cobranca.link || '') } : undefined,
         });
@@ -4710,6 +4714,9 @@ function destinoObrigado(ped, ref) {
 // ---------------------------------------------------------------------------
 const MSGS_STATUS = {
   coleta_agendada: { assunto: 'Sua coleta foi agendada — Ecobraz', titulo: 'Coleta agendada', corpo: 'Recebemos sua solicitação e sua coleta já está <strong>agendada</strong>. Você acompanha cada passo por aqui, no seu portal.' },
+  // OS criada SEM data marcada: dizer "agendada" fazia o cliente achar que já tinha
+  // dia e cobrar a equipe mesmo no prazo (pedido da Débora, 29/10).
+  coleta_recebida: { assunto: 'Recebemos sua solicitação de coleta — Ecobraz', titulo: 'Solicitação em processo', corpo: 'Recebemos sua solicitação de coleta e ela está <strong>aguardando roteiro</strong> — ainda <strong>não há data marcada</strong>. Assim que a data for definida, você recebe o aviso. Acompanhe pelo seu portal.' },
   a_caminho: { assunto: 'Seu coletor está a caminho! Acompanhe ao vivo — Ecobraz', titulo: 'Coletor a caminho 🚚', corpo: 'O agente de coleta da Ecobraz está <strong>a caminho</strong> da sua coleta. Entre no seu portal e toque em <strong>“Acompanhar o caminhão”</strong> para ver a chegada em tempo real.' },
   chegou: { assunto: 'Seu coletor chegou! — Ecobraz', titulo: 'Coletor chegou 📍', corpo: 'O agente de coleta da Ecobraz <strong>chegou ao local</strong> para a sua coleta.' },
   coleta_realizada: { assunto: 'Coleta realizada — Ecobraz', titulo: 'Coleta realizada', corpo: 'Sua coleta foi <strong>realizada com sucesso</strong>. Em breve os documentos ficam disponíveis para você no portal.' },

@@ -282,7 +282,7 @@ export function paginaAcompanhamento(dados) {
   function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
   function abrir(i){var c=CARDS[i];if(!c)return;
     var etapas=[
-      {k:'Coleta agendada',d:c.dataColeta,done:true},
+      {k:c.dataColeta?'Coleta agendada':'Solicitação recebida · aguardando roteiro',d:c.dataColeta,done:true},
       {k:'Recebido no galpão',d:c.recebidoEm,done:!!c.recebidoEm},
       {k:'Em processamento / destruição',d:c.processadoEm,done:!!c.processadoEm},
       {k:'Finalizado — aguardando documentação',d:c.finalizadoEm,done:c.coluna==='finalizado'||c.coluna==='concluido'},
