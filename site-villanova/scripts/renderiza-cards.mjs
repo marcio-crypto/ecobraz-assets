@@ -70,17 +70,23 @@ const escapa = (s) => String(s)
 // "Evidence Note NN/30" (que já vira rótulo), cortada em 110 caracteres SEM
 // partir palavra.
 function hook(p) {
-  if (p.card_hook) return p.card_hook;
+  if (p.card_hook) return { visivel: p.card_hook, alt: p.card_hook };
   let linhas = p.text.split('\n').map((l) => l.trim()).filter(Boolean);
   if (p.front === 'authority' && linhas[0] && linhas[0].startsWith('Evidence Note')) linhas = linhas.slice(1);
-  let h = (linhas[0] || '').replace(/\s+/g, ' ');
-  if (h.length > 110) h = h.slice(0, 110).replace(/\s+\S*$/, '').replace(/[.,;:—-]+$/, '') + '…';
-  return h;
+  const completo = (linhas[0] || '').replace(/\s+/g, ' ');
+  let visivel = completo;
+  if (visivel.length > 110) visivel = visivel.slice(0, 110).replace(/\s+\S*$/, '').replace(/[.,;:—-]+$/, '') + '…';
+  // O corte em 110 é para a ARTE, que tem largura. O texto alternativo não
+  // tem: ele é lido por leitor de tela e pode ir inteiro. Na primeira versão
+  // eu usei o mesmo corte nos dois e 24 dos 60 cartões ficaram com alt
+  // terminando em reticências no meio da frase — acessibilidade pior sem
+  // ganho nenhum. O visível corta; o alt vai completo.
+  return { visivel, alt: completo };
 }
 
 function monta(tpl, p) {
   const h = hook(p);
-  const ctx = { variant: p.front, hookclass: h.length > 80 ? 'long' : '', hook: escapa(h) };
+  const ctx = { variant: p.front, hookclass: h.visivel.length > 80 ? 'long' : '', hook: escapa(h.visivel) };
   if (p.front === 'authority') {
     const m = p.text.match(/^Evidence Note (\d+\/\d+)/);
     ctx.label = m ? `EVIDENCE NOTE ${m[1]}` : 'EVIDENCE NOTE';
@@ -99,7 +105,7 @@ function monta(tpl, p) {
     out = out.replace(re, ctx[k] ? '$1' : '');
   }
   for (const [k, v] of Object.entries(ctx)) out = out.replaceAll(`{{${k}}}`, String(v));
-  return { html: out, alt: h };
+  return { html: out, alt: h.alt };
 }
 
 // --- Ghost: token de 5 minutos, igual ao deploy-theme.mjs ---
