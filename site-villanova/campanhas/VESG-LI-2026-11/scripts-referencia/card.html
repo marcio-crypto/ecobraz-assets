@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>card</title>
+<style>
+  :root{--navy:#020914;--panel:#071a33;--gold:#b88a3d;--gold2:#c9a45c;--goldsoft:#f6efe4;--white:#fff;--muted:#aeb7c4}
+  html,body{margin:0;padding:0;width:1200px;height:627px;background:var(--navy);font-family:Inter,"Helvetica Neue",Arial,sans-serif;color:var(--white)}
+  .card{position:relative;width:1200px;height:627px;overflow:hidden;background:var(--navy)}
+  .card.sales{background:var(--navy)}
+  .card.sales .panel{position:absolute;inset:36px;background:var(--panel);border:1px solid rgba(184,138,61,.35)}
+  .grid{position:absolute;inset:0;background-image:linear-gradient(115deg,rgba(255,255,255,.06) 1px,transparent 1px);background-size:140px 140px}
+  .rule{position:absolute;left:0;top:0;bottom:0;width:8px;background:var(--gold)}
+  .label{position:absolute;left:72px;top:60px;font-size:24px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold2);font-weight:600}
+  .hook{position:absolute;left:72px;right:72px;top:150px;font-size:56px;line-height:1.15;font-weight:600;color:var(--white)}
+  .hook.long{font-size:48px}
+  .cta{position:absolute;left:72px;right:72px;bottom:120px;font-size:28px;color:var(--goldsoft)}
+  .pill{position:absolute;left:72px;bottom:56px;padding:10px 22px;border:2px solid var(--gold);border-radius:999px;font-size:22px;letter-spacing:.08em;color:var(--gold2);font-weight:600}
+  .site{position:absolute;left:72px;bottom:60px;font-size:24px;color:var(--white)}
+  .wordmark{position:absolute;right:72px;bottom:60px;font-size:20px;letter-spacing:.1em;color:var(--goldsoft);text-transform:uppercase}
+</style>
+</head>
+<body>
+<div class="card {{variant}}">
+  <div class="panel"></div>
+  <div class="grid"></div>
+  <div class="rule"></div>
+  <div class="label">{{label}}</div>
+  <div class="hook {{hookclass}}">{{hook}}</div>
+  {{#cta}}<div class="cta">{{cta}}</div>{{/cta}}
+  {{#pill}}<div class="pill">{{pill}}</div>{{/pill}}
+  {{#site}}<div class="site">villanovaesg.com</div>{{/site}}
+  <div class="wordmark">Villanova ESG · EU–Brazil Supplier Evidence</div>
+</div>
+</body>
+</html>
