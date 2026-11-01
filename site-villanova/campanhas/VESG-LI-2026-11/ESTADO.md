@@ -90,12 +90,93 @@ branch do PR. Quando o PR entrar, o caminho do Ghost passa a funcionar também.
 
 ## O que NÃO está feito
 
-- **Comentário fixado** (primeiro comentário com link de apoio): possível pelo
-  campo `firstCommentText`, não usado nesta rodada.
-- **Enquete**: o LinkedIn tem enquete nativa e o Metricool expõe
-  (`linkedinData.poll`). Não entrou — enquete substitui o post escrito, e
-  acrescentar posts fora do plano é decisão do Marcio.
-- **Vídeo**: o pacote não prevê. Cartão animado é possível, mas vídeo de
-  LinkedIn que rende não é cartão com movimento.
+> Comentário fixado, enquete e vídeo saíram desta lista em 01/11 — ver a
+> "Fase 3" no fim deste arquivo, com o que foi provado e o que não foi.
+
 - **Relatório semanal** de impressões/cliques/CTR: previsto na Fase 4 do
   pacote, ainda não montado.
+- **Vídeo nos outros meses**: existe um piloto, não uma rotina. Se o de
+  novembro render, dezembro ganha um por semana; se não render, fica no piloto.
+- **Conferência exaustiva arte×post**: as 95 imagens não foram abertas uma a
+  uma para confirmar que a arte X é do post X (foi por amostra).
+
+## Fase 3 — os recursos do LinkedIn (01/11/2026)
+
+Três recursos que a Fase 2 deixou explicitamente em aberto entraram nesta
+rodada. O que segue separa o que a API confirmou do que só o dia da publicação
+confirma.
+
+### Comentário fixado — 30 de 30 posts de autoridade
+
+`firstCommentText` gravado nos 30 posts das 05:00, com o link de apoio da
+semana (W1 SEMM · W2 CBAM · W3 EUDR · W4 CSDDD/contratos · W5 Scope 3 e
+publicações). Os 30 posts de VENDAS das 11:00 **não** foram tocados: eles já
+levam o link no corpo.
+
+Por que o link vai no comentário e não no corpo, nos posts de autoridade: o
+corpo deles é argumento, não oferta. Ressalva honesta: que link no primeiro
+comentário alcance mais que link no corpo é **prática de mercado, não medição
+minha** — o que eu meço é clique e pedido de análise.
+
+Confirmado na resposta da API de cada update, post a post: `firstCommentText`
+gravado, `publicationDate` idêntico, `len(mediaAltText) == len(media)`, e os
+**cinco carrosséis intactos** (A03 7 imagens, A10 9, A21 8, A28 9, A30 7, todos
+com `publishImagesAsPDF: true` e `documentTitle`).
+
+> Registro de um erro meu: o briefing que escrevi para a rodada 02–15 citava só
+> o A10 como carrossel e esqueceu o A03. Quem executou leu o planner antes de
+> escrever, viu as 7 imagens e copiou tudo igual. Se tivesse seguido o meu
+> briefing ao pé da letra, teria destruído o carrossel do A03.
+
+### Duas enquetes nativas
+
+| quando | pergunta | opções | id |
+|---|---|---|---|
+| 06/11 08:00 SP | nível SEMM da sua operação | 0-1 / 2 / 3 / 4 | 412920440 |
+| 13/11 08:00 SP | quem responde por emissões embutidas | Sustentabilidade / Operações / Financeiro / Ninguém ainda | 412920576 |
+
+`linkedinData.type: "POLL"`, `autoPublish: true`, duração 7 dias, cada uma com
+primeiro comentário levando à página do tema. Enquete não leva mídia — é assim
+que o LinkedIn trata o formato, não omissão.
+
+São posts **acrescentados** ao plano, num horário que não existia (08:00), para
+não tirar do ar nenhum dos 60 originais.
+
+### Vídeo — piloto no A15
+
+O pacote não previa vídeo. Entrou um, no post âncora da semana de EUDR
+(A15, 15/11, "45 days to 30 December 2026"), porque contagem regressiva é o
+único conteúdo do mês que ganha de verdade com movimento.
+
+- Arte: `arte/videos/A15.mp4`, gerado por
+  `site-villanova/scripts/renderiza-video.mjs` a partir de
+  `site-villanova/design/video-campanha.html`. Seis cenas, toda posição e
+  opacidade é função do tempo — **não** há animação de CSS, que escorrega
+  quando o quadro é capturado por screenshot.
+- Medido no arquivo: H.264 High 4.1, yuv420p, 1080×1350 (4:5), 25 fps,
+  600 quadros, 24,0 s, 1,20 MB, com trilha de áudio muda.
+- Mudo por decisão: o feed do LinkedIn começa sem som. Todo o conteúdo está em
+  texto na tela.
+- O cartão estático do A15 **saiu** e o vídeo entrou no lugar. O estado
+  anterior está em `content/A15-video-rollback.json` — desfazer é um comando.
+- Capa do vídeo fixada em 2,2 s (o quadro do "45"), para o feed não congelar
+  no primeiro quadro, que é quase vazio.
+
+**O que foi verificado:** os seis quadros-chave foram abertos e olhados um a um
+(na primeira renderização a rota pontilhada cruzava o texto em quatro cenas —
+defeito corrigido e re-renderizado); o Metricool ingeriu o arquivo e devolveu
+`…/6627481-file-15375827695960453597.mp4`; e aceitou `videoCoverMilliseconds`,
+que ele só aceita quando reconhece um vídeo na mídia de um post de LinkedIn.
+
+**O que NÃO foi verificado, e não dá para verificar daqui:** o
+`static.metricool.com` está bloqueado pelo proxy desta sessão, então eu **não**
+baixei o arquivo que o Metricool guardou para conferir que ele toca. E
+aceitação do vídeo pelo LinkedIn só se prova no dia 15/11. O formato está
+dentro do que o LinkedIn documenta (3 s a 30 min, 256×144 a 4096×2304, proporção
+entre 1:2.4 e 2.4:1), mas estar dentro da especificação não é o mesmo que ter
+publicado.
+
+### Contagem de mídia depois desta rodada
+
+59 cartões estáticos + 1 vídeo + 40 slides de carrossel. A frase "60/60 com
+imagem" da Fase 2 não vale mais ao pé da letra: o A15 agora é vídeo.

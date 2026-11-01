@@ -1,0 +1,31 @@
+{
+  "para_que_serve": "Estado do post A15 ANTES de trocar o cartao estatico pelo video. Se o video precisar sair, e' este o conteudo que volta.",
+  "gravado_em": "2026-11-01",
+  "post": {
+    "id_antes_da_troca": "412929319",
+    "uuid": "-5559506995369982480",
+    "blogId": "7795884",
+    "publicationDate": {
+      "dateTime": "2026-11-15T05:00:00",
+      "timezone": "America/Sao_Paulo"
+    },
+    "media": [
+      "https://static.metricool.com/planner/202611/6627481-file-1433107981153438211.jpeg"
+    ],
+    "mediaAltText": [
+      "45 days to 30 December 2026."
+    ],
+    "linkedinData": {
+      "previewIncluded": true,
+      "type": "POST",
+      "publishImagesAsPDF": false
+    },
+    "firstCommentText": "EUDR evidence readiness — origin and geolocation: https://www.villanovaesg.com/eudr-evidence-readiness-review/ — advisory review, not an audit or certification.",
+    "autoPublish": true,
+    "draft": false,
+    "id_depois_da_troca": "412942423",
+    "media_video_no_metricool": "https://static.metricool.com/planner/202611/6627481-file-15375827695960453597.mp4",
+    "videoCoverMilliseconds_aplicado": 2200
+  },
+  "observacao": "O id muda a cada update; o uuid nao. Para desfazer, releia o planner do dia 15/11 pelo uuid e mande o update com estes valores."
+}
