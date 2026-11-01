@@ -25,6 +25,11 @@ on:
         description: 'Template do cartão'
         type: string
         default: 'site-villanova/design/card-campanha.html'
+      tipo:
+        description: 'O que renderizar'
+        type: choice
+        options: [cartoes, carrosseis, ambos]
+        default: cartoes
       so:
         description: 'Só estes ids, separados por vírgula (vazio = todos). Use para provar a arte em 2 antes dos 60.'
         type: string
@@ -52,7 +57,8 @@ jobs:
           npm init -y >/dev/null 2>&1
           npm install playwright@1.56.1 --no-audit --no-fund
           npx playwright install --with-deps chromium
-      - name: Renderizar (e subir, se pedido)
+      - name: Renderizar os cartões (e subir, se pedido)
+        if: ${{ inputs.tipo == 'cartoes' || inputs.tipo == 'ambos' }}
         env:
           VILLANOVA_GHOST_ADMIN_URL: ${{ secrets.VILLANOVA_GHOST_ADMIN_URL }}
           VILLANOVA_GHOST_ADMIN_API_KEY: ${{ secrets.VILLANOVA_GHOST_ADMIN_API_KEY }}
@@ -63,9 +69,22 @@ jobs:
             --out out/cards \
             ${{ inputs.so && format('--so {0}', inputs.so) || '' }} \
             ${{ inputs.upload && '--upload' || '' }}
+
+      - name: Renderizar os carrosséis (e subir, se pedido)
+        if: ${{ inputs.tipo == 'carrosseis' || inputs.tipo == 'ambos' }}
+        env:
+          VILLANOVA_GHOST_ADMIN_URL: ${{ secrets.VILLANOVA_GHOST_ADMIN_URL }}
+          VILLANOVA_GHOST_ADMIN_API_KEY: ${{ secrets.VILLANOVA_GHOST_ADMIN_API_KEY }}
+        run: |
+          node site-villanova/scripts/renderiza-carrossel.mjs \
+            --spec site-villanova/campanhas/VESG-LI-2026-11/content/carrosseis.json \
+            --tpl site-villanova/design/carrossel-campanha.html \
+            --out out/carrosseis \
+            ${{ inputs.so && format('--so {0}', inputs.so) || '' }} \
+            ${{ inputs.upload && '--upload' || '' }}
       - name: Guardar os PNGs
         uses: actions/upload-artifact@v4
         with:
           name: cartoes-campanha
-          path: out/cards/
+          path: out/
           retention-days: 30

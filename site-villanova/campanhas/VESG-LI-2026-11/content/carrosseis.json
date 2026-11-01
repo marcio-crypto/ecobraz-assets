@@ -1,0 +1,92 @@
+{
+  "campaign": "VESG-LI-2026-11",
+  "formato": "1200x1500 (4:5), publicado como documento do LinkedIn (publishImagesAsPDF)",
+  "regra": "Nenhum slide inventa conteúdo. Cada linha vem do texto do post correspondente em posts.json, encurtada para caber — nunca acrescentada. Se um fato não está no post, não entra no carrossel.",
+  "carrosseis": [
+    {
+      "post": "A03",
+      "titulo_documento": "Supplier Evidence Maturity Model (SEMM)",
+      "pilar": "SEMM",
+      "nota": "EVIDENCE NOTE 03/30",
+      "capa": "Five levels. One question: can a buyer act on your file without calling you?",
+      "slides": [
+        { "n": "0", "titulo": "Absent", "linha": "No file exists." },
+        { "n": "1", "titulo": "Reactive", "linha": "Every request becomes a project." },
+        { "n": "2", "titulo": "Organised", "linha": "Records exist, gaps unknown." },
+        { "n": "3", "titulo": "Decision-ready", "linha": "A buyer can act on the file." },
+        { "n": "4", "titulo": "Continuously managed", "linha": "The next request is an export, not an emergency." }
+      ],
+      "fecho": "Most Brazilian exporters sit at 1 or 2. The jump that puts revenue on the table is 2 → 3.",
+      "fecho_linha": "The model is public and citable."
+    },
+    {
+      "post": "A10",
+      "titulo_documento": "What a CBAM data request actually asks for",
+      "pilar": "CBAM",
+      "nota": "EVIDENCE NOTE 10/30",
+      "capa": "What a CBAM data request actually asks a Brazilian producer for. Not the regulation — the e-mail.",
+      "slides": [
+        { "n": "1", "titulo": "Installation identification", "linha": "Which plant produced the goods." },
+        { "n": "2", "titulo": "Production route", "linha": "Blast furnace vs. electric arc; primary vs. secondary aluminium." },
+        { "n": "3", "titulo": "Direct emissions", "linha": "Fuels and process emissions attributable to the goods." },
+        { "n": "4", "titulo": "Indirect emissions", "linha": "Electricity consumed, with the emission factor used." },
+        { "n": "5", "titulo": "Precursors", "linha": "Embedded emissions of inputs already covered." },
+        { "n": "6", "titulo": "Methodology and monitoring", "linha": "How the figures were obtained, by whom, for which period." },
+        { "n": "7", "titulo": "Verification status", "linha": "Whether any third party has reviewed the data." }
+      ],
+      "fecho": "Most Brazilian files answer 1 and 2 immediately, 3 and 4 after internal negotiation, and 5–7 not at all.",
+      "fecho_linha": "Items 5–7 are where the importer decides whether your number is usable."
+    },
+    {
+      "post": "A21",
+      "titulo_documento": "An EUDR supplier file a buyer can use — six folders",
+      "pilar": "EUDR",
+      "nota": "EVIDENCE NOTE 21/30",
+      "capa": "The structure of an EUDR supplier file that a buyer can use. Six folders. No software required.",
+      "slides": [
+        { "n": "1", "titulo": "Supplier register", "linha": "Every farm, cooperative or intermediary, with role and tier." },
+        { "n": "2", "titulo": "Plot geolocation", "linha": "One entry per plot, point or polygon, source and date of the coordinate." },
+        { "n": "3", "titulo": "Production periods", "linha": "Harvest / slaughter / felling dates per plot, tied to the cut-off date." },
+        { "n": "4", "titulo": "Chain of custody", "linha": "Plot → intermediary → processing → export lot, with documents at each hand-over." },
+        { "n": "5", "titulo": "Legality file", "linha": "Per obligation category: which document, which issuer, which validity." },
+        { "n": "6", "titulo": "Open items", "linha": "What is missing, who owns it, by when. Labelled fact / interpretation / hypothesis." }
+      ],
+      "fecho": "A buyer who receives these six folders can run its own risk assessment in days instead of weeks.",
+      "fecho_linha": "That buyer will come back."
+    },
+    {
+      "post": "A28",
+      "titulo_documento": "The one-page supplier evidence index",
+      "pilar": "SEMM",
+      "nota": "EVIDENCE NOTE 28/30",
+      "capa": "The one-page supplier evidence index. If you build only one document this quarter, build this.",
+      "slides": [
+        { "n": "1", "titulo": "Obligation", "linha": "The request or clause. \"CBAM embedded emissions, plant X.\"" },
+        { "n": "2", "titulo": "Source", "linha": "Which regulation or contract it comes from." },
+        { "n": "3", "titulo": "Buyer", "linha": "Who asked, or who can ask." },
+        { "n": "4", "titulo": "Document", "linha": "The record that satisfies it: name, date, issuer." },
+        { "n": "5", "titulo": "Status", "linha": "Fact / interpretation / hypothesis / absent." },
+        { "n": "6", "titulo": "Owner", "linha": "One name." },
+        { "n": "7", "titulo": "Next date", "linha": "Expiry, renewal, next request." }
+      ],
+      "fecho": "A file that answers the next questionnaire in hours. A gap list the board can fund. A SEMM level you can defend.",
+      "fecho_linha": "It is a spreadsheet. The discipline is what makes it evidence."
+    },
+    {
+      "post": "A30",
+      "titulo_documento": "Thirty notes on EU–Brazil supplier evidence",
+      "pilar": "RECAP",
+      "nota": "EVIDENCE NOTE 30/30",
+      "capa": "European buyers decide on evidence. Most Brazilian evidence is not yet usable by anyone outside the company that holds it.",
+      "slides": [
+        { "n": "W1", "titulo": "The evidence gap", "linha": "SEMM levels, questionnaires, fact / interpretation / hypothesis." },
+        { "n": "W2", "titulo": "CBAM", "linha": "Definitive period, default values as a price problem, who owns the number." },
+        { "n": "W3", "titulo": "EUDR", "linha": "30 December 2026, geolocation, legality, the file behind the DDS." },
+        { "n": "W4", "titulo": "CSDDD after the Omnibus", "linha": "The CSRD value-chain cap, contract clauses, the board file." },
+        { "n": "W5", "titulo": "Scope 3", "linha": "Your emissions at the Brazilian end of your buyer's chain." }
+      ],
+      "fecho": "The common failure is not the operation. It is a file that depends on one person remembering where things are.",
+      "fecho_linha": "One owner, one index, one review cadence."
+    }
+  ]
+}

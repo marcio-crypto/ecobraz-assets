@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<style>
+  /* Cartão da campanha de LinkedIn — 1200x627.
+     Herda a linguagem do og-default.html (cartão social já aprovado e no ar):
+     mesmo gradiente, mesma rota Brasil→Europa, mesmo bloco de marca, título
+     serifado. Tokens do PADRAO.md v2.
+
+     POR QUE 627 E NÃO 630. O cartão social do site é 1200x630 (o que Google e
+     X esperam). O do feed do LinkedIn é 1.91:1 = 1200x627. Três pixels não
+     mudam a arte, mas mudam o corte: pedir 630 e deixar o LinkedIn cortar é
+     entregar a decisão de enquadramento para ele.
+
+     DOURADO: #b88a3d é ornamento (filete, losango, borda). Dourado de TEXTO
+     sobre navy é #d9b573. Trocar os dois reprova no contraste — é o erro que o
+     PADRAO.md registra na seção "Cor e contraste". */
+  :root{
+    --navy:#061426; --navy2:#0b2a52; --gold:#b88a3d; --gold-l:#d9b573;
+    --branco:#fff; --sub:#C9D4E4; --fraco:#8FA0B6;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:1200px;height:627px;overflow:hidden}
+  html{background:var(--navy)}
+  body{
+    font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    background:
+      radial-gradient(900px 520px at 78% 22%, #123a6b 0%, rgba(18,58,107,0) 62%),
+      linear-gradient(160deg, var(--navy) 55%, var(--navy2));
+    color:var(--branco);position:relative}
+
+  .rota{position:absolute;inset:0}
+  .wrap{position:relative;height:100%;display:flex;flex-direction:column;
+        justify-content:space-between;padding:46px 68px 42px}
+
+  /* ---------- marca ---------- */
+  .marca{display:flex;align-items:center;gap:16px}
+  .marca .nome{font-size:24px;letter-spacing:.03em;font-weight:700;line-height:1.1}
+  .marca .nome span{color:var(--gold-l)}
+  .marca .tag{font-size:10px;letter-spacing:.26em;color:var(--fraco);margin-top:5px}
+
+  /* ---------- miolo ---------- */
+  .eyebrow{display:flex;align-items:center;gap:12px;font-size:15px;font-weight:600;
+           letter-spacing:.2em;text-transform:uppercase;color:var(--gold-l)}
+  .eyebrow::before{content:"";width:26px;height:2px;background:var(--gold);flex:none}
+  .hook{font-family:Georgia,"Times New Roman",serif;font-weight:600;
+        font-size:54px;line-height:1.16;margin-top:20px;max-width:21ch;
+        /* balance distribui as linhas: sem ele "the e-mail." quebrava depois do
+           hífen e sobrava "mail." sozinho na última linha. */
+        text-wrap:balance}
+  /* Hook longo (>80 caracteres) desce de corpo e ganha largura: a alternativa
+     seria cortar a frase, e frase cortada no meio é pior que fonte menor. */
+  .hook.long{font-size:40px;line-height:1.2;max-width:30ch}
+  .cta{margin-top:22px;font-size:29px;color:var(--gold-l);font-weight:500}
+
+  /* ---------- rodapé ---------- */
+  .rodape{display:flex;align-items:flex-end;justify-content:space-between;
+          border-top:1px solid rgba(255,255,255,.14);padding-top:16px}
+  .site{font-size:21px;color:var(--sub);letter-spacing:.02em}
+  .aviso{font-size:14px;color:var(--fraco);text-align:right;max-width:46ch}
+  .pill{display:inline-block;padding:9px 20px;border:1.5px solid var(--gold);
+        border-radius:999px;font-size:19px;font-weight:600;letter-spacing:.1em;
+        color:var(--gold-l);text-transform:uppercase}
+
+  /* ---------- variante de vendas ----------
+     Mesma base; muda o peso: o sales tem uma linha de ação e o endereço do
+     site, então o miolo segura menos texto e o dourado aparece duas vezes.
+     A moldura fina marca "isto é oferta", sem inventar outra identidade. */
+  .sales .moldura{position:absolute;inset:22px;border:1px solid rgba(184,138,61,.30);
+                  border-radius:2px;pointer-events:none}
+</style></head>
+<body class="{{variant}}">
+  <svg class="rota" width="1200" height="627" viewBox="0 0 1200 627" fill="none" aria-hidden="true">
+    <path d="M735 500 Q 900 325 1105 296" stroke="#b88a3d" stroke-width="2.2"
+          stroke-dasharray="1 9" stroke-linecap="round" opacity=".7"/>
+    <circle cx="735" cy="500" r="7" fill="#b88a3d"/>
+    <circle cx="1105" cy="296" r="7" fill="#d9b573"/>
+    <circle cx="1035" cy="248" r="215" stroke="rgba(255,255,255,.055)" stroke-width="1.5"/>
+    <circle cx="1035" cy="248" r="140" stroke="rgba(255,255,255,.04)" stroke-width="1.5"/>
+  </svg>
+  <div class="moldura"></div>
+  <div class="wrap">
+    <div class="marca">
+      <svg width="46" height="52" viewBox="0 0 60 68" aria-hidden="true">
+        <path d="M30 2 56 12v26c0 14-12 22-26 28C16 60 4 52 4 38V12Z" fill="#16324F" stroke="#2C4162"/>
+        <path d="M30 2 56 12v26c0 14-12 22-26 28V2Z" fill="#3E6B4A"/>
+        <path d="M30 40l7 8-7 8-7-8Z" fill="#C9A24B"/>
+      </svg>
+      <div>
+        <div class="nome">VILLANOVA <span>ESG</span></div>
+        <div class="tag">EU&ndash;BRAZIL SUPPLIER EVIDENCE</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="eyebrow">{{label}}</div>
+      <div class="hook {{hookclass}}">{{hook}}</div>
+      {{#cta}}<div class="cta">{{cta}}</div>{{/cta}}
+    </div>
+
+    <div class="rodape">
+      <div>
+        {{#pill}}<span class="pill">{{pill}}</span>{{/pill}}
+        {{#site}}<div class="site">villanovaesg.com</div>{{/site}}
+      </div>
+      <div class="aviso">Advisory review &mdash; not an audit, certification or legal opinion.</div>
+    </div>
+  </div>
+</body></html>

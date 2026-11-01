@@ -129,7 +129,15 @@ const posts = JSON.parse(fs.readFileSync(CAMINHO_POSTS, 'utf8')).posts
 const tpl = fs.readFileSync(CAMINHO_TPL, 'utf8');
 fs.mkdirSync(SAIDA, { recursive: true });
 
-const { chromium } = await import('playwright');
+// O Playwright é resolvido de dois jeitos porque ele vive em dois lugares: no
+// Actions é instalado no diretório de trabalho (import normal resolve), e no
+// ambiente de desenvolvimento fica em /opt/node-tools, que só o resolvedor de
+// CommonJS enxerga — `import('playwright')` ali falha com ERR_MODULE_NOT_FOUND.
+const { chromium } = await import('playwright').catch(async () => {
+  const { createRequire } = await import('node:module');
+  const req = createRequire('/opt/node-tools/package.json');
+  return req('playwright');
+});
 const navegador = await chromium.launch();
 const pagina = await navegador.newPage({ viewport: { width: 1200, height: 627 }, deviceScaleFactor: 1 });
 
