@@ -31,6 +31,13 @@ const CAMINHO_POSTS = arg('--posts', 'site-villanova/campanhas/VESG-LI-2026-11/c
 const CAMINHO_TPL = arg('--tpl', 'site-villanova/design/card-campanha.html');
 const SAIDA = arg('--out', 'out/cards');
 const SUBIR = process.argv.includes('--upload');
+// jpeg ou png. O padrão é jpeg: a arte é gradiente + texto, onde o PNG gasta
+// ~300 kB por peça sem ganho visível, e são 100 peças. JPEG 88 fica em ~1/3
+// disso, e nenhuma delas precisa de transparência.
+const FORMATO = (arg('--formato', 'jpeg') || 'jpeg').toLowerCase();
+const EXT = FORMATO === 'png' ? 'png' : 'jpg';
+const TIPO_MIME = FORMATO === 'png' ? 'image/png' : 'image/jpeg';
+const opcoesFoto = FORMATO === 'png' ? {type: 'png'} : {type: 'jpeg', quality: 88};
 const SO = (arg('--so', '') || '').split(',').map((s) => s.trim()).filter(Boolean);
 
 // Pilar por semana e nome do serviço por slug: vêm do pacote da campanha
@@ -109,7 +116,7 @@ async function sobeParaGhost(arquivo, nome) {
   const chave = String(process.env.VILLANOVA_GHOST_ADMIN_API_KEY || '');
   if (!url || !chave.includes(':')) throw new Error('Credenciais do Ghost da Villanova ausentes.');
   const form = new FormData();
-  form.append('file', new Blob([fs.readFileSync(arquivo)], { type: 'image/png' }), nome);
+  form.append('file', new Blob([fs.readFileSync(arquivo)], { type: TIPO_MIME }), nome);
   form.append('purpose', 'image');
   const r = await fetch(`${url}/ghost/api/admin/images/upload/`, {
     method: 'POST',
@@ -145,15 +152,15 @@ const manifesto = {};
 for (const p of posts) {
   const { html, alt } = monta(tpl, p);
   await pagina.setContent(html, { waitUntil: 'load' });
-  const arquivo = path.join(SAIDA, `${p.id}.png`);
-  await pagina.screenshot({ path: arquivo, clip: { x: 0, y: 0, width: 1200, height: 627 } });
+  const arquivo = path.join(SAIDA, `${p.id}.${EXT}`);
+  await pagina.screenshot({ path: arquivo, ...opcoesFoto, clip: { x: 0, y: 0, width: 1200, height: 627 } });
   const kb = fs.statSync(arquivo).size / 1024;
   // O LinkedIn aceita bem acima disso, mas o pacote pede ≤1 MB e cartão de
   // texto que passa de 1 MB é sinal de arte errada (foto, gradiente ruidoso).
-  if (kb > 1024) console.log(`  ATENÇÃO: ${p.id}.png tem ${kb.toFixed(0)} kB, acima de 1 MB`);
+  if (kb > 1024) console.log(`  ATENÇÃO: ${p.id} tem ${kb.toFixed(0)} kB, acima de 1 MB`);
   manifesto[p.id] = { arquivo, alt, kb: Number(kb.toFixed(1)) };
   if (SUBIR) {
-    manifesto[p.id].url = await sobeParaGhost(arquivo, `vesg-li-2026-11-${p.id}.png`);
+    manifesto[p.id].url = await sobeParaGhost(arquivo, `vesg-li-2026-11-${p.id}.${EXT}`);
     console.log(`${p.id}  ${kb.toFixed(0)} kB  ${manifesto[p.id].url}`);
   } else {
     console.log(`${p.id}  ${kb.toFixed(0)} kB  ${arquivo}`);

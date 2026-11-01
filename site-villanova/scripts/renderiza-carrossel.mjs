@@ -19,6 +19,13 @@ const SPEC = arg('--spec', 'site-villanova/campanhas/VESG-LI-2026-11/content/car
 const TPL = arg('--tpl', 'site-villanova/design/carrossel-campanha.html');
 const SAIDA = arg('--out', 'out/carrosseis');
 const SUBIR = process.argv.includes('--upload');
+// jpeg ou png. O padrão é jpeg: a arte é gradiente + texto, onde o PNG gasta
+// ~300 kB por peça sem ganho visível, e são 100 peças. JPEG 88 fica em ~1/3
+// disso, e nenhuma delas precisa de transparência.
+const FORMATO = (arg('--formato', 'jpeg') || 'jpeg').toLowerCase();
+const EXT = FORMATO === 'png' ? 'png' : 'jpg';
+const TIPO_MIME = FORMATO === 'png' ? 'image/png' : 'image/jpeg';
+const opcoesFoto = FORMATO === 'png' ? {type: 'png'} : {type: 'jpeg', quality: 88};
 const SO = (arg('--so', '') || '').split(',').map((s) => s.trim()).filter(Boolean);
 
 const escapa = (s) => String(s ?? '')
@@ -37,7 +44,7 @@ async function sobeParaGhost(arquivo, nome) {
   const chave = String(process.env.VILLANOVA_GHOST_ADMIN_API_KEY || '');
   if (!url || !chave.includes(':')) throw new Error('Credenciais do Ghost da Villanova ausentes.');
   const form = new FormData();
-  form.append('file', new Blob([fs.readFileSync(arquivo)], { type: 'image/png' }), nome);
+  form.append('file', new Blob([fs.readFileSync(arquivo)], { type: TIPO_MIME }), nome);
   form.append('purpose', 'image');
   const r = await fetch(`${url}/ghost/api/admin/images/upload/`, {
     method: 'POST', body: form, signal: AbortSignal.timeout(60000),
@@ -83,9 +90,9 @@ for (const c of spec.carrosseis.filter((c) => (SO.length ? SO.includes(c.post) :
     let html = tpl;
     for (const [k, v] of Object.entries(ctx)) html = html.replaceAll(`{{${k}}}`, escapa(v));
     await pagina.setContent(html, { waitUntil: 'load' });
-    const arquivo = path.join(SAIDA, `${c.post}-${String(i + 1).padStart(2, '0')}.png`);
-    await pagina.screenshot({ path: arquivo, clip: { x: 0, y: 0, width: 1200, height: 1500 } });
-    if (SUBIR) urls.push(await sobeParaGhost(arquivo, `vesg-li-2026-11-${c.post}-${String(i + 1).padStart(2, '0')}.png`));
+    const arquivo = path.join(SAIDA, `${c.post}-${String(i + 1).padStart(2, '0')}.${EXT}`);
+    await pagina.screenshot({ path: arquivo, ...opcoesFoto, clip: { x: 0, y: 0, width: 1200, height: 1500 } });
+    if (SUBIR) urls.push(await sobeParaGhost(arquivo, `vesg-li-2026-11-${c.post}-${String(i + 1).padStart(2, '0')}.${EXT}`));
     else urls.push(arquivo);
   }
   manifesto[c.post] = { documentTitle: c.titulo_documento, alt: c.capa, paginas: urls };
