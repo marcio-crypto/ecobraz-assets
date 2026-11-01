@@ -256,3 +256,29 @@ então não dá para baixar e comparar byte a byte daqui. O que sustenta esse el
 indireto: o anexo foi feito por id a partir do manifesto, as 95 URLs são
 distintas, e nas quatro leituras do planner de hoje o texto alternativo de cada
 post corresponde à primeira linha daquele post.
+
+## Primeira publicação real — A01, 01/11/2026
+
+A primeira prova de que a máquina funciona fora do planner. Resposta da API às
+12:50 São Paulo, sobre o post das 12:30:
+
+```
+status:        PUBLISHED
+detailedStatus: Published
+id:            urn:li:share:7522681662070059008
+publicUrl:     https://linkedin.com/feed/update/urn:li:share:7522681662070059008
+```
+
+**Provado por isto:** post agendado + imagem anexada + `autoPublish` publicam
+sozinhos, no horário, sem ninguém tocar. É o mecanismo de que dependem os
+outros 61 posts.
+
+**NÃO provado por isto, e a diferença importa:** que o **primeiro comentário**
+apareceu de fato no LinkedIn. A API confirma que o campo foi gravado e que o
+post publicou; ela não devolve estado separado para o comentário. Tentei abrir a
+URL pública daqui para conferir com o olho — o `linkedin.com` também está
+bloqueado pelo proxy desta sessão (`CONNECT tunnel failed, 403`). Quem consegue
+confirmar em dez segundos é o Marcio, abrindo o post.
+
+Também segue sem prova, por serem formatos que ainda não publicaram: a **enquete
+nativa** (primeira em 06/11 08:00) e o **vídeo** (15/11 05:00).
