@@ -13,7 +13,32 @@
 | Publicação automática | ✅ `autoPublish: true`, `draft: false` | resposta da API em cada post |
 | Horários | ✅ 05:00 e 11:00 São Paulo | = 09:00 e 15:00 Europe/Rome, como o plano pede |
 | Lint de conteúdo | ✅ 60 posts, 30 dias, saída 0 | `scripts-referencia/validate.py` |
-| Imagem em cada post | ⏳ em execução em 01/11 | ver "Fase 2" abaixo |
+| Imagem em cada post | ✅ 60/60 | verificação independente, diff byte a byte |
+
+## Verificação final (01/11/2026, somente leitura)
+
+Um passe independente varreu os 30 dias, gravou as respostas da API em arquivo e
+rodou um comparador de verdade — não leitura:
+
+- **texto:** 60/60 idênticos ao `posts.json`, 51.721 caracteres comparados;
+- **imagem:** 60 com imagem, 0 sem; 95 URLs, **95 distintas** (nenhuma arte repetida);
+- **alt:** `len(mediaAltText) == len(media)` em 60/60;
+- **entrega:** 60/60 `autoPublish: true`, `draft: false`, provider `linkedin`;
+- **carrossel:** 5/5 com `publishImagesAsPDF` e `documentTitle`.
+
+O comparador foi testado contra si mesmo (1 caractere trocado → reprova; espaço
+a mais no fim → reprova). Não é um diff que passa de qualquer jeito.
+
+**Defeito encontrado e corrigido na mesma rodada:** 24 dos 55 cartões tinham o
+texto alternativo cortado em 110 caracteres, terminando em reticências no meio
+da frase. O corte era da arte, não do alt — leitor de tela não tem largura. O
+gerador foi corrigido e os 24 posts foram atualizados (24/24, zero falhas); os
+JPEG não mudaram, o que confirma que era só texto.
+
+**O que NÃO foi verificado:** as 95 imagens não foram abertas uma a uma para
+conferir que a arte X é do post X (conferência por amostra, não exaustiva), e
+publicação efetiva só o relógio confirma — todos estão `PENDING`, que é o estado
+correto de post agendado.
 
 ## Fase 2 — as imagens
 
