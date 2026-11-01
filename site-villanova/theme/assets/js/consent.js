@@ -4,12 +4,12 @@
   var KEY = 'vn-consent';
   var pt = (navigator.language || '').toLowerCase().indexOf('pt') === 0;
   var t = pt ? {
-    text: 'Usamos cookies de medição (Google Analytics) apenas com o seu consentimento, conforme o GDPR e a LGPD. Cookies essenciais não coletam dados pessoais.',
+    text: 'Usamos cookies de medição (Google Analytics, Microsoft Clarity e Metricool) apenas com o seu consentimento, conforme o GDPR e a LGPD. Cookies essenciais não coletam dados pessoais.',
     accept: 'Aceitar medição',
     reject: 'Somente essenciais',
     policy: 'Política de privacidade'
   } : {
-    text: 'We use measurement cookies (Google Analytics) only with your consent, in line with GDPR and LGPD. Essential cookies do not collect personal data.',
+    text: 'We use measurement cookies (Google Analytics, Microsoft Clarity and Metricool) only with your consent, in line with GDPR and LGPD. Essential cookies do not collect personal data.',
     accept: 'Accept measurement',
     reject: 'Essential only',
     policy: 'Privacy policy'
@@ -27,6 +27,26 @@
     })(window, document, 'clarity', 'script', 'xo2sy61q4d');
   }
 
+  // Metricool — medicao de site do painel da Villanova ESG (marca 7795884).
+  // Mesma regra da Clarity: carrega so' APOS o aceite, porque o tracker
+  // identifica a visita. O `hash` abaixo nao e' credencial: e' o
+  // identificador publico da marca, servido no HTML de quem visita, como o
+  // ID do GA4 e a data-key do Ahrefs que ja' estao no default.hbs.
+  var metricoolLoaded = false;
+  function loadMetricool() {
+    if (metricoolLoaded) return;
+    metricoolLoaded = true;
+    var s = document.createElement('script');
+    s.async = true;
+    s.src = 'https://tracker.metricool.com/tracker.js';
+    s.onload = function () {
+      if (window.beTracker && typeof window.beTracker.t === 'function') {
+        window.beTracker.t({hash: '5aa5d9d13ab65af696706fbdf091131'});
+      }
+    };
+    document.getElementsByTagName('head')[0].appendChild(s);
+  }
+
   function update(state) {
     if (typeof gtag === 'function') {
       gtag('consent', 'update', {
@@ -36,7 +56,7 @@
         ad_personalization: 'denied'
       });
     }
-    if (state === 'granted') loadClarity();
+    if (state === 'granted') { loadClarity(); loadMetricool(); }
   }
 
   var saved = null;
