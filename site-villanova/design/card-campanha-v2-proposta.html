@@ -1,0 +1,256 @@
+<!doctype html>
+<!-- sem lang: o mesmo arquivo serve os cartoes EN (authority) e EN/PT (sales) -->
+<html><head><meta charset="utf-8">
+<title>Villanova ESG — cartao de campanha 1200x627</title>
+<style>
+/* ============================================================================
+   CARTAO DE CAMPANHA — Villanova ESG · LinkedIn nov/2026 · 1200x627
+   Padrao de Design Villanova v2 (site-villanova/design/PADRAO.md, 30/07/2026)
+   e linguagem herdada de site-villanova/design/og-default.html (cartao social
+   aprovado e no ar): mesmo gradiente navy, mesma rota pontilhada Brasil->Europa,
+   mesmo escudo, titulo SERIFADO, filete de rodape.
+
+   DUAS ADVERTENCIAS A QUEM EDITAR ESTE ARQUIVO (as duas ja causaram defeito):
+
+   (1) NAO escreva nenhum marcador de chave nem de bloco opcional em comentario,
+       em CSS ou em texto. O render_cards.py casa so a PRIMEIRA ocorrencia de
+       cada bloco opcional (re.search); um exemplo escrito num comentario rouba
+       essa ocorrencia, os blocos de verdade nao sao removidos e o cartao sai com
+       os marcadores impressos. Por isso as chaves deste arquivo aparecem UMA vez
+       cada, so no corpo do HTML.
+
+   (2) A chave de presenca do rodape do sales e' um SINALIZADOR, nao um texto: o
+       render_cards.py manda "1" nela. Imprimi-la escreveria "1" no cartao. Por
+       isso o endereco esta literal no HTML, dentro do bloco opcional, e a chave
+       nao e' impressa em lugar nenhum.
+
+   COR (licao do defeito .vn-note documentado no PADRAO.md): nenhuma regra de
+   texto escreve cor literal. Toda cor de texto sai de --fg / --fg2 / --fg3 /
+   --accent, e esses tokens sao redeclarados INTEIROS junto com o fundo. Trocar
+   o fundo de um bloco sem trocar a cor do texto deixou de ser possivel aqui.
+
+   OFFLINE: nenhuma regra de importacao de CSS, nenhuma declaracao de fonte
+   propria, nenhuma fonte externa, nenhuma imagem remota, nenhum JS. As pilhas
+   de fonte sao identicas as do og-default.html.
+   ========================================================================= */
+
+:root{
+  /* tokens do PADRAO.md */
+  --navy:#061426;          /* fundo escuro principal */
+  --navy2:#0b2a52;         /* parada do gradiente */
+  --lift:#123a6b;          /* parada MAIS CLARA = fundo escuro de referencia */
+  --gold:#b88a3d;          /* ORNAMENTO: filete, moldura, borda, losango. Nao e' texto. */
+  --gold-l:#d9b573;        /* TEXTO dourado, so sobre fundo escuro */
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1200px;height:627px;overflow:hidden}
+html{background:var(--navy)}
+body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+     -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+
+/* ---------------------------------------------------------------------------
+   1. O CARTAO. A base E' o front authority: um arquivo renderizado sem
+   substituicao, ou com a chave de variante faltando, ainda sai cartao inteiro
+   e correto em vez de cartao sem estilo.
+   Contrastes medidos contra #123a6b (fundo escuro de referencia do PADRAO.md):
+   --fg 11,39:1 · --fg2 7,61:1 · --fg3 5,54:1 · --accent 5,86:1. Todos >= 4,5.
+   --------------------------------------------------------------------------- */
+.card{
+  position:relative;width:1200px;height:627px;overflow:hidden;
+  --fg:#ffffff;
+  --fg2:#c9d4e4;
+  --fg3:#a8b6ca;
+  --accent:var(--gold-l);
+  --orn:var(--gold);
+  --hair:rgba(255,255,255,.14);
+  --ring:rgba(255,255,255,.055);
+  --ring2:rgba(255,255,255,.04);
+  color:var(--fg);
+  background:
+    radial-gradient(900px 520px at 80% 20%, var(--lift) 0%, rgba(18,58,107,0) 62%),
+    linear-gradient(160deg, var(--navy) 55%, var(--navy2));
+}
+
+/* ---------------------------------------------------------------------------
+   2. SINAL DE FRONT. Os dois fronts ficam navy — inverter metade de uma serie
+   de 60 para papel claro criaria uma segunda identidade e um segundo regime de
+   contraste, e cor de marca e' decisao do Marcio. A distincao e' ESTRUTURAL,
+   que e' o que sobrevive a 1/3 do tamanho no feed:
+
+   authority = lombada dourada SANGRADA de topo a base, cartao cheio, pilula
+               arredondada no rodape esquerdo.
+   sales     = PAINEL recuado dentro de margem navy, aro dourado em volta,
+               aresta dourada a esquerda do painel, faixa de CTA e endereco.
+   --------------------------------------------------------------------------- */
+.spine{position:absolute;left:0;top:0;bottom:0;width:10px;
+       background:linear-gradient(180deg,var(--gold-l) 0%,var(--orn) 48%,#7d5920 100%)}
+.card.sales .spine{display:none}
+
+/* painel do sales: o fundo MUDA, entao os tokens de cor sao redeclarados
+   inteiros aqui. A parada mais clara do radial continua #123a6b, logo a
+   referencia de contraste e a mesma dos numeros acima. */
+.panel{display:none}
+.card.sales .panel{
+  display:block;position:absolute;inset:26px;
+  --fg:#ffffff;
+  --fg2:#c9d4e4;
+  --fg3:#a8b6ca;
+  --accent:var(--gold-l);
+  --orn:var(--gold);
+  --hair:rgba(255,255,255,.14);
+  color:var(--fg);
+  border:1px solid rgba(184,138,61,.42);
+  background:
+    radial-gradient(780px 460px at 86% 14%, var(--lift) 0%, rgba(18,58,107,0) 62%),
+    linear-gradient(158deg,#0a2140 0%,#081b33 100%);
+}
+.card.sales .panel::before{          /* aresta dourada do painel */
+  content:"";position:absolute;left:-1px;top:-1px;bottom:-1px;width:6px;
+  background:linear-gradient(180deg,var(--gold-l) 0%,var(--orn) 48%,#7d5920 100%);
+}
+
+/* ornamento herdado do og-default (rota pontilhada + aneis), cortado pela
+   borda direita. Caixa pintada medida por pixel: x 995..1200, y 49..547. A
+   coluna do titulo termina, no pior dos 68 casos medidos, em x=874 — 121px de
+   folga. Nenhum texto encosta no ornamento em nenhum dos dois fronts. */
+.orn{position:absolute;top:0;left:0;width:1200px;height:627px}
+.card.sales .orn{top:26px;left:26px;width:1148px;height:575px}
+.orn .ring{fill:none;stroke:var(--ring);stroke-width:1.5}
+.orn .ring.b{stroke:var(--ring2)}
+.orn .route{fill:none;stroke:var(--orn);stroke-width:2.3;
+            stroke-dasharray:1 9;stroke-linecap:round;opacity:.7}
+.orn .n1{fill:var(--orn)}
+.orn .n2{fill:var(--gold-l)}
+
+/* ---------------------------------------------------------------------------
+   3. GRADE: masthead / miolo centrado / rodape.
+   O miolo e' flex:1 com overflow:hidden — se um titulo escrito a mao passar do
+   contrato, ele e' aparado COM reticencias dentro do miolo e o rodape nao sai
+   do lugar. Nenhum dos 60 titulos reais chega perto disso (medido).
+   --------------------------------------------------------------------------- */
+.wrap{position:relative;height:100%;display:flex;flex-direction:column;
+      padding:40px 64px 34px 74px}
+.card.sales .wrap{padding:44px 72px 40px 80px}
+
+/* --- 3.1 masthead. A assinatura "EU-BRAZIL SUPPLIER EVIDENCE" do og-default
+   NAO entra: no og ela tem 10,5px, e o piso desta peca e' 28px — a 28px ela
+   fica mais larga que o proprio nome e desequilibra o lockup. A informacao ja
+   esta no olho do cartao e no rodape. --- */
+.mast{flex:none;display:flex;align-items:center;gap:16px}
+.mast svg{flex:none;display:block}
+.wordmark{font-size:30px;font-weight:700;letter-spacing:.035em;line-height:1.12;
+          white-space:nowrap;color:var(--fg)}
+.wordmark span{color:var(--accent)}
+
+/* --- 3.2 miolo --- */
+.mid{flex:1 1 auto;min-height:0;overflow:hidden;
+     display:flex;flex-direction:column;justify-content:center;padding:14px 0 10px}
+
+/* eyebrow do PADRAO: caps, tracking largo, dourado, traco antes */
+.eyebrow{flex:none;align-self:flex-start;max-width:100%;display:flex;align-items:center;gap:14px;
+         font-size:28px;font-weight:600;line-height:1.16;letter-spacing:.15em;
+         text-transform:uppercase;color:var(--accent);margin-bottom:20px}
+.eyebrow::before{content:"";flex:none;width:28px;height:3px;background:var(--orn)}
+.eyebrow span{min-width:0}
+
+/* TITULO SERIFADO — exigencia do PADRAO v2, mesma pilha do h1 do og-default.
+   min() na largura blinda contra servidor com serifada mais larga: o teto em px
+   vence, a coluna nao invade o ornamento, so sobe o numero de linhas.
+   O clamp e' rede de seguranca, nunca plano A: medido, nenhum dos 60 cartoes
+   reais o aciona, nem com a serifada 24% mais larga. */
+.hook{font-family:Georgia,"Times New Roman",serif;font-weight:600;
+      font-size:54px;line-height:1.14;letter-spacing:-.004em;
+      color:var(--fg);max-width:min(30ch,760px);
+      overflow-wrap:break-word;hyphens:none;
+      display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:5;
+      overflow:hidden}
+.card.long .hook{font-size:46px;line-height:1.15;max-width:min(34ch,790px);
+                 -webkit-line-clamp:6}
+/* o sales perde uma linha para a faixa do CTA: o clamp desce a 5 para que o
+   limite seja o corte COM reticencias do clamp, e nao o corte cru do miolo. */
+.card.sales.long .hook{-webkit-line-clamp:5}
+.card.sales .hook{-webkit-line-clamp:4}
+
+/* CTA do sales: UMA linha dourada com barra, sem preenchimento. Botao dourado
+   com texto branco reprova no AA (3,12 medido, PADRAO.md) — nao se usa aqui. */
+.cta{flex:none;margin-top:20px;font-size:30px;font-weight:600;line-height:1.26;
+     color:var(--accent);max-width:800px;padding-left:20px;
+     border-left:4px solid var(--orn)}
+
+/* --- 3.3 rodape --- */
+.foot{flex:none;display:flex;align-items:flex-end;justify-content:space-between;
+      gap:28px;border-top:1px solid var(--hair);padding-top:18px;min-height:48px}
+.foot .esq{flex:0 1 auto;min-width:0}
+.foot .dir{flex:1 1 auto;min-width:0;display:flex;justify-content:flex-end;align-items:flex-end}
+
+.pill{display:inline-block;font-size:28px;font-weight:600;line-height:1.1;
+      letter-spacing:.10em;text-transform:uppercase;color:var(--accent);
+      border:2px solid var(--orn);border-radius:999px;padding:9px 22px 10px;
+      white-space:nowrap}
+.site{font-size:28px;font-weight:500;letter-spacing:.015em;color:var(--fg2);
+      white-space:nowrap;padding-bottom:5px}
+
+/* Aviso consultivo. Fica SO no authority, e isso e' decisao, nao esquecimento:
+   os 30 cartoes authority sao todos em ingles (conferido no posts.json), o
+   front sales e' metade em portugues, e o contrato de saida nao tem chave de
+   idioma — um aviso juridico em ingles num cartao PT estaria errado. No sales
+   o aviso vai no texto da publicacao, na lingua certa. Para trazer o aviso ao
+   cartao do sales basta uma chave nova escolhida por idioma no render_cards.py:
+   o lugar dela e' este mesmo, o lado direito do rodape.
+   22px e' o unico texto abaixo de 28px, permitido para o aviso de rodape;
+   mede 5,54:1 sobre o fundo escuro de referencia. */
+.note{font-size:22px;line-height:1.3;color:var(--fg3);
+      text-align:right;max-width:560px;padding-bottom:3px}
+.card.sales .note{display:none}
+.endmark{display:none;flex:none;align-items:center;gap:12px;padding-bottom:9px}
+.endmark::before{content:"";width:58px;height:2px;background:var(--orn);opacity:.85}
+.endmark::after{content:"";width:11px;height:11px;background:var(--orn);transform:rotate(45deg)}
+.card.sales .endmark{display:flex}
+</style></head>
+
+<body>
+<div class="card {{variant}} {{hookclass}}">
+
+  <div class="spine" aria-hidden="true"></div>
+  <div class="panel" aria-hidden="true"></div>
+
+  <svg class="orn" viewBox="0 0 1200 627" fill="none" aria-hidden="true">
+    <circle class="ring"   cx="1300" cy="298" r="268"/>
+    <circle class="ring b" cx="1300" cy="298" r="193"/>
+    <path   class="route" d="M1052 468 C1094 398 1102 338 1170 262"/>
+    <circle class="n1" cx="1052" cy="468" r="7"/>
+    <circle class="n2" cx="1170" cy="262" r="7"/>
+  </svg>
+
+  <div class="wrap">
+
+    <header class="mast">
+      <!-- escudo da marca: identico ao do og-default.html aprovado -->
+      <svg width="46" height="52" viewBox="0 0 60 68" aria-hidden="true">
+        <path d="M30 2 56 12v26c0 14-12 22-26 28C16 60 4 52 4 38V12Z" fill="#16324F" stroke="#2C4162"/>
+        <path d="M30 2 56 12v26c0 14-12 22-26 28V2Z" fill="#3E6B4A"/>
+        <path d="M30 40l7 8-7 8-7-8Z" fill="#C9A24B"/>
+      </svg>
+      <div class="wordmark">VILLANOVA <span>ESG</span></div>
+    </header>
+
+    <div class="mid">
+      <div class="eyebrow"><span>{{label}}</span></div>
+      <h1 class="hook">{{hook}}</h1>
+      {{#cta}}<div class="cta">{{cta}}</div>{{/cta}}
+    </div>
+
+    <footer class="foot">
+      <div class="esq">
+        {{#pill}}<div class="pill">{{pill}}</div>{{/pill}}
+        {{#site}}<div class="site">villanovaesg.com</div>{{/site}}
+      </div>
+      <div class="dir">
+        <div class="note">Advisory only &mdash; not audit, certification or assurance.</div>
+        <span class="endmark" aria-hidden="true"></span>
+      </div>
+    </footer>
+
+  </div>
+</div>
+</body></html>
