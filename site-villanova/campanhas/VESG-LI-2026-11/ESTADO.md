@@ -180,3 +180,25 @@ publicado.
 
 59 cartões estáticos + 1 vídeo + 40 slides de carrossel. A frase "60/60 com
 imagem" da Fase 2 não vale mais ao pé da letra: o A15 agora é vídeo.
+
+### Conferência independente da Fase 3 (01/11, feita por mim, não pelos agentes)
+
+Os relatórios de quem executou são saída de modelo, não medição. Reli o planner
+inteiro — 1 a 30 de novembro, em quatro chamadas — e contei:
+
+| o que contei | resultado |
+|---|---|
+| posts de autoridade com `firstCommentText` preenchido | **30 de 30** |
+| posts de vendas com `firstCommentText` vazio (intocados) | **30 de 30** |
+| enquetes com `linkedinData.type: "POLL"` e 4 opções | **2 de 2** |
+| carrosséis com `publishImagesAsPDF: true` + `documentTitle` | **5 de 5** (A03 7 · A10 9 · A21 8 · A28 9 · A30 7 imagens) |
+| posts com `autoPublish: true`, `draft: false`, provider LinkedIn, `PENDING` | **62 de 62** |
+| A15 com vídeo e capa em 2,2 s | sim, e o primeiro comentário sobreviveu à troca |
+
+Total de 62 posts no mês: 30 de autoridade (05:00) + 30 de vendas (11:00) +
+2 enquetes (08:00). O A01 é a exceção de horário — 12:30 São Paulo no dia 1,
+porque a campanha começou no meio do dia.
+
+**O que nenhuma dessas contagens prova:** que o LinkedIn vai publicar. Todos
+estão `PENDING`, que é o estado correto de post agendado, e só o relógio
+converte isso em publicação.
