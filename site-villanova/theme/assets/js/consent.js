@@ -38,7 +38,10 @@
     metricoolLoaded = true;
     var s = document.createElement('script');
     s.async = true;
-    s.src = 'https://tracker.metricool.com/tracker.js';
+    // O caminho e' /resources/be.js. Em 01/11/2026 eu escrevi tracker.js de
+    // cabeca e o CloudFront devolveu 403: a tag disparava e nao carregava
+    // nada. Este endereco veio do snippet do proprio painel, nao de memoria.
+    s.src = 'https://tracker.metricool.com/resources/be.js';
     s.onload = function () {
       if (window.beTracker && typeof window.beTracker.t === 'function') {
         window.beTracker.t({hash: '5aa5d9d13ab65af696706fbdf091131'});

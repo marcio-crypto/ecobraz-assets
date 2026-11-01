@@ -94,9 +94,10 @@ for (const tela of [
   const pedidosClarity = [];
   pg.on('request', (r) => { if (r.url().includes('clarity.ms')) pedidosClarity.push(r.url().slice(0, 120)); });
   // Metricool entrou em 01/11/2026, atrás do mesmo aceite. Aqui guardo também o
-  // STATUS da resposta: buscar o tracker.js de um runner do GitHub devolveu 403
-  // do CloudFront, e eu não quero confundir bloqueio de datacenter com tag
-  // quebrada. Num navegador de verdade o número é que decide.
+  // STATUS da resposta — e foi ele que pegou o erro: a primeira versão apontava
+  // para /tracker.js e levava 403 do CloudFront. O caminho certo é
+  // /resources/be.js. Sem o status no log, "o pedido saiu" teria passado por
+  // prova de que a medição funcionava, e não era.
   const pedidosMetricool = [];
   pg.on('response', (r) => {
     if (r.url().includes('metricool.com')) pedidosMetricool.push(`${r.status()} ${r.url().slice(0, 110)}`);
