@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Villanova ESG — vídeo de campanha</title>
+<style>
+  /* VÍDEO DE CAMPANHA — 1080x1350 (4:5), o formato que ocupa mais altura no
+     feed do LinkedIn sem virar 9:16 de celular.
+
+     COMO ISTO FUNCIONA, E POR QUE NÃO USA ANIMAÇÃO DE CSS. Quem renderiza é o
+     renderiza-video.mjs: ele abre esta página UMA vez e, para cada quadro,
+     chama window.desenha(t) com o tempo em segundos e tira uma foto. Animação
+     de CSS depende do relógio do navegador, que não é o relógio do vídeo —
+     com screenshot em sequência ela escorrega e o vídeo sai tremido. Aqui toda
+     posição e opacidade é FUNÇÃO de t: o mesmo t devolve sempre o mesmo pixel.
+     É a mesma disciplina dos cartões (arte por código, nunca à mão), aplicada
+     ao tempo.
+
+     SEM ÁUDIO POR DECISÃO, NÃO POR LIMITAÇÃO. O feed do LinkedIn começa mudo.
+     Vídeo que só funciona com som é vídeo que não funciona. Todo o conteúdo
+     está no texto em tela — que também é o que um leitor de tela do LinkedIn
+     não lê, e por isso o post continua trazendo o argumento escrito no corpo.
+
+     Tokens do PADRAO.md v2. Dourado de ORNAMENTO é #b88a3d (filete, borda,
+     losango); dourado de TEXTO sobre navy é #d9b573. Trocar os dois reprova no
+     contraste — é o erro que o PADRAO.md registra na seção "Cor e contraste". */
+  :root{
+    --navy:#061426; --navy2:#0b2a52; --gold:#b88a3d; --gold-l:#d9b573;
+    --branco:#fff; --sub:#C9D4E4; --fraco:#8FA0B6;
+    --serif:Georgia,"Times New Roman",serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:1080px;height:1350px;overflow:hidden}
+  html{background:var(--navy)}
+  body{
+    font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    background:
+      radial-gradient(820px 620px at 76% 20%, #123a6b 0%, rgba(18,58,107,0) 64%),
+      linear-gradient(160deg, var(--navy) 55%, var(--navy2));
+    color:var(--branco);position:relative}
+
+  .rota{position:absolute;inset:0}
+
+  /* ---------- marca, fixa ---------- */
+  .topo{position:absolute;top:70px;left:84px;right:84px;
+        display:flex;align-items:flex-start;justify-content:space-between}
+  .marca{display:flex;align-items:center;gap:18px}
+  .marca .nome{font-size:33px;letter-spacing:.03em;font-weight:700;line-height:1.1}
+  .marca .nome span{color:var(--gold-l)}
+  .marca .tag{font-size:12.5px;letter-spacing:.26em;color:var(--fraco);margin-top:7px}
+  .selo{border:1.5px solid rgba(184,138,61,.55);border-radius:999px;
+        padding:9px 20px;font-size:16px;font-weight:600;letter-spacing:.14em;
+        color:var(--gold-l);text-transform:uppercase;white-space:nowrap}
+
+  /* ---------- palco ---------- */
+  /* O palco termina em y=950; a rota comeca em y=988. A folga e proposital. */
+  .palco{position:absolute;left:84px;right:84px;top:200px;bottom:400px}
+  .cena{position:absolute;inset:0;display:flex;flex-direction:column;
+         justify-content:center;will-change:opacity,transform}
+
+  .eyebrow{display:flex;align-items:center;gap:16px;font-size:20px;font-weight:600;
+           letter-spacing:.2em;text-transform:uppercase;color:var(--gold-l)}
+  .eyebrow::before{content:"";width:34px;height:2px;background:var(--gold);flex:none}
+
+  .numerao{font-family:var(--serif);font-weight:600;font-size:300px;line-height:.92;
+           letter-spacing:-.02em;color:var(--gold-l);margin-top:24px;
+           font-variant-numeric:tabular-nums}
+  .legenda{font-family:var(--serif);font-size:60px;line-height:1.14;margin-top:10px}
+  .legenda b{color:var(--gold-l);font-weight:600}
+  .apoio{font-size:32px;line-height:1.5;color:var(--sub);margin-top:44px;max-width:30ch}
+
+  .titulo{font-family:var(--serif);font-weight:600;font-size:62px;line-height:1.14;
+          margin-top:26px;max-width:21ch}
+  .titulo.menor{font-size:52px;max-width:24ch}
+
+  /* ---------- linha do tempo ---------- */
+  .linha{position:relative;margin-top:56px;height:200px}
+  .linha .trilho{position:absolute;top:21px;left:0;height:2px;
+                 background:rgba(255,255,255,.16);width:100%}
+  .linha .cheio{position:absolute;top:21px;left:0;height:2px;background:var(--gold)}
+  .no{position:absolute;top:0;width:44%}
+  .no .pt{width:22px;height:22px;border-radius:50%;border:2px solid var(--gold);
+          background:var(--navy);margin-bottom:22px}
+  .no.ativo .pt{background:var(--gold-l);border-color:var(--gold-l)}
+  .no .quando{font-family:var(--serif);font-size:38px;line-height:1.1;color:var(--branco)}
+  .no .quem{font-size:25px;line-height:1.4;color:var(--sub);margin-top:10px}
+
+  /* ---------- fichas de commodity ---------- */
+  .fichas{display:flex;flex-wrap:wrap;gap:16px;margin-top:46px;max-width:820px}
+  .ficha{border:1.5px solid rgba(255,255,255,.2);border-radius:999px;
+         padding:14px 28px;font-size:29px;color:var(--branco);white-space:nowrap}
+  .ficha.forte{border-color:rgba(184,138,61,.75);color:var(--gold-l)}
+
+  /* ---------- itens numerados ---------- */
+  .itens{margin-top:44px;display:flex;flex-direction:column;gap:34px}
+  .item{display:flex;gap:26px;align-items:flex-start}
+  .item .n{font-family:var(--serif);font-size:44px;line-height:1;color:var(--gold-l);
+           flex:none;width:62px;font-variant-numeric:tabular-nums}
+  .item .t{font-size:33px;line-height:1.46;color:var(--branco);max-width:30ch}
+
+  /* ---------- fato / interpretação ---------- */
+  .bloco{border-left:3px solid var(--gold);padding-left:32px;margin-top:40px}
+  .bloco + .bloco{margin-top:44px}
+  .bloco .rot{font-size:18px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
+              color:var(--gold-l)}
+  .bloco .txt{font-size:31px;line-height:1.5;color:var(--sub);margin-top:14px;max-width:30ch}
+  .bloco.mais .txt{color:var(--branco)}
+
+  /* ---------- fecho ---------- */
+  .fecho .frase{font-family:var(--serif);font-weight:600;font-size:58px;line-height:1.18;
+                max-width:22ch}
+  .fecho .site{font-size:34px;color:var(--gold-l);margin-top:40px;letter-spacing:.02em}
+  .fecho .acao{font-size:30px;color:var(--sub);margin-top:14px}
+
+  /* ---------- rodapé fixo ---------- */
+  .rodape{position:absolute;left:84px;right:84px;bottom:66px}
+  .aviso{font-size:21px;color:var(--fraco);line-height:1.4}
+  .barra{position:absolute;left:0;right:0;bottom:-26px;height:3px;
+         background:rgba(255,255,255,.13)}
+  .barra i{position:absolute;left:0;top:0;height:3px;background:var(--gold);width:0}
+</style></head>
+<body>
+  <svg class="rota" width="1080" height="1350" viewBox="0 0 1080 1350" fill="none" aria-hidden="true">
+    <defs><clipPath id="rev"><rect id="revr" x="0" y="0" width="0" height="1350"/></clipPath></defs>
+    <circle cx="900" cy="300" r="300" stroke="rgba(255,255,255,.05)" stroke-width="1.5"/>
+    <circle cx="900" cy="300" r="196" stroke="rgba(255,255,255,.037)" stroke-width="1.5"/>
+    <!-- A rota mora na faixa ABAIXO do palco (y>=988) e os aneis na faixa
+         ACIMA. Nenhum dos dois cruza a coluna de texto, em nenhuma cena. -->
+    <g clip-path="url(#rev)">
+      <path d="M230 1185 Q 620 1020 1008 988" stroke="#b88a3d" stroke-width="2.6"
+            stroke-dasharray="1 10" stroke-linecap="round" opacity=".72"/>
+    </g>
+    <circle id="pBR" cx="230" cy="1185" r="8" fill="#b88a3d"/>
+    <circle id="pEU" cx="1008" cy="988" r="8" fill="#d9b573"/>
+  </svg>
+
+  <div class="topo">
+    <div class="marca">
+      <svg width="54" height="61" viewBox="0 0 60 68" aria-hidden="true">
+        <path d="M30 2 56 12v26c0 14-12 22-26 28C16 60 4 52 4 38V12Z" fill="#16324F" stroke="#2C4162"/>
+        <path d="M30 2 56 12v26c0 14-12 22-26 28V2Z" fill="#3E6B4A"/>
+        <path d="M30 40l7 8-7 8-7-8Z" fill="#C9A24B"/>
+      </svg>
+      <div>
+        <div class="nome">VILLANOVA <span>ESG</span></div>
+        <div class="tag">EU&ndash;BRAZIL SUPPLIER EVIDENCE</div>
+      </div>
+    </div>
+    <div class="selo" id="selo">Evidence Note 15/30</div>
+  </div>
+
+  <div class="palco">
+    <!-- 1. contagem -->
+    <div class="cena" id="c1">
+      <div class="eyebrow" data-em="0.15">EUDR &middot; application date</div>
+      <div class="numerao" id="contador" data-em="0.35">0</div>
+      <div class="legenda" data-em="1.70">days to <b>30 December 2026</b></div>
+    </div>
+
+    <!-- 2. quem entra, e quando -->
+    <div class="cena" id="c2">
+      <div class="eyebrow" data-em="0.10">Who is in scope</div>
+      <div class="linha">
+        <div class="trilho"></div><div class="cheio" id="cheio"></div>
+        <div class="no ativo" style="left:0" data-em="0.30">
+          <div class="pt"></div>
+          <div class="quando">30 Dec 2026</div>
+          <div class="quem">Large and medium operators and traders</div>
+        </div>
+        <div class="no" style="left:52%" data-em="0.95">
+          <div class="pt"></div>
+          <div class="quando">30 Jun 2027</div>
+          <div class="quem">Micro and small enterprises</div>
+        </div>
+      </div>
+      <div class="apoio" data-em="1.55" style="max-width:34ch">The Commission has stated it
+        will not reopen the core text.</div>
+    </div>
+
+    <!-- 3. o que entra, do Brasil -->
+    <div class="cena" id="c3">
+      <div class="eyebrow" data-em="0.10">Covered, and shipped from Brazil</div>
+      <div class="titulo menor" data-em="0.28">Seven commodities and everything made of them.</div>
+      <div class="fichas">
+        <div class="ficha forte" data-em="0.60">Coffee</div>
+        <div class="ficha forte" data-em="0.72">Cocoa</div>
+        <div class="ficha forte" data-em="0.84">Soy</div>
+        <div class="ficha forte" data-em="0.96">Cattle products</div>
+        <div class="ficha" data-em="1.08">Leather</div>
+        <div class="ficha" data-em="1.20">Wood</div>
+        <div class="ficha" data-em="1.32">Rubber</div>
+        <div class="ficha" data-em="1.44">Palm-oil derivatives</div>
+      </div>
+    </div>
+
+    <!-- 4. o que isso significa -->
+    <div class="cena" id="c4">
+      <div class="eyebrow" data-em="0.10">What it means for the exporter</div>
+      <div class="itens">
+        <div class="item" data-em="0.35"><div class="n">01</div>
+          <div class="t">Your EU buyer files a due diligence statement <i>before</i> your product
+            is placed on the market.</div></div>
+        <div class="item" data-em="1.25"><div class="n">02</div>
+          <div class="t">That statement rests on origin, geolocation and legality data that only
+            you can supply.</div></div>
+        <div class="item" data-em="2.15"><div class="n">03</div>
+          <div class="t">Buyers are not waiting for 30 December. The requests have been arriving
+            all year.</div></div>
+      </div>
+    </div>
+
+    <!-- 5. fato / interpretação -->
+    <div class="cena" id="c5">
+      <div class="eyebrow" data-em="0.10">The line this page never blurs</div>
+      <div class="bloco" data-em="0.35">
+        <div class="rot">Fact</div>
+        <div class="txt">Regulation (EU) 2023/1115 as amended. Application 30 Dec 2026 for large
+          and medium operators, 30 Jun 2027 for micro and small.</div>
+      </div>
+      <div class="bloco mais" data-em="1.45">
+        <div class="rot">Interpretation</div>
+        <div class="txt">The supplier that delivers a clean EUDR data package in Q4 2026 becomes
+          the buyer&rsquo;s path of least resistance in Q1 2027.</div>
+      </div>
+    </div>
+
+    <!-- 6. fecho -->
+    <div class="cena fecho" id="c6">
+      <div class="eyebrow" data-em="0.10">This week on this page</div>
+      <div class="frase" data-em="0.30">What the data package contains, and where Brazilian
+        files break.</div>
+      <div class="site" data-em="1.05">villanovaesg.com</div>
+      <div class="acao" data-em="1.25">One note per morning. 30 days.</div>
+    </div>
+  </div>
+
+  <div class="rodape">
+    <div class="aviso" id="aviso">Advisory review &mdash; not an audit, certification or legal opinion.</div>
+    <div class="barra"><i id="progresso"></i></div>
+  </div>
+
+<script>
+  // ===== relógio do vídeo =====
+  // Toda a animação é função de t. Nada de requestAnimationFrame, nada de
+  // transition: o renderizador chama desenha(t) e fotografa.
+  var DUR = 24.0;
+  var CENAS = [
+    {el:'c1', ini:0.00, fim:4.00},
+    {el:'c2', ini:4.00, fim:8.20},
+    {el:'c3', ini:8.20, fim:12.40},
+    {el:'c4', ini:12.40, fim:16.90},
+    {el:'c5', ini:16.90, fim:21.00},
+    {el:'c6', ini:21.00, fim:24.00}
+  ];
+  var ENTRA = 0.55, SAI = 0.34;
+
+  function cl(x,a,b){ return x<a?a:(x>b?b:x); }
+  function easeOut(x){ x=cl(x,0,1); return 1-Math.pow(1-x,3); }
+  function easeInOut(x){ x=cl(x,0,1); return x<0.5 ? 4*x*x*x : 1-Math.pow(-2*x+2,3)/2; }
+
+  // Guarda os elementos animados de cada cena uma vez, para não consultar o
+  // DOM 600 vezes por quadro.
+  var cenas = CENAS.map(function(c){
+    var raiz = document.getElementById(c.el);
+    return {
+      cfg:c, raiz:raiz,
+      itens:[].slice.call(raiz.querySelectorAll('[data-em]')).map(function(e){
+        return {el:e, em:parseFloat(e.getAttribute('data-em'))};
+      })
+    };
+  });
+
+  function desenha(t){
+    t = cl(t, 0, DUR);
+
+    // --- rota: desenha-se nos primeiros 2,6 s e fica ---
+    var r = easeInOut(t/2.6);
+    document.getElementById('revr').setAttribute('width', (r*1080).toFixed(1));
+    document.getElementById('pBR').setAttribute('r', (8*easeOut((t-0.15)/0.5)).toFixed(2));
+    document.getElementById('pEU').setAttribute('r', (8*easeOut((t-2.05)/0.6)).toFixed(2));
+
+    // --- marca e selo entram e ficam ---
+    var m = easeOut(t/0.7);
+    document.querySelector('.marca').style.opacity = m.toFixed(3);
+    document.getElementById('selo').style.opacity = easeOut((t-0.45)/0.7).toFixed(3);
+
+    // --- barra de progresso: diz ao espectador que o vídeo é curto ---
+    document.getElementById('progresso').style.width = (t/DUR*100).toFixed(2) + '%';
+
+    // --- o disclaimer aparece só no fecho (PADRAO.md: um por peça) ---
+    document.getElementById('aviso').style.opacity = easeOut((t-21.3)/0.8).toFixed(3);
+
+    // --- cenas ---
+    for (var i=0;i<cenas.length;i++){
+      var c = cenas[i], cfg = c.cfg;
+      if (t < cfg.ini - 0.01 || t > cfg.fim + 0.01){ c.raiz.style.opacity = 0; c.raiz.style.visibility='hidden'; continue; }
+      c.raiz.style.visibility='visible';
+      var loc = t - cfg.ini;
+      var dentro = easeOut(loc/ENTRA);
+      // A última cena NÃO desaparece: se desaparecesse, o último quadro do
+      // vídeo seria navy vazio — e é nele que o feed costuma congelar.
+      var fora = (cfg.fim >= DUR - 0.001) ? 1 : easeOut((cfg.fim - t)/SAI);
+      c.raiz.style.opacity = Math.min(dentro, fora).toFixed(3);
+      // A cena inteira sobe 26px na entrada e desce 14px na saída: dá direção
+      // ao corte sem virar carrossel deslizante.
+      var dy = (1-dentro)*26 - (1-fora)*14;
+      c.raiz.style.transform = 'translateY(' + dy.toFixed(2) + 'px)';
+
+      for (var j=0;j<c.itens.length;j++){
+        var it = c.itens[j], p = easeOut((loc - it.em)/0.5);
+        it.el.style.opacity = p.toFixed(3);
+        it.el.style.transform = 'translateY(' + ((1-p)*18).toFixed(2) + 'px)';
+      }
+    }
+
+    // --- contador 0 → 45 (cena 1) ---
+    var cont = Math.round(45*easeOut((t-0.45)/1.25));
+    document.getElementById('contador').textContent = cont;
+
+    // --- trilho da linha do tempo (cena 2) ---
+    var lp = easeInOut((t-4.25)/1.5);
+    document.getElementById('cheio').style.width = (lp*52).toFixed(2) + '%';
+  }
+  window.desenha = desenha;
+  window.DUR = DUR;
+  desenha(0);
+</script>
+</body></html>
