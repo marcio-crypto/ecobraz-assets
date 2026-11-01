@@ -202,3 +202,57 @@ porque a campanha começou no meio do dia.
 **O que nenhuma dessas contagens prova:** que o LinkedIn vai publicar. Todos
 estão `PENDING`, que é o estado correto de post agendado, e só o relógio
 converte isso em publicação.
+
+## A conferência que faltava: arte × post, lida pelo pixel (01/11)
+
+O último item em aberto da Fase 2 era este, e eu mesmo o havia escrito: *"as 95
+imagens não foram abertas uma a uma para conferir que a arte X é do post X"*.
+Uma troca de índice no gerador passaria em **todos** os testes anteriores —
+60/60 com imagem, 95 URLs distintas, texto idêntico — porque nenhum deles olha
+o que está desenhado na peça.
+
+Fechado por `site-villanova/scripts/confere-arte-por-ocr.py`, que lê o pixel
+(ffmpeg inverte, tesseract transcreve) e **não olha o código que gerou a peça**.
+
+O teste não é "o texto esperado aparece na peça" — esse passaria com a arte
+trocada, porque toda peça divide marca, moldura e aviso legal. É um teste de
+**discriminação**: para cada peça, quanto ela casa com **cada** um dos 60 posts,
+exigindo que o vencedor seja o post do nome do arquivo.
+
+| critério | resultado |
+|---|---|
+| 1. vocabulário inteiro da peça | 58/60 decididos · 0 erradas · 2 empates |
+| 2. primeira linha, olhando da peça | 60/60 |
+| 3. primeira linha, olhando do post | 59/60 |
+| 4. classe (vendas tem chamada, autoridade tem pílula) | 60/60 |
+| 5. slides de carrossel, vocabulário | 40/40 (margem pior 0,40) |
+
+**100 de 100 peças provadas: nenhuma foi casada com outro post por todos os
+critérios.** Três divergiram entre critérios, e nenhuma delas é troca de arte:
+
+- **S09** e **S30** empataram no critério 1. Ganchos curtos cujo vocabulário o
+  post vizinho também usa (S09 divide *importer/embedded/emissions/data* com o
+  A13; S30 divide *comprador/pedido* com o S02, e as duas peças de vendas em
+  português têm a mesma chamada de ação). Os critérios 2 e 3 decidem a favor do
+  próprio post, 1,00 contra 0,30 e 0,80 contra 0,20.
+- **S19** falhou só no critério 3, casando com o A19 por 0,83 contra 0,79. Os
+  dois são do dia 19/11, do mesmo tema, e abrem com quase as mesmas palavras; a
+  arte do S19 corta em 110 caracteres e perde justamente o fim que o
+  distinguiria. O critério 4 resolve sem ambiguidade: a peça traz a chamada de
+  ação *"Send the request you received →"*, que só existe em cartão de vendas,
+  logo não pode ser a arte de um post de autoridade.
+
+O critério 3 ficou no conferidor **apesar** desse falso positivo conhecido: é o
+único sensível a gancho cortado, e critério que nunca reclama não está medindo
+nada.
+
+Conferido junto, sem OCR: no `arte/cartoes/manifest.json`, o texto alternativo
+de cada peça é **exatamente** a primeira linha do próprio post, 60/60, e nenhum
+termina em reticências — o defeito corrigido de manhã não voltou.
+
+**O que isto NÃO prova.** Que o arquivo anexado a cada post no Metricool é este
+mesmo arquivo. O `static.metricool.com` está bloqueado pelo proxy desta sessão,
+então não dá para baixar e comparar byte a byte daqui. O que sustenta esse elo é
+indireto: o anexo foi feito por id a partir do manifesto, as 95 URLs são
+distintas, e nas quatro leituras do planner de hoje o texto alternativo de cada
+post corresponde à primeira linha daquele post.
