@@ -282,3 +282,24 @@ confirmar em dez segundos é o Marcio, abrindo o post.
 
 Também segue sem prova, por serem formatos que ainda não publicaram: a **enquete
 nativa** (primeira em 06/11 08:00) e o **vídeo** (15/11 05:00).
+
+### Carrossel provado — A03, 03/11/2026
+
+O terceiro formato da campanha publicou sozinho, e com uma diferença que vale
+registrar:
+
+```
+status:    PUBLISHED
+id:        urn:li:ugcPost:7523293627226222594
+publicUrl: https://linkedin.com/feed/update/urn:li:ugcPost:7523293627226222594
+```
+
+Note o `ugcPost`, não `share`. A01 e A02 saíram como `urn:li:share:…`, que é
+post comum; o A03 saiu como `urn:li:ugcPost:…`, que é como o LinkedIn numera
+documento. Ou seja: as 7 imagens com `publishImagesAsPDF` **viraram documento
+de verdade**, não um carrossel de imagens soltas. Era a dúvida que o formato
+tinha, e ela está respondida pela própria API.
+
+Placar dos formatos até aqui: **post com imagem ✅** (A01, A02) ·
+**documento ✅** (A03) · **enquete** sem prova até 06/11 · **vídeo** sem prova
+até 15/11.
