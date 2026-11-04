@@ -22,4 +22,19 @@
     <aside class="article-cta container-narrow only-pt"><div><strong>Precisa retirar equipamentos ou resíduos eletrônicos?</strong><p>Envie os dados básicos para avaliação da coleta.</p></div><a class="button" href="{{@site.url}}/agendamento/?origem=artigo">Agendar coleta</a></aside>
     <aside class="article-cta container-narrow only-en"><div><strong>Need documented e-waste collection or disposal in Brazil?</strong><p>Message us in English — we reply with scope and documentation details.</p></div><a class="button" href="{{@custom.whatsapp_url}}" rel="noopener">Message us on WhatsApp</a></aside>
 </article>
+{{!-- Leia também: 3 posts da mesma tag principal (mesmo idioma, já que PT e EN
+     usam tags distintas). Dá a cada post links de entrada vindos dos irmãos,
+     em vez de depender só da paginação do /blog/. --}}
+{{#if primary_tag}}
+{{#get "posts" filter="primary_tag:{{primary_tag.slug}}+id:-{{id}}" limit="3" order="published_at desc" as |relacionados|}}
+{{#if relacionados}}
+<section class="section article-related">
+    <div class="container">
+        <h2 class="article-related-title"><span class="only-pt">Leia também</span><span class="only-en">Read next</span></h2>
+        <div class="post-grid">{{#foreach relacionados}}{{> "post-card"}}{{/foreach}}</div>
+    </div>
+</section>
+{{/if}}
+{{/get}}
+{{/if}}
 {{/post}}

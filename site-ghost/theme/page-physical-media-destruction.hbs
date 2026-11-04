@@ -200,6 +200,18 @@
   </div>
 </section>
 
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Technical content</span><h2>Read next</h2></div>
+      <p>Articles from the Ecobraz blog on the same subject as this page.</p>
+    </div>
+    {{#get "posts" filter="slug:[e-waste-environmental-impact-2025-data,brazil-e-waste-map-regional-data-volumes-risks,what-is-e-waste-examples-and-correct-disposal]" limit="3" as |leituras|}}
+    <div class="post-grid">{{#foreach leituras}}{{> "post-card"}}{{/foreach}}</div>
+    {{/get}}
+  </div>
+</section>
+
 <section class="hx-block">
   <div class="container">
     <div class="hx-head-split">

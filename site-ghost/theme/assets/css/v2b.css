@@ -502,3 +502,11 @@ body.is-empresa .copy-pf{display:none}
 .v2-ponto.is-active{background:var(--verde);width:30px}
 .v2-ponto:hover{background:var(--hover, #6FA82B)}
 @media (prefers-reduced-motion: reduce){.v2-carrossel .v2-slide{transition:none}}
+
+/* Leia também (post.hbs): 3 posts da mesma tag, abaixo do artigo. */
+.article-related{padding-top:0}
+.article-related-title{font-family:'Nunito','Inter',Arial,sans-serif;font-weight:800;font-size:clamp(24px,3vw,32px);color:var(--petrol);margin:0 0 24px}
+/* CTA contextual dentro do texto (blockquote com links para páginas de serviço). */
+.gh-content blockquote.ecb-cta{font-weight:600;font-size:16px}
+.gh-content blockquote.ecb-cta strong{display:block;font-size:19px;margin-bottom:6px}
+.gh-content blockquote.ecb-cta a{color:var(--verde-escuro);text-decoration:underline}

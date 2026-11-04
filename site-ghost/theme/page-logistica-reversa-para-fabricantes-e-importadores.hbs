@@ -199,6 +199,18 @@
   </div>
 </section>
 
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Conteúdo técnico</span><h2>Leia também</h2></div>
+      <p>Artigos do blog da Ecobraz sobre o mesmo tema desta página.</p>
+    </div>
+    {{#get "posts" filter="slug:[obsolescencia-programada-nos-carros-eletricos,tabela-de-classificacao-de-residuos-eletronicos-abntconama-consulta-rapida,lixo-eletronico-no-brasil-numeros-atualizados-2025]" limit="3" as |leituras|}}
+    <div class="post-grid">{{#foreach leituras}}{{> "post-card"}}{{/foreach}}</div>
+    {{/get}}
+  </div>
+</section>
+
 <section class="hx-block">
   <div class="container">
     <div class="hx-head-split">
