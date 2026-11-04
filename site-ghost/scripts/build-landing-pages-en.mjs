@@ -9,6 +9,9 @@ import path from 'node:path';
 const root = path.resolve(import.meta.dirname, '..');
 const base = 'https://ecobraz.org';
 const pages = JSON.parse(await fs.readFile(path.join(root, 'landing', 'landing-pages-en.json'), 'utf8'));
+// EN post titles (for the "Read next" list in the Ghost fallback content).
+const titulosPosts = new Map();
+for (const post of JSON.parse(await fs.readFile(path.join(root, 'content', 'en-posts.json'), 'utf8'))) titulosPosts.set(post.slug, post.title);
 
 const icons = {
   shield: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg>',
@@ -37,6 +40,29 @@ const referenciaSection = (p, slug) => !p.referencia ? '' : `<section class="hx-
 </section>
 
 `;
+// "Read next" (pillar → post): `leituras` = post slugs on the same subject,
+// written by scripts/insere-links-contextuais.mjs. Template fetches the posts
+// with {{#get}}; fallback content carries plain links for crawlers.
+// Whole section inside {{#get}} + {{#if}}: zero posts (unpublished, renamed
+// slug, Content API error) renders nothing instead of an empty grid.
+const leiturasSection = (p) => !(p.leituras && p.leituras.length) ? '' : `{{#get "posts" filter="slug:[${p.leituras.join(',')}]" limit="3" as |leituras|}}{{#if leituras}}
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Technical content</span><h2>Read next</h2></div>
+      <p>Articles from the Ecobraz blog on the same subject as this page.</p>
+    </div>
+    <div class="post-grid">{{#foreach leituras}}{{> "post-card"}}{{/foreach}}</div>
+  </div>
+</section>
+{{/if}}{{/get}}
+
+`;
+// EN posts all live under /blog/ (no EN museum collection in routes.yaml).
+const leiturasHtml = (p) => !(p.leituras && p.leituras.length) ? '' : `<h2>Read next</h2><ul>${p.leituras.map((s) => {
+  if (!titulosPosts.has(s)) throw new Error(`leituras: unknown post "${s}" in ${p.slug}`);
+  return `<li><a href="/blog/${s}/">${esc(titulosPosts.get(s))}</a></li>`;
+}).join('')}</ul>`;
 const referenciaHtml = (p) => !p.referencia ? '' : `<hr><h2>Technical reference</h2><p>This subject is developed in an original technical report by Ecobraz Emigre, published with a persistent identifier (DOI) on the open Zenodo repository:</p><ul><li>VILLANOVA, Marcio. <em>${esc(p.referencia.titulo)}</em>. Zenodo, 2026. <a href="https://doi.org/${p.referencia.doi}" rel="noopener">doi.org/${p.referencia.doi}</a>.</li></ul><p><a href="/technical-publications/">See all of Ecobraz\u2019s technical publications →</a></p>`;
 
 function renderTemplate(p) {
@@ -233,7 +259,7 @@ ${p.why ? `<section class="hx-block alt">
   </div>
 </section>
 
-${referenciaSection(p, slug)}<section class="hx-block" style="padding-top:0">
+${leiturasSection(p)}${referenciaSection(p, slug)}<section class="hx-block" style="padding-top:0">
   <div class="container">
     <div class="hx-final">
       <div>
@@ -303,7 +329,7 @@ ${groups}
   </div>
 </section>
 
-${referenciaSection(p, slug)}<section class="hx-block alt">
+${leiturasSection(p)}${referenciaSection(p, slug)}<section class="hx-block alt">
   <div class="container">
     <div class="hx-final">
       <div>
@@ -400,7 +426,7 @@ function renderSyncEntry(p) {
     `<h2>Scope</h2><p>${esc(p.scope.conditions)}</p>`,
     `<p>Hub solution <a href="${p.hub.href}">${esc(p.hub.title)}</a>. Related: ${p.related.map((r) => `<a href="${r.href}">${esc(r.title)}</a>`).join(', ')}. Evidence: <a href="/documentation-traceability/">documentation and traceability</a> and <a href="/public-evidence/">public evidence</a>.</p>`,
     `<p><a href="mailto:contato@ecobraz.org.br">Request a technical assessment</a>.</p>`
-  ].join('') + referenciaHtml(p);
+  ].join('') + referenciaHtml(p) + leiturasHtml(p);
   return {
     title: p.title,
     slug: p.slug,

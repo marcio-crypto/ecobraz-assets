@@ -99,3 +99,44 @@ zero — é só apagar a regra e seguir pelo Caminho B.
 
 **Rollback:** se qualquer verificação falhar, reenviar o backup original sem
 alterações.
+
+## 6. O mesmo bloqueio atinge o `/llms.txt` — medido em 23/09/2026
+
+Quando o prazo da coleta expressa passou de 24h para 72h, todas as páginas do
+site foram corrigidas pelo deploy. **Uma coisa não foi:** a linha da expressa
+dentro do `/llms.txt`, o arquivo que os robôs de IA leem.
+
+    https://ecobraz.org/llms.txt          -> "coleta expressa em até 24h"  (velho)
+    https://ecobraz.org/assets/llms.txt   -> "coleta expressa em até 24h"  (velho)
+    https://ecobraz.org/assets/llms-2026-09.txt -> "em até 72h"            (CERTO)
+
+O diagnóstico (`ecobraz-diag-asset.yml`) mostrou por quê:
+
+    etag: W/"a7a-1a080f7e175"
+    last-modified: Tue, 08 Sep 2026 12:22:03 GMT
+    x-cache: MISS, HIT, HIT
+
+As três leituras públicas — normal, com parâmetro novo e pedindo cópia fresca —
+devolvem **o mesmo byte**. A camada que guarda essa cópia fica **antes** do
+Cloudflare, ignora pedido de revalidação e declara validade de um ano. Purgar a
+borda não resolve; já foi tentado em setembro e não teve efeito.
+
+O conteúdo certo **já está no ar**, no caminho novo `assets/llms-2026-09.txt`,
+que não tem cópia presa em cache. O que falta é o `/llms.txt` apontar para lá.
+
+E é exatamente a mesma pedra do `/bio`: a regra de redirect vive no painel do
+Ghost, e a chave de integração recebe 403 tanto para baixar quanto para subir.
+
+**Então um único movimento resolve os dois problemas:**
+
+- pelo **Caminho A** (Cloudflare, seção 4): além da regra do `/bio`, uma segunda
+  Redirect Rule, com expressão `(http.request.uri.path eq "/llms.txt")` e
+  destino estático `https://ecobraz.org/assets/llms-2026-09.txt`, status **301**;
+- pelo **Caminho B** (download/upload no painel do Ghost, seção 5): o arquivo
+  montado leva as duas mudanças de uma vez — a regra nova do `/bio` e a troca do
+  destino do `/llms.txt`, que no repositório já está correta desde o `ebeb27b`.
+
+Alternativa independente: pedir de novo ao suporte do Ghost que limpe o cache de
+`/assets/llms.txt`. Funcionou em setembro, mas depende de terceiro e o problema
+volta na próxima vez que esse arquivo mudar. Apontar para um caminho novo não
+volta.

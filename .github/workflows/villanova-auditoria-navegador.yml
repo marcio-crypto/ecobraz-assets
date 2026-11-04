@@ -45,7 +45,13 @@ jobs:
   # URLs (por resto de divisão, então cada fatia mistura página institucional e
   # post) e o conjunto termina em ~1/4 do tempo. Com fatias=1 nada muda.
   preparar:
-    runs-on: ubuntu-latest
+    # ubuntu-24.04 FIXO, nao "latest". Em 01/11/2026 o runner "latest" virou
+    # Ubuntu 26.04 e o passo do Chromium morreu com "Playwright does not
+    # support chromium on ubuntu26.04-x64": o Playwright 1.56.1 nao conhece
+    # essa versao do sistema. O site nao tinha nada de errado — a ferramenta
+    # e' que parou de abrir. Versao fixa aqui porque esta auditoria so' vale
+    # se o navegador abrir.
+    runs-on: ubuntu-24.04
     outputs:
       fatias: ${{ steps.montar.outputs.fatias }}
     steps:
@@ -60,7 +66,7 @@ jobs:
 
   auditar:
     needs: preparar
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 35
     strategy:
       fail-fast: false

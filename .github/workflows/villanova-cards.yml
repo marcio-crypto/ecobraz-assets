@@ -1,0 +1,90 @@
+name: Villanova — cartões da campanha de LinkedIn
+
+# Renderiza os cartões 1200x627 de uma campanha e sobe cada um para a
+# biblioteca de imagens do Ghost da Villanova, devolvendo o manifesto id → URL.
+#
+# Por que o upload acontece AQUI e não na minha máquina: a chave de admin do
+# Ghost só existe como secret do Actions. É ela que faz a imagem nascer em
+# villanovaesg.com/content/images/... — URL pública, permanente e no domínio da
+# marca, que é o que o Metricool exige para anexar (link privado ou que expira
+# ele recusa).
+#
+# Este workflow NÃO toca no Metricool. Ele produz as URLs; anexar a imagem ao
+# post já agendado é um passo separado, feito pelo conector do Metricool. A
+# separação é de propósito: subir imagem é reversível, mexer em post agendado é
+# publicação.
+
+on:
+  workflow_dispatch:
+    inputs:
+      posts:
+        description: 'JSON dos posts da campanha'
+        type: string
+        default: 'site-villanova/campanhas/VESG-LI-2026-11/content/posts.json'
+      tpl:
+        description: 'Template do cartão'
+        type: string
+        default: 'site-villanova/design/card-campanha.html'
+      tipo:
+        description: 'O que renderizar'
+        type: choice
+        options: [cartoes, carrosseis, ambos]
+        default: cartoes
+      so:
+        description: 'Só estes ids, separados por vírgula (vazio = todos). Use para provar a arte em 2 antes dos 60.'
+        type: string
+        default: ''
+      upload:
+        description: 'Subir para o Ghost (desmarcado = só renderiza e guarda como artefato)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  cartoes:
+    # ubuntu-24.04 fixo: em 01/11/2026 o runner "latest" virou Ubuntu 26.04 e o
+    # Playwright 1.56.1 não abre o Chromium nele. Mesma correção da auditoria.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: Instalar o Playwright e o Chromium
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.56.1 --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Renderizar os cartões (e subir, se pedido)
+        if: ${{ inputs.tipo == 'cartoes' || inputs.tipo == 'ambos' }}
+        env:
+          VILLANOVA_GHOST_ADMIN_URL: ${{ secrets.VILLANOVA_GHOST_ADMIN_URL }}
+          VILLANOVA_GHOST_ADMIN_API_KEY: ${{ secrets.VILLANOVA_GHOST_ADMIN_API_KEY }}
+        run: |
+          node site-villanova/scripts/renderiza-cards.mjs \
+            --posts "${{ inputs.posts }}" \
+            --tpl "${{ inputs.tpl }}" \
+            --out out/cards \
+            ${{ inputs.so && format('--so {0}', inputs.so) || '' }} \
+            ${{ inputs.upload && '--upload' || '' }}
+
+      - name: Renderizar os carrosséis (e subir, se pedido)
+        if: ${{ inputs.tipo == 'carrosseis' || inputs.tipo == 'ambos' }}
+        env:
+          VILLANOVA_GHOST_ADMIN_URL: ${{ secrets.VILLANOVA_GHOST_ADMIN_URL }}
+          VILLANOVA_GHOST_ADMIN_API_KEY: ${{ secrets.VILLANOVA_GHOST_ADMIN_API_KEY }}
+        run: |
+          node site-villanova/scripts/renderiza-carrossel.mjs \
+            --spec site-villanova/campanhas/VESG-LI-2026-11/content/carrosseis.json \
+            --tpl site-villanova/design/carrossel-campanha.html \
+            --out out/carrosseis \
+            ${{ inputs.so && format('--so {0}', inputs.so) || '' }} \
+            ${{ inputs.upload && '--upload' || '' }}
+      - name: Guardar os PNGs
+        uses: actions/upload-artifact@v4
+        with:
+          name: cartoes-campanha
+          path: out/
+          retention-days: 30

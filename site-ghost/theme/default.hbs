@@ -71,18 +71,24 @@
         else if (stored === 'denied') window.clarity('consent', false);
       })();
     </script>
-    <!-- Connected Sites (E-goi) -->
+    <!-- Connected Sites (E-goi) — só carrega com consentimento explícito ('granted').
+         Sem escolha guardada ou com recusa, nada é baixado do egoi.site. O main.js
+         chama window.ecbCarregaEgoi() no clique de "Aceitar" do banner. -->
     <script>
-    if(window._mtmReady){
-     console.error('Connected sites script already loaded. You might have it dupplicated.');
-    } else {
-    window._mtmReady=true;
-    var _mtm = window._mtm = window._mtm || [];
-    _mtm.push({'mtm.startTime': (new Date().getTime()), 'event': 'mtm.Start'});
-    var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
-    g.async=true; g.defer=true; g.src='https://egoi.site/1774067_ecobraz.org.js?v='+new Date().getTime();
-    s.parentNode.insertBefore(g,s);
-    }
+    window.ecbCarregaEgoi = function () {
+      if (window._mtmReady) return;
+      window._mtmReady = true;
+      var _mtm = window._mtm = window._mtm || [];
+      _mtm.push({'mtm.startTime': (new Date().getTime()), 'event': 'mtm.Start'});
+      var d = document, g = d.createElement('script'), s = d.getElementsByTagName('script')[0];
+      g.async = true; g.defer = true; g.src = 'https://egoi.site/1774067_ecobraz.org.js?v=' + new Date().getTime();
+      s.parentNode.insertBefore(g, s);
+    };
+    (function () {
+      var stored = null;
+      try { stored = localStorage.getItem('ecb_consent'); } catch (e) {}
+      if (stored === 'granted') window.ecbCarregaEgoi();
+    })();
     </script>
     <!-- End Connected Sites -->
     <!-- Ahrefs Web Analytics (cookieless, sem necessidade de consentimento) -->
@@ -96,10 +102,19 @@
       "@context": "https://schema.org",
       "@graph": [
         {
-          "@type": "NGO",
+          {{!-- Um único nó do tema para a organização, sob o @id canônico. O
+               {{ghost_head}} (núcleo do Ghost, sem opção de desligar) continua
+               emitindo WebSite + publisher Organization SEM @id; esse nó NÃO se
+               funde com este — validadores só fundem por @id. O que o tema faz
+               é não duplicar o WebSite e concentrar os dados ricos aqui. --}}
+          "@type": ["Organization", "NGO"],
           "@id": "{{@site.url}}/#organization",
           "name": "Ecobraz Emigre",
           "alternateName": "Ecobraz",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "{{asset "images/og-ecobraz.png"}}"
+          },
           "legalName": "Associação Auxílio à Reciclagem de Eletrônicos e Inclusão Digital – Ecobraz",
           "taxID": "14.197.457/0001-42",
           "foundingDate": "2011",
@@ -142,14 +157,6 @@
           "sameAs": [
             "https://orcid.org/0009-0001-8072-6287"
           ]
-        },
-        {
-          "@type": "WebSite",
-          "@id": "{{@site.url}}/#website",
-          "url": "{{@site.url}}/",
-          "name": "Ecobraz Emigre",
-          "publisher": {"@id": "{{@site.url}}/#organization"},
-          "inLanguage": "pt-BR"
         }
       ]
     }

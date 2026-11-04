@@ -200,6 +200,18 @@
   </div>
 </section>
 
+{{#get "posts" filter="slug:[e-waste-environmental-impact-2025-data,brazil-e-waste-map-regional-data-volumes-risks,what-is-e-waste-examples-and-correct-disposal]" limit="3" as |leituras|}}{{#if leituras}}
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Technical content</span><h2>Read next</h2></div>
+      <p>Articles from the Ecobraz blog on the same subject as this page.</p>
+    </div>
+    <div class="post-grid">{{#foreach leituras}}{{> "post-card"}}{{/foreach}}</div>
+  </div>
+</section>
+{{/if}}{{/get}}
+
 <section class="hx-block">
   <div class="container">
     <div class="hx-head-split">

@@ -19,6 +19,37 @@ jobs:
         run: |
           for u in ${{ inputs.urls }}; do
             echo "=== $u ==="
+            # Apaga o corpo anterior ANTES de cada requisição. Sem isso, quando
+            # uma requisição falha (timeout, erro de TLS), o /tmp/body guarda a
+            # resposta da URL anterior e o resumo abaixo imprime dado VELHO como
+            # se fosse desta URL. Isso chegou a acontecer em 19/10 e quase levou
+            # a uma leitura errada.
+            rm -f /tmp/body
             curl -sS -o /tmp/body -w "HTTP %{http_code} | efetiva: %{url_effective} | %{time_total}s\n" -L --max-time 20 "$u" || echo "FALHA de conexão"
             grep -o '<title>[^<]*</title>' /tmp/body | head -1 || true
+            # Primeiro salto, SEM seguir redirecionamento: mostra o status (301,
+            # 302, 200…) e o Location. Sem isso a ferramenta so' mostra onde a
+            # URL termina, e dois cenarios bem diferentes ficam identicos — um
+            # 301 para o caminho certo e um 301 que joga tudo na home chegam
+            # ambos com "HTTP 200". Foi o que aconteceu com ecobrazinforma.org
+            # em 22/10.
+            curl -sSI --max-time 20 "$u" 2>/dev/null \
+              | grep -iE '^(HTTP/|location:|server:|cf-cache-status:)' | sed 's/^/  1o salto: /' || true
+            # Se a resposta nao for HTML (JSON de API, texto puro), mostra o
+            # comeco do corpo — senao a ferramenta fica cega para respostas
+            # que nao tem <title>, como consultas RDAP de dominio.
+            if [ -s /tmp/body ] && ! grep -qi '<html' /tmp/body; then
+              if jq -e . /tmp/body >/dev/null 2>&1; then
+                # Resposta JSON. Mostra os campos que interessam numa consulta
+                # de dominio (RDAP) e, se nao houver, as chaves de topo — o
+                # corpo cru costuma comecar com paginas de aviso legal.
+                echo "--- JSON: campos de registro ---"
+                jq -c '{ldhName, status, events, nameservers: [.nameservers[]?.ldhName]}' /tmp/body 2>/dev/null \
+                  || jq -c 'keys' /tmp/body
+              else
+                echo "--- corpo (primeiros 1200 caracteres) ---"
+                head -c 1200 /tmp/body
+                echo
+              fi
+            fi
           done

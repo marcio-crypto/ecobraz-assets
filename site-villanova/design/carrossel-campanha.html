@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<style>
+  /* Slide de carrossel (documento do LinkedIn) — 1200x1500, proporção 4:5.
+     Mesma língua visual do card-campanha.html e do og-default.html: gradiente
+     navy, rota Brasil→Europa, título serifado, dourado de texto #d9b573.
+
+     POR QUE 4:5 E NÃO QUADRADO. O documento do LinkedIn ocupa a largura da
+     coluna do feed e respeita a proporção das páginas. Em 4:5 o slide ocupa
+     mais altura de tela no celular que um quadrado — mais área para o polegar
+     parar. É a mesma razão pela qual o feed favorece vertical.
+
+     TRÊS TIPOS DE SLIDE, uma folha só: a classe no <body> (capa / item / fecho)
+     liga o que aparece. Um template por tipo seria três arquivos para manter em
+     sincronia, e foi assim que a identidade se perdeu em campanhas passadas. */
+  :root{
+    --navy:#061426; --navy2:#0b2a52; --gold:#b88a3d; --gold-l:#d9b573;
+    --branco:#fff; --sub:#C9D4E4; --fraco:#8FA0B6;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:1200px;height:1500px;overflow:hidden}
+  html{background:var(--navy)}
+  body{
+    font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    background:
+      radial-gradient(1000px 640px at 80% 16%, #123a6b 0%, rgba(18,58,107,0) 62%),
+      linear-gradient(165deg, var(--navy) 52%, var(--navy2));
+    color:var(--branco);position:relative}
+
+  .rota{position:absolute;inset:0}
+  .wrap{position:relative;height:100%;display:flex;flex-direction:column;
+        justify-content:space-between;padding:72px 84px 64px}
+  /* O miolo cresce e centraliza: com space-between puro todo o vazio ia para
+     cima do texto e o slide ficava com cara de rodapé pesado. */
+  .miolo{flex:1;display:flex;flex-direction:column;justify-content:center}
+
+  .marca{display:flex;align-items:center;gap:18px}
+  .marca .nome{font-size:30px;letter-spacing:.03em;font-weight:700;line-height:1.1}
+  .marca .nome span{color:var(--gold-l)}
+  .marca .tag{font-size:12px;letter-spacing:.26em;color:var(--fraco);margin-top:6px}
+
+  .eyebrow{display:flex;align-items:center;gap:14px;font-size:19px;font-weight:600;
+           letter-spacing:.2em;text-transform:uppercase;color:var(--gold-l)}
+  .eyebrow::before{content:"";width:30px;height:2px;background:var(--gold);flex:none}
+
+  .titulo{font-family:Georgia,"Times New Roman",serif;font-weight:600;
+          font-size:72px;line-height:1.14;margin-top:28px;text-wrap:balance}
+  .titulo.long{font-size:56px}
+
+  /* --- slide de item: o número é o elemento gráfico --- */
+  .num{font-family:Georgia,"Times New Roman",serif;font-size:190px;line-height:.9;
+       color:var(--gold-l);opacity:.92}
+  .num.curto{font-size:150px}
+  .item-tit{font-family:Georgia,"Times New Roman",serif;font-size:62px;
+            line-height:1.15;margin-top:28px;text-wrap:balance}
+  .item-lin{font-size:34px;line-height:1.5;color:var(--sub);margin-top:24px;max-width:26ch}
+
+  .fecho-lin{font-size:36px;line-height:1.5;color:var(--gold-l);margin-top:30px;max-width:24ch}
+
+  .rodape{display:flex;align-items:flex-end;justify-content:space-between;
+          border-top:1px solid rgba(255,255,255,.14);padding-top:22px}
+  .site{font-size:26px;color:var(--sub)}
+  .pagina{font-size:22px;color:var(--fraco);letter-spacing:.14em}
+  .aviso{font-size:18px;color:var(--fraco);text-align:right;max-width:34ch;margin-top:8px}
+  .segue{font-size:26px;color:var(--gold-l);letter-spacing:.04em}
+
+  /* o que cada tipo mostra */
+  .so-capa,.so-item,.so-fecho{display:none}
+  body.capa .so-capa{display:block}
+  body.item .so-item{display:block}
+  body.fecho .so-fecho{display:block}
+</style></head>
+<body class="{{kind}}">
+  <svg class="rota" width="1200" height="1500" viewBox="0 0 1200 1500" fill="none" aria-hidden="true">
+    <path d="M250 1255 Q 620 1060 1010 1010" stroke="#b88a3d" stroke-width="2.4"
+          stroke-dasharray="1 10" stroke-linecap="round" opacity=".55"/>
+    <circle cx="250" cy="1255" r="8" fill="#b88a3d"/>
+    <circle cx="1010" cy="1010" r="8" fill="#d9b573"/>
+    <circle cx="1010" cy="300" r="300" stroke="rgba(255,255,255,.05)" stroke-width="1.5"/>
+    <circle cx="1010" cy="300" r="195" stroke="rgba(255,255,255,.035)" stroke-width="1.5"/>
+  </svg>
+
+  <div class="wrap">
+    <div class="marca">
+      <svg width="54" height="61" viewBox="0 0 60 68" aria-hidden="true">
+        <path d="M30 2 56 12v26c0 14-12 22-26 28C16 60 4 52 4 38V12Z" fill="#16324F" stroke="#2C4162"/>
+        <path d="M30 2 56 12v26c0 14-12 22-26 28V2Z" fill="#3E6B4A"/>
+        <path d="M30 40l7 8-7 8-7-8Z" fill="#C9A24B"/>
+      </svg>
+      <div>
+        <div class="nome">VILLANOVA <span>ESG</span></div>
+        <div class="tag">EU&ndash;BRAZIL SUPPLIER EVIDENCE</div>
+      </div>
+    </div>
+
+    <div class="miolo">
+      <div class="so-capa">
+        <div class="eyebrow">{{nota}} &middot; {{pilar}}</div>
+        <div class="titulo {{tituloclass}}">{{capa}}</div>
+      </div>
+
+      <div class="so-item">
+        <div class="num {{numclass}}">{{n}}</div>
+        <div class="item-tit">{{titulo}}</div>
+        <div class="item-lin">{{linha}}</div>
+      </div>
+
+      <div class="so-fecho">
+        <div class="eyebrow">{{pilar}}</div>
+        <div class="titulo {{tituloclass}}">{{fecho}}</div>
+        <div class="fecho-lin">{{fecho_linha}}</div>
+      </div>
+    </div>
+
+    <div class="rodape">
+      <div>
+        <div class="site">villanovaesg.com</div>
+        <div class="so-capa"><div class="segue" style="margin-top:10px">Swipe &rarr;</div></div>
+        <div class="so-fecho"><div class="aviso" style="text-align:left;margin-top:12px;max-width:none;line-height:1.5">Advisory review &mdash; not an audit, certification or legal opinion.</div></div>
+      </div>
+      <div class="pagina">{{pagina}}</div>
+    </div>
+  </div>
+</body></html>

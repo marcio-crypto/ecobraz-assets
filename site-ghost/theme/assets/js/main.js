@@ -45,10 +45,16 @@
             try { localStorage.setItem('ecb_consent', state); } catch (_) {}
             if (typeof window.gtag === 'function') window.gtag('consent', 'update', {ad_storage: state, ad_user_data: state, ad_personalization: state, analytics_storage: state});
             if (typeof window.clarity === 'function') window.clarity('consent', state === 'granted');
+            // E-goi (Connected Sites) só entra depois do aceite explícito.
+            if (state === 'granted' && typeof window.ecbCarregaEgoi === 'function') window.ecbCarregaEgoi();
             consentBar.hidden = true;
             track('consent_choice', {choice: state});
         };
-        if (!readConsent() || readConsent() === null) consentBar.hidden = false;
+        // Sem escolha guardada — ou sem localStorage (modo privado, storage
+        // bloqueado) — mostra o banner; nesse último caso a escolha vale só
+        // para esta página, mas o visitante consegue aceitar ou recusar.
+        const escolhaGuardada = readConsent();
+        if (!escolhaGuardada || escolhaGuardada === 'unavailable') consentBar.hidden = false;
         consentBar.querySelector('[data-consent-accept]').addEventListener('click', () => applyConsent('granted'));
         consentBar.querySelector('[data-consent-decline]').addEventListener('click', () => applyConsent('denied'));
         document.querySelectorAll('[data-consent-open]').forEach((el) => el.addEventListener('click', (event) => { event.preventDefault(); consentBar.hidden = false; }));

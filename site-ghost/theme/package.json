@@ -48,10 +48,6 @@
         "type": "text",
         "default": "+55 11 4329-2001"
       },
-      "ceo_photo": {
-        "type": "image",
-        "description": "Foto oficial de Marcio Villanova exibida no bloco de liderança da página inicial."
-      },
       "ga_measurement_id": {
         "type": "text",
         "default": "G-Y1ERW8GNPR",

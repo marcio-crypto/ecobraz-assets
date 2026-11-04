@@ -9,6 +9,14 @@ import path from 'node:path';
 const root = path.resolve(import.meta.dirname, '..');
 const base = 'https://ecobraz.org';
 const pages = JSON.parse(await fs.readFile(path.join(root, 'landing', 'landing-pages.json'), 'utf8'));
+// Títulos dos posts PT (para o bloco "Leia também" do conteúdo de reserva).
+const titulosPosts = new Map();
+for (const arquivo of ['priority-posts.json', 'migrated-posts.json']) {
+  for (const post of JSON.parse(await fs.readFile(path.join(root, 'content', arquivo), 'utf8'))) {
+    const museu = (post.tags || []).some((t) => t.slug === 'museu-do-eletronico');
+    titulosPosts.set(post.slug, {title: post.title, base: museu ? '/museu/' : '/blog/'});
+  }
+}
 
 const icons = {
   shield: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg>',
@@ -37,6 +45,32 @@ const referenciaSection = (p, slug) => !p.referencia ? '' : `<section class="hx-
 </section>
 
 `;
+// Bloco "Leia também" (pilar → post): campo `leituras` = slugs de posts do
+// mesmo tema, gravado por scripts/insere-links-contextuais.mjs. O template
+// busca os posts no Ghost ({{#get}}) e usa o mesmo cartão das listagens; o
+// conteúdo de reserva leva os links em lista simples para o rastreio.
+// A seção inteira fica dentro do {{#get}} + {{#if}}: se o Ghost devolver zero
+// posts (despublicado, slug trocado, erro da Content API), nada é exibido.
+const leiturasSection = (p, lang) => !(p.leituras && p.leituras.length) ? '' : `{{#get "posts" filter="slug:[${p.leituras.join(',')}]" limit="3" as |leituras|}}{{#if leituras}}
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">${lang === 'pt' ? 'Conteúdo técnico' : 'Technical content'}</span><h2>${lang === 'pt' ? 'Leia também' : 'Read next'}</h2></div>
+      <p>${lang === 'pt' ? 'Artigos do blog da Ecobraz sobre o mesmo tema desta página.' : 'Articles from the Ecobraz blog on the same subject as this page.'}</p>
+    </div>
+    <div class="post-grid">{{#foreach leituras}}{{> "post-card"}}{{/foreach}}</div>
+  </div>
+</section>
+{{/if}}{{/get}}
+
+`;
+// `titulos` mapeia slug → {title, base}; a base é /museu/ para a coleção do
+// Museu e /blog/ para o resto (ver routes.yaml).
+const leiturasHtml = (p, titulos, lang) => !(p.leituras && p.leituras.length) ? '' : `<h2>${lang === 'pt' ? 'Leia também' : 'Read next'}</h2><ul>${p.leituras.map((s) => {
+  const info = titulos.get(s);
+  if (!info) throw new Error(`leituras: post desconhecido "${s}" em ${p.slug}`);
+  return `<li><a href="${info.base}${s}/">${esc(info.title)}</a></li>`;
+}).join('')}</ul>`;
 const referenciaHtml = (p) => !p.referencia ? '' : `<hr><h2>Referência técnica</h2><p>Este tema é aprofundado em relatório técnico autoral da Ecobraz Emigre, publicado com identificador permanente (DOI) no repositório aberto Zenodo:</p><ul><li>VILLANOVA, Marcio. <em>${esc(p.referencia.titulo)}</em>. Zenodo, 2026. <a href="https://doi.org/${p.referencia.doi}" rel="noopener">doi.org/${p.referencia.doi}</a>.</li></ul><p><a href="/publicacoes/">Conheça todas as publicações técnicas da Ecobraz →</a></p>`;
 
 // Bloco de depoimentos (avaliações públicas do Google) — campo opcional
@@ -295,7 +329,7 @@ ${depoimentosSection(p, slug)}<section class="hx-block alt">
   </div>
 </section>
 
-${referenciaSection(p, slug)}<section class="hx-block" style="padding-top:0">
+${leiturasSection(p, 'pt')}${referenciaSection(p, slug)}<section class="hx-block" style="padding-top:0">
   <div class="container">
     <div class="hx-final">
       <div>
@@ -366,7 +400,7 @@ ${groups}
   </div>
 </section>
 
-${referenciaSection(p, slug)}<section class="hx-block alt">
+${leiturasSection(p, 'pt')}${referenciaSection(p, slug)}<section class="hx-block alt">
   <div class="container">
     <div class="hx-final">
       <div>
@@ -466,7 +500,7 @@ function renderSyncEntry(p) {
     `<h2>Escopo</h2><p>${esc(p.scope.conditions)}</p>`,
     `<p>Solução do hub <a href="${p.hub.href}">${esc(p.hub.title)}</a>. Relacionadas: ${p.related.map((r) => `<a href="${r.href}">${esc(r.title)}</a>`).join(', ')}. Comprovação: <a href="/documentacao-e-rastreabilidade/">documentação e rastreabilidade</a> e <a href="/evidencias/">evidências públicas</a>.</p>`,
     `<p><a href="/agendamento/?perfil=${p.form && p.form.perfil ? p.form.perfil : 'empresa'}&amp;origem=${p.slug}">Solicitar avaliação técnica</a>.</p>`
-  ].join('') + depoimentosHtml(p) + referenciaHtml(p);
+  ].join('') + depoimentosHtml(p) + referenciaHtml(p) + leiturasHtml(p, titulosPosts, 'pt');
   return {
     title: p.title,
     slug: p.slug,

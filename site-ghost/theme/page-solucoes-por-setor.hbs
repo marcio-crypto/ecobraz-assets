@@ -50,6 +50,18 @@
   </div>
 </section>
 
+{{#get "posts" filter="slug:[o-desastre-de-minamata-a-ameaca-do-mercurio-e-alerta-global,cubatao-chuva-acida-e-o-ar-envenenado-pelo-progresso,agbogbloshie-o-maior-desastre-de-lixo-eletronico-do-mundo]" limit="3" as |leituras|}}{{#if leituras}}
+<section class="hx-block alt">
+  <div class="container">
+    <div class="hx-head-split">
+      <div><span class="hx-label">Conteúdo técnico</span><h2>Leia também</h2></div>
+      <p>Artigos do blog da Ecobraz sobre o mesmo tema desta página.</p>
+    </div>
+    <div class="post-grid">{{#foreach leituras}}{{> "post-card"}}{{/foreach}}</div>
+  </div>
+</section>
+{{/if}}{{/get}}
+
 <section class="hx-block alt">
   <div class="container">
     <div class="hx-final">

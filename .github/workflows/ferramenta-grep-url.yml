@@ -3,15 +3,31 @@ name: Ferramenta — procurar padrão no HTML ao vivo
 # Baixa a(s) URL(s) e conta/mostra ocorrências de um padrão no corpo da página.
 # Serve para verificar se um componente/classe/texto realmente chegou ao site
 # (o título sozinho não prova markup). Imprime contagem + trechos no log.
+#
+# Dois modos:
+#   - `urls`: procura nas URLs que eu já conheço.
+#   - `sitemap_de`: pega o sitemap do site (índice + filhos) e varre PÁGINA POR
+#     PÁGINA. É o modo para responder "isso está no site?", onde não saber a
+#     página é justamente o problema — e onde "não achei" só vale como resposta
+#     se vier com o número de páginas conferidas.
+# Os dois podem ser usados juntos; as listas se somam.
+#
+# Limite honesto do modo sitemap: o sitemap só lista o que o Ghost publica
+# nele. Página despublicada, com noindex ou fora do sitemap não entra.
 
 on:
   workflow_dispatch:
     inputs:
       urls:
-        description: 'URLs separadas por espaço'
-        required: true
+        description: 'URLs separadas por espaço (vazio = só o sitemap)'
+        required: false
+        default: ''
+      sitemap_de:
+        description: 'Site cujo sitemap deve ser varrido inteiro (ex.: https://ecobraz.org). Vazio = pular'
+        required: false
+        default: ''
       padrao:
-        description: 'Padrão (grep -E) a procurar no HTML'
+        description: 'Padrão (grep -E, sem diferenciar maiúsculas) a procurar no HTML'
         required: true
       linhas:
         description: 'Quantos trechos mostrar por URL (padrão 4)'
@@ -24,6 +40,7 @@ permissions:
 jobs:
   procurar:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       # O padrão e as URLs entram por VARIÁVEL DE AMBIENTE, não interpolados
       # direto no shell. Em 09/09/2026 eu pedi um padrão que continha aspas
@@ -31,16 +48,63 @@ jobs:
       # texto do padrão estava sendo colado dentro de um echo com aspas duplas
       # e fechava a string. O mesmo buraco aceitaria qualquer comando embutido
       # num padrão. Assim o shell nunca vê o conteúdo, só o nome da variável.
-      - name: Contagem e trechos do padrão em cada URL
+      - name: Monta a lista de páginas
         env:
           URLS: ${{ inputs.urls }}
+          SITEMAP_DE: ${{ inputs.sitemap_de }}
+        run: |
+          : > /tmp/urls.txt
+          for u in $URLS; do echo "$u" >> /tmp/urls.txt; done
+          if [ -n "$SITEMAP_DE" ]; then
+            curl -sSf --max-time 30 "$SITEMAP_DE/sitemap.xml" -o /tmp/index.xml
+            grep -o '<loc>[^<]*</loc>' /tmp/index.xml | sed 's/<[^>]*>//g' > /tmp/filhos.txt
+            echo "Sitemaps no índice de $SITEMAP_DE:"
+            sed 's/^/  /' /tmp/filhos.txt
+            while read -r filho; do
+              curl -sSf --max-time 30 "$filho" -o /tmp/filho.xml || continue
+              grep -o '<loc>[^<]*</loc>' /tmp/filho.xml | sed 's/<[^>]*>//g' \
+                | grep -vEi '\.(png|jpe?g|webp|gif|svg|ico|pdf)$' >> /tmp/urls.txt || true
+            done < /tmp/filhos.txt
+          fi
+          sort -u /tmp/urls.txt -o /tmp/urls.txt
+          echo "Páginas a conferir: $(wc -l < /tmp/urls.txt)"
+
+      - name: Contagem e trechos do padrão em cada página
+        env:
           PADRAO: ${{ inputs.padrao }}
           LINHAS: ${{ inputs.linhas }}
         run: |
-          for u in $URLS; do
-            echo "=== $u ==="
-            curl -sS -L --max-time 20 "$u" -o /tmp/body || { echo "FALHA de conexão"; continue; }
-            n=$(grep -Eo "$PADRAO" /tmp/body | wc -l)
-            printf 'ocorrências de %s: %s\n' "$PADRAO" "$n"
-            grep -Eo ".{0,60}$PADRAO.{0,60}" /tmp/body | head -"${LINHAS:-4}" || true
-          done
+          total=0
+          bateram=0
+          : > /tmp/bateram.txt
+          while read -r u; do
+            total=$((total + 1))
+            if ! curl -sS -L --max-time 20 -A "Mozilla/5.0 (compatible; EcobrazVarredura/1.0)" "$u" -o /tmp/body; then
+              echo "FALHA de conexão: $u"
+              continue
+            fi
+            # -i: sem diferenciar maiúsculas. Sem isso um padrão em minúsculas
+            # perde "Fibra" no meio de um título e a varredura mente por
+            # omissão.
+            n=$(grep -Eoi "$PADRAO" /tmp/body | wc -l)
+            if [ "$n" -gt 0 ]; then
+              bateram=$((bateram + 1))
+              echo "$u" >> /tmp/bateram.txt
+              echo "=== $u — $n ocorrência(s) ==="
+              grep -Eoi ".{0,80}$PADRAO.{0,80}" /tmp/body | head -"${LINHAS:-4}"
+            fi
+            # Pausa curta: uma varredura abre o site inteiro de uma vez e não
+            # vale derrubar o cache nem levar bloqueio por rajada.
+            sleep 0.3
+          done < /tmp/urls.txt
+          echo
+          echo "================ RESULTADO ================"
+          echo "Páginas conferidas: $total"
+          echo "Páginas com o padrão: $bateram"
+          if [ "$bateram" -eq 0 ]; then
+            echo "Nenhuma das páginas conferidas contém o padrão."
+          else
+            echo "URLs que bateram:"
+            sed 's/^/  /' /tmp/bateram.txt
+          fi
+          echo "Lembrete: o sitemap não lista página despublicada nem fora dele."

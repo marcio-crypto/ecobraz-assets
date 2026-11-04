@@ -83,8 +83,8 @@ relata('Guarda a preferência, fecha, e abre a home de novo — é o caso mais c
   await ctx.close();
 }
 
-// --------------------------------------------- 3. banner de consentimento e Clarity
-relata('\n\n============ 3. BANNER DE COOKIES E O PRÓPRIO CLARITY ============');
+// --------------------------------------------- 3. banner, Clarity e Metricool
+relata('\n\n============ 3. BANNER DE COOKIES, CLARITY E METRICOOL ============');
 for (const tela of [
   { nome: 'celular', viewport: { width: 390, height: 844 } },
   { nome: 'desktop', viewport: { width: 1366, height: 768 } },
@@ -93,6 +93,15 @@ for (const tela of [
   const pg = await ctx.newPage();
   const pedidosClarity = [];
   pg.on('request', (r) => { if (r.url().includes('clarity.ms')) pedidosClarity.push(r.url().slice(0, 120)); });
+  // Metricool entrou em 01/11/2026, atrás do mesmo aceite. Aqui guardo também o
+  // STATUS da resposta — e foi ele que pegou o erro: a primeira versão apontava
+  // para /tracker.js e levava 403 do CloudFront. O caminho certo é
+  // /resources/be.js. Sem o status no log, "o pedido saiu" teria passado por
+  // prova de que a medição funcionava, e não era.
+  const pedidosMetricool = [];
+  pg.on('response', (r) => {
+    if (r.url().includes('metricool.com')) pedidosMetricool.push(`${r.status()} ${r.url().slice(0, 110)}`);
+  });
 
   await pg.goto(`${BASE}/`, { waitUntil: 'load', timeout: 60000 });
   await pg.waitForTimeout(2500);
@@ -121,6 +130,7 @@ for (const tela of [
     if (antes.porcentoDaTela >= 30) relata(`   ⚠ ATENÇÃO: o banner come ${antes.porcentoDaTela}% da tela. É muito para celular.`);
   }
   relata(`   pedidos ao clarity.ms ANTES do aceite: ${pedidosClarity.length} ${pedidosClarity.length === 0 ? '(correto — só depois do aceite)' : '(ERRADO — carregou sem consentimento)'}`);
+  relata(`   pedidos ao metricool.com ANTES do aceite: ${pedidosMetricool.length} ${pedidosMetricool.length === 0 ? '(correto — só depois do aceite)' : '(ERRADO — carregou sem consentimento)'}`);
 
   if (antes.existe) {
     try {
@@ -130,6 +140,9 @@ for (const tela of [
       relata(`   depois de clicar em aceitar: banner ${sumiu ? 'sumiu (certo)' : 'CONTINUOU NA TELA (errado)'}`);
       relata(`   pedidos ao clarity.ms DEPOIS do aceite: ${pedidosClarity.length} ${pedidosClarity.length > 0 ? '(certo — a gravação começa aqui)' : '(ERRADO — o Clarity não carregou, a sessão não é gravada)'}`);
       for (const u of pedidosClarity.slice(0, 4)) relata(`       ${u}`);
+      const okMetricool = pedidosMetricool.some((l) => l.startsWith('200'));
+      relata(`   pedidos ao metricool.com DEPOIS do aceite: ${pedidosMetricool.length} ${okMetricool ? '(certo — o tracker carregou e respondeu 200)' : '(ATENÇÃO — nenhum 200; ver os status abaixo)'}`);
+      for (const u of pedidosMetricool.slice(0, 4)) relata(`       ${u}`);
     } catch (e) {
       relata(`   ✗ NÃO CONSEGUI CLICAR EM ACEITAR: ${e.message.slice(0, 120)}`);
     }

@@ -2,9 +2,9 @@
 // de-para.csv (fonte única) e valida a lógica localmente antes de existir
 // qualquer DNS: simula todas as origens (com e sem /amp, com e sem barra
 // final, com querystring) e confere cada destino.
-// Regra de segurança: destino de linha "migrar" cujo artigo ainda não está
-// publicado (não consta nos content JSONs) cai no fallback da seção até o
-// conteúdo entrar — nunca redirecionar para 404.
+// Regra de segurança: QUALQUER destino que ainda não esteja publicado (não
+// consta nos content JSONs) cai no fallback da seção até o conteúdo entrar —
+// nunca redirecionar para 404, seja qual for a ação da linha.
 import fs from 'node:fs/promises';
 
 const DESTINO_BASE = 'https://ecobraz.org';
@@ -35,7 +35,13 @@ for (const line of csv.trim().split('\n').slice(1)) {
   const [origem, destino, acao] = line.split(',');
   if (!origem || !destino) continue;
   let destinoFinal = destino;
-  if (acao === 'migrar' && !publicados.has(destino)) {
+  // A guarda vale para TODA linha, não só as de ação "migrar". O destino
+  // /autor/sergio-diniz/ (115 domínios de referência) estava em uma linha
+  // "estrutura-nova" e por isso escapava daqui, produzindo 301 -> 404 em
+  // produção. Validar só um tipo de linha contradizia a própria promessa de
+  // regras-de-redirect.md: "Nenhuma URL responde 404: o último recurso é
+  // sempre o hub."
+  if (!publicados.has(destino)) {
     const secao = origem.split('/')[1] || '';
     destinoFinal = FALLBACK[secao] || '/noticias-esg/';
     pendentes.push({origem, aguardando: destino, provisorio: destinoFinal});
