@@ -45,6 +45,8 @@
             try { localStorage.setItem('ecb_consent', state); } catch (_) {}
             if (typeof window.gtag === 'function') window.gtag('consent', 'update', {ad_storage: state, ad_user_data: state, ad_personalization: state, analytics_storage: state});
             if (typeof window.clarity === 'function') window.clarity('consent', state === 'granted');
+            // E-goi (Connected Sites) só entra depois do aceite explícito.
+            if (state === 'granted' && typeof window.ecbCarregaEgoi === 'function') window.ecbCarregaEgoi();
             consentBar.hidden = true;
             track('consent_choice', {choice: state});
         };
