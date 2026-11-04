@@ -12,7 +12,10 @@ const pages = JSON.parse(await fs.readFile(path.join(root, 'landing', 'landing-p
 // Títulos dos posts PT (para o bloco "Leia também" do conteúdo de reserva).
 const titulosPosts = new Map();
 for (const arquivo of ['priority-posts.json', 'migrated-posts.json']) {
-  for (const post of JSON.parse(await fs.readFile(path.join(root, 'content', arquivo), 'utf8'))) titulosPosts.set(post.slug, post.title);
+  for (const post of JSON.parse(await fs.readFile(path.join(root, 'content', arquivo), 'utf8'))) {
+    const museu = (post.tags || []).some((t) => t.slug === 'museu-do-eletronico');
+    titulosPosts.set(post.slug, {title: post.title, base: museu ? '/museu/' : '/blog/'});
+  }
 }
 
 const icons = {
@@ -46,20 +49,28 @@ const referenciaSection = (p, slug) => !p.referencia ? '' : `<section class="hx-
 // mesmo tema, gravado por scripts/insere-links-contextuais.mjs. O template
 // busca os posts no Ghost ({{#get}}) e usa o mesmo cartão das listagens; o
 // conteúdo de reserva leva os links em lista simples para o rastreio.
-const leiturasSection = (p, lang) => !(p.leituras && p.leituras.length) ? '' : `<section class="hx-block alt">
+// A seção inteira fica dentro do {{#get}} + {{#if}}: se o Ghost devolver zero
+// posts (despublicado, slug trocado, erro da Content API), nada é exibido.
+const leiturasSection = (p, lang) => !(p.leituras && p.leituras.length) ? '' : `{{#get "posts" filter="slug:[${p.leituras.join(',')}]" limit="3" as |leituras|}}{{#if leituras}}
+<section class="hx-block alt">
   <div class="container">
     <div class="hx-head-split">
       <div><span class="hx-label">${lang === 'pt' ? 'Conteúdo técnico' : 'Technical content'}</span><h2>${lang === 'pt' ? 'Leia também' : 'Read next'}</h2></div>
       <p>${lang === 'pt' ? 'Artigos do blog da Ecobraz sobre o mesmo tema desta página.' : 'Articles from the Ecobraz blog on the same subject as this page.'}</p>
     </div>
-    {{#get "posts" filter="slug:[${p.leituras.join(',')}]" limit="3" as |leituras|}}
     <div class="post-grid">{{#foreach leituras}}{{> "post-card"}}{{/foreach}}</div>
-    {{/get}}
   </div>
 </section>
+{{/if}}{{/get}}
 
 `;
-const leiturasHtml = (p, titulos, lang) => !(p.leituras && p.leituras.length) ? '' : `<h2>${lang === 'pt' ? 'Leia também' : 'Read next'}</h2><ul>${p.leituras.map((s) => `<li><a href="/blog/${s}/">${esc(titulos.get(s) || s)}</a></li>`).join('')}</ul>`;
+// `titulos` mapeia slug → {title, base}; a base é /museu/ para a coleção do
+// Museu e /blog/ para o resto (ver routes.yaml).
+const leiturasHtml = (p, titulos, lang) => !(p.leituras && p.leituras.length) ? '' : `<h2>${lang === 'pt' ? 'Leia também' : 'Read next'}</h2><ul>${p.leituras.map((s) => {
+  const info = titulos.get(s);
+  if (!info) throw new Error(`leituras: post desconhecido "${s}" em ${p.slug}`);
+  return `<li><a href="${info.base}${s}/">${esc(info.title)}</a></li>`;
+}).join('')}</ul>`;
 const referenciaHtml = (p) => !p.referencia ? '' : `<hr><h2>Referência técnica</h2><p>Este tema é aprofundado em relatório técnico autoral da Ecobraz Emigre, publicado com identificador permanente (DOI) no repositório aberto Zenodo:</p><ul><li>VILLANOVA, Marcio. <em>${esc(p.referencia.titulo)}</em>. Zenodo, 2026. <a href="https://doi.org/${p.referencia.doi}" rel="noopener">doi.org/${p.referencia.doi}</a>.</li></ul><p><a href="/publicacoes/">Conheça todas as publicações técnicas da Ecobraz →</a></p>`;
 
 // Bloco de depoimentos (avaliações públicas do Google) — campo opcional

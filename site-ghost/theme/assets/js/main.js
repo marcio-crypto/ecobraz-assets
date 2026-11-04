@@ -50,7 +50,11 @@
             consentBar.hidden = true;
             track('consent_choice', {choice: state});
         };
-        if (!readConsent() || readConsent() === null) consentBar.hidden = false;
+        // Sem escolha guardada — ou sem localStorage (modo privado, storage
+        // bloqueado) — mostra o banner; nesse último caso a escolha vale só
+        // para esta página, mas o visitante consegue aceitar ou recusar.
+        const escolhaGuardada = readConsent();
+        if (!escolhaGuardada || escolhaGuardada === 'unavailable') consentBar.hidden = false;
         consentBar.querySelector('[data-consent-accept]').addEventListener('click', () => applyConsent('granted'));
         consentBar.querySelector('[data-consent-decline]').addEventListener('click', () => applyConsent('denied'));
         document.querySelectorAll('[data-consent-open]').forEach((el) => el.addEventListener('click', (event) => { event.preventDefault(); consentBar.hidden = false; }));

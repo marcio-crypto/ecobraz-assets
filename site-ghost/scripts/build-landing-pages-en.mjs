@@ -43,20 +43,26 @@ const referenciaSection = (p, slug) => !p.referencia ? '' : `<section class="hx-
 // "Read next" (pillar → post): `leituras` = post slugs on the same subject,
 // written by scripts/insere-links-contextuais.mjs. Template fetches the posts
 // with {{#get}}; fallback content carries plain links for crawlers.
-const leiturasSection = (p) => !(p.leituras && p.leituras.length) ? '' : `<section class="hx-block alt">
+// Whole section inside {{#get}} + {{#if}}: zero posts (unpublished, renamed
+// slug, Content API error) renders nothing instead of an empty grid.
+const leiturasSection = (p) => !(p.leituras && p.leituras.length) ? '' : `{{#get "posts" filter="slug:[${p.leituras.join(',')}]" limit="3" as |leituras|}}{{#if leituras}}
+<section class="hx-block alt">
   <div class="container">
     <div class="hx-head-split">
       <div><span class="hx-label">Technical content</span><h2>Read next</h2></div>
       <p>Articles from the Ecobraz blog on the same subject as this page.</p>
     </div>
-    {{#get "posts" filter="slug:[${p.leituras.join(',')}]" limit="3" as |leituras|}}
     <div class="post-grid">{{#foreach leituras}}{{> "post-card"}}{{/foreach}}</div>
-    {{/get}}
   </div>
 </section>
+{{/if}}{{/get}}
 
 `;
-const leiturasHtml = (p) => !(p.leituras && p.leituras.length) ? '' : `<h2>Read next</h2><ul>${p.leituras.map((s) => `<li><a href="/blog/${s}/">${esc(titulosPosts.get(s) || s)}</a></li>`).join('')}</ul>`;
+// EN posts all live under /blog/ (no EN museum collection in routes.yaml).
+const leiturasHtml = (p) => !(p.leituras && p.leituras.length) ? '' : `<h2>Read next</h2><ul>${p.leituras.map((s) => {
+  if (!titulosPosts.has(s)) throw new Error(`leituras: unknown post "${s}" in ${p.slug}`);
+  return `<li><a href="/blog/${s}/">${esc(titulosPosts.get(s))}</a></li>`;
+}).join('')}</ul>`;
 const referenciaHtml = (p) => !p.referencia ? '' : `<hr><h2>Technical reference</h2><p>This subject is developed in an original technical report by Ecobraz Emigre, published with a persistent identifier (DOI) on the open Zenodo repository:</p><ul><li>VILLANOVA, Marcio. <em>${esc(p.referencia.titulo)}</em>. Zenodo, 2026. <a href="https://doi.org/${p.referencia.doi}" rel="noopener">doi.org/${p.referencia.doi}</a>.</li></ul><p><a href="/technical-publications/">See all of Ecobraz\u2019s technical publications →</a></p>`;
 
 function renderTemplate(p) {

@@ -102,10 +102,11 @@
       "@context": "https://schema.org",
       "@graph": [
         {
-          {{!-- Um único nó para a organização. O {{ghost_head}} já emite WebSite +
-               publisher Organization (sem @id) com o mesmo name/url; por isso o
-               tema NÃO repete WebSite e declara Organization+NGO sob o @id
-               canônico, para os consumidores reconciliarem pelo par name+url. --}}
+          {{!-- Um único nó do tema para a organização, sob o @id canônico. O
+               {{ghost_head}} (núcleo do Ghost, sem opção de desligar) continua
+               emitindo WebSite + publisher Organization SEM @id; esse nó NÃO se
+               funde com este — validadores só fundem por @id. O que o tema faz
+               é não duplicar o WebSite e concentrar os dados ricos aqui. --}}
           "@type": ["Organization", "NGO"],
           "@id": "{{@site.url}}/#organization",
           "name": "Ecobraz Emigre",

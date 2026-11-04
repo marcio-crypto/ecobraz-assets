@@ -130,25 +130,37 @@ const linkPilar = (temaKey, lang) => {
   return lang === 'pt' ? `<a href="${href(p.pt)}">${p.aPt}</a>` : `<a href="${href(p.en)}">${p.aEn}</a>`;
 };
 
-// Insere `bloco` depois do N-ésimo fechamento de parágrafo de nível superior
-// (ignora <p> dentro de <li>/<blockquote>, onde um <p> extra quebraria a lista).
-function insereAposParagrafo(html, n, bloco) {
+// "Blocos" de nível superior: cada </p> fora de lista/citação/tabela e cada
+// fechamento de <ul>/<ol>/<blockquote>/<table>/<figure> que volta ao nível 0.
+// A mesma varredura serve para contar (posição) e para inserir, para que o
+// bloco nunca caia dentro de uma lista nem seja empurrado para o fim do texto.
+function varreBlocos(html, aoFechar) {
   let depth = 0, count = 0;
-  const re = /<\/?(ul|ol|blockquote|table|figure)\b[^>]*>|<\/p>/gi;
+  const re = /<\/?(ul|ol|blockquote|table|figure)\b[^>]*>|<\/p>|<!--kg-card-(begin|end): html-->/gi;
   let m;
   while ((m = re.exec(html))) {
     const tag = m[0].toLowerCase();
-    if (tag === '</p>') {
-      if (depth === 0 && ++count === n) {
-        const at = m.index + m[0].length;
-        return html.slice(0, at) + '\n' + bloco + html.slice(at);
-      }
-    } else if (tag.startsWith('</')) depth = Math.max(0, depth - 1);
+    let fechouBloco = false;
+    if (tag === '</p>') fechouBloco = depth === 0;
+    else if (tag.startsWith('<!--kg-card-begin')) depth += 1;
+    else if (tag.startsWith('<!--kg-card-end')) { depth = Math.max(0, depth - 1); fechouBloco = depth === 0; }
+    else if (tag.startsWith('</')) { depth = Math.max(0, depth - 1); fechouBloco = depth === 0; }
     else depth += 1;
+    if (fechouBloco && aoFechar(++count, m.index + m[0].length) === true) return count;
   }
-  return html + '\n' + bloco;
+  return count;
 }
-const contaParagrafos = (html) => (html.match(/<\/p>/gi) || []).length;
+const contaParagrafos = (html) => varreBlocos(html, () => false);
+function insereAposParagrafo(html, n, bloco) {
+  let at = -1;
+  varreBlocos(html, (count, fim) => { if (count === n) { at = fim; return true; } return false; });
+  if (at < 0) return html + '\n' + bloco;
+  return html.slice(0, at) + '\n' + bloco + html.slice(at);
+}
+// Remove blocos gerados em execuções anteriores (o script regenera tudo, de
+// forma determinística, em vez de confiar num marcador que pode envelhecer).
+const RE_LEIA = /\n?<p><strong>(?:Leia também|Read next):<\/strong>.*?<\/p>/gs;
+const RE_CTA = /\n?(?:<!--kg-card-begin: html-->\n)?<blockquote class="ecb-cta">[\s\S]*?<\/blockquote>(?:\n<!--kg-card-end: html-->)?/g;
 
 function blocoLeiaTambem(temaKey, lang) {
   const rotulo = lang === 'pt' ? 'Leia também:' : 'Read next:';
@@ -165,7 +177,10 @@ function blocoCtaMuseu(slug) {
   const pagina = c.lang === 'pt' ? `<a href="${href(t.pt)}">${t.aPt}</a>` : `<a href="${href(t.en)}">${t.aEn}</a>`;
   const pilar = c.lang === 'pt' ? `<a href="${href(PILAR.b2b.pt)}">descarte para empresas</a>` : `<a href="${href(PILAR.b2b.en)}">e-waste collection for businesses</a>`;
   const fecho = c.lang === 'pt' ? `Para volumes corporativos, veja ${pilar}.` : `For corporate volumes, see ${pilar}.`;
-  return `<blockquote class="ecb-cta"><p><strong>${c.titulo}</strong></p><p>${c.texto} ${pagina}. ${fecho}</p></blockquote>`;
+  // Cartão HTML do Ghost: a conversão HTML→Lexical (?source=html) descarta a
+  // classe de um <blockquote> comum; dentro de kg-card html o trecho é
+  // preservado como está e o CSS .ecb-cta se aplica.
+  return `<!--kg-card-begin: html-->\n<blockquote class="ecb-cta"><p><strong>${c.titulo}</strong></p><p>${c.texto} ${pagina}. ${fecho}</p></blockquote>\n<!--kg-card-end: html-->`;
 }
 
 // ---------------------------------------------------------------------------
@@ -177,6 +192,7 @@ const PAGINAS_SIMPLES = [
 const SEM_LEITURAS = new Set(['politica-de-privacidade', 'privacy-policy', 'contato', 'contact', 'sobre', 'about', 'publicacoes', 'technical-publications', 'ecobraz-villanova-esg', 'request-a-collection']);
 
 const resumo = {postsComLeiaTambem: 0, postsJaTinham: 0, ctasMuseu: 0, paginasComLeituras: 0, landingsComLeituras: 0};
+const contaBlocos = contaParagrafos; // alias semântico (conta blocos de nível superior)
 const postsPorTema = {pt: {}, en: {}};
 
 // 1 + 2: posts
@@ -184,20 +200,22 @@ for (const [rel, lang] of POSTS) {
   const posts = await read(rel);
   for (const post of posts) {
     const tema = temaDe(post.slug);
-    (postsPorTema[lang][tema] ||= []).push({slug: post.slug, title: post.title});
-    const marcador = lang === 'pt' ? '<strong>Leia também:</strong>' : '<strong>Read next:</strong>';
+    // Posts do Museu vivem em /museu/{slug}/ (coleção própria no routes.yaml);
+    // os demais, inclusive Notícias ESG (canal, não coleção), em /blog/{slug}/.
+    const museu = (post.tags || []).some((t) => t.slug === 'museu-do-eletronico');
+    (postsPorTema[lang][tema] ||= []).push({slug: post.slug, title: post.title, base: museu ? '/museu/' : '/blog/'});
+    const original = post.html;
+    post.html = post.html.replace(RE_LEIA, '').replace(RE_CTA, '');
     if (TOP_MUSEU[post.slug]) {
-      if (!post.html.includes(`<strong>${TOP_MUSEU[post.slug].titulo}</strong>`)) {
-        const meio = Math.max(3, Math.round(contaParagrafos(post.html) * 0.45));
-        post.html = insereAposParagrafo(post.html, meio, blocoCtaMuseu(post.slug));
-        resumo.ctasMuseu += 1;
-      }
-      continue; // o CTA já traz página do material + pilar
+      const meio = Math.max(3, Math.round(contaParagrafos(post.html) * 0.45));
+      post.html = insereAposParagrafo(post.html, meio, blocoCtaMuseu(post.slug));
+      resumo.ctasMuseu += 1;
+    } else {
+      const pos = Math.min(3, Math.max(2, Math.round(contaParagrafos(post.html) / 3)));
+      post.html = insereAposParagrafo(post.html, pos, blocoLeiaTambem(tema, lang));
+      resumo.postsComLeiaTambem += 1;
     }
-    if (post.html.includes(marcador)) { resumo.postsJaTinham += 1; continue; }
-    const pos = Math.min(3, Math.max(2, Math.round(contaParagrafos(post.html) / 3)));
-    post.html = insereAposParagrafo(post.html, pos, blocoLeiaTambem(tema, lang));
-    resumo.postsComLeiaTambem += 1;
+    if (post.html === original) resumo.postsJaTinham += 1;
   }
   await write(rel, posts);
 }
@@ -235,7 +253,7 @@ for (const [rel, lang] of PAGINAS_SIMPLES) {
     const marcador = `<h2>${titulo}</h2>`;
     const leituras = leiturasPara(pagina.slug, lang);
     if (!leituras.length) continue;
-    const lista = `<ul>${leituras.map((p) => `<li><a href="/blog/${p.slug}/">${p.title}</a></li>`).join('')}</ul>`;
+    const lista = `<ul>${leituras.map((p) => `<li><a href="${p.base}${p.slug}/">${p.title}</a></li>`).join('')}</ul>`;
     const bloco = `${marcador}${lista}`;
     if (pagina.html.includes(marcador)) {
       // Atualiza o bloco existente (lista pode mudar quando entram posts novos).
