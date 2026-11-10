@@ -149,6 +149,9 @@ function renderTemplate(p) {
   const why = p.why ? p.why.items.map((w) => `<div class="hx-sol"><span class="hx-icon">${icons[w.icon] || icons.shield}</span><h3>${esc(w.title)}</h3><p>${esc(w.text)}</p></div>`).join('\n        ') : '';
   const scopeIn = p.scope.in.map((i) => `<li>${esc(i)}</li>`).join('');
   const scopeOut = p.scope.out.map((i) => `<li>${esc(i)}</li>`).join('');
+  // Frase de cobertura em destaque, acima da lista "dentro do escopo" — campo
+  // opcional `scope.lead` na landing (ex.: raio de atendimento e peso mínimo).
+  const scopeLead = p.scope.lead ? `<p style="margin:0 0 14px;font-size:13.5px;color:var(--petrol)"><strong>${esc(p.scope.lead)}</strong></p>` : '';
   const steps = p.steps.map((s) => `<div class="hx-step"><h3>${esc(s.title)}</h3><p>${esc(s.text)}</p></div>`).join('\n        ');
   const docs = p.evidence.map((d) => `<div class="hx-doc"><h3>${esc(d.title)}</h3><p>${esc(d.text)}</p></div>`).join('\n        ');
   const faq = p.faq.map((f) => `<details><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`).join('\n        ');
@@ -252,7 +255,7 @@ ${telasSection(p, slug)}${p.recognize ? `<section class="hx-block">
       <p>${esc(p.scope.sub || scopeSubDefault)}</p>
     </div>
     <div class="hx-scope">
-      <div class="hx-yes"><h3>${esc(p.scope.inTitle || 'Dentro do escopo')}</h3><ul>${scopeIn}</ul><p>${esc(p.scope.conditions)}</p></div>
+      <div class="hx-yes"><h3>${esc(p.scope.inTitle || 'Dentro do escopo')}</h3>${scopeLead}<ul>${scopeIn}</ul><p>${esc(p.scope.conditions)}</p></div>
       <div class="hx-not"><h3>${esc(p.scope.outTitle || 'Fora do escopo')}</h3><ul>${scopeOut}</ul><p>${esc(p.scope.outNote || 'Materiais fora do escopo exigem cadeias específicas e não fazem parte deste serviço.')}</p></div>
     </div>
   </div>
@@ -274,7 +277,7 @@ ${telasSection(p, slug)}${p.recognize ? `<section class="hx-block">
   <div class="container">
     <div class="hx-head-split">
       <div><span class="hx-label">Evidência da operação</span><h2>${esc(p.evidenceTitle)}</h2></div>
-      <p>A documentação reflete o que foi efetivamente executado em cada lote — sem promessa genérica.</p>
+      <p>A documentação reflete o que foi efetivamente executado em cada coleta — sem promessa genérica.</p>
     </div>
     <div class="hx-docs">
         ${docs}
@@ -497,7 +500,7 @@ function renderSyncEntry(p) {
     `<p>${esc(p.hero.sub)}</p>`,
     p.painsTitle ? `<h2>${esc(p.painsTitle)}</h2>` : '',
     p.painsSub ? `<p>${esc(p.painsSub)}</p>` : '',
-    `<h2>Escopo</h2><p>${esc(p.scope.conditions)}</p>`,
+    `<h2>Escopo</h2><p>${esc([p.scope.lead, p.scope.conditions].filter(Boolean).join(' '))}</p>`,
     `<p>Solução do hub <a href="${p.hub.href}">${esc(p.hub.title)}</a>. Relacionadas: ${p.related.map((r) => `<a href="${r.href}">${esc(r.title)}</a>`).join(', ')}. Comprovação: <a href="/documentacao-e-rastreabilidade/">documentação e rastreabilidade</a> e <a href="/evidencias/">evidências públicas</a>.</p>`,
     `<p><a href="/agendamento/?perfil=${p.form && p.form.perfil ? p.form.perfil : 'empresa'}&amp;origem=${p.slug}">Solicitar avaliação técnica</a>.</p>`
   ].join('') + depoimentosHtml(p) + referenciaHtml(p) + leiturasHtml(p, titulosPosts, 'pt');
