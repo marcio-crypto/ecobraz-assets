@@ -129,8 +129,8 @@ function renderTemplate(p) {
     ? 'A gente confirma tudo com você antes de agendar — sem surpresa.'
     : 'A coleta é confirmada após a avaliação de material, volume, localidade e documentação.';
   const recoCta = pf
-    ? 'Bastou um item da lista ser verdade aí dentro? Então esta página foi escrita para você — <a href="#avaliacao">conte em 1 minuto o que você tem</a>. A gente confirma tudo com você antes, sem telemarketing.'
-    : 'Bastou um item da lista ser verdade aí dentro? Então esta página foi escrita para você — <a href="#avaliacao">descreva a situação em 1 minuto</a> e receba um retorno técnico, não um telemarketing.';
+    ? 'Bastou uma dessas situações ser verdade aí dentro? Então esta página foi escrita para você — <a href="#avaliacao">conte em 1 minuto o que você tem</a>. A gente confirma tudo com você antes, sem telemarketing.'
+    : 'Bastou uma dessas situações ser verdade aí dentro? Então esta página foi escrita para você — <a href="#avaliacao">descreva a situação em 1 minuto</a> e receba um retorno técnico, não um telemarketing.';
   const relatedTitle = pf ? 'Também pode ser útil para você' : 'Também pode fazer parte da sua operação';
   const stepsSubDefault = pf
     ? 'A gente fala tudo antes e só agenda depois de confirmar os detalhes com você.'

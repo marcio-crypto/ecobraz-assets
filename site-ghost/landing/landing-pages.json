@@ -311,7 +311,7 @@
       "hint": "A equipe retorna com escopo, condições e documentação aplicável.",
       "material": "Eletrônicos",
       "describeLabel": "Descreva o sinistro ou os bens",
-      "describePlaceholder": "Ex.: 400 itens sinistrados em galpão de Barueri"
+      "describePlaceholder": "Ex.: 400 bens sinistrados em galpão de Barueri"
     },
     "painsTitle": "Salvado sem controle vira passivo da seguradora",
     "painsSub": "Três riscos que o processo de sinistro carrega quando a destinação não é rastreável.",
@@ -570,7 +570,7 @@
         },
         {
           "title": "Inventário por coleta",
-          "text": "cada item registrado antes de sair"
+          "text": "cada produto registrado antes de sair"
         },
         {
           "title": "Documentação",
@@ -583,7 +583,7 @@
       "hint": "A equipe retorna com escopo, condições e documentação aplicável.",
       "material": "Eletrônicos",
       "describeLabel": "O que precisa destinar?",
-      "describePlaceholder": "Ex.: 900 itens reprovados na triagem de pós-venda"
+      "describePlaceholder": "Ex.: 900 produtos reprovados na triagem de pós-venda"
     },
     "painsTitle": "Produto reprovado sem controle é risco para a marca",
     "painsSub": "Três problemas que crescem no estoque de avarias e devoluções.",
@@ -591,7 +591,7 @@
       {
         "icon": "alert",
         "title": "Sua marca à venda onde não deveria existir",
-        "text": "O item que a qualidade reprovou volta ao mercado por canal paralelo, quebra na mão do consumidor e aciona a SUA garantia — de um produto que você já tinha tirado de linha.",
+        "text": "O produto que a qualidade reprovou volta ao mercado por canal paralelo, quebra na mão do consumidor e aciona a SUA garantia — de um produto que você já tinha tirado de linha.",
         "consequence": "Custo real: garantia e assistência pagas em dobro, reclamação pública e o consumidor culpando a marca, não o atravessador."
       },
       {
@@ -603,7 +603,7 @@
       {
         "icon": "file",
         "title": "Baixa de estoque sem lastro é convite à glosa",
-        "text": "A saída definitiva do item precisa de trilha documental: o que saiu, quando, para onde e com que prova. Sem isso, a baixa vira fragilidade fiscal e de auditoria.",
+        "text": "A saída definitiva do produto precisa de trilha documental: o que saiu, quando, para onde e com que prova. Sem isso, a baixa vira fragilidade fiscal e de auditoria.",
         "consequence": "Custo real: questionamento fiscal, retrabalho contábil e a baixa contestada anos depois."
       }
     ],
@@ -611,7 +611,7 @@
       "in": [
         "Produtos eletroeletrônicos reprovados em triagem ou teste",
         "Devoluções sem condição de revenda",
-        "Itens fora de garantia e pós-reparo",
+        "Produtos fora de garantia e pós-reparo",
         "Produtos de assistência técnica e centros de reparo",
         "Placas, componentes e acessórios eletrônicos"
       ],
@@ -649,7 +649,7 @@
     "evidence": [
       {
         "title": "Inventário por coleta",
-        "text": "Relação dos itens destinados, registrada na origem."
+        "text": "Relação dos produtos destinados, registrada na origem."
       },
       {
         "title": "Descaracterização registrada",
@@ -669,7 +669,7 @@
       },
       {
         "title": "Controle contra retorno",
-        "text": "Fluxo desenhado para o item destinado não reaparecer no mercado."
+        "text": "Fluxo desenhado para o produto destinado não reaparecer no mercado."
       }
     ],
     "authority": "Atuação registrada em plataformas públicas de referência internacional. Cada alegação do site tem fonte, data e escopo declarados na página de evidências.",
@@ -754,7 +754,7 @@
         "title": "Com a Ecobraz",
         "items": [
           "Retirada pontual ou recorrente, com inventário",
-          "Descaracterização registrada — o item morre documentado",
+          "Descaracterização registrada — o produto morre documentado",
           "Controle de custódia até a destinação final",
           "MTR, CDF e relatório da coleta para sustentar a baixa",
           "Fábrica, CD e assistências no mesmo padrão"
@@ -1035,7 +1035,7 @@
     },
     "gains": {
       "title": "O que o banco ganha com o fluxo dedicado",
-      "sub": "Desmobilização deixa de ser risco operacional e vira item concluído.",
+      "sub": "Desmobilização deixa de ser risco operacional e vira tarefa concluída.",
       "items": [
         {
           "icon": "building",
@@ -2405,7 +2405,7 @@
         "Trocas de garantia e recolhas de pós-venda",
         "Produtos de pós-consumo recebidos de canais e clientes",
         "Produtos importados com defeito ou sem condição de revenda",
-        "Amostras, protótipos e itens de mostruário eletrônicos",
+        "Amostras, protótipos e produtos de mostruário eletrônicos",
         "Fluxos recorrentes com calendário por origem"
       ],
       "out": [
@@ -3991,7 +3991,7 @@
         "Retirada dentro das unidades — o ponto de coleta é a área comum, combinado com a zeladoria"
       ],
       "conditions": "O formato é definido com o síndico na avaliação: data, ponto de coleta, volume esperado e acesso. E se algum caso tiver custo, avisamos antes, com o valor.",
-      "outNote": "Para os itens que não entram, indicamos os canais oficiais de logística reversa."
+      "outNote": "Para os materiais que não entram, indicamos os canais oficiais de logística reversa."
     },
     "stepsTitle": "Do pedido à ata, em 5 passos",
     "stepsSub": "Sem fidelidade obrigatória — compatível com mandato de 2 anos.",
