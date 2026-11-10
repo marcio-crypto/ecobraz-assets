@@ -137,7 +137,7 @@ function renderTemplate(p) {
     : 'Nenhuma retirada é confirmada sem avaliação técnica. É isso que mantém a operação previsível e documentável.';
   const scopeSubDefault = pf
     ? 'A gente fala tudo antes: o que buscamos, o que não buscamos — e confirma os detalhes com você antes de ir.'
-    : 'Escopo declarado antes do agendamento reduz retrabalho e surpresa. Cada lote é avaliado tecnicamente.';
+    : 'Escopo declarado antes do agendamento reduz retrabalho e surpresa. Cada descarte é avaliado tecnicamente.';
   const formAction = '{{@site.url}}/agendamento/';
   const hiddenMaterial = p.form.material ? `<input type="hidden" name="material" value="${esc(p.form.material)}">` : '';
   const heroBand = p.hero.band.map((b) => `<span><strong>${esc(b.title)}</strong>${esc(b.text)}</span>`).join('\n        ');
