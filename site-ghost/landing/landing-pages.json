@@ -4,9 +4,9 @@
     "title": "Descarte de ativos de TI desmobilizados, com inventário e custódia",
     "crumb": "Ativos de TI desmobilizados",
     "serviceType": "Retirada, inventário, custódia e destinação de ativos de TI desmobilizados",
-    "custom_excerpt": "Retirada planejada de ativos de TI que saíram de operação — com inventário, cadeia de custódia e tratamento de dados quando aplicável, mediante avaliação técnica do lote.",
+    "custom_excerpt": "Retirada planejada de ativos de TI que saíram de operação — com inventário, cadeia de custódia e tratamento de dados quando aplicável, mediante avaliação técnica dos equipamentos.",
     "meta_title": "Descarte de ativos de TI desmobilizados | Ecobraz",
-    "meta_description": "Retirada, inventário, custódia e destinação de ativos de TI desmobilizados — com tratamento de dados e documentação, mediante avaliação técnica do lote.",
+    "meta_description": "Retirada, inventário, custódia e destinação de ativos de TI desmobilizados — com tratamento de dados e documentação, mediante avaliação técnica.",
     "hub": {
       "title": "Soluções corporativas",
       "href": "/solucoes-corporativas/"
@@ -31,14 +31,14 @@
       ]
     },
     "form": {
-      "title": "Descreva o lote em 1 minuto",
+      "title": "Descreva o descarte em 1 minuto",
       "hint": "A equipe retorna com escopo, condições e documentação aplicável.",
       "material": "Informática e TI",
       "describeLabel": "O que precisa retirar?",
       "describePlaceholder": "Ex.: 120 notebooks e 30 monitores em depósito"
     },
     "painsTitle": "Equipamento parado não é neutro: é passivo",
-    "painsSub": "Três riscos crescem em silêncio enquanto o lote espera num depósito.",
+    "painsSub": "Três riscos crescem em silêncio enquanto os equipamentos esperam num depósito.",
     "pains": [
       {
         "icon": "lock",
@@ -49,7 +49,7 @@
       {
         "icon": "alert",
         "title": "A lei não aceita 'entreguei para alguém levar'",
-        "text": "Pela Política Nacional de Resíduos Sólidos, a responsabilidade do gerador é compartilhada: se o lote da sua empresa aparecer despejado ou em canal irregular, quem responde é você.",
+        "text": "Pela Política Nacional de Resíduos Sólidos, a responsabilidade do gerador é compartilhada: se os equipamentos da sua empresa aparecerem despejados ou em canal irregular, quem responde é você.",
         "consequence": "Custo real: autuação ambiental, passivo jurídico e a manchete com a sua marca — anos depois do descarte."
       },
       {
@@ -73,11 +73,11 @@
         "Lâmpadas, óleo, isopor e embalagens",
         "Resíduos químicos, biológicos, radioativos ou contaminados"
       ],
-      "conditions": "A viabilidade depende de tipo de ativo, volume, localidade, acesso ao local e documentação solicitada. Cada lote é avaliado antes da confirmação."
+      "conditions": "A viabilidade depende de tipo de ativo, volume, localidade, acesso ao local e documentação solicitada. Cada descarte é avaliado antes da confirmação."
     },
     "steps": [
       {
-        "title": "Descreva o lote",
+        "title": "Descreva o descarte",
         "text": "Tipos de ativo, quantidade aproximada, localidade e necessidade documental."
       },
       {
@@ -100,7 +100,7 @@
     "evidenceTitle": "O que a sua auditoria vai receber",
     "evidence": [
       {
-        "title": "Inventário do lote",
+        "title": "Inventário dos equipamentos",
         "text": "Relação dos ativos retirados, registrada na origem."
       },
       {
@@ -113,7 +113,7 @@
       },
       {
         "title": "Cadeia de custódia",
-        "text": "Registro do percurso do lote, da origem à destinação."
+        "text": "Registro do percurso dos equipamentos, da origem à destinação."
       },
       {
         "title": "Escopo documentado",
@@ -137,11 +137,11 @@
       },
       {
         "q": "Atendem fora de São Paulo?",
-        "a": "A operação é sediada em São Paulo e região; coletas corporativas em outras regiões são avaliadas conforme volume, logística e prazo. Descreva o lote e a localidade para verificarmos a viabilidade."
+        "a": "A operação é sediada em São Paulo e região; coletas corporativas em outras regiões são avaliadas conforme volume, logística e prazo. Descreva os equipamentos e a localidade para verificarmos a viabilidade."
       },
       {
         "q": "Existe volume mínimo?",
-        "a": "Avaliamos desde lotes pontuais até desmobilizações de grande porte. A definição depende do tipo de ativo, da localidade e da logística envolvida."
+        "a": "Avaliamos desde descartes pontuais até desmobilizações de grande porte. A definição depende do tipo de ativo, da localidade e da logística envolvida."
       },
       {
         "q": "A coleta tem custo?",
@@ -153,7 +153,7 @@
         "title": "Sanitização e destruição de dados",
         "href": "/destruicao-de-dados/",
         "icon": "lock",
-        "text": "Tratamento de mídias com relatório, para lotes com exigência de TI ou DPO."
+        "text": "Tratamento de mídias com relatório, para descartes com exigência de TI ou DPO."
       },
       {
         "title": "Servidores e data center",
@@ -176,7 +176,7 @@
     ],
     "final": {
       "eyebrow": "Avaliação técnica sem compromisso",
-      "title": "Cada semana com o lote parado é risco correndo por conta da sua empresa.",
+      "title": "Cada semana com os equipamentos parados é risco correndo por conta da sua empresa.",
       "text": "Descreva os ativos, o volume e a localidade. A equipe retorna com escopo, condições e a documentação aplicável — por escrito."
     },
     "recognize": {
@@ -190,13 +190,13 @@
       ]
     },
     "contrast": {
-      "title": "O que muda quando a Ecobraz assume o lote",
+      "title": "O que muda quando a Ecobraz assume o descarte",
       "sub": "A diferença entre 'alguém levou' e uma operação encerrada por escrito.",
       "before": {
         "title": "Como está hoje",
         "items": [
           "Ninguém sabe listar o que existe no depósito",
-          "Destino do último lote: desconhecido",
+          "Destino do último descarte: desconhecido",
           "Dados 'provavelmente' apagados — sem registro",
           "Baixa patrimonial travada há meses",
           "Nada para mostrar quando a auditoria perguntar"
@@ -241,7 +241,7 @@
     },
     "why": {
       "title": "Por que a Ecobraz — e não o sucateiro mais barato",
-      "sub": "O barato do descarte irregular custa caro no dia em que alguém pergunta onde o lote foi parar.",
+      "sub": "O barato do descarte irregular custa caro no dia em que alguém pergunta onde os equipamentos foram parar.",
       "items": [
         {
           "icon": "shield",
@@ -310,7 +310,7 @@
       "title": "Descreva o caso em 1 minuto",
       "hint": "A equipe retorna com escopo, condições e documentação aplicável.",
       "material": "Eletrônicos",
-      "describeLabel": "Descreva o sinistro ou o lote",
+      "describeLabel": "Descreva o sinistro ou os bens",
       "describePlaceholder": "Ex.: 400 itens sinistrados em galpão de Barueri"
     },
     "painsTitle": "Salvado sem controle vira passivo da seguradora",
@@ -340,7 +340,7 @@
         "Bens eletroeletrônicos sinistrados — incêndio, alagamento, avaria de transporte",
         "Salvados eletrônicos sem condição de revenda",
         "Equipamentos com mídias de dados (com tratamento conforme escopo)",
-        "Lotes em galpões, depósitos, CDs e unidades do segurado",
+        "Bens em galpões, depósitos, CDs e unidades do segurado",
         "Operações em múltiplas localidades, avaliadas caso a caso"
       ],
       "out": [
@@ -409,7 +409,7 @@
       },
       {
         "q": "Atendem sinistros fora de São Paulo?",
-        "a": "Operações em outras praças são avaliadas conforme volume, logística e prazo do processo. Descreva a localidade e o lote para verificarmos a viabilidade."
+        "a": "Operações em outras praças são avaliadas conforme volume, logística e prazo do processo. Descreva a localidade e os bens para verificarmos a viabilidade."
       },
       {
         "q": "Trabalham com reguladoras e segurados corporativos?",
@@ -459,20 +459,20 @@
       "title": "Cenas que todo time de sinistro e salvados conhece",
       "items": [
         "O imóvel do segurado precisa ser devolvido e os bens sinistrados continuam ocupando o galpão",
-        "Salvado vendido 'no lote' apareceu funcionando no mercado — e virou questionamento no processo",
+        "Salvado vendido 'de porteira fechada' apareceu funcionando no mercado — e virou questionamento no processo",
         "Cada reguladora entrega um padrão de evidência diferente, e o dossiê nunca fecha igual",
         "Sinistro em praça onde não há operação de confiança — e o prazo do processo correndo",
-        "Bens com mídias de dados no meio do lote, e ninguém quer assinar o destino deles"
+        "Bens com mídias de dados no meio dos salvados, e ninguém quer assinar o destino deles"
       ]
     },
     "contrast": {
-      "title": "Do lote abandonado ao caso encerrado com dossiê",
+      "title": "Dos salvados abandonados ao caso encerrado com dossiê",
       "sub": "O elo final do sinistro tratado com o mesmo rigor da regulação.",
       "before": {
         "title": "Como costuma terminar",
         "items": [
           "Bens sinistrados esperando enquanto o aluguel do galpão corre",
-          "Venda 'no lote' sem controle do que volta ao mercado",
+          "Venda 'de porteira fechada' sem controle do que volta ao mercado",
           "Registro fotográfico incompleto ou inexistente",
           "Evidência de destinação: nota fiscal de sucata",
           "Padrão diferente a cada praça e a cada caso"
@@ -552,16 +552,16 @@
     "title": "Descarte de produtos danificados e fora de garantia",
     "crumb": "Produtos danificados e fora de garantia",
     "serviceType": "Destinação de produtos eletroeletrônicos danificados, devolvidos e fora de garantia, com descaracterização quando exigida",
-    "custom_excerpt": "Destinação de produtos eletroeletrônicos danificados, devolvidos ou fora de garantia — com descaracterização quando exigida, inventário por lote e documentação que protege a marca.",
+    "custom_excerpt": "Destinação de produtos eletroeletrônicos danificados, devolvidos ou fora de garantia — com descaracterização quando exigida, inventário por coleta e documentação que protege a marca.",
     "meta_title": "Descarte de produtos danificados e avariados | Ecobraz",
-    "meta_description": "Avarias, devoluções e estoque sem revenda: destinação com descaracterização quando exigida, inventário por lote e documentação para fabricantes e varejo.",
+    "meta_description": "Avarias, devoluções e estoque sem revenda: destinação com descaracterização quando exigida, inventário por coleta e documentação para fabricantes e varejo.",
     "hub": {
       "title": "Soluções corporativas",
       "href": "/solucoes-corporativas/"
     },
     "hero": {
       "eyebrow": "Avarias · Devoluções · Pós-venda",
-      "sub": "Quarentena de avarias tomando o CD, produto reprovado reaparecendo à venda com a sua marca e o fiscal pedindo lastro da baixa? A Ecobraz destina o que não pode voltar ao mercado — com descaracterização registrada, inventário por lote e a prova documental que sustenta a baixa de estoque.",
+      "sub": "Quarentena de avarias tomando o CD, produto reprovado reaparecendo à venda com a sua marca e o fiscal pedindo lastro da baixa? A Ecobraz destina o que não pode voltar ao mercado — com descaracterização registrada, inventário por coleta e a prova documental que sustenta a baixa de estoque.",
       "cta": "Solicitar avaliação técnica",
       "band": [
         {
@@ -569,7 +569,7 @@
           "text": "produto destinado não volta como problema"
         },
         {
-          "title": "Inventário por lote",
+          "title": "Inventário por coleta",
           "text": "cada item registrado antes de sair"
         },
         {
@@ -579,7 +579,7 @@
       ]
     },
     "form": {
-      "title": "Descreva o lote em 1 minuto",
+      "title": "Descreva o descarte em 1 minuto",
       "hint": "A equipe retorna com escopo, condições e documentação aplicável.",
       "material": "Eletrônicos",
       "describeLabel": "O que precisa destinar?",
@@ -597,7 +597,7 @@
       {
         "icon": "box",
         "title": "Quarentena é capital parado se deteriorando",
-        "text": "Avaria acumulada bloqueia espaço nobre do CD e capital que a contabilidade não consegue liberar — enquanto o lote só perde valor e ganha poeira.",
+        "text": "Avaria acumulada bloqueia espaço nobre do CD e capital que a contabilidade não consegue liberar — enquanto os produtos só ganham poeira.",
         "consequence": "Custo real: metros quadrados sem giro, balanço carregando estoque morto e decisão adiada a cada trimestre."
       },
       {
@@ -612,7 +612,7 @@
         "Produtos eletroeletrônicos reprovados em triagem ou teste",
         "Devoluções sem condição de revenda",
         "Itens fora de garantia e pós-reparo",
-        "Lotes de assistência técnica e centros de reparo",
+        "Produtos de assistência técnica e centros de reparo",
         "Placas, componentes e acessórios eletrônicos"
       ],
       "out": [
@@ -621,11 +621,11 @@
         "Lâmpadas, óleo, isopor e embalagens",
         "Resíduos químicos, biológicos, radioativos ou contaminados"
       ],
-      "conditions": "A viabilidade depende de categorias, volume, localidade e exigência de descaracterização. Cada lote é avaliado antes da confirmação."
+      "conditions": "A viabilidade depende de categorias, volume, localidade e exigência de descaracterização. Cada descarte é avaliado antes da confirmação."
     },
     "steps": [
       {
-        "title": "Descreva o lote",
+        "title": "Descreva o descarte",
         "text": "Categorias, quantidade, origem (CD, fábrica, assistência) e exigências."
       },
       {
@@ -638,17 +638,17 @@
       },
       {
         "title": "Retirada registrada",
-        "text": "Coleta com inventário por lote e cadeia de custódia."
+        "text": "Coleta com inventário e cadeia de custódia."
       },
       {
         "title": "Destinação e prova",
-        "text": "Descaracterização registrada, destinação e documentação do lote."
+        "text": "Descaracterização registrada, destinação e documentação da coleta."
       }
     ],
     "evidenceTitle": "A prova que sustenta a baixa e protege a marca",
     "evidence": [
       {
-        "title": "Inventário por lote",
+        "title": "Inventário por coleta",
         "text": "Relação dos itens destinados, registrada na origem."
       },
       {
@@ -661,11 +661,11 @@
       },
       {
         "title": "Cadeia de custódia",
-        "text": "Registro do percurso do lote até a destinação."
+        "text": "Registro do percurso dos produtos até a destinação."
       },
       {
         "title": "Relatório de destinação",
-        "text": "Consolidação por lote para conciliação de estoque e auditoria."
+        "text": "Consolidação por coleta para conciliação de estoque e auditoria."
       },
       {
         "title": "Controle contra retorno",
@@ -677,7 +677,7 @@
     "faq": [
       {
         "q": "Como garantem que o produto não volta ao mercado?",
-        "a": "Quando a descaracterização integra o escopo, ela é executada e registrada, e o lote segue em cadeia de custódia até a destinação. É esse conjunto documentado que protege a marca."
+        "a": "Quando a descaracterização integra o escopo, ela é executada e registrada, e os produtos seguem em cadeia de custódia até a destinação. É esse conjunto documentado que protege a marca."
       },
       {
         "q": "Atendem fábrica, CD e rede de assistências?",
@@ -685,7 +685,7 @@
       },
       {
         "q": "Existe volume mínimo?",
-        "a": "Avaliamos de lotes pontuais a fluxos recorrentes de pós-venda. A definição depende das categorias, da localidade e da logística."
+        "a": "Avaliamos de descartes pontuais a fluxos recorrentes de pós-venda. A definição depende das categorias, da localidade e da logística."
       },
       {
         "q": "A descaracterização pode ser total (trituração)?",
@@ -725,7 +725,7 @@
     "final": {
       "eyebrow": "Avaliação técnica sem compromisso",
       "title": "Quanto vale tirar a sua marca do canal paralelo ainda neste trimestre?",
-      "text": "Descreva categorias, volume e origem do lote. A equipe retorna com escopo, nível de descaracterização e o padrão de prova — por escrito."
+      "text": "Descreva categorias, volume e origem dos produtos. A equipe retorna com escopo, nível de descaracterização e o padrão de prova — por escrito."
     },
     "recognize": {
       "title": "Se a sua quarentena conta essa história, você está no lugar certo",
@@ -753,10 +753,10 @@
       "after": {
         "title": "Com a Ecobraz",
         "items": [
-          "Retirada por lote, pontual ou recorrente, com inventário",
+          "Retirada pontual ou recorrente, com inventário",
           "Descaracterização registrada — o item morre documentado",
           "Controle de custódia até a destinação final",
-          "MTR, CDF e relatório do lote para sustentar a baixa",
+          "MTR, CDF e relatório da coleta para sustentar a baixa",
           "Fábrica, CD e assistências no mesmo padrão"
         ]
       }
@@ -803,13 +803,13 @@
         },
         {
           "icon": "file",
-          "title": "Prova em cada lote",
+          "title": "Prova em cada coleta",
           "text": "Inventário, custódia e certificados aplicáveis fecham cada operação — é o lastro da sua baixa."
         },
         {
           "icon": "truck",
           "title": "Escala com padrão",
-          "text": "De um lote pontual ao fluxo recorrente de pós-venda, o processo e o documento são os mesmos."
+          "text": "De um descarte pontual ao fluxo recorrente de pós-venda, o processo e o documento são os mesmos."
         }
       ]
     },
@@ -862,7 +862,7 @@
     "pains": [
       {
         "icon": "lock",
-        "title": "O disco do ATM é o ativo mais sensível do lote",
+        "title": "O disco do ATM é o ponto mais sensível do descarte",
         "text": "Terminais e servidores de agência carregam registros de operação e módulos de segurança. Uma mídia extraviada no descarte é incidente de segurança bancária — não sucata perdida.",
         "consequence": "Custo real: incidente reportável, investigação interna e a confiança da diretoria de segurança em xeque."
       },
@@ -1299,7 +1299,7 @@
         {
           "icon": "truck",
           "title": "Fluxo completo se precisar",
-          "text": "Sanitização pode se integrar à retirada, destinação e documentação do lote inteiro — um fornecedor, uma operação."
+          "text": "Sanitização pode se integrar à retirada, destinação e documentação do descarte inteiro — um fornecedor, uma operação."
         }
       ]
     },
@@ -1324,7 +1324,7 @@
       },
       {
         "q": "Vocês também retiram e destinam os equipamentos?",
-        "a": "Sim. A sanitização pode ser contratada isolada ou integrada à retirada, destinação e documentação do lote — inventário, MTR e CDF quando aplicáveis."
+        "a": "Sim. A sanitização pode ser contratada isolada ou integrada à retirada, destinação e documentação do descarte — inventário, MTR e CDF quando aplicáveis."
       }
     ],
     "related": [
@@ -1434,7 +1434,7 @@
       {
         "icon": "file",
         "title": "Declaração genérica não é evidência",
-        "text": "'Certificamos a destruição de um lote de mídias' não responde à pergunta do auditor: quais mídias? A evidência precisa ser rastreável até a unidade.",
+        "text": "'Certificamos a destruição de um conjunto de mídias' não responde à pergunta do auditor: quais mídias? A evidência precisa ser rastreável até a unidade.",
         "consequence": "Custo real: apontamento em auditoria e retrabalho para reconstruir um histórico que deveria ter nascido pronto."
       }
     ],
@@ -1566,7 +1566,7 @@
         {
           "icon": "file",
           "title": "Evidência rastreável",
-          "text": "Registro por mídia conforme o escopo — não declaração genérica de lote."
+          "text": "Registro por mídia conforme o escopo — não declaração genérica do conjunto."
         },
         {
           "icon": "shield",
@@ -2269,7 +2269,7 @@
     },
     "final": {
       "eyebrow": "Material misto ou fora da lista?",
-      "title": "Descreva o lote — a avaliação separa o que entra do que não entra.",
+      "title": "Descreva o descarte — a avaliação separa o que entra do que não entra.",
       "text": "Tipo, volume e localidade: com isso a equipe retorna com o escopo aplicável e as condições, por escrito."
     },
     "foto": "ilustrativa-materiais-variados.jpg",
@@ -2299,7 +2299,7 @@
       "band": [
         {
           "title": "Obrigação atendida com prova",
-          "text": "destinação documentada lote a lote"
+          "text": "destinação documentada coleta a coleta"
         },
         {
           "title": "Garantia sem segunda vida",
@@ -2324,7 +2324,7 @@
         "O galpão de trocas de garantia cresce todo mês — e ninguém quer assinar o destino",
         "A empresa tem meta de logística reversa para reportar e os números não têm lastro",
         "Produto trocado em garantia apareceu recondicionado à venda — competindo com o novo",
-        "Importou, o lote veio com defeito, e a devolução ao exterior não compensa",
+        "Importou, a remessa veio com defeito, e a devolução ao exterior não compensa",
         "Auditoria de compliance pediu a trilha do pós-consumo e a resposta foi um contrato antigo"
       ]
     },
@@ -2368,7 +2368,7 @@
         "items": [
           "Calendário de destinação para o fluxo de pós-venda",
           "Descaracterização registrada — a unidade morre documentada",
-          "Inventário, MTR e CDF quando aplicáveis, por lote",
+          "Inventário, MTR e CDF quando aplicáveis, por coleta",
           "Consolidação por período para reporte e auditoria",
           "Um fornecedor, um padrão, uma trilha"
         ]
@@ -2404,7 +2404,7 @@
       "in": [
         "Trocas de garantia e recolhas de pós-venda",
         "Produtos de pós-consumo recebidos de canais e clientes",
-        "Lotes importados com defeito ou sem condição de revenda",
+        "Produtos importados com defeito ou sem condição de revenda",
         "Amostras, protótipos e itens de mostruário eletrônicos",
         "Fluxos recorrentes com calendário por origem"
       ],
@@ -2435,13 +2435,13 @@
       },
       {
         "title": "Consolidação e reporte",
-        "text": "Documentação por lote e consolidação por período para suas metas."
+        "text": "Documentação por coleta e consolidação por período para suas metas."
       }
     ],
     "evidenceTitle": "O lastro dos seus números de reversa",
     "evidence": [
       {
-        "title": "Inventário por lote",
+        "title": "Inventário por coleta",
         "text": "O que entrou no fluxo reverso, registrado na origem."
       },
       {
@@ -2454,7 +2454,7 @@
       },
       {
         "title": "Cadeia de custódia",
-        "text": "O percurso de cada lote até a destinação final."
+        "text": "O percurso de cada coleta até a destinação final."
       },
       {
         "title": "Consolidação por período",
@@ -2482,7 +2482,7 @@
         {
           "icon": "file",
           "title": "Prova no formato do reporte",
-          "text": "Documentação por lote e consolidação por período — o formato que metas e auditorias pedem."
+          "text": "Documentação por coleta e consolidação por período — o formato que metas e auditorias pedem."
         },
         {
           "icon": "truck",
@@ -2500,10 +2500,10 @@
       },
       {
         "q": "Como garantem que o produto trocado não volta ao mercado?",
-        "a": "Quando a descaracterização integra o escopo, ela é executada e registrada, e o lote segue em cadeia de custódia até a destinação — o conjunto documentado que protege a marca."
+        "a": "Quando a descaracterização integra o escopo, ela é executada e registrada, e os produtos seguem em cadeia de custódia até a destinação — o conjunto documentado que protege a marca."
       },
       {
-        "q": "Atendem fluxo contínuo, não só lotes pontuais?",
+        "q": "Atendem fluxo contínuo, não só coletas pontuais?",
         "a": "Sim — calendário por período e por origem, com consolidação documental. É o desenho ideal para pós-venda e recolhas permanentes."
       },
       {
@@ -2570,7 +2570,7 @@
     },
     "hero": {
       "eyebrow": "Reforma de lojas · Troca de PDV · Fechamento de unidades",
-      "sub": "Rede em reforma é equipamento saindo aos lotes: PDVs, totens, leitores, caixas e infraestrutura inteira de loja. A Ecobraz retira por unidade dentro do cronograma da obra, trata as mídias dos terminais de pagamento e consolida a documentação por loja e por regional.",
+      "sub": "Rede em reforma é equipamento saindo em volume: PDVs, totens, leitores, caixas e infraestrutura inteira de loja. A Ecobraz retira por unidade dentro do cronograma da obra, trata as mídias dos terminais de pagamento e consolida a documentação por loja e por regional.",
       "cta": "Solicitar avaliação técnica",
       "band": [
         {
@@ -2730,7 +2730,7 @@
       },
       {
         "title": "Cadeia de custódia",
-        "text": "O percurso de cada lote, da loja à destinação."
+        "text": "O percurso de cada coleta, da loja à destinação."
       },
       {
         "title": "Consolidação por regional",
@@ -2830,7 +2830,7 @@
   },
   {
     "slug": "para-empresas",
-    "title": "Vender o lote parece receita. É risco com troco.",
+    "title": "Vender os equipamentos obsoletos parece receita. É risco com troco.",
     "crumb": "Para empresas",
     "serviceType": "Descarte corporativo documentado com certificado verificável por QR, sistema de rastreabilidade gratuito e documentação para auditoria — sem contrato",
     "custom_excerpt": "O modelo Ecobraz para empresas: descarte documentado com certificado QR cuja autenticidade qualquer auditor confere em segundos, sistema completo grátis, sem contrato e sem exclusividade. Serviços específicos à parte, sempre com condições por escrito.",
@@ -2842,7 +2842,7 @@
     },
     "hero": {
       "eyebrow": "Descarte documentado · Certificado QR · Sistema grátis, sem contrato",
-      "sub": "Quem compra o seu lote não entrega prova — e a responsabilidade continua com a sua empresa. A Ecobraz entrega o contrário: descarte documentado com certificado cuja autenticidade qualquer auditor confere em segundos pela câmera, e o sistema completo de rastreabilidade grátis, sem contrato e sem exclusividade.",
+      "sub": "Quem compra os seus equipamentos obsoletos não entrega prova — e a responsabilidade continua com a sua empresa. A Ecobraz entrega o contrário: descarte documentado com certificado cuja autenticidade qualquer auditor confere em segundos pela câmera, e o sistema completo de rastreabilidade grátis, sem contrato e sem exclusividade.",
       "cta": "Agendar demonstração",
       "band": [
         {
@@ -2872,25 +2872,25 @@
       "title": "Esta página é para a sua empresa se…",
       "items": [
         "A auditoria (ou a matriz) pediu evidência do descarte e o que existe são e-mails e PDFs espalhados",
-        "Hoje o lote é vendido para um comprador — e a prova do que acontece depois é problema seu",
+        "Hoje os equipamentos obsoletos são vendidos para um comprador — e a prova do que acontece depois é problema seu",
         "O time de ESG monta relatório caçando dados de descarte em planilha, a cada ciclo",
         "O depósito acumula equipamento parado porque ninguém quer decidir o destino",
         "O banco ou o cliente europeu começou a pedir evidências e dados da cadeia — e o descarte é parte disso"
       ]
     },
-    "painsTitle": "As três perguntas que o auditor faz — e que a venda do lote não responde",
-    "painsSub": "O que o comprador paga pelo lote não cobre o que ele deixa com você.",
+    "painsTitle": "As três perguntas que o auditor faz — e que a venda dos equipamentos não responde",
+    "painsSub": "O que o comprador paga pelos equipamentos não cobre o que ele deixa com você.",
     "pains": [
       {
         "icon": "file",
         "title": "Quanto custa provar o destino de cada ativo?",
-        "text": "Quem compra o seu lote não tem obrigação de documentar nada. Na auditoria, a prova do que aconteceu depois do portão vira trabalho — e custo — da sua empresa.",
+        "text": "Quem compra os seus equipamentos não tem obrigação de documentar nada. Na auditoria, a prova do que aconteceu depois do portão vira trabalho — e custo — da sua empresa.",
         "consequence": "Custo real: horas de equipe caçando evidência a cada ciclo, sem garantia de encontrar."
       },
       {
         "icon": "lock",
         "title": "Quem responde se um HD com dados aparecer onde não devia?",
-        "text": "Pela Lei 12.305/2010, a responsabilidade do gerador é compartilhada — e a LGPD pergunta pelo seu CNPJ, não pelo comprador do lote. A responsabilidade não viaja com o caminhão.",
+        "text": "Pela Lei 12.305/2010, a responsabilidade do gerador é compartilhada — e a LGPD pergunta pelo seu CNPJ, não pelo comprador dos equipamentos. A responsabilidade não viaja com o caminhão.",
         "consequence": "Custo real: passivo ambiental e de dados em nome da sua empresa, sem prova para se defender."
       },
       {
@@ -2902,14 +2902,14 @@
     ],
     "contrast": {
       "title": "A conta que ninguém fez",
-      "sub": "Antes de olhar o que a venda do lote rende, some o que a sua empresa já paga para provar o próprio ESG. Vender otimiza o número que não importa. A demonstração faz essa conta com os seus números.",
+      "sub": "Antes de olhar o que a venda dos equipamentos rende, some o que a sua empresa já paga para provar o próprio ESG. Vender otimiza o número que não importa. A demonstração faz essa conta com os seus números.",
       "before": {
         "title": "O que a sua empresa já paga hoje",
         "items": [
           "Licenças de software e plataformas de ESG para controlar e reportar",
           "Gente alimentando planilha: quem coleta dado, quem digita, quem persegue fornecedor atrás de documento",
           "Validação das evidências a cada ciclo de relatório",
-          "E a venda do lote não abate nada disso — o comprador não entrega prova"
+          "E a venda dos equipamentos não abate nada disso — o comprador não entrega prova"
         ]
       },
       "after": {
@@ -3127,7 +3127,7 @@
       "hint": "Retorno em até 24h úteis. O acesso ao portal é liberado para clientes que descartam.",
       "material": "",
       "describeLabel": "O que precisa ser retirado?",
-      "describePlaceholder": "Ex.: 30 computadores, monitores e um lote de impressoras",
+      "describePlaceholder": "Ex.: 30 computadores, monitores e várias impressoras",
       "button": "Solicitar coleta",
       "micro": "Sem compromisso — a equipe avalia local, materiais e volume e retorna com o desenho da coleta."
     },
@@ -4134,8 +4134,8 @@
     },
     "hero": {
       "eyebrow": "PMEs · Descarte eventual · Sem fidelidade",
-      "sub": "Juntou equipamento parado no depósito e só quer resolver — sem assinar nada? A coleta avulsa é isso: você descreve o lote, recebe as condições por escrito antes de agendar (muitos materiais com valor de reciclagem saem sem custo) e fica com o comprovante da destinação.",
-      "cta": "Pedir avaliação do lote",
+      "sub": "Juntou equipamento parado no depósito e só quer resolver — sem assinar nada? A coleta avulsa é isso: você descreve o descarte, recebe as condições por escrito antes de agendar (muitos materiais com valor de reciclagem saem sem custo) e fica com o comprovante da destinação.",
+      "cta": "Pedir avaliação do descarte",
       "band": [
         {
           "title": "Sem contrato",
@@ -4152,7 +4152,7 @@
       ]
     },
     "form": {
-      "title": "Descreva o lote em 1 minuto",
+      "title": "Descreva o descarte em 1 minuto",
       "hint": "Retorno em até 24h úteis, com as condições por escrito.",
       "material": "",
       "describeLabel": "O que precisa sair?",
@@ -4194,7 +4194,7 @@
     ],
     "contrast": {
       "title": "Ferro-velho vs. coleta avulsa documentada",
-      "sub": "O mesmo lote, dois finais muito diferentes.",
+      "sub": "O mesmo descarte, dois finais muito diferentes.",
       "before": {
         "title": "Ferro-velho / carroceiro",
         "items": [
@@ -4209,7 +4209,7 @@
         "title": "Coleta avulsa Ecobraz",
         "items": [
           "Condições por escrito antes de agendar",
-          "O lote combinado no escopo sai inteiro — não garimpamos só o que vale",
+          "O que foi combinado no escopo sai inteiro — não garimpamos só o que vale",
           "Sem custo na maioria dos materiais com valor de reciclagem",
           "Comprovante da destinação no final",
           "Aparelhos com memória não são revendidos com dados"
@@ -4254,19 +4254,19 @@
         "Máquinas e equipamentos — mediante avaliação"
       ],
       "out": [
-        "Não compramos lotes: a remuneração da Ecobraz vem da destinação e valorização do material — você recebe a coleta (sem custo na maioria dos casos) e a documentação",
+        "Não compramos material: a remuneração da Ecobraz vem da destinação e valorização do material — você recebe a coleta (sem custo na maioria dos casos) e a documentação",
         "Pilhas domésticas avulsas, toner, lâmpadas e contaminados não entram",
         "Volumes muito pequenos ou acesso difícil podem ter custo — sempre informado antes, com o valor",
         "Equipamentos com dados: não são revendidos; tratamento formal com relatório é serviço à parte"
       ],
       "conditions": "A avaliação responde por escrito: o que entra, a logística, se há custo e qual documentação acompanha — antes de qualquer agendamento.",
-      "outNote": "Transparência primeiro: preferimos dizer 'este lote tem custo' antes, a surpreender depois."
+      "outNote": "Transparência primeiro: preferimos dizer 'este descarte tem custo' antes, a surpreender depois."
     },
     "stepsTitle": "Como funciona, sem enrolação",
     "stepsSub": "Da descrição ao comprovante.",
     "steps": [
       {
-        "title": "Descreva o lote",
+        "title": "Descreva o descarte",
         "text": "O que é, quanto é, onde está — 1 minuto no formulário ou WhatsApp."
       },
       {
@@ -4342,16 +4342,16 @@
         "a": "Muitos materiais com valor de reciclagem (informática, placas, cabos) saem sem custo — a avaliação confirma. Quando há custo (volume muito pequeno, acesso difícil, material sem valor de recuperação), dizemos antes, por escrito, com o valor. Você decide sabendo tudo."
       },
       {
-        "q": "Vocês pagam pelo meu lote?",
-        "a": "Não — não compramos sucata. A remuneração da Ecobraz vem da destinação e valorização do material; o que a sua empresa recebe é a coleta (sem custo na maioria dos casos) e a documentação da destinação. Se a sua prioridade for vender o lote, essa conta vale uma conversa: o comparativo está na página do contrato contínuo."
+        "q": "Vocês pagam pelos meus equipamentos?",
+        "a": "Não — não compramos sucata. A remuneração da Ecobraz vem da destinação e valorização do material; o que a sua empresa recebe é a coleta (sem custo na maioria dos casos) e a documentação da destinação. Se a sua prioridade for vender os equipamentos, essa conta vale uma conversa: o comparativo está na página do contrato contínuo."
       },
       {
         "q": "Emitem MTR e CDF?",
-        "a": "Quando aplicáveis ao material e ao serviço executado, sim — MTR é o Manifesto de Transporte de Resíduos e CDF é o Certificado de Destinação Final. A avaliação já diz qual documentação acompanha o seu lote."
+        "a": "Quando aplicáveis ao material e ao serviço executado, sim — MTR é o Manifesto de Transporte de Resíduos e CDF é o Certificado de Destinação Final. A avaliação já diz qual documentação acompanha o seu descarte."
       },
       {
         "q": "Atendem meu porte?",
-        "a": "De uma dúzia de itens a caminhões — descreva o lote que a avaliação responde. Empresas menores são a maioria das coletas avulsas."
+        "a": "De uma dúzia de equipamentos a caminhões — descreva o descarte que a avaliação responde. Empresas menores são a maioria das coletas avulsas."
       },
       {
         "q": "E se a gente passar a descartar sempre?",
@@ -4380,7 +4380,7 @@
     ],
     "final": {
       "eyebrow": "Resolva esta semana",
-      "title": "Descreva o lote e receba as condições por escrito",
+      "title": "Descreva o descarte e receba as condições por escrito",
       "text": "Sem contrato, sem mensalidade, sem surpresa — e com o comprovante no final. Retorno em até 24h úteis."
     },
     "leituras": [
