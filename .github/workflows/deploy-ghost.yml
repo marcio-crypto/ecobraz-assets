@@ -7,6 +7,10 @@ on:
         description: 'Enviar lead de teste real para Ploomes/E-goi'
         type: boolean
         default: false
+      regravar_ghost:
+        description: 'Regravar o Ghost mesmo que haja edições manuais (elas serão perdidas)'
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths:
@@ -21,6 +25,13 @@ on:
 
 permissions:
   contents: read
+  actions: read
+
+# Uma publicação por vez: a trava de edições manuais compara o Ghost com o fim
+# da última escrita do pipeline, e duas publicações sobrepostas se confundiriam.
+concurrency:
+  group: deploy-ghost
+  cancel-in-progress: false
 
 jobs:
   deploy-theme:
@@ -39,6 +50,18 @@ jobs:
       - name: Build Ghost theme ZIP
         working-directory: site-ghost/theme
         run: zip -r ../ecobraz-conversion.zip . -x '.DS_Store' '*.git*'
+      # A trava vem antes de QUALQUER passo que escreve no Ghost. Ela reconhece
+      # os passos de escrita pelo nome (PASSO_DE_ESCRITA no script): ao criar um
+      # passo novo que escreva páginas ou posts, comece o nome por "Sync ".
+      - name: Testa a trava de edições manuais
+        run: node --test site-ghost/scripts/trava-edicoes-manuais.test.mjs
+      - name: Trava — edições manuais no Ghost ainda não levadas ao repositório
+        env:
+          GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
+          GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
+          TRAVA_REGRAVAR: ${{ (github.event_name == 'workflow_dispatch' && inputs.regravar_ghost) || startsWith(github.event.head_commit.message, '[regravar-ghost]') }}
+        run: node site-ghost/scripts/trava-edicoes-manuais.mjs
       - name: Upload theme to Ghost staging
         env:
           GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}

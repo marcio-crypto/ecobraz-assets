@@ -39,3 +39,25 @@ padrão de design v2 aprovado pelo Marcio: tokens, componentes, ícones e
 regras em `site-villanova/design/PADRAO.md` (referências renderizadas na
 mesma pasta). Antes de publicar página nova, renderizar prévia e conferir
 visualmente contra as referências.
+
+## Publicação do site Ecobraz e edições no Ghost (regra de 10/11/2026)
+
+- A publicação (`.github/workflows/deploy-ghost.yml`) regrava título, texto, meta
+  e código injetado de todas as páginas e posts listados em
+  `site-ghost/content/*.json`. Edição feita direto no editor do Ghost nesses
+  conteúdos some na publicação seguinte. Em 10/11/2026 isso reverteu a página
+  `/coleta-de-lixo-eletronico-para-empresas/`.
+- Mudança de texto nesses conteúdos entra pelo repositório, nunca só pelo
+  editor. Se for preciso editar no Ghost com urgência, levar o mesmo texto para
+  o repositório antes da próxima publicação.
+- As landing pages geradas por `build-landing-pages.mjs`
+  (`commercial-pages.json`) são renderizadas por template: o texto do editor
+  não aparece ao público, mas título, meta e código injetado aparecem. As
+  demais páginas mostram o texto do editor. Conferir como a página é
+  renderizada antes de afirmar que uma edição "não aparece ao público".
+- A trava `site-ghost/scripts/trava-edicoes-manuais.mjs` para a publicação,
+  antes de qualquer escrita, se houver conteúdo gerido alterado no Ghost depois
+  da última escrita do pipeline. Liberar de propósito (título do commit
+  começando por `[regravar-ghost]`, ou execução manual com "Regravar o Ghost")
+  só com decisão do Marcio, porque a edição manual é perdida.
+- A trava não cobre configurações gerais do site, meta das tags nem o tema.
