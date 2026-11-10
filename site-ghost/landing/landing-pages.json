@@ -3703,7 +3703,8 @@
         "Móveis, entulho e materiais não eletrônicos",
         "Resíduos químicos ou contaminados"
       ],
-      "conditions": "A coleta gratuita atende São Paulo e região, em um raio de até 200 km da capital, a partir de 20 kg. Antes de agendar, a equipe confirma com você: CEP, acesso (escada, elevador) e o que você tem para descartar.",
+      "lead": "A coleta gratuita atende São Paulo e região, em um raio de até 200 km da capital, a partir de 20 kg.",
+      "conditions": "Antes de agendar, a equipe confirma com você: CEP, acesso (escada, elevador) e o que você tem para descartar.",
       "outNote": "Para os materiais que não buscamos, indicamos os canais oficiais de logística reversa dos fabricantes.",
       "sub": "A gente fala tudo antes: o que buscamos, o que não buscamos — e confirma os detalhes com você antes de ir."
     },
@@ -3760,6 +3761,10 @@
         {
           "autor": "Sandra Barbosa",
           "texto": "Acabaram de retirar. Todo processo perfeito com a promessa! Sem burocracia, gratuito, vieram em menos de 10 dias, atendimento do início ao fim muito bom! Parabéns! Por mais organizações e empresas assim!"
+        },
+        {
+          "autor": "Lara Ribeiro",
+          "texto": "Atendimento excelente. Entrei em contato para coletarem de computadores e impressoras que estavam parados. Combinamos dia e horário, fizeram a retiradas na minha residência. Todo eletrônico que eu precisar descartar, será por aqui!! Gratidão"
         },
         {
           "autor": "Alexandre Viana",
