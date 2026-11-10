@@ -150,6 +150,12 @@
     ],
     "related": [
       {
+        "title": "Desmobilização de ativos com venda em leilão",
+        "href": "/desmobilizacao-de-ativos/",
+        "icon": "shield",
+        "text": "Retirada sem custo, dados destruídos e venda em leilão em nome da Ecobraz."
+      },
+      {
         "title": "Sanitização e destruição de dados",
         "href": "/destruicao-de-dados/",
         "icon": "lock",
@@ -1881,6 +1887,12 @@
       }
     ],
     "related": [
+      {
+        "title": "Desmobilização de ativos com venda em leilão",
+        "href": "/desmobilizacao-de-ativos/",
+        "icon": "shield",
+        "text": "Retirada sem custo, dados destruídos e venda em leilão em nome da Ecobraz."
+      },
       {
         "title": "Sanitização segura de dados",
         "href": "/sanitizacao-segura-de-dados/",
