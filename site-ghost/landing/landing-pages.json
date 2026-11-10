@@ -3566,17 +3566,17 @@
     "slug": "coleta-gratuita",
     "title": "Coleta gratuita de lixo eletrônico na sua casa",
     "crumb": "Coleta gratuita",
-    "serviceType": "Coleta residencial gratuita de resíduos eletrônicos na Grande São Paulo, mediante avaliação de endereço e material",
+    "serviceType": "Coleta residencial gratuita de resíduos eletrônicos em São Paulo e região, em um raio de até 200 km da capital, mediante avaliação de endereço e material",
     "custom_excerpt": "A Ecobraz busca seus eletrônicos parados em casa, sem custo, em São Paulo e região — com dia combinado e comprovante do que saiu. Gratuidade confirmada na avaliação.",
-    "meta_title": "Coleta gratuita de lixo eletrônico | Ecobraz",
+    "meta_title": "Coleta e descarte de lixo eletrônico em São Paulo | Ecobraz",
     "meta_description": "TV velha, computador parado, geladeira que já era? A Ecobraz coleta na sua casa, sem custo, em São Paulo e região — com comprovante. Agende em 1 minuto.",
     "hub": {
       "title": "Como funciona",
       "href": "/como-funciona/"
     },
     "hero": {
-      "eyebrow": "Residências · Grande São Paulo · Sem custo",
-      "sub": "Aquela TV velha, o computador parado, a geladeira que já era: a Ecobraz busca na sua casa, sem custo, e dá o destino certo — com direito a comprovante. É só contar o que você tem e onde você está.",
+      "eyebrow": "Residências · São Paulo e região · Sem custo",
+      "sub": "Não sabe onde descartar lixo eletrônico em São Paulo? TV velha, computador parado, geladeira que já era: a Ecobraz faz a coleta na sua casa, sem custo, e cuida do descarte de eletrônicos e eletrodomésticos com comprovante. É só contar o que você tem e onde você está.",
       "cta": "Agendar coleta gratuita",
       "band": [
         {
@@ -3651,7 +3651,7 @@
       "after": {
         "title": "Coleta da Ecobraz",
         "items": [
-          "Sem custo para residências na Grande SP",
+          "Sem custo para residências em São Paulo e região",
           "Dia combinado com você",
           "Destinação documentada desde 2011",
           "Comprovante do que foi retirado",
@@ -3666,7 +3666,7 @@
         {
           "icon": "shield",
           "title": "Sem custo",
-          "text": "Coleta residencial gratuita na Grande SP, confirmada na avaliação."
+          "text": "Coleta residencial gratuita em São Paulo e região, confirmada na avaliação."
         },
         {
           "icon": "truck",
@@ -3700,11 +3700,11 @@
         "Pilhas domésticas avulsas (AA, AAA)",
         "Lâmpadas",
         "Toner e cartuchos",
-        "Móveis, entulho e itens não eletrônicos",
+        "Móveis, entulho e materiais não eletrônicos",
         "Resíduos químicos ou contaminados"
       ],
-      "conditions": "Antes de agendar, a equipe confirma com você: CEP, acesso (escada, elevador) e o que você tem para descartar. Em alguns casos, indicamos um ponto de entrega ou o envio pelos Correios — sempre confirmado antes.",
-      "outNote": "Para os itens que não buscamos, indicamos os canais oficiais de logística reversa dos fabricantes.",
+      "conditions": "A coleta gratuita atende São Paulo e região, em um raio de até 200 km da capital, a partir de 20 kg. Antes de agendar, a equipe confirma com você: CEP, acesso (escada, elevador) e o que você tem para descartar.",
+      "outNote": "Para os materiais que não buscamos, indicamos os canais oficiais de logística reversa dos fabricantes.",
       "sub": "A gente fala tudo antes: o que buscamos, o que não buscamos — e confirma os detalhes com você antes de ir."
     },
     "stepsTitle": "Como funciona, em 3 passos",
@@ -3762,10 +3762,6 @@
           "texto": "Acabaram de retirar. Todo processo perfeito com a promessa! Sem burocracia, gratuito, vieram em menos de 10 dias, atendimento do início ao fim muito bom! Parabéns! Por mais organizações e empresas assim!"
         },
         {
-          "autor": "Michelle Lopes",
-          "texto": "Entrei em contato com a Ecobraz e fui prontamente atendida! Fui até o correio e despachei 2 caixas com muitos equipamentos que eu juntava a anos , não tive custo algum! Eles foram muito atenciosos e gentis no atendimento! Eu super recomendo!"
-        },
-        {
           "autor": "Alexandre Viana",
           "texto": "No geral é uma ótima empresa. Atendimento é muito bom e rápido, sem contar que todo o processo ocorreu de forma tranquila e sem problemas. Recomendo para que esteja considerando entrar em contato para a doação de eletrônicos que não funcionam mais."
         }
@@ -3775,12 +3771,28 @@
     "faqTitle": "Perguntas de quem vai descartar de casa",
     "faq": [
       {
-        "q": "É grátis mesmo?",
-        "a": "Sim — para residências em São Paulo e região, com confirmação na avaliação do CEP, do material, do volume e do acesso. E se o seu caso não puder ser gratuito, avisamos antes, com o valor — nada de surpresa na porta."
+        "q": "Onde descartar lixo eletrônico em São Paulo?",
+        "a": "A Ecobraz faz a coleta na sua casa, com frota própria, em São Paulo e região, em um raio de até 200 km da capital. A coleta é sem custo a partir de 20 kg, com a gratuidade confirmada na avaliação. A cada coleta é emitido o CDF (Certificado de Destinação Final)."
       },
       {
-        "q": "Moro fora da Grande São Paulo. Tem jeito?",
-        "a": "Descreva o que você tem e a sua cidade: a equipe avalia e responde. Em alguns casos há a possibilidade de envio pelos Correios ou de um ponto de entrega — sempre com agendamento e confirmação da equipe antes, conforme o material e a embalagem."
+        "q": "Como pedir a coleta de lixo eletrônico em casa?",
+        "a": "Conte o que você tem e onde você está: no pedido desta página, pelo telefone (11) 4329-2001 ou pelo WhatsApp +55 11 91272-8412. A equipe faz uma avaliação prévia por foto e quantidade antes da coleta."
+      },
+      {
+        "q": "É grátis mesmo?",
+        "a": "Sim — para residências em São Paulo e região, em um raio de até 200 km da capital, a partir de 20 kg, com confirmação na avaliação do CEP, do material, do volume e do acesso. E se o seu caso não puder ser gratuito, avisamos antes, com o valor — nada de surpresa na porta."
+      },
+      {
+        "q": "Moro fora da capital. A coleta atende a minha cidade?",
+        "a": "A coleta com frota própria atende até 200 km de São Paulo capital. Dentro desse raio, é sem custo a partir de 20 kg, com a gratuidade confirmada na avaliação. Fora do raio, a equipe avalia caso a caso, com frete por cotação."
+      },
+      {
+        "q": "Como funciona o descarte de eletrônicos?",
+        "a": "Você informa o que tem e a equipe faz uma avaliação prévia por foto e quantidade. A coleta é feita com frota própria em um raio de até 200 km de São Paulo capital e, a cada coleta, é emitido o CDF (Certificado de Destinação Final). O acesso ao Portal Ecobraz é grátis e sem contrato."
+      },
+      {
+        "q": "Vocês fazem o descarte de eletrodomésticos?",
+        "a": "Sim. A coleta atende equipamentos obsoletos ou danificados, eletrônicos e eletrodomésticos, como TV, computador e geladeira. Não coletamos pilhas, lâmpadas, cartuchos de tinta nem toner, e não compramos material."
       },
       {
         "q": "Vocês sobem no apartamento?",
@@ -3814,7 +3826,7 @@
         "title": "Pontos de coleta",
         "href": "/pontos-de-coleta/",
         "icon": "box",
-        "text": "Prefere levar? Veja onde entregar seus eletrônicos."
+        "text": "Consulte a modalidade disponível para o seu material e a sua região."
       },
       {
         "title": "Descarte de geladeira velha",
