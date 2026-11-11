@@ -533,7 +533,7 @@
         {
           "icon": "shield",
           "title": "15 anos de operação",
-          "text": "Associação fundada em 2011, com reconhecimento em plataformas da UE e da ONU — escopo declarado na página de evidências."
+          "text": "Associação fundada em 2011, com registros públicos em plataformas da UE e da ONU — não são chancela; escopo declarado na página de evidências."
         },
         {
           "icon": "lock",
@@ -805,7 +805,7 @@
         {
           "icon": "shield",
           "title": "15 anos de operação",
-          "text": "Associação fundada em 2011, com reconhecimento em plataformas da UE e da ONU — escopo declarado na página de evidências."
+          "text": "Associação fundada em 2011, com registros públicos em plataformas da UE e da ONU — não são chancela; escopo declarado na página de evidências."
         },
         {
           "icon": "file",
@@ -1077,7 +1077,7 @@
         {
           "icon": "shield",
           "title": "15 anos de operação",
-          "text": "Associação fundada em 2011, com reconhecimento em plataformas da UE e da ONU — escopo declarado na página de evidências."
+          "text": "Associação fundada em 2011, com registros públicos em plataformas da UE e da ONU — não são chancela; escopo declarado na página de evidências."
         },
         {
           "icon": "file",
@@ -1300,7 +1300,7 @@
         {
           "icon": "chart",
           "title": "15 anos de operação",
-          "text": "Associação fundada em 2011, com reconhecimento em plataformas da UE e da ONU — escopo declarado na página de evidências."
+          "text": "Associação fundada em 2011, com registros públicos em plataformas da UE e da ONU — não são chancela; escopo declarado na página de evidências."
         },
         {
           "icon": "truck",
@@ -1577,7 +1577,7 @@
         {
           "icon": "shield",
           "title": "15 anos de operação",
-          "text": "Associação fundada em 2011, com reconhecimento em plataformas da UE e da ONU — escopo declarado na página de evidências."
+          "text": "Associação fundada em 2011, com registros públicos em plataformas da UE e da ONU — não são chancela; escopo declarado na página de evidências."
         },
         {
           "icon": "chart",
@@ -1853,7 +1853,7 @@
         {
           "icon": "shield",
           "title": "15 anos de operação",
-          "text": "Associação fundada em 2011, com reconhecimento em plataformas da UE e da ONU — escopo declarado na página de evidências."
+          "text": "Associação fundada em 2011, com registros públicos em plataformas da UE e da ONU — não são chancela; escopo declarado na página de evidências."
         },
         {
           "icon": "file",
@@ -2489,7 +2489,7 @@
         {
           "icon": "shield",
           "title": "15 anos de operação",
-          "text": "Associação fundada em 2011, com reconhecimento em plataformas da UE e da ONU — escopo declarado na página de evidências."
+          "text": "Associação fundada em 2011, com registros públicos em plataformas da UE e da ONU — não são chancela; escopo declarado na página de evidências."
         },
         {
           "icon": "file",
@@ -2770,7 +2770,7 @@
         {
           "icon": "shield",
           "title": "15 anos de operação",
-          "text": "Associação fundada em 2011, com reconhecimento em plataformas da UE e da ONU — escopo declarado na página de evidências."
+          "text": "Associação fundada em 2011, com registros públicos em plataformas da UE e da ONU — não são chancela; escopo declarado na página de evidências."
         },
         {
           "icon": "file",
@@ -2862,8 +2862,8 @@
           "text": "357 avaliações públicas em set/2026 · em operação desde 2011"
         },
         {
-          "title": "Listada por ONU e UE",
-          "text": "atuação registrada em plataformas públicas internacionais"
+          "title": "Registros públicos",
+          "text": "base de sociedade civil da ONU e plataforma ECESP, da UE — não são chancela"
         },
         {
           "title": "Sem contrato",
@@ -2927,7 +2927,7 @@
       "after": {
         "title": "O que muda descartando com a Ecobraz",
         "items": [
-          "A prova nasce pronta na coleta: fotos, pesos, NF, MTR e certificado com QR",
+          "A prova nasce pronta na coleta: fotos, pesos e certificado com QR, mais NF e MTR quando aplicáveis",
           "Sua equipe para de caçar papel — os documentos ficam organizados no portal",
           "Dados exportáveis para alimentar o sistema de ESG que você já usa",
           "Certificado cuja autenticidade qualquer auditor confere em segundos, sem custo"
@@ -2936,7 +2936,7 @@
     },
     "gains": {
       "title": "Grátis para todo cliente — sem contrato, sem pegadinha",
-      "sub": "Não é amostra nem período de teste: é o pacote completo, liberado com o e-mail cadastrado. A Ecobraz se remunera com a destinação e valorização do material — por isso não cobra a coleta.",
+      "sub": "Não é amostra nem período de teste: é o pacote completo, liberado com o e-mail cadastrado. A coleta é sem custo em São Paulo e região, em raio de até 200 km da capital, a partir de 20 kg e com a gratuidade confirmada na avaliação técnica. Fora desse raio, o atendimento é caso a caso, com frete por cotação.",
       "items": [
         {
           "icon": "truck",
@@ -2962,20 +2962,19 @@
     },
     "scope": {
       "title": "O que é pago — e o que não retiramos",
-      "sub": "Sem letra miúda: o descarte documentado e o sistema são grátis. Serviços específicos são pagos, à parte, sempre com condições por escrito.",
+      "sub": "Sem letra miúda: o sistema é grátis para todo cliente, e a coleta é sem custo em São Paulo e região (até 200 km da capital, a partir de 20 kg). Fora desse raio, o frete é cotado antes. Serviços específicos são pagos, à parte, sempre com condições por escrito.",
       "inTitle": "Pagos, à parte — quando você precisar",
       "in": [
         "Coleta expressa em até 72h (R$ 55)",
         "Laudos específicos por material ou processo",
         "Sanitização de dados com laudo",
         "Equipamentos médicos e laboratoriais",
-        "Relatórios ESG prontos",
         "Programa Adote um Bairro"
       ],
-      "conditions": "Nenhum desses serviços é obrigatório — o descarte documentado, o certificado com QR e o portal continuam grátis com ou sem eles. Precisa de uma retirada avulsa? Também fazemos, sem contrato.",
+      "conditions": "Nenhum desses serviços é obrigatório — as condições da coleta, o certificado com QR e o portal não mudam com ou sem eles. Precisa de uma retirada avulsa? Também fazemos, sem contrato.",
       "outTitle": "Não retiramos",
       "out": [
-        "Pilhas domésticas avulsas, toner e lâmpadas",
+        "Pilhas domésticas avulsas, toner, cartuchos e lâmpadas",
         "Resíduos químicos, biológicos ou radioativos",
         "Créditos, selos ou compensações não lastreados",
         "Resultado de auditoria de terceiros — a documentação sai pronta para ela; quem audita é o auditor"
@@ -2999,7 +2998,7 @@
       },
       {
         "title": "A prova no seu portal",
-        "text": "NF, MTR, CDF com QR e histórico no perfil da sua empresa — acumulando a cada coleta."
+        "text": "CDF com QR e histórico no perfil da sua empresa, com NF e MTR quando aplicáveis — acumulando a cada coleta."
       }
     ],
     "evidenceTitle": "O que a sua auditoria vai receber",
@@ -3021,7 +3020,7 @@
         "text": "A série de dados que o seu ESG usa, exportável quando você quiser — a prova é sua."
       }
     ],
-    "authority": "Associação sem fins lucrativos em operação desde 2011, com nota 4,9 em 357 avaliações públicas no Google (set/2026) e atuação listada em plataformas públicas da ONU e da União Europeia. Cada alegação do site tem fonte, data e escopo declarados na página de evidências.",
+    "authority": "Associação sem fins lucrativos em operação desde 2011, com nota 4,9 em 357 avaliações públicas no Google (set/2026). Mantém perfil público na base de sociedade civil das Nações Unidas e tem o programa Adote um Bairro publicado como boa prática na plataforma europeia ECESP — registros públicos, não chancela. Cada alegação do site tem fonte, data e escopo declarados na página de evidências.",
     "faqTitle": "O que diretores e gestores perguntam",
     "faq": [
       {
@@ -3030,7 +3029,7 @@
       },
       {
         "q": "O que é pago?",
-        "a": "O descarte documentado, o certificado com QR e o portal são grátis. São pagos, à parte e sempre com condições por escrito: coleta expressa em até 72h (R$ 55), laudos específicos, sanitização de dados com laudo, equipamentos médicos e laboratoriais, relatórios ESG prontos e o programa Adote um Bairro. Nenhum deles é obrigatório."
+        "a": "O certificado com QR e o portal são grátis para todo cliente. A coleta é sem custo em São Paulo e região, em raio de até 200 km da capital, a partir de 20 kg; fora desse raio, o frete é cotado antes. São pagos, à parte e sempre com condições por escrito: coleta expressa em até 72h (R$ 55), laudos específicos, sanitização de dados com laudo, equipamentos médicos e laboratoriais e o programa Adote um Bairro. Nenhum deles é obrigatório."
       },
       {
         "q": "Qual é o prazo da coleta?",
@@ -3038,7 +3037,7 @@
       },
       {
         "q": "O que vocês não retiram?",
-        "a": "Pilhas domésticas avulsas, toner, lâmpadas e resíduos químicos, biológicos ou radioativos. A lista fica visível antes do agendamento — escopo declarado reduz retrabalho e surpresa."
+        "a": "Pilhas domésticas avulsas, toner, cartuchos, lâmpadas e resíduos químicos, biológicos ou radioativos. A lista fica visível antes do agendamento — escopo declarado reduz retrabalho e surpresa."
       },
       {
         "q": "Como funciona a demonstração?",
@@ -3117,7 +3116,7 @@
     },
     "hero": {
       "eyebrow": "Grátis para todo cliente · Sem contrato · Inclusive pessoa física",
-      "sub": "Três coisas que o sistema resolve na sua mesa: um certificado cuja autenticidade qualquer auditor confere em 5 segundos apontando a câmera; o caminho do resíduo rastreado da doca ao destino licenciado; e a documentação organizada que a diretoria encontra sozinha.",
+      "sub": "Três coisas que o sistema resolve na sua mesa: um certificado cuja autenticidade qualquer auditor confere em 5 segundos apontando a câmera; o caminho do resíduo rastreado da doca ao destino final; e a documentação organizada que a diretoria encontra sozinha.",
       "cta": "Agendar demonstração",
       "band": [
         {
@@ -3126,7 +3125,7 @@
         },
         {
           "title": "Da doca ao destino",
-          "text": "pesagem na entrada e na saída, amarrada ao destino licenciado"
+          "text": "pesagem na entrada e na saída, amarrada ao destino final"
         },
         {
           "title": "Já é cliente? Entre no portal",
@@ -3159,9 +3158,9 @@
         "title": "Com o Portal Ecobraz",
         "items": [
           "Certificado validado em segundos, pela câmera, no próprio sistema",
-          "Caminho rastreado da doca ao destino: pesado na entrada e na saída, amarrado ao destino licenciado",
-          "NF, MTR e CDF organizados por coleta, no perfil da empresa",
-          "Painel executivo com volumes, pendências e licenças — a diretoria vê sozinha"
+          "Caminho rastreado da doca ao destino: pesado na entrada e na saída, amarrado ao destino final",
+          "CDF de cada coleta, mais NF e MTR quando aplicáveis, organizados no perfil da empresa",
+          "Painel executivo com volumes e pendências — a diretoria vê sozinha"
         ]
       }
     },
@@ -3174,11 +3173,11 @@
       },
       {
         "title": "2 · Rastreio da doca ao destino",
-        "text": "Pesagem de entrada e de saída, triagem por material e amarração de cada etapa até o destino licenciado."
+        "text": "Pesagem de entrada e de saída, triagem por material e amarração de cada etapa até o destino final."
       },
       {
         "title": "3 · Documentos no seu perfil",
-        "text": "NF, MTR e CDF com QR, organizados por coleta, no CNPJ da sua empresa — ou no seu e-mail, se você é pessoa física."
+        "text": "CDF com QR de cada coleta, no CNPJ da sua empresa — ou no seu e-mail, se você é pessoa física. Para empresas, NF e MTR quando aplicáveis."
       },
       {
         "title": "4 · Decisão com dado, não com pasta",
@@ -3192,10 +3191,10 @@
       "in": [
         "Portal completo para todo cliente — inclusive pessoa física",
         "Login com o e-mail cadastrado: sem contrato, sem mensalidade",
-        "NF, MTR, CDF com QR, fotos e pesos por coleta",
+        "CDF com QR, fotos e pesos por coleta; para empresas, NF e MTR quando aplicáveis",
         "Histórico completo e exportação dos seus dados — a prova é sua"
       ],
-      "conditions": "O acesso é liberado para quem descarta com a Ecobraz. Serviços específicos (laudos, sanitização de dados com laudo, relatórios ESG prontos) são contratados à parte, com condições por escrito.",
+      "conditions": "O acesso é liberado para quem descarta com a Ecobraz. Serviços específicos (laudos e sanitização de dados com laudo) são contratados à parte, com condições por escrito.",
       "outTitle": "O que não prometemos",
       "out": [
         "Venda de software — não existe licença para comprar; o portal acompanha o descarte",
@@ -3208,11 +3207,11 @@
     "evidence": [
       {
         "title": "CDF com QR antifraude",
-        "text": "Emitido após conferência da engenharia ambiental, assinado por responsável técnico e validável por qualquer pessoa, em segundos."
+        "text": "Emitido a cada coleta, assinado por responsável técnico e validável por qualquer pessoa, em segundos."
       },
       {
         "title": "Nota Fiscal e MTR",
-        "text": "O rastro fiscal e de transporte de cada coleta, amarrado à ordem de serviço que o gerou."
+        "text": "Para empresas, quando aplicáveis: o rastro fiscal e de transporte da coleta, amarrado à ordem de serviço que o gerou."
       },
       {
         "title": "Fotos e pesos",
@@ -3223,7 +3222,7 @@
         "text": "Volumes e documentos por período, prontos para o seu relatório — os dados são seus."
       }
     ],
-    "authority": "Associação sem fins lucrativos em operação desde 2011, com nota 4,9 em 357 avaliações públicas no Google (set/2026) e atuação listada em plataformas públicas da ONU e da União Europeia. Cada alegação tem fonte, data e escopo declarados na página de evidências.",
+    "authority": "Associação sem fins lucrativos em operação desde 2011, com nota 4,9 em 357 avaliações públicas no Google (set/2026). Mantém perfil público na base de sociedade civil das Nações Unidas e tem o programa Adote um Bairro publicado como boa prática na plataforma europeia ECESP — registros públicos, não chancela. Cada alegação tem fonte, data e escopo declarados na página de evidências.",
     "depoimentos": {
       "titulo": "Quem já descarta com a Ecobraz",
       "nota": "4,9",
@@ -3249,7 +3248,7 @@
     "faq": [
       {
         "q": "O portal é pago?",
-        "a": "Não. É grátis para todo cliente que descarta com a Ecobraz — inclusive pessoa física. A Ecobraz se remunera pela destinação e valorização do material, não pela venda de software."
+        "a": "Não. É grátis para todo cliente que descarta com a Ecobraz — inclusive pessoa física. Não existe venda de software: o portal acompanha o descarte."
       },
       {
         "q": "Preciso assinar contrato para usar?",
@@ -3311,7 +3310,7 @@
           "alt": "Certificado de Destinação Final com selo de validação verificável por QR",
           "eyebrow": "2 · Certificado com QR",
           "title": "O documento cuja autenticidade se confere em 5 segundos",
-          "text": "Aponte a câmera para o QR e o próprio sistema confirma a autenticidade — emitido depois da conferência da engenharia ambiental.",
+          "text": "Aponte a câmera para o QR e o próprio sistema confirma a autenticidade do certificado, emitido a cada coleta.",
           "points": [
             "Assinado por responsável técnico",
             "Validação antifraude no próprio sistema",
@@ -4266,7 +4265,7 @@
         "Máquinas e equipamentos — mediante avaliação"
       ],
       "out": [
-        "Não compramos material: a remuneração da Ecobraz vem da destinação e valorização do material — você recebe a coleta (sem custo na maioria dos casos) e a documentação",
+        "Não compramos material: você recebe a coleta (sem custo na maioria dos casos) e a documentação",
         "Pilhas domésticas avulsas, toner, lâmpadas e contaminados não entram",
         "Volumes muito pequenos ou acesso difícil podem ter custo — sempre informado antes, com o valor",
         "Equipamentos com dados: não são revendidos; tratamento formal com relatório é serviço à parte"
@@ -4355,7 +4354,7 @@
       },
       {
         "q": "Vocês pagam pelos meus equipamentos?",
-        "a": "Não — não compramos sucata. A remuneração da Ecobraz vem da destinação e valorização do material; o que a sua empresa recebe é a coleta (sem custo na maioria dos casos) e a documentação da destinação. Se a sua prioridade for vender os equipamentos, essa conta vale uma conversa: o comparativo está na página do contrato contínuo."
+        "a": "Não — não compramos sucata. O que a sua empresa recebe é a coleta (sem custo na maioria dos casos) e a documentação da destinação. Se a sua prioridade for vender os equipamentos, essa conta vale uma conversa: o comparativo está na página do contrato contínuo."
       },
       {
         "q": "Emitem MTR e CDF?",
