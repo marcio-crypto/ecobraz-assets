@@ -1,6 +1,7 @@
 # Acervo documental da Ecobraz — ficha de referência
 
-Atualizado em 12/08/2026, a partir dos documentos enviados pela Debora
+Atualizado em 11/11/2026 (CTF/IBAMA, a partir do certificado enviado pelo
+Marcelo). Base de 12/08/2026, a partir dos documentos enviados pela Debora
 (PDFs originais no Google Drive do Marcio — **fonte da verdade**; aqui fica
 só a ficha de consulta).
 
@@ -30,7 +31,7 @@ endereço/CEP em `institutional-pages.json`.
 
 | Documento | Número | Emissão | Validade | Situação |
 |---|---|---|---|---|
-| CTF/APP — IBAMA (Certificado de Regularidade) | Registro 5526493 | 10/06/2026 | **10/09/2026** | vigente, **renovar** |
+| CTF/APP — IBAMA (Certificado de Regularidade) | Registro 5526493 | 11/09/2026 | **11/12/2026** | vigente (consulta de 11/11/2026), **renovar até 11/12/2026** |
 | AVCB — Corpo de Bombeiros PM/SP | AVCB nº 752396 | 17/02/2025 | 27/01/2028 | vigente |
 | Estatuto + ATA (Registro Civil de PJ) | Registro nº 495.653 (1º RCPJ/SP) | 08/08/2024 | — | vigente |
 | Licença de funcionamento (Prefeitura SP) | Processo 6056.2026/0012266-3 | autuado 24/06/2026 | — | **em andamento** (protocolo) |
@@ -50,7 +51,8 @@ endereço/CEP em `institutional-pages.json`.
 
 ## Alertas de prazo
 
-- ⚠️ **CTF/IBAMA vence em 10/09/2026** — renovação no portal do IBAMA
+- ⚠️ **CTF/IBAMA vence em 11/12/2026** (certificado anterior: 10/06/2026 a
+  10/09/2026) — renovação no portal do IBAMA
   (o CR é gerado por consulta; exige relatório de atividades em dia).
 - Licença de funcionamento: protocolo de 24/06/2026 sem decisão registrada
   nos documentos enviados — acompanhar.
