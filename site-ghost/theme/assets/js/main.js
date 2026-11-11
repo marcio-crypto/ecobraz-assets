@@ -79,6 +79,8 @@
             if (typeof window.clarity === 'function') window.clarity('consent', state === 'granted');
             // E-goi (Connected Sites) só entra depois do aceite explícito.
             if (state === 'granted' && typeof window.ecbCarregaEgoi === 'function') window.ecbCarregaEgoi();
+            // Pixel de anúncios da OpenAI: mesma regra do E-goi.
+            if (state === 'granted' && typeof window.ecbCarregaOpenAIAds === 'function') window.ecbCarregaOpenAIAds();
             consentBar.hidden = true;
             track('consent_choice', {choice: state});
         };
