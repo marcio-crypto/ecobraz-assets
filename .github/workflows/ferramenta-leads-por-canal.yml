@@ -1,0 +1,39 @@
+name: Ferramenta — leads da Ecobraz por canal de origem (só contagem)
+
+# Conta os leads do cofre da Ecobraz por mês, canal de origem (busca orgânica,
+# chat de IA, busca paga, Perfil da Empresa no Google, social, e-mail,
+# indicação, direto, campanha) e perfil (empresa ou casa).
+#
+# Privacidade: este repositório é público e o log do Actions também é. Esta
+# ferramenta imprime SÓ contagens. Nunca imprime nome, e-mail, telefone,
+# empresa, endereço nem texto de lead. Só leitura: não altera nem apaga nada.
+#
+# Leads anteriores à mudança da origem (11/2026) aparecem como "sem registro".
+
+on:
+  workflow_dispatch:
+    inputs:
+      meses:
+        description: 'Meses a contar, AAAA-MM, separados por vírgula'
+        required: true
+        default: '2026-11'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  contar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      NS: 5b56276238f8492fb78d7a4d7d215f85
+      MESES: ${{ inputs.meses }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Teste da contagem (sem rede)
+        run: python3 site-ghost/scripts/leads-por-canal.py --selftest
+      - name: Contar leads por mês, canal e perfil (sem conteúdo)
+        run: python3 site-ghost/scripts/leads-por-canal.py

@@ -29,7 +29,7 @@ export default {
     if (url.pathname === '/health') {
       let cofre = null;
       try { if (env.LEADS_COFRE) cofre = (await env.LEADS_COFRE.list({limit:1000})).keys.length; } catch {}
-      return json({ok:true, service:'ecobraz-coletas', version:10, destino:'portal', ploomes:'desativado', form:'adaptativo', leads_no_cofre:cofre}, 200, cors);
+      return json({ok:true, service:'ecobraz-coletas', version:11, destino:'portal', ploomes:'desativado', form:'adaptativo', leads_no_cofre:cofre}, 200, cors);
     }
     if (url.pathname !== '/api/coletas' || request.method !== 'POST') return json({ok:false, error:'not_found'}, 404, cors);
     if (!allowed.has(origin)) return json({ok:false, error:'origin_not_allowed'}, 403, cors);
@@ -93,7 +93,28 @@ function validate(v) {
 }
 function normalize(v, request) {
   const clean=(x,max=500)=>String(x||'').trim().slice(0,max);
-  return {profile:clean(v.profile),name:clean(v.name,200),company:clean(v.company,200),email:clean(v.email,320).toLowerCase(),phone:clean(v.phone,50),material_category:clean(v.material_category,200),volume:clean(v.volume,100),material_description:clean(v.material_description,4000),postal_code:clean(v.postal_code,20),city:clean(v.city,150),state:clean(v.state,20),documentation:clean(v.documentation,250),urgency:clean(v.urgency,100),page_url:clean(v.page_url,1000),source:'website',utm_source:clean(v.utm_source,200),utm_medium:clean(v.utm_medium,200),utm_campaign:clean(v.utm_campaign,200),utm_content:clean(v.utm_content,200),utm_term:clean(v.utm_term,200),marketing_consent:v.marketing_consent==='yes',submitted_at:new Date().toISOString(),country:request.cf?.country || ''};
+  return {profile:clean(v.profile),name:clean(v.name,200),company:clean(v.company,200),email:clean(v.email,320).toLowerCase(),phone:clean(v.phone,50),material_category:clean(v.material_category,200),volume:clean(v.volume,100),material_description:clean(v.material_description,4000),postal_code:clean(v.postal_code,20),city:clean(v.city,150),state:clean(v.state,20),documentation:clean(v.documentation,250),urgency:clean(v.urgency,100),page_url:clean(v.page_url,1000),source:'website',utm_source:clean(v.utm_source,200),utm_medium:clean(v.utm_medium,200),utm_campaign:clean(v.utm_campaign,200),utm_content:clean(v.utm_content,200),utm_term:clean(v.utm_term,200),...origemDoLead(v, clean),marketing_consent:v.marketing_consent==='yes',submitted_at:new Date().toISOString(),country:request.cf?.country || ''};
+}
+// Origem do lead (decisão do Marcio, 11/11/2026): canal do primeiro toque da
+// sessão, domínio de quem indicou e caminho de entrada. Nenhum dado pessoal.
+// Valores fora do esperado são descartados (o campo vem do navegador).
+const CANAIS = {busca_organica:'organic', chat_ia:'ai', busca_paga:'cpc', perfil_google:'organic', social:'social', email:'email', indicacao:'referral', direto:'(none)', campanha:''};
+function origemDoLead(v, clean) {
+  const canal = Object.hasOwn(CANAIS, String(v.origin_channel || '')) ? String(v.origin_channel) : '';
+  const host = clean(v.origin_referrer, 120).toLowerCase().replace(/[^a-z0-9.\-]/g, '');
+  const caminho = clean(v.landing_path, 300).split('?')[0].split('#')[0];
+  return {origin_channel: canal, origin_referrer: host, landing_path: caminho.startsWith('/') ? caminho : ''};
+}
+// O portal já recebe utm_source e utm_medium. Quando a visita não veio de
+// campanha (UTM vazia), esses dois campos levam a origem derivada — assim o
+// escritório vê de onde o lead veio sem nenhuma mudança no portal.
+function comOrigemDerivada(lead) {
+  const {origin_channel, origin_referrer, landing_path, ...paraOPortal} = lead;
+  if (origin_channel && !paraOPortal.utm_source && !paraOPortal.utm_medium && CANAIS[origin_channel]) {
+    paraOPortal.utm_source = origin_referrer || (origin_channel === 'direto' ? '(direct)' : origin_channel);
+    paraOPortal.utm_medium = CANAIS[origin_channel];
+  }
+  return paraOPortal;
 }
 // Registra o lead na caixa de entrada do escritório, no sistema próprio (portal).
 // Servidor-a-servidor, autenticado pelo segredo compartilhado LEAD_INGEST_SECRET
@@ -105,7 +126,7 @@ async function sendToPortal(lead, env) {
   const r = await fetch(target, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-lead-secret': env.LEAD_INGEST_SECRET },
-    body: JSON.stringify(lead),
+    body: JSON.stringify(comOrigemDerivada(lead)),
   });
   const body = await r.text();
   if (!r.ok) throw new Error(`portal_${r.status}_${body.slice(0, 180)}`);

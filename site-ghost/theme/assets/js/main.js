@@ -11,6 +11,38 @@
     } catch (_) { /* armazenamento indisponível não deve quebrar a página */ }
     const storedUtm = (key) => { try { return sessionStorage.getItem(`ecb_${key}`) || ''; } catch (_) { return ''; } };
 
+    // Origem da visita (primeiro toque da sessão): só o domínio de quem indicou, o
+    // caminho de entrada e o canal. Sem dado pessoal. Viaja até o formulário de coleta
+    // para o lead chegar com o canal (busca, chat de IA, anúncio, social, direto).
+    const AI_HOSTS = /(^|\.)(chatgpt\.com|openai\.com|perplexity\.ai|claude\.ai|copilot\.microsoft\.com|gemini\.google\.com|notebooklm\.google\.com|meta\.ai|grok\.com|x\.ai|deepseek\.com|you\.com|phind\.com|mistral\.ai)$/;
+    const SEARCH_HOSTS = /(^|\.)(google\.[a-z.]+|bing\.com|duckduckgo\.com|yahoo\.com|ecosia\.org|brave\.com|yandex\.[a-z]+|baidu\.com|startpage\.com|qwant\.com)$/;
+    const SOCIAL_HOSTS = /(^|\.)(linkedin\.com|lnkd\.in|facebook\.com|instagram\.com|t\.co|x\.com|twitter\.com|youtube\.com|tiktok\.com|whatsapp\.com|wa\.me|wl\.co)$/;
+    const classifyOrigin = (refHost, qs) => {
+        const medium = (qs.get('utm_medium') || '').toLowerCase();
+        const source = (qs.get('utm_source') || '').toLowerCase();
+        const campaign = (qs.get('utm_campaign') || '').toLowerCase();
+        if (qs.get('gclid') || qs.get('gbraid') || qs.get('wbraid') || qs.get('msclkid') || /cpc|ppc|paid/.test(medium)) return 'busca_paga';
+        if (/gbp|google_business|perfil/.test(`${source} ${campaign}`)) return 'perfil_google';
+        if (medium === 'email' || /egoi|newsletter/.test(source)) return 'email';
+        if (source || medium || campaign) return 'campanha';
+        if (!refHost) return 'direto';
+        if (AI_HOSTS.test(refHost)) return 'chat_ia';
+        if (SEARCH_HOSTS.test(refHost)) return 'busca_organica';
+        if (SOCIAL_HOSTS.test(refHost)) return 'social';
+        return 'indicacao';
+    };
+    try {
+        if (!sessionStorage.getItem('ecb_origin_channel')) {
+            let refHost = '';
+            try { refHost = document.referrer ? new URL(document.referrer).hostname.replace(/^www\./, '').toLowerCase() : ''; } catch (_) { refHost = ''; }
+            if (refHost === window.location.hostname.replace(/^www\./, '')) refHost = '';
+            sessionStorage.setItem('ecb_origin_referrer', refHost);
+            sessionStorage.setItem('ecb_landing_path', window.location.pathname.slice(0, 300));
+            sessionStorage.setItem('ecb_origin_channel', classifyOrigin(refHost, landingParams));
+        }
+    } catch (_) { /* armazenamento indisponível não deve quebrar a página */ }
+    const storedOrigin = (key) => { try { return sessionStorage.getItem(`ecb_${key}`) || ''; } catch (_) { return ''; } };
+
     // Micro-conversões: WhatsApp, telefone, e-mail e todos os CTAs identificados.
     document.addEventListener('click', (event) => {
         const link = event.target.closest('a, button');
@@ -69,6 +101,7 @@
     const params = new URLSearchParams(window.location.search);
     form.querySelector('[data-page-url]').value = window.location.href;
     form.querySelectorAll('[data-utm]').forEach((input) => { input.value = params.get(input.dataset.utm) || storedUtm(input.dataset.utm); });
+    form.querySelectorAll('[data-origin]').forEach((input) => { input.value = storedOrigin(input.dataset.origin); });
 
     // form_start_coleta: dispara uma única vez, na primeira interação real com o formulário.
     let formStarted = false;
