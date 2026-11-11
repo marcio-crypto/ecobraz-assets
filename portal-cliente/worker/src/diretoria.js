@@ -201,6 +201,10 @@ export function paginaPainelDiretoria(diretor, d, x) {
     <div><div style="font-size:14px;font-weight:800">📣 Campanhas de WhatsApp</div><div style="font-size:12px;color:#9FC6C1;margin-top:2px">Divulgação e oferta de coleta para a base — canal oficial, com template aprovado e opt-out.</div></div>
     <span style="font-size:12px;font-weight:800;color:#92C430">Abrir →</span>
   </a>
+  <a href="/diretoria/verificar-adote" style="display:flex;justify-content:space-between;align-items:center;gap:12px;text-decoration:none;background:#062f36;border:1px solid #12525d;border-radius:14px;padding:14px 16px;margin-bottom:12px;color:#eaf5f3">
+    <div><div style="font-size:14px;font-weight:800">🔎 Verificação — compra pública do Adote</div><div style="font-size:12px;color:#9FC6C1;margin-top:2px">Confere se alguma ficha criada pela compra pública do Adote deu acesso indevido ao portal. Só leitura.</div></div>
+    <span style="font-size:12px;font-weight:800;color:#92C430">Abrir →</span>
+  </a>
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" class="g2">
     ${trio('📥 Leads que chegam', leads.dia, leads.semana, leads.mes, leads.dia ? '#0B7A66' : TEAL)}${spark(leads.serie)}
