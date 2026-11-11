@@ -4145,7 +4145,7 @@
     },
     "hero": {
       "eyebrow": "PMEs · Descarte eventual · Sem fidelidade",
-      "sub": "Juntou equipamento parado no depósito e só quer resolver — sem assinar nada? A coleta avulsa é isso: você descreve o descarte, recebe as condições por escrito antes de agendar (em São Paulo e região, até 200 km da capital, muitos materiais com valor de reciclagem saem sem custo) e fica com o comprovante da destinação.",
+      "sub": "Juntou equipamento parado no depósito e só quer resolver — sem assinar nada? A coleta avulsa é isso: você descreve o descarte, recebe as condições por escrito antes de agendar (em São Paulo e região, até 200 km da capital, muitos materiais saem sem custo) e fica com o comprovante da destinação.",
       "cta": "Pedir avaliação do descarte",
       "band": [
         {
@@ -4221,7 +4221,7 @@
         "items": [
           "Condições por escrito antes de agendar",
           "O que foi combinado no escopo sai inteiro — não garimpamos só o que vale",
-          "Sem custo na maioria dos materiais com valor de reciclagem",
+          "Sem custo na maioria dos casos",
           "Comprovante da destinação no final",
           "Aparelhos com memória não são revendidos com dados"
         ]
@@ -4350,7 +4350,7 @@
     "faq": [
       {
         "q": "Quanto custa?",
-        "a": "Em São Paulo e região (até 200 km da capital), muitos materiais com valor de reciclagem (informática, placas, cabos) saem sem custo — a avaliação confirma. Fora desse raio, frete por cotação. Quando há custo (volume muito pequeno, acesso difícil, material sem valor de recuperação), dizemos antes, por escrito, com o valor. Você decide sabendo tudo."
+        "a": "Em São Paulo e região (até 200 km da capital), muitos materiais (informática, placas, cabos) saem sem custo — a avaliação confirma. Fora desse raio, frete por cotação. Quando há custo (volume muito pequeno, acesso difícil, material que exige tratamento especial), dizemos antes, por escrito, com o valor. Você decide sabendo tudo."
       },
       {
         "q": "Vocês pagam pelos meus equipamentos?",
