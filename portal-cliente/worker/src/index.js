@@ -339,6 +339,17 @@ export default {
           const clientes = await listarClientes(env);
           const resumo = clientes.find((c) => String(c.doc || '').replace(/\D/g, '') === cnpj);
           if (resumo) cliente = await lerCliente(env, resumo.id);
+          // SEGURANÇA — esta rota é PÚBLICA (sem login). Se o CNPJ informado já é de um
+          // cliente da base, os dados digitados aqui NÃO podem criar nem alterar o cadastro
+          // dele: antes, o e-mail do formulário era gravado como o e-mail da empresa na base
+          // e passava a ENTRAR NO PORTAL como ela — qualquer pessoa, sabendo um CNPJ, via os
+          // documentos do cliente. Agora a ficha nasce dos dados da PRÓPRIA base e o e-mail
+          // de quem compra fica só no pedido. Só CNPJ desconhecido cria cadastro novo com o
+          // que foi digitado. Se a base não responder, a compra falha (nunca "na dúvida, cria").
+          if (!cliente && env.DB_PLOOMES) {
+            const naBase = await env.DB_PLOOMES.prepare("SELECT ploomes_id FROM contatos WHERE tipo='PJ' AND REPLACE(REPLACE(REPLACE(REPLACE(documento,'.',''),'-',''),'/',''),' ','')=?1 ORDER BY ploomes_id LIMIT 1").bind(cnpj).first();
+            if (naBase) { cliente = await materializarClienteKV(env, 'p' + naBase.ploomes_id); if (!cliente) throw new Error('cliente_da_base_nao_materializou'); }
+          }
           if (!cliente) cliente = await salvarCliente(env, { tipo: 'PJ', razaoSocial, cnpj, email, telefone: String(b.telefone || '').trim(), endereco: { cidade: String(b.cidade || '').trim() }, origem: 'adote' });
         } catch (e) { console.error('adote_cliente_falhou', safeError(e)); return json({ ok: false, erro: 'Falha ao registrar o cliente.' }, 500); }
         const valor = preco.valor;
