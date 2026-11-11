@@ -153,7 +153,7 @@
         "title": "Desmobilização de ativos com venda em leilão",
         "href": "/desmobilizacao-de-ativos/",
         "icon": "shield",
-        "text": "Retirada sem custo, dados destruídos e venda em leilão em nome da Ecobraz."
+        "text": "Retirada sem custo em até 200 km de São Paulo, dados destruídos e venda em leilão em nome da Ecobraz."
       },
       {
         "title": "Sanitização e destruição de dados",
@@ -1891,7 +1891,7 @@
         "title": "Desmobilização de ativos com venda em leilão",
         "href": "/desmobilizacao-de-ativos/",
         "icon": "shield",
-        "text": "Retirada sem custo, dados destruídos e venda em leilão em nome da Ecobraz."
+        "text": "Retirada sem custo em até 200 km de São Paulo, dados destruídos e venda em leilão em nome da Ecobraz."
       },
       {
         "title": "Sanitização segura de dados",
@@ -1956,7 +1956,7 @@
             "title": "Descarte para empresas",
             "href": "/para-empresas/",
             "icon": "building",
-            "text": "O contrato contínuo: coletas programadas, sem custo de coleta, com prova em três padrões."
+            "text": "O contrato contínuo: coletas programadas, sem custo de coleta em São Paulo e região (até 200 km da capital), com prova em três padrões."
           },
           {
             "title": "Sistema de rastreabilidade",
@@ -3881,7 +3881,7 @@
       "band": [
         {
           "title": "Sem custo para o condomínio",
-          "text": "na maioria dos casos — confirmado na avaliação"
+          "text": "em São Paulo e região (até 200 km da capital), na maioria dos casos — confirmado na avaliação"
         },
         {
           "title": "Campanha com moradores",
@@ -3965,7 +3965,7 @@
         {
           "icon": "shield",
           "title": "Sem custo na maioria dos casos",
-          "text": "Confirmado na avaliação de volume, materiais e acesso — e se houver custo, dizemos antes, com o valor."
+          "text": "Em São Paulo e região (até 200 km da capital), confirmado na avaliação de volume, materiais e acesso — e se houver custo, dizemos antes, com o valor. Fora desse raio, frete por cotação."
         },
         {
           "icon": "truck",
@@ -4136,16 +4136,16 @@
     "title": "Coleta avulsa para empresas: sem contrato e sem mensalidade",
     "crumb": "Coleta avulsa",
     "serviceType": "Coleta pontual de resíduos eletrônicos corporativos, com avaliação prévia por escrito e comprovante de destinação",
-    "custom_excerpt": "Para a empresa que descarta de vez em quando: uma coleta com começo, meio e fim — condições por escrito antes de agendar, muitos materiais sem custo, e o comprovante da destinação no final. Sem contrato.",
+    "custom_excerpt": "Para a empresa que descarta de vez em quando: uma coleta com começo, meio e fim — condições por escrito antes de agendar, muitos materiais sem custo em São Paulo e região, e o comprovante da destinação no final. Sem contrato.",
     "meta_title": "Coleta avulsa de eletrônicos para empresas | Ecobraz",
-    "meta_description": "Empresa com descarte eventual? Coleta avulsa sem contrato: condições por escrito antes, muitos materiais sem custo, comprovante da destinação no final.",
+    "meta_description": "Empresa com descarte eventual? Coleta avulsa sem contrato: condições por escrito antes, muitos materiais sem custo em SP e região, comprovante no final.",
     "hub": {
       "title": "Soluções corporativas",
       "href": "/solucoes-corporativas/"
     },
     "hero": {
       "eyebrow": "PMEs · Descarte eventual · Sem fidelidade",
-      "sub": "Juntou equipamento parado no depósito e só quer resolver — sem assinar nada? A coleta avulsa é isso: você descreve o descarte, recebe as condições por escrito antes de agendar (muitos materiais com valor de reciclagem saem sem custo) e fica com o comprovante da destinação.",
+      "sub": "Juntou equipamento parado no depósito e só quer resolver — sem assinar nada? A coleta avulsa é isso: você descreve o descarte, recebe as condições por escrito antes de agendar (em São Paulo e região, até 200 km da capital, muitos materiais com valor de reciclagem saem sem custo) e fica com o comprovante da destinação.",
       "cta": "Pedir avaliação do descarte",
       "band": [
         {
@@ -4350,7 +4350,7 @@
     "faq": [
       {
         "q": "Quanto custa?",
-        "a": "Muitos materiais com valor de reciclagem (informática, placas, cabos) saem sem custo — a avaliação confirma. Quando há custo (volume muito pequeno, acesso difícil, material sem valor de recuperação), dizemos antes, por escrito, com o valor. Você decide sabendo tudo."
+        "a": "Em São Paulo e região (até 200 km da capital), muitos materiais com valor de reciclagem (informática, placas, cabos) saem sem custo — a avaliação confirma. Fora desse raio, frete por cotação. Quando há custo (volume muito pequeno, acesso difícil, material sem valor de recuperação), dizemos antes, por escrito, com o valor. Você decide sabendo tudo."
       },
       {
         "q": "Vocês pagam pelos meus equipamentos?",
