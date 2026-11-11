@@ -302,9 +302,148 @@ export function emailsDoCliente(cli) {
   if (cli.tipo === 'PJ') (cli.contatos || []).forEach((c) => add(c && c.email));
   return out;
 }
-export async function salvarCliente(env, rec) {
+// ---------------------------------------------------------------------------
+// ACESSO AO PORTAL — E-MAIL TROCADO OU REMOVIDO PELA EQUIPE DEIXA DE ENTRAR
+// (caso MK Inovação, 11/11). A Débora trocou o e-mail de um contato na ficha e o
+// e-mail ANTIGO continuou entrando no portal (e aparecendo lá). Causa: os contatos
+// de uma empresa moram em dois lugares — a ficha que a equipe edita (KV) e as
+// "pessoas vinculadas" migradas do Ploomes (D1). Salvar a ficha só espelhava a
+// linha da EMPRESA; a pessoa vinculada ficava com o e-mail velho para sempre, o
+// login aceita qualquer linha do D1, e a equipe não tinha como tirar esse acesso.
+//
+// Regra — SÓ por decisão EXPLÍCITA da equipe, nunca por dedução:
+//   1) ao SALVAR a ficha, o e-mail de contato tirado/trocado NAQUELA edição sai;
+//   2) pelo botão "Remover acesso" da ficha (e-mails da base antiga).
+// Abrir a ficha e o login NÃO alteram nada: há milhares de fichas carregadas em
+// lote na migração que podem estar MAIS VELHAS que a base — deduzir "troca" pela
+// diferença entre as duas poderia tirar o acesso de um cliente legítimo.
+// A decisão fica numa chave própria por CNPJ + e-mail (clirev:<cnpj>:<email>) que
+// o login consulta: vale também para linhas duplicadas da empresa na base e não
+// depende de regravar a ficha.
+// ---------------------------------------------------------------------------
+const emailLimpo = (e) => { const x = String(e || '').trim().toLowerCase(); return /^[^@\s,;]+@[^@\s,;]+\.[^@\s,;]+$/.test(x) ? x : ''; };
+// Um campo de e-mail pode trazer mais de um endereço ("a@x.com; b@x.com").
+const emailsDoCampo = (v) => { const out = []; for (const p of String(v || '').split(/[\s,;]+/)) { const e = emailLimpo(p); if (e && !out.includes(e)) out.push(e); } return out; };
+const nomeChave = (s) => limpar(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+const docSql = "REPLACE(REPLACE(REPLACE(REPLACE(documento,'.',''),'-',''),'/',''),' ','')";
+const chaveRev = (doc, em) => `clirev:${doc}:${em}`;
+// E-mails só dos CONTATOS da empresa (sem o e-mail "da empresa" do topo da ficha).
+export function emailsContatos(cli) {
+  const out = [];
+  if (cli && cli.tipo === 'PJ') for (const c of (cli.contatos || [])) for (const e of emailsDoCampo(c && c.email)) if (!out.includes(e)) out.push(e);
+  return out;
+}
+// A ficha (KV) de um cliente pelo CNPJ/CPF — MESMA regra de quem abre o "Editar"
+// (materializarClienteKV): o primeiro do índice com aquele documento.
+export async function fichaKVPorDoc(env, doc) {
+  const d = digits(doc);
+  if (!env.PORTAL_KV || d.length < 11) return null;
+  try { const hit = (await listarClientes(env)).find((c) => digits(c.doc) === d); return hit ? await lerCliente(env, hit.id) : null; } catch { return null; }
+}
+// O login pergunta: a equipe tirou o acesso deste e-mail ao portal deste cliente?
+// Falha de leitura = "não" (um soluço do KV não pode trancar todo mundo).
+export async function acessoRevogado(env, doc, email) {
+  const d = digits(doc); const em = emailLimpo(email);
+  if (!env.PORTAL_KV || d.length < 11 || !em) return false;
+  try { return !!(await env.PORTAL_KV.get(chaveRev(d, em))); } catch { return false; }
+}
+// Tira o acesso de UM e-mail ao portal de UMA empresa. Grava primeiro a decisão (é
+// o que o login consulta — se não gravar, nada mais é feito e quem chamou é avisado)
+// e depois tira esse e-mail das pessoas vinculadas da base antiga daquele CNPJ
+// (inclusive em linhas duplicadas da empresa). `para` = e-mail novo da mesma pessoa,
+// quando foi troca. NÃO regrava a ficha nem a linha da empresa.
+export async function revogarAcessoEmpresa(env, doc, email, { por = '', motivo = 'removido', para = '' } = {}) {
+  const d = digits(doc); const em = emailLimpo(email);
+  if (d.length !== 14) return { ok: false, motivo: 'Cadastre o CNPJ do cliente para poder remover acessos.' };
+  if (!em) return { ok: false, motivo: 'E-mail inválido.' };
+  if (!env.PORTAL_KV) return { ok: false, motivo: 'Armazenamento indisponível.' };
+  try { await env.PORTAL_KV.put(chaveRev(d, em), JSON.stringify({ email: em, em: agora(), por: String(por || ''), motivo: String(motivo || 'removido') })); }
+  catch { return { ok: false, motivo: 'Não consegui gravar agora — tente de novo em instantes.' }; }
+  let linhas = 0;
+  if (env.DB_PLOOMES) {
+    try {
+      const alvo = await env.DB_PLOOMES.prepare(`SELECT ploomes_id FROM contatos WHERE tipo='PF' AND email=?1 COLLATE NOCASE AND company_id IN (SELECT ploomes_id FROM contatos WHERE tipo='PJ' AND ${docSql}=?2) LIMIT 20`).bind(em, d).all();
+      for (const row of (alvo.results || [])) { await env.DB_PLOOMES.prepare('UPDATE contatos SET email=?2 WHERE ploomes_id=?1').bind(row.ploomes_id, emailLimpo(para)).run(); linhas++; }
+    } catch { /* a decisão já está gravada: o login já barra */ }
+  }
+  return { ok: true, linhas };
+}
+// Botão "Remover acesso" da ficha — para e-mails da base antiga que NÃO são contato
+// da ficha. E-mail que é contato da ficha se resolve no Editar.
+export async function removerAcessoPelaFicha(env, doc, email, por) {
+  const em = emailLimpo(email);
+  if (!em) return { ok: false, motivo: 'E-mail inválido.' };
+  const ficha = await fichaKVPorDoc(env, doc);
+  if (ficha && emailsContatos(ficha).includes(em)) return { ok: false, motivo: 'Este e-mail é de um contato da ficha — altere ou remova o contato em Editar.' };
+  return await revogarAcessoEmpresa(env, doc, em, { por, motivo: 'removido pela equipe' });
+}
+// O que o cartão "Acesso ao portal" da ficha mostra (SÓ LEITURA — não altera nada):
+//   daFicha   — e-mails da ficha (contatos + e-mail da empresa), quando há ficha;
+//   daBase    — e-mails que TAMBÉM entram por registros da base antiga (pessoa
+//               vinculada ou linha da empresa) e não estão escritos na ficha;
+//   revogados — acessos que a equipe removeu (trilha: quando, por quem, por quê).
+export async function acessosDaEmpresa(env, cli) {
+  const out = { doc: '', daFicha: null, contatos: [], emailEmpresa: '', daBase: [], revogados: [] };
+  if (!cli || cli.tipo !== 'PJ') return out;
+  const d = digits(cli.cnpj);
+  if (d.length !== 14) return out;
+  out.doc = d;
+  const ehFicha = !/^p\d+$/.test(String(cli.id || ''));
+  const ficha = ehFicha ? cli : await fichaKVPorDoc(env, d);
+  if (env.PORTAL_KV && typeof env.PORTAL_KV.list === 'function') {
+    try {
+      const l = await env.PORTAL_KV.list({ prefix: `clirev:${d}:`, limit: 30 });
+      for (const k of (l.keys || [])) { try { const v = await env.PORTAL_KV.get(k.name); if (v) out.revogados.push(JSON.parse(v)); } catch { /* segue */ } }
+    } catch { /* a trilha é informativa */ }
+  }
+  if (!ficha) return out;
+  const fora = new Set(out.revogados.map((r) => emailLimpo(r && r.email)).filter(Boolean));
+  out.daFicha = emailsDoCliente(ficha).filter((e) => !fora.has(e));
+  out.contatos = emailsContatos(ficha);
+  // e-mail do topo da ficha que não é de nenhum contato (PJ não tem campo para editá-lo)
+  { const emp = emailLimpo(ficha.email); if (emp && !out.contatos.includes(emp) && !fora.has(emp)) out.emailEmpresa = emp; }
+  if (!env.DB_PLOOMES) return out;
+  // "Está escrito na ficha" considera campo com mais de um endereço.
+  const escritos = new Set([...emailsContatos(ficha), ...emailsDoCampo(ficha.email)]);
+  try {
+    const r = await env.DB_PLOOMES.prepare(`SELECT tipo, nome, email FROM contatos WHERE COALESCE(email,'')<>'' AND ((tipo='PJ' AND ${docSql}=?1) OR (tipo='PF' AND company_id IN (SELECT ploomes_id FROM contatos WHERE tipo='PJ' AND ${docSql}=?1))) LIMIT 150`).bind(d).all();
+    for (const row of (r.results || [])) {
+      const e = emailLimpo(row.email); // o login casa o campo inteiro: só endereço único entra
+      if (!e || escritos.has(e) || fora.has(e) || out.daBase.some((x) => x.email === e)) continue;
+      out.daBase.push({ email: e, nome: row.tipo === 'PJ' ? '' : limpar(row.nome), origem: row.tipo === 'PJ' ? 'empresa' : 'pessoa' });
+    }
+  } catch { /* base indisponível: mostra só a ficha */ }
+  return out;
+}
+// O que saiu dos contatos entre o "antes" e o "depois" de UMA edição da ficha.
+// `para` = e-mail novo do contato de MESMO nome (foi troca, não remoção).
+function emailsQueSairam(anterior, rec) {
+  if (!anterior || !rec || rec.tipo !== 'PJ' || anterior.tipo !== 'PJ') return [];
+  const antes = emailsContatos(anterior); const depois = emailsContatos(rec);
+  const out = [];
+  for (const x of antes) {
+    if (depois.includes(x)) continue;
+    const dono = (anterior.contatos || []).find((c) => emailsDoCampo(c && c.email).includes(x));
+    const nk = dono ? nomeChave(dono.nome) : '';
+    let para = '';
+    if (nk) {
+      const mesmoNome = (rec.contatos || []).filter((c) => nomeChave(c && c.nome) === nk);
+      const novos = mesmoNome.length === 1 ? emailsDoCampo(mesmoNome[0].email).filter((e) => !antes.includes(e)) : [];
+      if (novos.length === 1) para = novos[0];
+    }
+    out.push({ email: x, para });
+  }
+  return out;
+}
+// `anterior` = a ficha como estava ANTES desta edição (só vem do "Salvar" da equipe):
+// é o que diz quais e-mails de contato foram tirados/trocados agora.
+export async function salvarCliente(env, rec, anterior) {
   rec.atualizadoEm = agora();
   if (!rec.id) { rec.id = (rec.tipo === 'PJ' ? 'emp_' : 'pf_') + (crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '').slice(0, 10) : Math.random().toString(36).slice(2, 12)); rec.criadoEm = rec.atualizadoEm; }
+  const sairam = emailsQueSairam(anterior, rec);
+  // O e-mail "da empresa" (topo da ficha) não tem campo no formulário de PJ: se era
+  // o e-mail que saiu, acompanha — senão seguiria abrindo o portal escondido.
+  for (const s of sairam) if (emailLimpo(rec.email) === s.email) rec.email = s.para || '';
   if (env.PORTAL_KV) {
     await env.PORTAL_KV.put(`cli:${rec.id}`, JSON.stringify(rec));
     const idx = await listarClientes(env);
@@ -322,6 +461,19 @@ export async function salvarCliente(env, rec) {
   }
   // Espelha na base D1 (a lista de Cadastro lê de lá) — casa por documento. Best-effort.
   try { const pid = await espelharClienteD1(env, rec); if (pid && rec.ploomesId !== pid && env.PORTAL_KV) { rec.ploomesId = pid; await env.PORTAL_KV.put(`cli:${rec.id}`, JSON.stringify(rec)); } } catch { /* não bloqueia o cadastro */ }
+  // Efetiva o que a equipe decidiu NESTA edição: o e-mail que saiu dos contatos deixa
+  // de entrar (decisão gravada + base antiga + índice de login) e o e-mail que ESTÁ
+  // nos contatos volta a valer, se algum dia tinha sido removido. Best-effort.
+  try {
+    const d = digits(rec.cnpj);
+    if (anterior && rec.tipo === 'PJ' && d.length === 14 && env.PORTAL_KV) {
+      for (const s of sairam) {
+        await revogarAcessoEmpresa(env, d, s.email, { por: rec.atualizadoPor || '', motivo: s.para ? 'alterado para ' + s.para : 'removido da ficha', para: s.para });
+        if (!emailsDoCliente(rec).includes(s.email) && (await env.PORTAL_KV.get(`climail:${s.email}`)) === rec.id) await env.PORTAL_KV.delete(`climail:${s.email}`);
+      }
+      for (const e of emailsContatos(rec)) { if (await env.PORTAL_KV.get(chaveRev(d, e))) await env.PORTAL_KV.delete(chaveRev(d, e)); }
+    }
+  } catch { /* não bloqueia o cadastro */ }
   // Marketing: manda os e-mails do cliente para a lista do e-Goi (best-effort).
   try { await sincronizarClienteEgoi(env, rec); } catch { /* nunca bloqueia o cadastro */ }
   return rec;
@@ -837,21 +989,46 @@ export async function arquivosDoCliente(env, cli) {
   } catch { return []; }
 }
 
-export function paginaClienteDetalhe(user, cli, arquivos, negocios, segmento, cardTarefas) {
+export function paginaClienteDetalhe(user, cli, arquivos, negocios, segmento, cardTarefas, acessos) {
   const negs = negocios || [];
   // 🔑 Acesso ao portal (caso ROCKY, 23/09): a equipe TESTA na hora se um e-mail é
   // reconhecido pelo login (mesmo caminho do login de verdade) e ENVIA o link de
   // acesso dali mesmo — sem depender de o cliente pedir e sem adivinhar o problema.
-  const emailsAcesso = emailsDoCliente(cli);
-  const linhaEmail = (em) => `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;border:1px solid #EEF1F0;border-radius:10px;padding:8px 12px;margin-bottom:7px">
-      <span style="font-size:13px;font-weight:600;color:#10262B;word-break:break-all;flex:1;min-width:180px">${esc(em)}</span>
-      <button class="btn btn-g" style="padding:7px 12px;font-size:12px" onclick="acTestar('${esc(em)}')">Testar</button>
-      <button class="btn btn-p" style="padding:7px 12px;font-size:12px" onclick="acEnviar('${esc(em)}')">✉️ Enviar link</button>
+  // Caso MK (11/11): o cartão também mostra os e-mails que entram por registros da
+  // BASE ANTIGA (pessoa vinculada do Ploomes / linha da empresa) e não estão escritos
+  // na ficha, com o botão "Remover acesso". `acessos` vem de acessosDaEmpresa — só
+  // leitura: abrir a ficha nunca altera acesso de ninguém.
+  const ac = acessos || {};
+  const temFicha = Array.isArray(ac.daFicha);
+  const emailsAcesso = temFicha ? ac.daFicha : emailsDoCliente(cli);
+  const podeRemover = temFicha && !!ac.doc;
+  // Argumento de função dentro de onclick="…": JSON + escape de HTML (um e-mail com
+  // apóstrofo ou aspas não quebra o botão nem injeta código).
+  const arg = (v) => esc(JSON.stringify(String(v == null ? '' : v)));
+  const btnRemover = (em) => `<button class="btn btn-g" style="padding:7px 12px;font-size:12px;color:#B23A2E;border-color:#E8C9BE" onclick="acRevogar(${arg(em)})">Remover acesso</button>`;
+  const linhaEmail = (em) => {
+    const soDaEmpresa = podeRemover && !!ac.emailEmpresa && em === ac.emailEmpresa;
+    return `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;border:1px solid #EEF1F0;border-radius:10px;padding:8px 12px;margin-bottom:7px">
+      <span style="font-size:13px;font-weight:600;color:#10262B;word-break:break-all;flex:1;min-width:180px">${esc(em)}${soDaEmpresa ? ' <span style="font-size:10.5px;font-weight:700;color:#7c8a87">· e-mail da empresa (não é de um contato)</span>' : ''}</span>
+      <button class="btn btn-g" style="padding:7px 12px;font-size:12px" onclick="acTestar(${arg(em)})">Testar</button>
+      <button class="btn btn-p" style="padding:7px 12px;font-size:12px" onclick="acEnviar(${arg(em)})">✉️ Enviar link</button>
+      ${soDaEmpresa ? btnRemover(em) : ''}
     </div>`;
+  };
+  const daBase = podeRemover ? (ac.daBase || []) : [];
+  const blocoBase = daBase.length ? `<div style="background:#F7FAF9;border:1px solid #DDE7E4;border-radius:10px;padding:11px 13px;margin:4px 0 9px">
+      <div style="font-size:12px;font-weight:800;color:#28413f;margin-bottom:3px">Também entram no portal — registros da base antiga</div>
+      <div style="font-size:11.5px;color:#4F6469;line-height:1.5;margin-bottom:8px">Estes e-mails vieram da base antiga (Ploomes) e <b>não estão escritos nesta ficha</b>, mas ainda abrem o portal deste cliente. Se a pessoa não é mais do cliente, clique em <b>Remover acesso</b>. Se ainda é, adicione como contato em Editar.</div>
+      ${daBase.map((p) => `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#fff;border:1px solid #E4EBE9;border-radius:9px;padding:7px 11px;margin-bottom:6px"><span style="font-size:13px;font-weight:600;color:#10262B;word-break:break-all;flex:1;min-width:180px">${esc(p.email)} <span style="font-weight:600;color:#7c8a87">· ${p.origem === 'empresa' ? 'e-mail geral da empresa' : esc(p.nome || 'pessoa da base antiga')}</span></span><button class="btn btn-g" style="padding:7px 12px;font-size:12px" onclick="acTestar(${arg(p.email)})">Testar</button>${btnRemover(p.email)}</div>`).join('')}
+    </div>` : '';
+  const jaFora = (ac.revogados || []).filter((r) => r && r.email).slice(0, 8);
+  const blocoFora = jaFora.length ? `<div style="font-size:11.5px;color:#7c8a87;line-height:1.6;margin:2px 0 8px">🚫 Acessos removidos (não entram mais): ${jaFora.map((r) => `<b>${esc(r.email)}</b> (${[r.em ? dataBR(r.em) : '', r.motivo || '', r.por ? 'por ' + r.por : ''].filter(Boolean).map(esc).join(' · ')})`).join(' · ')}</div>` : '';
   const cardAcesso = `<div class="card" style="margin-top:14px">
     <div class="sec" style="margin-top:0">🔑 Acesso ao portal</div>
-    <div style="font-size:12.5px;color:#4F6469;line-height:1.6;margin:-2px 0 10px">O cliente entra em <b>sistema.ecobraz.org</b> com o e-mail dele (link por e-mail ou Google). <b>Testar</b> confere na hora se o e-mail é reconhecido pelo login; <b>Enviar link</b> manda o e-mail de acesso agora, sem esperar o cliente pedir.</div>
+    <div style="font-size:12.5px;color:#4F6469;line-height:1.6;margin:-2px 0 10px">O cliente entra em <b>sistema.ecobraz.org</b> com o e-mail dele (link por e-mail ou Google). <b>Testar</b> confere na hora se o e-mail é reconhecido pelo login; <b>Enviar link</b> manda o e-mail de acesso agora, sem esperar o cliente pedir. <b>E-mail alterado ou removido nos contatos deixa de entrar.</b></div>
     ${emailsAcesso.length ? emailsAcesso.map(linhaEmail).join('') : '<div style="font-size:12.5px;color:#8fa39f;margin-bottom:8px">Nenhum e-mail na ficha ainda — cadastre em ✏️ Editar (no cliente ou nos contatos).</div>'}
+    ${blocoBase}
+    ${blocoFora}
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:4px">
       <input id="acEmail" placeholder="ou digite um e-mail para conferir…" style="flex:1;min-width:200px">
       <button class="btn btn-g" style="padding:9px 12px;font-size:12px" onclick="acTestar()">Testar</button>
@@ -875,6 +1052,13 @@ export function paginaClienteDetalhe(user, cli, arquivos, negocios, segmento, ca
     fetch('/api/cadastro/enviar-acesso',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:em})}).then(function(r){return r.json();}).then(function(j){
       if(j.enviado){acMsg('<span style="color:#1E5B31;font-weight:800">✉️ Link de acesso enviado agora</span> para '+acEsc(em)+' — vale uma vez, por 15 minutos. Peça para conferir também o spam/lixo eletrônico.');}
       else{acMsg('<span style="color:#B23A2E;font-weight:800">Não enviei:</span> '+acEsc(j.motivo||'falha'));}
+    }).catch(function(){acMsg('Sem conexão.');});}
+  function acRevogar(em){ if(!em) return;
+    if(!confirm('Remover o acesso de '+em+' ao portal deste cliente?\\n\\nEsse e-mail deixa de entrar. Para devolver o acesso depois, é só adicionar o e-mail como contato em Editar.')) return;
+    acMsg('Removendo o acesso de '+acEsc(em)+'…');
+    fetch('/api/cadastro/revogar-acesso',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({doc:${JSON.stringify(digits(ac.doc))},email:em})}).then(function(r){return r.json();}).then(function(j){
+      if(j.ok){location.reload();}
+      else{acMsg('<span style="color:#B23A2E;font-weight:800">Não removi:</span> '+acEsc(j.motivo||'falha'));}
     }).catch(function(){acMsg('Sem conexão.');});}
   </script>`;
   const segDoc = String((cli.tipo === 'PJ' ? cli.cnpj : cli.cpf) || '').replace(/\D/g, '');

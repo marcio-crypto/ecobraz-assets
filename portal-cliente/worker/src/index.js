@@ -77,7 +77,7 @@ import { sondarAnexosPloomes, paginaSondaAnexos } from './ploomes-docs.js';
 import { amostraContatosPloomes, paginaAmostraContatos, importarLoteContatos, estatisticasMigracao, buscarContatos, paginaMigrarPloomes, detalheContato, paginaContatoDetalhe, importarLoteNegocios, estatisticasNegocios, paginaMigrarNegocios } from './ploomes-migracao.js';
 import { importarLoteAnexos, importarLoteAnexosContatos, completarAnexos, importarAnexosJanela, reprocessarFalhas, importarLoteDocumentos, recuperarDocumentos, estatisticasArquivos, paginaMigrarArquivos, diagnosticoAnexos, paginaDiagAnexos } from './ploomes-arquivos.js';
 import { fiscalPermitido, nomeFiscal, listarNotas, lerNota, importarLote, vincularNota, sugerirVinculoSync, paginaFiscalLogin, paginaFiscalHome, paginaFiscalResultado, paginaFiscalNota } from './fiscal.js';
-import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, emailsDoCliente, reindexarEmailsClientes, backfillEnderecos, paginaManutencao, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, clienteDeLead, arquivosDoCliente, paginaLeads, paginaLeadDetalhe, paginaInicio, listarClientesD1, contagensClientesD1, lerClienteD1, negociosDoCliente, espelharClienteD1, sincronizarKVparaD1, lerNegocioDetalheD1, paginaOSDetalhe, curarContatosKV, classificarPedido, atualizarIndexLead, excluirLead } from './cadastro.js';
+import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, emailsDoCliente, reindexarEmailsClientes, backfillEnderecos, paginaManutencao, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, clienteDeLead, arquivosDoCliente, paginaLeads, paginaLeadDetalhe, paginaInicio, listarClientesD1, contagensClientesD1, lerClienteD1, negociosDoCliente, espelharClienteD1, sincronizarKVparaD1, lerNegocioDetalheD1, paginaOSDetalhe, curarContatosKV, classificarPedido, atualizarIndexLead, excluirLead, acessosDaEmpresa, acessoRevogado, removerAcessoPelaFicha } from './cadastro.js';
 import { listarColetasOS, lerColetaOS, seloOS, criarColetaOS, atualizarStatusOS, atualizarColetaOS, anexarTelemetriaOS, registrarAnexoColeta, removerAnexoColeta, alvoAvisoColeta, salvarColetaOSDireto, paginaColetasLista, paginaGerarColeta, paginaEditarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga, definirCobrancaOS, anexarBoletoCobrancaOS, marcarCobrancaPagaOS, definirMtrOS } from './coletas.js';
 import { listarVeiculos, lerVeiculo, salvarVeiculo, paginaFrota, paginaVeiculoForm, lerJornadaAtiva, abrirJornada, fecharJornada, registrarAbastecimento, tagColetaComVeiculo, servirFotoJornada, bannerJornada, paginaAbrirDia, paginaFecharDia, paginaAbastecer, placaDaColeta } from './frota.js';
 import { carregarEquipeNoEnv, listarUsuarios, lerUsuario, salvarUsuario, importarUsuarios, paginaEquipe, paginaUsuarioForm, paginaEquipeImportar } from './equipe.js';
@@ -1757,6 +1757,10 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
         const cli = await carregarClientePorId(env, url.searchParams.get('id') || '');
         if (!cli) return html(paginaMensagem('Cliente não encontrado', 'Volte e tente de novo.'), 404);
+        // Cartão "Acesso ao portal" (caso MK, 11/11): além dos e-mails da ficha, mostra os
+        // que entram por registros da base antiga — SÓ LEITURA, abrir a ficha não altera nada.
+        let acessos = null;
+        try { acessos = await acessosDaEmpresa(env, cli); } catch (error) { console.error('ficha_acessos_falhou', safeError(error)); }
         let arquivos = []; try { arquivos = await arquivosDoCliente(env, cli); } catch { /* sem arquivos, tudo bem */ }
         let negocios = []; try { negocios = await negociosDoCliente(env, cli); } catch { /* sem histórico, tudo bem */ }
         let segmento = null; try { segmento = await segmentoDoCliente(env, cli.tipo === 'PJ' ? cli.cnpj : cli.cpf); } catch { /* segmento é opcional */ }
@@ -1765,7 +1769,16 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
           const idFicha = String(url.searchParams.get('id') || '');
           cardTarefas = cardTarefasCliente(idFicha, await listarTarefasCliente(env, { clienteId: idFicha, clienteDoc: cli.tipo === 'PJ' ? cli.cnpj : cli.cpf }));
         } catch { cardTarefas = ''; }
-        return html(paginaClienteDetalhe(escritorio, cli, arquivos, negocios, segmento, cardTarefas));
+        return html(paginaClienteDetalhe(escritorio, cli, arquivos, negocios, segmento, cardTarefas, acessos));
+      }
+      // Botão "Remover acesso" da ficha: tira do portal deste cliente (CNPJ) um e-mail
+      // da base antiga que não é contato da ficha. Decisão explícita da equipe.
+      if (pathname === '/api/cadastro/revogar-acesso' && request.method === 'POST') {
+        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        const b = await request.json().catch(() => ({}));
+        const res = await removerAcessoPelaFicha(env, String(b.doc || ''), b.email, escritorio.email || '');
+        if (res.ok) console.log('acesso_removido_pela_equipe', { por: escritorio.email, dominio: String(b.email || '').split('@')[1] || '' });
+        return json(res);
       }
       // Acesso ao portal — ferramentas da EQUIPE na ficha do cliente (caso ROCKY, 23/09:
       // cliente trocou o e-mail e "não recebia o acesso"; a equipe não tinha como conferir).
@@ -1977,7 +1990,10 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         if (Array.isArray(b.contatos)) b.semContatosIntencional = b.contatos.length === 0;
         let existente = null; if (b.id) existente = await lerCliente(env, b.id);
         const leadOrigem = String(b.leadOrigem || '').trim(); if ('leadOrigem' in b) delete b.leadOrigem;
-        const salvo = await salvarCliente(env, existente ? { ...existente, ...b } : b);
+        // `existente` vai junto: é o "antes" que diz quais e-mails de contato foram
+        // trocados/removidos nesta edição — eles deixam de entrar no portal.
+        b.atualizadoPor = escritorio.email || '';
+        const salvo = await salvarCliente(env, existente ? { ...existente, ...b } : b, existente);
         // Veio de um lead do site? Marca o lead como tratado e guarda o vínculo (best-effort).
         if (leadOrigem) { try { const l = await lerLead(env, leadOrigem); if (l && l.status !== 'tratado') { l.status = 'tratado'; l.clienteId = salvo.id; await salvarLead(env, l); } } catch { /* não bloqueia o cadastro */ } }
         return json({ ok: true, id: salvo.id });
@@ -3668,6 +3684,10 @@ function cookieFiscal(valor, maxAge) { return `${FISCAL_COOKIE}=${encodeURICompo
 async function buscarClienteBase(email, env) {
   const em = String(email || '').trim().toLowerCase();
   if (!em) return null;
+  // Clientes (CNPJ/CPF) em que a EQUIPE removeu o acesso deste e-mail (trocou ou tirou
+  // o contato na ficha, ou clicou em "Remover acesso" — caso MK, 11/11). Decisão
+  // explícita, gravada à parte; o login só consulta, nunca deduz nem altera nada.
+  const barrados = new Set();
   // 1) Base migrada do Ploomes (D1) — tem ploomes_id (histórico completo).
   if (env.DB_PLOOMES) {
     try {
@@ -3678,11 +3698,14 @@ async function buscarClienteBase(email, env) {
            LEFT JOIN contatos e ON e.ploomes_id = c.company_id
           WHERE c.email = ?1 COLLATE NOCASE
           ORDER BY (CASE WHEN c.company_id IS NOT NULL AND c.company_id <> 0 THEN 0 ELSE 1 END), c.ploomes_id DESC
-          LIMIT 1`
+          LIMIT 5`
       ).bind(em).all();
-      const row = (r.results || [])[0] || null;
-      if (row) {
+      for (const row of (r.results || [])) {
         const temEmpresa = !!(row.company_id && Number(row.company_id) !== 0 && row.emp_id);
+        // Acesso removido pela equipe para este cliente? Não entra por esta linha —
+        // tenta a próxima (o mesmo e-mail pode valer em outro cliente).
+        const docLinha = String((temEmpresa ? (row.emp_doc || row.doc_pessoa) : row.doc_pessoa) || '').replace(/\D/g, '');
+        if (docLinha && await acessoRevogado(env, docLinha, em)) { barrados.add(docLinha); continue; }
         return {
           contactId: row.cid,
           empresaId: temEmpresa ? row.emp_id : row.cid,
@@ -3706,7 +3729,7 @@ async function buscarClienteBase(email, env) {
         if (cli && emailsDoCliente(cli).includes(em)) {
           const nome = cli.tipo === 'PJ' ? (cli.razaoSocial || cli.nomeFantasia || '') : (cli.nome || '');
           const documento = String((cli.tipo === 'PJ' ? cli.cnpj : cli.cpf) || '').replace(/\D/g, '');
-          return { contactId: 0, empresaId: 0, nome, email: em, documento, dataFim: null, liberado: true, nivel: 'admin' };
+          if (!(documento && (barrados.has(documento) || await acessoRevogado(env, documento, em)))) return { contactId: 0, empresaId: 0, nome, email: em, documento, dataFim: null, liberado: true, nivel: 'admin' };
         }
       }
     } catch (error) { console.error('base_kv_lookup', safeError(error)); }
