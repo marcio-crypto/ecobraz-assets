@@ -166,6 +166,7 @@ const SLUG_ICON = {
   'o-que-e-pgrs-quem-precisa-e-o-que-o-plano-deve-conter': 'clipboard',
   'bateria-estufada-riscos-o-que-fazer-e-como-descartar': 'battery',
   'como-descartar-geladeira-fogao-maquina-de-lavar-e-micro-ondas': 'fridge',
+  'exportacao-eletronicos-cdf-termina-no-porto-comprador-europeu': 'certificate',
 };
 
 const hashInt = (value) => parseInt(crypto.createHash('sha1').update(value).digest('hex').slice(0, 8), 16);

@@ -295,7 +295,7 @@
     },
     "hero": {
       "eyebrow": "Sinistros · Salvados · Descaracterização",
-      "sub": "Galpão do segurado com prazo para devolver, salvados sem destino e o processo exigindo evidência? A Ecobraz inventaria, fotografa, descaracteriza e destina bens eletroeletrônicos sinistrados — com cadeia de custódia que blinda o processo e impede o bem indenizado de reaparecer no mercado.",
+      "sub": "Galpão do segurado com prazo para devolver, salvados sem destino e o processo exigindo evidência? A Ecobraz inventaria, fotografa, descaracteriza e destina bens eletroeletrônicos sinistrados — com cadeia de custódia que documenta o processo e reduz o risco de o bem indenizado reaparecer no mercado.",
       "cta": "Solicitar avaliação técnica",
       "band": [
         {
@@ -501,7 +501,7 @@
       "items": [
         {
           "icon": "shield",
-          "title": "Processo blindado",
+          "title": "Processo documentado",
           "text": "Evidência de ponta a ponta no destino dos bens — o elo final para de ser o ponto fraco."
         },
         {
@@ -881,7 +881,7 @@
       {
         "icon": "alert",
         "title": "Ativo de segurança sem rastro de saída",
-        "text": "Equipamento do setor financeiro que sai sem inventário, custódia e destino registrado é apontamento garantido em auditoria interna e externa.",
+        "text": "Equipamento do setor financeiro que sai sem inventário, custódia e destino registrado tende a virar apontamento em auditoria interna e externa.",
         "consequence": "Custo real: não conformidade em auditoria, plano de ação forçado e desgaste entre áreas."
       }
     ],
@@ -1825,7 +1825,7 @@
       },
       {
         "title": "MTR e CDF",
-        "text": "Transporte e destinação certificados, quando aplicáveis ao material."
+        "text": "Transporte e destinação documentados, quando aplicáveis ao material."
       },
       {
         "title": "Relatório do projeto",
@@ -2462,7 +2462,7 @@
       },
       {
         "title": "MTR e CDF",
-        "text": "Transporte e destinação certificados, quando aplicáveis ao material."
+        "text": "Transporte e destinação documentados, quando aplicáveis ao material."
       },
       {
         "title": "Cadeia de custódia",
@@ -2738,7 +2738,7 @@
       },
       {
         "title": "MTR e CDF",
-        "text": "Transporte e destinação certificados, quando aplicáveis ao material."
+        "text": "Transporte e destinação documentados, quando aplicáveis ao material."
       },
       {
         "title": "Cadeia de custódia",
@@ -3116,7 +3116,7 @@
     },
     "hero": {
       "eyebrow": "Grátis para todo cliente · Sem contrato · Inclusive pessoa física",
-      "sub": "Três coisas que o sistema resolve na sua mesa: um certificado cuja autenticidade qualquer auditor confere em 5 segundos apontando a câmera; o caminho do resíduo rastreado da doca ao destino final; e a documentação organizada que a diretoria encontra sozinha.",
+      "sub": "Três coisas que o sistema resolve na sua mesa: um certificado cuja autenticidade qualquer auditor confere em segundos apontando a câmera; o caminho do resíduo rastreado da doca ao destino final; e a documentação organizada que a diretoria encontra sozinha.",
       "cta": "Agendar demonstração",
       "band": [
         {
@@ -3309,7 +3309,7 @@
           "img": "portal-tela-cdf.png",
           "alt": "Certificado de Destinação Final com selo de validação verificável por QR",
           "eyebrow": "2 · Certificado com QR",
-          "title": "O documento cuja autenticidade se confere em 5 segundos",
+          "title": "O documento cuja autenticidade se confere em segundos",
           "text": "Aponte a câmera para o QR e o próprio sistema confirma a autenticidade do certificado, emitido a cada coleta.",
           "points": [
             "Assinado por responsável técnico",
@@ -4117,7 +4117,7 @@
         "title": "Pontos de coleta",
         "href": "/pontos-de-coleta/",
         "icon": "box",
-        "text": "Onde entregar diretamente, se preferir."
+        "text": "Consulte a modalidade disponível para o seu material e a sua região."
       }
     ],
     "final": {
