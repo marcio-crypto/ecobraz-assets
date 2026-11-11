@@ -1,5 +1,18 @@
 name: Ferramenta — listar leads da Villanova (cofre KV)
 
+# Mostra QUANTOS leads há no cofre da Villanova e os IDENTIFICADORES dos mais
+# recentes. Não imprime o conteúdo de nenhum lead.
+#
+# Privacidade: este repositório é público e o log do Actions também é. Até
+# 11/11/2026 esta ferramenta imprimia o valor inteiro de cada lead (nome,
+# e-mail, empresa, cargo, mensagem). Por decisão do Marcio, passou a mostrar só
+# contagem, nome da chave, tamanho do registro e o NOME dos campos preenchidos.
+# O nome da chave é "lead:<data e hora>:<8 caracteres aleatórios>" e não carrega
+# dado de pessoa.
+#
+# Para ler o conteúdo de um lead, use o e-mail de notificação ou o painel do
+# Cloudflare — nunca um log público.
+
 on:
   workflow_dispatch:
     inputs:
@@ -19,16 +32,39 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       NS: dbcea79a0fee420d873c313a7a2acf50
+      LIMITE: ${{ inputs.limite }}
     steps:
-      - name: Listar chaves e valores (sem expor segredos)
+      - name: Contar leads e listar identificadores (sem conteúdo)
         run: |
+          set -euo pipefail
           npx wrangler@latest kv key list --namespace-id="$NS" --remote > /tmp/chaves.json
-          echo "Total de leads no cofre: $(python3 -c 'import json;print(len(json.load(open("/tmp/chaves.json"))))')"
-          python3 - <<'EOF'
-          import json, subprocess
+          python3 - <<'PY'
+          import json, os, re, subprocess, sys
+
+          NS = os.environ['NS']
+          try:
+              limite = max(0, int(os.environ.get('LIMITE') or '20'))
+          except ValueError:
+              sys.exit('"limite" precisa ser um número inteiro.')
+
           chaves = sorted((k['name'] for k in json.load(open('/tmp/chaves.json'))), reverse=True)
-          limite = int('${{ inputs.limite }}' or '20')
+          print(f'Total de leads no cofre: {len(chaves)}')
+          if not chaves:
+              sys.exit('O cofre voltou VAZIO. Quase sempre isso quer dizer que o wrangler leu o\n'
+                       'armazenamento local em vez do namespace de verdade (o wrangler 4 exige\n'
+                       '--remote nos comandos de KV), e nao que nao ha lead. Nao trate como cofre vazio.')
+
+          # Só nomes de chave no formato esperado são impressos por inteiro.
+          formato = re.compile(r'^lead:[0-9T:.\-]+Z:[0-9a-f]{8}$')
           for nome in chaves[:limite]:
-              valor = subprocess.run(['npx','wrangler@latest','kv','key','get',nome,'--namespace-id','dbcea79a0fee420d873c313a7a2acf50','--remote'],capture_output=True,text=True).stdout.strip()
-              print('='*60); print(nome); print(valor)
-          EOF
+              valor = subprocess.run(
+                  ['npx', 'wrangler@latest', 'kv', 'key', 'get', nome, '--namespace-id', NS, '--remote'],
+                  capture_output=True, text=True).stdout
+              try:
+                  dado = json.loads(valor)
+                  campos = sorted(k for k, v in dado.items() if v not in (None, '', [], {})) if isinstance(dado, dict) else []
+              except ValueError:
+                  campos = []
+              rotulo = nome if formato.match(nome) else f'(chave fora do formato, {len(nome)} caracteres — nome omitido)'
+              print(f'{rotulo} | {len(valor.encode("utf-8"))} bytes | campos preenchidos: {", ".join(campos) if campos else "não lido"}')
+          PY
