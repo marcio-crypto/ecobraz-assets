@@ -767,9 +767,20 @@ async function rodarSync(){
 // (BrasilAPI → minhareceita.org, que é a origem dos dados da BrasilAPI → publica.cnpj.ws),
 // todas com User-Agent e timeout curto, e o acerto fica 30 dias em cache no KV —
 // repetir a busca do mesmo CNPJ passa a ser instantâneo e não gasta as fontes.
-// Devolve { dados } no acerto, ou { erro: 'nao_encontrado'|'indisponivel', detalhe }.
+// Devolve { dados } no acerto, ou { erro: 'cnpj_invalido'|'nao_encontrado'|'indisponivel', detalhe }.
+// CNPJ com dígito verificador errado nem vai às fontes: em 11/11 o monitor mostrou 6
+// tentativas seguidas com "HTTP 400" nas três fontes (= número inválido) e a tela
+// dizia "fontes instáveis, tente de novo" — a pessoa insistia num número digitado errado.
+export function cnpjValido(v) {
+  const n = digits(v);
+  if (n.length !== 14 || /^(\d)\1{13}$/.test(n)) return false;
+  const dv = (base) => { let soma = 0, peso = base.length - 7; for (const ch of base) { soma += Number(ch) * peso; peso = peso === 2 ? 9 : peso - 1; } const r = soma % 11; return r < 2 ? 0 : 11 - r; };
+  const d1 = dv(n.slice(0, 12)); const d2 = dv(n.slice(0, 12) + d1);
+  return n.slice(12) === `${d1}${d2}`;
+}
 export async function consultarCNPJ(cnpj, env) {
   const n = digits(cnpj); if (n.length !== 14) return { erro: 'nao_encontrado', detalhe: 'cnpj com menos de 14 dígitos' };
+  if (!cnpjValido(n)) return { erro: 'cnpj_invalido', detalhe: 'dígito verificador não confere' };
   if (env && env.PORTAL_KV) {
     try { const c = await env.PORTAL_KV.get(`cnpj:${n}`); if (c) return { dados: JSON.parse(c) }; } catch { /* cache é atalho, nunca trava */ }
   }
@@ -799,7 +810,8 @@ export async function consultarCNPJ(cnpj, env) {
   for (const f of fontes) {
     try {
       const r = await fetch(f.url, { headers: ua, signal: AbortSignal.timeout(6000) });
-      if (r.status === 404) { naoExiste = true; motivos.push(`${f.nome}: 404`); continue; }
+      // 404 = não existe; 400 = a própria fonte recusou o número (não é instabilidade).
+      if (r.status === 404 || r.status === 400) { naoExiste = true; motivos.push(`${f.nome}: ${r.status}`); continue; }
       if (!r.ok) { motivos.push(`${f.nome}: HTTP ${r.status}`); continue; }
       const dados = f.ler(await r.json());
       if (!dados) { motivos.push(`${f.nome}: resposta sem dados`); continue; }
@@ -807,7 +819,7 @@ export async function consultarCNPJ(cnpj, env) {
       return { dados };
     } catch (e) { motivos.push(`${f.nome}: ${String((e && e.name) || e).slice(0, 40)}`); }
   }
-  // 404 em alguma fonte = o CNPJ não existe mesmo; o resto é instabilidade (vale re-tentar).
+  // 404/400 em alguma fonte = o CNPJ não existe/é recusado; o resto é instabilidade (vale re-tentar).
   return { erro: naoExiste ? 'nao_encontrado' : 'indisponivel', detalhe: motivos.join(' · ').slice(0, 300) };
 }
 
@@ -957,7 +969,7 @@ function addContato(){var w=document.getElementById('contatos');var d=document.c
   w.appendChild(d);}
 document.addEventListener('click',function(ev){if(ev.target&&ev.target.classList.contains('rm-contato')){var c=ev.target.closest('.contato');if(c)c.remove();}});
 function buscarCNPJ(){var n=(document.getElementById('cnpj').value||'').replace(/\\D/g,'');if(n.length!==14){msg('CNPJ deve ter 14 dígitos.');return;}msg('Buscando dados do CNPJ…');
-  fetch('/api/cadastro/cnpj?n='+n).then(r=>r.json()).then(d=>{if(!d||!d.ok){msg(d&&d.error==='indisponivel'?'As fontes públicas de CNPJ estão instáveis agora — espere 1 minuto e clique em "Buscar dados" de novo (ou preencha manualmente).':'Não encontrei esse CNPJ na Receita — confira os números (ou preencha manualmente).');return;}var s=function(id,v){if(v&&document.getElementById(id)&&!document.getElementById(id).value)document.getElementById(id).value=v;};s('razaoSocial',d.razaoSocial);s('nomeFantasia',d.nomeFantasia);s('cep',d.cep);s('logradouro',d.logradouro);s('numero',d.numero);s('complemento',d.complemento);s('bairro',d.bairro);s('cidade',d.cidade);s('uf',d.uf);msg('Dados preenchidos ✓ confira e complete.');}).catch(()=>msg('Sem conexão — preencha manualmente.'));}
+  fetch('/api/cadastro/cnpj?n='+n).then(r=>r.json()).then(d=>{if(!d||!d.ok){msg(d&&d.error==='cnpj_invalido'?'Esse CNPJ não é válido — algum número foi digitado errado. Confira com o cliente e tente de novo.':d&&d.error==='indisponivel'?'As fontes públicas de CNPJ estão instáveis agora — espere 1 minuto e clique em "Buscar dados" de novo (ou preencha manualmente).':'Não encontrei esse CNPJ na Receita — confira os números (ou preencha manualmente).');return;}var s=function(id,v){if(v&&document.getElementById(id)&&!document.getElementById(id).value)document.getElementById(id).value=v;};s('razaoSocial',d.razaoSocial);s('nomeFantasia',d.nomeFantasia);s('cep',d.cep);s('logradouro',d.logradouro);s('numero',d.numero);s('complemento',d.complemento);s('bairro',d.bairro);s('cidade',d.cidade);s('uf',d.uf);msg('Dados preenchidos ✓ confira e complete.');}).catch(()=>msg('Sem conexão — preencha manualmente.'));}
 function buscarCEP(sfx){sfx=sfx||'';var c=document.getElementById('cep'+sfx);if(!c)return;var n=(c.value||'').replace(/\\D/g,'');if(n.length!==8)return;
   fetch('https://viacep.com.br/ws/'+n+'/json/').then(function(r){return r.json();}).then(function(d){if(!d||d.erro)return;var s=function(id,v){var el=document.getElementById(id+sfx);if(el&&v)el.value=v;};s('logradouro',d.logradouro);s('bairro',d.bairro);s('cidade',d.localidade);s('uf',d.uf);var comp=document.getElementById('complemento'+sfx);if(comp&&!comp.value&&d.complemento)comp.value=d.complemento;var num=document.getElementById('numero'+sfx);if(num&&!num.value)num.focus();}).catch(function(){});}
 function cpfValido(v){var s=0,r,i;for(i=0;i<9;i++)s+=parseInt(v.charAt(i),10)*(10-i);r=(s*10)%11;if(r===10)r=0;if(r!==parseInt(v.charAt(9),10))return false;s=0;for(i=0;i<10;i++)s+=parseInt(v.charAt(i),10)*(11-i);r=(s*10)%11;if(r===10)r=0;return r===parseInt(v.charAt(10),10);}
