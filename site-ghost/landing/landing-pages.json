@@ -533,7 +533,7 @@
         {
           "icon": "shield",
           "title": "15 anos de operação",
-          "text": "Associação fundada em 2011, com reconhecimento em plataformas da UE e da ONU — escopo declarado na página de evidências."
+          "text": "Associação fundada em 2011, com registros públicos em plataformas da UE e da ONU — não são chancela; escopo declarado na página de evidências."
         },
         {
           "icon": "lock",
@@ -805,7 +805,7 @@
         {
           "icon": "shield",
           "title": "15 anos de operação",
-          "text": "Associação fundada em 2011, com reconhecimento em plataformas da UE e da ONU — escopo declarado na página de evidências."
+          "text": "Associação fundada em 2011, com registros públicos em plataformas da UE e da ONU — não são chancela; escopo declarado na página de evidências."
         },
         {
           "icon": "file",
@@ -1077,7 +1077,7 @@
         {
           "icon": "shield",
           "title": "15 anos de operação",
-          "text": "Associação fundada em 2011, com reconhecimento em plataformas da UE e da ONU — escopo declarado na página de evidências."
+          "text": "Associação fundada em 2011, com registros públicos em plataformas da UE e da ONU — não são chancela; escopo declarado na página de evidências."
         },
         {
           "icon": "file",
@@ -1300,7 +1300,7 @@
         {
           "icon": "chart",
           "title": "15 anos de operação",
-          "text": "Associação fundada em 2011, com reconhecimento em plataformas da UE e da ONU — escopo declarado na página de evidências."
+          "text": "Associação fundada em 2011, com registros públicos em plataformas da UE e da ONU — não são chancela; escopo declarado na página de evidências."
         },
         {
           "icon": "truck",
@@ -1577,7 +1577,7 @@
         {
           "icon": "shield",
           "title": "15 anos de operação",
-          "text": "Associação fundada em 2011, com reconhecimento em plataformas da UE e da ONU — escopo declarado na página de evidências."
+          "text": "Associação fundada em 2011, com registros públicos em plataformas da UE e da ONU — não são chancela; escopo declarado na página de evidências."
         },
         {
           "icon": "chart",
@@ -1853,7 +1853,7 @@
         {
           "icon": "shield",
           "title": "15 anos de operação",
-          "text": "Associação fundada em 2011, com reconhecimento em plataformas da UE e da ONU — escopo declarado na página de evidências."
+          "text": "Associação fundada em 2011, com registros públicos em plataformas da UE e da ONU — não são chancela; escopo declarado na página de evidências."
         },
         {
           "icon": "file",
@@ -2489,7 +2489,7 @@
         {
           "icon": "shield",
           "title": "15 anos de operação",
-          "text": "Associação fundada em 2011, com reconhecimento em plataformas da UE e da ONU — escopo declarado na página de evidências."
+          "text": "Associação fundada em 2011, com registros públicos em plataformas da UE e da ONU — não são chancela; escopo declarado na página de evidências."
         },
         {
           "icon": "file",
@@ -2770,7 +2770,7 @@
         {
           "icon": "shield",
           "title": "15 anos de operação",
-          "text": "Associação fundada em 2011, com reconhecimento em plataformas da UE e da ONU — escopo declarado na página de evidências."
+          "text": "Associação fundada em 2011, com registros públicos em plataformas da UE e da ONU — não são chancela; escopo declarado na página de evidências."
         },
         {
           "icon": "file",
@@ -4265,7 +4265,7 @@
         "Máquinas e equipamentos — mediante avaliação"
       ],
       "out": [
-        "Não compramos material: a remuneração da Ecobraz vem da destinação e valorização do material — você recebe a coleta (sem custo na maioria dos casos) e a documentação",
+        "Não compramos material: você recebe a coleta (sem custo na maioria dos casos) e a documentação",
         "Pilhas domésticas avulsas, toner, lâmpadas e contaminados não entram",
         "Volumes muito pequenos ou acesso difícil podem ter custo — sempre informado antes, com o valor",
         "Equipamentos com dados: não são revendidos; tratamento formal com relatório é serviço à parte"
@@ -4354,7 +4354,7 @@
       },
       {
         "q": "Vocês pagam pelos meus equipamentos?",
-        "a": "Não — não compramos sucata. A remuneração da Ecobraz vem da destinação e valorização do material; o que a sua empresa recebe é a coleta (sem custo na maioria dos casos) e a documentação da destinação. Se a sua prioridade for vender os equipamentos, essa conta vale uma conversa: o comparativo está na página do contrato contínuo."
+        "a": "Não — não compramos sucata. O que a sua empresa recebe é a coleta (sem custo na maioria dos casos) e a documentação da destinação. Se a sua prioridade for vender os equipamentos, essa conta vale uma conversa: o comparativo está na página do contrato contínuo."
       },
       {
         "q": "Emitem MTR e CDF?",

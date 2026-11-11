@@ -161,6 +161,11 @@ const SLUG_ICON = {
   'o-caso-funko-pop-quando-estoque-vira-entulho': 'box',
   'brasil-proibe-exportacao-de-lixo-eletronico-bruto-e-cria-reserva-estrategica': 'truck',
   'reserva-de-mercado-1984-a-era-da-engenharia-reversa': 'building',
+  'o-que-e-logistica-reversa-definicao-quem-e-obrigado-e-como-funciona': 'truck',
+  'o-que-e-a-pnrs-a-politica-nacional-de-residuos-solidos-explicada': 'clipboard',
+  'o-que-e-pgrs-quem-precisa-e-o-que-o-plano-deve-conter': 'clipboard',
+  'bateria-estufada-riscos-o-que-fazer-e-como-descartar': 'battery',
+  'como-descartar-geladeira-fogao-maquina-de-lavar-e-micro-ondas': 'fridge',
 };
 
 const hashInt = (value) => parseInt(crypto.createHash('sha1').update(value).digest('hex').slice(0, 8), 16);
