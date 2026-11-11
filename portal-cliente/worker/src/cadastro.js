@@ -455,7 +455,11 @@ export async function salvarCliente(env, rec, anterior) {
     };
     const i = idx.findIndex((x) => x.id === rec.id);
     if (i >= 0) idx[i] = resumo; else idx.unshift(resumo);
-    await env.PORTAL_KV.put('cli:index', JSON.stringify(idx).slice(0, 900000));
+    // SEM cortar o texto: o antigo `.slice(0, 900000)` cortaria o JSON no meio quando o
+    // índice passasse de 900 KB — viraria JSON inválido e TODO salvar/editar de cliente
+    // quebraria de uma vez (mesmo defeito já corrigido no índice de OS). Com milhares de
+    // fichas carregadas na migração o índice já está perto disso; o KV aceita até 25 MB.
+    await env.PORTAL_KV.put('cli:index', JSON.stringify(idx));
     // Índice de login: e-mail → id do cliente (pro cliente novo entrar no portal).
     try { for (const em of emailsDoCliente(rec)) await env.PORTAL_KV.put(`climail:${em}`, rec.id); } catch { /* não bloqueia o cadastro */ }
   }
