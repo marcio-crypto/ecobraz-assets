@@ -84,6 +84,7 @@ import { carregarEquipeNoEnv, listarUsuarios, lerUsuario, salvarUsuario, importa
 import { agentesDe } from './agente.js';
 import { atenderMcpClaude, lerConexaoClaude, gerarConexaoClaude, revogarConexaoClaude, paginaConexaoClaude } from './mcp-claude.js';
 import { servirIcone, servirManifest, servirServiceWorker } from './pwa.js';
+import { varrerFichasAdote, analisarFichaAdote, paginaVerificaAdote } from './verifica-adote.js';
 import { googleConfigurado, iniciarGoogle, callbackGoogle, botaoGoogle } from './google-auth.js';
 
 // Acessos garantidos no código: o dono (todos os papéis) e a auditora da Villanova
@@ -1363,6 +1364,28 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
           }
         }
         return json({ received: true });
+      }
+      // Verificação SÓ LEITURA (diretoria): fichas criadas pela compra PÚBLICA do Adote —
+      // a falha corrigida em 11/11/2026 (o e-mail digitado virava login do cliente) chegou
+      // a ser usada? A tela chama a varredura em lotes e depois a análise ficha a ficha.
+      // Nada aqui grava nem remove acesso: a decisão é da equipe, na ficha do cliente.
+      if (pathname === '/diretoria/verificar-adote' && request.method === 'GET') {
+        if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
+        console.log('verifica_adote_aberta', { por: diretoria.email }); // nunca dados de cliente
+        return html(paginaVerificaAdote());
+      }
+      if (pathname === '/api/diretoria/verificar-adote/varrer' && request.method === 'GET') {
+        if (!diretoria) return json({ ok: false, erro: 'nao_autenticado' }, 401);
+        try { return json(await varrerFichasAdote(env, url.searchParams.get('cursor') || '')); }
+        catch (error) { console.error('verifica_adote_varrer_falhou', safeError(error)); return json({ ok: false, erro: 'A leitura das fichas falhou agora.' }, 500); }
+      }
+      if (pathname === '/api/diretoria/verificar-adote/ficha' && request.method === 'GET') {
+        if (!diretoria) return json({ ok: false, erro: 'nao_autenticado' }, 401);
+        try {
+          // `buscarClienteBase` = o MESMO reconhecimento do login: "entra hoje?" é o que o login responderia.
+          const res = await analisarFichaAdote(env, url.searchParams.get('id') || '', { reconhecerLogin: buscarClienteBase });
+          return json(res.ok ? res : { ...res, definitivo: true });
+        } catch (error) { console.error('verifica_adote_ficha_falhou', safeError(error)); return json({ ok: false, erro: 'A conferência desta ficha falhou agora.' }, 500); }
       }
       // Diagnóstico definitivo: quais meios de pagamento a conta MP aceita (tem Pix?).
       // Log de pagamentos: prova visível do status registrado de cada pedido.
