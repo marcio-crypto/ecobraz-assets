@@ -91,6 +91,62 @@
     })();
     </script>
     <!-- End Connected Sites -->
+    <!-- Pixel de medição de anúncios da OpenAI (ChatGPT) — mesma regra do E-goi:
+         só carrega com consentimento explícito ('granted'). Sem escolha guardada
+         ou com recusa, nada é baixado de bzrcdn.openai.com. O main.js chama
+         window.ecbCarregaOpenAIAds() no clique de "Aceitar" do banner. Sem modo
+         de teste (debug). Mede só o pedido de coleta de EMPRESA concluído. -->
+    <script id="ecb-openai-ads-consent">
+    window.ecbCarregaOpenAIAds = function () {
+      var w = window, d = document;
+      if (w.__ecobrazOpenAIAdsInstalled) return;
+      w.__ecobrazOpenAIAdsInstalled = true;
+      if (!w.oaiq) {
+        var q = function () { q.q.push(arguments); };
+        q.q = [];
+        w.oaiq = q;
+        var js = d.createElement('script');
+        js.async = true;
+        js.src = 'https://bzrcdn.openai.com/sdk/oaiq.min.js';
+        var firstScript = d.getElementsByTagName('script')[0];
+        firstScript.parentNode.insertBefore(js, firstScript);
+      }
+      w.oaiq('consent', true);
+      w.oaiq('init', {pixelId: '6pMtJsojL6fTxBbR9Cc8Xv'});
+      // Recusa depois de ter aceitado: o pixel é avisado na hora.
+      d.addEventListener('click', function (event) {
+        var target = event.target;
+        if (!target || !target.closest) return;
+        if (target.closest('[data-consent-accept]')) w.oaiq('consent', true);
+        if (target.closest('[data-consent-decline]')) w.oaiq('consent', false);
+      }, true);
+      d.addEventListener('submit', function (event) {
+        var target = event.target;
+        var form = target && target.closest ? target.closest('[data-collection-form]') : null;
+        if (!form || form.__openaiLeadObserver) return;
+        var profile = form.querySelector('input[name="profile"]:checked');
+        if (!profile || profile.value !== 'empresa') return;
+        var parent = form.parentNode;
+        if (!parent) return;
+        var eventId = 'ecobraz-b2b-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+        var observer = new MutationObserver(function () {
+          var done = parent.querySelector('.form-done');
+          var heading = done && done.querySelector('h2');
+          if (!heading || heading.textContent.trim() !== 'Solicitação recebida!') return;
+          w.oaiq('measure', 'lead_created', {type: 'customer_action'}, {event_id: eventId});
+          observer.disconnect();
+        });
+        form.__openaiLeadObserver = observer;
+        observer.observe(parent, {childList: true, subtree: true});
+        w.setTimeout(function () { observer.disconnect(); }, 60000);
+      }, true);
+    };
+    (function () {
+      var stored = null;
+      try { stored = localStorage.getItem('ecb_consent'); } catch (e) {}
+      if (stored === 'granted') window.ecbCarregaOpenAIAds();
+    })();
+    </script>
     <!-- Ahrefs Web Analytics (cookieless, sem necessidade de consentimento) -->
     <script src="https://analytics.ahrefs.com/analytics.js" data-key="0FinodpCUBXN5LhNZx7Rmg" async></script>
     <!-- Ahrefs — verificação de propriedade do site (método HTML tag) -->
@@ -107,7 +163,7 @@
                emitindo WebSite + publisher Organization SEM @id; esse nó NÃO se
                funde com este — validadores só fundem por @id. O que o tema faz
                é não duplicar o WebSite e concentrar os dados ricos aqui. --}}
-          "@type": ["Organization", "NGO"],
+          "@type": ["Organization", "NGO", "RecyclingCenter"],
           "@id": "{{@site.url}}/#organization",
           "name": "Ecobraz Emigre",
           "alternateName": "Ecobraz",
@@ -122,10 +178,29 @@
           "telephone": "+55-11-4329-2001",
           "email": "contato@ecobraz.org.br",
           "description": "Associação brasileira dedicada à coleta e reciclagem de resíduos eletroeletrônicos e à inclusão digital, com rastreabilidade e documentação de destinação para empresas e pessoas físicas.",
-          "areaServed": {
-            "@type": "AdministrativeArea",
-            "name": "São Paulo e região metropolitana, com operações corporativas avaliadas em outras regiões do Brasil"
-          },
+          {{!-- Horário, cidades e área atendida confirmados pelo Marcio em
+               11/11/2026 (horário lido no Perfil da Empresa no Google; cidades
+               = as que têm página no site). Mudou algum deles? Atualizar aqui e
+               no Perfil juntos. --}}
+          "areaServed": [
+            {"@type": "AdministrativeArea", "name": "São Paulo e região (até 200 km da capital); fora desse raio, frete por cotação"},
+            {"@type": "City", "name": "São Paulo"},
+            {"@type": "City", "name": "Guarulhos"},
+            {"@type": "City", "name": "Santo André"},
+            {"@type": "City", "name": "São Bernardo do Campo"},
+            {"@type": "City", "name": "São Caetano do Sul"},
+            {"@type": "City", "name": "Osasco"},
+            {"@type": "City", "name": "Campinas"}
+          ],
+          "openingHoursSpecification": [
+            {
+              "@type": "OpeningHoursSpecification",
+              "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+              "opens": "08:00",
+              "closes": "17:00"
+            }
+          ],
+          "hasMap": "https://www.google.com/maps/place/Ecobraz+Emigre/@-23.5144998,-46.5737944,17z/",
           "employee": {"@id": "{{@site.url}}/#marcio-villanova"},
           "address": {
             "@type": "PostalAddress",
