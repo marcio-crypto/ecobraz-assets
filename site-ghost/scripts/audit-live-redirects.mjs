@@ -49,6 +49,25 @@ function loadFromRedirectsYaml(text, max) {
   return sample;
 }
 
+// Erro de rede (conexão recusada, tempo esgotado, DNS) não é erro de
+// redirecionamento: tenta de novo antes de acusar. Resposta com status errado
+// nunca é repetida — essa é a falha que a auditoria existe para pegar.
+const TENTATIVAS = Math.max(1, Number(process.env.AUDIT_REDIRECTS_TENTATIVAS || 3));
+const ESPERA_MS = Number(process.env.AUDIT_REDIRECTS_ESPERA_MS || 1500);
+async function fetchComNovaTentativa(url, options) {
+  let ultimoErro;
+  for (let tentativa = 1; tentativa <= TENTATIVAS; tentativa += 1) {
+    try {
+      return await fetch(url, options);
+    } catch (error) {
+      ultimoErro = error;
+      if (tentativa < TENTATIVAS) await new Promise((resolve) => setTimeout(resolve, ESPERA_MS * tentativa));
+    }
+  }
+  ultimoErro.message = `${ultimoErro.message} (erro de rede em ${TENTATIVAS} tentativa(s))`;
+  throw ultimoErro;
+}
+
 const errors = [];
 for (let index = 0; index < redirects.length; index += 8) {
   const batch = redirects.slice(index, index + 8);
@@ -57,7 +76,7 @@ for (let index = 0; index < redirects.length; index += 8) {
       const expected = normalizePath(new URL(target, baseUrl).pathname);
       let currentUrl = `${baseUrl}${source}`;
       let hops = 0;
-      let response = await fetch(currentUrl, {redirect:'manual'});
+      let response = await fetchComNovaTentativa(currentUrl, {redirect:'manual'});
       // Segue a cadeia de redirecionamentos (até 5 saltos), exigindo 301 no primeiro.
       if (response.status !== 301) {
         errors.push(`${source}: expected 301, received ${response.status}`);
@@ -71,13 +90,13 @@ for (let index = 0; index < redirects.length; index += 8) {
         actual = normalizePath(new URL(currentUrl).pathname);
         hops += 1;
         if (actual === expected) break;
-        response = await fetch(currentUrl, {redirect:'manual'});
+        response = await fetchComNovaTentativa(currentUrl, {redirect:'manual'});
       }
       if (actual !== expected) {
         errors.push(`${source}: expected ${expected}, received ${actual || '(no location)'} after ${hops} hop(s)`);
         return;
       }
-      const targetResponse = await fetch(currentUrl, {redirect:'follow'});
+      const targetResponse = await fetchComNovaTentativa(currentUrl, {redirect:'follow'});
       if (!targetResponse.ok) errors.push(`${source}: target ${expected} returned ${targetResponse.status}`);
       else console.log(`PASS ${source} -> ${expected}${hops > 1 ? ` (cadeia de ${hops} saltos)` : ''}`);
     } catch (error) {
