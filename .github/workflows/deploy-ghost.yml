@@ -55,6 +55,8 @@ jobs:
       # passo novo que escreva páginas ou posts, comece o nome por "Sync ".
       - name: Testa a trava de edições manuais
         run: node --test site-ghost/scripts/trava-edicoes-manuais.test.mjs
+      - name: Testa a auditoria de redirecionamentos (sem rede externa)
+        run: node --test site-ghost/scripts/audit-live-redirects.test.mjs
       - name: Trava — edições manuais no Ghost ainda não levadas ao repositório
         env:
           GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
