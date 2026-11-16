@@ -152,6 +152,24 @@
     <!-- Ahrefs — verificação de propriedade do site (método HTML tag) -->
     <meta name="ahrefs-site-verification" content="414fe2eda6a9d59fe6d45ee353290f541eb057edd819f1a7db4e0aca809687c5">
     {{ghost_head}}
+    {{!-- Veio do código injetado do painel do Ghost (F021): agora fica no tema,
+         dentro do repositório e da trava de edições manuais. --}}
+    <style id="ecobraz-cls-fix-tema">
+    /* Reserva o espaço das capas antes do carregamento e evita layout shift */
+    .article-image {
+      aspect-ratio: 16 / 9;
+      max-height: 650px;
+      overflow: hidden;
+      background: #eef2f0;
+    }
+    .article-image > img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      max-height: none;
+      object-fit: cover;
+    }
+    </style>
     {{{block "head"}}}
     <script type="application/ld+json">
     {
