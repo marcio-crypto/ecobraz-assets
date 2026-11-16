@@ -3587,7 +3587,7 @@
     },
     "hero": {
       "eyebrow": "Residências · São Paulo e região · Sem custo",
-      "sub": "Não sabe onde descartar lixo eletrônico em São Paulo? TV velha, computador parado, geladeira que já era: a Ecobraz faz a coleta na sua casa, sem custo, e cuida do descarte de eletrônicos e eletrodomésticos com comprovante. É só contar o que você tem e onde você está.",
+      "sub": "Não sabe onde descartar lixo eletrônico em São Paulo? TV velha, computador parado, geladeira que já era: a Ecobraz faz a coleta na sua casa, sem custo em São Paulo e região (até 200 km da capital), e cuida do descarte de eletrônicos e eletrodomésticos com comprovante. É só contar o que você tem e onde você está.",
       "cta": "Agendar coleta gratuita",
       "band": [
         {
@@ -3677,7 +3677,7 @@
         {
           "icon": "shield",
           "title": "Sem custo",
-          "text": "Coleta residencial gratuita em São Paulo e região, confirmada na avaliação."
+          "text": "Coleta residencial gratuita em São Paulo e região (até 200 km da capital), confirmada na avaliação."
         },
         {
           "icon": "truck",
