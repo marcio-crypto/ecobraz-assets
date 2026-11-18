@@ -212,7 +212,8 @@ function lerEmails(v, opcoes) {
     // (quando o que vem logo depois é o pedaço que falta: ".br", ".com.br", ". br", "br", "m.br" — com ou sem ">", ")", ";" colado.
     //  "Brás", "BR-116" e "br" depois de um endereço que já termina em .br não são corte.)
     const depois = palavras.slice(i + 1, i + 3).join(' ');
-    if (inteira && achados.length && (/^(?:\.[a-z]{2,6}|[a-z]\.br)(?![\p{L}\p{N}@])/u.test(depois) || (!achados[achados.length - 1].endsWith('.br') && /^\.?\s?br(?![\p{L}\p{N}@-])/u.test(depois)))) inteira = false;
+    if (inteira && achados.length && (/^(?:\.[a-z]{2,6}|[a-z]\.br)(?![\p{L}\p{N}@])(?![a-z0-9._%+&-]*@)/u.test(depois) || (!achados[achados.length - 1].endsWith('.br') && /^\.?\s?br(?![\p{L}\p{N}@-])(?![a-z0-9._%+&-]*@)/u.test(depois)))) inteira = false;
+    if (inteira && achados.length && /\.(?:co|ne|or)$/.test(achados[achados.length - 1]) && /^(?:co m|ne t|or g)(?![\p{L}\p{N}@.'’-])/u.test(achados[achados.length - 1].slice(-2) + ' ' + depois)) inteira = false;
     if (inteira && campo && achados.length && !/^[<(\[]/.test(palavra) && nomeNaoBate(antes, achados[0])) inteira = false;
     if (inteira) { if (!bons.length && achados.length) ruimAntes = ruins > 0; for (const t of achados) if (!bons.includes(t)) bons.push(t); }
     else if (/[^@\s]@/.test(palavra)) ruins++; // "@perfil" de rede social não conta como e-mail
