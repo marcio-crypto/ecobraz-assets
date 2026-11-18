@@ -7,6 +7,7 @@
 import { botaoGoogle } from './google-auth.js';
 import { sincronizarClienteEgoi } from './egoi.js';
 import { SEGMENTOS } from './premium.js';
+import { marcarLoteGrande, registrarHistoricoLead, avisarLoteGrande, textoBR, minutosEntre, situacaoPrazo, agoraLocalBR } from './atendimento.js';
 
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const agora = () => { try { return new Date().toISOString(); } catch { return ''; } };
@@ -1206,7 +1207,13 @@ export async function salvarLead(env, rec) {
   const i = idx.findIndex((x) => x.id === rec.id);
   // Índice gravado INTEIRO: o antigo .slice(0, 800000) cortaria o JSON no meio quando a
   // lista crescesse — e a caixa de leads inteira quebraria (mesmo defeito do cli:index).
-  if (i >= 0) { idx[i].status = rec.status; await env.PORTAL_KV.put('leads:index', JSON.stringify(idx)); }
+  if (i >= 0) {
+    idx[i].status = rec.status;
+    // Campos do atendimento também no índice: a caixa de entrada e as consultas do
+    // Claude leem o índice sem abrir lead por lead.
+    for (const k of ['primeiroContatoEm', 'clienteId', 'osId', 'osNumero', 'loteGrande', 'prazoAlvoEm']) if (rec[k] !== undefined && rec[k] !== '') idx[i][k] = rec[k];
+    await env.PORTAL_KV.put('leads:index', JSON.stringify(idx));
+  }
   return rec;
 }
 // Atualiza campos de um lead no índice (pagamento, prioridade…) sem regravar tudo.
@@ -1229,6 +1236,7 @@ export async function excluirLead(env, id) {
 }
 // Status que NÃO são mais "novo/pendente" (não contam como lead a tratar na caixa).
 // 'sem_retorno' = o cliente sumiu depois de mandar o formulário; 'tratado' = já cuidado.
+// 'contatado' = alguém da equipe já falou com o cliente, mas o pedido segue em aberto.
 export const LEAD_RESOLVIDO = new Set(['tratado', 'sem_retorno', 'excluido']);
 export const leadPendente = (l) => !!l && !LEAD_RESOLVIDO.has(l && l.status);
 // Pílula de status do lead — mesma aparência na lista e no detalhe.
@@ -1236,6 +1244,7 @@ export function badgeStatusLead(status) {
   const base = 'flex:none;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;';
   if (status === 'tratado') return `<span style="${base}background:#EEF1F0;color:#7c8a87">TRATADO</span>`;
   if (status === 'sem_retorno') return `<span style="${base}background:#F7E9E9;color:#9B4A4A">SEM RETORNO</span>`;
+  if (status === 'contatado') return `<span style="${base}background:#E3F0F3;color:#0B5B66">EM CONTATO</span>`;
   return `<span style="${base}background:#FFF4DE;color:#8A6A16">NOVO</span>`;
 }
 // Recebe um lead do site (worker ecobraz-coletas) e guarda na nossa base.
@@ -1343,8 +1352,14 @@ export function classificarPedido(texto) {
   return { tipo: 'normal', itens: [], comCusto: a.comCusto, estimativaKg };
 }
 
-export async function ingestLead(env, body) {
+// `opcoes` (só para quem chama por dentro do sistema — nunca vem do formulário público):
+//   manual: pedido registrado à mão pela equipe (chegou por WhatsApp, telefone, e-mail…);
+//   criadoEm: hora em que o CLIENTE pediu (ISO); por: e-mail de quem registrou;
+//   canal: whatsapp | telefone | email | presencial | outro;
+//   primeiroContatoEm: quando a equipe respondeu pela 1ª vez (opcional, ISO).
+export async function ingestLead(env, body, opcoes) {
   const b = body || {};
+  const o = opcoes || {};
   const email = String(b.email || '').trim().toLowerCase();
   const nome = String(b.name || b.nome || '').trim();
   const empresa = String(b.company || b.empresa || '').trim();
@@ -1377,46 +1392,110 @@ export async function ingestLead(env, body) {
     utm: { source: b.utm_source || '', medium: b.utm_medium || '', campaign: b.utm_campaign || '', content: b.utm_content || '', term: b.utm_term || '' },
     triagem: { tipo: triagem.tipo, itens: triagem.itens, comCusto: triagem.comCusto, estimativaKg: triagem.estimativaKg, motivo: triagem.motivo || '' },
     prioridade: triagem.tipo === 'prioritaria' ? 'alta' : '',
-    criadoEm: agora(),
+    // Data E hora do pedido (UTC; as telas mostram no horário de Brasília).
+    criadoEm: (o.manual && o.criadoEm) || agora(),
   };
+  if (o.manual) {
+    rec.registradoEm = agora();
+    rec.registradoPor = String(o.por || '').trim().toLowerCase().slice(0, 120);
+    rec.canal = String(o.canal || 'outro').slice(0, 30);
+    // A equipe já tinha respondido quando registrou? Vale como primeiro contato.
+    if (o.primeiroContatoEm) { rec.status = 'contatado'; rec.primeiroContatoEm = o.primeiroContatoEm; rec.primeiroContatoPor = rec.registradoPor; }
+  }
+  // Lote grande (empresa com 51+ itens ou desmobilização de ativos): prazo-alvo de 72h.
+  marcarLoteGrande(rec, env);
   if (env.PORTAL_KV) {
     await env.PORTAL_KV.put(`lead:${id}`, JSON.stringify(rec));
     const idx = await listarLeads(env);
     // perfil no índice (PF/PJ): as consultas por perfil não precisam abrir lead por lead.
     // O DOCUMENTO manda (o formulário do portal marca "empresa" até para pessoa física).
     const perfil = rec.documento.length === 14 ? 'PJ' : (rec.documento.length === 11 ? 'PF' : (rec.perfil === 'empresa' ? 'PJ' : (rec.perfil === 'pessoa_fisica' ? 'PF' : '')));
-    idx.unshift({ id, nome: nome || empresa || email, empresa, email, documento: rec.documento, cidade: rec.cidade, status: 'novo', criadoEm: rec.criadoEm, triagem: triagem.tipo, prioridade: rec.prioridade, origem: rec.origem, perfil });
+    const extra = {};
+    if (rec.loteGrande) { extra.loteGrande = true; extra.prazoAlvoEm = rec.prazoAlvoEm; }
+    if (rec.primeiroContatoEm) extra.primeiroContatoEm = rec.primeiroContatoEm;
+    idx.unshift({ id, nome: nome || empresa || email, empresa, email, documento: rec.documento, cidade: rec.cidade, status: rec.status, criadoEm: rec.criadoEm, triagem: triagem.tipo, prioridade: rec.prioridade, origem: rec.origem, perfil, ...extra });
     await env.PORTAL_KV.put('leads:index', JSON.stringify(idx));
+    // Histórico: o pedido entrou (na hora do cliente) e, quando registrado à mão, por quem.
+    await registrarHistoricoLead(env, { leadId: id, de: null, para: 'novo', em: rec.criadoEm, por: o.manual ? rec.registradoPor : `sistema (${rec.origem})`, evento: 'pedido_recebido', detalhe: o.manual ? `registrado à mão em ${textoBR(rec.registradoEm)} — canal: ${rec.canal}` : (rec.loteGrande ? 'lote grande' : '') });
+    if (rec.primeiroContatoEm) await registrarHistoricoLead(env, { leadId: id, de: 'novo', para: 'contatado', em: rec.primeiroContatoEm, por: rec.primeiroContatoPor, evento: 'primeiro_contato', detalhe: 'informado no registro' });
+    if (rec.loteGrande) { try { await avisarLoteGrande(env, rec, { por: o.manual ? rec.registradoPor : '' }); } catch (e) { console.error('aviso_lote_grande_falhou', String((e && e.message) || e).slice(0, 140)); } }
   }
-  return { ok: true, id, triagem };
+  return { ok: true, id, triagem, loteGrande: !!rec.loteGrande };
 }
 
 export function paginaLeads(user, leads) {
   // Testes/duplicados excluídos somem da lista; 'sem_retorno' e 'tratado' não contam como novos.
   leads = leads.filter((l) => l && l.status !== 'excluido');
-  const novos = leads.filter(leadPendente).length;
-  // Prioritárias ainda não tratadas sobem para o topo da fila.
-  const ordenados = [...leads].sort((a, b2) => Number(b2.prioridade === 'alta' && leadPendente(b2)) - Number(a.prioridade === 'alta' && leadPendente(a)));
+  const semContato = (l) => leadPendente(l) && l.status !== 'contatado';
+  const novos = leads.filter(semContato).length;
+  const emContato = leads.filter((l) => l.status === 'contatado').length;
+  // Lote grande ainda sem coleta gerada: prazo de 72h correndo — vai para o topo.
+  const loteAberto = (l) => !!(l.loteGrande && !l.osId && leadPendente(l));
+  const lotes = leads.filter(loteAberto).length;
+  // Ordem: lotes grandes em aberto (o prazo mais curto primeiro), depois as
+  // prioritárias ainda não tratadas, depois o resto (mais recente primeiro).
+  const peso = (l) => (loteAberto(l) ? 2 : ((l.prioridade === 'alta' && leadPendente(l)) ? 1 : 0));
+  const ordenados = [...leads].sort((a, b2) => (peso(b2) - peso(a)) || (peso(a) === 2 ? String(a.prazoAlvoEm || '').localeCompare(String(b2.prazoAlvoEm || '')) : 0));
+  const pilula = (fundo, cor, txt, borda) => `<span style="flex:none;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;background:${fundo};color:${cor}${borda ? `;border:1px solid ${borda}` : ''}">${txt}</span>`;
+  const seloLote = (l) => {
+    if (!l.loteGrande) return '';
+    if (l.osId) return pilula('#EEF1F0', '#4F6469', `🏭 LOTE GRANDE · ${esc(l.osNumero || 'OS gerada')}`);
+    if (!leadPendente(l)) return pilula('#EEF1F0', '#4F6469', '🏭 LOTE GRANDE');
+    const sit = situacaoPrazo(l.prazoAlvoEm, {});
+    if (sit && sit.situacao === 'vencido') return pilula('#FDE8E8', '#9B1C1C', `🏭 LOTE GRANDE · PRAZO VENCIDO`, '#F3C6C6');
+    return pilula('#FFE9C7', '#8A4B00', `🏭 LOTE GRANDE · coletar até ${esc(textoBR(l.prazoAlvoEm).slice(0, 11))}h`, '#F2C173');
+  };
   const seloTriagem = (l) => {
-    if (l.prioridade === 'alta') return '<span style="flex:none;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;background:#FFE9C7;color:#8A4B00;border:1px solid #F2C173">🌟 PRIORITÁRIA</span>';
-    if (l.triagem === 'barrado') return '<span style="flex:none;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;background:#FDE8E8;color:#9B1C1C">🚫 NÃO COLETAMOS</span>';
-    if (l.triagem === 'orcamento') return '<span style="flex:none;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;background:#E8F0FD;color:#1C4E9B">📋 ORÇAMENTO</span>';
-    if (l.triagem === 'so_perigosos') return '<span style="flex:none;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;background:#FDE8E8;color:#9B1C1C">⛔ SÓ PERIGOSOS</span>';
-    if (l.pagamento === 'aguardando') return '<span style="flex:none;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;background:#FFF4DE;color:#8A6A16">💳 AGUARDANDO PGTO</span>';
-    if (l.pagamento === 'pago') return '<span style="flex:none;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;background:#E5F6E5;color:#1E7A1E">💳 TAXA PAGA</span>';
+    if (l.prioridade === 'alta') return pilula('#FFE9C7', '#8A4B00', '🌟 PRIORITÁRIA', '#F2C173');
+    if (l.triagem === 'barrado') return pilula('#FDE8E8', '#9B1C1C', '🚫 NÃO COLETAMOS');
+    if (l.triagem === 'orcamento') return pilula('#E8F0FD', '#1C4E9B', '📋 ORÇAMENTO');
+    if (l.triagem === 'so_perigosos') return pilula('#FDE8E8', '#9B1C1C', '⛔ SÓ PERIGOSOS');
+    if (l.pagamento === 'aguardando') return pilula('#FFF4DE', '#8A6A16', '💳 AGUARDANDO PGTO');
+    if (l.pagamento === 'pago') return pilula('#E5F6E5', '#1E7A1E', '💳 TAXA PAGA');
     return '';
   };
-  const linhas = ordenados.length ? ordenados.map((l) => `<a href="/leads/lead?id=${esc(l.id)}" style="display:flex;justify-content:space-between;align-items:center;gap:12px;text-decoration:none;background:#fff;border:1px solid ${l.prioridade === 'alta' && leadPendente(l) ? '#F2C173;box-shadow:0 0 0 2px #FFF3DF' : '#E4EBE9'};border-radius:12px;padding:13px 15px;margin-bottom:9px">
+  const destaque = (l) => (loteAberto(l) ? '#F2C173;box-shadow:0 0 0 2px #FFE9C7' : ((l.prioridade === 'alta' && leadPendente(l)) ? '#F2C173;box-shadow:0 0 0 2px #FFF3DF' : '#E4EBE9'));
+  const linhas = ordenados.length ? ordenados.map((l) => `<a href="/leads/lead?id=${esc(l.id)}" style="display:flex;justify-content:space-between;align-items:center;gap:12px;text-decoration:none;background:#fff;border:1px solid ${destaque(l)};border-radius:12px;padding:13px 15px;margin-bottom:9px">
       <div style="min-width:0"><div style="font-size:14px;font-weight:800;color:#10262B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.nome || l.empresa || '(sem nome)')}</div>
-      <div style="font-size:12px;color:#7c8a87;margin-top:3px">${esc(l.email || '')}${l.cidade ? ' · ' + esc(l.cidade) : ''} · ${esc(dataBR(l.criadoEm))}</div></div>
-      <span style="display:flex;flex:none;gap:6px;align-items:center">${seloTriagem(l)}${badgeStatusLead(l.status)}</span>
+      <div style="font-size:12px;color:#7c8a87;margin-top:3px">${esc(l.email || '')}${l.cidade ? ' · ' + esc(l.cidade) : ''} · ${esc(textoBR(l.criadoEm) || dataBR(l.criadoEm))}</div></div>
+      <span style="display:flex;flex:none;flex-wrap:wrap;justify-content:flex-end;gap:6px;align-items:center">${seloLote(l)}${seloTriagem(l)}${badgeStatusLead(l.status)}</span>
     </a>`).join('') : `<div class="card" style="text-align:center;color:#8fa39f;font-size:13.5px">Nenhum lead ainda. Quando alguém preencher o formulário do site, aparece aqui.</div>`;
+  const op = (v, t) => `<option value="${esc(v)}">${esc(t || v)}</option>`;
+  const formNovo = `<div class="card" id="fNovo" style="display:none;margin-bottom:14px">
+    <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#00333B;margin-bottom:6px">Registrar pedido recebido fora do site</div>
+    <div style="font-size:12px;color:#7c8a87;line-height:1.55;margin-bottom:12px">Pedido que chegou por WhatsApp, telefone, e-mail ou pessoalmente. Use a <b>hora em que o cliente pediu</b> — é ela que mede o tempo até a coleta.</div>
+    <div class="g2"><div><label>Canal</label><select id="nCanal">${op('whatsapp', 'WhatsApp')}${op('telefone', 'Telefone')}${op('email', 'E-mail')}${op('presencial', 'Pessoalmente')}${op('outro', 'Outro')}</select></div>
+      <div><label>Data e hora do pedido (Brasília)</label><input id="nQuando" type="datetime-local" value="${esc(agoraLocalBR())}"></div></div>
+    <div class="g2"><div><label>Perfil</label><select id="nPerfil">${op('empresa', 'Empresa (PJ)')}${op('pessoa_fisica', 'Pessoa física')}</select></div>
+      <div><label>CNPJ ou CPF (se souber)</label><input id="nDoc" inputmode="numeric"></div></div>
+    <div class="g2"><div><label>Empresa</label><input id="nEmpresa"></div><div><label>Nome do contato</label><input id="nNome"></div></div>
+    <div class="g2"><div><label>Telefone</label><input id="nFone"></div><div><label>E-mail</label><input id="nEmail" type="email"></div></div>
+    <div class="g2"><div><label>Cidade</label><input id="nCidade"></div><div><label>UF</label><input id="nUf" maxlength="2"></div></div>
+    <div class="g2"><div><label>Quantos itens?</label><select id="nVolume">${op('', 'Selecione')}${op('Até 10 itens')}${op('11 a 50 itens')}${op('51 a 200 itens')}${op('Mais de 200 itens')}${op('Não sei estimar')}</select></div>
+      <div><label>…ou o número exato</label><input id="nItens" type="number" min="1" step="1"></div></div>
+    <div><label>O que precisa ser coletado</label><textarea id="nDesc" rows="3"></textarea></div>
+    <div><label>Já respondeu ao cliente? Hora da 1ª resposta (opcional)</label><input id="nResp" type="datetime-local"></div>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:12px"><button class="btn btn-p" id="nSalvar">Registrar pedido</button><span id="nMsg" style="font-size:12.5px;color:#4F6469"></span></div>
+  </div>`;
   return `${head('Leads do site')}<body>${topo(user, 'leads')}
 <div class="wrap">
   <a href="/cadastro" style="font-size:13px;font-weight:800;text-decoration:none;color:#4F6469">← Cadastro</a>
-  <div style="display:flex;justify-content:space-between;align-items:center;margin:12px 0 14px"><h1 style="font-size:20px;margin:0">Leads do site</h1><span style="font-size:11px;background:#FFF4DE;color:#8A6A16;font-weight:800;padding:3px 9px;border-radius:20px">${novos} novo(s)</span></div>
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin:12px 0 14px"><h1 style="font-size:20px;margin:0">Leads do site</h1>
+    <span style="display:flex;gap:6px;flex-wrap:wrap">${lotes ? `<span style="font-size:11px;background:#FFE9C7;color:#8A4B00;font-weight:800;padding:3px 9px;border-radius:20px">🏭 ${lotes} lote(s) grande(s) em aberto</span>` : ''}<span style="font-size:11px;background:#FFF4DE;color:#8A6A16;font-weight:800;padding:3px 9px;border-radius:20px">${novos} novo(s)</span>${emContato ? `<span style="font-size:11px;background:#E3F0F3;color:#0B5B66;font-weight:800;padding:3px 9px;border-radius:20px">${emContato} em contato</span>` : ''}</span></div>
+  <button class="btn btn-g" id="bNovo" style="margin-bottom:12px">＋ Registrar pedido (WhatsApp, telefone, e-mail)</button>
+  ${formNovo}
   <div>${linhas}</div>
 </div>
+<script>
+(function(){var b=document.getElementById('bNovo'),f=document.getElementById('fNovo');if(b)b.onclick=function(){f.style.display=f.style.display==='none'?'block':'none';};
+function v(id){var el=document.getElementById(id);return el?String(el.value||'').trim():'';}
+var s=document.getElementById('nSalvar'),m=document.getElementById('nMsg');
+if(s)s.onclick=function(){var corpo={canal:v('nCanal'),quando:v('nQuando'),primeiraResposta:v('nResp'),perfil:v('nPerfil'),documento:v('nDoc'),empresa:v('nEmpresa'),nome:v('nNome'),fone:v('nFone'),email:v('nEmail'),cidade:v('nCidade'),uf:v('nUf').toUpperCase(),volume:v('nItens')?(v('nItens')+' itens'):v('nVolume'),descricao:v('nDesc')};
+  if(!corpo.empresa&&!corpo.nome){m.textContent='Informe a empresa ou o nome do contato.';return;}
+  if(!corpo.quando){m.textContent='Informe a data e hora do pedido.';return;}
+  s.disabled=true;m.textContent='Registrando…';
+  fetch('/api/leads/novo',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(corpo)}).then(function(r){return r.json();}).then(function(j){if(j.ok){location.href='/leads/lead?id='+encodeURIComponent(j.id);}else{s.disabled=false;m.textContent=j.message||'Não foi possível registrar.';}}).catch(function(){s.disabled=false;m.textContent='Sem conexão.';});};})();
+</script>
 </body></html>`;
 }
 
@@ -1438,9 +1517,29 @@ export function clienteDeLead(lead) {
   return { tipo: 'PF', nome: lead.nome || '', fone: lead.fone || '', email: lead.email || '', endereco, obsColeta: obs };
 }
 
-export function paginaLeadDetalhe(user, lead) {
+// Rótulos do histórico do lead (tela e consultas).
+export const ROTULO_STATUS_LEAD = { novo: 'novo', contatado: 'em contato', tratado: 'tratado', sem_retorno: 'sem retorno', 'aguardando-pagamento': 'aguardando pagamento', excluido: 'excluído' };
+const ROTULO_EVENTO_LEAD = { pedido_recebido: 'Pedido recebido', primeiro_contato: 'Primeiro contato', contato: 'Contato registrado', status: 'Status alterado', convertido_cliente: 'Convertido em cliente', os_criada: 'Coleta gerada', auto_cliente_existente: 'Cliente já existente — direcionado ao portal (automático)', pagamento_aprovado: 'Taxa paga — liberado (automático)', aguardando_pagamento: 'Aguardando pagamento da taxa (automático)', excluido: 'Excluído' };
+const duracaoTexto = (min) => (min == null ? '' : (min < 60 ? `${min} min` : (min < 2880 ? `${Math.round(min / 6) / 10} h` : `${Math.round(min / 144) / 10} dias`)));
+
+export function paginaLeadDetalhe(user, lead, extras) {
+  const x = extras || {};
+  const historico = Array.isArray(x.historico) ? x.historico : [];
+  // lead.clienteId pode ser o id numérico do contato no Ploomes (cliente já existente do
+  // site) — a rota resolve para a ficha certa em clienteSugeridoId.
+  const clienteParaColeta = x.clienteSugeridoId || (/^\d+$/.test(String(lead.clienteId || '')) ? '' : (lead.clienteId || ''));
   const linha = (l, v) => v ? `<tr><td style="padding:8px 0;border-top:1px solid #EEF1F0;color:#6B7B78;width:38%">${esc(l)}</td><td style="padding:8px 0;border-top:1px solid #EEF1F0;font-weight:600">${esc(v)}</td></tr>` : '';
   const utm = lead.utm && (lead.utm.source || lead.utm.campaign) ? [lead.utm.source, lead.utm.medium, lead.utm.campaign, lead.utm.content, lead.utm.term].filter(Boolean).join(' · ') : '';
+  const resolvido = LEAD_RESOLVIDO.has(lead.status);
+  const minContato = lead.primeiroContatoEm ? minutosEntre(lead.criadoEm, lead.primeiroContatoEm) : null;
+  const semContatoHa = !lead.primeiroContatoEm && !resolvido ? minutosEntre(lead.criadoEm, new Date().toISOString()) : null;
+  const sitPrazo = lead.loteGrande && lead.prazoAlvoEm && !lead.osId ? situacaoPrazo(lead.prazoAlvoEm, {}) : null;
+  const banner = lead.loteGrande ? `<div style="background:#FFF6E8;border:1px solid #F2C173;border-radius:12px;padding:12px 14px;margin:0 0 12px;font-size:13.5px;color:#7A4600;line-height:1.55"><b>🏭 LOTE GRANDE</b> — ${esc(lead.loteGrandeMotivo || 'empresa com volume grande')}. Prazo-alvo da coleta: <b>${esc(textoBR(lead.prazoAlvoEm) || '—')}</b> (${esc(lead.prazoHoras || 72)}h do pedido)${lead.osId ? ` · coleta gerada: <a href="/coletas/os?id=${esc(lead.osId)}" style="color:#7A4600;font-weight:800">${esc(lead.osNumero || 'abrir OS')}</a>` : (sitPrazo ? ` · <b>${esc(sitPrazo.texto)}</b>` : '')}.</div>` : '';
+  const contatoTxt = lead.primeiroContatoEm
+    ? `${textoBR(lead.primeiroContatoEm)}${lead.primeiroContatoPor ? ` — ${lead.primeiroContatoPor}` : ''}${minContato != null ? ` (${duracaoTexto(minContato)} depois do pedido)` : ''}`
+    : (semContatoHa != null ? `ainda sem contato registrado — pedido aguardando há ${duracaoTexto(semContatoHa)}` : '');
+  const linhasHist = historico.map((h) => `<tr><td style="padding:6px 8px 6px 0;border-top:1px solid #EEF1F0;white-space:nowrap;color:#4F6469">${esc(textoBR(h.em))}</td><td style="padding:6px 0;border-top:1px solid #EEF1F0"><b>${esc(ROTULO_EVENTO_LEAD[h.evento] || h.evento || 'Alteração')}</b>${h.de && h.para && h.de !== h.para ? ` · ${esc(ROTULO_STATUS_LEAD[h.de] || h.de)} → ${esc(ROTULO_STATUS_LEAD[h.para] || h.para)}` : ''}${h.detalhe ? ` · ${esc(h.detalhe)}` : ''}<div style="font-size:11.5px;color:#9aa7a4">${esc(h.por || '')}</div></td></tr>`).join('');
+  const podeContato = !lead.primeiroContatoEm && !resolvido;
   return `${head(lead.nome || lead.empresa || 'Lead')}<body>${topo(user, 'leads')}
 <div class="wrap">
   <a href="/leads" style="font-size:13px;font-weight:800;text-decoration:none;color:#4F6469">← Todos os leads</a>
@@ -1448,8 +1547,13 @@ export function paginaLeadDetalhe(user, lead) {
     <div>${badgeStatusLead(lead.status)}
     <h1 style="font-size:22px;margin:8px 0 0">${esc(lead.nome || lead.empresa || '—')}</h1></div>
   </div>
+  ${banner}
   <div class="card">
     <table role="presentation" style="width:100%;border-collapse:collapse;font-size:13.5px">
+      ${linha('Pedido recebido em', textoBR(lead.criadoEm) || dataBR(lead.criadoEm))}
+      ${lead.registradoEm ? linha('Registrado à mão', `${textoBR(lead.registradoEm)}${lead.registradoPor ? ` — ${lead.registradoPor}` : ''}${lead.canal ? ` · canal: ${lead.canal}` : ''}`) : ''}
+      ${linha('Primeiro contato', contatoTxt)}
+      ${lead.osId ? linha('Coleta gerada', lead.osNumero || lead.osId) : ''}
       ${linha('Perfil', lead.perfil === 'empresa' ? 'Empresa' : (lead.perfil === 'pessoa_fisica' ? 'Pessoa física' : lead.perfil))}
       ${linha('Empresa', lead.empresa)}
       ${linha('E-mail', lead.email)}
@@ -1462,26 +1566,31 @@ export function paginaLeadDetalhe(user, lead) {
       ${linha('Urgência', lead.urgencia)}
       ${linha('Consentimento marketing', lead.consentimentoMkt ? 'Sim' : 'Não')}
       ${linha('Origem', [lead.origem, utm].filter(Boolean).join(' · '))}
-      ${linha('Recebido em', dataBR(lead.criadoEm))}
     </table>
   </div>
   ${(Array.isArray(lead.fotos) && lead.fotos.length) ? `<div class="card" style="margin-top:12px"><div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#7c8a87;margin-bottom:10px">📷 Fotos enviadas pelo cliente</div><div style="display:flex;flex-wrap:wrap;gap:10px">${lead.fotos.map((f) => `<a href="/coletas/anexo?key=${encodeURIComponent(f.key)}" target="_blank" rel="noopener"><img src="/coletas/anexo?key=${encodeURIComponent(f.key)}" alt="${esc(f.nome || 'foto')}" style="width:130px;height:100px;object-fit:cover;border:1px solid #E4EBE9;border-radius:8px;background:#fff"></a>`).join('')}</div></div>` : ''}
   <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
-    <a class="btn btn-p" href="/cadastro/novo?tipo=${lead.perfil === 'pessoa_fisica' ? 'PF' : 'PJ'}&lead=${esc(lead.id)}">➜ Converter em cliente</a>
+    ${podeContato ? '<button class="btn btn-p" id="bcont">📞 Registrei o contato</button>' : ''}
+    ${clienteParaColeta && !lead.osId ? `<a class="btn btn-p" href="/coletas/nova?cliente=${encodeURIComponent(clienteParaColeta)}&lead=${encodeURIComponent(lead.id)}">＋ Gerar coleta deste pedido</a>` : ''}
+    ${lead.clienteId ? '' : `<a class="btn ${clienteParaColeta ? 'btn-g' : 'btn-p'}" href="/cadastro/novo?tipo=${lead.perfil === 'pessoa_fisica' ? 'PF' : 'PJ'}&lead=${esc(lead.id)}">➜ Converter em cliente</a>`}
     <button class="btn btn-g" id="btrat" ${lead.status === 'tratado' ? 'disabled style="opacity:.5"' : ''}>${lead.status === 'tratado' ? '✓ Tratado' : 'Marcar como tratado'}</button>
     <button class="btn btn-g" id="bsr" ${lead.status === 'sem_retorno' ? 'disabled style="opacity:.5"' : ''}>${lead.status === 'sem_retorno' ? '✓ Sem retorno' : 'Sem retorno'}</button>
     <button class="btn" id="bdel" style="background:#FDECEC;color:#9B1C1C;border:1px solid #F3C6C6">Excluir</button>
     <span id="m" style="font-size:13px;color:#4F6469;align-self:center"></span>
   </div>
   <div style="font-size:11px;color:#9aa7a4;margin-top:10px;line-height:1.6">
-    <b>Converter em cliente</b>: o cadastro já vem preenchido com os dados do lead e o lead é marcado como tratado. Depois é só <b>Gerar coleta</b> na ficha.<br>
-    <b>Sem retorno</b>: mandou o formulário mas não respondeu ao contato — fica registrado, sem sumir da lista (para você separar quem engajou de quem sumiu).<br>
+    <b>Registrei o contato</b>: use assim que falar com o cliente pela 1ª vez (telefone, WhatsApp, e-mail) — é o que mede quanto tempo o pedido esperou resposta.<br>
+    <b>Gerar coleta deste pedido</b>: a coleta já nasce ligada a este pedido (sem adivinhação) — e, se for lote grande, com o prazo-alvo de 72h.<br>
+    <b>Converter em cliente</b>: o cadastro já vem preenchido com os dados do lead. Depois, na ficha, <b>Gerar coleta</b> já sugere este pedido.<br>
+    <b>Sem retorno</b>: mandou o formulário mas não respondeu ao contato — fica registrado, sem sumir da lista.<br>
     <b>Excluir</b>: remove de vez. Use só em <b>testes ou duplicados</b> — não dá para desfazer.
   </div>
+  ${linhasHist ? `<div class="card" style="margin-top:14px"><div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#7c8a87;margin-bottom:8px">🕒 Histórico do pedido</div><table style="width:100%;border-collapse:collapse;font-size:13px">${linhasHist}</table></div>` : ''}
 </div>
 <script>
 var LID='${esc(lead.id)}';var m=document.getElementById('m');
 function acao(btn,url,indo,depois){if(!btn||btn.disabled)return;btn.onclick=async()=>{if(url.indexOf('excluir')>=0&&!confirm('Excluir este lead? Não dá para desfazer. Use em testes ou duplicados.'))return;btn.disabled=true;m.textContent=indo;try{const r=await fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:LID})});if(r.ok){depois();}else{m.textContent='Falha. Tente de novo.';btn.disabled=false;}}catch{m.textContent='Sem conexão.';btn.disabled=false;}};}
+acao(document.getElementById('bcont'),'/api/leads/contato','Salvando…',function(){location.reload();});
 acao(document.getElementById('btrat'),'/api/leads/tratar','Salvando…',function(){location.reload();});
 acao(document.getElementById('bsr'),'/api/leads/sem-retorno','Salvando…',function(){location.reload();});
 acao(document.getElementById('bdel'),'/api/leads/excluir','Excluindo…',function(){location.href='/leads';});

@@ -83,6 +83,8 @@ import { listarVeiculos, lerVeiculo, salvarVeiculo, paginaFrota, paginaVeiculoFo
 import { carregarEquipeNoEnv, listarUsuarios, lerUsuario, salvarUsuario, importarUsuarios, paginaEquipe, paginaUsuarioForm, paginaEquipeImportar } from './equipe.js';
 import { agentesDe } from './agente.js';
 import { atenderMcpClaude, lerConexaoClaude, gerarConexaoClaude, revogarConexaoClaude, paginaConexaoClaude, listarAuditoriaClaude } from './mcp-claude.js';
+import { mudancaComHistorico, registrarHistoricoLead, listarHistoricoLead, deLocalBR, leadsAbertosDoCliente } from './atendimento.js';
+import { LEAD_RESOLVIDO as LEAD_JA_RESOLVIDO } from './cadastro.js';
 import { servirIcone, servirManifest, servirServiceWorker } from './pwa.js';
 import { googleConfigurado, iniciarGoogle, callbackGoogle, botaoGoogle } from './google-auth.js';
 
@@ -554,10 +556,11 @@ export default {
                   const lead = await lerLead(env, ped.leadId);
                   if (lead) {
                     lead.cobranca = { ...(lead.cobranca || {}), status: 'pago', paymentId: pg.id, pagoEm: nowS() };
-                    if (lead.status === 'aguardando-pagamento') lead.status = 'novo';
+                    const hist = lead.status === 'aguardando-pagamento' ? mudancaComHistorico(lead, 'novo', { humano: false, por: 'sistema', evento: 'pagamento_aprovado' }).historico : null;
                     lead.descricao = `💳 TAXA PAGA (R$ ${ped.valor})${ped.expressa ? ' — ⚡ EXPRESSA: COLETAR EM ATÉ 24H' : ''} ✔ LIBERADA\n\n${lead.descricao}`;
                     await salvarLead(env, lead);
                     await atualizarIndexLead(env, ped.leadId, { pagamento: 'pago', status: lead.status, prioridade: ped.expressa ? 'alta' : (lead.prioridade || '') });
+                    if (hist) await registrarHistoricoLead(env, hist);
                   }
                   if (ped.clienteEmail) { try { await enviarEmailColetaPaga(ped, env); } catch (error) { console.error('email_coleta_paga', safeError(error)); } }
                   console.log('coleta_taxa_paga', { lead: ped.leadId, valor: pg.valor, expressa: !!ped.expressa });
@@ -753,10 +756,12 @@ export default {
             if (cli && cli.liberado) {
               const lead = await lerLead(env, r.id);
               if (lead) {
-                lead.status = 'tratado';
+                // Ação AUTOMÁTICA: entra no histórico, mas não conta como 1º contato humano.
+                const mud = mudancaComHistorico(lead, 'tratado', { humano: false, por: 'sistema', evento: 'auto_cliente_existente', detalhe: 'link de acesso ao portal enviado por e-mail' });
                 lead.clienteId = String(cli.contactId || '');
                 lead.nota = 'Cliente já existente — direcionado ao portal automaticamente (e-mail com link de acesso enviado).';
                 await salvarLead(env, lead);
+                await registrarHistoricoLead(env, mud.historico);
               }
               const token = await criarToken({ cid: cli.contactId, emp: cli.empresaId, em: cli.email, nome: cli.nome, fim: cli.dataFim || '', doc: cli.documento || '', tipo: 'login' }, LINK_TTL_S, env);
               if (env.PORTAL_KV) await env.PORTAL_KV.put(`nonce:${token.nonce}`, '1', { expirationTtl: LINK_TTL_S });
@@ -2015,7 +2020,19 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         b.atualizadoPor = escritorio.email || '';
         const salvo = await salvarCliente(env, existente ? { ...existente, ...b } : b, existente);
         // Veio de um lead do site? Marca o lead como tratado e guarda o vínculo (best-effort).
-        if (leadOrigem) { try { const l = await lerLead(env, leadOrigem); if (l && l.status !== 'tratado') { l.status = 'tratado'; l.clienteId = salvo.id; l.tratadoPor = escritorio.email || ''; l.tratadoEm = nowS(); await salvarLead(env, l); } } catch { /* não bloqueia o cadastro */ } }
+        if (leadOrigem) {
+          try {
+            const l = await lerLead(env, leadOrigem);
+            if (l) {
+              // A ficha nova fica ligada ao pedido (a "Gerar coleta" da ficha já sugere este pedido).
+              l.clienteId = salvo.id;
+              let hist = null;
+              if (l.status !== 'tratado') { hist = mudancaComHistorico(l, 'tratado', { por: escritorio.email || '', evento: 'convertido_cliente' }).historico; l.tratadoPor = escritorio.email || ''; l.tratadoEm = nowS(); }
+              await salvarLead(env, l);
+              if (hist) await registrarHistoricoLead(env, hist);
+            }
+          } catch { /* não bloqueia o cadastro */ }
+        }
         return json({ ok: true, id: salvo.id });
       }
       // Anexar um novo documento a um cliente (upload → R2 + catálogo D1, casado pelo CNPJ/CPF).
@@ -2062,7 +2079,10 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
         const l = await lerLead(env, url.searchParams.get('id') || '');
         if (!l) return html(paginaMensagem('Lead não encontrado', 'Volte e tente de novo.'), 404);
-        return html(paginaLeadDetalhe(escritorio, l));
+        const historico = await listarHistoricoLead(env, l.id);
+        let clienteSugeridoId = '';
+        try { clienteSugeridoId = await clienteDoPedido(env, l); } catch { clienteSugeridoId = ''; }
+        return html(paginaLeadDetalhe(escritorio, l, { historico, clienteSugeridoId }));
       }
       if (pathname === '/api/leads/tratar' && request.method === 'POST') {
         if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
@@ -2070,8 +2090,58 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         if (!b || !b.id) return json({ ok: false, error: 'dados' }, 400);
         const l = await lerLead(env, b.id);
         if (!l) return json({ ok: false, error: 'nao_encontrado' }, 404);
-        l.status = 'tratado'; l.tratadoPor = escritorio.email || ''; l.tratadoEm = nowS(); await salvarLead(env, l);
+        const mud = mudancaComHistorico(l, 'tratado', { por: escritorio.email || '', evento: 'status' });
+        l.tratadoPor = escritorio.email || ''; l.tratadoEm = nowS(); await salvarLead(env, l);
+        await registrarHistoricoLead(env, mud.historico);
         return json({ ok: true });
+      }
+      // "Registrei o contato": a equipe falou com o cliente pela 1ª vez. Marca a hora do
+      // 1º contato (uma vez só) e o pedido passa a "em contato" — segue em aberto.
+      if (pathname === '/api/leads/contato' && request.method === 'POST') {
+        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = null; }
+        if (!b || !b.id) return json({ ok: false, error: 'dados' }, 400);
+        const l = await lerLead(env, b.id);
+        if (!l) return json({ ok: false, error: 'nao_encontrado' }, 404);
+        // "Aguardando pagamento" continua como está (a liberação automática depende dele).
+        const novo = (l.status || 'novo') === 'novo' ? 'contatado' : l.status;
+        const mud = mudancaComHistorico(l, novo, { por: escritorio.email || '', evento: 'contato', contato: true });
+        await salvarLead(env, l);
+        await registrarHistoricoLead(env, mud.historico);
+        return json({ ok: true, primeiroContatoEm: l.primeiroContatoEm || '' });
+      }
+      // Pedido que chegou FORA do site (WhatsApp, telefone, e-mail, pessoalmente): a
+      // equipe registra com a hora em que o cliente pediu — entra na mesma caixa e na
+      // mesma medição de tempo dos pedidos do site.
+      if (pathname === '/api/leads/novo' && request.method === 'POST') {
+        if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
+        let b; try { b = await request.json(); } catch { b = null; }
+        if (!b) return json({ ok: false, error: 'dados' }, 400);
+        const agoraMs = Date.now();
+        const quando = deLocalBR(b.quando);
+        if (!quando) return json({ ok: false, message: 'Informe a data e a hora do pedido.' }, 400);
+        if (Date.parse(quando) > agoraMs + 5 * 60e3) return json({ ok: false, message: 'A hora do pedido está no futuro — confira.' }, 400);
+        if (Date.parse(quando) < agoraMs - 90 * 86400e3) return json({ ok: false, message: 'Pedido com mais de 90 dias — confira a data.' }, 400);
+        let resposta = '';
+        if (String(b.primeiraResposta || '').trim()) {
+          resposta = deLocalBR(b.primeiraResposta);
+          if (!resposta || Date.parse(resposta) < Date.parse(quando) || Date.parse(resposta) > agoraMs + 5 * 60e3) return json({ ok: false, message: 'A hora da 1ª resposta precisa ser depois do pedido e não pode estar no futuro.' }, 400);
+        }
+        const canais = { whatsapp: 'WhatsApp', telefone: 'telefone', email: 'e-mail', presencial: 'atendimento presencial', outro: 'outro canal' };
+        const canal = canais[b.canal] ? b.canal : 'outro';
+        const docN = String(b.documento || '').replace(/\D/g, '');
+        const corpo = {
+          name: String(b.nome || '').trim().slice(0, 200), company: String(b.empresa || '').trim().slice(0, 200),
+          email: String(b.email || '').trim().toLowerCase().slice(0, 320), phone: String(b.fone || '').trim().slice(0, 50),
+          profile: b.perfil === 'pessoa_fisica' ? 'pessoa_fisica' : 'empresa', documento: (docN.length === 11 || docN.length === 14) ? docN : '',
+          material_category: `Pedido por ${canais[canal]} (registrado pela equipe)`, volume: String(b.volume || '').trim().slice(0, 60),
+          material_description: String(b.descricao || '').slice(0, 4000), city: String(b.cidade || '').trim().slice(0, 80), state: String(b.uf || '').trim().toUpperCase().slice(0, 2),
+          source: canal,
+        };
+        if (!corpo.name && !corpo.company && !corpo.email) return json({ ok: false, message: 'Informe a empresa ou o nome do contato.' }, 400);
+        const r = await ingestLead(env, corpo, { manual: true, criadoEm: quando, por: escritorio.email || '', canal, primeiroContatoEm: resposta });
+        if (!r || !r.ok) return json({ ok: false, message: 'Não foi possível registrar o pedido.' }, 400);
+        return json({ ok: true, id: r.id, loteGrande: !!r.loteGrande }, 201);
       }
       // "Sem retorno": cliente mandou o formulário e não respondeu ao contato. Fica
       // registrado (não some), para separar quem engajou de quem sumiu.
@@ -2081,15 +2151,21 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         if (!b || !b.id) return json({ ok: false, error: 'dados' }, 400);
         const l = await lerLead(env, b.id);
         if (!l) return json({ ok: false, error: 'nao_encontrado' }, 404);
-        l.status = 'sem_retorno'; l.tratadoPor = escritorio.email || ''; l.tratadoEm = nowS(); await salvarLead(env, l);
+        const mud = mudancaComHistorico(l, 'sem_retorno', { por: escritorio.email || '', evento: 'status' });
+        l.tratadoPor = escritorio.email || ''; l.tratadoEm = nowS(); await salvarLead(env, l);
+        await registrarHistoricoLead(env, mud.historico);
         return json({ ok: true });
       }
       // Excluir de vez (testes/duplicados) — some do registro e do índice. Irreversível.
+      // O histórico (sem dado pessoal) guarda que foi excluído, quando e por quem.
       if (pathname === '/api/leads/excluir' && request.method === 'POST') {
         if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
         let b; try { b = await request.json(); } catch { b = null; }
         if (!b || !b.id) return json({ ok: false, error: 'dados' }, 400);
+        let deStatus = null;
+        try { const l = await lerLead(env, b.id); deStatus = l ? (l.status || 'novo') : null; } catch { deStatus = null; }
         const ok = await excluirLead(env, b.id);
+        if (ok && deStatus) await registrarHistoricoLead(env, { leadId: String(b.id), de: deStatus, para: 'excluido', em: new Date().toISOString(), por: escritorio.email || '', evento: 'excluido' });
         return json({ ok: !!ok });
       }
 
@@ -2120,7 +2196,21 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         const agentes = [...agentesDe(env).entries()].map(([email, nome]) => ({ email, nome }));
         let patrocinadores = []; try { patrocinadores = await listarPatrocinadores(env); } catch { /* ok */ }
         let veiculos = []; try { veiculos = await listarVeiculos(env); } catch { /* ok */ }
-        return html(paginaGerarColeta(escritorio, cli, agentes, patrocinadores, veiculos));
+        // Pedidos (leads) em aberto deste cliente, para a coleta nascer ligada ao pedido
+        // certo. Veio da tela do pedido (?lead=): ele já vem escolhido. Sem isso, só
+        // pré-seleciona quando há UM pedido em aberto, feito nos últimos 30 dias.
+        let pedidos = [], leadSel = '';
+        try {
+          const idxLeads = await listarLeads(env);
+          pedidos = leadsAbertosDoCliente(idxLeads, cli);
+          const pedido = String(url.searchParams.get('lead') || '').replace(/[^a-zA-Z0-9_]/g, '');
+          if (pedido) {
+            let p = pedidos.find((x) => x.id === pedido);
+            if (!p) { const e = idxLeads.find((x) => x && x.id === pedido); if (e && !e.osId && e.status !== 'excluido') { p = e; pedidos = [e, ...pedidos]; } }
+            if (p) leadSel = p.id;
+          } else if (pedidos.length === 1 && Date.parse(pedidos[0].criadoEm) >= Date.now() - 30 * 86400e3) leadSel = pedidos[0].id;
+        } catch { pedidos = []; leadSel = ''; }
+        return html(paginaGerarColeta(escritorio, cli, agentes, patrocinadores, veiculos, { pedidos, leadSel }));
       }
       // Foto da carga registrada pelo motorista — visível para a EQUIPE (comercial/doca/
       // diretoria/motorista) ou via TOKEN (para o documento do cliente). Reaproveita o
@@ -2388,7 +2478,29 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
         let b; try { b = await request.json(); } catch { b = null; }
         if (!b || !String(b.endereco || '').trim()) return json({ ok: false, error: 'Informe o endereço da coleta.' }, 400);
-        const os = await criarColetaOS(env, b, escritorio.email);
+        // Pedido de origem (vínculo EXATO lead → OS): confere que o pedido existe e
+        // ainda não gerou coleta. Os campos do vínculo saem do lead, nunca do corpo.
+        const pedidoId = String(b.leadId || '').replace(/[^a-zA-Z0-9_]/g, '').slice(0, 60);
+        delete b.leadId; delete b.leadOrigem;
+        let leadOrig = null;
+        if (pedidoId) {
+          leadOrig = await lerLead(env, pedidoId);
+          if (!leadOrig || leadOrig.status === 'excluido') return json({ ok: false, error: 'Pedido de origem não encontrado — recarregue a página.' }, 400);
+          if (leadOrig.osId) return json({ ok: false, error: `Este pedido já gerou a coleta ${leadOrig.osNumero || ''} — escolha “coleta sem pedido registrado” ou outro pedido.` }, 409);
+        }
+        const os = await criarColetaOS(env, b, escritorio.email, leadOrig ? { lead: leadOrig } : undefined);
+        if (leadOrig) {
+          // O pedido passa a apontar para a OS (e sai da caixa de pendentes).
+          try {
+            const l = (await lerLead(env, leadOrig.id)) || leadOrig;
+            l.osId = os.id; l.osNumero = os.numero; l.osCriadaEm = os.criadoEm;
+            if (!l.clienteId && os.clienteId) l.clienteId = os.clienteId;
+            const mud = mudancaComHistorico(l, LEAD_JA_RESOLVIDO.has(l.status) ? null : 'tratado', { por: escritorio.email || '', evento: 'os_criada', detalhe: os.numero });
+            if (!l.tratadoEm && l.status === 'tratado') { l.tratadoPor = escritorio.email || ''; l.tratadoEm = nowS(); }
+            await salvarLead(env, l);
+            await registrarHistoricoLead(env, mud.historico);
+          } catch (error) { console.error('lead_os_vinculo_falhou', safeError(error)); }
+        }
         // Avisa o cliente (best-effort: nunca bloqueia a criação). SEM data marcada o
         // e-mail diz "aguardando roteiro" — dizer "agendada" fazia o cliente achar que
         // já tinha dia e cobrar a equipe dentro do prazo (pedido da Débora, 29/10).
@@ -3972,6 +4084,41 @@ async function carregarClientePorId(env, id) {
   if (/^p\d+$/.test(s)) return await lerClienteD1(env, s.slice(1));
   return await curarContatosKV(env, await lerCliente(env, s));
 }
+// Ficha do cliente para o botão "Gerar coleta deste pedido": a ficha ligada ao pedido
+// (KV), o contato migrado ('p'+id — se a pessoa é de uma empresa, a EMPRESA), ou a
+// ficha com o mesmo CNPJ/CPF ou e-mail. Só SUGERE: a tela de coleta mostra o cliente
+// antes de salvar. Devolve '' quando não acha (aí segue o "Converter em cliente").
+async function clienteDoPedido(env, lead) {
+  const db = env.DB_PLOOMES;
+  // Pedido de EMPRESA: a pessoa de contato aponta para a empresa dela (mesma regra do
+  // login do portal). Pedido de pessoa física: a própria pessoa.
+  const pf = (lead && lead.perfil) === 'pessoa_fisica';
+  const contatoD1 = async (sqlWhere, valor, irParaEmpresa) => {
+    if (!db) return '';
+    try {
+      const r = await db.prepare(`SELECT c.ploomes_id AS cid, e.ploomes_id AS emp FROM contatos c LEFT JOIN contatos e ON e.ploomes_id = c.company_id AND COALESCE(c.company_id,0) <> 0 WHERE ${sqlWhere} ORDER BY (e.ploomes_id IS NOT NULL) ${irParaEmpresa ? 'DESC' : 'ASC'}, c.ploomes_id DESC LIMIT 1`).bind(valor).first();
+      return r && r.cid ? 'p' + ((irParaEmpresa && r.emp) || r.cid) : '';
+    } catch { return ''; }
+  };
+  const cid = String((lead && lead.clienteId) || '').trim();
+  if (cid) {
+    if (/^p\d+$/.test(cid)) return cid;
+    if (/^\d+$/.test(cid)) { const p = await contatoD1('c.ploomes_id = ?1', Number(cid), !pf); if (p) return p; }
+    else if (await lerCliente(env, cid)) return cid;
+  }
+  const doc = String((lead && lead.documento) || '').replace(/\D/g, '');
+  if (doc.length === 11 || doc.length === 14) {
+    try { const idx = await listarClientes(env); const hit = idx.find((c) => String(c.doc || '').replace(/\D/g, '') === doc); if (hit && hit.id) return hit.id; } catch { /* segue */ }
+    const p = await contatoD1('c.documento = ?1', doc, false); if (p) return p;
+  }
+  const em = String((lead && lead.email) || '').trim().toLowerCase();
+  if (em && em.includes('@')) {
+    try { const kvId = env.PORTAL_KV ? await env.PORTAL_KV.get(`climail:${em}`) : null; if (kvId && await lerCliente(env, kvId)) return kvId; } catch { /* segue */ }
+    const p = await contatoD1('c.email = ?1 COLLATE NOCASE', em, !pf); if (p) return p;
+  }
+  return '';
+}
+
 // Materializa um contato D1 como registro KV (necessário para editar / gerar coleta).
 // Reaproveita um KV existente com o mesmo documento; senão cria um novo (que já espelha
 // de volta no D1). Se o id já for KV, apenas lê. Devolve o cli KV (ou null).
@@ -4322,10 +4469,11 @@ async function solicitarOS(request, sessao, env) {
         lead.expressa = expressa;
         // Menos de 20 itens: só agenda depois de pago. Expressa com 20+: se não
         // pagar, a coleta segue valendo como tradicional gratuita.
-        if (poucoVolume) lead.status = 'aguardando-pagamento';
+        const hist = poucoVolume ? mudancaComHistorico(lead, 'aguardando-pagamento', { humano: false, por: 'sistema', evento: 'aguardando_pagamento' }).historico : null;
         lead.descricao = `💳 TAXA DE R$ ${valorTaxa} (${motivo}) — AGUARDANDO PAGAMENTO. ${poucoVolume ? 'SÓ AGENDAR DEPOIS DE PAGO.' : 'Se não pagar, tratar como tradicional gratuita (1–7 dias úteis).'}\n\n${lead.descricao}`;
         await salvarLead(env, lead);
         await atualizarIndexLead(env, r.id, { pagamento: 'aguardando', status: lead.status });
+        if (hist) await registrarHistoricoLead(env, hist);
       }
       pagamento = { valor: valorTaxa, link: s.url, motivo };
     } catch (error) {
@@ -4716,10 +4864,11 @@ async function fulfillPedidoPago(env, ped, pg) {
       const lead = await lerLead(env, ped.leadId);
       if (lead) {
         lead.cobranca = { ...(lead.cobranca || {}), status: 'pago', paymentId: pg.id, pagoEm: nowS() };
-        if (lead.status === 'aguardando-pagamento') lead.status = 'novo';
+        const hist = lead.status === 'aguardando-pagamento' ? mudancaComHistorico(lead, 'novo', { humano: false, por: 'sistema', evento: 'pagamento_aprovado' }).historico : null;
         lead.descricao = `💳 TAXA PAGA (R$ ${ped.valor})${ped.expressa ? ' — ⚡ EXPRESSA: COLETAR EM ATÉ 24H' : ''} ✔ LIBERADA\n\n${lead.descricao}`;
         await salvarLead(env, lead);
         await atualizarIndexLead(env, ped.leadId, { pagamento: 'pago', status: lead.status, prioridade: ped.expressa ? 'alta' : (lead.prioridade || '') });
+        if (hist) await registrarHistoricoLead(env, hist);
       }
       if (ped.clienteEmail) { try { await enviarEmailColetaPaga(ped, env); } catch (error) { console.error('email_coleta_paga', safeError(error)); } }
       console.log('coleta_taxa_paga', { lead: ped.leadId, valor: pg.valor, expressa: !!ped.expressa });

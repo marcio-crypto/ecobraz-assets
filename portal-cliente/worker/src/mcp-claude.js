@@ -297,7 +297,7 @@ async function dentroDoLimite(env) {
 // Auditoria: função, filtros, quantidade de registros, tempo e data/hora — SEM dado
 // pessoal: filtro que pode identificar alguém (termo de busca, documento, nome do
 // cliente ou do motorista) é gravado como "[omitido]".
-const FILTROS_SEGUROS = new Set(['tipo', 'ultima_coleta_de', 'ultima_coleta_ate', 'nunca_coletou', 'cadastrado_de', 'cadastrado_ate', 'cidade', 'uf', 'material', 'tem_os_aberta', 'aceita_email', 'tem_email', 'origem', 'pagina', 'por_pagina', 'formato', 'campos', 'de', 'ate', 'campo_data', 'status', 'tipo_cliente', 'perfil', 'canal', 'fonte', 'limite']);
+const FILTROS_SEGUROS = new Set(['tipo', 'ultima_coleta_de', 'ultima_coleta_ate', 'nunca_coletou', 'cadastrado_de', 'cadastrado_ate', 'cidade', 'uf', 'material', 'tem_os_aberta', 'aceita_email', 'tem_email', 'origem', 'pagina', 'por_pagina', 'formato', 'campos', 'de', 'ate', 'campo_data', 'status', 'tipo_cliente', 'perfil', 'canal', 'fonte', 'limite', 'prioridade']);
 function filtrosParaLog(args) {
   const out = {};
   for (const [k, v] of Object.entries(args && typeof args === 'object' ? args : {})) {

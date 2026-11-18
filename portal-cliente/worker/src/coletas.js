@@ -8,6 +8,7 @@ import { botaoGoogle } from './google-auth.js';
 import { lerCliente } from './cadastro.js';
 import { abasEquipe } from './os-utils.js';
 import { lerChavesKV } from './kv-lote.js';
+import { situacaoPrazo, textoBR } from './atendimento.js';
 import qrcode from 'qrcode-generator';
 
 const TE = new TextEncoder();
@@ -105,6 +106,8 @@ function resumoIndiceOS(rec) {
   const placa = placaDaOS(rec); if (placa) r.placa = placa;
   if (rec.concluidaEm) r.concluidaEm = rec.concluidaEm;
   if (rec.canceladaEm) r.canceladaEm = rec.canceladaEm;
+  if (rec.leadId) r.leadId = rec.leadId;
+  if (rec.prazoAlvoEm) r.prazoAlvoEm = rec.prazoAlvoEm;
   return r;
 }
 // Grava o índice de OS. O antigo `.slice(0, 900000)` CORTAVA O JSON NO MEIO quando o
@@ -167,7 +170,10 @@ function limparTransportadora(t) {
   };
 }
 
-export async function criarColetaOS(env, dados, criadoPor) {
+// `origem` (opcional) = { lead }: o pedido (lead) de onde a coleta nasceu, JÁ CONFERIDO
+// pela rota — nunca vem do corpo da requisição. Grava o vínculo EXATO lead → OS e, se o
+// pedido for lote grande, o prazo-alvo (hora do pedido + 72h).
+export async function criarColetaOS(env, dados, criadoPor, origem) {
   const d = dados || {};
   const numero = await proximoNumero(env);
   const id = 'coleta_' + (crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '').slice(0, 12) : Math.random().toString(36).slice(2, 14));
@@ -191,12 +197,24 @@ export async function criarColetaOS(env, dados, criadoPor) {
   // Transportadora e motorista próprio são excludentes: com transportadora, a OS
   // não pertence à rota de nenhum motorista (e não aparece no app de ninguém).
   if (rec.transportadora) { rec.agenteEmail = ''; rec.agenteNome = ''; }
+  const lo = origem && origem.lead;
+  if (lo && lo.id) {
+    rec.leadId = String(lo.id).slice(0, 60);
+    const lc = isoValido(lo.criadoEm); if (lc) rec.leadCriadoEm = lc;
+    if (lo.loteGrande) {
+      rec.loteGrande = true;
+      const pa = isoValido(lo.prazoAlvoEm); if (pa) rec.prazoAlvoEm = pa;
+      rec.prazoHoras = Number(lo.prazoHoras) || 72;
+    }
+  }
   if (env.PORTAL_KV) {
     await env.PORTAL_KV.put(`os:${id}`, JSON.stringify(rec));
     const idx = await listarColetasOS(env);
     const resumo = { id, numero, status: 'agendada', clienteId: rec.clienteId || '', clienteDoc: rec.clienteDoc || '', clienteNome: rec.clienteNome, cidade: cidadeDoEndereco(rec.endereco), dataAgendada: rec.dataAgendada, agenteNome: rec.agenteNome, agenteEmail: rec.agenteEmail, criadoEm: rec.criadoEm, mat: materialIndiceOS(rec) };
     if (rec.transportadora) resumo.transp = rec.transportadora.nome;
     { const placa = placaDaOS(rec); if (placa) resumo.placa = placa; }
+    if (rec.leadId) resumo.leadId = rec.leadId;
+    if (rec.prazoAlvoEm) resumo.prazoAlvoEm = rec.prazoAlvoEm;
     idx.unshift(resumo);
     await salvarIndiceOS(env, idx);
   }
@@ -516,7 +534,7 @@ export function paginaColetasLista(user, coletas, q, cliCtx, negocios, aba) {
   const linhas = lista.length ? lista.map((c) => `<a href="/coletas/os?id=${esc(c.id)}" style="display:flex;justify-content:space-between;align-items:center;gap:12px;text-decoration:none;background:#fff;border:1px solid #E4EBE9;border-radius:12px;padding:13px 15px;margin-bottom:9px">
       <div style="min-width:0"><div style="font-size:14px;font-weight:800;color:#10262B">${esc(c.numero)} <span style="font-weight:600;color:#7c8a87">· ${esc(c.clienteNome || '')}</span></div>
       <div style="font-size:12px;color:#7c8a87;margin-top:3px">${c.dataAgendada ? '📅 ' + esc(dataBR(c.dataAgendada)) : 'sem data'}${c.agenteNome ? ' · 🚚 ' + esc(c.agenteNome) : ''}${c.transp ? ' · 🚛 ' + esc(c.transp) : ''}${c.cidade ? ' · ' + esc(c.cidade) : ''}</div></div>
-      <span style="flex:none;display:flex;align-items:center;gap:6px">${c.reagendar ? '<span style="font-size:10px;font-weight:800;color:#8A6A16;background:#FFF4DE;border-radius:20px;padding:3px 9px">↩︎ REAGENDAR</span>' : ''}${pill(c.status, c.dataAgendada)}</span>
+      <span style="flex:none;display:flex;align-items:center;gap:6px">${c.prazoAlvoEm && c.status !== 'concluida' && c.status !== 'cancelada' ? `<span style="font-size:10px;font-weight:800;color:#8A4B00;background:#FFE9C7;border-radius:20px;padding:3px 9px">🏭 até ${esc(textoBR(c.prazoAlvoEm).slice(0, 13))}h</span>` : ''}${c.reagendar ? '<span style="font-size:10px;font-weight:800;color:#8A6A16;background:#FFF4DE;border-radius:20px;padding:3px 9px">↩︎ REAGENDAR</span>' : ''}${pill(c.status, c.dataAgendada)}</span>
     </a>`).join('') : `<div class="card" style="text-align:center;color:#8fa39f;font-size:13.5px">${vazioMsg}</div>`;
   return `${head('Coletas')}<body>${topo('coletas')}
 <div class="wrap">
@@ -531,7 +549,19 @@ export function paginaColetasLista(user, coletas, q, cliCtx, negocios, aba) {
 </div></body></html>`;
 }
 
-export function paginaGerarColeta(user, cliente, agentes, patrocinadores, veiculos) {
+// `pedidosCtx` (opcional) = { pedidos, leadSel }: pedidos (leads) em aberto deste cliente
+// e o já escolhido — a coleta nasce ligada ao pedido certo (vínculo exato lead → OS).
+export function paginaGerarColeta(user, cliente, agentes, patrocinadores, veiculos, pedidosCtx) {
+  const pc = pedidosCtx || {};
+  const pedidos = Array.isArray(pc.pedidos) ? pc.pedidos : [];
+  const leadSel = String(pc.leadSel || '');
+  const rotuloPedido = (p) => [textoBR(p.criadoEm) || '', p.nome || p.empresa || '', p.origem ? `via ${p.origem}` : '', p.loteGrande ? `🏭 LOTE GRANDE — coletar até ${textoBR(p.prazoAlvoEm)}` : (p.prioridade === 'alta' ? '🌟 prioritária' : '')].filter(Boolean).join(' · ');
+  const blocoPedido = pedidos.length ? `<div class="sec" style="margin-top:0">Pedido de origem</div>
+    <select id="leadId">
+      <option value="">— coleta sem pedido registrado —</option>
+      ${pedidos.map((p) => `<option value="${esc(p.id)}"${p.id === leadSel ? ' selected' : ''}>${esc(rotuloPedido(p))}</option>`).join('')}
+    </select>
+    <div style="font-size:11px;color:#9aa7a4;margin:6px 0 4px">Ligar a coleta ao pedido mede o tempo do pedido até a coleta${pedidos.some((p) => p.loteGrande) ? ' e, no lote grande, o prazo de 72h' : ''}. Se esta coleta não veio de nenhum desses pedidos, escolha “coleta sem pedido registrado”.</div>` : '';
   const fmtEnd = (x) => [[x.logradouro, x.numero].filter(Boolean).join(', '), x.complemento, x.bairro, [x.cidade, x.uf].filter(Boolean).join('/'), x.cep].filter(Boolean).join(' · ');
   const rotEnd = (x, n) => x.rotulo || x.bairro || x.cidade || ('Endereço ' + n);
   const e = cliente.endereco || {};
@@ -555,6 +585,7 @@ export function paginaGerarColeta(user, cliente, agentes, patrocinadores, veicul
   <h1 style="font-size:20px;margin:10px 0 2px">Nova coleta</h1>
   <p style="font-size:12.5px;color:#8fa39f;margin:0 0 14px">Gerando a Ordem de Coleta para <b>${esc(nome)}</b>.</p>
   <div class="card">
+    ${blocoPedido}
     <div class="sec">Local &amp; agendamento</div>
     <label>Endereço da coleta</label>
     ${temEnd2 ? `<div style="font-size:11.5px;color:#0B5B66;font-weight:700;margin:-2px 0 6px">Este cliente tem 2 endereços — escolha o correto:</div>
@@ -614,7 +645,8 @@ function gerar(){var ag=g('agente').split('|');var ehTransp=g('quemColeta')==='t
     material:g('material'),quantidade:g('quantidade'),acondicionamento:g('acondicionamento'),obs:g('obs'),obsInterna:g('obsInterna'),
     itensTexto:g('itens'),veiculoPlaca:ehTransp?'':g('veiculo'),certificados:certs,
     agenteEmail:ehTransp?'':(ag[0]||''),agenteNome:ehTransp?'':(ag[1]||''),
-    transportadora:ehTransp?{nome:g('tNome'),cnpj:g('tCnpj'),placa:g('tPlaca'),motorista:g('tMot'),fone:g('tFone')}:null};
+    transportadora:ehTransp?{nome:g('tNome'),cnpj:g('tCnpj'),placa:g('tPlaca'),motorista:g('tMot'),fone:g('tFone')}:null,
+    leadId:g('leadId')};
   var pOn=document.getElementById('patroOn');
   if(pOn&&pOn.checked){var pp=g('patro').split('|');if(!pp[0]){document.getElementById('m').textContent='Escolha a empresa patrocinadora ou desmarque o patrocínio.';return;}rec.patrocinadorId=pp[0];rec.patrocinadorNome=pp[1]||'';}
   if(!rec.endereco){document.getElementById('m').textContent='Informe o endereço da coleta.';return;}
@@ -699,7 +731,7 @@ export function paginaColetaOSDetalhe(user, os, acomp, extras) {
 <div class="wrap">
   <a href="/coletas" style="font-size:13px;font-weight:800;text-decoration:none;color:#4F6469">← Todas as coletas</a>
   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin:12px 0 16px">
-    <div>${pill(os.status, os.dataAgendada)}<h1 style="font-size:22px;margin:8px 0 0">${esc(os.numero)}</h1>
+    <div>${pill(os.status, os.dataAgendada)}${os.prazoAlvoEm && os.status !== 'cancelada' ? ` <span style="font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;background:#FFE9C7;color:#8A4B00">🏭 LOTE GRANDE · ${esc((situacaoPrazo(os.prazoAlvoEm, { status: os.status, concluidaEm: os.concluidaEm }) || {}).texto || '')}</span>` : ''}<h1 style="font-size:22px;margin:8px 0 0">${esc(os.numero)}</h1>
     <div style="font-size:13px;color:#7c8a87;margin-top:2px">${os.clienteId ? `<a href="/cadastro/cliente?id=${esc(os.clienteId)}" style="color:#0B5B66;font-weight:700;text-decoration:none">${esc(os.clienteNome || 'Cliente')} ↗</a>` : esc(os.clienteNome || '')}</div></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;flex:none;justify-content:flex-end">
       ${os.clienteId && !ro ? `<a href="/cadastro/cliente?id=${esc(os.clienteId)}" class="btn btn-g" style="padding:9px 12px;font-size:12.5px">👤 Abrir cliente</a>` : ''}
@@ -726,7 +758,9 @@ export function paginaColetaOSDetalhe(user, os, acomp, extras) {
       ${linha('Observações', os.obs)}
       ${os.obsInterna ? `<tr><td style="padding:8px 0;border-top:1px solid #EEF1F0;color:#8a6a16;width:38%;font-weight:700">🔒 Interna (equipe)</td><td style="padding:8px 0;border-top:1px solid #EEF1F0;font-weight:600;white-space:pre-wrap;word-break:break-word;color:#7a5f13">${esc(os.obsInterna)}</td></tr>` : ''}
       ${linha('Certificados solicitados', (os.certificados || []).join(' · '))}
-      ${linha('Aberta em', dataBR(os.criadoEm))}
+      ${linha('Aberta em', textoBR(os.criadoEm) || dataBR(os.criadoEm))}
+      ${os.leadId ? `<tr><td style="padding:8px 0;border-top:1px solid #EEF1F0;color:#6B7B78;width:38%">Pedido de origem</td><td style="padding:8px 0;border-top:1px solid #EEF1F0;font-weight:600">${ro ? `pedido de ${esc(textoBR(os.leadCriadoEm) || '—')}` : `<a href="/leads/lead?id=${esc(os.leadId)}" style="color:#0B5B66;font-weight:700;text-decoration:none">pedido de ${esc(textoBR(os.leadCriadoEm) || '—')} ↗</a>`}</td></tr>` : ''}
+      ${os.prazoAlvoEm ? linha('Prazo-alvo (lote grande)', `${textoBR(os.prazoAlvoEm)} (${os.prazoHoras || 72}h do pedido) — ${(situacaoPrazo(os.prazoAlvoEm, { status: os.status, concluidaEm: os.concluidaEm }) || {}).texto || ''}`) : ''}
       ${os.status === 'concluida' && os.concluidaEm ? linha('Concluída em', dataBR(os.concluidaEm)) : ''}
       ${os.status === 'cancelada' && os.canceladaEm ? linha('Cancelada em', dataBR(os.canceladaEm) + (os.motivoCancelamento ? ' — motivo: ' + os.motivoCancelamento : '')) : ''}
     </table>
