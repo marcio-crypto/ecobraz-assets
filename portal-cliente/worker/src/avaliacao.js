@@ -209,9 +209,8 @@ function lerEmails(v, opcoes) {
     const resto = pedacos[pedacos.length - 1];
     if (resto && !resto.includes('@') && PALAVRA_SOLTA.test(resto)) soltas = [resto];
     // Fim do domínio cortado por um espaço ("souza@empresa.com .br"): o endereço lido estaria errado.
-    // (só quando o que vem em seguida é o pedaço que falta: ".br", ".com.br", ". br" ou "br" depois de um ponto)
-    const prox = palavras[i + 1] || '';
-    if (inteira && achados.length && (/^\.[a-z]{2,6}(?:\.[a-z]{2,6})*[.,;]?$/.test(prox) || (/\.$/.test(palavra) && /^br[.,;)]?$/.test(prox)) || (prox === '.' && /^br[.,;)]?$/.test(palavras[i + 2] || '')))) inteira = false;
+    // (quando o que vem logo depois é o pedaço que falta: ".br", ".com.br", ". br", "br" — com ou sem ">", ")", ";" colado)
+    if (inteira && achados.length && /^(?:\.[a-z]{2,6}(?![a-z0-9@])|\.?\s?br(?![a-z0-9@]))/.test(palavras.slice(i + 1, i + 3).join(' '))) inteira = false;
     if (inteira && campo && achados.length && !/^[<(\[]/.test(palavra) && nomeNaoBate(antes, achados[0])) inteira = false;
     if (inteira) { for (const t of achados) if (!bons.includes(t)) bons.push(t); }
     else if (/[^@\s]@/.test(palavra)) ruins++; // "@perfil" de rede social não conta como e-mail
@@ -228,19 +227,16 @@ const ehRotulo = (p) => { const n = semAcentoMin(p).replace(/[.:]+$/, ''); retur
 // endereço), uma delas tem de bater com o COMEÇO de um pedaço do endereço ("Sergio Souza
 // sergio.souza@x.com", "Maria maria@x.com") ou ser o sobrenome depois das iniciais ("Sergio
 // Souza ssouza@x.com"). "ana santana@x.com" e "mara amaral@x.com" NÃO batem. Nome repetido
-// ("Maria Clara maria clara@x.com"): a última palavra é parte do endereço → não bate. Caixa de
-// setor em domínio de empresa ("Carlos, compras@empresa.com.br") é aceita.
-const DOMINIOS_PESSOAIS = new Set(['gmail', 'googlemail', 'hotmail', 'outlook', 'yahoo', 'ymail', 'live', 'msn', 'icloud', 'me', 'uol', 'bol', 'terra', 'ig', 'globo', 'globomail', 'r7', 'zipmail', 'protonmail', 'proton', 'aol', 'oi', 'pop']);
+// ("Maria Clara maria clara@x.com"): a última palavra é parte do endereço → não bate. Na dúvida
+// ("silvana silva@x.com", "Carlos, compras@x.com") o endereço é descartado e a OS mostra "e-mail inválido".
 function nomeNaoBate(soltas, email) {
   const nomes = (soltas || []).filter((x) => /\p{L}/u.test(x) && !['e', 'ou', 'and'].includes(x) && !ehRotulo(x)).map((x) => semAcentoMin(x).replace(/[^a-z0-9]/g, '')).filter(Boolean);
   if (!nomes.length) return false; // nada, só números, conectivos ou rótulos
   const ultima = nomes[nomes.length - 1];
   if (nomes.indexOf(ultima) !== nomes.length - 1) return true;
-  const [local, dominio] = String(email).split('@');
-  const pedacos = local.split(/[._+-]+/).map((x) => x.replace(/[^a-z0-9]/g, '')).filter(Boolean);
-  if (!DOMINIOS_PESSOAIS.has(String(dominio || '').split('.')[0]) && (NAO_PESSOA.has(local) || NAO_PESSOA.has(pedacos[0]))) return false;
+  const pedacos = String(email).split('@')[0].split(/[._+-]+/).map((x) => x.replace(/[^a-z0-9]/g, '')).filter(Boolean);
   const iniciais = nomes.map((x) => x[0]).join('');
-  const bate = (n) => n.length >= 3 && pedacos.some((q) => q.startsWith(n) || (q.length >= 3 && n.startsWith(q)) || (q.endsWith(n) && q.length - n.length <= 2 && [...q.slice(0, q.length - n.length)].every((ch) => iniciais.includes(ch))));
+  const bate = (n) => n.length >= 3 && pedacos.some((q) => q.startsWith(n) || (q.endsWith(n) && q.length - n.length <= 2 && [...q.slice(0, q.length - n.length)].every((ch) => iniciais.includes(ch))));
   return !nomes.some(bate);
 }
 export const emailsDe = (v) => lerEmails(v).bons;
@@ -285,7 +281,7 @@ export function primeiroNome(nome) {
 const contatoInativo = (c) => /inativ|deslig|demit|saiu|nao trabalha|ex-func|bloque|falec|nao contat|aposent|afastad/.test(semAcentoMin(c && c.status));
 const fonesNac = (v) => {
   const out = [];
-  for (const parte of String(v == null ? '' : v).split(/\s*(?:\/|;|,|\||·|\be\b|\bou\b)\s*/i)) {
+  for (const parte of String(v == null ? '' : v).slice(0, 500).split(/\s*(?:\/|;|,|\||·|\be\b|\bou\b)\s*/i)) {
     let d = digits(parte);
     if (d.startsWith('55') && (d.length === 12 || d.length === 13)) d = d.slice(2);
     if (d.startsWith('0') && (d.length === 11 || d.length === 12)) d = d.slice(1);
@@ -1327,10 +1323,10 @@ function testeAviso(t){var m=$('mAviso');m.textContent='Enviando o teste…';pos
 function salvarCasa(){var m=$('mCasa');m.textContent='Salvando…';post('/api/avaliacoes/casa',{texto:$('casa').value}).then(function(j){m.textContent=j.ok?'Salvo.':(j.message||'Não foi possível salvar.');}).catch(function(){m.textContent='Sem conexão.';});}
 function carga(){var f=$('arq').files[0],m=$('mCarga');if(!f){m.textContent='Escolha o arquivo.';return;}var padrao=$('aMotivo').value;var r=new FileReader();
   r.onload=function(){var RE=/^[a-z0-9_%+&-]+(\\.[a-z0-9_%+&-]+)*@[a-z0-9-]+(\\.[a-z0-9-]+)*\\.[a-z]{2,}$/,linhas=String(r.result||'').split(/\\r?\\n/),achados=[],temSaida=false,i;
-    for(i=0;i<linhas.length;i++){var t=linhas[i].toLowerCase(),cels=t.split(/[\\s,;|<>()\\[\\]"]+/),e='';
+    for(i=0;i<linhas.length;i++){var t=linhas[i].normalize('NFC').toLowerCase(),cels=t.split(/[\\s,;|<>()\\[\\]"]+/),e='';
       for(var c=0;c<cels.length;c++){var x=cels[c].replace(/^[.']+|[.']+$/g,'');if(x.length<=254&&RE.test(x)){e=x;break;}}
       if(!e)continue;var resto=t.replace(e,' ').replace(/_/g,' '),tipo='';
-      if(/\\b(inativ[oa]s?|removid[oa]s?|removed|descadastr\\w*|unsubscri\\w*|opt[- ]?out|cancelad[oa]s?|cancelou|cancell?ed|reclama\\w*|spam|complain\\w*)\\b/.test(resto)||/(?:\\b(?:n\\S?o|non|not)|(?:^|[^a-z-])(?:in|un))[\\s-]+(?:ativ[oa]s?|active|subscribed|inscrit[oa]s?|confirmad[oa]s?)\\b/.test(resto.replace(/\\bopt[\\s-]?in\\b/g,' ')))tipo='descadastrado';
+      if(/\\b(inativ[oa]s?|removid[oa]s?|removed|descadastr\\w*|unsubscri\\w*|opt[- ]?out|cancelad[oa]s?|cancelou|cancell?ed|reclama\\w*|spam|complain\\w*)\\b/.test(resto)||/(?:\\b(?:n[^a-z\\s]o|nao|not)[\\s-]+(?:(?:est[aá]|foi|[eé]|is|was)[\\s-]+)?|\\b(?:no|non)[\\s-]+|(?:^|[^a-z-])(?:in|un)[\\s-]+)(?:ativ[oa]s?|active|subscribed|inscrit[oa]s?|confirmad[oa]s?)\\b/.test(resto.replace(/\\bopt[\\s-]?in\\b/g,' ')))tipo='descadastrado';
       else if(/\\b(bounce[ds]?|hard|inv[aá]lid[oa]s?|invalid|inexistente)\\b/.test(resto))tipo='invalido';
       else if(/\\b(ativ[oa]s?|active|subscribed|inscrit[oa]s?|confirmad[oa]s?)\\b/.test(resto))tipo='ativo';
       if(tipo==='descadastrado'||tipo==='invalido')temSaida=true;
