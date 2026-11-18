@@ -85,7 +85,7 @@ import { agentesDe } from './agente.js';
 import { atenderMcpClaude, lerConexaoClaude, gerarConexaoClaude, revogarConexaoClaude, paginaConexaoClaude, listarAuditoriaClaude } from './mcp-claude.js';
 import { mudancaComHistorico, registrarHistoricoLead, listarHistoricoLead, deLocalBR, leadsAbertosDoCliente, leadSemOSValida, medido, INICIO_MEDICAO_TXT } from './atendimento.js';
 import { LEAD_RESOLVIDO as LEAD_JA_RESOLVIDO } from './cadastro.js';
-import { CRON_AVALIACAO, processarAvaliacoes, lerConfigAvaliacao, salvarModoAvaliacao, salvarCasaAvaliacao, consultarNaoEnviar, adicionarNaoEnviar, removerNaoEnviar, contarNaoEnviar, marcarWhatsapp, desfazerWhatsapp, registrarReabertura, emailsDe, enviarExemplo, conferirDominio, infoAvaliacaoOS, dadosPaginaAvaliacoes, blocoAvaliacaoOS, paginaAvaliacoes } from './avaliacao.js';
+import { CRON_AVALIACAO, processarAvaliacoes, lerConfigAvaliacao, salvarModoAvaliacao, salvarCasaAvaliacao, consultarNaoEnviar, adicionarNaoEnviar, removerNaoEnviar, contarNaoEnviar, marcarWhatsapp, desfazerWhatsapp, registrarReabertura, emailsDe, enviarExemplo, conferirDominio, infoAvaliacaoOS, dadosPaginaAvaliacoes, blocoAvaliacaoOS, paginaAvaliacoes, receberAvisoResend, enviarTesteAviso, ultimoAviso, avisosConfigurados } from './avaliacao.js';
 import { servirIcone, servirManifest, servirServiceWorker } from './pwa.js';
 import { googleConfigurado, iniciarGoogle, callbackGoogle, botaoGoogle } from './google-auth.js';
 
@@ -1344,6 +1344,14 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         // Boleto: gerado, mas ainda não pago — a baixa é automática pelo webhook quando pagar.
         return html(paginaMensagem('Boleto gerado', 'Seu boleto foi gerado. Pague pelo app ou site do seu banco até o vencimento — a confirmação é automática (costuma levar de 1 a 2 dias úteis após o pagamento). Assim que cair, seu pedido é liberado sozinho.', 'https://ecobraz.org'));
       }
+      // Avisos do Resend (devolução definitiva e queixa de spam): entram sozinhos na lista
+      // "não enviar e-mail" do pedido de avaliação. A autenticidade é conferida pela
+      // assinatura do aviso (segredo RESEND_WEBHOOK_SECRET, que fica só na Cloudflare);
+      // sem o segredo, tudo é recusado. Pelo navegador (GET) só informa se está ligado.
+      if (pathname === '/api/resend/webhook' && request.method === 'GET') {
+        return json({ ok: true, webhook: 'resend', ativo: avisosConfigurados(env), dica: 'Este é o endereço que o Resend chama (por POST) para avisar devoluções e queixas — não funciona pelo navegador. Se você está vendo isto, o endereço existe e está no ar.' });
+      }
+      if (pathname === '/api/resend/webhook' && request.method === 'POST') return await receberAvisoResend(request, env);
       // Abrir este endereço no navegador (GET) NÃO é erro: o webhook funciona por
       // POST (a Stripe chama sozinha). Respondemos algo claro para não assustar.
       if (pathname === '/api/stripe/webhook' && request.method === 'GET') {
@@ -2211,12 +2219,15 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         if (pathname === '/api/avaliacoes/casa') return json({ ok: !!(await salvarCasaAvaliacao(env, b.texto, autor)) });
         if (pathname === '/api/avaliacoes/conferir') return json({ ok: true, conferencia: await conferirDominio(env) });
         if (pathname === '/api/avaliacoes/exemplo') return json(await enviarExemplo(env, autor, b.modelo === 'PJ' ? 'PJ' : 'PF'));
+        // Teste de ponta a ponta do aviso de devolução/queixa (endereço de teste do próprio Resend) e a situação dos avisos.
+        if (pathname === '/api/avaliacoes/teste-aviso') return json(await enviarTesteAviso(env, b.tipo === 'queixa' ? 'queixa' : 'devolucao', autor));
+        if (pathname === '/api/avaliacoes/aviso-estado') return json({ ok: true, configurado: avisosConfigurados(env), ultimo: await ultimoAviso(env) });
         if (pathname === '/api/avaliacoes/nao-enviar') {
           const acao = String(b.acao || '');
           if (acao === 'importar') { const r = await adicionarNaoEnviar(env, b.itens, { origem: 'egoi', por: autor }); return json({ ok: r.ok, gravados: r.gravados }); }
           const email = String(b.email || '').trim().toLowerCase();
           if (emailsDe(email)[0] !== email) return json({ ok: false, message: 'E-mail inválido (confira se não tem acento, espaço ou vírgula).' }, 400);
-          if (acao === 'consultar') { const x = (await consultarNaoEnviar(env, [email])).get(email); return json({ ok: true, message: x ? `Está na lista (${x.motivo === 'invalido' ? 'e-mail inválido' : 'pediu para sair'}${x.em ? `, desde ${String(x.em).slice(0, 10).split('-').reverse().join('/')}` : ''}): não recebe.` : 'Não está na lista — pode receber.' }); }
+          if (acao === 'consultar') { const x = (await consultarNaoEnviar(env, [email])).get(email); return json({ ok: true, message: x ? `Está na lista (${x.motivo === 'invalido' ? 'e-mail inválido' : 'pediu para sair'}${x.em ? `, desde ${String(x.em).slice(0, 10).split('-').reverse().join('/')}` : ''}${x.origem === 'resend' ? ', aviso do Resend' : ''}): não recebe.` : 'Não está na lista — pode receber.' }); }
           if (acao === 'adicionar') { await adicionarNaoEnviar(env, [{ e: email, m: b.motivo === 'invalido' ? 'invalido' : 'descadastrado' }], { origem: 'manual', por: autor }); return json({ ok: true, message: 'Colocado na lista: este e-mail não recebe mais.', total: (await contarNaoEnviar(env)).total }); }
           if (acao === 'remover') { const r = await removerNaoEnviar(env, email, autor); return json({ ok: !!r.ok, message: r.ok ? 'Tirado da lista.' : 'Não foi possível tirar da lista agora. Tente de novo.', total: (await contarNaoEnviar(env)).total }); }
           return json({ ok: false, message: 'Ação inválida.' }, 400);

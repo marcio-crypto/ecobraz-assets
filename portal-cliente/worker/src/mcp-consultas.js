@@ -20,7 +20,7 @@ import { lerChavesKV } from './kv-lote.js';
 import { MATERIAIS as TRIAGEM_DOCA } from './operacional.js';
 import { REGRAS_MATERIAIS, estimarPesoKg } from './cadastro.js';
 import { isoBR, minutosEntre, percentil, segundaDaSemana, situacaoPrazo, avaliarLoteGrande, perfilDoLead, ehPedidoDeColeta, medido, INICIO_MEDICAO_TXT } from './atendimento.js';
-import { lerAvaliacoes, camposAvaliacao, ROTULO_MOTIVO } from './avaliacao.js';
+import { lerAvaliacoes, camposAvaliacao, ROTULO_MOTIVO, lerAvisos } from './avaliacao.js';
 
 export class ErroUso extends Error {}
 
@@ -1065,7 +1065,7 @@ async function ferrMetricasDiarias(env, args) {
   const dias = [];
   for (let d = de; d <= ate; d = somaDias(d, 1)) dias.push(d);
   const blank = () => ({ total: 0, pf: 0, pj: 0 });
-  const m = new Map(dias.map((d) => [d, { dia: d, os_criadas: blank(), os_agendadas: blank(), os_concluidas: blank(), os_canceladas: blank(), peso_total_kg: 0, _mat: new Map(), _cid: new Map(), valor_cobrado: 0, valor_recebido: 0, leads_recebidos: 0, leads_convertidos_em_os: 0, conclusoes_estimadas: 0, avaliacoes_google: { pedidos_email: 0, pedidos_whatsapp: 0, nao_enviados: 0, nao_enviados_por_motivo: {}, testes: 0 } }]));
+  const m = new Map(dias.map((d) => [d, { dia: d, os_criadas: blank(), os_agendadas: blank(), os_concluidas: blank(), os_canceladas: blank(), peso_total_kg: 0, _mat: new Map(), _cid: new Map(), valor_cobrado: 0, valor_recebido: 0, leads_recebidos: 0, leads_convertidos_em_os: 0, conclusoes_estimadas: 0, avaliacoes_google: { pedidos_email: 0, pedidos_whatsapp: 0, nao_enviados: 0, nao_enviados_por_motivo: {}, testes: 0, devolucoes: 0, queixas: 0 }, avisos_resend: { devolucoes: 0, queixas: 0, temporarias: 0 } }]));
   // Pedidos de avaliação no Google: contagem no dia em que o pedido saiu (ou em que se
   // decidiu não enviar), horário de Brasília.
   if (ctx.db) {
@@ -1081,6 +1081,18 @@ async function ferrMetricasDiarias(env, args) {
         else if (x.status === 'nao_enviado') { a.nao_enviados++; const k = ROTULO_MOTIVO[x.motivo] || x.motivo || 'outro'; a.nao_enviados_por_motivo[k] = (a.nao_enviados_por_motivo[k] || 0) + 1; }
       }
     } catch { /* registro de avaliações ainda não criado */ }
+    // Devoluções e queixas avisadas pelo Resend, no dia do aviso (horário de Brasília).
+    // avisos_resend = todos os e-mails do sistema; dentro de avaliacoes_google, só os do
+    // pedido de avaliação. Avisos de teste ficam de fora.
+    try {
+      const ini = new Date(Date.parse(`${de}T00:00:00-03:00`)).toISOString(), fim = new Date(Date.parse(`${somaDias(ate, 1)}T00:00:00-03:00`)).toISOString();
+      for (const x of await lerAvisos({ DB_PLOOMES: ctx.db }, ini, fim)) {
+        const d = m.get(diaBR(x.em)); if (!d) continue;
+        if (x.classe === 'devolucao') { d.avisos_resend.devolucoes++; if (x.pedido) d.avaliacoes_google.devolucoes++; }
+        else if (x.classe === 'queixa') { d.avisos_resend.queixas++; if (x.pedido) d.avaliacoes_google.queixas++; }
+        else d.avisos_resend.temporarias++;
+      }
+    } catch { /* avisos ainda não recebidos */ }
   }
   const conta = (dia, campo, tipo) => { const x = m.get(dia); if (!x) return null; x[campo].total++; if (tipo) x[campo][tipo.toLowerCase()]++; return x; };
   // Cancelamentos antigos sem data → estimativa pela última atualização (lida da OS).
@@ -1135,7 +1147,7 @@ async function ferrMetricasDiarias(env, args) {
   const todos = dias.map((d) => { const x = m.get(d); const out = { ...x, peso_total_kg: r2(x.peso_total_kg), valor_cobrado: r2(x.valor_cobrado), valor_recebido: r2(x.valor_recebido), materiais_mais_coletados: top(x._mat), cidades_com_mais_coletas: top(x._cid) }; delete out._mat; delete out._cid; return out; });
   const fatia = todos.slice((pagina - 1) * porPagina, pagina * porPagina);
   ctx.aviso('Dia de conclusão das OS antigas é estimado pela data agendada (conclusoes_estimadas mostra quantas no dia); exato a partir de 18/11/2026.');
-  ctx.aviso('avaliacoes_google = pedidos de avaliação no Google por dia: pedidos_email (enviados ao cliente), pedidos_whatsapp (marcados pela equipe na OS), nao_enviados com o motivo (sem e-mail, descadastrado, bloqueio, já pedido em 12 meses, casa/família…) e testes (modo de teste: e-mail só para a equipe). Tudo zero enquanto a função estiver desligada.');
+  ctx.aviso('avaliacoes_google = pedidos de avaliação no Google por dia: pedidos_email (enviados ao cliente), pedidos_whatsapp (marcados pela equipe na OS), nao_enviados com o motivo (sem e-mail, descadastrado, bloqueio, já pedido em 12 meses, casa/família…) e testes (modo de teste: e-mail só para a equipe). Tudo zero enquanto a função estiver desligada. devolucoes e queixas (dentro de avaliacoes_google) = avisos do Resend sobre e-mails do pedido de avaliação: devolução definitiva (o endereço não existe) e queixa de spam. avisos_resend = os mesmos avisos para TODOS os e-mails que o sistema envia, mais as devoluções temporárias (que não entram na lista “não enviar e-mail”). Zero enquanto o aviso do Resend não for ligado.');
   ctx.aviso(`leads_convertidos_em_os = leads recebidos no dia que viraram OS: vínculo exato quando a OS foi gerada a partir do pedido; pedidos de antes de ${INICIO_MEDICAO_TXT}, vínculo provável (OS do mesmo cliente em até 30 dias). Valores: cobranças de OS + vendas do portal; pedidos não pagos antigos somem do sistema em 35–90 dias.`);
   return saida(ctx, a, {
     total: todos.length, pagina, porPagina, itens: fatia, filtros: { de, ate }, titulo: 'Métricas por dia',

@@ -10,6 +10,9 @@
 //     índice de OS. Se a OS deixar de estar concluída antes da hora, nada é enviado.
 //   • Um pedido por cliente a cada 12 meses (chave: CNPJ/CPF; sem documento, o e-mail), e
 //     o mesmo endereço de e-mail não recebe dois pedidos em 12 meses (CNPJs diferentes).
+//   • Descadastro bloqueia o cliente inteiro (qualquer e-mail dele na lista como "pediu para
+//     sair"); devolução e queixa avisadas pelo Resend entram sozinhas na lista (webhook com
+//     assinatura conferida — segredo RESEND_WEBHOOK_SECRET, só no ambiente).
 //   • Não recebe: casa/família, bloqueio de contato, já pedido em 12 meses, sem e-mail e
 //     e-mail na lista "não enviar e-mail" (descadastrados e inválidos).
 //   • Registro em D1 (avaliacao_pedidos — uma linha por OS; o registro da OS no KV não é
@@ -259,13 +262,17 @@ export function dadosDoCliente(os, cli) {
   // Há e-mail MAL FORMADO no cadastro ou no contato da OS? Ele nunca é usado; se não sobrar
   // outro endereço, o motivo que fica na OS é "e-mail inválido" (e não "sem e-mail").
   const emailMalFormado = [c.email, txt, ...contatos.map((x) => x.email)].some(temEmailMalFormado);
+  // TODOS os e-mails bem formados do cliente: o geral da ficha, o do contato da OS e o de
+  // QUALQUER contato (inclusive os marcados como inativos). É neles que vale a regra
+  // "descadastro bloqueia o cliente inteiro".
+  const emailsTodos = [...new Set([...emailsDe(c.email), ...emailsDe(txt), ...todosContatos.flatMap((x) => emailsDe(x.email))])].slice(0, 80);
   // Chave da regra dos 12 meses: o CNPJ/CPF; sem documento, o e-mail (todos os do cliente
   // contam, para o pedido não se repetir só porque mudou o contato da OS). A ficha
   // (clienteId) também liga duas coletas do mesmo cliente.
   const clienteId = String(o.clienteId || '').replace(/[^a-zA-Z0-9_]/g, '').slice(0, 60);
   const chaves = doc ? ['d:' + doc] : cands.map((x) => 'e:' + x.email);
   const chave = chaves[0] || (clienteId ? 'c:' + clienteId : '');
-  return { doc, perfil, empresa, nomes, fones, emails: cands, emailMalFormado, chave, chaves, clienteId, clienteNome: limpar(o.clienteNome || nomes[0] || '') };
+  return { doc, perfil, empresa, nomes, fones, emails: cands, emailsTodos, emailMalFormado, chave, chaves, clienteId, clienteNome: limpar(o.clienteNome || nomes[0] || '') };
 }
 // Casa e família: entra por CNPJ/CPF, por e-mail/domínio ou por pedaço do nome (4+ letras),
 // que vale para o nome do cliente e para o domínio do e-mail. Devolve a entrada que casou.
@@ -334,6 +341,9 @@ async function garantirTabelas(db) {
     db.prepare('CREATE INDEX IF NOT EXISTS avaliacao_pedidos_proc ON avaliacao_pedidos (processado_em)'),
     db.prepare('CREATE TABLE IF NOT EXISTS email_nao_enviar (email TEXT PRIMARY KEY, motivo TEXT, origem TEXT, em TEXT, por TEXT)'),
     db.prepare('CREATE TABLE IF NOT EXISTS avaliacao_auditoria (id INTEGER PRIMARY KEY AUTOINCREMENT, em TEXT, por TEXT, acao TEXT, detalhe TEXT)'),
+    // Avisos do Resend (devolução e queixa). `id` = identificador do aviso (não repete); `para` mascarado.
+    db.prepare('CREATE TABLE IF NOT EXISTS email_avisos (id TEXT PRIMARY KEY, em TEXT, recebido_em TEXT, tipo TEXT, classe TEXT, para TEXT, pedido INTEGER DEFAULT 0, teste INTEGER DEFAULT 0, incluido TEXT, detalhe TEXT)'),
+    db.prepare('CREATE INDEX IF NOT EXISTS email_avisos_em ON email_avisos (em)'),
   ]);
   // Tabela criada por versão anterior (sem cliente_id e/ou para_h): acrescenta o que faltar.
   try { await db.prepare('SELECT cliente_id, para_h FROM avaliacao_pedidos LIMIT 0').all(); }
@@ -383,7 +393,8 @@ async function resumoEmail(email) {
 // As três consultas que decidem um envio, numa ida só ao banco (falha de leitura = ERRO):
 //  1. já houve pedido para este CLIENTE em 12 meses? Casa pela chave (CNPJ/CPF; sem
 //     documento, qualquer e-mail do cliente) ou pela mesma ficha;
-//  2. quais e-mails do cliente estão na lista "não enviar e-mail";
+//  2. quais e-mails do cliente — TODOS, inclusive os de contato inativo — estão na lista
+//     "não enviar e-mail";
 //  3. quais ENDEREÇOS do cliente já receberam pedido em 12 meses (por outro CNPJ/CPF).
 // O que conta como "pedido": enviado e WhatsApp; "enviando" e "envio não confirmado" (pode
 // ter saído) — estes dois só quando nasceram no mesmo tipo de envio (os de teste não seguram
@@ -395,7 +406,7 @@ async function consultasDoEnvio(db, d, osId, agoraMs, contarTeste, resumos) {
   const conta = "(status IN ('enviado','whatsapp') OR ((status = 'enviando' OR (status = 'nao_enviado' AND motivo = 'envio_nao_confirmado')) AND (?4 = 1 OR COALESCE(modo,'') <> 'teste')) OR (?4 = 1 AND status = 'teste'))";
   const r = await db.batch([
     db.prepare(`SELECT os_numero FROM avaliacao_pedidos WHERE (chave IN (SELECT value FROM json_each(?1)) OR (?5 <> '' AND cliente_id = ?5)) AND os_id <> ?2 AND COALESCE(pedida_em, processado_em) >= ?3 AND ${conta} LIMIT 1`).bind(JSON.stringify(chaves), String(osId), desde, t, d.clienteId || ''),
-    db.prepare('SELECT email, motivo FROM email_nao_enviar WHERE email IN (SELECT value FROM json_each(?1))').bind(JSON.stringify(d.emails.map((x) => x.email))),
+    db.prepare('SELECT email, motivo FROM email_nao_enviar WHERE email IN (SELECT value FROM json_each(?1))').bind(JSON.stringify(d.emailsTodos || d.emails.map((x) => x.email))),
     db.prepare(`SELECT para_h FROM avaliacao_pedidos WHERE para_h IN (SELECT value FROM json_each(?1)) AND os_id <> ?2 AND COALESCE(pedida_em, processado_em) >= ?3 AND ${conta}`).bind(JSON.stringify(resumos), String(osId), desde, t),
   ]);
   const linhas = (i) => (r && r[i] && r[i].results) || null;
@@ -432,7 +443,7 @@ export async function consultarNaoEnviar(env, emails, opcoes) {
 // `itens` = [{ e: email, m: 'descadastrado' | 'invalido' }] (até 1.000 por chamada). Quem já
 // está como "descadastrado" nunca é rebaixado para "inválido" por uma carga posterior, e a
 // data da 1ª entrada é mantida.
-export async function adicionarNaoEnviar(env, itens, { origem, por } = {}) {
+export async function adicionarNaoEnviar(env, itens, { origem, por, nota } = {}) {
   const db = env && env.DB_PLOOMES;
   if (!db) return { ok: false, gravados: 0 };
   const limpos = new Map();
@@ -448,7 +459,7 @@ export async function adicionarNaoEnviar(env, itens, { origem, por } = {}) {
     await db.prepare("INSERT INTO email_nao_enviar (email, motivo, origem, em, por) SELECT json_extract(value,'$.e'), json_extract(value,'$.m'), ?2, ?3, ?4 FROM json_each(?1) WHERE true ON CONFLICT(email) DO UPDATE SET motivo = CASE WHEN email_nao_enviar.motivo = 'descadastrado' THEN 'descadastrado' ELSE excluded.motivo END")
       .bind(JSON.stringify(arr.slice(i, i + 250)), String(origem || 'manual').slice(0, 30), new Date().toISOString(), String(por || '').slice(0, 120)).run();
   }
-  await auditar(env, por, 'lista não enviar', arr.length === 1 ? `incluiu ${mascarar(arr[0].e)} (${arr[0].m === 'invalido' ? 'inválido' : 'descadastrado'})` : `carga de ${arr.length} e-mail(s)`);
+  await auditar(env, por, 'lista não enviar', `${nota ? `${nota}: ` : ''}${arr.length === 1 ? `incluiu ${mascarar(arr[0].e)} (${arr[0].m === 'invalido' ? 'inválido' : 'descadastrado'})` : `carga de ${arr.length} e-mail(s)`}`);
   return { ok: true, gravados: arr.length };
 }
 export async function removerNaoEnviar(env, email, por) {
@@ -543,12 +554,16 @@ async function processarUma(env, cfg, ctx, os, cli, linha0, fichaSumiu) {
   if ((d.doc && ctx.bloqueios.porDoc.has(d.doc)) || d.fones.some((f) => ctx.bloqueios.porFone.has(semNove(f)))) return await nao('bloqueio');
   const resumos = await Promise.all(d.emails.map((x) => resumoEmail(x.email)));
   const q = await consultasDoEnvio(db, d, os.id, agora, cfg.modo === 'teste', resumos);
+  // Descadastro bloqueia o CLIENTE INTEIRO: basta UM e-mail dele (o geral, o do contato da OS
+  // ou o de qualquer contato) estar na lista como "pediu para sair" — pela carga do E-goi,
+  // pela tela ou por queixa de spam avisada pelo Resend. Não vai para nenhum outro e-mail.
+  if ([...q.lista.values()].some((x) => x.motivo !== 'invalido')) return await nao('descadastrado');
   if (q.recente) return await nao('ja_pedido_12m');
   // Nenhum endereço bem formado: não tenta o envio. Havia um mal formado → "e-mail inválido".
   if (!d.emails.length) return await nao(d.emailMalFormado ? 'email_invalido' : 'sem_email');
-  // Escolha do endereço, na ordem de preferência. Descadastrado = não envia para o cliente;
-  // inválido = tenta o próximo; endereço que já recebeu pedido em 12 meses (por outro
-  // CNPJ/CPF) = tenta o próximo.
+  // Escolha do endereço, na ordem de preferência. E-mail inválido (voltou) = tenta o próximo;
+  // endereço que já recebeu pedido em 12 meses (por outro CNPJ/CPF) = tenta o próximo.
+  // (Descadastrado nem chega aqui: bloqueou o cliente inteiro logo acima.)
   let alvoEmail = null, resumoAlvo = '', motivoSem = '';
   for (let i = 0; i < d.emails.length; i++) {
     const cand = d.emails[i], b = q.lista.get(cand.email);
@@ -755,6 +770,128 @@ export async function desfazerWhatsapp(env, osId) {
   return { ok: true };
 }
 
+// --- Avisos do Resend: devolução e queixa entram sozinhas na lista "não enviar e-mail" ---------
+// O Resend chama POST /api/resend/webhook a cada devolução ou queixa. Antes de aceitar, a
+// AUTENTICIDADE é conferida pela assinatura do aviso (padrão Svix): HMAC-SHA256 de
+// "id.hora.corpo" com o segredo do webhook, que fica SÓ nos segredos do ambiente
+// (RESEND_WEBHOOK_SECRET) — nunca no repositório, em log ou em tela. Sem o segredo, tudo é
+// recusado. Aviso com mais de 5 minutos é recusado (contra repetição de um aviso antigo).
+//   • devolução DEFINITIVA (o endereço não existe)  → lista como "e-mail inválido (voltou)";
+//   • queixa de spam                                → lista como "pediu para sair" (e, pela
+//     regra do descadastro, bloqueia o cliente inteiro);
+//   • devolução temporária (caixa cheia, servidor fora do ar) → NÃO entra na lista.
+const QUEM_RESEND = 'Resend (automático)';
+const TOLERANCIA_AVISO_S = 300;
+const TAMANHO_MAX_AVISO = 100000;
+const deBase64 = (t) => Uint8Array.from(atob(t), (ch) => ch.charCodeAt(0));
+const respJson = (status, obj) => new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
+async function avisoAutentico(segredo, id, ts, corpo, cabecalho) {
+  let chave;
+  try { chave = deBase64(String(segredo).trim().replace(/^whsec_/, '')); } catch { return false; }
+  if (chave.length < 16) return false;
+  const k = await crypto.subtle.importKey('raw', chave, { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']);
+  const dados = new TextEncoder().encode(`${id}.${ts}.${corpo}`);
+  // O cabeçalho pode trazer várias assinaturas ("v1,<base64> v1,<base64>"): basta uma conferir.
+  for (const parte of String(cabecalho || '').split(/\s+/).slice(0, 10)) {
+    const i = parte.indexOf(',');
+    if (i < 0 || parte.slice(0, i) !== 'v1') continue;
+    let assin; try { assin = deBase64(parte.slice(i + 1)); } catch { continue; }
+    if (await crypto.subtle.verify('HMAC', k, assin, dados)) return true; // comparação em tempo constante
+  }
+  return false;
+}
+export const avisosConfigurados = (env) => !!(env && env.RESEND_WEBHOOK_SECRET);
+export async function receberAvisoResend(request, env) {
+  const segredo = String((env && env.RESEND_WEBHOOK_SECRET) || '');
+  if (!segredo) return respJson(503, { ok: false, erro: 'nao_configurado' });
+  if (Number(request.headers.get('content-length') || 0) > TAMANHO_MAX_AVISO) return respJson(413, { ok: false, erro: 'grande_demais' });
+  const id = String(request.headers.get('svix-id') || '');
+  const ts = String(request.headers.get('svix-timestamp') || '');
+  const assinatura = String(request.headers.get('svix-signature') || '');
+  const corpo = await request.text();
+  if (corpo.length > TAMANHO_MAX_AVISO) return respJson(413, { ok: false, erro: 'grande_demais' });
+  if (!/^[A-Za-z0-9_.-]{1,120}$/.test(id) || !/^\d{9,12}$/.test(ts) || !assinatura || assinatura.length > 2000) return respJson(401, { ok: false, erro: 'sem_assinatura' });
+  if (Math.abs(Date.now() / 1000 - Number(ts)) > TOLERANCIA_AVISO_S) return respJson(401, { ok: false, erro: 'fora_do_prazo' });
+  let autentico = false;
+  try { autentico = await avisoAutentico(segredo, id, ts, corpo, assinatura); } catch { autentico = false; }
+  if (!autentico) return respJson(401, { ok: false, erro: 'assinatura_invalida' });
+  let ev = null; try { ev = JSON.parse(corpo); } catch { ev = null; }
+  if (!ev || typeof ev !== 'object') return respJson(400, { ok: false, erro: 'corpo_invalido' });
+  try { return respJson(200, { ok: true, ...(await tratarAvisoResend(env, id, ev)) }); }
+  catch (e) {
+    // Falha nossa (banco fora do ar…): responde erro para o Resend tentar de novo mais tarde.
+    console.error('resend_aviso_falhou', String(ev.type || '').slice(0, 40), String((e && e.message) || e).slice(0, 80));
+    return respJson(500, { ok: false, erro: 'falha_interna' });
+  }
+}
+async function tratarAvisoResend(env, id, ev) {
+  const db = env && env.DB_PLOOMES;
+  if (!db) throw new Error('sem_banco');
+  const tipo = String(ev.type || '').slice(0, 40);
+  const dados = ev.data && typeof ev.data === 'object' ? ev.data : {};
+  // Classe do aviso. Só "devolucao" (definitiva) e "queixa" mexem na lista.
+  let classe = '';
+  if (tipo === 'email.complained') classe = 'queixa';
+  else if (tipo === 'email.bounced') {
+    const bt = semAcentoMin(dados.bounce && dados.bounce.type);
+    classe = bt === 'permanent' ? 'devolucao' : (bt === 'temporary' || bt === 'transient' ? 'temporaria' : 'indefinida');
+  } else if (tipo === 'email.suppressed') {
+    // O Resend se recusou a enviar porque o endereço já está na lista de bloqueio DELE (devolução
+    // definitiva ou queixa anterior). Se o aviso disser que foi queixa, vale como queixa.
+    classe = /complain|spam/.test(semAcentoMin(JSON.stringify(dados.suppressed || dados.bounce || ''))) ? 'queixa' : 'devolucao';
+  } else if (tipo === 'email.delivery_delayed') classe = 'temporaria';
+  if (!classe) return { ignorado: true }; // entregue, aberto etc.: não interessa aqui
+  await garantirTabelas(db);
+  // O Resend repete o aviso se não tiver certeza de que chegou: cada um é tratado uma vez só.
+  if (await db.prepare('SELECT id FROM email_avisos WHERE id = ?1').bind(id).first()) return { repetido: true };
+  const lista = Array.isArray(dados.to) ? dados.to : (dados.to ? [dados.to] : []);
+  const destinos = [...new Set(lista.flatMap((x) => emailsDe(String(x == null ? '' : x))))];
+  const unico = destinos.length === 1 ? destinos[0] : '';
+  const doRemetente = emailsDe(remetente(env))[0] || '';
+  const doPedido = !!doRemetente && emailsDe(String(dados.from || '')).includes(doRemetente);
+  const ehTeste = /@resend\.dev$/.test(unico); // endereços de teste do próprio Resend
+  const ehCasa = !!unico && !ehTeste && (unico === emailTeste(env) || (!!doRemetente && unico.endsWith(`@${doRemetente.split('@')[1]}`)));
+  const motivoLista = classe === 'devolucao' ? 'invalido' : (classe === 'queixa' ? 'descadastrado' : '');
+  const rotulo = classe === 'queixa' ? 'queixa de spam' : 'devolução definitiva';
+  let incluido = '';
+  if (motivoLista) {
+    if (!unico) incluido = destinos.length > 1 ? 'varios_destinatarios' : 'sem_endereco';
+    else if (ehTeste) { incluido = 'teste'; await auditar(env, QUEM_RESEND, 'aviso de teste', `${rotulo} de teste recebida e conferida — nada foi incluído na lista`); }
+    else if (ehCasa) { incluido = 'casa'; await auditar(env, QUEM_RESEND, 'aviso do Resend', `${rotulo} de um endereço da casa (${mascarar(unico)}) — não incluído na lista`); }
+    else { await adicionarNaoEnviar(env, [{ e: unico, m: motivoLista }], { origem: 'resend', por: QUEM_RESEND, nota: rotulo }); incluido = motivoLista; }
+  }
+  const agora = new Date().toISOString();
+  const tEv = Date.parse(ev.created_at || '');
+  const em = Number.isFinite(tEv) && Math.abs(Date.now() - tEv) < 3 * 86400e3 ? new Date(tEv).toISOString() : agora;
+  await db.prepare('INSERT OR IGNORE INTO email_avisos (id, em, recebido_em, tipo, classe, para, pedido, teste, incluido, detalhe) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10)')
+    .bind(id, em, agora, tipo, classe, unico ? mascarar(unico) : '', doPedido ? 1 : 0, ehTeste ? 1 : 0, incluido, String((dados.bounce && dados.bounce.subType) || '').replace(/[^A-Za-z]/g, '').slice(0, 40)).run();
+  console.log('resend_aviso', tipo, classe, incluido || 'nao_incluido');
+  return { classe, incluido };
+}
+// Avisos de um período (para a tela e para o conector). Os de teste ficam de fora da contagem.
+export async function lerAvisos(env, deISO, ateISO) {
+  const db = env && env.DB_PLOOMES; if (!db) return [];
+  try { const r = await db.prepare('SELECT em, classe, pedido FROM email_avisos WHERE teste = 0 AND em >= ?1 AND em < ?2 LIMIT 5000').bind(String(deISO), String(ateISO)).all(); return (r && r.results) || []; } catch { return []; }
+}
+export async function ultimoAviso(env) {
+  const db = env && env.DB_PLOOMES; if (!db) return null;
+  try { return (await db.prepare('SELECT recebido_em, classe, teste, incluido FROM email_avisos ORDER BY recebido_em DESC LIMIT 1').first()) || null; } catch { return null; }
+}
+// Teste de ponta a ponta, disparado por alguém da equipe na tela: manda um e-mail para um
+// endereço de TESTE do próprio Resend (que simula a devolução ou a queixa). O aviso volta
+// pelo caminho de verdade, é conferido e aparece em "Últimas mudanças" como aviso de teste —
+// sem incluir nada na lista e sem contar nas devoluções do dia.
+export async function enviarTesteAviso(env, tipo, por) {
+  if (!avisosConfigurados(env)) return { ok: false, message: 'Primeiro é preciso guardar o segredo do aviso na Cloudflare (veja “Como ligar”, logo abaixo).' };
+  const quem = emailsDe(por)[0] || 'equipe';
+  if (env.PORTAL_KV) { const k = `throttle:avaliacao-teste-aviso:${quem}`; if (await env.PORTAL_KV.get(k)) return { ok: false, message: 'Aguarde um minuto para repetir o teste.' }; await env.PORTAL_KV.put(k, '1', { expirationTtl: 60 }); }
+  const queixa = tipo === 'queixa';
+  const r = await enviarResend(env, { para: queixa ? 'complained@resend.dev' : 'bounced@resend.dev', assunto: `[TESTE DE AVISO] ${queixa ? 'queixa' : 'devolução'} simulada`, texto: 'Teste do aviso de devolução e queixa do Resend, disparado pela tela de avaliações do sistema. Nenhum cliente recebe este e-mail.', idem: `avaliacao-teste-aviso-${Date.now()}` });
+  if (!r.ok) return { ok: false, message: r.erro === 'sem_chave_email' ? 'O serviço de e-mail (Resend) não está configurado.' : `O serviço de e-mail recusou o envio do teste (${r.erro}).` };
+  await auditar(env, por, 'aviso de teste', `disparou o teste de ${queixa ? 'queixa' : 'devolução'}`);
+  return { ok: true, desde: new Date().toISOString() };
+}
+
 // --- Exemplo para a própria pessoa da equipe (conferir texto, caixa de entrada e resposta) ----
 export async function enviarExemplo(env, para, modelo) {
   const dest = emailsDe(para)[0];
@@ -817,7 +954,16 @@ export async function dadosPaginaAvaliacoes(env) {
   }
   // O serviço de e-mail está recusando os envios (chave, domínio ou limite)? Mostra na tela.
   const recusa = (ultimos.find((r) => r.status === 'pendente' && /^resend_(401|403|429)$/.test(String(r.erro || ''))) || {}).erro || '';
-  return { cfg, ultimos, semana, recusa, auditoria: await listarAuditoria(env, 12), naoEnviar: await contarNaoEnviar(env), resendOk: !!(env && env.RESEND_API_KEY), remetente: remetente(env), testePara: emailTeste(env), link: (env && env.AVALIACAO_LINK) || LINK_PADRAO };
+  // Devoluções e queixas avisadas pelo Resend, por dia (horário de Brasília), últimos 7 dias.
+  const avisosDia = new Map();
+  for (const a of await lerAvisos(env, new Date(Date.now() - 7 * 86400e3).toISOString(), new Date(Date.now() + 86400e3).toISOString())) {
+    const dia = new Date(Date.parse(a.em) - 3 * MS_H).toISOString().slice(0, 10);
+    const x = avisosDia.get(dia) || { dia, devolucoes: 0, queixas: 0, temporarias: 0, devolucoes_pedido: 0, queixas_pedido: 0 };
+    if (a.classe === 'devolucao') { x.devolucoes++; if (a.pedido) x.devolucoes_pedido++; } else if (a.classe === 'queixa') { x.queixas++; if (a.pedido) x.queixas_pedido++; } else x.temporarias++;
+    avisosDia.set(dia, x);
+  }
+  const avisos = { configurado: avisosConfigurados(env), ultimo: await ultimoAviso(env), dias: [...avisosDia.values()].sort((a, b) => (a.dia < b.dia ? 1 : -1)) };
+  return { cfg, ultimos, semana, recusa, avisos, auditoria: await listarAuditoria(env, 12), naoEnviar: await contarNaoEnviar(env), resendOk: !!(env && env.RESEND_API_KEY), remetente: remetente(env), testePara: emailTeste(env), link: (env && env.AVALIACAO_LINK) || LINK_PADRAO };
 }
 
 // --- Telas --------------------------------------------------------------------------------------
@@ -861,6 +1007,10 @@ export function paginaAvaliacoes(user, d, podeLigar) {
   const bModo = (modo, rotulo, explica, trava) => `<button class="btn ${cfg.modo === modo ? 'btn-d' : 'btn-g'}" ${trava ? 'disabled style="opacity:.5;cursor:not-allowed"' : ''} onclick="modo('${modo}')">${cfg.modo === modo ? '● ' : ''}${rotulo}</button><div style="font-size:11.5px;color:#7c8a87;margin:4px 0 12px;line-height:1.5">${explica}</div>`;
   const linhas = d.ultimos.map((r) => `<tr><td style="padding:7px 8px 7px 0;border-top:1px solid #EEF1F0;white-space:nowrap;color:#4F6469">${esc(textoBR(r.pedida_em || r.processado_em))}</td><td style="padding:7px 8px 7px 0;border-top:1px solid #EEF1F0;white-space:nowrap"><a href="/coletas/os?id=${esc(r.os_id)}" style="color:#0B5B66;font-weight:700;text-decoration:none">${esc(r.os_numero || 'OS')}</a></td><td style="padding:7px 0;border-top:1px solid #EEF1F0">${esc(resultadoTexto(r))}</td></tr>`).join('');
   const mudancas = (d.auditoria || []).map((a) => `<div style="padding:7px 0;border-top:1px solid #EEF1F0;font-size:12.5px;line-height:1.5;overflow-wrap:anywhere"><span style="color:#7c8a87">${esc(textoBR(a.em))} · ${esc(a.por || '')}</span><br><b>${esc(a.acao || '')}</b>: ${esc(a.detalhe || '')}</div>`).join('');
+  const av = d.avisos || { configurado: false, ultimo: null, dias: [] };
+  const diaCurto = (dia) => dia.split('-').reverse().slice(0, 2).join('/');
+  const rotuloAviso = (u) => (u.teste ? 'aviso de teste' : (u.classe === 'queixa' ? 'queixa de spam' : (u.classe === 'devolucao' ? 'devolução definitiva' : 'devolução temporária')));
+  const avisosLinhas = av.dias.map((x) => `<div style="padding:6px 0;border-top:1px solid #EEF1F0;font-size:13px">${esc(diaCurto(x.dia))} — devoluções: <b>${x.devolucoes}</b>${x.devolucoes ? ` (${x.devolucoes_pedido} de pedido de avaliação)` : ''} · queixas: <b>${x.queixas}</b>${x.queixas ? ` (${x.queixas_pedido} de pedido de avaliação)` : ''} · temporárias: <b>${x.temporarias}</b></div>`).join('');
   const exemplo = montarMensagem({ perfil: 'PF', primeiro: 'Maria', empresa: '', link: d.link });
   const exemploPJ = montarMensagem({ perfil: 'PJ', primeiro: 'Carlos', empresa: 'Empresa Exemplo Ltda', link: d.link });
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Avaliações no Google — Ecobraz</title>
@@ -928,12 +1078,26 @@ pre{white-space:pre-wrap;word-break:break-word;background:#F7FAF9;border:1px sol
     <div style="display:flex;gap:10px;align-items:center;margin-top:8px"><button class="btn btn-g" onclick="salvarCasa()">Salvar lista</button><span id="mCasa" class="msg" style="margin:0"></span></div>
   </div>
   <div class="card">
+    <div class="sec">Devoluções e queixas (avisos do Resend)</div>
+    <div style="font-size:13.5px;line-height:1.6">Aviso do Resend: ${av.configurado ? '<b style="color:#1E5B31">✅ ligado</b>' : '<b style="color:#9B1C1C">❌ ainda não ligado</b> — sem isso, devolução e queixa não entram sozinhas na lista (veja “Como ligar”, abaixo)'}.${av.ultimo ? ` Último aviso recebido: <b>${esc(textoBR(av.ultimo.recebido_em))}</b> (${esc(rotuloAviso(av.ultimo))}).` : (av.configurado ? ' Nenhum aviso recebido ainda.' : '')}</div>
+    <div style="font-size:12.5px;color:#4F6469;line-height:1.6;margin-top:6px">E-mail que <b>volta de vez</b> (o endereço não existe) entra na lista como “e-mail inválido (voltou)”. <b>Queixa de spam</b> entra como “pediu para sair” e bloqueia o cliente inteiro. Devolução <b>temporária</b> (caixa cheia, servidor fora do ar) não entra na lista. Cada entrada aparece em “Últimas mudanças” como vinda do Resend.</div>
+    <div class="sec" style="margin-top:14px">Últimos 7 dias, por dia</div>
+    ${avisosLinhas || '<div style="font-size:13px;color:#8fa39f">Nenhuma devolução ou queixa nos últimos 7 dias.</div>'}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+      <button class="btn btn-g" onclick="testeAviso('devolucao')">🧪 Testar aviso de devolução</button>
+      <button class="btn btn-g" onclick="testeAviso('queixa')">🧪 Testar aviso de queixa</button>
+    </div>
+    <div id="mAviso" class="msg">O teste manda um e-mail para um endereço de teste do próprio Resend (nenhum cliente recebe). Em até 1 minuto o aviso volta e aparece aqui e em “Últimas mudanças” como “aviso de teste”, sem incluir nada na lista.</div>
+    <details style="margin-top:10px"><summary style="font-size:12.5px;font-weight:800;color:#0B5B66;cursor:pointer">Como ligar (uma vez só)</summary>
+      <div style="font-size:12.5px;color:#4F6469;line-height:1.7;margin-top:6px">1. No painel do Resend, em <b>Webhooks</b>, clique em <b>Add Webhook</b>; no endereço, cole <b>https://sistema.ecobraz.org/api/resend/webhook</b>; marque os eventos <b>email.bounced</b>, <b>email.complained</b>, <b>email.delivery_delayed</b> e, se existir, <b>email.suppressed</b>; clique em <b>Add</b>.<br>2. Abra o webhook criado e copie o <b>Signing Secret</b> (começa com “whsec_”).<br>3. Na Cloudflare, em <b>Workers &amp; Pages → ecobraz-portal → Settings → Variables and Secrets</b>, clique em <b>Add</b>, escolha o tipo <b>Secret</b>, nome <b>RESEND_WEBHOOK_SECRET</b>, cole o valor e clique em <b>Deploy</b>.<br>4. Volte aqui, recarregue a página (deve aparecer “✅ ligado”) e clique em “Testar aviso de devolução”.<br><b>O segredo não deve ser colado em conversa, e-mail ou arquivo</b> — só nesses dois lugares.</div></details>
+  </div>
+  <div class="card">
     <div class="sec">Últimas mudanças (chave e listas)</div>
     ${mudancas || '<div style="font-size:13px;color:#8fa39f">Nenhuma mudança registrada ainda.</div>'}
   </div>
   <div class="card">
     <div class="sec">Como funciona</div>
-    <div style="font-size:13px;color:#4F6469;line-height:1.7">• Sai 2 horas depois de a coleta ficar <b>concluída</b>, só entre 08h e 20h (fora disso, às 08h seguintes). O sistema confere a cada 10 minutos.<br>• Um pedido por cliente a cada 12 meses (pelo CNPJ/CPF; sem documento, pelo e-mail). O mesmo endereço de e-mail também não recebe dois pedidos em 12 meses, ainda que seja contato de empresas diferentes — nesse caso o pedido vai para o contato seguinte da empresa, se houver.<br>• Não recebem: casa e família, cliente com bloqueio de contato, quem já recebeu em 12 meses, quem não tem e-mail, quem tem e-mail mal formado no cadastro (endereço cortado, com “|” no meio, texto grudado — aparece como “e-mail inválido”) e quem está na lista “não enviar e-mail”. O motivo aparece na OS.<br>• Também não sai: coleta marcada como concluída mais de 10 dias depois da data dela (coleta antiga) e coleta que foi <b>reaberta</b> depois de concluída — só uma conclusão nova volta a valer.<br>• Contato marcado como inativo/desligado no cadastro não recebe.<br>• Se o sistema não conseguir ler as listas ou o cadastro, ele <b>não envia</b> e tenta de novo na rodada seguinte.<br>• Sem e-mail? Peça pelo WhatsApp e marque <b>“Pedi pelo WhatsApp”</b> na OS — vale como pedido feito.<br>• Texto simples, sem imagem. O link é o do Google, sem rastreio.</div>
+    <div style="font-size:13px;color:#4F6469;line-height:1.7">• Sai 2 horas depois de a coleta ficar <b>concluída</b>, só entre 08h e 20h (fora disso, às 08h seguintes). O sistema confere a cada 10 minutos.<br>• Um pedido por cliente a cada 12 meses (pelo CNPJ/CPF; sem documento, pelo e-mail). O mesmo endereço de e-mail também não recebe dois pedidos em 12 meses, ainda que seja contato de empresas diferentes — nesse caso o pedido vai para o contato seguinte da empresa, se houver.<br>• Não recebem: casa e família, cliente com bloqueio de contato, quem já recebeu em 12 meses, quem não tem e-mail, quem tem e-mail mal formado no cadastro (endereço cortado, com “|” no meio, texto grudado — aparece como “e-mail inválido”) e quem está na lista “não enviar e-mail”. O motivo aparece na OS.<br>• Também não sai: coleta marcada como concluída mais de 10 dias depois da data dela (coleta antiga) e coleta que foi <b>reaberta</b> depois de concluída — só uma conclusão nova volta a valer.<br>• Contato marcado como inativo/desligado no cadastro não recebe.<br>• Se o sistema não conseguir ler as listas ou o cadastro, ele <b>não envia</b> e tenta de novo na rodada seguinte.<br>• <b>Descadastro bloqueia o cliente inteiro:</b> se qualquer e-mail do cliente (o geral, o do contato da coleta ou o de qualquer contato) estiver na lista como “pediu para sair”, o pedido não vai para nenhum e-mail dele. E-mail inválido (voltou) ou mal formado é diferente: o pedido pode ir para outro e-mail bom do cliente.<br>• Sem e-mail? Peça pelo WhatsApp e marque <b>“Pedi pelo WhatsApp”</b> na OS — vale como pedido feito.<br>• Texto simples, sem imagem. O link é o do Google, sem rastreio.</div>
     <label>Pessoa física — assunto: ${esc(exemplo.assunto)}</label><pre>${esc(exemplo.texto)}</pre>
     <label>Empresa — assunto: ${esc(exemploPJ.assunto)}</label><pre>${esc(exemploPJ.texto)}</pre>
   </div>
@@ -954,6 +1118,8 @@ function conferir(){var m=$('mConf');m.textContent='Consultando…';post('/api/a
   m.innerHTML=l.map(function(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;');}).join('<br>');}).catch(function(){m.textContent='Sem conexão.';});}
 function exemplo(t){var m=$('mConf');m.textContent='Enviando…';post('/api/avaliacoes/exemplo',{modelo:t}).then(function(j){m.textContent=j.ok?('Exemplo enviado para '+j.para+'. Confira a caixa de entrada (e o spam) e responda a ele.'):(j.message||'Não foi possível enviar.');}).catch(function(){m.textContent='Sem conexão.';});}
 function lista(a){var e=$('lEmail').value.trim(),m=$('mLista');if(!e){m.textContent='Digite o e-mail.';return;}m.textContent='…';post('/api/avaliacoes/nao-enviar',{acao:a,email:e,motivo:$('lMotivo').value}).then(function(j){m.textContent=j.message||(j.ok?'Feito.':'Não foi possível.');if(j.ok&&j.total!=null)$('tLista').textContent=j.total;}).catch(function(){m.textContent='Sem conexão.';});}
+function testeAviso(t){var m=$('mAviso');m.textContent='Enviando o teste…';post('/api/avaliacoes/teste-aviso',{tipo:t}).then(function(j){if(!j.ok){m.textContent=j.message||'Não foi possível disparar o teste.';return;}var n=0;m.textContent='Teste enviado. Esperando o aviso do Resend voltar…';
+  (function olhar(){post('/api/avaliacoes/aviso-estado',{}).then(function(e){var u=e&&e.ultimo;if(u&&u.teste&&u.recebido_em>j.desde){m.innerHTML='<b style="color:#1E5B31">✅ Aviso de teste recebido e conferido.</b> Recarregue a página para ver em “Últimas mudanças”.';return;}if(++n>=20){m.textContent='O aviso não voltou em 1 minuto. Confira no Resend se o webhook está ativo e se o segredo guardado na Cloudflare é o mesmo do webhook; depois tente de novo.';return;}setTimeout(olhar,3000);}).catch(function(){if(++n>=20){m.textContent='Sem conexão para conferir. Recarregue a página em um minuto.';return;}setTimeout(olhar,3000);});})();}).catch(function(){m.textContent='Sem conexão.';});}
 function salvarCasa(){var m=$('mCasa');m.textContent='Salvando…';post('/api/avaliacoes/casa',{texto:$('casa').value}).then(function(j){m.textContent=j.ok?'Salvo.':(j.message||'Não foi possível salvar.');}).catch(function(){m.textContent='Sem conexão.';});}
 function carga(){var f=$('arq').files[0],m=$('mCarga');if(!f){m.textContent='Escolha o arquivo.';return;}var padrao=$('aMotivo').value;var r=new FileReader();
   r.onload=function(){var RE=/^[a-z0-9_%+&-]+(\\.[a-z0-9_%+&-]+)*@[a-z0-9-]+(\\.[a-z0-9-]+)*\\.[a-z]{2,}$/,linhas=String(r.result||'').split(/\\r?\\n/),achados=[],temSaida=false,i;
