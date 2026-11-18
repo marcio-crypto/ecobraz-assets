@@ -14,7 +14,12 @@
     // Origem da visita (primeiro toque da sessão): só o domínio de quem indicou, o
     // caminho de entrada e o canal. Sem dado pessoal. Viaja até o formulário de coleta
     // para o lead chegar com o canal (busca, chat de IA, anúncio, social, direto).
-    const AI_HOSTS = /(^|\.)(chatgpt\.com|openai\.com|perplexity\.ai|claude\.ai|copilot\.microsoft\.com|gemini\.google\.com|notebooklm\.google\.com|meta\.ai|grok\.com|x\.ai|deepseek\.com|you\.com|phind\.com|mistral\.ai)$/;
+    const AI_HOSTS = /(^|\.)(chatgpt\.com|openai\.com|perplexity\.ai|claude\.ai|copilot\.microsoft\.com|copilot\.com|gemini\.google\.com|bard\.google\.com|notebooklm\.google\.com|meta\.ai|grok\.com|x\.ai|deepseek\.com|you\.com|phind\.com|mistral\.ai|poe\.com|duck\.ai)$/;
+    // Assistente que marca o próprio link: o ChatGPT acrescenta utm_source=chatgpt.com,
+    // sem utm_medium, e muitas vezes abre o link sem indicar de onde veio. Essa marca
+    // é origem "chat de IA", não campanha nossa (F041, 18/11/2026). A mesma lista
+    // existe no Worker (FONTE_IA), que corrige páginas ainda em cache.
+    const AI_UTM = /^(chatgpt|openai|perplexity|claude|copilot|gemini|bard|grok|deepseek|mistral|phind|poe)$/;
     const SEARCH_HOSTS = /(^|\.)(google\.[a-z.]+|bing\.com|duckduckgo\.com|yahoo\.com|ecosia\.org|brave\.com|yandex\.[a-z]+|baidu\.com|startpage\.com|qwant\.com)$/;
     const SOCIAL_HOSTS = /(^|\.)(linkedin\.com|lnkd\.in|facebook\.com|instagram\.com|t\.co|x\.com|twitter\.com|youtube\.com|tiktok\.com|whatsapp\.com|wa\.me|wl\.co)$/;
     const classifyOrigin = (refHost, qs) => {
@@ -22,6 +27,8 @@
         const source = (qs.get('utm_source') || '').toLowerCase();
         const campaign = (qs.get('utm_campaign') || '').toLowerCase();
         if (qs.get('gclid') || qs.get('gbraid') || qs.get('wbraid') || qs.get('msclkid') || /cpc|ppc|paid/.test(medium)) return 'busca_paga';
+        const sourceHost = source.replace(/^www\./, '');
+        if (AI_HOSTS.test(sourceHost) || AI_UTM.test(sourceHost)) return 'chat_ia';
         if (/gbp|google_business|perfil/.test(`${source} ${campaign}`)) return 'perfil_google';
         if (medium === 'email' || /egoi|newsletter/.test(source)) return 'email';
         if (source || medium || campaign) return 'campanha';
@@ -173,11 +180,33 @@
 
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
-        if (!form.reportValidity()) return;
+        // WebMCP (F040, 18/11/2026): o formulário é declarado como ferramenta para
+        // assistentes de IA (toolname/tooldescription no <form>). Quando o envio vem
+        // de um assistente, o navegador espera uma resposta; ela é dada aqui, em cada
+        // saída. Em navegador sem esse recurso, event.agentInvoked não existe e nada
+        // muda para quem preenche à mão.
+        const viaAgente = event.agentInvoked === true;
+        let responderAgente = null;
+        if (viaAgente && typeof event.respondWith === 'function') {
+            try { event.respondWith(new Promise((resolve) => { responderAgente = resolve; })); } catch (_) { responderAgente = null; }
+        }
+        const paraAgente = (resultado) => { if (responderAgente) { const r = responderAgente; responderAgente = null; r(resultado); } };
+        const paginaEmIngles = (document.documentElement.lang || '').toLowerCase().indexOf('en') === 0;
+        // O assistente pode preencher sem disparar "change": reaplica a régua do
+        // perfil e da categoria antes de validar.
+        syncPerfil();
+        syncHospitalDeclaration();
+        if (!form.reportValidity()) {
+            const invalidos = Array.from(form.elements).filter((el) => el.name && el.willValidate && !el.validity.valid).map((el) => el.name);
+            paraAgente({ok: false, error: 'validation_failed', fields: Array.from(new Set(invalidos)), message: paginaEmIngles ? 'Some required fields are missing or invalid. Nothing was sent.' : 'Faltam campos obrigatórios ou há campo inválido. Nada foi enviado.'});
+            return;
+        }
         const endpoint = form.dataset.endpoint;
         if (!endpoint) {
             status.textContent = 'A integração está sendo configurada. Use o WhatsApp para enviar sua solicitação agora.';
-            status.className = 'form-status is-error'; return;
+            status.className = 'form-status is-error';
+            paraAgente({ok: false, error: 'unavailable', message: paginaEmIngles ? 'The form is unavailable. Nothing was sent. Use WhatsApp: https://wa.me/5511912728412' : 'O formulário está indisponível. Nada foi enviado. Use o WhatsApp: https://wa.me/5511912728412'});
+            return;
         }
         const button = form.querySelector('[type="submit"]');
         // O rótulo do botão é restaurado no finally — capturado aqui para valer
@@ -205,6 +234,7 @@
                     const first = form.querySelector(`[name="${detail.fields[0]}"]`);
                     if (first) { first.scrollIntoView({behavior: 'smooth', block: 'center'}); first.focus({preventScroll: true}); }
                     track('form_error_coleta', {page_path: window.location.pathname, error_type: 'validation', fields: detail.fields.join(',')});
+                    paraAgente({ok: false, error: 'validation_failed', fields: detail.fields, message: paginaEmIngles ? 'Some fields need to be corrected. Nothing was sent.' : 'Há campos a corrigir. Nada foi enviado.'});
                     return;
                 }
                 // Armadilha anti-spam ou envio rápido demais: em vez de fingir sucesso
@@ -225,6 +255,7 @@
                     status.appendChild(a); status.appendChild(document.createTextNode('.'));
                     status.className = 'form-status is-error';
                     track('form_error_coleta', {page_path: window.location.pathname, error_type: 'blocked'});
+                    paraAgente({ok: false, error: 'blocked_form', message: paginaEmIngles ? 'The submission could not be confirmed. Nothing was sent. Wait a few seconds and send again, or use WhatsApp: ' + wa : 'Não foi possível confirmar o envio. Nada foi enviado. Espere alguns segundos e envie de novo, ou use o WhatsApp: ' + wa});
                     return;
                 }
                 throw new Error((detail && detail.error) || 'submission_failed');
@@ -249,6 +280,12 @@
                 volume: payload.volume
             });
             window.dataLayer = window.dataLayer || []; window.dataLayer.push({event:'collection_request_submitted',profile:payload.profile,material_category:payload.material_category,state:payload.state});
+            // Pedido enviado por assistente de IA pelo navegador (WebMCP): evento próprio,
+            // para medir se a estrutura para agentes traz coleta. Sem dado pessoal.
+            if (viaAgente) track('coleta_via_agente', {page_path: window.location.pathname, profile: payload.profile});
+            paraAgente({ok: true, status: 'request_received', message: paginaEmIngles
+                ? 'Request received by Ecobraz. This does not confirm the collection yet: the team assesses the request and replies within 24 business hours, by the e-mail or phone provided.'
+                : 'Pedido recebido pela Ecobraz. O envio ainda não confirma a coleta: a equipe avalia o pedido e responde em até 24h úteis, pelo e-mail ou telefone informado.'});
             // A tela de confirmação substitui o formulário: evita reenvios em duplicidade.
             const isEn = (document.documentElement.lang || '').toLowerCase().indexOf('en') === 0;
             const done = document.createElement('div');
@@ -298,7 +335,8 @@
         } catch (_) {
             status.textContent = 'Não foi possível enviar agora. Tente novamente ou fale com a equipe pelo WhatsApp.'; status.className = 'form-status is-error';
             track('form_error_coleta', {page_path: window.location.pathname});
-        } finally { button.disabled = false; button.textContent = buttonLabel; }
+            paraAgente({ok: false, error: 'submission_failed', message: paginaEmIngles ? 'The request could not be sent now. Nothing was confirmed. Try again or use WhatsApp: https://wa.me/5511912728412' : 'Não foi possível enviar agora. Nada foi confirmado. Tente de novo ou use o WhatsApp: https://wa.me/5511912728412'});
+        } finally { button.disabled = false; button.textContent = buttonLabel; paraAgente({ok: false, error: 'unknown', message: paginaEmIngles ? 'No confirmation was received.' : 'Não houve confirmação do envio.'}); }
     });
 })();
 
