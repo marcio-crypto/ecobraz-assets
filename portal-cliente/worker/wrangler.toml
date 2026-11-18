@@ -31,8 +31,10 @@ binding = "R2_ARQUIVOS"
 bucket_name = "ecobraz-arquivos"
 
 # Cron diário — alertas de vencimento dos Documentos da Empresa (11:00 UTC = 8h de Brasília).
+# 06:00 UTC (3h de Brasília): completa o índice de OS antigas (consultas do Claude) —
+# de madrugada, para não disputar o índice com a equipe trabalhando.
 [triggers]
-crons = ["0 11 * * *"]
+crons = ["0 11 * * *", "0 6 * * *"]
 
 # Limite do conector do Claude (pedido do Marcio, 17/11): 60 consultas por minuto.
 # O código usa este limitador da Cloudflare quando ele existe (env.MCP_LIMITE); sem

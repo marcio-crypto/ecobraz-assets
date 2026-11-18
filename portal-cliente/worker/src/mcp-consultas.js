@@ -77,28 +77,64 @@ function cpfValido(d) {
   s = 0; for (let i = 0; i < 10; i++) s += Number(d[i]) * (11 - i);
   r = (s * 10) % 11; if (r === 10) r = 0; return r === Number(d[10]);
 }
-// Texto livre: CPF formatado vira máscara; CPF escrito de outro jeito (só números,
-// "123456789-09", com espaços ou barra) também, quando passa no dígito verificador
-// (pode pegar 1 telefone digitado sem pontuação em 100 — melhor esconder a mais);
-// RG no formato 00.000.000-0 some.
-const RE_CPF_LIVRE = /(?<![\d./-])\d{3}[.\s]?\d{3}[.\s]?\d{3}[-.\s/]?\d{2}(?!\d)/g;
+// Texto livre — CPF: 11 dígitos escritos como se escreve CPF (pontos, hífen, travessão,
+// espaço, barra ou vírgula; até 3 separadores entre os blocos) viram máscara quando
+// passam no dígito verificador, quando têm o formato 000.000.000-00, ou quando a
+// palavra "CPF" vem logo antes (CPF digitado com erro). Pode esconder 1 número em 100
+// que não era CPF — melhor esconder a mais. RG: com a palavra "RG" na frente, o número
+// inteiro some; sem ela, somem os formatos típicos (00.000.000-0, 00000000-0, UF-00.000.000).
+const SEP_DOC = '[\\s.,\\-–—/]{0,3}';
+const RE_CPF_LIVRE = new RegExp(`(?<!\\d)\\d{3}${SEP_DOC}\\d{3}${SEP_DOC}\\d{3}${SEP_DOC}\\d{2}(?!\\d)`, 'g');
+const RE_RG_PALAVRA = /\b(?:rg|r\.g\.?)(?![a-z])[\s:.\-–—]*(?:n[º°o.]?\s*)?(?:[a-z]{2}[\s\-–—/]*)?\d[\dx.\-–—\s/]{3,16}[\dx]/gi;
 export function limparTextoLivre(s) {
   return String(s == null ? '' : s)
-    .replace(/(?<!\d)\d{3}\.\d{3}\.\d{3}-\d{2}(?!\d)/g, (m) => mascararCPF(m))
-    .replace(RE_CPF_LIVRE, (m) => (cpfValido(digits(m)) ? mascararCPF(m) : m))
-    .replace(/(?<![\d.])\d{1,2}\.\d{3}\.\d{3}-[\dxX](?![\dxX])/g, '[RG omitido]');
+    .replace(RE_CPF_LIVRE, (m, pos, tudo) => {
+      const d = digits(m);
+      if (cpfValido(d) || /^\d{3}\.\d{3}\.\d{3}-\d{2}$/.test(m) || /cpf/i.test(tudo.slice(Math.max(0, pos - 25), pos))) return mascararCPF(d);
+      return m;
+    })
+    .replace(RE_RG_PALAVRA, 'RG [omitido]')
+    .replace(/(?<![\d.])\d{1,2}\.\d{3}\.\d{3}-[\dxX](?![\dxX])/g, '[RG omitido]')
+    .replace(/(?<![\d./\-])\d{7,9}-[\dxX](?![\dxX])/g, '[RG omitido]')
+    .replace(/\b[A-Z]{2}[\-–—\s]?\d{1,2}\.\d{3}\.\d{3}(?:-[\dxX])?(?![\dxX])/g, '[RG omitido]');
 }
-// Mensagem de lead: tira as linhas estruturadas de endereço e documento que o portal
-// escreve ("Endereço de coleta: …", "(CEP … · rua, nº …)", "CNPJ/CPF: …") e qualquer
-// "Rua/Av./Alameda… nº" digitado pela pessoa — rua e número não saem (LGPD). Pega a
-// palavra do logradouro, até 6 palavras do nome (aceita "25 de Março") e o número
-// ("123", ", 455", "nº 1500"); na dúvida, esconde a mais.
-const RE_LOGRADOURO = /\b(?:rua|r\.|avenida|av\.?|alameda|al\.|travessa|tv\.|estrada|rodovia|rod\.|pra[cç]a|largo|viela|servid[aã]o)[ \t]+(?:\d{1,4}\b[ \t]*)?(?:[^\s\d,;:()]+[ \t]*){0,6}(?:,?[ \t]*(?:(?:n[º°o.]?|n[uú]mero)[ \t]*)?\d{1,5}[a-z]?\b)?/gi;
-export function limparMensagemLead(texto) {
+// Endereço em texto livre (rua e número não saem — LGPD). As linhas que o próprio
+// sistema escreve com endereço ("Endereço: …", "Endereço de coleta: …", "(CEP … · rua,
+// nº …)", "CNPJ/CPF: …") saem inteiras. No resto do texto somem "Rua/Avenida/Alameda/
+// Travessa/Estrada/Rodovia/Praça…", as abreviações com ponto (Av., Al., Trav., Estr.,
+// Rod., Pça., Lgo., R.), "R das Flores"/"Av Paulista" sem ponto, com até 10 palavras do
+// nome (aceita "25 de Março") e o número ("123", ", 455", "nº 1.500", "s/n"); e
+// "Quadra 104", "Lote 20". Endereço escrito sem nenhuma dessas palavras (ex.: só "das
+// Flores, 123") não tem como ser reconhecido.
+// Linha "rótulo: valor" de endereço (com dois-pontos — "endereço errado" num motivo
+// de cancelamento continua, só a rua dentro dele some).
+const RE_LINHA_ENDERECO = /^\s*(?:endere[cç]o(?:\s+(?:de|da|do)\s+[a-zà-ú]+)?\s*:|end\.?\s*:|local\s+(?:de|da)\s+(?:coleta|retirada)\s*:|logradouro\s*:|\(\s*cep\b|cnpj\/cpf\s*:)/i;
+const NOME_RUA = String.raw`(?:\d{1,4}\b[ \t]*)?(?:[^\s\d,;:()\[\]]+[ \t]*){0,10}`;
+const NUMERO_RUA = String.raw`(?:,?[ \t]*(?:(?:n[º°o.]?|n[uú]m(?:ero)?\.?)[ \t]*)?(?:\d{1,5}(?:\.\d{3})?[a-z]?\b|s\/n\b))?`;
+const RE_RUA_PALAVRA = new RegExp(String.raw`\b(?:rua|avenida|alameda|travessa|estrada|rodovia|pra[cç]a|pça|largo|viela|servid[aã]o)(?![a-zà-ú])[ \t]*[:.]?[ \t]*` + NOME_RUA + NUMERO_RUA, 'gi');
+const RE_RUA_ABREV = new RegExp(String.raw`\b(?:av|al|trav|estr|rod|pça|pç|pca|lgo|r)[.:][ \t]*` + NOME_RUA + NUMERO_RUA, 'gi');
+const RE_RUA_SEM_PONTO = new RegExp(String.raw`\b(?:Av|AV|Al|R|Trav|TRAV|Estr|ESTR|Rod|ROD)[ \t]+(?=[A-ZÁÉÍÓÚÂÊÔÃÕÇ0-9]|d[aeo]s?\s)` + NOME_RUA + NUMERO_RUA, 'g');
+const RE_QUADRA_LOTE = /\b(?:quadra|qd|qda|lote|lt)\.?[ \t]*\d{1,4}[a-z]?\b/gi;
+export function semEndereco(texto) {
   return String(texto == null ? '' : texto).split(/\r?\n/)
-    .filter((l) => !/^\s*(endere[cç]o de coleta:|\(cep\b|cnpj\/cpf:)/i.test(l))
-    .join('\n').replace(RE_LOGRADOURO, '[endereço omitido]');
+    .filter((l) => !RE_LINHA_ENDERECO.test(l))
+    .join('\n')
+    .replace(RE_RUA_PALAVRA, '[endereço omitido]')
+    .replace(RE_RUA_ABREV, '[endereço omitido]')
+    .replace(RE_RUA_SEM_PONTO, '[endereço omitido]')
+    .replace(RE_QUADRA_LOTE, '[endereço omitido]');
 }
+export const limparMensagemLead = semEndereco;
+// Texto livre que vai sair: CPF/RG mascarados PRIMEIRO (o número da rua não pode
+// "comer" o começo de um CPF), depois sem endereço, e só então cortado (um corte no
+// meio de um CPF deixaria dígitos que a máscara não reconhece mais).
+const textoSeguro = (s, max, manterLinhas) => {
+  let t = semEndereco(limparTextoLivre(s));
+  t = manterLinhas ? t.split(/\r?\n/).map((l) => l.replace(/[ \t]+/g, ' ').trim()).filter(Boolean).join('\n') : limpar(t);
+  return max && t.length > max ? t.slice(0, max).replace(/\s+\S{0,20}$/, '') : t;
+};
+// Campo que o sistema já cortou na gravação: tira a última palavra se ficou pela metade.
+const semCauda = (s, max) => { const t = String(s == null ? '' : s); return t.length >= max ? t.replace(/\s+\S{0,20}$/, '') : t; };
 // Última barreira antes de sair: todo texto passa pela limpeza, menos os campos que
 // SÃO telefone (um celular de 11 dígitos não pode virar máscara de CPF por acaso).
 const CAMPOS_FONE = new Set(['celulares', 'telefones', 'celular', 'telefone']);
@@ -229,13 +265,14 @@ export function categoriaMaterial(nome) {
   return { codigo: 'outros', nome: 'Outros' };
 }
 // "quantidade | material | 2 geladeira; 1 monitor" → nomes dos itens (ou o material).
+// Os textos saem já sem endereço e sem CPF/RG (são digitados livremente na OS).
 function partesMat(mat) {
   const s = String(mat || ''); if (!s) return { quantidade: '', material: '', itens: [] };
   const [q = '', m = '', i = ''] = s.split(' | ');
-  const itens = i ? i.split('; ').map((x) => { const mm = x.match(/^(\d+(?:[.,]\d+)?)\s+(.*)$/); return mm ? { qtd: mm[1], nome: mm[2].trim() } : { qtd: '1', nome: x.trim() }; }).filter((x) => x.nome) : [];
-  return { quantidade: q.trim(), material: m.trim(), itens };
+  const itens = i ? i.split('; ').map((x) => { const mm = x.match(/^(\d+(?:[.,]\d+)?)\s+(.*)$/); return mm ? { qtd: mm[1], nome: textoSeguro(mm[2], 140) } : { qtd: '1', nome: textoSeguro(x, 140) }; }).filter((x) => x.nome) : [];
+  return { quantidade: textoSeguro(q, 100), material: textoSeguro(m, 300), itens };
 }
-const nomesMateriais = (mat) => { const p = partesMat(mat); return p.itens.length ? p.itens.map((x) => x.nome) : (p.material ? [p.material.slice(0, 80)] : []); };
+const nomesMateriais = (mat) => { const p = partesMat(mat); return p.itens.length ? p.itens.map((x) => x.nome) : (p.material ? [textoSeguro(p.material, 80)] : []); };
 // A OS tem o material procurado? Texto da OS (quantidade, material e itens) ou categoria
 // pesada na doca. OS cancelada não conta (não houve coleta).
 const osTemMaterial = (o, termos, mats, pesos) => o.status !== 'cancelada' && (casaTermo(mats.get(o.id) || '', termos) || ((pesos.get(o.id) || {}).cats || []).some((c) => casaTermo(normTxt(c.categoria), termos)));
@@ -276,6 +313,7 @@ function novoContexto(env) {
         const cats = new Map(); for (const l of lt) { const a = cats.get(l.carga_id) || []; a.push({ categoria: limpar(l.categoria), kg: Number(l.kg) || 0 }); cats.set(l.carga_id, a); }
         for (const c of cg) {
           let lista = []; try { lista = JSON.parse(c.os_json || '[]'); } catch { lista = []; }
+          if (!Array.isArray(lista)) lista = []; // uma carga com dado estranho não derruba o peso das outras
           const n = lista.length || 1;
           for (const o of lista) {
             const id = String((o && o.id) || ''); if (!id) continue;
@@ -421,8 +459,8 @@ async function vinculosLeadOS(ctx) {
   }
   return { osPorLead, leadPorOS };
 }
-const gclidDe = (url) => { try { return new URL(String(url || '')).searchParams.get('gclid') || ''; } catch { const m = String(url || '').match(/[?&]gclid=([^&#\s]+)/); return m ? decodeURIComponent(m[1]) : ''; } };
-const utmDe = (u) => { const o = {}; for (const k of ['source', 'medium', 'campaign', 'content', 'term']) if (u && u[k]) o[k] = String(u[k]).slice(0, 120); return Object.keys(o).length ? o : null; };
+const gclidDe = (url) => { const s = String(url || ''); try { return new URL(s).searchParams.get('gclid') || ''; } catch { const m = s.match(/[?&]gclid=([^&#\s]+)/); if (!m) return ''; try { return decodeURIComponent(m[1]); } catch { return m[1]; } } };
+const utmDe = (u) => { const o = {}; for (const k of ['source', 'medium', 'campaign', 'content', 'term']) if (u && u[k]) o[k] = textoSeguro(u[k], 120); return Object.keys(o).length ? o : null; };
 
 // --- Saída -------------------------------------------------------------------------------
 function camposPedidos(a) {
@@ -430,9 +468,12 @@ function camposPedidos(a) {
   if (typeof a.campos === 'string' && a.campos.trim()) return a.campos.split(/[\s,;]+/).filter(Boolean);
   return null;
 }
-function saida(ctx, a, { total, pagina, porPagina, itens, filtros, extra, titulo, linha }) {
+// `fixos`: campos que saem SEMPRE, mesmo quando a chamada pede só alguns `campos`
+// (ex.: aceita_email e motivo_bloqueio de todo cliente — regra do descadastro).
+function saida(ctx, a, { total, pagina, porPagina, itens, filtros, extra, titulo, linha, fixos, rodape }) {
   const paginas = Math.max(1, Math.ceil((Number(total) || 0) / porPagina));
-  const campos = camposPedidos(a);
+  const pedidos = camposPedidos(a);
+  const campos = pedidos ? [...new Set([...pedidos, ...(fixos || [])])] : null;
   const lista = campos ? itens.map((it) => Object.fromEntries(campos.filter((k) => k in it).map((k) => [k, it[k]]))) : itens;
   const filtrosLimpos = Object.fromEntries(Object.entries(filtros || {}).filter(([, v]) => v !== '' && v != null));
   if (ctx.orcamento && ctx.orcamento.esgotado) ctx.aviso('Resposta PARCIAL: esta consulta precisou ler mais registros do que a plataforma permite numa chamada — alguns detalhes podem ter ficado vazios. Reduza o período ou o tamanho da página.');
@@ -440,7 +481,7 @@ function saida(ctx, a, { total, pagina, porPagina, itens, filtros, extra, titulo
   if (String(a.formato || '').trim().toLowerCase() !== 'texto') return JSON.stringify(corpo);
   const linhas = [`${titulo}: ${total} resultado(s) — página ${pagina} de ${paginas} (${porPagina} por página)`];
   for (const it of corpo.itens) linhas.push('• ' + (campos ? Object.entries(it).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : (v && typeof v === 'object' ? JSON.stringify(v) : v)}`).join(' — ') : linha(it)));
-  if (corpo.extra_texto) linhas.push(corpo.extra_texto);
+  if (rodape) { const r = rodape(corpo); if (r) linhas.push(r); }
   if (pagina < paginas) linhas.push(`… peça a página ${pagina + 1} para continuar.`);
   for (const av of corpo.avisos) linhas.push(`⚠️ ${av}`);
   return linhas.join('\n');
@@ -504,7 +545,7 @@ async function ferrClientes(env, args) {
   if (origem === 'sistema' || origem === 'site') where.push('c.ploomes_id >= 900000000');
   if (temEmail != null) where.push(`${temEmail ? '' : 'NOT '}(COALESCE(c.email,'') LIKE '%@%' OR EXISTS (SELECT 1 FROM contatos q WHERE q.company_id = c.ploomes_id AND q.tipo='PF' AND COALESCE(q.email,'') LIKE '%@%'))`);
   const precisaFone = aceita != null;
-  const cols = `c.ploomes_id AS i, c.documento AS d, c.tipo AS t, TRIM(COALESCE(NULLIF(c.nome,''), c.nome_fantasia, '')) AS n${cepPref ? ', c.endereco AS e' : ''}${origem === 'site' || origem === 'sistema' || precisaFone ? ', c.email AS m' : ''}${precisaFone ? ', c.telefone AS f' : ''}`;
+  const cols = `c.ploomes_id AS i, c.documento AS d, c.tipo AS t, TRIM(COALESCE(NULLIF(c.nome,''), c.nome_fantasia, '')) AS n${cepPref ? ", c.endereco AS e, c.cidade AS ci, c.uf AS u, CASE WHEN json_valid(c.dados_json) THEN json_extract(c.dados_json,'$.ZipCode') END AS z" : ''}${origem === 'site' || origem === 'sistema' || precisaFone ? ', c.email AS m' : ''}${precisaFone ? ', c.telefone AS f' : ''}`;
   let linhas;
   if (positivo) {
     const docs = [...positivo].filter((k) => !k.startsWith('p'));
@@ -521,12 +562,13 @@ async function ferrClientes(env, args) {
   const grupos = new Map();
   const agrupa = (r) => {
     const k = chaveCliente(r.d, r.i);
-    const g = grupos.get(k) || { k, tipo: tipoDaChave(k, r.t), pids: [], nome: '', end: '', emails: [], fones: [] };
-    if (!g.pids.includes(r.i)) g.pids.push(r.i);
+    const g = grupos.get(k) || { k, tipo: tipoDaChave(k, r.t), pids: [], nome: '', linhas: [], emails: [], fonesTexto: [] };
+    if (g.pids.includes(r.i)) return;
+    g.pids.push(r.i);
     if (!g.nome && r.n) g.nome = limpar(r.n);
-    if (r.e && !g.end) g.end = r.e;
+    if (cepPref) g.linhas.push({ endereco: r.e, cidade: r.ci, uf: r.u, pl_cep: r.z });
     if (r.m) g.emails.push(...separarEmails(r.m));
-    if (r.f) g.fones.push(...fonesNacionais(r.f));
+    if (r.f) g.fonesTexto.push(r.f);
     grupos.set(k, g);
   };
   for (const r of linhas) agrupa(r);
@@ -543,7 +585,7 @@ async function ferrClientes(env, args) {
       for (const k of faltam) {
         if (grupos.has(k)) continue;
         const os1 = (ossPorDoc.get(k) || [])[0];
-        grupos.set(k, { k, tipo: tipoDaChave(k), pids: [], nome: limpar(os1 && os1.clienteNome) || '(cliente sem cadastro na base)', end: '', emails: [], fones: [], semCadastro: true });
+        grupos.set(k, { k, tipo: tipoDaChave(k), pids: [], nome: limpar(os1 && os1.clienteNome) || '(cliente sem cadastro na base)', linhas: [], emails: [], fonesTexto: [], semCadastro: true });
       }
     }
   }
@@ -552,7 +594,20 @@ async function ferrClientes(env, args) {
   // 4) Filtros que dependem de dados fora do SQL.
   if (nunca) lista = lista.filter((g) => !stats.has(g.k));
   if (temOsAberta === false) lista = lista.filter((g) => !(ossPorDoc.get(g.k) || []).some((o) => ABERTAS.has(o.status)));
-  if (cepPref) lista = lista.filter((g) => enderecoDaLinha({ endereco: g.end }).cep.startsWith(cepPref));
+  // Fichas do sistema novo dos candidatos (endereço e contatos editados pela equipe):
+  // os filtros de CEP e de descadastro usam a MESMA regra do item que sai na lista.
+  let fichaDe = () => null;
+  if (cepPref || aceita != null) {
+    const idPorDoc = await ctx.fichaIdPorDoc();
+    const ids = [...new Set(lista.map((g) => idPorDoc.get(g.k)).filter(Boolean))];
+    const TETO_FICHAS = 3000;
+    if (ids.length > TETO_FICHAS) ctx.aviso(`Filtro de CEP/descadastro: ${ids.length} candidatos têm ficha no sistema novo e foram conferidas ${TETO_FICHAS}; nos demais valeram só os dados da base — confira o aceita_email de cada item (ele considera tudo). Combine com outro filtro para conferência completa.`);
+    const lidos = await ctx.lerVarios(ids.slice(0, TETO_FICHAS).map((id) => `cli:${id}`));
+    const fichas = new Map();
+    for (const id of ids.slice(0, TETO_FICHAS)) { try { const raw = lidos.get(`cli:${id}`); if (raw) fichas.set(id, JSON.parse(raw)); } catch { /* ficha ilegível: fica a base */ } }
+    fichaDe = (g) => { const id = idPorDoc.get(g.k); return (id && fichas.get(id)) || null; };
+  }
+  if (cepPref) lista = lista.filter((g) => enderecoCliente(fichaDe(g), g.linhas).cep.startsWith(cepPref));
   if (origem === 'site' || origem === 'sistema') {
     const leads = await ctx.leads();
     const lDocs = new Set(leads.map((l) => digits(l.documento)).filter(Boolean));
@@ -567,11 +622,11 @@ async function ferrClientes(env, args) {
     const fonesPessoas = new Map();
     if (pjPids.length) {
       const ps = await consultaEmFatias(db, () => "SELECT p.company_id AS c, p.telefone AS f FROM contatos p WHERE p.tipo='PF' AND p.company_id IN (SELECT value FROM json_each(?1)) AND COALESCE(p.telefone,'') <> ''", pjPids);
-      for (const x of ps) { const l = fonesPessoas.get(x.c) || []; l.push(...fonesNacionais(x.f)); fonesPessoas.set(x.c, l); }
+      for (const x of ps) { const l = fonesPessoas.get(x.c) || []; l.push(x.f); fonesPessoas.set(x.c, l); }
     }
-    const bloqueado = (g) => bl.porDoc.has(g.k) || g.fones.some((f) => bl.porFone.has(f)) || g.pids.some((pid) => (fonesPessoas.get(pid) || []).some((f) => bl.porFone.has(f)));
+    const bloqueado = (g) => motivoDeBloqueio(bl, g.k, [...fonesDaFicha(fichaDe(g)), ...g.fonesTexto, ...g.pids.flatMap((pid) => fonesPessoas.get(pid) || [])]) != null;
     lista = lista.filter((g) => (aceita ? !bloqueado(g) : bloqueado(g)));
-    ctx.aviso('aceita_email: o filtro considera os telefones e documentos da base; contatos digitados só na ficha do sistema novo entram no valor de cada item.');
+    ctx.aviso('aceita_email: o filtro usa a mesma regra do campo de cada cliente — documento e telefones da base, das pessoas da empresa e da ficha do sistema novo.');
   }
   // 5) Ordem: com filtro de última coleta, da mais recente; senão, por nome.
   const porData = !!(ultDe || ultAte);
@@ -592,8 +647,31 @@ async function ferrClientes(env, args) {
   return saida(ctx, a, {
     total, pagina, porPagina, itens, filtros, titulo: 'Clientes',
     extra: { contagem: { com_cnpj_ou_cpf: total - semDoc, sem_documento: semDoc } },
-    linha: (c) => [c.nome, c.tipo, c.cnpj || c.cpf, c.cidade && `${c.cidade}/${c.uf}`, (c.emails || [])[0], (c.celulares || [])[0] || (c.telefones || [])[0], c.ultima_coleta && `última coleta ${c.ultima_coleta}`, c.aceita_email === 'não' ? `NÃO contatar (${c.motivo_bloqueio})` : ''].filter(Boolean).join(' — '),
+    fixos: ['aceita_email', 'motivo_bloqueio'],
+    rodape: (corpo) => (corpo.contagem ? `Com CNPJ/CPF: ${corpo.contagem.com_cnpj_ou_cpf} · sem documento: ${corpo.contagem.sem_documento}` : ''),
+    linha: (c) => [c.nome, c.tipo, c.cnpj || c.cpf, c.cidade && `${c.cidade}/${c.uf}`, (c.emails || [])[0], (c.celulares || [])[0] || (c.telefones || [])[0], c.ultima_coleta && `última coleta ${c.ultima_coleta}`, c.aceita_email === 'não' ? `aceita e-mail: NÃO — não contatar (${c.motivo_bloqueio})` : 'aceita e-mail: sim'].filter(Boolean).join(' — '),
   });
+}
+
+// Regras únicas, usadas tanto pelos FILTROS quanto pelo que sai em cada cliente (um
+// filtro não pode discordar do campo que aparece na lista).
+// Telefones da ficha do sistema novo (o da ficha e os dos contatos com cargo).
+const fonesDaFicha = (f) => (f ? [f.fone, f.telefone, ...(Array.isArray(f.contatos) ? f.contatos.map((c) => c && c.fone) : [])] : []);
+// Descadastro conhecido pelo sistema: empresa retirada das campanhas, ou algum telefone
+// do cliente que pediu para sair do WhatsApp. null = pode contatar.
+function motivoDeBloqueio(bl, k, fonesTexto) {
+  const exc = bl.porDoc.get(k);
+  if (exc) return `empresa retirada das campanhas pela diretoria${exc.em ? ` em ${diaBR(exc.em)}` : ''}`;
+  const todos = [...new Set(fonesNacionais(fonesTexto.filter(Boolean).join(' / ')))];
+  const hit = todos.map((t) => bl.porFone.get(t)).find(Boolean);
+  return hit ? `pediu para sair das mensagens de WhatsApp${hit.em ? ` em ${diaBR(hit.em)}` : ''}${hit.motivo ? ` (${textoSeguro(hit.motivo, 80)})` : ''}` : null;
+}
+// Endereço que sai para o cliente: o da ficha (quando tem CEP ou cidade); senão a
+// primeira linha da base que tiver CEP ou cidade.
+function enderecoCliente(f, rows) {
+  if (f && f.endereco && (f.endereco.cep || f.endereco.cidade)) return { cep: digits(f.endereco.cep).slice(0, 8), bairro: limpar(f.endereco.bairro), cidade: limpar(f.endereco.cidade), uf: limpar(f.endereco.uf).toUpperCase() };
+  for (const r of rows || []) { const e = enderecoDaLinha(r); if (e.cep || e.cidade) return e; }
+  return { cep: '', bairro: '', cidade: '', uf: '' };
 }
 
 async function detalharClientes(ctx, grupos, { stats, ossPorDoc, termos }) {
@@ -624,10 +702,7 @@ async function detalharClientes(ctx, grupos, { stats, ossPorDoc, termos }) {
     const f = ficha(g);
     const pes = g.pids.flatMap((id) => pessoasPorEmpresa.get(id) || []);
     const contatosFicha = (f && Array.isArray(f.contatos) ? f.contatos : []).filter((c) => c && (c.nome || c.email || c.fone));
-    let end = { cep: '', bairro: '', cidade: '', uf: '' };
-    if (f && f.endereco && (f.endereco.cep || f.endereco.cidade)) end = { cep: digits(f.endereco.cep).slice(0, 8), bairro: limpar(f.endereco.bairro), cidade: limpar(f.endereco.cidade), uf: limpar(f.endereco.uf).toUpperCase() };
-    else for (const r of rows) { const e = enderecoDaLinha(r); if (e.cep || e.cidade) { end = e; break; } }
-    return { g, rows, f, pes, contatosFicha, end };
+    return { g, rows, f, pes, contatosFicha, end: enderecoCliente(f, rows) };
   });
   const ceps = [...new Set(base.map((b) => b.end.cep).filter((c) => c.length === 8))];
   const geo = await ctx.lerVarios(ceps.map((c) => `geocep:${c}`));
@@ -636,7 +711,7 @@ async function detalharClientes(ctx, grupos, { stats, ossPorDoc, termos }) {
     const r0 = rows[0] || {};
     const emails = separarEmails(f && f.email, contatosFicha.map((c) => c.email), rows.map((r) => r.email), pes.map((x) => x.email));
     const docsDoCliente = [g.k, ...rows.map((r) => r.documento), ...pes.map((x) => x.documento)];
-    const fones = fonesSemDocs(docsDoCliente, f && (f.fone || f.telefone), contatosFicha.map((c) => c.fone), rows.map((r) => r.telefone), pes.map((x) => x.telefone));
+    const fones = fonesSemDocs(docsDoCliente, fonesDaFicha(f), rows.map((r) => r.telefone), pes.map((x) => x.telefone));
     let coord = null; try { const raw = geo.get(`geocep:${end.cep}`); const v = raw ? JSON.parse(raw) : null; if (v && Number.isFinite(Number(v.lat)) && Number.isFinite(Number(v.lon)) && v.lat && v.lon) coord = { lat: Number(v.lat), lon: Number(v.lon) }; } catch { coord = null; }
     const s = stats.get(g.k);
     const lista = ossPorDoc.get(g.k) || [];
@@ -648,14 +723,7 @@ async function detalharClientes(ctx, grupos, { stats, ossPorDoc, termos }) {
     const emAberto = lista.filter((o) => o.cobranca && o.cobranca.status !== 'pago' && o.status !== 'cancelada');
     const valorAberto = r2(emAberto.reduce((t, o) => t + (Number(o.cobranca.valor) || 0), 0));
     // Descadastro (o que o sistema conhece): opt-out do WhatsApp e empresa excluída.
-    let motivo = null;
-    const exc = bl.porDoc.get(g.k);
-    if (exc) motivo = `empresa retirada das campanhas pela diretoria${exc.em ? ` em ${diaBR(exc.em)}` : ''}`;
-    if (!motivo) {
-      const todos = [...new Set([...fonesNacionais([f && (f.fone || f.telefone), ...contatosFicha.map((c) => c.fone), ...rows.map((r) => r.telefone), ...pes.map((x) => x.telefone)].filter(Boolean).join(' / '))])];
-      const hit = todos.map((t) => bl.porFone.get(t)).find(Boolean);
-      if (hit) motivo = `pediu para sair das mensagens de WhatsApp${hit.em ? ` em ${diaBR(hit.em)}` : ''}${hit.motivo ? ` (${limpar(hit.motivo).slice(0, 80)})` : ''}`;
-    }
+    const motivo = motivoDeBloqueio(bl, g.k, [...fonesDaFicha(f), ...rows.map((r) => r.telefone), ...pes.map((x) => x.telefone)]);
     const origemFicha = String((f && f.origem) || '');
     const origem = g.pids.some((id) => Number(id) < 900000000) || origemFicha.startsWith('ploomes') ? 'ploomes' : (origemFicha === 'adote' ? 'adote' : (lDocs.has(g.k) || emails.some((e) => lEmails.has(e)) ? 'site' : (g.semCadastro ? 'sem cadastro na base' : 'sistema')));
     const cadastro = rows.map((r) => diaBR(r.criado_em)).filter(Boolean).sort()[0] || diaBR(f && f.criadoEm) || null;
@@ -713,6 +781,7 @@ async function ferrColetasPeriodo(env, args) {
     const semData = oss.filter((o) => o.status === 'cancelada' && !o.canceladaEm).map((o) => o.id);
     const regs = await ctx.lerVarios(semData.slice(0, 400).map((id) => `os:${id}`));
     for (const id of semData.slice(0, 400)) { try { const raw = regs.get(`os:${id}`); const r = raw ? JSON.parse(raw) : null; canceladaEst.set(id, diaBR(r && (r.atualizadoEm || r.criadoEm))); } catch { /* sem data */ } }
+    if (semData.length > 400) ctx.aviso(`${semData.length - 400} cancelamentos antigos (sem data registrada) ficaram fora desta busca por limite de leitura — reduza o período.`);
   }
   const dataRef = (o) => {
     if (campo === 'criacao') return diaBR(o.criadoEm);
@@ -771,7 +840,7 @@ async function detalharColetas(ctx, lista, vinc) {
     const p = pesos.get(o.id) || {};
     const kg = op && op.entrada && Number(op.entrada.pesoKg) > 0 ? Number(op.entrada.pesoKg) : (p.kg > 0 ? p.kg : null);
     const rateado = op && op.entrada && Number(op.entrada.pesoKg) > 0 ? !!(op.entrada.rateado && !op.entrada.ajustadoEm) : !!p.rateado;
-    const itensDecl = (Array.isArray(rec.itens) ? rec.itens : []).map((it) => ({ nome: limpar(it.nome), quantidade: limpar(it.qtd) || '1' })).filter((it) => it.nome);
+    const itensDecl = (Array.isArray(rec.itens) ? rec.itens : []).map((it) => ({ nome: textoSeguro(semCauda(it && it.nome, 140)), quantidade: limpar(it && it.qtd) || '1' })).filter((it) => it.nome);
     const pesados = op && Array.isArray(op.materiais) && op.materiais.length
       ? op.materiais.map((m) => ({ categoria: limpar(String(m.rotulo || '').replace(/\s+·\s+LT-[\w-]+$/, '')), peso_kg: r2(m.qtd) }))
       : (p.cats || []).map((c) => ({ categoria: c.categoria, peso_kg: c.kg }));
@@ -791,12 +860,12 @@ async function detalharColetas(ctx, lista, vinc) {
       data_conclusao: conc.dia || null, data_conclusao_estimada: conc.dia ? conc.estimada : undefined,
       data_cancelamento: o.status === 'cancelada' ? (diaBR(o.canceladaEm || rec.canceladaEm) || diaBR(rec.atualizadoEm) || null) : null,
       data_cancelamento_estimada: o.status === 'cancelada' ? !(o.canceladaEm || rec.canceladaEm) : undefined,
-      motivo_cancelamento: o.status === 'cancelada' ? (limpar(rec.motivoCancelamento) || null) : undefined,
+      motivo_cancelamento: o.status === 'cancelada' ? (textoSeguro(semCauda(rec.motivoCancelamento, 300)) || null) : undefined,
       motorista: limpar(o.agenteNome) || (o.transp ? `Transportadora: ${limpar(o.transp)}` : null),
       veiculo: placaDoRegistro(rec) || ctx.placa(o) || null,
       materiais: itensDecl,
-      material_descricao: limpar(rec.material) || null,
-      quantidade_estimada: limpar(rec.quantidade) || null,
+      material_descricao: textoSeguro(semCauda(rec.material, 500)) || null,
+      quantidade_estimada: textoSeguro(semCauda(rec.quantidade, 100)) || null,
       materiais_pesados: pesados,
       peso_kg: kg != null ? r2(kg) : null, peso_rateado: kg != null ? rateado : undefined,
       modalidade: leadRec && leadRec.expressa ? 'expressa' : 'padrão',
@@ -835,9 +904,12 @@ async function ferrLeads(env, args) {
   let lista = (await ctx.leads()).filter((l) => { const d = diaBR(l.criadoEm); return (!de || d >= de) && (!ate || d <= ate); });
   if (status) lista = lista.filter((l) => statusDe(l) === statusOk[status]);
   if (origem) lista = lista.filter((l) => normTxt(l.origem).includes(origem));
-  // Perfil: do índice (gravado desde 18/11) ou pelo documento; os demais pela ficha do lead.
-  const perfilIdx = (l) => (l.perfil === 'PJ' || l.perfil === 'PF' ? l.perfil : (digits(l.documento).length === 14 ? 'PJ' : (digits(l.documento).length === 11 ? 'PF' : '')));
-  const perfilDoRec = (r) => (r && (r.perfil === 'empresa' ? 'PJ' : (r.perfil === 'pessoa_fisica' ? 'PF' : '')));
+  // Perfil: o DOCUMENTO manda (CNPJ = PJ, CPF = PF) — o formulário do portal marca
+  // "empresa" até para pessoa física; sem documento, o perfil gravado no índice (desde
+  // 18/11) ou no próprio lead.
+  const perfilDoc = (d) => { const n = digits(d).length; return n === 14 ? 'PJ' : (n === 11 ? 'PF' : ''); };
+  const perfilIdx = (l) => perfilDoc(l.documento) || (l.perfil === 'PJ' || l.perfil === 'PF' ? l.perfil : '');
+  const perfilDoRec = (r) => (r ? (perfilDoc(r.documento) || (r.perfil === 'empresa' ? 'PJ' : (r.perfil === 'pessoa_fisica' ? 'PF' : ''))) : '');
   if (perfil) {
     const indef = lista.filter((l) => !perfilIdx(l));
     const LIM = 600;
@@ -855,7 +927,7 @@ async function ferrLeads(env, args) {
     const doc = digits(r.documento || l.documento);
     const fones = fonesSemDocs([r.documento, l.documento], r.fone);
     const os = vinc.osPorLead.get(l.id);
-    const pf = perfilIdx(l) || perfilDoRec(r) || (l.empresa ? 'PJ' : 'PF');
+    const pf = perfilDoc(r.documento) || perfilIdx(l) || perfilDoRec(r) || (l.empresa ? 'PJ' : 'PF');
     const item = {
       id: l.id, data: diaBR(l.criadoEm), perfil: pf,
       nome: limpar(r.nome || l.nome) || null, empresa: limpar(r.empresa || l.empresa) || null,
@@ -863,8 +935,8 @@ async function ferrLeads(env, args) {
       email: separarEmails(r.email || l.email)[0] || null,
       celular: fones.celulares[0] || fones.telefones[0] || null,
       cidade: limpar(r.cidade || l.cidade) || null, uf: limpar(r.uf).toUpperCase() || null, cep: fmtCep(digits(r.cep).slice(0, 8)) || null,
-      material: limpar(r.material) || null, volume: limpar(r.volume) || null,
-      mensagem: limparMensagemLead(r.descricao).slice(0, 1500) || null,
+      material: textoSeguro(r.material, 300) || null, volume: textoSeguro(r.volume, 200) || null,
+      mensagem: textoSeguro(r.descricao, 1500, true) || null,
       triagem: (r.triagem && r.triagem.tipo) || l.triagem || null,
       modalidade: r.expressa ? 'expressa' : 'padrão',
       consentimento_marketing: r.consentimentoMkt === true ? 'sim' : 'não informado',
@@ -900,8 +972,11 @@ async function ferrMetricasDiarias(env, args) {
   const m = new Map(dias.map((d) => [d, { dia: d, os_criadas: blank(), os_agendadas: blank(), os_concluidas: blank(), os_canceladas: blank(), peso_total_kg: 0, _mat: new Map(), _cid: new Map(), valor_cobrado: 0, valor_recebido: 0, leads_recebidos: 0, leads_convertidos_em_os: 0, conclusoes_estimadas: 0 }]));
   const conta = (dia, campo, tipo) => { const x = m.get(dia); if (!x) return null; x[campo].total++; if (tipo) x[campo][tipo.toLowerCase()]++; return x; };
   // Cancelamentos antigos sem data → estimativa pela última atualização (lida da OS).
-  const canc = oss.filter((o) => o.status === 'cancelada' && !o.canceladaEm).map((o) => o.id).slice(0, 400);
-  const comCob = oss.filter((o) => o.cobranca).map((o) => o.id).slice(0, 600);
+  const cancTodos = oss.filter((o) => o.status === 'cancelada' && !o.canceladaEm).map((o) => o.id);
+  const cobTodos = oss.filter((o) => o.cobranca).map((o) => o.id);
+  const canc = cancTodos.slice(0, 400), comCob = cobTodos.slice(0, 600);
+  if (cancTodos.length > canc.length) ctx.aviso(`${cancTodos.length - canc.length} cancelamentos antigos (sem data registrada) ficaram fora da contagem por limite de leitura.`);
+  if (cobTodos.length > comCob.length) ctx.aviso(`${cobTodos.length - comCob.length} cobranças de OS mais antigas ficaram fora dos valores por limite de leitura.`);
   const regs = await ctx.lerVarios([...new Set([...canc, ...comCob])].map((id) => `os:${id}`));
   const rec = (id) => { try { const raw = regs.get(`os:${id}`); return raw ? JSON.parse(raw) : null; } catch { return null; } };
   for (const o of oss) {
@@ -932,6 +1007,7 @@ async function ferrMetricasDiarias(env, args) {
     if (env.PORTAL_KV && typeof env.PORTAL_KV.list === 'function') {
       const keys = []; let cursor; let guarda = 0;
       do { const r = await env.PORTAL_KV.list({ prefix: 'pedido:', cursor, limit: 1000 }); keys.push(...(r.keys || []).map((k) => k.name)); cursor = r.list_complete ? null : r.cursor; } while (cursor && ++guarda < 3);
+      if (keys.length > 1500 || cursor) ctx.aviso('Vendas do portal: há mais pedidos guardados do que esta consulta lê de uma vez (1.500) — os valores do portal podem sair incompletos.');
       const peds = await ctx.lerVarios(keys.slice(0, 1500));
       for (const k of keys.slice(0, 1500)) {
         let p = null; try { const raw = peds.get(k); p = raw ? JSON.parse(raw) : null; } catch { p = null; }
@@ -1033,7 +1109,7 @@ async function ferrBloqueiosContato(env, args) {
       clientes: quem.map((q) => (Number(q.emp) > 0
         ? { id: digits(q.ed).length === 14 ? `PJ-${digits(q.ed)}` : `PJ-B${q.emp}`, nome: limpar(q.en) || null, contato: limpar(q.n) || null }
         : { id: q.t === 'PJ' && digits(q.d).length === 14 ? `PJ-${digits(q.d)}` : `${q.t === 'PJ' ? 'PJ' : 'PF'}-B${q.i}`, nome: limpar(q.n) || null })),
-      data: diaBR(x.em) || null, motivo: limpar(x.motivo) || 'pediu para sair',
+      data: diaBR(x.em) || null, motivo: textoSeguro(x.motivo, 200) || 'pediu para sair',
     });
   }
   for (const [doc, x] of bl.porDoc) itens.push({ canal: 'Campanhas (diretoria)', documento: doc.length === 14 ? fmtCNPJ(doc) : mascararCPF(doc) || null, email: null, clientes: [{ id: doc.length === 14 ? `PJ-${doc}` : null, nome: limpar(x.nome) || null }], data: diaBR(x.em) || null, motivo: 'empresa retirada das campanhas pela diretoria' });

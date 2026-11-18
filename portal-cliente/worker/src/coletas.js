@@ -77,11 +77,18 @@ export async function lerColetaOS(env, id) {
 // Com isso o filtro por material, os materiais mais coletados e a estimativa de peso
 // da agenda saem do índice, sem abrir OS por OS (consultas do Claude, 17/11).
 const semAcentoMin = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+// Até 200 caracteres (o índice tem teto de tamanho); o corte cai entre palavras, para
+// nunca deixar um número pela metade.
 export function materialIndiceOS(rec) {
   const n = (s) => semAcentoMin(s).replace(/\|/g, '/').replace(/\s+/g, ' ').trim();
   const itens = (Array.isArray(rec && rec.itens) ? rec.itens : []).map((it) => `${String((it && it.qtd) || '1').trim()} ${String((it && it.nome) || '').trim()}`).filter((s) => s.trim()).join('; ');
   const partes = [n(rec && rec.quantidade), n(rec && rec.material), n(itens)];
-  return partes.some(Boolean) ? partes.join(' | ').slice(0, 300) : '';
+  if (!partes.some(Boolean)) return '';
+  const s = partes.join(' | ');
+  if (s.length <= 200) return s;
+  const corte = s.slice(0, 201);
+  const fimItem = corte.lastIndexOf('; ');
+  return (fimItem > 120 ? corte.slice(0, fimItem) : s.slice(0, 200).replace(/[\s;,][^\s;,]*$/, '')).trim();
 }
 const placaDaOS = (rec) => String((rec && rec.transportadora && rec.transportadora.placa) || (rec && rec.veiculoPlaca) || '').trim().toUpperCase();
 const isoValido = (v) => { const s = String(v || ''); return s && !isNaN(Date.parse(s)) ? s : ''; };
@@ -229,7 +236,8 @@ export async function atualizarStatusOS(env, id, status, extra) {
   if (status === 'concluida' && rec.status !== 'concluida') rec.concluidaEm = isoValido(x.em) || agora();
   if (status === 'cancelada' && rec.status !== 'cancelada') {
     rec.canceladaEm = agora();
-    const motivo = String(x.motivo || '').trim().slice(0, 300);
+    let motivo = String(x.motivo || '').trim();
+    if (motivo.length > 300) motivo = motivo.slice(0, 300).replace(/\s+\S*$/, ''); // corta entre palavras
     if (motivo) rec.motivoCancelamento = motivo; else delete rec.motivoCancelamento;
   }
   rec.status = status; rec.atualizadoEm = agora();

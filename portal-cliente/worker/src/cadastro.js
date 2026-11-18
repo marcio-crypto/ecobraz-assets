@@ -1383,7 +1383,8 @@ export async function ingestLead(env, body) {
     await env.PORTAL_KV.put(`lead:${id}`, JSON.stringify(rec));
     const idx = await listarLeads(env);
     // perfil no índice (PF/PJ): as consultas por perfil não precisam abrir lead por lead.
-    const perfil = rec.perfil === 'empresa' || rec.documento.length === 14 ? 'PJ' : (rec.perfil === 'pessoa_fisica' || rec.documento.length === 11 ? 'PF' : '');
+    // O DOCUMENTO manda (o formulário do portal marca "empresa" até para pessoa física).
+    const perfil = rec.documento.length === 14 ? 'PJ' : (rec.documento.length === 11 ? 'PF' : (rec.perfil === 'empresa' ? 'PJ' : (rec.perfil === 'pessoa_fisica' ? 'PF' : '')));
     idx.unshift({ id, nome: nome || empresa || email, empresa, email, documento: rec.documento, cidade: rec.cidade, status: 'novo', criadoEm: rec.criadoEm, triagem: triagem.tipo, prioridade: rec.prioridade, origem: rec.origem, perfil });
     await env.PORTAL_KV.put('leads:index', JSON.stringify(idx));
   }

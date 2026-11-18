@@ -110,14 +110,19 @@ export default {
   // da Empresa + resgate de vendas (cobrança gerada e não paga em 7 dias → e-mail
   // para a equipe comercial tentar reverter; um aviso por pedido).
   async scheduled(event, env, ctx) {
+    // Madrugada (06:00 UTC = 3h de Brasília): só completa as OS antigas do índice com
+    // materiais, placa e hora real de conclusão (usados pelas consultas do Claude). Fica
+    // longe do horário em que a equipe cria/altera OS — regravar o índice não atropela
+    // ninguém. Quando não falta mais nada, não faz nada.
+    if (event && event.cron === '0 6 * * *') {
+      try { const r = await completarIndiceOS(env, 800); console.log('cron_indice_os', r); }
+      catch (error) { console.error('cron_indice_os_erro', safeError(error)); }
+      return;
+    }
     try { const r = await alertasEmpresaDocs(env); console.log('cron_empdocs', r); }
     catch (error) { console.error('cron_empdocs_erro', safeError(error)); }
     try { const r = await avisoResgatePendentes(env); console.log('cron_resgate', r); }
     catch (error) { console.error('cron_resgate_erro', safeError(error)); }
-    // Completa as OS antigas do índice com materiais, placa e hora real de conclusão
-    // (usados pelas consultas do Claude). Em lotes; some sozinho quando não falta nada.
-    try { const r = await completarIndiceOS(env, 450); console.log('cron_indice_os', r); }
-    catch (error) { console.error('cron_indice_os_erro', safeError(error)); }
   },
   async fetch(request, env) {
     const url = new URL(request.url);
