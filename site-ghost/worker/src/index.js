@@ -18,6 +18,8 @@
 //   passo de e-mail é apenas registrado como "skipped".
 
 const JSON_HEADERS = {'content-type':'application/json; charset=utf-8','cache-control':'no-store'};
+// Tempo mínimo entre a página abrir e o envio (segunda barreira anti-spam).
+const MIN_FILL_MS = 3000;
 
 export default {
   async fetch(request, env) {
@@ -29,7 +31,7 @@ export default {
     if (url.pathname === '/health') {
       let cofre = null;
       try { if (env.LEADS_COFRE) cofre = (await env.LEADS_COFRE.list({limit:1000})).keys.length; } catch {}
-      return json({ok:true, service:'ecobraz-coletas', version:11, destino:'portal', ploomes:'desativado', form:'adaptativo', leads_no_cofre:cofre}, 200, cors);
+      return json({ok:true, service:'ecobraz-coletas', version:12, destino:'portal', ploomes:'desativado', form:'adaptativo', leads_no_cofre:cofre}, 200, cors);
     }
     if (url.pathname !== '/api/coletas' || request.method !== 'POST') return json({ok:false, error:'not_found'}, 404, cors);
     if (!allowed.has(origin)) return json({ok:false, error:'origin_not_allowed'}, 403, cors);
@@ -37,7 +39,21 @@ export default {
     try { input = await request.json(); } catch { return json({ok:false,error:'invalid_json'},400,cors); }
     const validation = validate(input);
     if (!validation.ok) return json({ok:false,error:'validation_failed',fields:validation.fields},422,cors);
-    if (input.website) return json({ok:true}, 202, cors);
+    // Anti-spam (18/11/2026, decisão do Marcio): a armadilha e o envio rápido demais
+    // são RECUSADOS com erro visível. Antes o Worker respondia 202 "ok" e descartava
+    // em silêncio — um assistente de IA que preenchesse o campo escondido mostrava
+    // "recebido" ao cliente e a Ecobraz nunca via o pedido.
+    //  - armadilha: campo novo "ecb_nao_preencher" (o antigo "website" segue valendo
+    //    para páginas ainda em cache);
+    //  - tempo: se o formulário informar o tempo e ele for menor que 3 s. Página em
+    //    cache que não manda o tempo continua aceita.
+    const armadilha = String(input.ecb_nao_preencher || input.website || '').trim();
+    const tempo = (input.form_elapsed_ms === undefined || input.form_elapsed_ms === null || input.form_elapsed_ms === '') ? null : Number(input.form_elapsed_ms);
+    const rapidoDemais = tempo !== null && Number.isFinite(tempo) && tempo < MIN_FILL_MS;
+    if (armadilha || rapidoDemais) {
+      console.warn('blocked_form', armadilha ? 'armadilha' : 'rapido_demais');
+      return json({ok:false, error:'blocked_form'}, 422, cors);
+    }
     if (env.TURNSTILE_SECRET_KEY) {
       const passed = await verifyTurnstile(input.turnstile_token, request.headers.get('CF-Connecting-IP'), env.TURNSTILE_SECRET_KEY);
       if (!passed) return json({ok:false,error:'challenge_failed'},403,cors);
