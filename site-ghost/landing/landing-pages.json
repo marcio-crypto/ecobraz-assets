@@ -2847,7 +2847,7 @@
     "serviceType": "Descarte corporativo documentado com certificado verificável por QR, sistema de rastreabilidade gratuito e documentação para auditoria — sem contrato",
     "custom_excerpt": "O modelo Ecobraz para empresas: descarte documentado com certificado QR cuja autenticidade qualquer auditor confere em segundos, sistema completo grátis, sem contrato e sem exclusividade. Serviços específicos à parte, sempre com condições por escrito.",
     "meta_title": "Descarte para empresas com certificado QR | Ecobraz",
-    "meta_description": "Descarte documentado com certificado QR, sistema de rastreabilidade completo grátis e sem contrato. Coleta em 1 a 7 dias úteis. Agende uma demonstração.",
+    "meta_description": "Descarte documentado com certificado QR e rastreabilidade grátis, sem contrato. Coleta em até 15 dias úteis; lote grande em 72h. Agende uma demonstração.",
     "hub": {
       "title": "Soluções corporativas",
       "href": "/solucoes-corporativas/"
@@ -2940,7 +2940,7 @@
       "items": [
         {
           "icon": "truck",
-          "title": "Coleta documentada em 1 a 7 dias úteis",
+          "title": "Coleta documentada em até 15 dias úteis",
           "text": "Avaliação técnica antes; fotos e pesos registrados na hora da retirada, em cada coleta."
         },
         {
@@ -2994,7 +2994,7 @@
       },
       {
         "title": "Primeira coleta documentada",
-        "text": "Em 1 a 7 dias úteis após a avaliação técnica, com fotos e pesos registrados na origem."
+        "text": "Em até 15 dias úteis após a avaliação técnica (lote grande, de 51 itens ou mais, em até 72h), com fotos e pesos registrados na origem."
       },
       {
         "title": "A prova no seu portal",
@@ -3033,7 +3033,7 @@
       },
       {
         "q": "Qual é o prazo da coleta?",
-        "a": "O padrão é de 1 a 7 dias úteis após a avaliação técnica. Precisa com mais urgência? Existe a coleta expressa, em até 72h, por R$ 55 — com as condições apresentadas antes da confirmação."
+        "a": "O padrão é de até 15 dias úteis após a avaliação técnica. Empresa com lote grande (51 itens ou mais) tem retirada em até 72h após a avaliação. Para os demais casos com urgência, existe a coleta expressa, em até 72h, por R$ 55 — com as condições apresentadas antes da confirmação."
       },
       {
         "q": "O que vocês não retiram?",
