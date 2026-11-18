@@ -51,16 +51,20 @@ NF, cadeia de custódia) com B2C (geladeira, "a gente busca") no mesmo fluxo.
    botões verdes lado a lado.
 4. **Hero da home = 1 pergunta + 4 portas** (Pessoa física · Empresa ·
    Governo · English), cada porta com 1 linha e 1 CTA próprio.
-5. **Faixa de prova** logo sob o hero: ★4,9 Google · 357 avaliações (set/2026) · desde
+5. **Faixa de prova** logo sob o hero: ★4,9 Google · centenas de avaliações · desde
    2011 · ONU/Comissão Europeia · resposta em 24h úteis. Só fatos verificados.
-   A nota e o total de avaliações são copiados à mão em dezenas de arquivos do
-   `site-ghost/` (tema, `content/*.json`, `landing/*.json`). Quando o número
-   mudar, **não corrija só a página que você está olhando**: rode o workflow
+   Desde 18/11/2026 (decisão do Marcio) o site **não escreve mais o total de
+   avaliações nem o mês**: o número envelhecia em dezenas de arquivos. A frase
+   padrão é "centenas de avaliações públicas" (em inglês, "hundreds of public
+   Google reviews"). Não volte a escrever total nem data.
+   A **nota 4,9** continua copiada à mão em dezenas de arquivos do
+   `site-ghost/` (tema, `content/*.json`, `landing/*.json`). Se a nota mudar,
+   **não corrija só a página que você está olhando**: rode o workflow
    "Ferramenta — coleta pública de avaliações do Google" para ler o valor atual
-   no perfil, e troque número **e** mês em todo o `site-ghost/` de uma vez.
-   Último acerto: 354 (ago/2026) → 357 (set/2026), em 08/09/2026 —
-   nota **4,9** e total **357** conferidos na tela do próprio Perfil da
-   Empresa no Google ("Ecobraz Emigre · 4,9 ★ (357)"), não só informados.
+   no perfil, e troque a nota em todo o `site-ghost/` de uma vez.
+   Histórico: 354 (ago/2026) → 357 (set/2026), em 08/09/2026, com nota **4,9**
+   conferida na tela do próprio Perfil da Empresa no Google; em 18/11/2026 o
+   perfil mostrava 4,9 com 359 avaliações.
 6. Timeline "Como funciona" em 4 passos numerados (não cards).
 7. FAQ em `details/summary` — "sem letra miúda" como tom.
 
