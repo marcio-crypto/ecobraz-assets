@@ -167,9 +167,16 @@ export const REGRA_EMAIL = EMAIL_INTEIRO.source;
 // Lê os e-mails de um texto. `bons` = endereços bem formados. `ruins` = quantas palavras
 // tinham cara de e-mail (algo@…) mas estavam mal formadas (domínio cortado, "|" no meio,
 // texto grudado, acento…) — essas são descartadas INTEIRAS e nunca viram destinatário.
-function lerEmails(v) {
-  const bons = []; let ruins = 0;
+// `campo: true` = o texto vem de um CAMPO de e-mail do cadastro (não de texto livre). Aí uma
+// palavra solta logo antes do endereço ("maria clara@gmail.com") é tratada como erro de
+// digitação — espaço no lugar de ponto — e o endereço é descartado, em vez de virar
+// "clara@gmail.com", que é de outra pessoa. Em texto livre (contato da OS: "Maria
+// maria@x.com 11 9…") um nome antes do e-mail é normal e continua aceito.
+function lerEmails(v, opcoes) {
+  const campo = !!(opcoes && opcoes.campo);
+  const bons = []; let ruins = 0, anterior = '';
   for (const palavra of String(v == null ? '' : v).toLowerCase().split(/\s+/)) {
+    const antes = anterior; anterior = palavra;
     if (!palavra.includes('@')) continue;
     // Dentro de uma palavra (sem espaço), vírgula, barra, aspas etc. só podem separar
     // endereços INTEIROS: "joao,silva@x.com" e "maria/joao@x.com" são descartados — não
@@ -179,18 +186,36 @@ function lerEmails(v) {
       let t = bruto;
       const dentro = t.match(/<([^<>]*)>/); if (dentro) t = dentro[1];   // nome<a@b.com>
       t = t.replace(/^[(\[<]+|[)\]>]+$/g, '');                            // (a@b.com) [a@b.com]
-      const rotulo = t.match(/^[a-z-]{1,12}:(.+)$/); if (rotulo) t = rotulo[1]; // e-mail:a@b.com
+      const rotulo = t.match(/^([^:@]+):(.+)$/); if (rotulo && ehRotulo(rotulo[1])) t = rotulo[2];   // e-mail:a@b.com, financeiro:a@b.com (só rótulo conhecido)
       t = t.replace(/^[.'’]+|[.'’]+$/g, '');
       if (!t) continue;
       if (t.length <= 254 && EMAIL_INTEIRO.test(t)) achados.push(t); else { inteira = false; break; }
     }
+    // Num CAMPO de e-mail, palavra solta logo antes do endereço é erro de digitação (espaço no lugar
+    // de ponto) — a não ser que seja um rótulo conhecido, um conectivo ou o começo do próprio endereço.
+    if (inteira && campo && achados.length && palavraSoltaAntes(antes, achados[0], palavra)) inteira = false;
     if (inteira) { for (const t of achados) if (!bons.includes(t)) bons.push(t); }
     else if (/[^@\s]@/.test(palavra)) ruins++; // "@perfil" de rede social não conta como e-mail
   }
   return { bons, ruins };
 }
+// Rótulo antes do endereço: os de e-mail ("e-mail:", "mailto:") e os nomes de setor/cargo
+// ("financeiro:", "compras:"). "joao:silva@x.com" NÃO é rótulo — é descartado, não vira "silva@x.com".
+const ROTULOS_EMAIL = new Set(['e-mail', 'email', 'mail', 'mailto', 'correio']);
+const ehRotulo = (p) => { const n = semAcentoMin(p).replace(/[.:]+$/, ''); return ROTULOS_EMAIL.has(n) || NAO_PESSOA.has(n); };
+// "maria clara@gmail.com" → true (descarta). "financeiro fin@x.com", "a@x.com ou b@x.com" e
+// "maria maria.silva@x.com" (o nome da pessoa antes do endereço dela) → false (aceita).
+function palavraSoltaAntes(antes, email, palavra) {
+  if (!/^[\p{L}\p{N}._'’-]+$/u.test(antes) || !/\p{L}/u.test(antes)) return false; // nada antes, ou veio com pontuação ("fin:", "a@b.com,")
+  if (/^[<(\[]/.test(palavra) || ['e', 'ou', 'and'].includes(antes) || ehRotulo(antes)) return false;
+  const n = semAcentoMin(antes).replace(/[^a-z0-9]/g, '');
+  return !(n.length >= 3 && String(email).split('@')[0].replace(/[^a-z0-9]/g, '').startsWith(n));
+}
 export const emailsDe = (v) => lerEmails(v).bons;
 export const temEmailMalFormado = (v) => lerEmails(v).ruins > 0;
+// Para os campos de e-mail do cadastro (o geral da ficha e o de cada contato).
+const emailsDoCampo = (v) => lerEmails(v, { campo: true }).bons;
+const campoMalFormado = (v) => lerEmails(v, { campo: true }).ruins > 0;
 const TITULOS = new Set(['sr', 'sra', 'srta', 'dr', 'dra', 'eng', 'prof', 'profa', 'dona', 'seu']);
 const NAO_PESSOA = new Set(['financeiro', 'compras', 'recepcao', 'recepcionista', 'comercial', 'administrativo', 'administracao', 'adm', 'rh', 'dp', 'pessoal', 'ti', 'cpd', 'informatica', 'tecnologia', 'infra', 'infraestrutura', 'contato', 'atendimento', 'portaria', 'porteiro', 'porteira', 'zelador', 'zeladora', 'zeladoria', 'sindico', 'sindica', 'condominio', 'almoxarifado', 'estoque', 'deposito', 'manutencao', 'predial', 'facilities', 'suporte', 'diretoria', 'diretor', 'diretora', 'gerencia', 'gerente', 'supervisor', 'supervisora', 'coordenador', 'coordenadora', 'encarregado', 'encarregada', 'sac', 'fiscal', 'nfe', 'nf', 'xml', 'faturamento', 'cobranca', 'tesouraria', 'logistica', 'expedicao', 'operacao', 'operacoes', 'producao', 'vendas', 'marketing', 'juridico', 'contabilidade', 'secretaria', 'escritorio', 'engenharia', 'qualidade', 'sustentabilidade', 'seguranca', 'servicos', 'gerais', 'geral', 'equipe', 'central', 'matriz', 'filial', 'unidade', 'loja', 'obra', 'empresa', 'cliente', 'responsavel', 'proprietario', 'proprietaria', 'morador', 'moradora', 'espolio', 'departamento', 'setor', 'falar', 'procurar', 'tratar', 'aos', 'cuidados', 'sem', 'nao']);
 // Primeiro nome para a saudação ("MARIA DA SILVA" → "Maria"). '' quando não parece nome de
@@ -236,9 +261,9 @@ export function dadosDoCliente(os, cli) {
   if (nomeOs.length < 2) nomeOs = '';
   const todosContatos = (Array.isArray(c.contatos) ? c.contatos : []).filter(Boolean);
   const contatos = todosContatos.filter((x) => !contatoInativo(x));
-  const inativos = new Set(todosContatos.filter(contatoInativo).flatMap((x) => emailsDe(x.email)));
+  const inativos = new Set(todosContatos.filter(contatoInativo).flatMap((x) => emailsDoCampo(x.email)));
   const cands = [];
-  const poe = (email, nome) => { for (const e of emailsDe(email)) if (!inativos.has(e) && !cands.some((x) => x.email === e)) cands.push({ email: e, nome: limpar(nome) }); };
+  const poe = (email, nome) => { for (const e of emailsDoCampo(email)) if (!inativos.has(e) && !cands.some((x) => x.email === e)) cands.push({ email: e, nome: limpar(nome) }); };
   if (perfil === 'PJ') {
     poe(emailOs, nomeOs);
     const nOs = semAcentoMin(nomeOs);
@@ -249,7 +274,7 @@ export function dadosDoCliente(os, cli) {
       const m = contatos.find((x) => nomeDe(x) === nOs) || (parciais.length === 1 ? parciais[0] : null);
       if (m) poe(m.email, m.nome);
     }
-    for (const e of emailsDe(c.email)) { const dono = contatos.find((x) => emailsDe(x.email).includes(e)); poe(e, dono ? dono.nome : ''); }
+    for (const e of emailsDoCampo(c.email)) { const dono = contatos.find((x) => emailsDoCampo(x.email).includes(e)); poe(e, dono ? dono.nome : ''); }
     for (const x of contatos) poe(x.email, x.nome);
   } else {
     poe(c.email, c.nome || nomeOs);
@@ -261,11 +286,14 @@ export function dadosDoCliente(os, cli) {
   const fones = [...new Set([c.fone, c.telefone, c.celular, ...contatos.map((x) => x.fone), txt].flatMap(fonesNac))];
   // Há e-mail MAL FORMADO no cadastro ou no contato da OS? Ele nunca é usado; se não sobrar
   // outro endereço, o motivo que fica na OS é "e-mail inválido" (e não "sem e-mail").
-  const emailMalFormado = [c.email, txt, ...contatos.map((x) => x.email)].some(temEmailMalFormado);
+  const emailMalFormado = temEmailMalFormado(txt) || [c.email, ...contatos.map((x) => x.email)].some(campoMalFormado);
   // TODOS os e-mails bem formados do cliente: o geral da ficha, o do contato da OS e o de
   // QUALQUER contato (inclusive os marcados como inativos). É neles que vale a regra
   // "descadastro bloqueia o cliente inteiro".
-  const emailsTodos = [...new Set([...emailsDe(c.email), ...emailsDe(txt), ...todosContatos.flatMap((x) => emailsDe(x.email))])].slice(0, 80);
+  // SEM corte: a conferência na lista tem de cobrir todos (e todos os candidatos a destinatário).
+  // Aqui vale a leitura mais LARGA (todo endereço que der para ler do cadastro): para bloquear,
+  // na dúvida entra; para ENVIAR (acima), na dúvida fica de fora.
+  const emailsTodos = [...new Set([...cands.map((x) => x.email), ...emailsDe(c.email), ...emailsDe(txt), ...todosContatos.flatMap((x) => emailsDe(x.email))])];
   // Chave da regra dos 12 meses: o CNPJ/CPF; sem documento, o e-mail (todos os do cliente
   // contam, para o pedido não se repetir só porque mudou o contato da OS). A ficha
   // (clienteId) também liga duas coletas do mesmo cliente.
@@ -311,7 +339,8 @@ export function montarMensagem({ perfil, primeiro, empresa, link }) {
 }
 const remetente = (env) => String((env && env.AVALIACAO_FROM) || REMETENTE_PADRAO);
 const emailTeste = (env) => emailsDe((env && env.AVALIACAO_TESTE_PARA) || remetente(env))[0] || '';
-const mascarar = (e) => { const [u, d] = String(e || '').split('@'); return d ? `${u.slice(0, 2)}***@${d}` : ''; };
+// Mostra no máximo 2 letras do começo — e menos quando o endereço é curto (nunca ele inteiro).
+const mascarar = (e) => { const [u, d] = String(e || '').split('@'); return d ? `${u.slice(0, u.length > 3 ? 2 : (u.length > 1 ? 1 : 0))}***@${d}` : ''; };
 
 // Envio pelo Resend, em texto simples, com limite de 15 segundos. Chave de idempotência: o
 // mesmo pedido repetido em até 24h não vira dois e-mails. `definitivo` = repetir não resolve.
@@ -334,7 +363,11 @@ const semTabela = (e) => /no such table/i.test(String((e && e.message) || e));
 const prontas = new WeakSet();
 async function garantirTabelas(db) {
   if (!db || prontas.has(db)) return;
-  // Tudo num lote só (uma ida ao banco).
+  // Caminho normal: UMA instrução confere se as quatro tabelas e as colunas novas existem.
+  try {
+    await db.prepare('SELECT (SELECT COUNT(*) FROM (SELECT cliente_id, para_h FROM avaliacao_pedidos LIMIT 0)) + (SELECT COUNT(*) FROM (SELECT email FROM email_nao_enviar LIMIT 0)) + (SELECT COUNT(*) FROM (SELECT id FROM avaliacao_auditoria LIMIT 0)) + (SELECT COUNT(*) FROM (SELECT id FROM email_avisos LIMIT 0)) AS ok').first();
+    prontas.add(db); return;
+  } catch { /* falta tabela ou coluna: cria/atualiza abaixo */ }
   await db.batch([
     db.prepare('CREATE TABLE IF NOT EXISTS avaliacao_pedidos (os_id TEXT PRIMARY KEY, os_numero TEXT, chave TEXT, perfil TEXT, status TEXT NOT NULL, canal TEXT, motivo TEXT, concluida_em TEXT, previsto_em TEXT, processado_em TEXT, pedida_em TEXT, por TEXT, para TEXT, tentativas INTEGER DEFAULT 0, erro TEXT, modo TEXT, reserva TEXT, status_antes TEXT, cliente_id TEXT, para_h TEXT)'),
     db.prepare('CREATE INDEX IF NOT EXISTS avaliacao_pedidos_chave ON avaliacao_pedidos (chave)'),
@@ -401,18 +434,29 @@ async function resumoEmail(email) {
 // o envio de verdade); em teste, os testes também contam (ensaio fiel).
 async function consultasDoEnvio(db, d, osId, agoraMs, contarTeste, resumos) {
   const chaves = [...new Set([...(d.chaves || []), d.chave].filter(Boolean))];
+  // A lista é conferida para TODOS os e-mails do cliente e TODOS os candidatos a destinatário
+  // — sem corte. Cadastro absurdamente grande não é conferido pela metade: dá erro e não envia.
+  const todos = [...new Set([...(d.emailsTodos || []), ...d.emails.map((x) => x.email)])];
+  if (todos.length > 1000) throw new Error('emails_demais_no_cadastro');
   const desde = new Date(agoraMs - DIAS_12_MESES * 86400e3).toISOString();
   const t = contarTeste ? 1 : 0;
-  const conta = "(status IN ('enviado','whatsapp') OR ((status = 'enviando' OR (status = 'nao_enviado' AND motivo = 'envio_nao_confirmado')) AND (?4 = 1 OR COALESCE(modo,'') <> 'teste')) OR (?4 = 1 AND status = 'teste'))";
+  // "Em andamento" = há uma tentativa em curso (enviando) ou na fila para tentar de novo
+  // (pendente): ainda não se sabe se vai sair, mas pode já ter saído.
+  const doModo = "(?4 = 1 OR COALESCE(modo,'') <> 'teste')";
+  const conta = `(status IN ('enviado','whatsapp') OR ((status IN ('enviando','pendente') OR (status = 'nao_enviado' AND motivo = 'envio_nao_confirmado')) AND ${doModo}) OR (?4 = 1 AND status = 'teste'))`;
   const r = await db.batch([
-    db.prepare(`SELECT os_numero FROM avaliacao_pedidos WHERE (chave IN (SELECT value FROM json_each(?1)) OR (?5 <> '' AND cliente_id = ?5)) AND os_id <> ?2 AND COALESCE(pedida_em, processado_em) >= ?3 AND ${conta} LIMIT 1`).bind(JSON.stringify(chaves), String(osId), desde, t, d.clienteId || ''),
-    db.prepare('SELECT email, motivo FROM email_nao_enviar WHERE email IN (SELECT value FROM json_each(?1))').bind(JSON.stringify(d.emailsTodos || d.emails.map((x) => x.email))),
-    db.prepare(`SELECT para_h FROM avaliacao_pedidos WHERE para_h IN (SELECT value FROM json_each(?1)) AND os_id <> ?2 AND COALESCE(pedida_em, processado_em) >= ?3 AND ${conta}`).bind(JSON.stringify(resumos), String(osId), desde, t),
+    // o que já está decidido vem primeiro; "em andamento" só aparece se não houver nada decidido
+    db.prepare(`SELECT os_numero, status FROM avaliacao_pedidos WHERE (chave IN (SELECT value FROM json_each(?1)) OR (?5 <> '' AND cliente_id = ?5)) AND os_id <> ?2 AND COALESCE(pedida_em, processado_em) >= ?3 AND ${conta} ORDER BY CASE WHEN status IN ('enviando','pendente') THEN 1 ELSE 0 END LIMIT 1`).bind(JSON.stringify(chaves), String(osId), desde, t, d.clienteId || ''),
+    db.prepare('SELECT email, motivo FROM email_nao_enviar WHERE email IN (SELECT value FROM json_each(?1))').bind(JSON.stringify(todos)),
+    // andando = 1 quando TUDO o que segura o endereço é envio ainda em andamento (nada decidido)
+    db.prepare(`SELECT para_h, MIN(CASE WHEN status IN ('enviando','pendente') THEN 1 ELSE 0 END) AS andando FROM avaliacao_pedidos WHERE para_h IN (SELECT value FROM json_each(?1)) AND os_id <> ?2 AND COALESCE(pedida_em, processado_em) >= ?3 AND ${conta} GROUP BY para_h`).bind(JSON.stringify(resumos), String(osId), desde, t),
   ]);
   const linhas = (i) => (r && r[i] && r[i].results) || null;
   if (!Array.isArray(r) || r.length !== 3 || !linhas(0) || !linhas(1) || !linhas(2)) throw new Error('consultas_do_envio_sem_resposta');
   const lista = new Map(); for (const x of linhas(1)) lista.set(x.email, x);
-  return { recente: linhas(0)[0] || null, lista, destinos: new Set(linhas(2).map((x) => x.para_h)) };
+  const achou = linhas(0)[0] || null;
+  const andando = !!achou && ['enviando', 'pendente'].includes(achou.status);
+  return { recente: achou && !andando ? achou : null, emAndamento: andando, lista, destinos: new Map(linhas(2).map((x) => [x.para_h, Number(x.andando) === 1])) };
 }
 // Bloqueios de contato já conhecidos pelo sistema (os mesmos do conector): telefones que
 // pediram para sair do WhatsApp e empresas retiradas das campanhas pela diretoria.
@@ -543,8 +587,9 @@ async function processarUma(env, cfg, ctx, os, cli, linha0, fichaSumiu) {
   };
   // Nada que nasceu num modo (teste/ligado) é enviado em outro.
   if (linha && linha.modo && linha.modo !== cfg.modo) return await nao(linha.modo === 'teste' ? 'teste' : 'falha_envio');
-  // A OS foi reaberta enquanto este envio estava em andamento: a retomada não reenvia.
-  if (retomada && linha.status_antes === 'reaberta') return await nao('envio_nao_confirmado');
+  // A OS foi reaberta enquanto este envio estava em andamento: nem a retomada nem uma nova
+  // tentativa reenviam (mesmo que a OS tenha sido reconcluída sozinha com a hora antiga).
+  if (linha && linha.status_antes === 'reaberta') return await nao('reaberta');
   if (agora - alvo > VALIDADE_H * MS_H) return await nao('prazo_expirado');
   // Regras, nesta ordem (a primeira que valer é o motivo que aparece na OS).
   if (coletaAntiga(os)) return await nao('coleta_antiga');
@@ -559,23 +604,33 @@ async function processarUma(env, cfg, ctx, os, cli, linha0, fichaSumiu) {
   // pela tela ou por queixa de spam avisada pelo Resend. Não vai para nenhum outro e-mail.
   if ([...q.lista.values()].some((x) => x.motivo !== 'invalido')) return await nao('descadastrado');
   if (q.recente) return await nao('ja_pedido_12m');
+  // Outra coleta do MESMO cliente está com o envio em andamento (saindo agora, ou na fila
+  // para tentar de novo — pode até já ter saído): esta espera o desfecho da outra, sem
+  // registrar nada. Se a outra sair, esta vira "já pedido"; se a outra falhar de vez, esta sai.
+  if (q.emAndamento) return 'ignorada';
   // Nenhum endereço bem formado: não tenta o envio. Havia um mal formado → "e-mail inválido".
   if (!d.emails.length) return await nao(d.emailMalFormado ? 'email_invalido' : 'sem_email');
   // Escolha do endereço, na ordem de preferência. E-mail inválido (voltou) = tenta o próximo;
   // endereço que já recebeu pedido em 12 meses (por outro CNPJ/CPF) = tenta o próximo.
   // (Descadastrado nem chega aqui: bloqueou o cliente inteiro logo acima.)
-  let alvoEmail = null, resumoAlvo = '', motivoSem = '';
+  let alvoEmail = null, resumoAlvo = '', motivoSem = '', esperar = false;
   for (let i = 0; i < d.emails.length; i++) {
     const cand = d.emails[i], b = q.lista.get(cand.email);
     if (b) { if (!motivoSem) motivoSem = b.motivo === 'invalido' ? 'email_invalido' : 'descadastrado'; if (b.motivo !== 'invalido') break; continue; }
-    if (q.destinos.has(resumos[i])) { if (!motivoSem) motivoSem = 'ja_pedido_12m'; continue; }
+    // Endereço seguro só por um envio AINDA EM ANDAMENTO de outro cliente: tenta o próximo; se
+    // não houver, esta OS espera o desfecho daquele (não decide "já pedido" antes da hora).
+    if (q.destinos.has(resumos[i])) { if (q.destinos.get(resumos[i])) esperar = true; else if (!motivoSem) motivoSem = 'ja_pedido_12m'; continue; }
     alvoEmail = cand; resumoAlvo = resumos[i]; break;
   }
+  if (!alvoEmail && esperar) return 'ignorada';
   if (!alvoEmail) return await nao(motivoSem || 'descadastrado');
   // A chave pode ter sido desligada (ou trocada) no meio da rodada: confere de novo antes de
   // cada envio. Mudou — ou não deu para ler — → a rodada para aqui, sem enviar.
   const chaveAgora = await lerChave(env);
   if (chaveAgora.modo !== cfg.modo || chaveAgora.desde !== cfg.desde || chaveAgora.ligadoEm !== cfg.ligadoEm) return 'parar';
+  // O horário (08h–20h) é conferido de novo na hora de cada envio: uma rodada que começou
+  // atrasada, ou que demorou, não manda nada depois das 20h.
+  if (!dentroDaJanela(agora + (Date.now() - (ctx.inicioReal || Date.now())))) return 'parar_horario';
   // Reserva: só quem grava a própria marca envia (duas rodadas ao mesmo tempo não viram dois
   // e-mails). Sem documento, a chave dos 12 meses é o e-mail que de fato recebe.
   const chaveReg = d.doc ? d.chave : `e:${alvoEmail.email}`;
@@ -606,10 +661,16 @@ async function processarUma(env, cfg, ctx, os, cli, linha0, fichaSumiu) {
   const doServico = /^resend_(401|403|429|5\d\d)$/.test(erro);
   const acabou = repetido || envio.definitivo || (!doServico && (Number(minha.tentativas) || 1) >= MAX_TENTATIVAS);
   console.error('avaliacao_envio_falhou', os.numero || os.id, erro, acabou ? 'definitivo' : 'vai_tentar_de_novo');
+  // A dúvida de uma tentativa anterior (tempo esgotado/rede — pode ter saído) NÃO é apagada por
+  // outra falha na tentativa seguinte (limite, serviço fora do ar, qualquer recusa passageira):
+  // o erro guardado continua o da dúvida. Só a recusa DEFINITIVA do próprio pedido a desfaz
+  // (o mesmo pedido, com a mesma chave, teria sido recusado igual na 1ª vez).
+  const duvidaAntes = !!(linha && INCERTOS.has(linha.erro));
+  const erroGuardado = duvidaAntes && !envio.definitivo ? linha.erro : erro;
   // Retomada que falhou de novo continua "enviando" (para a próxima tentativa seguir como retomada).
-  if (retomada && !acabou) { await db.prepare('UPDATE avaliacao_pedidos SET erro=?3 WHERE os_id=?1 AND reserva=?2').bind(os.id, marca, erro).run(); return 'falha'; }
-  const incerto = repetido || retomada || INCERTOS.has(erro);
-  await db.prepare('UPDATE avaliacao_pedidos SET status=?3, canal=?4, motivo=?5, erro=?6, reserva=NULL WHERE os_id=?1 AND reserva=?2').bind(os.id, marca, acabou ? 'nao_enviado' : 'pendente', acabou ? 'nenhum' : 'email', acabou ? (incerto ? 'envio_nao_confirmado' : 'falha_envio') : null, erro).run();
+  if (retomada && !acabou) { await db.prepare('UPDATE avaliacao_pedidos SET erro=?3 WHERE os_id=?1 AND reserva=?2').bind(os.id, marca, erroGuardado).run(); return 'falha'; }
+  const incerto = repetido || retomada || INCERTOS.has(erroGuardado);
+  await db.prepare('UPDATE avaliacao_pedidos SET status=?3, canal=?4, motivo=?5, erro=?6, reserva=NULL WHERE os_id=?1 AND reserva=?2').bind(os.id, marca, acabou ? 'nao_enviado' : 'pendente', acabou ? 'nenhum' : 'email', acabou ? (incerto ? 'envio_nao_confirmado' : 'falha_envio') : null, erroGuardado).run();
   return 'falha';
 }
 
@@ -662,7 +723,7 @@ export async function processarAvaliacoes(env, opcoes) {
   const fila = cands.filter(naVez).sort((a, b) => a.alvo - b.alvo);
   res.candidatas = fila.length;
   if (!fila.length) return res;
-  const ctx = { agoraMs, bloqueios: null, envios: 0 };
+  const ctx = { agoraMs, bloqueios: null, envios: 0, inicioReal: Date.now() };
   const espera = Number.isFinite(o.pausaMs) ? o.pausaMs : PAUSA_ENVIO_MS;
   let acoes = 0, erros = 0, parar = false;
   // A fila é olhada em partes de 40 OS (até 5 partes), parando nas 5 decisões da rodada:
@@ -691,6 +752,7 @@ export async function processarAvaliacoes(env, opcoes) {
         const r = await processarUma(env, cfg, ctx, os, cli, ja.get(c.id) || null, !!fid && !cli);
         // A chave mudou no meio da rodada (desligaram, ou trocaram o modo): para sem enviar mais nada.
         if (r === 'parar') { res.erro = 'chave_mudou'; parar = true; break; }
+        if (r === 'parar_horario') { res.fora_do_horario = true; parar = true; break; } // passou das 20h no meio da rodada
         if (r === 'enviado') res.enviados++; else if (r === 'teste') res.testes++; else if (r === 'nao_enviado') res.nao_enviados++; else if (r === 'falha') res.falhas++;
         if (r !== 'ignorada') acoes++;
         if (ctx.envios > antes && espera > 0) await dormir(espera);
@@ -785,12 +847,14 @@ const TOLERANCIA_AVISO_S = 300;
 const TAMANHO_MAX_AVISO = 100000;
 const deBase64 = (t) => Uint8Array.from(atob(t), (ch) => ch.charCodeAt(0));
 const respJson = (status, obj) => new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
+// `corpo` = os BYTES do aviso, exatamente como chegaram (a assinatura é sobre eles).
 async function avisoAutentico(segredo, id, ts, corpo, cabecalho) {
   let chave;
   try { chave = deBase64(String(segredo).trim().replace(/^whsec_/, '')); } catch { return false; }
   if (chave.length < 16) return false;
   const k = await crypto.subtle.importKey('raw', chave, { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']);
-  const dados = new TextEncoder().encode(`${id}.${ts}.${corpo}`);
+  const prefixo = new TextEncoder().encode(`${id}.${ts}.`);
+  const dados = new Uint8Array(prefixo.length + corpo.length); dados.set(prefixo, 0); dados.set(corpo, prefixo.length);
   // O cabeçalho pode trazer várias assinaturas ("v1,<base64> v1,<base64>"): basta uma conferir.
   for (const parte of String(cabecalho || '').split(/\s+/).slice(0, 10)) {
     const i = parte.indexOf(',');
@@ -800,22 +864,40 @@ async function avisoAutentico(segredo, id, ts, corpo, cabecalho) {
   }
   return false;
 }
+// Lê o corpo aos poucos e para assim que passa do tamanho máximo (não carrega um corpo enorme).
+async function lerCorpoLimitado(request, max) {
+  if (!request.body) return new Uint8Array(0);
+  const leitor = request.body.getReader();
+  const partes = []; let total = 0;
+  for (;;) {
+    const { done, value } = await leitor.read();
+    if (done) break;
+    total += value.length;
+    if (total > max) { try { await leitor.cancel(); } catch { /* já fechado */ } return null; }
+    partes.push(value);
+  }
+  const tudo = new Uint8Array(total); let pos = 0;
+  for (const x of partes) { tudo.set(x, pos); pos += x.length; }
+  return tudo;
+}
 export const avisosConfigurados = (env) => !!(env && env.RESEND_WEBHOOK_SECRET);
 export async function receberAvisoResend(request, env) {
   const segredo = String((env && env.RESEND_WEBHOOK_SECRET) || '');
   if (!segredo) return respJson(503, { ok: false, erro: 'nao_configurado' });
-  if (Number(request.headers.get('content-length') || 0) > TAMANHO_MAX_AVISO) return respJson(413, { ok: false, erro: 'grande_demais' });
+  // 1º os cabeçalhos (barato), depois o corpo — e o corpo com tamanho máximo.
   const id = String(request.headers.get('svix-id') || '');
   const ts = String(request.headers.get('svix-timestamp') || '');
   const assinatura = String(request.headers.get('svix-signature') || '');
-  const corpo = await request.text();
-  if (corpo.length > TAMANHO_MAX_AVISO) return respJson(413, { ok: false, erro: 'grande_demais' });
   if (!/^[A-Za-z0-9_.-]{1,120}$/.test(id) || !/^\d{9,12}$/.test(ts) || !assinatura || assinatura.length > 2000) return respJson(401, { ok: false, erro: 'sem_assinatura' });
   if (Math.abs(Date.now() / 1000 - Number(ts)) > TOLERANCIA_AVISO_S) return respJson(401, { ok: false, erro: 'fora_do_prazo' });
+  if (Number(request.headers.get('content-length') || 0) > TAMANHO_MAX_AVISO) return respJson(413, { ok: false, erro: 'grande_demais' });
+  let corpo = null;
+  try { corpo = await lerCorpoLimitado(request, TAMANHO_MAX_AVISO); } catch { return respJson(400, { ok: false, erro: 'corpo_invalido' }); }
+  if (!corpo) return respJson(413, { ok: false, erro: 'grande_demais' });
   let autentico = false;
   try { autentico = await avisoAutentico(segredo, id, ts, corpo, assinatura); } catch { autentico = false; }
   if (!autentico) return respJson(401, { ok: false, erro: 'assinatura_invalida' });
-  let ev = null; try { ev = JSON.parse(corpo); } catch { ev = null; }
+  let ev = null; try { ev = JSON.parse(new TextDecoder().decode(corpo)); } catch { ev = null; }
   if (!ev || typeof ev !== 'object') return respJson(400, { ok: false, erro: 'corpo_invalido' });
   try { return respJson(200, { ok: true, ...(await tratarAvisoResend(env, id, ev)) }); }
   catch (e) {
@@ -829,16 +911,20 @@ async function tratarAvisoResend(env, id, ev) {
   if (!db) throw new Error('sem_banco');
   const tipo = String(ev.type || '').slice(0, 40);
   const dados = ev.data && typeof ev.data === 'object' ? ev.data : {};
+  const falaDeQueixa = (o) => /complain|spam/.test(semAcentoMin(JSON.stringify(o || '')));
   // Classe do aviso. Só "devolucao" (definitiva) e "queixa" mexem na lista.
   let classe = '';
   if (tipo === 'email.complained') classe = 'queixa';
   else if (tipo === 'email.bounced') {
     const bt = semAcentoMin(dados.bounce && dados.bounce.type);
     classe = bt === 'permanent' ? 'devolucao' : (bt === 'temporary' || bt === 'transient' ? 'temporaria' : 'indefinida');
+    // Devolução "porque o endereço já está bloqueado no Resend": se o motivo do bloqueio foi
+    // uma queixa de spam, vale como queixa (bloqueia o cliente inteiro).
+    if (classe === 'devolucao' && /suppress/.test(semAcentoMin(dados.bounce && dados.bounce.subType)) && falaDeQueixa(dados.bounce)) classe = 'queixa';
   } else if (tipo === 'email.suppressed') {
     // O Resend se recusou a enviar porque o endereço já está na lista de bloqueio DELE (devolução
     // definitiva ou queixa anterior). Se o aviso disser que foi queixa, vale como queixa.
-    classe = /complain|spam/.test(semAcentoMin(JSON.stringify(dados.suppressed || dados.bounce || ''))) ? 'queixa' : 'devolucao';
+    classe = falaDeQueixa(dados.suppressed || dados.bounce) ? 'queixa' : 'devolucao';
   } else if (tipo === 'email.delivery_delayed') classe = 'temporaria';
   if (!classe) return { ignorado: true }; // entregue, aberto etc.: não interessa aqui
   await garantirTabelas(db);
@@ -850,6 +936,7 @@ async function tratarAvisoResend(env, id, ev) {
   const doRemetente = emailsDe(remetente(env))[0] || '';
   const doPedido = !!doRemetente && emailsDe(String(dados.from || '')).includes(doRemetente);
   const ehTeste = /@resend\.dev$/.test(unico); // endereços de teste do próprio Resend
+  // "Da empresa" = mesmo domínio do remetente (ou o endereço que recebe os testes): não entra na lista.
   const ehCasa = !!unico && !ehTeste && (unico === emailTeste(env) || (!!doRemetente && unico.endsWith(`@${doRemetente.split('@')[1]}`)));
   const motivoLista = classe === 'devolucao' ? 'invalido' : (classe === 'queixa' ? 'descadastrado' : '');
   const rotulo = classe === 'queixa' ? 'queixa de spam' : 'devolução definitiva';
@@ -857,8 +944,15 @@ async function tratarAvisoResend(env, id, ev) {
   if (motivoLista) {
     if (!unico) incluido = destinos.length > 1 ? 'varios_destinatarios' : 'sem_endereco';
     else if (ehTeste) { incluido = 'teste'; await auditar(env, QUEM_RESEND, 'aviso de teste', `${rotulo} de teste recebida e conferida — nada foi incluído na lista`); }
-    else if (ehCasa) { incluido = 'casa'; await auditar(env, QUEM_RESEND, 'aviso do Resend', `${rotulo} de um endereço da casa (${mascarar(unico)}) — não incluído na lista`); }
-    else { await adicionarNaoEnviar(env, [{ e: unico, m: motivoLista }], { origem: 'resend', por: QUEM_RESEND, nota: rotulo }); incluido = motivoLista; }
+    else if (ehCasa) { incluido = 'casa'; await auditar(env, QUEM_RESEND, 'aviso do Resend', `${rotulo} de um endereço da própria empresa (${mascarar(unico)}) — não incluído na lista`); }
+    else {
+      // Como o endereço estava na lista ANTES deste aviso (falha de leitura = erro: o Resend repete).
+      const antes = (await consultarNaoEnviar(env, [unico], { estrito: true })).get(unico);
+      // Já estava (como "pediu para sair", que nunca é rebaixado, ou com o mesmo motivo): a lista
+      // não muda — o aviso conta no dia, mas não vira linha em "Últimas mudanças".
+      if (antes && (antes.motivo === 'descadastrado' || antes.motivo === motivoLista)) incluido = 'ja_estava';
+      else { await adicionarNaoEnviar(env, [{ e: unico, m: motivoLista }], { origem: 'resend', por: QUEM_RESEND, nota: antes ? `${rotulo} (estava como inválido)` : rotulo }); incluido = motivoLista; }
+    }
   }
   const agora = new Date().toISOString();
   const tEv = Date.parse(ev.created_at || '');
@@ -868,14 +962,26 @@ async function tratarAvisoResend(env, id, ev) {
   console.log('resend_aviso', tipo, classe, incluido || 'nao_incluido');
   return { classe, incluido };
 }
-// Avisos de um período (para a tela e para o conector). Os de teste ficam de fora da contagem.
-export async function lerAvisos(env, deISO, ateISO) {
+// Contagem dos avisos por dia (horário de Brasília), classe e origem — feita pelo próprio banco,
+// sem teto de linhas. Os avisos de teste ficam de fora. Devolve [{ dia, classe, pedido, n }].
+export async function contarAvisos(env, deISO, ateISO) {
   const db = env && env.DB_PLOOMES; if (!db) return [];
-  try { const r = await db.prepare('SELECT em, classe, pedido FROM email_avisos WHERE teste = 0 AND em >= ?1 AND em < ?2 LIMIT 5000').bind(String(deISO), String(ateISO)).all(); return (r && r.results) || []; } catch { return []; }
+  try { const r = await db.prepare("SELECT strftime('%Y-%m-%d', em, '-3 hours') AS dia, classe, pedido, COUNT(*) AS n FROM email_avisos WHERE teste = 0 AND em >= ?1 AND em < ?2 GROUP BY 1, 2, 3").bind(String(deISO), String(ateISO)).all(); return (r && r.results) || []; } catch { return []; }
 }
 export async function ultimoAviso(env) {
   const db = env && env.DB_PLOOMES; if (!db) return null;
   try { return (await db.prepare('SELECT recebido_em, classe, teste, incluido FROM email_avisos ORDER BY recebido_em DESC LIMIT 1').first()) || null; } catch { return null; }
+}
+// Situação dos avisos para a tela. `desde` (opcional): chegou algum aviso DE TESTE depois desse instante?
+export async function estadoAvisos(env, desde) {
+  const db = env && env.DB_PLOOMES;
+  let testeRecebido = false;
+  // Só aceita a hora no formato exato em que o próprio sistema a devolve (AAAA-MM-DDTHH:MM:SS.sssZ).
+  const t = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(String(desde || '')) ? Date.parse(desde) : NaN;
+  if (db && Number.isFinite(t)) {
+    try { testeRecebido = !!(await db.prepare('SELECT id FROM email_avisos WHERE teste = 1 AND recebido_em >= ?1 LIMIT 1').bind(new Date(t).toISOString()).first()); } catch { testeRecebido = false; }
+  }
+  return { ok: true, configurado: avisosConfigurados(env), ultimo: await ultimoAviso(env), testeRecebido };
 }
 // Teste de ponta a ponta, disparado por alguém da equipe na tela: manda um e-mail para um
 // endereço de TESTE do próprio Resend (que simula a devolução ou a queixa). O aviso volta
@@ -886,10 +992,11 @@ export async function enviarTesteAviso(env, tipo, por) {
   const quem = emailsDe(por)[0] || 'equipe';
   if (env.PORTAL_KV) { const k = `throttle:avaliacao-teste-aviso:${quem}`; if (await env.PORTAL_KV.get(k)) return { ok: false, message: 'Aguarde um minuto para repetir o teste.' }; await env.PORTAL_KV.put(k, '1', { expirationTtl: 60 }); }
   const queixa = tipo === 'queixa';
+  const desde = new Date().toISOString(); // ANTES de enviar: o aviso pode voltar muito rápido
   const r = await enviarResend(env, { para: queixa ? 'complained@resend.dev' : 'bounced@resend.dev', assunto: `[TESTE DE AVISO] ${queixa ? 'queixa' : 'devolução'} simulada`, texto: 'Teste do aviso de devolução e queixa do Resend, disparado pela tela de avaliações do sistema. Nenhum cliente recebe este e-mail.', idem: `avaliacao-teste-aviso-${Date.now()}` });
   if (!r.ok) return { ok: false, message: r.erro === 'sem_chave_email' ? 'O serviço de e-mail (Resend) não está configurado.' : `O serviço de e-mail recusou o envio do teste (${r.erro}).` };
   await auditar(env, por, 'aviso de teste', `disparou o teste de ${queixa ? 'queixa' : 'devolução'}`);
-  return { ok: true, desde: new Date().toISOString() };
+  return { ok: true, desde };
 }
 
 // --- Exemplo para a própria pessoa da equipe (conferir texto, caixa de entrada e resposta) ----
@@ -956,11 +1063,11 @@ export async function dadosPaginaAvaliacoes(env) {
   const recusa = (ultimos.find((r) => r.status === 'pendente' && /^resend_(401|403|429)$/.test(String(r.erro || ''))) || {}).erro || '';
   // Devoluções e queixas avisadas pelo Resend, por dia (horário de Brasília), últimos 7 dias.
   const avisosDia = new Map();
-  for (const a of await lerAvisos(env, new Date(Date.now() - 7 * 86400e3).toISOString(), new Date(Date.now() + 86400e3).toISOString())) {
-    const dia = new Date(Date.parse(a.em) - 3 * MS_H).toISOString().slice(0, 10);
-    const x = avisosDia.get(dia) || { dia, devolucoes: 0, queixas: 0, temporarias: 0, devolucoes_pedido: 0, queixas_pedido: 0 };
-    if (a.classe === 'devolucao') { x.devolucoes++; if (a.pedido) x.devolucoes_pedido++; } else if (a.classe === 'queixa') { x.queixas++; if (a.pedido) x.queixas_pedido++; } else x.temporarias++;
-    avisosDia.set(dia, x);
+  for (const a of await contarAvisos(env, new Date(Date.now() - 7 * 86400e3).toISOString(), new Date(Date.now() + 86400e3).toISOString())) {
+    const n = Number(a.n) || 0;
+    const x = avisosDia.get(a.dia) || { dia: a.dia, devolucoes: 0, queixas: 0, temporarias: 0, devolucoes_pedido: 0, queixas_pedido: 0 };
+    if (a.classe === 'devolucao') { x.devolucoes += n; if (a.pedido) x.devolucoes_pedido += n; } else if (a.classe === 'queixa') { x.queixas += n; if (a.pedido) x.queixas_pedido += n; } else x.temporarias += n;
+    avisosDia.set(a.dia, x);
   }
   const avisos = { configurado: avisosConfigurados(env), ultimo: await ultimoAviso(env), dias: [...avisosDia.values()].sort((a, b) => (a.dia < b.dia ? 1 : -1)) };
   return { cfg, ultimos, semana, recusa, avisos, auditoria: await listarAuditoria(env, 12), naoEnviar: await contarNaoEnviar(env), resendOk: !!(env && env.RESEND_API_KEY), remetente: remetente(env), testePara: emailTeste(env), link: (env && env.AVALIACAO_LINK) || LINK_PADRAO };
@@ -1080,7 +1187,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:#F7FAF9;border:1px sol
   <div class="card">
     <div class="sec">Devoluções e queixas (avisos do Resend)</div>
     <div style="font-size:13.5px;line-height:1.6">Aviso do Resend: ${av.configurado ? '<b style="color:#1E5B31">✅ ligado</b>' : '<b style="color:#9B1C1C">❌ ainda não ligado</b> — sem isso, devolução e queixa não entram sozinhas na lista (veja “Como ligar”, abaixo)'}.${av.ultimo ? ` Último aviso recebido: <b>${esc(textoBR(av.ultimo.recebido_em))}</b> (${esc(rotuloAviso(av.ultimo))}).` : (av.configurado ? ' Nenhum aviso recebido ainda.' : '')}</div>
-    <div style="font-size:12.5px;color:#4F6469;line-height:1.6;margin-top:6px">E-mail que <b>volta de vez</b> (o endereço não existe) entra na lista como “e-mail inválido (voltou)”. <b>Queixa de spam</b> entra como “pediu para sair” e bloqueia o cliente inteiro. Devolução <b>temporária</b> (caixa cheia, servidor fora do ar) não entra na lista. Cada entrada aparece em “Últimas mudanças” como vinda do Resend.</div>
+    <div style="font-size:12.5px;color:#4F6469;line-height:1.6;margin-top:6px">E-mail que <b>volta de vez</b> (o endereço não existe) entra na lista como “e-mail inválido (voltou)”. <b>Queixa de spam</b> entra como “pediu para sair” e bloqueia o cliente inteiro. Devolução <b>temporária</b> (caixa cheia, servidor fora do ar) não entra na lista. Cada entrada aparece em “Últimas mudanças” como vinda do Resend. Quem já estava como “pediu para sair” continua assim. Só endereço do próprio domínio da empresa (o do remetente) fica de fora da lista; a lista “casa e família” não muda isso.</div>
     <div class="sec" style="margin-top:14px">Últimos 7 dias, por dia</div>
     ${avisosLinhas || '<div style="font-size:13px;color:#8fa39f">Nenhuma devolução ou queixa nos últimos 7 dias.</div>'}
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
@@ -1119,14 +1226,14 @@ function conferir(){var m=$('mConf');m.textContent='Consultando…';post('/api/a
 function exemplo(t){var m=$('mConf');m.textContent='Enviando…';post('/api/avaliacoes/exemplo',{modelo:t}).then(function(j){m.textContent=j.ok?('Exemplo enviado para '+j.para+'. Confira a caixa de entrada (e o spam) e responda a ele.'):(j.message||'Não foi possível enviar.');}).catch(function(){m.textContent='Sem conexão.';});}
 function lista(a){var e=$('lEmail').value.trim(),m=$('mLista');if(!e){m.textContent='Digite o e-mail.';return;}m.textContent='…';post('/api/avaliacoes/nao-enviar',{acao:a,email:e,motivo:$('lMotivo').value}).then(function(j){m.textContent=j.message||(j.ok?'Feito.':'Não foi possível.');if(j.ok&&j.total!=null)$('tLista').textContent=j.total;}).catch(function(){m.textContent='Sem conexão.';});}
 function testeAviso(t){var m=$('mAviso');m.textContent='Enviando o teste…';post('/api/avaliacoes/teste-aviso',{tipo:t}).then(function(j){if(!j.ok){m.textContent=j.message||'Não foi possível disparar o teste.';return;}var n=0;m.textContent='Teste enviado. Esperando o aviso do Resend voltar…';
-  (function olhar(){post('/api/avaliacoes/aviso-estado',{}).then(function(e){var u=e&&e.ultimo;if(u&&u.teste&&u.recebido_em>j.desde){m.innerHTML='<b style="color:#1E5B31">✅ Aviso de teste recebido e conferido.</b> Recarregue a página para ver em “Últimas mudanças”.';return;}if(++n>=20){m.textContent='O aviso não voltou em 1 minuto. Confira no Resend se o webhook está ativo e se o segredo guardado na Cloudflare é o mesmo do webhook; depois tente de novo.';return;}setTimeout(olhar,3000);}).catch(function(){if(++n>=20){m.textContent='Sem conexão para conferir. Recarregue a página em um minuto.';return;}setTimeout(olhar,3000);});})();}).catch(function(){m.textContent='Sem conexão.';});}
+  (function olhar(){post('/api/avaliacoes/aviso-estado',{desde:j.desde}).then(function(e){if(e&&e.testeRecebido){m.innerHTML='<b style="color:#1E5B31">✅ Aviso de teste recebido e conferido.</b> Recarregue a página para ver em “Últimas mudanças”.';return;}if(++n>=20){m.textContent='O aviso não voltou em 1 minuto. Confira no Resend se o webhook está ativo e se o segredo guardado na Cloudflare é o mesmo do webhook; depois tente de novo.';return;}setTimeout(olhar,3000);}).catch(function(){if(++n>=20){m.textContent='Sem conexão para conferir. Recarregue a página em um minuto.';return;}setTimeout(olhar,3000);});})();}).catch(function(){m.textContent='Sem conexão.';});}
 function salvarCasa(){var m=$('mCasa');m.textContent='Salvando…';post('/api/avaliacoes/casa',{texto:$('casa').value}).then(function(j){m.textContent=j.ok?'Salvo.':(j.message||'Não foi possível salvar.');}).catch(function(){m.textContent='Sem conexão.';});}
 function carga(){var f=$('arq').files[0],m=$('mCarga');if(!f){m.textContent='Escolha o arquivo.';return;}var padrao=$('aMotivo').value;var r=new FileReader();
   r.onload=function(){var RE=/^[a-z0-9_%+&-]+(\\.[a-z0-9_%+&-]+)*@[a-z0-9-]+(\\.[a-z0-9-]+)*\\.[a-z]{2,}$/,linhas=String(r.result||'').split(/\\r?\\n/),achados=[],temSaida=false,i;
     for(i=0;i<linhas.length;i++){var t=linhas[i].toLowerCase(),cels=t.split(/[\\s,;|<>()\\[\\]"]+/),e='';
       for(var c=0;c<cels.length;c++){var x=cels[c].replace(/^[.']+|[.']+$/g,'');if(x.length<=254&&RE.test(x)){e=x;break;}}
-      if(!e)continue;var resto=t.replace(e,' '),tipo='';
-      if(/\\b(inativ[oa]s?|removid[oa]s?|removed|descadastr\\w*|unsubscri\\w*|opt[- ]?out|cancelad[oa]s?|cancell?ed|reclama\\w*|spam|complain\\w*)\\b/.test(resto))tipo='descadastrado';
+      if(!e)continue;var resto=t.replace(e,' ').replace(/_/g,' '),tipo='';
+      if(/\\b(inativ[oa]s?|removid[oa]s?|removed|descadastr\\w*|unsubscri\\w*|opt[- ]?out|cancelad[oa]s?|cancelou|cancell?ed|reclama\\w*|spam|complain\\w*)\\b/.test(resto))tipo='descadastrado';
       else if(/\\b(bounce[ds]?|hard|inv[aá]lid[oa]s?|invalid|inexistente)\\b/.test(resto))tipo='invalido';
       else if(/\\b(ativ[oa]s?|active|subscribed|inscrit[oa]s?|confirmad[oa]s?)\\b/.test(resto))tipo='ativo';
       if(tipo==='descadastrado'||tipo==='invalido')temSaida=true;

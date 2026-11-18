@@ -20,7 +20,7 @@ import { lerChavesKV } from './kv-lote.js';
 import { MATERIAIS as TRIAGEM_DOCA } from './operacional.js';
 import { REGRAS_MATERIAIS, estimarPesoKg } from './cadastro.js';
 import { isoBR, minutosEntre, percentil, segundaDaSemana, situacaoPrazo, avaliarLoteGrande, perfilDoLead, ehPedidoDeColeta, medido, INICIO_MEDICAO_TXT } from './atendimento.js';
-import { lerAvaliacoes, camposAvaliacao, ROTULO_MOTIVO, lerAvisos } from './avaliacao.js';
+import { lerAvaliacoes, camposAvaliacao, ROTULO_MOTIVO, contarAvisos } from './avaliacao.js';
 
 export class ErroUso extends Error {}
 
@@ -1086,11 +1086,13 @@ async function ferrMetricasDiarias(env, args) {
     // pedido de avaliação. Avisos de teste ficam de fora.
     try {
       const ini = new Date(Date.parse(`${de}T00:00:00-03:00`)).toISOString(), fim = new Date(Date.parse(`${somaDias(ate, 1)}T00:00:00-03:00`)).toISOString();
-      for (const x of await lerAvisos({ DB_PLOOMES: ctx.db }, ini, fim)) {
-        const d = m.get(diaBR(x.em)); if (!d) continue;
-        if (x.classe === 'devolucao') { d.avisos_resend.devolucoes++; if (x.pedido) d.avaliacoes_google.devolucoes++; }
-        else if (x.classe === 'queixa') { d.avisos_resend.queixas++; if (x.pedido) d.avaliacoes_google.queixas++; }
-        else d.avisos_resend.temporarias++;
+      // A soma por dia já vem pronta do banco (sem teto de linhas).
+      for (const x of await contarAvisos({ DB_PLOOMES: ctx.db }, ini, fim)) {
+        const d = m.get(x.dia); if (!d) continue;
+        const n = Number(x.n) || 0;
+        if (x.classe === 'devolucao') { d.avisos_resend.devolucoes += n; if (x.pedido) d.avaliacoes_google.devolucoes += n; }
+        else if (x.classe === 'queixa') { d.avisos_resend.queixas += n; if (x.pedido) d.avaliacoes_google.queixas += n; }
+        else d.avisos_resend.temporarias += n;
       }
     } catch { /* avisos ainda não recebidos */ }
   }

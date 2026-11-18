@@ -85,7 +85,7 @@ import { agentesDe } from './agente.js';
 import { atenderMcpClaude, lerConexaoClaude, gerarConexaoClaude, revogarConexaoClaude, paginaConexaoClaude, listarAuditoriaClaude } from './mcp-claude.js';
 import { mudancaComHistorico, registrarHistoricoLead, listarHistoricoLead, deLocalBR, leadsAbertosDoCliente, leadSemOSValida, medido, INICIO_MEDICAO_TXT } from './atendimento.js';
 import { LEAD_RESOLVIDO as LEAD_JA_RESOLVIDO } from './cadastro.js';
-import { CRON_AVALIACAO, processarAvaliacoes, lerConfigAvaliacao, salvarModoAvaliacao, salvarCasaAvaliacao, consultarNaoEnviar, adicionarNaoEnviar, removerNaoEnviar, contarNaoEnviar, marcarWhatsapp, desfazerWhatsapp, registrarReabertura, emailsDe, enviarExemplo, conferirDominio, infoAvaliacaoOS, dadosPaginaAvaliacoes, blocoAvaliacaoOS, paginaAvaliacoes, receberAvisoResend, enviarTesteAviso, ultimoAviso, avisosConfigurados } from './avaliacao.js';
+import { CRON_AVALIACAO, processarAvaliacoes, lerConfigAvaliacao, salvarModoAvaliacao, salvarCasaAvaliacao, consultarNaoEnviar, adicionarNaoEnviar, removerNaoEnviar, contarNaoEnviar, marcarWhatsapp, desfazerWhatsapp, registrarReabertura, emailsDe, enviarExemplo, conferirDominio, infoAvaliacaoOS, dadosPaginaAvaliacoes, blocoAvaliacaoOS, paginaAvaliacoes, receberAvisoResend, enviarTesteAviso, estadoAvisos, avisosConfigurados } from './avaliacao.js';
 import { servirIcone, servirManifest, servirServiceWorker } from './pwa.js';
 import { googleConfigurado, iniciarGoogle, callbackGoogle, botaoGoogle } from './google-auth.js';
 
@@ -2221,7 +2221,7 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         if (pathname === '/api/avaliacoes/exemplo') return json(await enviarExemplo(env, autor, b.modelo === 'PJ' ? 'PJ' : 'PF'));
         // Teste de ponta a ponta do aviso de devolução/queixa (endereço de teste do próprio Resend) e a situação dos avisos.
         if (pathname === '/api/avaliacoes/teste-aviso') return json(await enviarTesteAviso(env, b.tipo === 'queixa' ? 'queixa' : 'devolucao', autor));
-        if (pathname === '/api/avaliacoes/aviso-estado') return json({ ok: true, configurado: avisosConfigurados(env), ultimo: await ultimoAviso(env) });
+        if (pathname === '/api/avaliacoes/aviso-estado') return json(await estadoAvisos(env, typeof b.desde === 'string' ? b.desde.slice(0, 40) : ''));
         if (pathname === '/api/avaliacoes/nao-enviar') {
           const acao = String(b.acao || '');
           if (acao === 'importar') { const r = await adicionarNaoEnviar(env, b.itens, { origem: 'egoi', por: autor }); return json({ ok: r.ok, gravados: r.gravados }); }
