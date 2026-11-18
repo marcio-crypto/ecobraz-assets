@@ -7,6 +7,7 @@
 import { botaoGoogle } from './google-auth.js';
 import { lerCliente } from './cadastro.js';
 import { abasEquipe } from './os-utils.js';
+import { lerChavesKV } from './kv-lote.js';
 import qrcode from 'qrcode-generator';
 
 const TE = new TextEncoder();
@@ -71,6 +72,19 @@ export async function lerColetaOS(env, id) {
   const raw = await env.PORTAL_KV.get(`os:${String(id).replace(/[^a-zA-Z0-9_-]/g, '')}`);
   return raw ? JSON.parse(raw) : null;
 }
+// Materiais da OS em texto NORMALIZADO (sem acento, minúsculo) para o índice, sempre
+// em 3 partes: "quantidade | material | qtd item; qtd item" ('' quando não há nada).
+// Com isso o filtro por material, os materiais mais coletados e a estimativa de peso
+// da agenda saem do índice, sem abrir OS por OS (consultas do Claude, 17/11).
+const semAcentoMin = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+export function materialIndiceOS(rec) {
+  const n = (s) => semAcentoMin(s).replace(/\|/g, '/').replace(/\s+/g, ' ').trim();
+  const itens = (Array.isArray(rec && rec.itens) ? rec.itens : []).map((it) => `${String((it && it.qtd) || '1').trim()} ${String((it && it.nome) || '').trim()}`).filter((s) => s.trim()).join('; ');
+  const partes = [n(rec && rec.quantidade), n(rec && rec.material), n(itens)];
+  return partes.some(Boolean) ? partes.join(' | ').slice(0, 300) : '';
+}
+const placaDaOS = (rec) => String((rec && rec.transportadora && rec.transportadora.placa) || (rec && rec.veiculoPlaca) || '').trim().toUpperCase();
+const isoValido = (v) => { const s = String(v || ''); return s && !isNaN(Date.parse(s)) ? s : ''; };
 // Entrada do índice (os:index) reconstruída a partir do registro completo — usada
 // quando uma OS existe em os:{id} mas sumiu do índice (ex.: gravações concorrentes
 // se atropelaram): em vez de divergir para sempre, a OS re-entra no índice.
@@ -80,6 +94,10 @@ function resumoIndiceOS(rec) {
   if (rec.reagendar) r.reagendar = 1;
   if (rec.mtr && rec.mtr.numero) r.mtr = rec.mtr.numero;
   if (rec.cobranca) r.cobranca = { valor: rec.cobranca.valor, status: rec.cobranca.status, link: rec.cobranca.link };
+  r.mat = materialIndiceOS(rec);
+  const placa = placaDaOS(rec); if (placa) r.placa = placa;
+  if (rec.concluidaEm) r.concluidaEm = rec.concluidaEm;
+  if (rec.canceladaEm) r.canceladaEm = rec.canceladaEm;
   return r;
 }
 // Grava o índice de OS. O antigo `.slice(0, 900000)` CORTAVA O JSON NO MEIO quando o
@@ -169,8 +187,9 @@ export async function criarColetaOS(env, dados, criadoPor) {
   if (env.PORTAL_KV) {
     await env.PORTAL_KV.put(`os:${id}`, JSON.stringify(rec));
     const idx = await listarColetasOS(env);
-    const resumo = { id, numero, status: 'agendada', clienteId: rec.clienteId || '', clienteDoc: rec.clienteDoc || '', clienteNome: rec.clienteNome, cidade: cidadeDoEndereco(rec.endereco), dataAgendada: rec.dataAgendada, agenteNome: rec.agenteNome, agenteEmail: rec.agenteEmail, criadoEm: rec.criadoEm };
+    const resumo = { id, numero, status: 'agendada', clienteId: rec.clienteId || '', clienteDoc: rec.clienteDoc || '', clienteNome: rec.clienteNome, cidade: cidadeDoEndereco(rec.endereco), dataAgendada: rec.dataAgendada, agenteNome: rec.agenteNome, agenteEmail: rec.agenteEmail, criadoEm: rec.criadoEm, mat: materialIndiceOS(rec) };
     if (rec.transportadora) resumo.transp = rec.transportadora.nome;
+    { const placa = placaDaOS(rec); if (placa) resumo.placa = placa; }
     idx.unshift(resumo);
     await salvarIndiceOS(env, idx);
   }
@@ -201,17 +220,67 @@ export function alvoAvisoColeta(os, cli) {
   };
 }
 
-export async function atualizarStatusOS(env, id, status) {
+// `extra` (opcional): { em } = quando a coleta foi de fato concluída (ex.: hora em que o
+// motorista encerrou no app) e { motivo } do cancelamento. A data é gravada só na
+// TRANSIÇÃO: receber na doca uma OS que já estava concluída não muda a data.
+export async function atualizarStatusOS(env, id, status, extra) {
   const rec = await lerColetaOS(env, id); if (!rec) return null;
+  const x = extra || {};
+  if (status === 'concluida' && rec.status !== 'concluida') rec.concluidaEm = isoValido(x.em) || agora();
+  if (status === 'cancelada' && rec.status !== 'cancelada') {
+    rec.canceladaEm = agora();
+    const motivo = String(x.motivo || '').trim().slice(0, 300);
+    if (motivo) rec.motivoCancelamento = motivo; else delete rec.motivoCancelamento;
+  }
   rec.status = status; rec.atualizadoEm = agora();
   if (env.PORTAL_KV) {
     await env.PORTAL_KV.put(`os:${id}`, JSON.stringify(rec));
     const idx = await listarColetasOS(env); const i = idx.findIndex((x) => x.id === id);
-    if (i >= 0) { idx[i].status = status; if (!idx[i].clienteDoc && rec.clienteDoc) idx[i].clienteDoc = rec.clienteDoc; }
+    if (i >= 0) {
+      idx[i].status = status; if (!idx[i].clienteDoc && rec.clienteDoc) idx[i].clienteDoc = rec.clienteDoc;
+      if (rec.concluidaEm) idx[i].concluidaEm = rec.concluidaEm;
+      if (rec.canceladaEm) idx[i].canceladaEm = rec.canceladaEm;
+    }
     else idx.unshift(resumoIndiceOS(rec)); // sumiu do índice? re-entra, em vez de ficar invisível para as listas
     await salvarIndiceOS(env, idx);
   }
   return rec;
+}
+
+// Completa as entradas ANTIGAS do índice (de antes de 18/11) com os campos novos:
+// materiais (mat), placa e a hora real da conclusão (encerramento no app do motorista,
+// que fica guardado 120 dias; sem esse registro marca conclSemReg e a leitura estima).
+// Roda no agendamento diário, em lotes. Relê o índice logo antes de gravar para não
+// atropelar OS criadas ou alteradas enquanto as leituras aconteciam.
+export async function completarIndiceOS(env, limite) {
+  const max = Math.max(1, Number(limite) || 450);
+  if (!env.PORTAL_KV) return { lidas: 0, completadas: 0 };
+  const idx = await listarColetasOS(env);
+  const semMat = idx.filter((x) => x && x.id && x.mat === undefined).slice(0, max).map((x) => x.id);
+  const semConcl = idx.filter((x) => x && x.id && x.status === 'concluida' && !x.concluidaEm && !x.conclSemReg).slice(0, Math.max(0, max - semMat.length)).map((x) => x.id);
+  if (!semMat.length && !semConcl.length) return { lidas: 0, completadas: 0 };
+  const regs = await lerChavesKV(env.PORTAL_KV, semMat.map((id) => `os:${id}`));
+  const ests = await lerChavesKV(env.PORTAL_KV, semConcl.map((id) => `coleta:${id}`));
+  const mats = new Map();
+  for (const id of semMat) {
+    let rec = null; try { const raw = regs.get(`os:${id}`); rec = raw ? JSON.parse(raw) : null; } catch { rec = null; }
+    mats.set(id, rec ? { mat: materialIndiceOS(rec), placa: placaDaOS(rec) } : { mat: '', placa: '' });
+  }
+  const concl = new Map();
+  for (const id of semConcl) {
+    let em = ''; try { const raw = ests.get(`coleta:${id}`); const e = raw ? JSON.parse(raw) : null; em = isoValido(e && e.encerramento && e.encerramento.em); } catch { em = ''; }
+    concl.set(id, em);
+  }
+  const fresco = await listarColetasOS(env);
+  let completadas = 0;
+  for (const x of fresco) {
+    if (!x || !x.id) continue;
+    const m = mats.get(x.id);
+    if (m && x.mat === undefined) { x.mat = m.mat; if (m.placa && !x.placa) x.placa = m.placa; completadas++; }
+    if (concl.has(x.id) && x.status === 'concluida' && !x.concluidaEm && !x.conclSemReg) { const em = concl.get(x.id); if (em) x.concluidaEm = em; else x.conclSemReg = 1; completadas++; }
+  }
+  if (completadas) await salvarIndiceOS(env, fresco);
+  return { lidas: semMat.length + semConcl.length, completadas };
 }
 
 // Reagendamento pedido pelo MOTORISTA (pedido da equipe 18/08: "preciso que
@@ -358,7 +427,7 @@ export async function atualizarColetaOS(env, id, dados) {
   if (env.PORTAL_KV) {
     await env.PORTAL_KV.put(`os:${id}`, JSON.stringify(rec));
     const idx = await listarColetasOS(env); const i = idx.findIndex((x) => x.id === id);
-    if (i >= 0) { idx[i].cidade = cidadeDoEndereco(rec.endereco); idx[i].dataAgendada = rec.dataAgendada; idx[i].agenteNome = rec.agenteNome; idx[i].agenteEmail = rec.agenteEmail; if (rec.transportadora) idx[i].transp = rec.transportadora.nome; else delete idx[i].transp; if (!idx[i].clienteDoc && rec.clienteDoc) idx[i].clienteDoc = rec.clienteDoc; await salvarIndiceOS(env, idx); }
+    if (i >= 0) { idx[i].cidade = cidadeDoEndereco(rec.endereco); idx[i].dataAgendada = rec.dataAgendada; idx[i].agenteNome = rec.agenteNome; idx[i].agenteEmail = rec.agenteEmail; if (rec.transportadora) idx[i].transp = rec.transportadora.nome; else delete idx[i].transp; if (!idx[i].clienteDoc && rec.clienteDoc) idx[i].clienteDoc = rec.clienteDoc; idx[i].mat = materialIndiceOS(rec); const placa = placaDaOS(rec); if (placa) idx[i].placa = placa; else delete idx[i].placa; await salvarIndiceOS(env, idx); }
   }
   return rec;
 }
@@ -650,6 +719,8 @@ export function paginaColetaOSDetalhe(user, os, acomp, extras) {
       ${os.obsInterna ? `<tr><td style="padding:8px 0;border-top:1px solid #EEF1F0;color:#8a6a16;width:38%;font-weight:700">🔒 Interna (equipe)</td><td style="padding:8px 0;border-top:1px solid #EEF1F0;font-weight:600;white-space:pre-wrap;word-break:break-word;color:#7a5f13">${esc(os.obsInterna)}</td></tr>` : ''}
       ${linha('Certificados solicitados', (os.certificados || []).join(' · '))}
       ${linha('Aberta em', dataBR(os.criadoEm))}
+      ${os.status === 'concluida' && os.concluidaEm ? linha('Concluída em', dataBR(os.concluidaEm)) : ''}
+      ${os.status === 'cancelada' && os.canceladaEm ? linha('Cancelada em', dataBR(os.canceladaEm) + (os.motivoCancelamento ? ' — motivo: ' + os.motivoCancelamento : '')) : ''}
     </table>
     ${os.endereco ? `<div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
       <a href="https://waze.com/ul?q=${encodeURIComponent(os.endereco)}&navigate=yes" target="_blank" rel="noopener" class="btn" style="flex:1;min-width:150px;background:#33ccff;color:#083b47;padding:11px 12px;font-size:13px">🧭 Abrir no Waze</a>
@@ -736,7 +807,7 @@ export function paginaColetaOSDetalhe(user, os, acomp, extras) {
 </div>
 <script>var TEM_MOTORISTA=${os.agenteEmail ? 'true' : 'false'};var TEM_TRANSP=${os.transportadora ? 'true' : 'false'};
 function salvarPesoReal(){var i=document.getElementById('pesoReal'),m=document.getElementById('pesoMsg');if(!i)return;if(!i.value.trim()){if(m)m.textContent='Digite o peso.';return;}if(m)m.textContent='Salvando…';
-  fetch('/api/coletas/peso-real',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({osId:'${esc(os.id)}',kg:i.value})}).then(function(r){return r.json();}).then(function(j){if(j.ok){if(m)m.textContent='✓ salvo';setTimeout(function(){location.reload();},600);}else{if(m)m.textContent=j.message||'Falha ao salvar.';}}).catch(function(){if(m)m.textContent='Sem conexão.';});}function setStatus(s){if(s==='em_transporte'&&!TEM_MOTORISTA&&!TEM_TRANSP&&!confirm('Esta coleta não tem motorista escolhido. Se colocar em transporte assim, ela NÃO vai aparecer para nenhum motorista. O ideal é Editar e escolher o motorista (ou marcar a transportadora) antes. Continuar mesmo assim?'))return;if(s==='cancelada'&&!confirm('Cancelar esta coleta? Ela sai da lista principal, mas fica guardada no histórico (dá pra reativar depois).'))return;document.getElementById('m').textContent='Salvando…';fetch('/api/coletas/status',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:'${esc(os.id)}',status:s})}).then(r=>r.json()).then(j=>{if(j.ok){location.reload();}else{document.getElementById('m').textContent='Falha.';}}).catch(()=>document.getElementById('m').textContent='Sem conexão.');}
+  fetch('/api/coletas/peso-real',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({osId:'${esc(os.id)}',kg:i.value})}).then(function(r){return r.json();}).then(function(j){if(j.ok){if(m)m.textContent='✓ salvo';setTimeout(function(){location.reload();},600);}else{if(m)m.textContent=j.message||'Falha ao salvar.';}}).catch(function(){if(m)m.textContent='Sem conexão.';});}function setStatus(s){if(s==='em_transporte'&&!TEM_MOTORISTA&&!TEM_TRANSP&&!confirm('Esta coleta não tem motorista escolhido. Se colocar em transporte assim, ela NÃO vai aparecer para nenhum motorista. O ideal é Editar e escolher o motorista (ou marcar a transportadora) antes. Continuar mesmo assim?'))return;var motivo='';if(s==='cancelada'){motivo=prompt('Cancelar esta coleta? Ela sai da lista principal, mas fica guardada no histórico (dá pra reativar depois).\\n\\nMotivo do cancelamento (opcional — ex.: cliente desistiu, OS duplicada, endereço errado):','');if(motivo===null)return;}document.getElementById('m').textContent='Salvando…';fetch('/api/coletas/status',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:'${esc(os.id)}',status:s,motivo:motivo||''})}).then(r=>r.json()).then(j=>{if(j.ok){location.reload();}else{document.getElementById('m').textContent='Falha.';}}).catch(()=>document.getElementById('m').textContent='Sem conexão.');}
 function enviarAnexo(){var f=document.getElementById('arqFile'),tp=document.getElementById('arqTipo'),msg=document.getElementById('anexoMsg');if(!f.files||!f.files[0]){msg.textContent='Escolha um arquivo.';return;}if(f.files[0].size>15728640){msg.textContent='Arquivo muito grande (máx. 15 MB).';return;}if(!tp.value){msg.textContent='Escolha o tipo do documento.';return;}var fd=new FormData();fd.append('arquivo',f.files[0]);msg.textContent='Enviando…';fetch('/api/coletas/anexo?id=${esc(os.id)}&tipo='+encodeURIComponent(tp.value),{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(j){if(j.ok){location.reload();}else{msg.textContent=j.error||'Falha ao enviar.';}}).catch(function(){msg.textContent='Sem conexão.';});}
 function removerAnexo(k){if(!confirm('Remover este anexo?'))return;fetch('/api/coletas/anexo-remover',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:'${esc(os.id)}',key:k})}).then(function(r){return r.json();}).then(function(j){if(j.ok)location.reload();}).catch(function(){});}</script>
 </body></html>`;

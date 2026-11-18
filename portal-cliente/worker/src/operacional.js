@@ -110,12 +110,12 @@ export async function listarColetasRecebiveis(env) {
     try {
       const raw = env.PORTAL_KV ? await env.PORTAL_KV.get(`coleta:${c.id}`) : null;
       const e = raw ? JSON.parse(raw) : null;
-      return (e && e.status === 'encerrada') ? c : null;
+      return (e && e.status === 'encerrada') ? { c, em: e.encerramento && e.encerramento.em } : null;
     } catch { return null; /* estado ilegível: fica como está */ }
   }))).filter(Boolean);
-  for (const c of presas) {
+  for (const { c, em } of presas) {
     concluidas.push(c);
-    try { await atualizarStatusOS(env, c.id, 'concluida'); }
+    try { await atualizarStatusOS(env, c.id, 'concluida', { em }); }
     catch (err) { console.error('doca_cura_encerrada_falhou', c.id, String((err && err.message) || err).slice(0, 140)); }
   }
   // Quem está no índice da doca (op:index) já foi recebida — filtra em memória.

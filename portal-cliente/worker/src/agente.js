@@ -330,7 +330,7 @@ export async function registrarEncerramento(env, id, agente, dados) {
   // Se esta gravação falhar, a lista do app e a fila da recepção se curam sozinhas
   // (listarColetasComStatus / listarColetasRecebiveis) — mas deixamos o rastro no log.
   try { await limparReagendarOS(env, id); } catch { /* ok */ }
-  try { await atualizarStatusOS(env, id, 'concluida'); } catch (err) { console.error('encerrar_conclui_os_falhou', id, String((err && err.message) || err).slice(0, 140)); }
+  try { await atualizarStatusOS(env, id, 'concluida', { em: e.encerramento.em }); } catch (err) { console.error('encerrar_conclui_os_falhou', id, String((err && err.message) || err).slice(0, 140)); }
   return e;
 }
 export async function registrarReagendamento(env, id, agente, dados) {
@@ -361,7 +361,7 @@ export async function listarColetasComStatus(env, agenteEmail) {
       // OS-2026-0124, 14/09: o motorista encerrou, mas a OS não virou "concluída" —
       // ex.: gravações concorrentes no índice se atropelaram). Cura na hora: conclui
       // a OS de novo — some da lista do motorista e entra na fila da recepção.
-      try { await atualizarStatusOS(env, c.id, 'concluida'); }
+      try { await atualizarStatusOS(env, c.id, 'concluida', { em: e.encerramento && e.encerramento.em }); }
       catch (err) { console.error('app_cura_encerrada_falhou', c.id, String((err && err.message) || err).slice(0, 140)); }
       continue;
     }

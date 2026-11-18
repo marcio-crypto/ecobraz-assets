@@ -78,11 +78,11 @@ import { amostraContatosPloomes, paginaAmostraContatos, importarLoteContatos, es
 import { importarLoteAnexos, importarLoteAnexosContatos, completarAnexos, importarAnexosJanela, reprocessarFalhas, importarLoteDocumentos, recuperarDocumentos, estatisticasArquivos, paginaMigrarArquivos, diagnosticoAnexos, paginaDiagAnexos } from './ploomes-arquivos.js';
 import { fiscalPermitido, nomeFiscal, listarNotas, lerNota, importarLote, vincularNota, sugerirVinculoSync, paginaFiscalLogin, paginaFiscalHome, paginaFiscalResultado, paginaFiscalNota } from './fiscal.js';
 import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, emailsDoCliente, reindexarEmailsClientes, backfillEnderecos, paginaManutencao, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, clienteDeLead, arquivosDoCliente, paginaLeads, paginaLeadDetalhe, paginaInicio, listarClientesD1, contagensClientesD1, lerClienteD1, negociosDoCliente, espelharClienteD1, sincronizarKVparaD1, lerNegocioDetalheD1, paginaOSDetalhe, curarContatosKV, classificarPedido, atualizarIndexLead, excluirLead, acessosDaEmpresa, acessoRevogado, removerAcessoPelaFicha } from './cadastro.js';
-import { listarColetasOS, lerColetaOS, seloOS, criarColetaOS, atualizarStatusOS, atualizarColetaOS, anexarTelemetriaOS, registrarAnexoColeta, removerAnexoColeta, alvoAvisoColeta, salvarColetaOSDireto, paginaColetasLista, paginaGerarColeta, paginaEditarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga, definirCobrancaOS, anexarBoletoCobrancaOS, marcarCobrancaPagaOS, definirMtrOS } from './coletas.js';
+import { listarColetasOS, lerColetaOS, seloOS, criarColetaOS, atualizarStatusOS, atualizarColetaOS, anexarTelemetriaOS, registrarAnexoColeta, removerAnexoColeta, alvoAvisoColeta, salvarColetaOSDireto, paginaColetasLista, paginaGerarColeta, paginaEditarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga, definirCobrancaOS, anexarBoletoCobrancaOS, marcarCobrancaPagaOS, definirMtrOS, completarIndiceOS } from './coletas.js';
 import { listarVeiculos, lerVeiculo, salvarVeiculo, paginaFrota, paginaVeiculoForm, lerJornadaAtiva, abrirJornada, fecharJornada, registrarAbastecimento, tagColetaComVeiculo, servirFotoJornada, bannerJornada, paginaAbrirDia, paginaFecharDia, paginaAbastecer, placaDaColeta } from './frota.js';
 import { carregarEquipeNoEnv, listarUsuarios, lerUsuario, salvarUsuario, importarUsuarios, paginaEquipe, paginaUsuarioForm, paginaEquipeImportar } from './equipe.js';
 import { agentesDe } from './agente.js';
-import { atenderMcpClaude, lerConexaoClaude, gerarConexaoClaude, revogarConexaoClaude, paginaConexaoClaude } from './mcp-claude.js';
+import { atenderMcpClaude, lerConexaoClaude, gerarConexaoClaude, revogarConexaoClaude, paginaConexaoClaude, listarAuditoriaClaude } from './mcp-claude.js';
 import { servirIcone, servirManifest, servirServiceWorker } from './pwa.js';
 import { googleConfigurado, iniciarGoogle, callbackGoogle, botaoGoogle } from './google-auth.js';
 
@@ -114,6 +114,10 @@ export default {
     catch (error) { console.error('cron_empdocs_erro', safeError(error)); }
     try { const r = await avisoResgatePendentes(env); console.log('cron_resgate', r); }
     catch (error) { console.error('cron_resgate_erro', safeError(error)); }
+    // Completa as OS antigas do índice com materiais, placa e hora real de conclusão
+    // (usados pelas consultas do Claude). Em lotes; some sozinho quando não falta nada.
+    try { const r = await completarIndiceOS(env, 450); console.log('cron_indice_os', r); }
+    catch (error) { console.error('cron_indice_os_erro', safeError(error)); }
   },
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -856,7 +860,7 @@ export default {
       if (pathname.startsWith('/mcp-claude/')) return await atenderMcpClaude(request, env, url);
       if (pathname === '/diretoria/conexao-claude' && request.method === 'GET') {
         if (!diretoria) return html(paginaLoginDiretoria(googleConfigurado(env)));
-        return html(paginaConexaoClaude(diretoria, await lerConexaoClaude(env)));
+        return html(paginaConexaoClaude(diretoria, await lerConexaoClaude(env), await listarAuditoriaClaude(env, 40)));
       }
       if (pathname === '/api/diretoria/conexao-claude' && request.method === 'POST') {
         if (!diretoria) return json({ ok: false, error: 'nao_autenticado' }, 401);
@@ -2006,7 +2010,7 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         b.atualizadoPor = escritorio.email || '';
         const salvo = await salvarCliente(env, existente ? { ...existente, ...b } : b, existente);
         // Veio de um lead do site? Marca o lead como tratado e guarda o vínculo (best-effort).
-        if (leadOrigem) { try { const l = await lerLead(env, leadOrigem); if (l && l.status !== 'tratado') { l.status = 'tratado'; l.clienteId = salvo.id; await salvarLead(env, l); } } catch { /* não bloqueia o cadastro */ } }
+        if (leadOrigem) { try { const l = await lerLead(env, leadOrigem); if (l && l.status !== 'tratado') { l.status = 'tratado'; l.clienteId = salvo.id; l.tratadoPor = escritorio.email || ''; l.tratadoEm = nowS(); await salvarLead(env, l); } } catch { /* não bloqueia o cadastro */ } }
         return json({ ok: true, id: salvo.id });
       }
       // Anexar um novo documento a um cliente (upload → R2 + catálogo D1, casado pelo CNPJ/CPF).
@@ -2061,7 +2065,7 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         if (!b || !b.id) return json({ ok: false, error: 'dados' }, 400);
         const l = await lerLead(env, b.id);
         if (!l) return json({ ok: false, error: 'nao_encontrado' }, 404);
-        l.status = 'tratado'; await salvarLead(env, l);
+        l.status = 'tratado'; l.tratadoPor = escritorio.email || ''; l.tratadoEm = nowS(); await salvarLead(env, l);
         return json({ ok: true });
       }
       // "Sem retorno": cliente mandou o formulário e não respondeu ao contato. Fica
@@ -2072,7 +2076,7 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         if (!b || !b.id) return json({ ok: false, error: 'dados' }, 400);
         const l = await lerLead(env, b.id);
         if (!l) return json({ ok: false, error: 'nao_encontrado' }, 404);
-        l.status = 'sem_retorno'; await salvarLead(env, l);
+        l.status = 'sem_retorno'; l.tratadoPor = escritorio.email || ''; l.tratadoEm = nowS(); await salvarLead(env, l);
         return json({ ok: true });
       }
       // Excluir de vez (testes/duplicados) — some do registro e do índice. Irreversível.
@@ -2398,7 +2402,7 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         // anterior ("estou indo"/check-in/foto) vão para o histórico — o app do
         // motorista abre com os botões liberados (caso OS-2026-0046, 15/09).
         if (b.status === 'em_transporte') { try { await prepararNovaTentativa(env, b.id); } catch (error) { console.error('preparar_tentativa_falhou', safeError(error)); } }
-        const os = await atualizarStatusOS(env, b.id, b.status);
+        const os = await atualizarStatusOS(env, b.id, b.status, { motivo: b.motivo });
         // Aviso "coleta realizada" ao cliente na conclusão — do SISTEMA NOVO (sem Ploomes).
         // Best-effort, de-dup por KV, nunca bloqueia a mudança de status.
         try {

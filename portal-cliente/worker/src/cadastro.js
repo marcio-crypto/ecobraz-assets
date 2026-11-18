@@ -1204,7 +1204,9 @@ export async function salvarLead(env, rec) {
   await env.PORTAL_KV.put(`lead:${rec.id}`, JSON.stringify(rec));
   const idx = await listarLeads(env);
   const i = idx.findIndex((x) => x.id === rec.id);
-  if (i >= 0) { idx[i].status = rec.status; await env.PORTAL_KV.put('leads:index', JSON.stringify(idx).slice(0, 800000)); }
+  // Índice gravado INTEIRO: o antigo .slice(0, 800000) cortaria o JSON no meio quando a
+  // lista crescesse — e a caixa de leads inteira quebraria (mesmo defeito do cli:index).
+  if (i >= 0) { idx[i].status = rec.status; await env.PORTAL_KV.put('leads:index', JSON.stringify(idx)); }
   return rec;
 }
 // Atualiza campos de um lead no índice (pagamento, prioridade…) sem regravar tudo.
@@ -1212,7 +1214,7 @@ export async function atualizarIndexLead(env, id, patch) {
   if (!env.PORTAL_KV || !id) return;
   const idx = await listarLeads(env);
   const i = idx.findIndex((x) => x.id === id);
-  if (i >= 0) { Object.assign(idx[i], patch); await env.PORTAL_KV.put('leads:index', JSON.stringify(idx).slice(0, 800000)); }
+  if (i >= 0) { Object.assign(idx[i], patch); await env.PORTAL_KV.put('leads:index', JSON.stringify(idx)); }
 }
 // Exclui um lead de vez (registro + índice). Uso: tirar testes/duplicados da caixa,
 // para não confundir com quem realmente entrou em contato. É irreversível.
@@ -1222,7 +1224,7 @@ export async function excluirLead(env, id) {
   await env.PORTAL_KV.delete(`lead:${safe}`);
   const idx = await listarLeads(env);
   const novo = idx.filter((x) => x.id !== id && x.id !== safe);
-  await env.PORTAL_KV.put('leads:index', JSON.stringify(novo).slice(0, 800000));
+  await env.PORTAL_KV.put('leads:index', JSON.stringify(novo));
   return true;
 }
 // Status que NÃO são mais "novo/pendente" (não contam como lead a tratar na caixa).
@@ -1271,6 +1273,8 @@ const MATERIAIS_COM_CUSTO = [
 const MATERIAIS_ORCAMENTO = [
   ['hospitalar', 'equipamento hospitalar'], ['equipamentos?\\s+medicos?', 'equipamento médico'], ['raio-?\\s?x\\b', 'raio-X'],
 ];
+// As mesmas listas oficiais, para o catálogo de materiais das consultas do Claude.
+export const REGRAS_MATERIAIS = { recusados: MATERIAIS_RECUSADOS, comCusto: MATERIAIS_COM_CUSTO, orcamento: MATERIAIS_ORCAMENTO };
 const semAcentoMin = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 const compila = (lista) => lista.map(([re, rotulo]) => [new RegExp(re), rotulo]);
 const RE_RECUSADOS = compila(MATERIAIS_RECUSADOS), RE_COM_CUSTO = compila(MATERIAIS_COM_CUSTO), RE_ORCAMENTO = compila(MATERIAIS_ORCAMENTO);
@@ -1378,8 +1382,10 @@ export async function ingestLead(env, body) {
   if (env.PORTAL_KV) {
     await env.PORTAL_KV.put(`lead:${id}`, JSON.stringify(rec));
     const idx = await listarLeads(env);
-    idx.unshift({ id, nome: nome || empresa || email, empresa, email, documento: rec.documento, cidade: rec.cidade, status: 'novo', criadoEm: rec.criadoEm, triagem: triagem.tipo, prioridade: rec.prioridade, origem: rec.origem });
-    await env.PORTAL_KV.put('leads:index', JSON.stringify(idx).slice(0, 800000));
+    // perfil no índice (PF/PJ): as consultas por perfil não precisam abrir lead por lead.
+    const perfil = rec.perfil === 'empresa' || rec.documento.length === 14 ? 'PJ' : (rec.perfil === 'pessoa_fisica' || rec.documento.length === 11 ? 'PF' : '');
+    idx.unshift({ id, nome: nome || empresa || email, empresa, email, documento: rec.documento, cidade: rec.cidade, status: 'novo', criadoEm: rec.criadoEm, triagem: triagem.tipo, prioridade: rec.prioridade, origem: rec.origem, perfil });
+    await env.PORTAL_KV.put('leads:index', JSON.stringify(idx));
   }
   return { ok: true, id, triagem };
 }

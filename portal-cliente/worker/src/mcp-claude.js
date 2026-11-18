@@ -16,6 +16,7 @@ import { listarColetasOS } from './coletas.js';
 import { estatisticaAdocao } from './uso.js';
 import { listarFalhas } from './monitor.js';
 import { balancoVendas } from './premium.js';
+import { FERRAMENTAS_CONSULTA, NOMES_CONSULTA, executarConsulta, ErroUso } from './mcp-consultas.js';
 
 const digits = (s) => String(s || '').replace(/\D/g, '');
 const fmtCNPJ = (d) => d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
@@ -275,7 +276,54 @@ async function execFerramenta(env, nome, args) {
   if (nome === 'coletas') return await ferrColetas(env, args);
   if (nome === 'visao_geral') return await ferrVisaoGeral(env);
   if (nome === 'clientes_pj_por_ultima_coleta') return await ferrPjUltimaColeta(env, args);
+  if (NOMES_CONSULTA.has(nome)) return await executarConsulta(env, nome, args);
   throw new Error(`Ferramenta desconhecida: ${nome}`);
+}
+
+// --- Limite de uso e auditoria (pedido do Marcio, 17/11) ----------------------------
+// Limite: 60 consultas por minuto. Usa o limitador do Cloudflare quando configurado
+// (binding MCP_LIMITE); senão, um contador local do processo.
+const LIMITE_POR_MINUTO = 60;
+const janelaLocal = [];
+async function dentroDoLimite(env) {
+  const rl = env.MCP_LIMITE;
+  if (rl && typeof rl.limit === 'function') { try { const r = await rl.limit({ key: 'mcp-claude' }); return !!(r && r.success); } catch { /* usa o contador local */ } }
+  const agora = Date.now();
+  while (janelaLocal.length && agora - janelaLocal[0] >= 60000) janelaLocal.shift();
+  if (janelaLocal.length >= LIMITE_POR_MINUTO) return false;
+  janelaLocal.push(agora);
+  return true;
+}
+// Auditoria: função, filtros, quantidade de registros, tempo e data/hora — SEM dado
+// pessoal: filtro que pode identificar alguém (termo de busca, documento, nome do
+// cliente ou do motorista) é gravado como "[omitido]".
+const FILTROS_SEGUROS = new Set(['tipo', 'ultima_coleta_de', 'ultima_coleta_ate', 'nunca_coletou', 'cadastrado_de', 'cadastrado_ate', 'cidade', 'uf', 'material', 'tem_os_aberta', 'aceita_email', 'tem_email', 'origem', 'pagina', 'por_pagina', 'formato', 'campos', 'de', 'ate', 'campo_data', 'status', 'tipo_cliente', 'perfil', 'canal', 'fonte', 'limite']);
+function filtrosParaLog(args) {
+  const out = {};
+  for (const [k, v] of Object.entries(args && typeof args === 'object' ? args : {})) {
+    if (k === 'cep_prefixo') out[k] = String(v == null ? '' : v).replace(/\D/g, '').slice(0, 5);
+    else if (FILTROS_SEGUROS.has(k)) out[k] = Array.isArray(v) ? v.slice(0, 20).map((x) => String(x).slice(0, 30)) : (v && typeof v === 'object' ? '[objeto]' : String(v).slice(0, 40));
+    else out[String(k).slice(0, 30)] = '[omitido]';
+  }
+  return out;
+}
+function contarRegistros(texto) {
+  const s = String(texto || '');
+  if (s.startsWith('{')) { try { const j = JSON.parse(s); return { qtd: Array.isArray(j.itens) ? j.itens.length : null, total: Number.isFinite(j.total) ? j.total : null }; } catch { /* texto */ } }
+  return { qtd: s.split('\n').filter((l) => l.startsWith('•')).length, total: null };
+}
+let tabelaAuditoriaOk = false;
+async function registrarAuditoria(env, reg) {
+  const db = env.DB_PLOOMES; if (!db) return;
+  try {
+    if (!tabelaAuditoriaOk) { await db.prepare('CREATE TABLE IF NOT EXISTS mcp_auditoria (id INTEGER PRIMARY KEY AUTOINCREMENT, em TEXT, funcao TEXT, filtros TEXT, qtd INTEGER, total INTEGER, ms INTEGER, ok INTEGER, erro TEXT)').run(); tabelaAuditoriaOk = true; }
+    await db.prepare('INSERT INTO mcp_auditoria (em, funcao, filtros, qtd, total, ms, ok, erro) VALUES (?1,?2,?3,?4,?5,?6,?7,?8)')
+      .bind(new Date().toISOString(), String(reg.funcao || '').slice(0, 40), JSON.stringify(reg.filtros || {}).slice(0, 800), reg.qtd == null ? null : Number(reg.qtd), reg.total == null ? null : Number(reg.total), Number(reg.ms) || 0, reg.ok ? 1 : 0, String(reg.erro || '').slice(0, 20)).run();
+  } catch { /* auditoria nunca derruba a consulta */ }
+}
+export async function listarAuditoriaClaude(env, limite) {
+  if (!env.DB_PLOOMES) return [];
+  try { const r = await env.DB_PLOOMES.prepare('SELECT em, funcao, filtros, qtd, total, ms, ok, erro FROM mcp_auditoria ORDER BY id DESC LIMIT ?1').bind(Math.min(200, Math.max(1, Number(limite) || 40))).all(); return (r && r.results) || []; } catch { return []; }
 }
 
 // --- Servidor MCP (JSON-RPC 2.0 sobre POST) -------------------------------------
@@ -287,16 +335,24 @@ async function responderMsg(env, m) {
   if (String(m.method || '').startsWith('notifications/')) return null; // aceitas em silêncio
   if (m.method === 'initialize') {
     const pv = (m.params && typeof m.params.protocolVersion === 'string') ? m.params.protocolVersion : '2025-06-18';
-    return { jsonrpc: '2.0', id: m.id, result: { protocolVersion: pv, capabilities: { tools: { listChanged: false } }, serverInfo: { name: 'Base de Clientes Ecobraz', version: '1.0' } } };
+    return { jsonrpc: '2.0', id: m.id, result: { protocolVersion: pv, capabilities: { tools: { listChanged: false } }, serverInfo: { name: 'Base de Clientes Ecobraz', version: '2.0' } } };
   }
   if (m.method === 'ping') return { jsonrpc: '2.0', id: m.id, result: {} };
-  if (m.method === 'tools/list') return { jsonrpc: '2.0', id: m.id, result: { tools: FERRAMENTAS } };
+  if (m.method === 'tools/list') return { jsonrpc: '2.0', id: m.id, result: { tools: [...FERRAMENTAS, ...FERRAMENTAS_CONSULTA] } };
   if (m.method === 'tools/call') {
     const nome = m.params && m.params.name;
+    const args = (m.params && m.params.arguments) || {};
+    const t0 = Date.now();
+    if (!(await dentroDoLimite(env))) {
+      await registrarAuditoria(env, { funcao: nome, filtros: filtrosParaLog(args), ms: 0, ok: false, erro: 'limite' });
+      return { jsonrpc: '2.0', id: m.id, result: { content: [{ type: 'text', text: `Limite de ${LIMITE_POR_MINUTO} consultas por minuto atingido — aguarde um minuto e tente de novo.` }], isError: true } };
+    }
     try {
-      const texto = await execFerramenta(env, nome, (m.params && m.params.arguments) || {});
+      const texto = await execFerramenta(env, nome, args);
+      await registrarAuditoria(env, { funcao: nome, filtros: filtrosParaLog(args), ...contarRegistros(texto), ms: Date.now() - t0, ok: true });
       return { jsonrpc: '2.0', id: m.id, result: { content: [{ type: 'text', text: String(texto) }] } };
     } catch (e) {
+      await registrarAuditoria(env, { funcao: nome, filtros: filtrosParaLog(args), ms: Date.now() - t0, ok: false, erro: e instanceof ErroUso ? 'parametros' : 'interno' });
       return { jsonrpc: '2.0', id: m.id, result: { content: [{ type: 'text', text: 'Erro: ' + String((e && e.message) || e).slice(0, 200) }], isError: true } };
     }
   }
@@ -329,8 +385,16 @@ export async function atenderMcpClaude(request, env, url) {
 
 // --- Tela da Diretoria: gerar / revogar a conexão --------------------------------
 const escH = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-export function paginaConexaoClaude(diretor, cfg) {
+export function paginaConexaoClaude(diretor, cfg, auditoria) {
   const dataBRcfg = cfg && cfg.criadoEm ? `${cfg.criadoEm.slice(8, 10)}/${cfg.criadoEm.slice(5, 7)}/${cfg.criadoEm.slice(0, 4)}` : '';
+  const quandoBR = (iso) => { const t = Date.parse(iso || ''); if (isNaN(t)) return ''; const d = new Date(t - 3 * 3600e3); const p = (n) => String(n).padStart(2, '0'); return `${p(d.getUTCDate())}/${p(d.getUTCMonth() + 1)} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`; };
+  const filtrosTxt = (raw) => { try { const o = JSON.parse(raw || '{}'); return Object.entries(o).map(([k, v]) => `${k}=${Array.isArray(v) ? v.join(',') : v}`).join(' · '); } catch { return ''; } };
+  const linhasAud = (auditoria || []).map((r) => `<tr><td style="padding:6px 8px;border-top:1px solid #EEF1F0;white-space:nowrap">${escH(quandoBR(r.em))}</td><td style="padding:6px 8px;border-top:1px solid #EEF1F0;font-weight:700">${escH(r.funcao)}</td><td style="padding:6px 8px;border-top:1px solid #EEF1F0;color:#4F6469;word-break:break-word">${escH(filtrosTxt(r.filtros))}</td><td style="padding:6px 8px;border-top:1px solid #EEF1F0;text-align:right">${r.qtd == null ? '—' : escH(String(r.qtd))}${r.total != null ? ` / ${escH(String(r.total))}` : ''}</td><td style="padding:6px 8px;border-top:1px solid #EEF1F0;text-align:right;white-space:nowrap">${escH(String(r.ms || 0))} ms</td><td style="padding:6px 8px;border-top:1px solid #EEF1F0">${r.ok ? '✓' : `<span style="color:#B23A2E;font-weight:700">${escH(r.erro || 'erro')}</span>`}</td></tr>`).join('');
+  const cardAud = `<div class="card">
+    <div style="font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#00333B;margin-bottom:6px">📋 Últimas consultas do Claude (auditoria)</div>
+    <div style="font-size:12px;color:#4F6469;line-height:1.6;margin-bottom:8px">Cada chamada fica registrada: função, filtros, registros devolvidos (página / total), tempo de resposta e data/hora. Dados pessoais nos filtros (nome, documento, termo de busca) aparecem como [omitido].</div>
+    ${linhasAud ? `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><tr style="color:#7c8a87;text-align:left"><th style="padding:4px 8px">Quando</th><th style="padding:4px 8px">Função</th><th style="padding:4px 8px">Filtros</th><th style="padding:4px 8px;text-align:right">Registros</th><th style="padding:4px 8px;text-align:right">Tempo</th><th style="padding:4px 8px">OK</th></tr>${linhasAud}</table></div>` : '<div style="font-size:12.5px;color:#8fa39f">Nenhuma consulta registrada ainda.</div>'}
+  </div>`;
   const estado = cfg
     ? `<div style="background:#E4F3E6;border:1px solid #bfe3c6;border-radius:12px;padding:14px 16px;font-size:13px;color:#1E5B31"><b>🟢 Conexão ATIVA</b> — criada em ${escH(dataBRcfg)}${cfg.por ? ` por ${escH(cfg.por)}` : ''}.<br><span style="color:#4F6469">A chave não fica guardada aqui (só a impressão digital dela). Se você perdeu a URL, gere uma nova — a antiga morre na hora.</span></div>`
     : `<div style="background:#FFF4DE;border:1px solid #f0dca6;border-radius:12px;padding:14px 16px;font-size:13px;color:#8A6A16"><b>⚪ Conexão desligada.</b> Gere a chave para conectar o Claude à base.</div>`;
@@ -342,7 +406,7 @@ export function paginaConexaoClaude(diretor, cfg) {
 <body><div style="background:#00333B;padding:15px 20px"><div style="max-width:720px;margin:0 auto"><a href="/diretoria" style="text-decoration:none"><span style="color:#fff;font-size:16px;font-weight:800">ecobraz</span><span style="color:#92C430;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin-left:8px">conexão com o claude</span></a></div></div>
 <div class="wrap">
   <h1 style="font-size:20px;margin:14px 0 6px">🔌 Base de clientes no Claude</h1>
-  <p style="font-size:13px;color:#4F6469;line-height:1.65;margin:0 0 14px">Conecta o claude.ai à nossa base — <b>só leitura</b> (buscar clientes, ficha, coletas e números gerais). Nada pode ser alterado por essa conexão, e o CPF de pessoa física sai mascarado.</p>
+  <p style="font-size:13px;color:#4F6469;line-height:1.65;margin:0 0 14px">Conecta o claude.ai à nossa base — <b>só leitura</b>: buscar clientes, ficha, coletas, números gerais e, em lote com filtros, clientes, coletas por período, leads, métricas por dia, agenda/capacidade, bloqueios de contato e catálogo de materiais. Nada pode ser alterado por essa conexão, o CPF sai mascarado e há limite de 60 consultas por minuto.</p>
   ${estado}
   <div class="card">
     <div style="display:flex;gap:10px;flex-wrap:wrap">
@@ -366,7 +430,9 @@ export function paginaConexaoClaude(diretor, cfg) {
       <li>Pronto: peça, por exemplo, <i>"busque o cliente ROLDÃO na base da Ecobraz e me diga as últimas coletas dele"</i>.</li>
     </ol>
     <div style="font-size:11.5px;color:#9aa7a4;margin-top:10px">Se algo vazar ou parecer estranho, volte aqui e toque em <b>Desligar a conexão</b> (ou gere chave nova) — a URL antiga para de funcionar na hora.</div>
+    <div style="font-size:11.5px;color:#9aa7a4;margin-top:6px">O Claude guarda a lista de funções do conector: quando o sistema ganha uma função nova, ela só aparece lá depois de <b>remover e adicionar de novo</b> o conector Base Ecobraz (com a mesma URL, ou com uma chave nova gerada aqui).</div>
   </div>
+  ${cardAud}
 </div>
 <script>
 var bG=document.getElementById('bGerar'),bR=document.getElementById('bRev'),m=document.getElementById('m');

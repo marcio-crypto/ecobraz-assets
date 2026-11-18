@@ -1,0 +1,1138 @@
+// CONSULTAS EM LOTE DA BASE — conector "Base Ecobraz" do Claude (pedido do Marcio,
+// 17/11): leitura direta, com filtros e paginação, de clientes, coletas, leads e dados
+// operacionais — listas de campanha separando PF e PJ, reativação da base,
+// acompanhamento de coletas por dia e planejamento da capacidade de retirada.
+//
+// Regras desta camada (todas obrigatórias):
+//   1. SÓ LEITURA: nenhuma função grava nada (nem cache).
+//   2. Saída JSON { total, pagina, paginas, por_pagina, itens, filtros, avisos };
+//      formato "texto" opcional, para compatibilidade.
+//   3. Até 200 por página. Datas AAAA-MM-DD no fuso de São Paulo (UTC-3, sem verão).
+//   4. LGPD: CPF NUNCA sai completo (***.456.789-**) — nem dentro de textos livres; RG
+//      digitado em texto livre é omitido; nada de dado bancário, senha ou token; de
+//      pessoa física (e de qualquer cliente) só cidade, UF, CEP e bairro, sem rua/número.
+//   5. Descadastro: todo cliente traz aceita_email e motivo_bloqueio.
+//   6. Cada informação que não existe no banco sai vazia e é dita em "avisos" — nunca
+//      inventada. Estimativas vêm marcadas como estimativas.
+
+import { listarColetasOS, materialIndiceOS } from './coletas.js';
+import { lerChavesKV } from './kv-lote.js';
+import { MATERIAIS as TRIAGEM_DOCA } from './operacional.js';
+import { REGRAS_MATERIAIS, estimarPesoKg } from './cadastro.js';
+
+export class ErroUso extends Error {}
+
+// --- Utilidades ---------------------------------------------------------------------
+const digits = (s) => String(s == null ? '' : s).replace(/\D/g, '');
+const limpar = (s) => String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
+const normTxt = (s) => String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim();
+const fmtCNPJ = (d) => (d.length === 14 ? d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5') : d);
+const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+const MS_H = 3600e3;
+const ROTULO_STATUS = { agendada: 'Agendada', em_transporte: 'Em transporte', na_unidade: 'Na unidade', concluida: 'Concluída', cancelada: 'Cancelada' };
+const rotuloStatus = (o) => (o.status === 'agendada' && !o.dataAgendada ? 'Aguardando roteiro' : (ROTULO_STATUS[o.status] || o.status || ''));
+const ABERTAS = new Set(['agendada', 'em_transporte', 'na_unidade']);
+
+// Dia (AAAA-MM-DD) em São Paulo. Data/hora com fuso (Z ou ±HH:MM) é convertida; data
+// sem fuso já está no horário local e só perde a hora.
+export function diaBR(v) {
+  const s = String(v == null ? '' : v).trim();
+  const m = s.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (!m) return '';
+  if (!/T.*(Z|[+-]\d{2}:?\d{2})$/i.test(s)) return m[1];
+  const t = Date.parse(s);
+  return isNaN(t) ? m[1] : new Date(t - 3 * MS_H).toISOString().slice(0, 10);
+}
+const hojeBR = () => new Date(Date.now() - 3 * MS_H).toISOString().slice(0, 10);
+const somaDias = (dia, n) => new Date(Date.parse(dia + 'T12:00:00Z') + n * 86400e3).toISOString().slice(0, 10);
+// Parâmetro de data: AAAA-MM-DD, ou AAAA-MM (início/fim do mês). '' quando inválido.
+function dataParam(v, fim) {
+  const s = String(v == null ? '' : v).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) { const t = Date.parse(s + 'T12:00:00Z'); return !isNaN(t) && new Date(t).toISOString().slice(0, 10) === s ? s : ''; }
+  if (/^\d{4}-\d{2}$/.test(s)) { const [a, m] = s.split('-').map(Number); if (m < 1 || m > 12) return ''; return fim ? new Date(Date.UTC(a, m, 0)).toISOString().slice(0, 10) : s + '-01'; }
+  return '';
+}
+function periodoObrigatorio(a, maxDias) {
+  const de = dataParam(a.de, false), ate = dataParam(a.ate, true);
+  if (!de || !ate) throw new ErroUso('Informe "de" e "ate" no formato AAAA-MM-DD (ou AAAA-MM para o mês inteiro).');
+  if (de > ate) throw new ErroUso('"de" precisa ser anterior ou igual a "ate".');
+  if (maxDias && (Date.parse(ate) - Date.parse(de)) / 86400e3 + 1 > maxDias) throw new ErroUso(`Período máximo desta função: ${maxDias} dias. Divida a consulta.`);
+  return { de, ate };
+}
+const sim = (v) => v === true || /^(true|sim|s|yes|1)$/i.test(String(v == null ? '' : v).trim());
+const nao = (v) => v === false || /^(false|nao|não|n|no|0)$/i.test(String(v == null ? '' : v).trim());
+const simNaoNulo = (v) => (v == null || String(v).trim() === '' ? null : (sim(v) ? true : (nao(v) ? false : null)));
+function paginacao(a, padrao) {
+  const pagina = Math.max(1, Math.floor(Number(a.pagina) || 1));
+  const porPagina = Math.min(200, Math.max(1, Math.floor(Number(a.por_pagina) || padrao || 50)));
+  return { pagina, porPagina };
+}
+
+// --- LGPD ---------------------------------------------------------------------------
+export function mascararCPF(v) { const d = digits(v); return d.length === 11 ? `***.${d.slice(3, 6)}.${d.slice(6, 9)}-**` : ''; }
+function cpfValido(d) {
+  if (!/^\d{11}$/.test(d) || /^(\d)\1{10}$/.test(d)) return false;
+  let s = 0; for (let i = 0; i < 9; i++) s += Number(d[i]) * (10 - i);
+  let r = (s * 10) % 11; if (r === 10) r = 0; if (r !== Number(d[9])) return false;
+  s = 0; for (let i = 0; i < 10; i++) s += Number(d[i]) * (11 - i);
+  r = (s * 10) % 11; if (r === 10) r = 0; return r === Number(d[10]);
+}
+// Texto livre: CPF formatado vira máscara; CPF escrito de outro jeito (só números,
+// "123456789-09", com espaços ou barra) também, quando passa no dígito verificador
+// (pode pegar 1 telefone digitado sem pontuação em 100 — melhor esconder a mais);
+// RG no formato 00.000.000-0 some.
+const RE_CPF_LIVRE = /(?<![\d./-])\d{3}[.\s]?\d{3}[.\s]?\d{3}[-.\s/]?\d{2}(?!\d)/g;
+export function limparTextoLivre(s) {
+  return String(s == null ? '' : s)
+    .replace(/(?<!\d)\d{3}\.\d{3}\.\d{3}-\d{2}(?!\d)/g, (m) => mascararCPF(m))
+    .replace(RE_CPF_LIVRE, (m) => (cpfValido(digits(m)) ? mascararCPF(m) : m))
+    .replace(/(?<![\d.])\d{1,2}\.\d{3}\.\d{3}-[\dxX](?![\dxX])/g, '[RG omitido]');
+}
+// Mensagem de lead: tira as linhas estruturadas de endereço e documento que o portal
+// escreve ("Endereço de coleta: …", "(CEP … · rua, nº …)", "CNPJ/CPF: …") e qualquer
+// "Rua/Av./Alameda… nº" digitado pela pessoa — rua e número não saem (LGPD). Pega a
+// palavra do logradouro, até 6 palavras do nome (aceita "25 de Março") e o número
+// ("123", ", 455", "nº 1500"); na dúvida, esconde a mais.
+const RE_LOGRADOURO = /\b(?:rua|r\.|avenida|av\.?|alameda|al\.|travessa|tv\.|estrada|rodovia|rod\.|pra[cç]a|largo|viela|servid[aã]o)[ \t]+(?:\d{1,4}\b[ \t]*)?(?:[^\s\d,;:()]+[ \t]*){0,6}(?:,?[ \t]*(?:(?:n[º°o.]?|n[uú]mero)[ \t]*)?\d{1,5}[a-z]?\b)?/gi;
+export function limparMensagemLead(texto) {
+  return String(texto == null ? '' : texto).split(/\r?\n/)
+    .filter((l) => !/^\s*(endere[cç]o de coleta:|\(cep\b|cnpj\/cpf:)/i.test(l))
+    .join('\n').replace(RE_LOGRADOURO, '[endereço omitido]');
+}
+// Última barreira antes de sair: todo texto passa pela limpeza, menos os campos que
+// SÃO telefone (um celular de 11 dígitos não pode virar máscara de CPF por acaso).
+const CAMPOS_FONE = new Set(['celulares', 'telefones', 'celular', 'telefone']);
+function sanitizar(v, chave) {
+  if (typeof v === 'string') return CAMPOS_FONE.has(chave) ? v : limparTextoLivre(v);
+  if (Array.isArray(v)) return v.map((x) => sanitizar(x, chave));
+  if (v && typeof v === 'object') { const o = {}; for (const [k, x] of Object.entries(v)) o[k] = sanitizar(x, k); return o; }
+  return v;
+}
+
+// --- Contatos: e-mails e telefones ---------------------------------------------------
+export function separarEmails(...valores) {
+  const out = [];
+  for (const v of valores.flat()) for (const m of String(v == null ? '' : v).toLowerCase().matchAll(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/g)) if (!out.includes(m[0])) out.push(m[0]);
+  return out;
+}
+const fmtFone = (d) => (d.length === 11 ? `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}` : `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`);
+// Dígitos nacionais (DDD + número) de cada telefone de um texto livre.
+function fonesNacionais(v) {
+  const out = [];
+  for (const parte of String(v == null ? '' : v).split(/\s*(?:\/|;|,|\||\be\b|\bou\b)\s*/i)) {
+    let d = digits(parte);
+    if (d.startsWith('55') && (d.length === 12 || d.length === 13)) d = d.slice(2);
+    if (d.startsWith('0') && (d.length === 11 || d.length === 12)) d = d.slice(1);
+    // 11 dígitos sem o 9 de celular não é telefone no Brasil; se passa no dígito
+    // verificador do CPF, é CPF digitado no campo errado — não sai.
+    if (d.length === 11 && d[2] !== '9' && cpfValido(d)) continue;
+    if (d.length === 10 || d.length === 11) out.push(d);
+  }
+  return out;
+}
+export function separarFones(...valores) {
+  const cel = [], fix = [];
+  for (const v of valores.flat()) for (const d of fonesNacionais(v)) {
+    if (d.length === 11 && d[2] === '9') { if (!cel.includes(d)) cel.push(d); } else if (!fix.includes(d)) fix.push(d);
+  }
+  return { celulares: cel.map(fmtFone), telefones: fix.map(fmtFone) };
+}
+// Telefones de um cliente sem nenhum número igual a um CPF dele (CPF digitado no campo
+// de telefone sairia "disfarçado" de celular).
+function fonesSemDocs(docs, ...valores) {
+  const r = separarFones(...valores);
+  const bloq = new Set((docs || []).map(digits).filter((d) => d.length === 11));
+  const fica = (f) => !bloq.has(digits(f));
+  return { celulares: r.celulares.filter(fica), telefones: r.telefones.filter(fica) };
+}
+
+// --- Endereço ---------------------------------------------------------------------
+const cepDe = (v) => { const m = String(v == null ? '' : v).match(/(?<!\d)(\d{5})-?(\d{3})(?!\d)/); return m ? m[1] + m[2] : ''; };
+const fmtCep = (d) => (d.length === 8 ? `${d.slice(0, 5)}-${d.slice(5)}` : '');
+// Placa do veículo da OS: a da transportadora (coleta terceirizada) ou a do motorista —
+// mesma regra do índice de OS.
+const placaDoRegistro = (rec) => String((rec && rec.transportadora && rec.transportadora.placa) || (rec && rec.veiculoPlaca) || '').trim().toUpperCase();
+// Endereço de uma linha do D1: JSON (cadastro do sistema novo) ou texto do Ploomes.
+function enderecoDaLinha(row) {
+  const t = String((row && row.endereco) || '').trim();
+  if (t.startsWith('{')) { try { const o = JSON.parse(t); return { cep: digits(o.cep).slice(0, 8), bairro: limpar(o.bairro), cidade: limpar(o.cidade || row.cidade), uf: limpar(o.uf || row.uf).toUpperCase() }; } catch { /* texto */ } }
+  return { cep: digits(row && row.pl_cep).slice(0, 8) || cepDe(t), bairro: limpar(row && row.pl_bairro), cidade: limpar(row && row.cidade), uf: limpar(row && row.uf).toUpperCase() };
+}
+const PRACA_DA_SE = { lat: -23.5505, lon: -46.6339 };
+function distanciaSeKm(lat, lon) {
+  const rad = Math.PI / 180, R = 6371;
+  const dLat = (lat - PRACA_DA_SE.lat) * rad, dLon = (lon - PRACA_DA_SE.lon) * rad;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(PRACA_DA_SE.lat * rad) * Math.cos(lat * rad) * Math.sin(dLon / 2) ** 2;
+  return Math.round(2 * R * Math.asin(Math.sqrt(a)) * 10) / 10;
+}
+
+// --- SQL ------------------------------------------------------------------------------
+const DOC_SQL = (col) => `REPLACE(REPLACE(REPLACE(REPLACE(COALESCE(${col},''),'.',''),'/',''),'-',''),' ','')`;
+const ACENTOS = 'áaàaâaãaäaÁaÀaÂaÃaÄaéeèeêeëeÉeÈeÊeËeíiìiîiïiÍiÌiÎiÏióoòoôoõoöoÓoÒoÔoÕoÖoúuùuûuüuÚuÙuÛuÜuçcÇcñnÑn';
+function sqlSemAcento(col) { let s = `COALESCE(${col},'')`; for (let i = 0; i < ACENTOS.length; i += 2) s = `REPLACE(${s},'${ACENTOS[i]}','${ACENTOS[i + 1]}')`; return `TRIM(LOWER(${s}))`; }
+const SQL_DIA_BR = (col) => `(CASE WHEN ${col} GLOB '????-??-??T*Z' OR ${col} GLOB '????-??-??T*[+-][0-9][0-9]:[0-9][0-9]' THEN date(${col}, '-3 hours') ELSE substr(${col},1,10) END)`;
+const COND_TIPO = {
+  PJ: "c.tipo='PJ'",
+  PF: "c.tipo='PF' AND COALESCE(c.company_id,0)=0",
+  todos: "(c.tipo='PJ' OR (c.tipo='PF' AND COALESCE(c.company_id,0)=0))",
+};
+// Executa a mesma consulta em fatias (listas grandes no json_each) e junta as linhas.
+async function consultaEmFatias(db, montarSQL, lista, bindsExtras, fatia) {
+  const out = [];
+  const tam = fatia || 2500;
+  for (let i = 0; i < Math.max(1, lista.length); i += tam) {
+    const parte = lista.slice(i, i + tam);
+    if (!parte.length && lista.length) break;
+    const r = await db.prepare(montarSQL()).bind(JSON.stringify(parte), ...(bindsExtras || [])).all();
+    out.push(...((r && r.results) || []));
+  }
+  return out;
+}
+const chaveCliente = (doc, pid) => { const d = digits(doc); return d.length === 11 || d.length === 14 ? d : 'p' + pid; };
+// Tipo pelo documento (CNPJ = PJ, CPF = PF); sem documento, o tipo do cadastro.
+const tipoDaChave = (k, t) => (k.startsWith('p') ? (t === 'PJ' ? 'PJ' : 'PF') : (k.length === 14 ? 'PJ' : 'PF'));
+// Id público do cliente: PJ com CNPJ → "PJ-<cnpj>"; os demais pelo registro da base →
+// "PF-B<id>" / "PJ-B<id>". Nunca pelo CPF (que não pode sair inteiro).
+function idCliente(k, tipo, pids) {
+  if (k.length === 14 && !k.startsWith('p')) return `PJ-${k}`;
+  const base = k.startsWith('p') ? Number(k.slice(1)) : Math.min(...(pids || []).map(Number).filter((n) => n > 0));
+  return Number.isFinite(base) && base > 0 ? `${tipo === 'PJ' ? 'PJ' : 'PF'}-B${base}` : null;
+}
+
+// --- Materiais: sinônimos e categorias -------------------------------------------------
+const SINONIMOS = [
+  ['geladeira', 'refrigerador'], ['freezer', 'congelador'], ['maquina de lavar', 'lavadora', 'lava roupa', 'lava-roupa'],
+  ['micro-ondas', 'microondas', 'micro ondas'], ['televisao', 'televisor', 'tv'], ['notebook', 'laptop'],
+  ['computador', 'desktop', 'cpu', 'gabinete'], ['celular', 'smartphone'], ['nobreak', 'no-break', 'no break'], ['ar condicionado', 'ar-condicionado'],
+];
+function termosMaterial(v) {
+  const t = normTxt(v); if (!t) return [];
+  const grupo = SINONIMOS.find((g) => g.includes(t));
+  return grupo ? grupo : [t];
+}
+const casaTermo = (texto, termos) => termos.some((t) => (t.length <= 3 ? new RegExp(`\\b${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}s?\\b`).test(texto) : texto.includes(t)));
+const CATEGORIAS = [
+  ['linha_branca', 'Linha branca', /geladeira|refrigerador|freezer|congelador|frigobar|maquina de lavar|lavadora|lava.?roupa|secadora|lava.?loucas?|fogao|cooktop|forno|micro.?ondas|ar.?condicionado|bebedouro|purificador|adega/],
+  ['informatica', 'Informática', /computador|desktop|gabinete|\bcpus?\b|notebook|laptop|monitor|impressora|multifuncional|servidor|teclado|mouse|\bhds?\b|\bssds?\b|memoria|placa|\bpci\b|roteador|switch|modem|scanner|projetor|tablet|componente|informatica/],
+  ['telefonia', 'Telefonia', /celular|smartphone|telefone|central telefonica|\bpabx\b|radio/],
+  ['baterias_energia', 'Baterias e energia', /bateria|pilha|nobreak|no-break|estabilizador|\bups\b|\bfontes?\b/],
+  ['cabos', 'Cabos e fios', /\bcabos?\b|\bfios?\b|fiacao|extensao/],
+  ['linha_marrom', 'Linha marrom (TV e áudio)', /\btvs?\b|televis|caixa de som|\bsom\b|home theater|\bdvd|video.?game|decodificador|receptor/],
+  ['iluminacao', 'Iluminação', /lampada|luminaria|reator/],
+  ['cartuchos_toners', 'Cartuchos e toners', /cartucho|toner|tonner/],
+  ['metais', 'Metais e sucata', /metal|sucata|\baco\b|aluminio|cobre|ferro/],
+  ['plastico', 'Plástico', /plastico/],
+];
+export function categoriaMaterial(nome) {
+  const t = normTxt(nome);
+  for (const [cod, rotulo, re] of CATEGORIAS) if (re.test(t)) return { codigo: cod, nome: rotulo };
+  return { codigo: 'outros', nome: 'Outros' };
+}
+// "quantidade | material | 2 geladeira; 1 monitor" → nomes dos itens (ou o material).
+function partesMat(mat) {
+  const s = String(mat || ''); if (!s) return { quantidade: '', material: '', itens: [] };
+  const [q = '', m = '', i = ''] = s.split(' | ');
+  const itens = i ? i.split('; ').map((x) => { const mm = x.match(/^(\d+(?:[.,]\d+)?)\s+(.*)$/); return mm ? { qtd: mm[1], nome: mm[2].trim() } : { qtd: '1', nome: x.trim() }; }).filter((x) => x.nome) : [];
+  return { quantidade: q.trim(), material: m.trim(), itens };
+}
+const nomesMateriais = (mat) => { const p = partesMat(mat); return p.itens.length ? p.itens.map((x) => x.nome) : (p.material ? [p.material.slice(0, 80)] : []); };
+// A OS tem o material procurado? Texto da OS (quantidade, material e itens) ou categoria
+// pesada na doca. OS cancelada não conta (não houve coleta).
+const osTemMaterial = (o, termos, mats, pesos) => o.status !== 'cancelada' && (casaTermo(mats.get(o.id) || '', termos) || ((pesos.get(o.id) || {}).cats || []).some((c) => casaTermo(normTxt(c.categoria), termos)));
+
+// --- Contexto de uma chamada (memoriza leituras; nada é gravado) ------------------------
+function novoContexto(env) {
+  const memo = new Map();
+  const uma = (k, fn) => { if (!memo.has(k)) memo.set(k, fn()); return memo.get(k); };
+  const kvJSON = async (chave, padrao) => { try { const raw = env.PORTAL_KV ? await env.PORTAL_KV.get(chave) : null; const v = raw ? JSON.parse(raw) : padrao; return v == null ? padrao : v; } catch { return padrao; } };
+  const ctx = {
+    env, db: env.DB_PLOOMES || null, avisos: [],
+    // Teto de operações de KV desta chamada (a plataforma corta em 1.000 por invocação;
+    // com leitura em lote o uso real fica em dezenas). Se acabar, a resposta sai com aviso.
+    orcamento: { restante: 850 },
+    aviso(t) { if (!ctx.avisos.includes(t)) ctx.avisos.push(t); },
+    oss: () => uma('oss', async () => { try { const l = await listarColetasOS(env); return Array.isArray(l) ? l.filter((o) => o && o.id) : []; } catch { ctx.aviso('Índice de Ordens de Coleta indisponível agora.'); return []; } }),
+    opIndex: () => uma('op', async () => { const l = await kvJSON('op:index', []); return Array.isArray(l) ? l : []; }),
+    leads: () => uma('leads', async () => { const l = await kvJSON('leads:index', []); return Array.isArray(l) ? l.filter((x) => x && x.id && x.status !== 'excluido') : []; }),
+    cliIdx: () => uma('cli', async () => { const l = await kvJSON('cli:index', []); return Array.isArray(l) ? l : []; }),
+    lerVarios: (chaves) => lerChavesKV(env.PORTAL_KV, chaves, { orcamento: ctx.orcamento }),
+  };
+  // Ficha (KV) por documento: mesmo critério do "Editar" — a 1ª do índice com aquele doc.
+  ctx.fichaIdPorDoc = () => uma('fichaDoc', async () => { const m = new Map(); for (const c of await ctx.cliIdx()) { const d = digits(c && c.doc); if ((d.length === 11 || d.length === 14) && !m.has(d)) m.set(d, c.id); } return m; });
+  ctx.docPorFicha = () => uma('docFicha', async () => { const m = new Map(); for (const c of await ctx.cliIdx()) { const d = digits(c && c.doc); if (c && c.id && (d.length === 11 || d.length === 14)) m.set(c.id, d); } return m; });
+  // Documento do cliente de uma OS (o da OS; se faltar, o da ficha ligada a ela).
+  ctx.docDaOS = async (o) => { const d = digits(o && o.clienteDoc); if (d.length === 11 || d.length === 14) return d; return (o && o.clienteId && (await ctx.docPorFicha()).get(o.clienteId)) || ''; };
+  // Peso e categorias pesadas por OS: doca (op:index, 300 mais recentes) + cargas (D1).
+  ctx.pesos = () => uma('pesos', async () => {
+    const porOS = new Map();
+    for (const o of await ctx.opIndex()) {
+      const id = String((o && o.osId) || ''); if (!id) continue;
+      porOS.set(id, { kg: Number(o.entradaKg) || 0, rateado: false, etapa: o.etapa || '', recebidoEm: o.criadoEm || '', cats: [] });
+    }
+    if (ctx.db) {
+      try {
+        const cg = ((await ctx.db.prepare("SELECT id, peso_liquido, os_json FROM op_cargas WHERE COALESCE(status,'') <> 'cancelada'").all()) || {}).results || [];
+        let lt = []; try { lt = ((await ctx.db.prepare('SELECT carga_id, categoria, SUM(peso) AS kg FROM op_lotes GROUP BY carga_id, categoria').all()) || {}).results || []; } catch { lt = []; }
+        const cats = new Map(); for (const l of lt) { const a = cats.get(l.carga_id) || []; a.push({ categoria: limpar(l.categoria), kg: Number(l.kg) || 0 }); cats.set(l.carga_id, a); }
+        for (const c of cg) {
+          let lista = []; try { lista = JSON.parse(c.os_json || '[]'); } catch { lista = []; }
+          const n = lista.length || 1;
+          for (const o of lista) {
+            const id = String((o && o.id) || ''); if (!id) continue;
+            const cur = porOS.get(id) || { kg: 0, rateado: false, etapa: '', recebidoEm: '', cats: [] };
+            if (!(cur.kg > 0) && Number(c.peso_liquido) > 0) cur.kg = r2(Number(c.peso_liquido) / n);
+            if (n > 1) cur.rateado = true;
+            cur.cats = (cats.get(c.id) || []).map((x) => ({ categoria: x.categoria, kg: r2(x.kg / n) }));
+            porOS.set(id, cur);
+          }
+        }
+      } catch { /* sem cargas registradas */ }
+    }
+    return porOS;
+  });
+  // Materiais (texto normalizado) de cada OS: do índice; OS antigas ainda sem o campo
+  // são lidas direto (até um teto) — o agendamento diário completa o índice.
+  // A placa das OS antigas sai da mesma leitura (o índice só a tem depois de completado).
+  ctx.placasLidas = new Map();
+  ctx.mats = () => uma('mats', async () => {
+    const oss = await ctx.oss();
+    const mapa = new Map();
+    const falta = [];
+    for (const o of oss) { if (o.mat !== undefined) mapa.set(o.id, String(o.mat || '')); else falta.push(o.id); }
+    if (falta.length) {
+      const TETO = 600;
+      const ler = falta.slice(0, TETO);
+      const regs = await ctx.lerVarios(ler.map((id) => `os:${id}`));
+      let semLeitura = falta.length - ler.length;
+      for (const id of ler) {
+        if (!regs.has(`os:${id}`)) { semLeitura++; continue; }
+        try { const raw = regs.get(`os:${id}`); const rec = raw ? JSON.parse(raw) : null; mapa.set(id, rec ? materialIndiceOS(rec) : ''); const pl = placaDoRegistro(rec); if (pl) ctx.placasLidas.set(id, pl); } catch { mapa.set(id, ''); }
+      }
+      if (semLeitura > 0) ctx.aviso(`Materiais: ${semLeitura} OS antigas ainda não estão no índice (o agendamento diário completa) — buscas por material podem sair incompletas até lá.`);
+    }
+    return mapa;
+  });
+  ctx.placa = (o) => String(o.placa || ctx.placasLidas.get(o.id) || '');
+  // Bloqueios de contato conhecidos pelo sistema: opt-out do WhatsApp (inclui quem
+  // respondeu SAIR) e empresas retiradas das campanhas pela diretoria.
+  ctx.bloqueios = () => uma('bloq', async () => {
+    const porFone = new Map(), porDoc = new Map();
+    if (ctx.db) {
+      try {
+        const r = await ctx.db.prepare('SELECT tel, motivo, em FROM wa_optout ORDER BY em DESC LIMIT 5000').all();
+        for (const x of (r && r.results) || []) { let t = digits(x.tel); if (t.startsWith('55') && t.length >= 12) t = t.slice(2); if (t && !porFone.has(t)) porFone.set(t, x); }
+      } catch { /* sem campanhas ainda */ }
+      try {
+        const r = await ctx.db.prepare('SELECT doc, nome, em FROM wa_excluidos ORDER BY em DESC LIMIT 5000').all();
+        for (const x of (r && r.results) || []) { const d = digits(x.doc); if (d && !porDoc.has(d)) porDoc.set(d, x); }
+      } catch { /* sem exclusões */ }
+    }
+    return { porFone, porDoc };
+  });
+  // Estatística de coletas por cliente (chave = CNPJ/CPF, ou p+id sem documento), com a
+  // MESMA regra de clientes_pj_por_ultima_coleta: negócios ganhos do Ploomes (data de
+  // abertura) + OS concluídas do sistema novo (data agendada; sem ela, a de criação).
+  ctx.stats = () => uma('stats', async () => {
+    const st = new Map();
+    const junta = (k, pri, ult, n, origemUlt) => {
+      if (!k || !/^\d{4}-\d{2}-\d{2}$/.test(pri) || !/^\d{4}-\d{2}-\d{2}$/.test(ult)) return;
+      const s = st.get(k) || { pri, ult, n: 0, nOS: 0, origemUlt };
+      s.n += n; if (pri < s.pri) s.pri = pri; if (ult > s.ult) { s.ult = ult; s.origemUlt = origemUlt; }
+      st.set(k, s);
+    };
+    if (ctx.db) {
+      try {
+        const r = await ctx.db.prepare(
+          `SELECT d, pid, MIN(cri) AS pri, MAX(cri) AS ult, COUNT(*) AS n FROM (
+             SELECT REPLACE(REPLACE(REPLACE(COALESCE(e.documento,''),'.',''),'/',''),'-','') AS d, e.ploomes_id AS pid, substr(g.criado_em,1,10) AS cri
+               FROM negocios g
+               JOIN contatos c ON c.ploomes_id = g.contact_id
+               JOIN contatos e ON e.ploomes_id = COALESCE(NULLIF(c.company_id, 0), c.ploomes_id)
+              WHERE g.status_id = 2) GROUP BY d, pid`
+        ).all();
+        for (const x of (r && r.results) || []) junta(chaveCliente(x.d, x.pid), String(x.pri || ''), String(x.ult || ''), Number(x.n) || 0, 'histórico Ploomes');
+      } catch { ctx.aviso('Histórico do Ploomes indisponível agora — datas de coleta só do sistema novo.'); }
+    }
+    for (const o of await ctx.oss()) {
+      if (o.status !== 'concluida') continue;
+      const d = digits(o.clienteDoc); if (d.length !== 11 && d.length !== 14) continue;
+      const dia = String(o.dataAgendada || o.criadoEm || '').slice(0, 10);
+      junta(d, dia, dia, 1, o.numero || 'OS');
+      const s = st.get(d); if (s) s.nOS++;
+    }
+    return st;
+  });
+  return ctx;
+}
+
+// Data em que a OS foi concluída/cancelada. Registro exato desde 18/11/2026; antes
+// disso a conclusão vem do app do motorista (quando ainda guardado) ou é ESTIMADA pela
+// data agendada; o cancelamento antigo é estimado pela última atualização da OS.
+function dataConclusao(o, pesos) {
+  if (o.status !== 'concluida') return { dia: '', estimada: false };
+  if (o.concluidaEm) return { dia: diaBR(o.concluidaEm), estimada: false };
+  const p = pesos && pesos.get(o.id);
+  return { dia: o.dataAgendada || diaBR(p && p.recebidoEm) || diaBR(o.criadoEm), estimada: true };
+}
+
+// Vínculo PROVÁVEL pedido (lead) → OS: a 1ª OS do mesmo cliente (documento ou e-mail)
+// criada em até 30 dias depois do lead. A OS não guarda de qual pedido nasceu; por
+// isso é "provável" e vem marcado assim.
+async function vinculosLeadOS(ctx) {
+  const oss = await ctx.oss();
+  const leads = (await ctx.leads()).filter((l) => l.criadoEm);
+  const docs = [...new Set((await Promise.all(oss.map((o) => ctx.docDaOS(o)))).filter(Boolean))];
+  const emailsPorDoc = new Map();
+  if (ctx.db && docs.length) {
+    try {
+      const rows = await consultaEmFatias(ctx.db, () => `SELECT ${DOC_SQL('c.documento')} AS d, c.ploomes_id AS i, c.email AS m FROM contatos c WHERE ${DOC_SQL('c.documento')} IN (SELECT value FROM json_each(?1))`, docs);
+      const pidDoc = new Map();
+      for (const r of rows) { const d = digits(r.d); pidDoc.set(r.i, d); const s = emailsPorDoc.get(d) || new Set(); for (const e of separarEmails(r.m)) s.add(e); emailsPorDoc.set(d, s); }
+      const pids = [...pidDoc.keys()];
+      if (pids.length) {
+        const ps = await consultaEmFatias(ctx.db, () => "SELECT p.company_id AS c, p.email AS m FROM contatos p WHERE p.tipo='PF' AND p.company_id IN (SELECT value FROM json_each(?1)) AND COALESCE(p.email,'') LIKE '%@%'", pids);
+        for (const p of ps) { const d = pidDoc.get(p.c); if (!d) continue; const s = emailsPorDoc.get(d) || new Set(); for (const e of separarEmails(p.m)) s.add(e); emailsPorDoc.set(d, s); }
+      }
+    } catch { /* sem e-mails: vincula só por documento */ }
+  }
+  // OS de cada cliente em ordem de criação; e-mail → clientes (para achar rápido).
+  const ossPorDoc = new Map();
+  for (const o of oss) {
+    const t = Date.parse(o.criadoEm); if (isNaN(t)) continue;
+    const d = await ctx.docDaOS(o); if (!d) continue;
+    const l = ossPorDoc.get(d) || []; l.push({ o, t }); ossPorDoc.set(d, l);
+  }
+  for (const l of ossPorDoc.values()) l.sort((x, y) => x.t - y.t);
+  const docsPorEmail = new Map();
+  for (const [d, emails] of emailsPorDoc) for (const e of emails) { const s = docsPorEmail.get(e) || new Set(); s.add(d); docsPorEmail.set(e, s); }
+  const osPorLead = new Map(), leadPorOS = new Map();
+  for (const l of [...leads].sort((x, y) => String(x.criadoEm).localeCompare(String(y.criadoEm)))) {
+    const t = Date.parse(l.criadoEm); if (isNaN(t)) continue;
+    const ld = digits(l.documento), le = String(l.email || '').trim().toLowerCase();
+    const docsCand = new Set([...(ld ? [ld] : []), ...(le && docsPorEmail.has(le) ? docsPorEmail.get(le) : [])]);
+    let melhor = null;
+    for (const d of docsCand) for (const { o, t: to } of ossPorDoc.get(d) || []) {
+      if (to < t) continue; if (to > t + 30 * 86400e3) break;
+      if (leadPorOS.has(o.id)) continue;
+      if (!melhor || to < melhor.t) melhor = { o, t: to };
+      break;
+    }
+    if (melhor) { osPorLead.set(l.id, melhor.o); leadPorOS.set(melhor.o.id, l); }
+  }
+  return { osPorLead, leadPorOS };
+}
+const gclidDe = (url) => { try { return new URL(String(url || '')).searchParams.get('gclid') || ''; } catch { const m = String(url || '').match(/[?&]gclid=([^&#\s]+)/); return m ? decodeURIComponent(m[1]) : ''; } };
+const utmDe = (u) => { const o = {}; for (const k of ['source', 'medium', 'campaign', 'content', 'term']) if (u && u[k]) o[k] = String(u[k]).slice(0, 120); return Object.keys(o).length ? o : null; };
+
+// --- Saída -------------------------------------------------------------------------------
+function camposPedidos(a) {
+  if (Array.isArray(a.campos)) return a.campos.map((c) => String(c).trim()).filter(Boolean);
+  if (typeof a.campos === 'string' && a.campos.trim()) return a.campos.split(/[\s,;]+/).filter(Boolean);
+  return null;
+}
+function saida(ctx, a, { total, pagina, porPagina, itens, filtros, extra, titulo, linha }) {
+  const paginas = Math.max(1, Math.ceil((Number(total) || 0) / porPagina));
+  const campos = camposPedidos(a);
+  const lista = campos ? itens.map((it) => Object.fromEntries(campos.filter((k) => k in it).map((k) => [k, it[k]]))) : itens;
+  const filtrosLimpos = Object.fromEntries(Object.entries(filtros || {}).filter(([, v]) => v !== '' && v != null));
+  if (ctx.orcamento && ctx.orcamento.esgotado) ctx.aviso('Resposta PARCIAL: esta consulta precisou ler mais registros do que a plataforma permite numa chamada — alguns detalhes podem ter ficado vazios. Reduza o período ou o tamanho da página.');
+  const corpo = sanitizar({ total, pagina, paginas, por_pagina: porPagina, itens: lista, ...(extra || {}), filtros: filtrosLimpos, avisos: ctx.avisos });
+  if (String(a.formato || '').trim().toLowerCase() !== 'texto') return JSON.stringify(corpo);
+  const linhas = [`${titulo}: ${total} resultado(s) — página ${pagina} de ${paginas} (${porPagina} por página)`];
+  for (const it of corpo.itens) linhas.push('• ' + (campos ? Object.entries(it).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : (v && typeof v === 'object' ? JSON.stringify(v) : v)}`).join(' — ') : linha(it)));
+  if (corpo.extra_texto) linhas.push(corpo.extra_texto);
+  if (pagina < paginas) linhas.push(`… peça a página ${pagina + 1} para continuar.`);
+  for (const av of corpo.avisos) linhas.push(`⚠️ ${av}`);
+  return linhas.join('\n');
+}
+
+// ===================================================================================
+// A) CLIENTES
+// ===================================================================================
+async function ferrClientes(env, args) {
+  const a = args || {};
+  const ctx = novoContexto(env);
+  const db = ctx.db;
+  if (!db) throw new ErroUso('Base indisponível no momento.');
+  const tipo = /^pj$/i.test(String(a.tipo || '').trim()) ? 'PJ' : (/^pf$/i.test(String(a.tipo || '').trim()) ? 'PF' : 'todos');
+  const { pagina, porPagina } = paginacao(a, 50);
+  const ultDe = dataParam(a.ultima_coleta_de, false), ultAte = dataParam(a.ultima_coleta_ate, true);
+  const cadDe = dataParam(a.cadastrado_de, false), cadAte = dataParam(a.cadastrado_ate, true);
+  for (const [nome, bruto, ok] of [['ultima_coleta_de', a.ultima_coleta_de, ultDe], ['ultima_coleta_ate', a.ultima_coleta_ate, ultAte], ['cadastrado_de', a.cadastrado_de, cadDe], ['cadastrado_ate', a.cadastrado_ate, cadAte]]) {
+    if (bruto != null && String(bruto).trim() && !ok) throw new ErroUso(`"${nome}" precisa estar no formato AAAA-MM-DD (ou AAAA-MM).`);
+  }
+  const nunca = sim(a.nunca_coletou);
+  if (nunca && (ultDe || ultAte)) throw new ErroUso('Use nunca_coletou OU ultima_coleta_de/ate — os dois juntos não retornam ninguém.');
+  const cidade = normTxt(a.cidade);
+  const uf = String(a.uf || '').trim().toUpperCase().slice(0, 2);
+  const cepPref = digits(a.cep_prefixo).slice(0, 8);
+  const termos = termosMaterial(a.material);
+  const temOsAberta = simNaoNulo(a.tem_os_aberta);
+  const aceita = simNaoNulo(a.aceita_email);
+  const temEmail = simNaoNulo(a.tem_email);
+  const origem = normTxt(a.origem);
+  if (origem && !['ploomes', 'sistema', 'site'].includes(origem)) throw new ErroUso('origem aceita: ploomes, sistema ou site.');
+  const filtros = { tipo, ultima_coleta_de: ultDe, ultima_coleta_ate: ultAte, nunca_coletou: nunca || '', cadastrado_de: cadDe, cadastrado_ate: cadAte, cidade: a.cidade ? limpar(a.cidade) : '', uf, cep_prefixo: cepPref, material: a.material ? normTxt(a.material) : '', tem_os_aberta: temOsAberta, aceita_email: aceita, tem_email: temEmail, origem };
+
+  const stats = await ctx.stats();
+  const oss = await ctx.oss();
+  // OS por cliente (chave = documento).
+  const ossPorDoc = new Map();
+  for (const o of oss) { const d = await ctx.docDaOS(o); if (!d) continue; const l = ossPorDoc.get(d) || []; l.push(o); ossPorDoc.set(d, l); }
+
+  // 1) Conjunto POSITIVO de chaves (quando algum filtro diz exatamente quem entra).
+  let positivo = null;
+  const restringe = (conj) => { positivo = positivo ? new Set([...positivo].filter((k) => conj.has(k))) : conj; };
+  if (ultDe || ultAte) restringe(new Set([...stats.entries()].filter(([, s]) => (!ultDe || s.ult >= ultDe) && (!ultAte || s.ult <= ultAte)).map(([k]) => k)));
+  if (termos.length) {
+    const mats = await ctx.mats(); const pesos = await ctx.pesos();
+    const conj = new Set();
+    for (const [d, lista] of ossPorDoc) if (lista.some((o) => osTemMaterial(o, termos, mats, pesos))) conj.add(d);
+    restringe(conj);
+  }
+  if (temOsAberta === true) restringe(new Set([...ossPorDoc].filter(([, l]) => l.some((o) => ABERTAS.has(o.status))).map(([d]) => d)));
+
+  // 2) SQL: linhas do universo de clientes (PJ = empresas; PF = pessoas que SÃO
+  //    clientes — contatos de empresa ficam dentro da empresa).
+  const where = [COND_TIPO[tipo]]; const binds = [];
+  const p = (v) => { binds.push(v); return `?${binds.length + 1}`; }; // ?1 = lista do json_each
+  if (uf) where.push(`UPPER(TRIM(COALESCE(c.uf,''))) = ${p(uf)}`);
+  if (cidade) where.push(`${sqlSemAcento('c.cidade')} = ${p(cidade)}`);
+  if (cadDe) where.push(`${SQL_DIA_BR('c.criado_em')} >= ${p(cadDe)}`);
+  if (cadAte) where.push(`${SQL_DIA_BR('c.criado_em')} <= ${p(cadAte)}`);
+  if (origem === 'ploomes') where.push('c.ploomes_id < 900000000');
+  if (origem === 'sistema' || origem === 'site') where.push('c.ploomes_id >= 900000000');
+  if (temEmail != null) where.push(`${temEmail ? '' : 'NOT '}(COALESCE(c.email,'') LIKE '%@%' OR EXISTS (SELECT 1 FROM contatos q WHERE q.company_id = c.ploomes_id AND q.tipo='PF' AND COALESCE(q.email,'') LIKE '%@%'))`);
+  const precisaFone = aceita != null;
+  const cols = `c.ploomes_id AS i, c.documento AS d, c.tipo AS t, TRIM(COALESCE(NULLIF(c.nome,''), c.nome_fantasia, '')) AS n${cepPref ? ', c.endereco AS e' : ''}${origem === 'site' || origem === 'sistema' || precisaFone ? ', c.email AS m' : ''}${precisaFone ? ', c.telefone AS f' : ''}`;
+  let linhas;
+  if (positivo) {
+    const docs = [...positivo].filter((k) => !k.startsWith('p'));
+    const pids = [...positivo].filter((k) => k.startsWith('p')).map((k) => Number(k.slice(1)));
+    linhas = [];
+    if (docs.length) linhas.push(...await consultaEmFatias(db, () => `SELECT ${cols} FROM contatos c WHERE ${where.join(' AND ')} AND ${DOC_SQL('c.documento')} IN (SELECT value FROM json_each(?1))`, docs, binds));
+    if (pids.length) linhas.push(...await consultaEmFatias(db, () => `SELECT ${cols} FROM contatos c WHERE ${where.join(' AND ')} AND c.ploomes_id IN (SELECT value FROM json_each(?1))`, pids, binds));
+  } else {
+    const r = await db.prepare(`SELECT ${cols} FROM contatos c WHERE ?1 IS NULL AND ${where.join(' AND ')}`).bind(null, ...binds).all();
+    linhas = (r && r.results) || [];
+  }
+  // 3) Agrupa por cliente (mesmo CNPJ/CPF em mais de uma linha = um cliente só). O tipo
+  //    sai do documento quando há (CNPJ = PJ, CPF = PF); sem documento, do cadastro.
+  const grupos = new Map();
+  const agrupa = (r) => {
+    const k = chaveCliente(r.d, r.i);
+    const g = grupos.get(k) || { k, tipo: tipoDaChave(k, r.t), pids: [], nome: '', end: '', emails: [], fones: [] };
+    if (!g.pids.includes(r.i)) g.pids.push(r.i);
+    if (!g.nome && r.n) g.nome = limpar(r.n);
+    if (r.e && !g.end) g.end = r.e;
+    if (r.m) g.emails.push(...separarEmails(r.m));
+    if (r.f) g.fones.push(...fonesNacionais(r.f));
+    grupos.set(k, g);
+  };
+  for (const r of linhas) agrupa(r);
+  // Documento com coleta que ficou fora do universo acima — CPF cadastrado como contato
+  // de uma empresa (a OS saiu em nome da pessoa), documento salvo no tipo errado, ou
+  // ficha do sistema novo que não espelhou na base: entra pelas linhas que existirem e,
+  // sem nenhuma, como "sem cadastro na base". Só quando nenhum filtro depende do
+  // cadastro — mesma contagem da função clientes_pj_por_ultima_coleta.
+  const filtroDeCadastro = !!(uf || cidade || cadDe || cadAte || origem || temEmail != null || cepPref || precisaFone);
+  if (positivo && !filtroDeCadastro) {
+    const faltam = [...positivo].filter((k) => !grupos.has(k) && !k.startsWith('p') && (tipo === 'todos' || tipo === tipoDaChave(k)));
+    if (faltam.length) {
+      for (const r of await consultaEmFatias(db, () => `SELECT ${cols} FROM contatos c WHERE ${DOC_SQL('c.documento')} IN (SELECT value FROM json_each(?1))`, faltam)) agrupa(r);
+      for (const k of faltam) {
+        if (grupos.has(k)) continue;
+        const os1 = (ossPorDoc.get(k) || [])[0];
+        grupos.set(k, { k, tipo: tipoDaChave(k), pids: [], nome: limpar(os1 && os1.clienteNome) || '(cliente sem cadastro na base)', end: '', emails: [], fones: [], semCadastro: true });
+      }
+    }
+  }
+  let lista = [...grupos.values()];
+  if (tipo !== 'todos') lista = lista.filter((g) => g.tipo === tipo);
+  // 4) Filtros que dependem de dados fora do SQL.
+  if (nunca) lista = lista.filter((g) => !stats.has(g.k));
+  if (temOsAberta === false) lista = lista.filter((g) => !(ossPorDoc.get(g.k) || []).some((o) => ABERTAS.has(o.status)));
+  if (cepPref) lista = lista.filter((g) => enderecoDaLinha({ endereco: g.end }).cep.startsWith(cepPref));
+  if (origem === 'site' || origem === 'sistema') {
+    const leads = await ctx.leads();
+    const lDocs = new Set(leads.map((l) => digits(l.documento)).filter(Boolean));
+    const lEmails = new Set(leads.map((l) => String(l.email || '').trim().toLowerCase()).filter(Boolean));
+    const veioDoSite = (g) => lDocs.has(g.k) || g.emails.some((e) => lEmails.has(e));
+    lista = lista.filter((g) => (origem === 'site' ? veioDoSite(g) : !veioDoSite(g)));
+  }
+  if (aceita != null) {
+    const bl = await ctx.bloqueios();
+    // Telefones das pessoas vinculadas às empresas candidatas.
+    const pjPids = lista.filter((g) => g.tipo === 'PJ').flatMap((g) => g.pids);
+    const fonesPessoas = new Map();
+    if (pjPids.length) {
+      const ps = await consultaEmFatias(db, () => "SELECT p.company_id AS c, p.telefone AS f FROM contatos p WHERE p.tipo='PF' AND p.company_id IN (SELECT value FROM json_each(?1)) AND COALESCE(p.telefone,'') <> ''", pjPids);
+      for (const x of ps) { const l = fonesPessoas.get(x.c) || []; l.push(...fonesNacionais(x.f)); fonesPessoas.set(x.c, l); }
+    }
+    const bloqueado = (g) => bl.porDoc.has(g.k) || g.fones.some((f) => bl.porFone.has(f)) || g.pids.some((pid) => (fonesPessoas.get(pid) || []).some((f) => bl.porFone.has(f)));
+    lista = lista.filter((g) => (aceita ? !bloqueado(g) : bloqueado(g)));
+    ctx.aviso('aceita_email: o filtro considera os telefones e documentos da base; contatos digitados só na ficha do sistema novo entram no valor de cada item.');
+  }
+  // 5) Ordem: com filtro de última coleta, da mais recente; senão, por nome.
+  const porData = !!(ultDe || ultAte);
+  for (const g of lista) g.ordem = normTxt(g.nome);
+  lista.sort((x, y) => {
+    if (porData) { const dx = (stats.get(x.k) || {}).ult || '', dy = (stats.get(y.k) || {}).ult || ''; if (dx !== dy) return dy < dx ? -1 : 1; }
+    return (x.ordem < y.ordem ? -1 : (x.ordem > y.ordem ? 1 : 0)) || (x.k < y.k ? -1 : (x.k > y.k ? 1 : 0));
+  });
+  const total = lista.length;
+  const semDoc = lista.filter((g) => g.k.startsWith('p')).length;
+  if (semDoc) ctx.aviso(`${semDoc} cliente(s) da lista não têm CNPJ/CPF no cadastro (campo cnpj/cpf vazio)${tipo !== 'PF' ? '; a função clientes_pj_por_ultima_coleta conta só empresas COM CNPJ — é essa a diferença entre as duas (ver "contagem")' : ''}.`);
+  const fatia = lista.slice((pagina - 1) * porPagina, pagina * porPagina);
+  const itens = await detalharClientes(ctx, fatia, { stats, ossPorDoc, termos });
+  if (termos.length) ctx.aviso('material: procura nas OS não canceladas (concluídas e em aberto); "material_encontrado_em" mostra em quais OS o material apareceu.');
+  if (tipo !== 'PJ') ctx.aviso('PF = pessoa física que é cliente; contatos de empresas ficam dentro da empresa (por isso o total difere de "pessoas físicas" da visao_geral, que soma os dois).');
+  ctx.aviso('Coletas: OS concluídas do sistema novo + negócios ganhos do Ploomes (data de abertura). Peso e materiais só existem para OS do sistema novo.');
+  ctx.aviso('Descadastro de e-mail não é gravado no sistema (fica no E-goi, que bloqueia o envio sozinho); aceita_email = "não" vem de opt-out do WhatsApp ou de empresa retirada das campanhas.');
+  return saida(ctx, a, {
+    total, pagina, porPagina, itens, filtros, titulo: 'Clientes',
+    extra: { contagem: { com_cnpj_ou_cpf: total - semDoc, sem_documento: semDoc } },
+    linha: (c) => [c.nome, c.tipo, c.cnpj || c.cpf, c.cidade && `${c.cidade}/${c.uf}`, (c.emails || [])[0], (c.celulares || [])[0] || (c.telefones || [])[0], c.ultima_coleta && `última coleta ${c.ultima_coleta}`, c.aceita_email === 'não' ? `NÃO contatar (${c.motivo_bloqueio})` : ''].filter(Boolean).join(' — '),
+  });
+}
+
+async function detalharClientes(ctx, grupos, { stats, ossPorDoc, termos }) {
+  if (!grupos.length) return [];
+  const db = ctx.db;
+  const pids = grupos.flatMap((g) => g.pids);
+  const linhas = pids.length ? await consultaEmFatias(db, () => `SELECT c.ploomes_id, c.tipo, c.nome, c.nome_fantasia, c.documento, c.email, c.telefone, c.cidade, c.uf, c.endereco, c.company_id, c.criado_em,
+      CASE WHEN json_valid(c.dados_json) THEN json_extract(c.dados_json,'$.Neighborhood') END AS pl_bairro,
+      CASE WHEN json_valid(c.dados_json) THEN json_extract(c.dados_json,'$.ZipCode') END AS pl_cep
+    FROM contatos c WHERE c.ploomes_id IN (SELECT value FROM json_each(?1))`, pids) : [];
+  const porPid = new Map(linhas.map((r) => [r.ploomes_id, r]));
+  const pjPids = grupos.filter((g) => g.tipo === 'PJ').flatMap((g) => g.pids);
+  const pessoas = pjPids.length ? await consultaEmFatias(db, () => "SELECT p.company_id AS c, p.nome, p.email, p.telefone, p.documento FROM contatos p WHERE p.tipo='PF' AND p.company_id IN (SELECT value FROM json_each(?1)) ORDER BY p.nome", pjPids) : [];
+  const pessoasPorEmpresa = new Map(); for (const x of pessoas) { const l = pessoasPorEmpresa.get(x.c) || []; l.push(x); pessoasPorEmpresa.set(x.c, l); }
+  // Fichas do sistema novo (dados editados pela equipe: contatos com cargo, endereço).
+  const fichaPorDoc = await ctx.fichaIdPorDoc();
+  const fichaIds = [...new Set(grupos.map((g) => fichaPorDoc.get(g.k)).filter(Boolean))];
+  const fichasRaw = await ctx.lerVarios(fichaIds.map((id) => `cli:${id}`));
+  const ficha = (g) => { const id = fichaPorDoc.get(g.k); if (!id) return null; try { const raw = fichasRaw.get(`cli:${id}`); return raw ? JSON.parse(raw) : null; } catch { return null; } };
+  const bl = await ctx.bloqueios();
+  const pesos = await ctx.pesos();
+  const mats = await ctx.mats();
+  const leads = await ctx.leads();
+  const lDocs = new Set(leads.map((l) => digits(l.documento)).filter(Boolean));
+  const lEmails = new Set(leads.map((l) => String(l.email || '').trim().toLowerCase()).filter(Boolean));
+  const base = grupos.map((g) => {
+    const rows = g.pids.map((id) => porPid.get(id)).filter(Boolean);
+    const f = ficha(g);
+    const pes = g.pids.flatMap((id) => pessoasPorEmpresa.get(id) || []);
+    const contatosFicha = (f && Array.isArray(f.contatos) ? f.contatos : []).filter((c) => c && (c.nome || c.email || c.fone));
+    let end = { cep: '', bairro: '', cidade: '', uf: '' };
+    if (f && f.endereco && (f.endereco.cep || f.endereco.cidade)) end = { cep: digits(f.endereco.cep).slice(0, 8), bairro: limpar(f.endereco.bairro), cidade: limpar(f.endereco.cidade), uf: limpar(f.endereco.uf).toUpperCase() };
+    else for (const r of rows) { const e = enderecoDaLinha(r); if (e.cep || e.cidade) { end = e; break; } }
+    return { g, rows, f, pes, contatosFicha, end };
+  });
+  const ceps = [...new Set(base.map((b) => b.end.cep).filter((c) => c.length === 8))];
+  const geo = await ctx.lerVarios(ceps.map((c) => `geocep:${c}`));
+  return base.map(({ g, rows, f, pes, contatosFicha, end }) => {
+    const pj = g.tipo === 'PJ';
+    const r0 = rows[0] || {};
+    const emails = separarEmails(f && f.email, contatosFicha.map((c) => c.email), rows.map((r) => r.email), pes.map((x) => x.email));
+    const docsDoCliente = [g.k, ...rows.map((r) => r.documento), ...pes.map((x) => x.documento)];
+    const fones = fonesSemDocs(docsDoCliente, f && (f.fone || f.telefone), contatosFicha.map((c) => c.fone), rows.map((r) => r.telefone), pes.map((x) => x.telefone));
+    let coord = null; try { const raw = geo.get(`geocep:${end.cep}`); const v = raw ? JSON.parse(raw) : null; if (v && Number.isFinite(Number(v.lat)) && Number.isFinite(Number(v.lon)) && v.lat && v.lon) coord = { lat: Number(v.lat), lon: Number(v.lon) }; } catch { coord = null; }
+    const s = stats.get(g.k);
+    const lista = ossPorDoc.get(g.k) || [];
+    const concluidas = lista.filter((o) => o.status === 'concluida');
+    const pesadas = concluidas.filter((o) => ((pesos.get(o.id) || {}).kg || 0) > 0);
+    const pesoTotal = r2(pesadas.reduce((t, o) => t + pesos.get(o.id).kg, 0));
+    const materiais = [...new Set([...concluidas.flatMap((o) => nomesMateriais(mats.get(o.id))), ...concluidas.flatMap((o) => ((pesos.get(o.id) || {}).cats || []).map((c) => c.categoria))])].filter(Boolean).slice(0, 20);
+    const abertas = lista.filter((o) => ABERTAS.has(o.status)).map((o) => ({ numero: o.numero, status: o.status, status_rotulo: rotuloStatus(o), data_agendada: o.dataAgendada || null }));
+    const emAberto = lista.filter((o) => o.cobranca && o.cobranca.status !== 'pago' && o.status !== 'cancelada');
+    const valorAberto = r2(emAberto.reduce((t, o) => t + (Number(o.cobranca.valor) || 0), 0));
+    // Descadastro (o que o sistema conhece): opt-out do WhatsApp e empresa excluída.
+    let motivo = null;
+    const exc = bl.porDoc.get(g.k);
+    if (exc) motivo = `empresa retirada das campanhas pela diretoria${exc.em ? ` em ${diaBR(exc.em)}` : ''}`;
+    if (!motivo) {
+      const todos = [...new Set([...fonesNacionais([f && (f.fone || f.telefone), ...contatosFicha.map((c) => c.fone), ...rows.map((r) => r.telefone), ...pes.map((x) => x.telefone)].filter(Boolean).join(' / '))])];
+      const hit = todos.map((t) => bl.porFone.get(t)).find(Boolean);
+      if (hit) motivo = `pediu para sair das mensagens de WhatsApp${hit.em ? ` em ${diaBR(hit.em)}` : ''}${hit.motivo ? ` (${limpar(hit.motivo).slice(0, 80)})` : ''}`;
+    }
+    const origemFicha = String((f && f.origem) || '');
+    const origem = g.pids.some((id) => Number(id) < 900000000) || origemFicha.startsWith('ploomes') ? 'ploomes' : (origemFicha === 'adote' ? 'adote' : (lDocs.has(g.k) || emails.some((e) => lEmails.has(e)) ? 'site' : (g.semCadastro ? 'sem cadastro na base' : 'sistema')));
+    const cadastro = rows.map((r) => diaBR(r.criado_em)).filter(Boolean).sort()[0] || diaBR(f && f.criadoEm) || null;
+    const contatoPrincipal = pj ? (contatosFicha[0]
+      ? { nome: limpar(contatosFicha[0].nome) || null, cargo: limpar(contatosFicha[0].cargo) || null, email: separarEmails(contatosFicha[0].email)[0] || null, telefone: (() => { const x = fonesSemDocs(docsDoCliente, contatosFicha[0].fone); return x.celulares[0] || x.telefones[0] || null; })() }
+      : (() => { const x = pes.find((q) => q.email || q.telefone); if (!x) return null; const fx = fonesSemDocs(docsDoCliente, x.telefone); return { nome: limpar(x.nome) || null, cargo: null, email: separarEmails(x.email)[0] || null, telefone: fx.celulares[0] || fx.telefones[0] || null }; })()) : undefined;
+    const item = {
+      id: idCliente(g.k, g.tipo, g.pids),
+      tipo: g.tipo,
+      nome: limpar(pj ? ((f && f.razaoSocial) || r0.nome || g.nome) : ((f && f.nome) || r0.nome || g.nome)) || null,
+      nome_fantasia: pj ? (limpar((f && f.nomeFantasia) || r0.nome_fantasia) || null) : undefined,
+      cnpj: pj ? (!g.k.startsWith('p') && g.k.length === 14 ? fmtCNPJ(g.k) : null) : undefined,
+      cpf: !pj ? (mascararCPF(g.k) || null) : undefined,
+      emails, celulares: fones.celulares, telefones: fones.telefones,
+      contato_principal: contatoPrincipal,
+      cidade: end.cidade || null, uf: end.uf || null, cep: fmtCep(end.cep) || null, bairro: end.bairro || null,
+      latitude: coord ? coord.lat : null, longitude: coord ? coord.lon : null,
+      distancia_km_sp: coord ? distanciaSeKm(coord.lat, coord.lon) : null,
+      cadastrado_em: cadastro,
+      origem,
+      primeira_coleta: s ? s.pri : null, ultima_coleta: s ? s.ult : null, total_coletas: s ? s.n : 0,
+      peso_total_kg: pesadas.length ? pesoTotal : null,
+      materiais,
+      material_encontrado_em: termos && termos.length ? lista.filter((o) => osTemMaterial(o, termos, mats, pesos)).map((o) => ({ numero: o.numero, status: rotuloStatus(o) })) : undefined,
+      os_aberta: abertas.length ? abertas : null,
+      aceita_email: motivo ? 'não' : 'sim', motivo_bloqueio: motivo,
+      cobranca: emAberto.length ? { situacao: 'em aberto', valor_em_aberto: valorAberto, cobrancas_em_aberto: emAberto.length } : { situacao: 'em dia', valor_em_aberto: 0 },
+    };
+    for (const k of Object.keys(item)) if (item[k] === undefined) delete item[k];
+    return item;
+  });
+}
+
+// ===================================================================================
+// B) COLETAS POR PERÍODO
+// ===================================================================================
+async function ferrColetasPeriodo(env, args) {
+  const a = args || {};
+  const ctx = novoContexto(env);
+  const { de, ate } = periodoObrigatorio(a, 732);
+  const campo = { criacao: 'criacao', criada: 'criacao', agendada: 'agendada', agendamento: 'agendada', concluida: 'concluida', conclusao: 'concluida', cancelada: 'cancelada', cancelamento: 'cancelada' }[normTxt(a.campo_data) || 'criacao'];
+  if (!campo) throw new ErroUso('campo_data aceita: criacao, agendada, concluida ou cancelada.');
+  const status = normTxt(a.status).replace(/\s+/g, '_');
+  if (status && !['agendada', 'aguardando_roteiro', 'em_transporte', 'na_unidade', 'concluida', 'cancelada'].includes(status)) throw new ErroUso('status aceita: agendada, aguardando_roteiro, em_transporte, na_unidade, concluida ou cancelada.');
+  const tipoCli = /^pj$/i.test(String(a.tipo_cliente || '').trim()) ? 'PJ' : (/^pf$/i.test(String(a.tipo_cliente || '').trim()) ? 'PF' : '');
+  const cidade = normTxt(a.cidade), motorista = normTxt(a.motorista), termos = termosMaterial(a.material), origem = normTxt(a.origem);
+  const { pagina, porPagina } = paginacao(a, 50);
+  const filtros = { de, ate, campo_data: campo, status, tipo_cliente: tipoCli, cidade: a.cidade ? limpar(a.cidade) : '', material: a.material ? normTxt(a.material) : '', motorista: a.motorista ? limpar(a.motorista) : '', origem };
+
+  const oss = await ctx.oss();
+  const pesos = await ctx.pesos();
+  // Cancelamentos antigos (sem data registrada): estimativa pela última atualização.
+  const canceladaEst = new Map();
+  if (campo === 'cancelada') {
+    const semData = oss.filter((o) => o.status === 'cancelada' && !o.canceladaEm).map((o) => o.id);
+    const regs = await ctx.lerVarios(semData.slice(0, 400).map((id) => `os:${id}`));
+    for (const id of semData.slice(0, 400)) { try { const raw = regs.get(`os:${id}`); const r = raw ? JSON.parse(raw) : null; canceladaEst.set(id, diaBR(r && (r.atualizadoEm || r.criadoEm))); } catch { /* sem data */ } }
+  }
+  const dataRef = (o) => {
+    if (campo === 'criacao') return diaBR(o.criadoEm);
+    if (campo === 'agendada') return o.dataAgendada || '';
+    if (campo === 'concluida') return dataConclusao(o, pesos).dia;
+    if (o.status !== 'cancelada') return '';
+    return o.canceladaEm ? diaBR(o.canceladaEm) : (canceladaEst.get(o.id) || '');
+  };
+  let lista = oss.filter((o) => { const d = dataRef(o); return d && d >= de && d <= ate; });
+  if (status === 'aguardando_roteiro') lista = lista.filter((o) => o.status === 'agendada' && !o.dataAgendada);
+  else if (status) lista = lista.filter((o) => o.status === status);
+  if (tipoCli) { const t = []; for (const o of lista) { const d = await ctx.docDaOS(o); if ((tipoCli === 'PJ' && d.length === 14) || (tipoCli === 'PF' && d.length === 11)) t.push(o); } lista = t; }
+  if (cidade) lista = lista.filter((o) => normTxt(o.cidade) === cidade);
+  if (motorista) lista = lista.filter((o) => normTxt(o.agenteNome).includes(motorista) || normTxt(o.transp).includes(motorista) || (motorista === 'sem motorista' && !o.agenteNome && !o.transp));
+  if (termos.length) { const mats = await ctx.mats(); lista = lista.filter((o) => casaTermo(mats.get(o.id) || '', termos) || ((pesos.get(o.id) || {}).cats || []).some((c) => casaTermo(normTxt(c.categoria), termos))); }
+  let vinc = null;
+  if (origem) {
+    vinc = await vinculosLeadOS(ctx);
+    lista = lista.filter((o) => { const l = vinc.leadPorOS.get(o.id); return origem === 'sem_pedido' ? !l : (l && normTxt(l.origem).includes(origem)); });
+  }
+  lista.sort((x, y) => dataRef(x).localeCompare(dataRef(y)) || String(x.numero).localeCompare(String(y.numero)));
+  const total = lista.length;
+  const fatia = lista.slice((pagina - 1) * porPagina, pagina * porPagina);
+  const itens = await detalharColetas(ctx, fatia, vinc || await vinculosLeadOS(ctx));
+  if (campo === 'concluida') ctx.aviso('Data de conclusão: registrada exatamente a partir de 18/11/2026; antes disso vem do app do motorista quando guardado, ou é estimada pela data agendada (data_conclusao_estimada = true).');
+  if (campo === 'cancelada') ctx.aviso('Data de cancelamento: registrada a partir de 18/11/2026; cancelamentos anteriores usam a última atualização da OS (data_cancelamento_estimada = true).');
+  ctx.aviso('Modalidade e origem do pedido não ficam gravadas na OS: vêm do pedido (lead) do mesmo cliente feito até 30 dias antes ("vínculo provável"). Sem pedido ligado, modalidade = "padrão" e origem vazia.');
+  return saida(ctx, a, {
+    total, pagina, porPagina, itens, filtros, titulo: `Coletas (${campo})`,
+    linha: (o) => [o.numero, o.status_rotulo, o.cliente && `${o.cliente.nome} (${o.cliente.tipo})`, o.cidade, `criada ${o.data_criacao}`, o.data_agendada && `agendada ${o.data_agendada}`, o.data_conclusao && `concluída ${o.data_conclusao}${o.data_conclusao_estimada ? ' (estimada)' : ''}`, o.motorista && `🚚 ${o.motorista}`, o.peso_kg != null && `${o.peso_kg} kg`].filter(Boolean).join(' — '),
+  });
+}
+
+async function detalharColetas(ctx, lista, vinc) {
+  if (!lista.length) return [];
+  const pesos = await ctx.pesos();
+  const regs = await ctx.lerVarios(lista.map((o) => `os:${o.id}`));
+  const ops = await ctx.lerVarios(lista.map((o) => `op:${o.id}`));
+  const leadIds = lista.map((o) => vinc.leadPorOS.get(o.id)).filter(Boolean).map((l) => `lead:${l.id}`);
+  const leadsRaw = await ctx.lerVarios(leadIds);
+  // Ids dos clientes (PJ pelo CNPJ; PF pela linha da base — nunca pelo CPF).
+  const docs = [...new Set((await Promise.all(lista.map((o) => ctx.docDaOS(o)))).filter(Boolean))];
+  const pidPF = new Map();
+  const pfDocs = docs.filter((d) => d.length === 11);
+  if (ctx.db && pfDocs.length) {
+    // Mesmo critério da função clientes: a linha de cliente PF (sem empresa); se o CPF
+    // só existir como contato de empresa ou noutro tipo, a menor linha com aquele CPF.
+    try { for (const r of await consultaEmFatias(ctx.db, () => `SELECT ${DOC_SQL('c.documento')} AS d, COALESCE(MIN(CASE WHEN c.tipo='PF' AND COALESCE(c.company_id,0)=0 THEN c.ploomes_id END), MIN(c.ploomes_id)) AS i FROM contatos c WHERE ${DOC_SQL('c.documento')} IN (SELECT value FROM json_each(?1)) GROUP BY 1`, pfDocs)) pidPF.set(digits(r.d), r.i); } catch { /* sem id */ }
+  }
+  const out = [];
+  for (const o of lista) {
+    let rec = {}; try { const raw = regs.get(`os:${o.id}`); rec = raw ? JSON.parse(raw) : {}; } catch { rec = {}; }
+    let op = null; try { const raw = ops.get(`op:${o.id}`); op = raw ? JSON.parse(raw) : null; } catch { op = null; }
+    const d = await ctx.docDaOS(o);
+    const tipo = d.length === 14 ? 'PJ' : (d.length === 11 ? 'PF' : null);
+    const p = pesos.get(o.id) || {};
+    const kg = op && op.entrada && Number(op.entrada.pesoKg) > 0 ? Number(op.entrada.pesoKg) : (p.kg > 0 ? p.kg : null);
+    const rateado = op && op.entrada && Number(op.entrada.pesoKg) > 0 ? !!(op.entrada.rateado && !op.entrada.ajustadoEm) : !!p.rateado;
+    const itensDecl = (Array.isArray(rec.itens) ? rec.itens : []).map((it) => ({ nome: limpar(it.nome), quantidade: limpar(it.qtd) || '1' })).filter((it) => it.nome);
+    const pesados = op && Array.isArray(op.materiais) && op.materiais.length
+      ? op.materiais.map((m) => ({ categoria: limpar(String(m.rotulo || '').replace(/\s+·\s+LT-[\w-]+$/, '')), peso_kg: r2(m.qtd) }))
+      : (p.cats || []).map((c) => ({ categoria: c.categoria, peso_kg: c.kg }));
+    const conc = dataConclusao(o, pesos);
+    const lead = vinc.leadPorOS.get(o.id);
+    let leadRec = null; if (lead) { try { const raw = leadsRaw.get(`lead:${lead.id}`); leadRec = raw ? JSON.parse(raw) : null; } catch { leadRec = null; } }
+    const etapa = (op && op.etapa) || p.etapa || '';
+    const cdf = etapa === 'concluida' && (!op || !op.validacao || op.validacao.decisao === 'validada');
+    const notas = Array.isArray(rec.notas) ? rec.notas : [];
+    const mtrNum = (rec.mtr && rec.mtr.numero) || o.mtr || '';
+    out.push({
+      numero: o.numero, status: o.status, status_rotulo: rotuloStatus(o),
+      cliente: { id: d.length === 14 ? `PJ-${d}` : (pidPF.has(d) ? `PF-B${pidPF.get(d)}` : null), tipo, nome: limpar(o.clienteNome) || null },
+      cidade: limpar(o.cidade) || null, cep: fmtCep(cepDe(rec.endereco)) || null,
+      data_criacao: diaBR(o.criadoEm) || null,
+      data_agendada: o.dataAgendada || null,
+      data_conclusao: conc.dia || null, data_conclusao_estimada: conc.dia ? conc.estimada : undefined,
+      data_cancelamento: o.status === 'cancelada' ? (diaBR(o.canceladaEm || rec.canceladaEm) || diaBR(rec.atualizadoEm) || null) : null,
+      data_cancelamento_estimada: o.status === 'cancelada' ? !(o.canceladaEm || rec.canceladaEm) : undefined,
+      motivo_cancelamento: o.status === 'cancelada' ? (limpar(rec.motivoCancelamento) || null) : undefined,
+      motorista: limpar(o.agenteNome) || (o.transp ? `Transportadora: ${limpar(o.transp)}` : null),
+      veiculo: placaDoRegistro(rec) || ctx.placa(o) || null,
+      materiais: itensDecl,
+      material_descricao: limpar(rec.material) || null,
+      quantidade_estimada: limpar(rec.quantidade) || null,
+      materiais_pesados: pesados,
+      peso_kg: kg != null ? r2(kg) : null, peso_rateado: kg != null ? rateado : undefined,
+      modalidade: leadRec && leadRec.expressa ? 'expressa' : 'padrão',
+      valor_cobrado: o.cobranca ? r2(o.cobranca.valor) : null,
+      pagamento: o.cobranca ? (o.cobranca.status === 'pago' ? 'pago' : 'em aberto') : null,
+      origem_pedido: lead ? { canal: limpar(lead.origem) || 'site', utm: utmDe(leadRec && leadRec.utm), gclid: gclidDe(leadRec && leadRec.pagina) || null, data_pedido: diaBR(lead.criadoEm), vinculo: 'provável (pedido do mesmo cliente até 30 dias antes)' } : null,
+      documentos: {
+        cdf: { emitido: !!cdf, numero: cdf ? 'CDF-' + digits(o.numero) : null },
+        nf: { emitida: notas.length > 0, numeros: notas.map((n) => String(n.numero || '')).filter(Boolean) },
+        mtr: { emitida: !!mtrNum, numero: mtrNum || null },
+      },
+    });
+    const it = out[out.length - 1]; for (const k of Object.keys(it)) if (it[k] === undefined) delete it[k];
+  }
+  return out;
+}
+
+// ===================================================================================
+// C) LEADS
+// ===================================================================================
+const STATUS_LEAD = { novo: 'novo', 'aguardando-pagamento': 'novo', tratado: 'contatado', sem_retorno: 'perdido' };
+async function ferrLeads(env, args) {
+  const a = args || {};
+  const ctx = novoContexto(env);
+  const de = dataParam(a.de, false), ate = dataParam(a.ate, true);
+  if ((a.de && !de) || (a.ate && !ate)) throw new ErroUso('"de" e "ate" no formato AAAA-MM-DD (ou AAAA-MM).');
+  const status = normTxt(a.status).replace(/\s+/g, '_');
+  const statusOk = { novo: 'novo', contatado: 'contatado', virou_os: 'virou OS', perdido: 'perdido' };
+  if (status && !statusOk[status]) throw new ErroUso('status aceita: novo, contatado, virou_os ou perdido.');
+  const perfil = /^pj$/i.test(String(a.perfil || '').trim()) ? 'PJ' : (/^pf$/i.test(String(a.perfil || '').trim()) ? 'PF' : '');
+  const origem = normTxt(a.origem);
+  const { pagina, porPagina } = paginacao(a, 50);
+  const filtros = { de, ate, status, perfil, origem };
+  const vinc = await vinculosLeadOS(ctx);
+  const statusDe = (l) => (vinc.osPorLead.has(l.id) ? 'virou OS' : (STATUS_LEAD[l.status] || 'novo'));
+  let lista = (await ctx.leads()).filter((l) => { const d = diaBR(l.criadoEm); return (!de || d >= de) && (!ate || d <= ate); });
+  if (status) lista = lista.filter((l) => statusDe(l) === statusOk[status]);
+  if (origem) lista = lista.filter((l) => normTxt(l.origem).includes(origem));
+  // Perfil: do índice (gravado desde 18/11) ou pelo documento; os demais pela ficha do lead.
+  const perfilIdx = (l) => (l.perfil === 'PJ' || l.perfil === 'PF' ? l.perfil : (digits(l.documento).length === 14 ? 'PJ' : (digits(l.documento).length === 11 ? 'PF' : '')));
+  const perfilDoRec = (r) => (r && (r.perfil === 'empresa' ? 'PJ' : (r.perfil === 'pessoa_fisica' ? 'PF' : '')));
+  if (perfil) {
+    const indef = lista.filter((l) => !perfilIdx(l));
+    const LIM = 600;
+    const regs = await ctx.lerVarios(indef.slice(0, LIM).map((l) => `lead:${l.id}`));
+    const doRec = new Map(); for (const l of indef.slice(0, LIM)) { try { const raw = regs.get(`lead:${l.id}`); doRec.set(l.id, perfilDoRec(raw ? JSON.parse(raw) : null) || (l.empresa ? 'PJ' : 'PF')); } catch { doRec.set(l.id, l.empresa ? 'PJ' : 'PF'); } }
+    if (indef.length > LIM) ctx.aviso(`Perfil de ${indef.length - LIM} leads antigos deduzido pelo nome da empresa (reduza o período para precisão total).`);
+    lista = lista.filter((l) => (perfilIdx(l) || doRec.get(l.id) || (l.empresa ? 'PJ' : 'PF')) === perfil);
+  }
+  lista.sort((x, y) => String(y.criadoEm).localeCompare(String(x.criadoEm)));
+  const total = lista.length;
+  const fatia = lista.slice((pagina - 1) * porPagina, pagina * porPagina);
+  const regs = await ctx.lerVarios(fatia.map((l) => `lead:${l.id}`));
+  const itens = fatia.map((l) => {
+    let r = {}; try { const raw = regs.get(`lead:${l.id}`); r = raw ? JSON.parse(raw) : {}; } catch { r = {}; }
+    const doc = digits(r.documento || l.documento);
+    const fones = fonesSemDocs([r.documento, l.documento], r.fone);
+    const os = vinc.osPorLead.get(l.id);
+    const pf = perfilIdx(l) || perfilDoRec(r) || (l.empresa ? 'PJ' : 'PF');
+    const item = {
+      id: l.id, data: diaBR(l.criadoEm), perfil: pf,
+      nome: limpar(r.nome || l.nome) || null, empresa: limpar(r.empresa || l.empresa) || null,
+      documento: doc.length === 14 ? fmtCNPJ(doc) : (doc.length === 11 ? mascararCPF(doc) : null),
+      email: separarEmails(r.email || l.email)[0] || null,
+      celular: fones.celulares[0] || fones.telefones[0] || null,
+      cidade: limpar(r.cidade || l.cidade) || null, uf: limpar(r.uf).toUpperCase() || null, cep: fmtCep(digits(r.cep).slice(0, 8)) || null,
+      material: limpar(r.material) || null, volume: limpar(r.volume) || null,
+      mensagem: limparMensagemLead(r.descricao).slice(0, 1500) || null,
+      triagem: (r.triagem && r.triagem.tipo) || l.triagem || null,
+      modalidade: r.expressa ? 'expressa' : 'padrão',
+      consentimento_marketing: r.consentimentoMkt === true ? 'sim' : 'não informado',
+      origem: limpar(r.origem || l.origem) || null, utm: utmDe(r.utm), gclid: gclidDe(r.pagina) || null,
+      status: statusDe(l), status_sistema: l.status || 'novo',
+      os_gerada: os ? { numero: os.numero, status: os.status, vinculo: 'provável (mesmo cliente, até 30 dias depois)' } : null,
+      quem_atendeu: limpar(r.tratadoPor) || null,
+    };
+    return item;
+  });
+  ctx.aviso('"virou OS" = existe OS do mesmo cliente (documento ou e-mail) criada até 30 dias depois do lead — o sistema não grava esse vínculo; é provável.');
+  ctx.aviso('"quem_atendeu" é gravado a partir de 18/11/2026; leads tratados antes ficam vazios.');
+  return saida(ctx, a, {
+    total, pagina, porPagina, itens, filtros, titulo: 'Leads',
+    linha: (l) => [l.data, l.perfil, l.nome || l.empresa, l.email, l.celular, l.cidade, l.material, l.status, l.os_gerada && `OS ${l.os_gerada.numero}`].filter(Boolean).join(' — '),
+  });
+}
+
+// ===================================================================================
+// D) MÉTRICAS DIÁRIAS
+// ===================================================================================
+async function ferrMetricasDiarias(env, args) {
+  const a = args || {};
+  const ctx = novoContexto(env);
+  const { de, ate } = periodoObrigatorio(a, 732);
+  const { pagina, porPagina } = paginacao(a, 31);
+  const oss = await ctx.oss();
+  const pesos = await ctx.pesos();
+  const mats = await ctx.mats();
+  const dias = [];
+  for (let d = de; d <= ate; d = somaDias(d, 1)) dias.push(d);
+  const blank = () => ({ total: 0, pf: 0, pj: 0 });
+  const m = new Map(dias.map((d) => [d, { dia: d, os_criadas: blank(), os_agendadas: blank(), os_concluidas: blank(), os_canceladas: blank(), peso_total_kg: 0, _mat: new Map(), _cid: new Map(), valor_cobrado: 0, valor_recebido: 0, leads_recebidos: 0, leads_convertidos_em_os: 0, conclusoes_estimadas: 0 }]));
+  const conta = (dia, campo, tipo) => { const x = m.get(dia); if (!x) return null; x[campo].total++; if (tipo) x[campo][tipo.toLowerCase()]++; return x; };
+  // Cancelamentos antigos sem data → estimativa pela última atualização (lida da OS).
+  const canc = oss.filter((o) => o.status === 'cancelada' && !o.canceladaEm).map((o) => o.id).slice(0, 400);
+  const comCob = oss.filter((o) => o.cobranca).map((o) => o.id).slice(0, 600);
+  const regs = await ctx.lerVarios([...new Set([...canc, ...comCob])].map((id) => `os:${id}`));
+  const rec = (id) => { try { const raw = regs.get(`os:${id}`); return raw ? JSON.parse(raw) : null; } catch { return null; } };
+  for (const o of oss) {
+    const d = await ctx.docDaOS(o); const tipo = d.length === 14 ? 'PJ' : (d.length === 11 ? 'PF' : '');
+    conta(diaBR(o.criadoEm), 'os_criadas', tipo);
+    if (o.dataAgendada && o.status !== 'cancelada') conta(o.dataAgendada, 'os_agendadas', tipo);
+    const c = dataConclusao(o, pesos);
+    if (c.dia) {
+      const x = conta(c.dia, 'os_concluidas', tipo);
+      if (x) {
+        if (c.estimada) x.conclusoes_estimadas++;
+        x.peso_total_kg += (pesos.get(o.id) || {}).kg || 0;
+        for (const n of nomesMateriais(mats.get(o.id))) x._mat.set(n, (x._mat.get(n) || 0) + 1);
+        for (const cat of (pesos.get(o.id) || {}).cats || []) x._mat.set(normTxt(cat.categoria), (x._mat.get(normTxt(cat.categoria)) || 0) + 1);
+        if (o.cidade) x._cid.set(limpar(o.cidade), (x._cid.get(limpar(o.cidade)) || 0) + 1);
+      }
+    }
+    if (o.status === 'cancelada') { const r = o.canceladaEm ? null : rec(o.id); conta(o.canceladaEm ? diaBR(o.canceladaEm) : diaBR(r && (r.atualizadoEm || r.criadoEm)), 'os_canceladas', tipo); }
+    if (o.cobranca) {
+      const r = rec(o.id);
+      const cob = (r && r.cobranca) || o.cobranca;
+      const xc = m.get(diaBR(cob.criadoEm)); if (xc) xc.valor_cobrado += Number(cob.valor) || 0;
+      if (cob.status === 'pago') { const xp = m.get(diaBR(cob.pagoEm)); if (xp) xp.valor_recebido += Number(cob.valor) || 0; }
+    }
+  }
+  // Vendas do portal (Coleta Expressa, Adote, carbono, ESG) pagas no período.
+  try {
+    if (env.PORTAL_KV && typeof env.PORTAL_KV.list === 'function') {
+      const keys = []; let cursor; let guarda = 0;
+      do { const r = await env.PORTAL_KV.list({ prefix: 'pedido:', cursor, limit: 1000 }); keys.push(...(r.keys || []).map((k) => k.name)); cursor = r.list_complete ? null : r.cursor; } while (cursor && ++guarda < 3);
+      const peds = await ctx.lerVarios(keys.slice(0, 1500));
+      for (const k of keys.slice(0, 1500)) {
+        let p = null; try { const raw = peds.get(k); p = raw ? JSON.parse(raw) : null; } catch { p = null; }
+        if (!p || p.produto === 'teste' || p.produto === 'oscobranca') continue;
+        const xc = m.get(diaBR(p.criadoEm)); if (xc) xc.valor_cobrado += Number(p.valor) || 0;
+        if (p.status === 'pago') { const xp = m.get(diaBR(p.pagoEm)); if (xp) xp.valor_recebido += Number(p.valor) || 0; }
+      }
+    }
+  } catch { ctx.aviso('Vendas do portal (fora das OS) indisponíveis agora.'); }
+  const vinc = await vinculosLeadOS(ctx);
+  for (const l of await ctx.leads()) { const x = m.get(diaBR(l.criadoEm)); if (x) { x.leads_recebidos++; if (vinc.osPorLead.has(l.id)) x.leads_convertidos_em_os++; } }
+  const top = (mp) => [...mp.entries()].sort((x, y) => y[1] - x[1] || x[0].localeCompare(y[0])).slice(0, 5).map(([nome, qtd]) => ({ nome, os: qtd }));
+  const todos = dias.map((d) => { const x = m.get(d); const out = { ...x, peso_total_kg: r2(x.peso_total_kg), valor_cobrado: r2(x.valor_cobrado), valor_recebido: r2(x.valor_recebido), materiais_mais_coletados: top(x._mat), cidades_com_mais_coletas: top(x._cid) }; delete out._mat; delete out._cid; return out; });
+  const fatia = todos.slice((pagina - 1) * porPagina, pagina * porPagina);
+  ctx.aviso('Dia de conclusão das OS antigas é estimado pela data agendada (conclusoes_estimadas mostra quantas no dia); exato a partir de 18/11/2026.');
+  ctx.aviso('leads_convertidos_em_os = leads recebidos no dia que viraram OS do mesmo cliente em até 30 dias (vínculo provável). Valores: cobranças de OS + vendas do portal; pedidos não pagos antigos somem do sistema em 35–90 dias.');
+  return saida(ctx, a, {
+    total: todos.length, pagina, porPagina, itens: fatia, filtros: { de, ate }, titulo: 'Métricas por dia',
+    linha: (x) => `${x.dia} — criadas ${x.os_criadas.total} (PF ${x.os_criadas.pf}/PJ ${x.os_criadas.pj}) · concluídas ${x.os_concluidas.total} · canceladas ${x.os_canceladas.total} · ${x.peso_total_kg} kg · cobrado R$ ${x.valor_cobrado} · recebido R$ ${x.valor_recebido} · leads ${x.leads_recebidos} (${x.leads_convertidos_em_os} viraram OS)`,
+  });
+}
+
+// ===================================================================================
+// E) AGENDA E CAPACIDADE
+// ===================================================================================
+async function ferrAgendaCapacidade(env, args) {
+  const a = args || {};
+  const ctx = novoContexto(env);
+  const { de, ate } = periodoObrigatorio(a, 186);
+  const { pagina, porPagina } = paginacao(a, 31);
+  const oss = await ctx.oss();
+  const pesos = await ctx.pesos();
+  const mats = await ctx.mats();
+  // Peso: o real da doca quando já pesada; senão PREVISTO pelo texto da OS (quantidade
+  // declarada + itens × peso típico — o mesmo estimador da triagem dos pedidos).
+  const pesoOS = (o) => {
+    const p = pesos.get(o.id); if (p && p.kg > 0) return { kg: p.kg, real: true };
+    const pm = partesMat(mats.get(o.id));
+    // Quantidade declarada em kg vale sozinha (somar os itens contaria duas vezes).
+    const est = estimarPesoKg(pm.quantidade) || estimarPesoKg(`${pm.material} ${pm.itens.map((i) => `${i.qtd} ${i.nome}`).join(' ')}`);
+    return { kg: est || 0, real: false, semEstimativa: !est };
+  };
+  const dias = []; for (let d = de; d <= ate; d = somaDias(d, 1)) dias.push(d);
+  const porDia = new Map(dias.map((d) => [d, []]));
+  for (const o of oss) if (o.status !== 'cancelada' && o.dataAgendada && porDia.has(o.dataAgendada)) porDia.get(o.dataAgendada).push(o);
+  const todos = dias.map((d) => {
+    const lista = porDia.get(d);
+    const grupos = new Map();
+    let kg = 0, semEst = 0;
+    for (const o of lista) {
+      const quem = limpar(o.agenteNome) || (o.transp ? `Transportadora: ${limpar(o.transp)}` : 'Sem motorista definido');
+      const g = grupos.get(quem) || { motorista: quem, veiculos: [], qtd_os: 0, concluidas: 0, peso_previsto_kg: 0, peso_real_kg: 0, cidades: [], os: [] };
+      const placa = ctx.placa(o); if (placa && !g.veiculos.includes(placa)) g.veiculos.push(placa);
+      g.qtd_os++; if (o.status === 'concluida') g.concluidas++;
+      const p = pesoOS(o); if (p.real) g.peso_real_kg += p.kg; else { g.peso_previsto_kg += p.kg; if (p.semEstimativa) semEst++; }
+      kg += p.kg;
+      if (o.cidade && !g.cidades.includes(limpar(o.cidade))) g.cidades.push(limpar(o.cidade));
+      g.os.push(o.numero);
+      grupos.set(quem, g);
+    }
+    const motoristas = [...grupos.values()].map((g) => ({ ...g, peso_previsto_kg: r2(g.peso_previsto_kg), peso_real_kg: r2(g.peso_real_kg) })).sort((x, y) => y.qtd_os - x.qtd_os);
+    return { dia: d, qtd_os: lista.length, peso_total_kg: r2(kg), os_sem_estimativa_de_peso: semEst, cidades: [...new Set(lista.map((o) => limpar(o.cidade)).filter(Boolean))], motoristas };
+  });
+  const fila = oss.filter((o) => o.status === 'agendada' && !o.dataAgendada);
+  const filaKg = r2(fila.reduce((t, o) => t + pesoOS(o).kg, 0));
+  const fatia = todos.slice((pagina - 1) * porPagina, pagina * porPagina);
+  ctx.aviso('peso_previsto_kg é ESTIMATIVA pelo texto da OS (quantidade declarada e itens × peso típico); peso_real_kg é o pesado na doca. OS sem texto suficiente ficam sem estimativa (os_sem_estimativa_de_peso).');
+  ctx.aviso('Veículo: placa gravada na OS (do motorista ou da transportadora); OS sem placa não aparecem em "veiculos".');
+  return saida(ctx, a, {
+    total: todos.length, pagina, porPagina, itens: fatia, filtros: { de, ate }, titulo: 'Agenda e capacidade',
+    extra: { fila_sem_data: { qtd_os: fila.length, peso_previsto_kg: filaKg, observacao: 'OS "aguardando roteiro" (sem data marcada)' } },
+    linha: (x) => `${x.dia} — ${x.qtd_os} OS · ${x.peso_total_kg} kg · ${x.motoristas.map((g) => `${g.motorista}: ${g.qtd_os} OS${g.veiculos.length ? ` (${g.veiculos.join(', ')})` : ''}`).join(' | ') || 'sem coletas'}${x.cidades.length ? ` · ${x.cidades.join(', ')}` : ''}`,
+  });
+}
+
+// ===================================================================================
+// F) BLOQUEIOS DE CONTATO
+// ===================================================================================
+async function ferrBloqueiosContato(env, args) {
+  const a = args || {};
+  const ctx = novoContexto(env);
+  const { pagina, porPagina } = paginacao(a, 100);
+  const canalF = normTxt(a.canal);
+  const bl = await ctx.bloqueios();
+  const itens = [];
+  // Clientes ligados a cada telefone bloqueado (para saber de quem é o número).
+  const porFone = new Map();
+  if (ctx.db && bl.porFone.size) {
+    try {
+      const r = await ctx.db.prepare("SELECT c.ploomes_id AS i, c.tipo AS t, c.documento AS d, COALESCE(NULLIF(c.nome,''), c.nome_fantasia, '') AS n, c.email AS m, c.telefone AS f, COALESCE(c.company_id,0) AS emp, e.documento AS ed, COALESCE(NULLIF(e.nome,''), e.nome_fantasia, '') AS en FROM contatos c LEFT JOIN contatos e ON e.ploomes_id = c.company_id AND COALESCE(c.company_id,0) <> 0 WHERE COALESCE(c.telefone,'') <> ''").all();
+      const alvo = new Set(bl.porFone.keys());
+      for (const x of (r && r.results) || []) for (const f of fonesNacionais(x.f)) if (alvo.has(f)) { const l = porFone.get(f) || []; l.push(x); porFone.set(f, l); }
+    } catch { /* sem o cruzamento */ }
+  }
+  for (const [tel, x] of bl.porFone) {
+    const quem = (porFone.get(tel) || []).slice(0, 5);
+    itens.push({
+      canal: 'WhatsApp', telefone: fmtFone(tel), email: separarEmails(quem.map((q) => q.m))[0] || null,
+      clientes: quem.map((q) => (Number(q.emp) > 0
+        ? { id: digits(q.ed).length === 14 ? `PJ-${digits(q.ed)}` : `PJ-B${q.emp}`, nome: limpar(q.en) || null, contato: limpar(q.n) || null }
+        : { id: q.t === 'PJ' && digits(q.d).length === 14 ? `PJ-${digits(q.d)}` : `${q.t === 'PJ' ? 'PJ' : 'PF'}-B${q.i}`, nome: limpar(q.n) || null })),
+      data: diaBR(x.em) || null, motivo: limpar(x.motivo) || 'pediu para sair',
+    });
+  }
+  for (const [doc, x] of bl.porDoc) itens.push({ canal: 'Campanhas (diretoria)', documento: doc.length === 14 ? fmtCNPJ(doc) : mascararCPF(doc) || null, email: null, clientes: [{ id: doc.length === 14 ? `PJ-${doc}` : null, nome: limpar(x.nome) || null }], data: diaBR(x.em) || null, motivo: 'empresa retirada das campanhas pela diretoria' });
+  let lista = itens;
+  if (canalF) lista = lista.filter((i) => normTxt(i.canal).includes(canalF));
+  lista.sort((x, y) => String(y.data || '').localeCompare(String(x.data || '')));
+  const total = lista.length;
+  ctx.aviso('Descadastros de e-mail feitos pelo link do E-goi ficam no E-goi (que bloqueia o envio sozinho) e não são lidos aqui; o sistema guarda só os do WhatsApp e as empresas retiradas das campanhas.');
+  return saida(ctx, a, {
+    total, pagina, porPagina, itens: lista.slice((pagina - 1) * porPagina, pagina * porPagina), filtros: { canal: canalF }, titulo: 'Bloqueios de contato',
+    linha: (b) => [b.canal, b.telefone || b.documento, b.email, (b.clientes || []).map((c) => c.nome).filter(Boolean).join(', '), b.data, b.motivo].filter(Boolean).join(' — '),
+  });
+}
+
+// ===================================================================================
+// G) MATERIAIS
+// ===================================================================================
+async function ferrMateriais(env, args) {
+  const a = args || {};
+  const ctx = novoContexto(env);
+  const { pagina, porPagina } = paginacao(a, 100);
+  const fonteF = normTxt(a.fonte);
+  const slug = (s) => normTxt(s).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50);
+  const itens = [];
+  for (const m of TRIAGEM_DOCA) itens.push({ codigo: `doca.${m.id}`, nome: m.rotulo, categoria: categoriaMaterial(m.rotulo).nome, fonte: 'triagem da doca', ibama: m.ibama || null, classe: m.classe || null, destino: m.destino || null });
+  if (ctx.db) {
+    try {
+      const r = await ctx.db.prepare("SELECT l.categoria AS c, COUNT(*) AS n, SUM(l.peso) AS kg FROM op_lotes l JOIN op_cargas g ON g.id = l.carga_id WHERE COALESCE(g.status,'') <> 'cancelada' GROUP BY l.categoria ORDER BY kg DESC").all();
+      for (const x of (r && r.results) || []) if (limpar(x.c)) itens.push({ codigo: `lote.${slug(x.c)}`, nome: limpar(x.c), categoria: categoriaMaterial(x.c).nome, fonte: 'lotes das cargas (doca)', lotes: Number(x.n) || 0, peso_total_kg: r2(x.kg) });
+    } catch { /* sem cargas */ }
+  }
+  const mats = await ctx.mats();
+  const freq = new Map();
+  for (const mat of mats.values()) for (const n of new Set(partesMat(mat).itens.map((x) => x.nome))) freq.set(n, (freq.get(n) || 0) + 1);
+  for (const [n, q] of [...freq.entries()].sort((x, y) => y[1] - x[1]).slice(0, 300)) itens.push({ codigo: `item.${slug(n)}`, nome: n, categoria: categoriaMaterial(n).nome, fonte: 'itens declarados nas OS', os: q });
+  const regra = (lista, situacao) => { for (const [, rot] of lista) itens.push({ codigo: `regra.${slug(rot)}`, nome: rot, categoria: categoriaMaterial(rot).nome, fonte: 'regras de triagem dos pedidos', situacao }); };
+  regra(REGRAS_MATERIAIS.recusados, 'não coletamos');
+  regra(REGRAS_MATERIAIS.comCusto, 'coletamos com taxa (só junto com outros equipamentos)');
+  regra(REGRAS_MATERIAIS.orcamento, 'só com orçamento');
+  let lista = itens;
+  if (fonteF) lista = lista.filter((i) => normTxt(i.fonte).includes(fonteF));
+  const total = lista.length;
+  ctx.aviso('Não existe catálogo oficial de materiais com código: este reúne a tabela de triagem da doca (com código IBAMA), as categorias usadas nos lotes, os itens digitados nas OS e as regras de triagem. "categoria" é sugerida por palavra-chave.');
+  return saida(ctx, a, {
+    total, pagina, porPagina, itens: lista.slice((pagina - 1) * porPagina, pagina * porPagina), filtros: { fonte: fonteF }, titulo: 'Materiais',
+    linha: (m) => [m.codigo, m.nome, m.categoria, m.fonte, m.situacao, m.os != null && `${m.os} OS`, m.peso_total_kg != null && `${m.peso_total_kg} kg`].filter(Boolean).join(' — '),
+  });
+}
+
+// ===================================================================================
+// Definições (descrições lidas pelo Claude para saber como chamar)
+// ===================================================================================
+const PAG = { pagina: { type: 'number', description: 'página, a partir de 1' }, por_pagina: { type: 'number', description: 'itens por página (máx. 200)' }, campos: { type: 'array', items: { type: 'string' }, description: 'opcional: só estes campos de cada item (economiza espaço em páginas grandes)' }, formato: { type: 'string', enum: ['json', 'texto'], description: 'json (padrão) ou texto' } };
+export const FERRAMENTAS_CONSULTA = [
+  {
+    name: 'clientes',
+    description: 'Clientes da Ecobraz EM LOTE, com filtros — para listas de campanha (PF e PJ separados) e reativação. Só leitura. Filtros opcionais: tipo (PF | PJ | todos), ultima_coleta_de / ultima_coleta_ate (AAAA-MM-DD ou AAAA-MM; última coleta/atendimento concluído, somando sistema novo e histórico do Ploomes), nunca_coletou (true), cadastrado_de / cadastrado_ate, cidade, uf, cep_prefixo (ex.: "013"), material (ex.: "geladeira"; procura nos itens das OS, aceita sinônimos), tem_os_aberta (true/false), aceita_email (true/false), tem_email (true/false), origem (ploomes | sistema | site). Cada cliente traz: id, tipo, nome, CNPJ ou CPF mascarado, e-mails, celulares, telefones, contato principal (PJ), cidade/UF/CEP/bairro (sem rua), coordenadas e distância até a Praça da Sé quando houver, datas de cadastro e de 1ª/última coleta, total de coletas, peso, materiais, OS aberta, aceita_email + motivo_bloqueio e situação de cobrança (com filtro de material, também material_encontrado_em: as OS onde o material apareceu). JSON: total, pagina, paginas, itens (até 200 por página; padrão 50) e contagem (com e sem CNPJ/CPF). Exemplo: {"tipo":"PF","ultima_coleta_de":"2025-11-01","ultima_coleta_ate":"2026-11-17","aceita_email":true,"por_pagina":200,"campos":["nome","emails","celulares","cidade","ultima_coleta"]}',
+    inputSchema: { type: 'object', properties: { tipo: { type: 'string', enum: ['PF', 'PJ', 'todos'] }, ultima_coleta_de: { type: 'string' }, ultima_coleta_ate: { type: 'string' }, nunca_coletou: { type: 'boolean' }, cadastrado_de: { type: 'string' }, cadastrado_ate: { type: 'string' }, cidade: { type: 'string' }, uf: { type: 'string' }, cep_prefixo: { type: 'string' }, material: { type: 'string' }, tem_os_aberta: { type: 'boolean' }, aceita_email: { type: 'boolean' }, tem_email: { type: 'boolean' }, origem: { type: 'string', enum: ['ploomes', 'sistema', 'site'] }, ...PAG } },
+  },
+  {
+    name: 'coletas_periodo',
+    description: 'Ordens de Coleta (OS) num período, com filtros — acompanhar coletas por dia. Só leitura. Obrigatórios: de, ate (AAAA-MM-DD ou AAAA-MM). campo_data escolhe qual data cai no período: criacao (padrão) | agendada | concluida | cancelada. Filtros opcionais: status (agendada | aguardando_roteiro | em_transporte | na_unidade | concluida | cancelada), tipo_cliente (PF | PJ), cidade, material, motorista (nome, ou "sem motorista"), origem (canal do pedido, ex.: site, portal-coleta; ou "sem_pedido"). Cada OS traz: número, status, cliente (id, tipo, nome), cidade e CEP, datas de criação/agendamento/conclusão/cancelamento (com marcação quando estimada), motivo do cancelamento, motorista e veículo, materiais declarados e pesados, peso, modalidade, valor cobrado e pagamento, origem do pedido (UTM e gclid quando houver) e documentos (CDF, NF e MTR com número). Exemplo: {"de":"2026-11-17","ate":"2026-11-17","campo_data":"concluida"}',
+    inputSchema: { type: 'object', properties: { de: { type: 'string' }, ate: { type: 'string' }, campo_data: { type: 'string', enum: ['criacao', 'agendada', 'concluida', 'cancelada'] }, status: { type: 'string' }, tipo_cliente: { type: 'string', enum: ['PF', 'PJ'] }, cidade: { type: 'string' }, material: { type: 'string' }, motorista: { type: 'string' }, origem: { type: 'string' }, ...PAG }, required: ['de', 'ate'] },
+  },
+  {
+    name: 'leads',
+    description: 'Leads (pedidos que chegam pelo formulário do site, pelo portal do cliente e demais canais), com filtros. Só leitura. Filtros opcionais: de, ate (AAAA-MM-DD), status (novo | contatado | virou_os | perdido), perfil (PF | PJ), origem (ex.: site, portal-coleta). Cada lead traz: id, data, perfil, nome, empresa, e-mail, celular, cidade/UF/CEP, material e mensagem, triagem, modalidade, origem com UTM e gclid, status, OS gerada (vínculo provável) e quem atendeu. Exemplo: {"de":"2026-11-01","ate":"2026-11-17","status":"novo","perfil":"PJ"}',
+    inputSchema: { type: 'object', properties: { de: { type: 'string' }, ate: { type: 'string' }, status: { type: 'string', enum: ['novo', 'contatado', 'virou_os', 'perdido'] }, perfil: { type: 'string', enum: ['PF', 'PJ'] }, origem: { type: 'string' }, ...PAG } },
+  },
+  {
+    name: 'metricas_diarias',
+    description: 'Métricas POR DIA entre de e ate (obrigatórios, AAAA-MM-DD; até 2 anos, 31 dias por página): OS criadas, agendadas, concluídas e canceladas separadas em PF e PJ; peso total; materiais mais coletados; cidades com mais coletas; valor cobrado e recebido; leads recebidos e convertidos em OS. Só leitura. Exemplo: {"de":"2026-11-01","ate":"2026-11-17"}',
+    inputSchema: { type: 'object', properties: { de: { type: 'string' }, ate: { type: 'string' }, ...PAG }, required: ['de', 'ate'] },
+  },
+  {
+    name: 'agenda_capacidade',
+    description: 'AGENDA E CAPACIDADE por dia entre de e ate (obrigatórios; até 186 dias): OS agendadas por motorista e veículo, quantidade, peso previsto (estimado pelo texto da OS) ou real (doca) e cidades atendidas — para saber quanto cabe antes de disparar uma campanha. Traz também a fila "aguardando roteiro" (OS sem data). Só leitura. Exemplo: {"de":"2026-11-18","ate":"2026-11-30"}',
+    inputSchema: { type: 'object', properties: { de: { type: 'string' }, ate: { type: 'string' }, ...PAG }, required: ['de', 'ate'] },
+  },
+  {
+    name: 'bloqueios_contato',
+    description: 'Quem pediu para NÃO receber contato: opt-out do WhatsApp (inclui quem respondeu SAIR) e empresas retiradas das campanhas pela diretoria — com telefone ou documento, e-mail e cliente ligados quando houver, data, canal e motivo. Use antes de montar qualquer lista de campanha. Só leitura. Filtro opcional: canal (whatsapp | campanhas). Exemplo: {}',
+    inputSchema: { type: 'object', properties: { canal: { type: 'string' }, ...PAG } },
+  },
+  {
+    name: 'materiais',
+    description: 'Catálogo dos materiais usados nas OS: código, nome e categoria (linha branca, informática, baterias, cabos etc.), reunindo a tabela de triagem da doca (com código IBAMA e classe), as categorias dos lotes pesados, os itens digitados nas OS (com quantas OS) e as regras de triagem (o que não coletamos, o que tem taxa, o que exige orçamento). Use os nomes daqui no filtro "material". Só leitura. Filtro opcional: fonte (doca | lotes | itens | regras). Exemplo: {"fonte":"itens"}',
+    inputSchema: { type: 'object', properties: { fonte: { type: 'string' }, ...PAG } },
+  },
+];
+export const NOMES_CONSULTA = new Set(FERRAMENTAS_CONSULTA.map((f) => f.name));
+
+export async function executarConsulta(env, nome, args) {
+  if (nome === 'clientes') return await ferrClientes(env, args);
+  if (nome === 'coletas_periodo') return await ferrColetasPeriodo(env, args);
+  if (nome === 'leads') return await ferrLeads(env, args);
+  if (nome === 'metricas_diarias') return await ferrMetricasDiarias(env, args);
+  if (nome === 'agenda_capacidade') return await ferrAgendaCapacidade(env, args);
+  if (nome === 'bloqueios_contato') return await ferrBloqueiosContato(env, args);
+  if (nome === 'materiais') return await ferrMateriais(env, args);
+  throw new Error(`Ferramenta desconhecida: ${nome}`);
+}
