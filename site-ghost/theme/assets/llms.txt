@@ -1,7 +1,7 @@
 # Ecobraz Emigre
 
 > Coleta e destinação de resíduos eletrônicos na Grande São Paulo, Brasil, desde 2011.
-> A coleta padrão é gratuita (1 a 7 dias úteis) para pessoas físicas, empresas de todos
+> A coleta padrão é gratuita (até 15 dias úteis; empresa com lote grande, de 51 itens ou mais, em até 72h) para pessoas físicas, empresas de todos
 > os portes e órgãos públicos; a empresa se remunera com a destinação do material.
 > Todo cliente recebe certificado de destinação com QR validável e acesso gratuito ao
 > portal (sistema.ecobraz.org), sem contrato. Serviço vendido e realizado no Brasil,

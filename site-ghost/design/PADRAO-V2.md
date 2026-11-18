@@ -83,8 +83,9 @@ NF, cadeia de custódia) com B2C (geladeira, "a gente busca") no mesmo fluxo.
 
 ## Mensagens-âncora (modelo comercial confirmado 30/07)
 
-- "Coleta gratuita em 1 a 7 dias úteis. Precisa com mais urgência? Existe a
-  expressa em até 72h, por R$ 55." (preço da expressa PÚBLICO — decisão do
+- "Coleta gratuita em até 15 dias úteis; empresa com lote grande (51 itens ou
+  mais) em até 72h. Precisa com mais urgência? Existe a expressa em até 72h,
+  por R$ 55." (prazos decididos pelo Marcio em 18/11/2026; antes: 1 a 7 dias úteis) (preço da expressa PÚBLICO — decisão do
   Marcio em 31/07/2026; demais serviços pagos continuam sem preço público)
 - "Todo cliente usa o sistema completo de graça. Sem contrato. Sem pegadinha.
   Entrou com seu e-mail, está dentro." — inclusive pessoa física.
