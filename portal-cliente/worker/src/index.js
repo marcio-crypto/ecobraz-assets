@@ -85,6 +85,7 @@ import { agentesDe } from './agente.js';
 import { atenderMcpClaude, lerConexaoClaude, gerarConexaoClaude, revogarConexaoClaude, paginaConexaoClaude, listarAuditoriaClaude } from './mcp-claude.js';
 import { mudancaComHistorico, registrarHistoricoLead, listarHistoricoLead, deLocalBR, leadsAbertosDoCliente, leadSemOSValida, medido, INICIO_MEDICAO_TXT } from './atendimento.js';
 import { LEAD_RESOLVIDO as LEAD_JA_RESOLVIDO } from './cadastro.js';
+import { CRON_AVALIACAO, processarAvaliacoes, lerConfigAvaliacao, salvarModoAvaliacao, salvarCasaAvaliacao, consultarNaoEnviar, adicionarNaoEnviar, removerNaoEnviar, contarNaoEnviar, marcarWhatsapp, desfazerWhatsapp, enviarExemplo, conferirDominio, infoAvaliacaoOS, dadosPaginaAvaliacoes, blocoAvaliacaoOS, paginaAvaliacoes } from './avaliacao.js';
 import { servirIcone, servirManifest, servirServiceWorker } from './pwa.js';
 import { googleConfigurado, iniciarGoogle, callbackGoogle, botaoGoogle } from './google-auth.js';
 
@@ -116,9 +117,21 @@ export default {
     // materiais, placa e hora real de conclusão (usados pelas consultas do Claude). Fica
     // longe do horário em que a equipe cria/altera OS — regravar o índice não atropela
     // ninguém. Quando não falta mais nada, não faz nada.
-    if (event && event.cron === '0 6 * * *') {
+    const cron = String((event && event.cron) || '');
+    if (cron === '0 6 * * *') {
       try { const r = await completarIndiceOS(env, 800); console.log('cron_indice_os', r); }
       catch (error) { console.error('cron_indice_os_erro', safeError(error)); }
+      return;
+    }
+    // A cada 10 min (08:00–19:50 de Brasília): pedidos de avaliação no Google das coletas
+    // concluídas (só faz algo com a chave em "teste" ou "ligado"). Trava de segurança: os
+    // alertas diários abaixo só rodam no gatilho das 11:00 UTC — qualquer outro gatilho
+    // que não seja o deles cai aqui, e nunca dispara os alertas de 10 em 10 minutos.
+    const quando = new Date((event && event.scheduledTime) || Date.now());
+    const horaDosAlertas = quando.getUTCHours() === 11 && quando.getUTCMinutes() === 0;
+    if (cron === CRON_AVALIACAO || (cron !== '0 11 * * *' && !horaDosAlertas)) {
+      try { const r = await processarAvaliacoes(env); if (r.candidatas) console.log('cron_avaliacao', r); }
+      catch (error) { console.error('cron_avaliacao_erro', safeError(error)); }
       return;
     }
     try { const r = await alertasEmpresaDocs(env); console.log('cron_empdocs', r); }
@@ -2173,6 +2186,56 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         return json({ ok: !!ok });
       }
 
+      // Pedido de avaliação no Google depois da coleta (pedido da Débora, 18/11): chave
+      // desligado/teste/ligado, lista "não enviar e-mail", conferência do domínio e
+      // registro. Escritório e diretoria usam; só a diretoria liga de verdade.
+      if (pathname === '/avaliacoes' && request.method === 'GET') {
+        const quem = escritorio || diretoria;
+        if (!quem) return html(paginaLoginEscritorio(googleConfigurado(env)));
+        return html(paginaAvaliacoes(quem, await dadosPaginaAvaliacoes(env), !!diretoria));
+      }
+      if (pathname.startsWith('/api/avaliacoes/') && request.method === 'POST') {
+        const quem = escritorio || diretoria;
+        if (!quem) return json({ ok: false, message: 'Entre de novo no sistema.' }, 401);
+        let b; try { b = await request.json(); } catch { b = null; }
+        if (!b || typeof b !== 'object') b = {};
+        const autor = String(quem.email || '');
+        if (pathname === '/api/avaliacoes/modo') {
+          const modo = String(b.modo || '');
+          if (!['desligado', 'teste', 'ligado'].includes(modo)) return json({ ok: false, message: 'Opção inválida.' }, 400);
+          if (modo === 'ligado' && !diretoria) return json({ ok: false, message: 'Só a diretoria pode ligar de verdade.' }, 403);
+          const c = await salvarModoAvaliacao(env, modo, autor);
+          console.log('avaliacao_modo', modo);
+          return json({ ok: !!c, modo: c ? c.modo : '' });
+        }
+        if (pathname === '/api/avaliacoes/casa') return json({ ok: !!(await salvarCasaAvaliacao(env, b.texto, autor)) });
+        if (pathname === '/api/avaliacoes/conferir') return json({ ok: true, conferencia: await conferirDominio(env) });
+        if (pathname === '/api/avaliacoes/exemplo') return json(await enviarExemplo(env, autor, b.modelo === 'PJ' ? 'PJ' : 'PF'));
+        if (pathname === '/api/avaliacoes/nao-enviar') {
+          const acao = String(b.acao || '');
+          if (acao === 'importar') { const r = await adicionarNaoEnviar(env, b.itens, { origem: 'egoi', por: autor }); return json({ ok: r.ok, gravados: r.gravados }); }
+          const email = String(b.email || '').trim().toLowerCase();
+          if (!/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(email)) return json({ ok: false, message: 'E-mail inválido.' }, 400);
+          if (acao === 'consultar') { const x = (await consultarNaoEnviar(env, [email])).get(email); return json({ ok: true, message: x ? `Está na lista (${x.motivo === 'invalido' ? 'e-mail inválido' : 'pediu para sair'}${x.em ? `, desde ${String(x.em).slice(0, 10).split('-').reverse().join('/')}` : ''}): não recebe.` : 'Não está na lista — pode receber.' }); }
+          if (acao === 'adicionar') { await adicionarNaoEnviar(env, [{ e: email, m: b.motivo === 'invalido' ? 'invalido' : 'descadastrado' }], { origem: 'manual', por: autor }); return json({ ok: true, message: 'Colocado na lista: este e-mail não recebe mais.', total: (await contarNaoEnviar(env)).total }); }
+          if (acao === 'remover') { await removerNaoEnviar(env, email); return json({ ok: true, message: 'Tirado da lista.', total: (await contarNaoEnviar(env)).total }); }
+          return json({ ok: false, message: 'Ação inválida.' }, 400);
+        }
+        return json({ ok: false, message: 'Rota não encontrada.' }, 404);
+      }
+      // "Pedi pelo WhatsApp" na OS: vale como pedido de avaliação feito (regra dos 12 meses).
+      if (pathname === '/api/coletas/avaliacao-whatsapp' && request.method === 'POST') {
+        if (!escritorio) return json({ ok: false, message: 'Entre de novo no sistema.' }, 401);
+        let b; try { b = await request.json(); } catch { b = null; }
+        const osId = String((b && b.id) || '').replace(/[^a-zA-Z0-9_-]/g, '');
+        if (!osId) return json({ ok: false, message: 'OS não informada.' }, 400);
+        if (b.acao === 'desfazer') return json(await desfazerWhatsapp(env, osId));
+        const osA = await lerColetaOS(env, osId);
+        if (!osA) return json({ ok: false, message: 'Coleta não encontrada.' }, 404);
+        let cliA = null; try { cliA = osA.clienteId ? await lerCliente(env, osA.clienteId) : null; } catch { cliA = null; }
+        return json(await marcarWhatsapp(env, osA, cliA, escritorio.email || ''));
+      }
+
       // Ordens de Coleta (escritório/comercial) — geração própria a partir do cliente.
       if (pathname === '/coletas' && request.method === 'GET') {
         if (!escOuEng) return html(paginaLoginEscritorio(googleConfigurado(env)));
@@ -2320,7 +2383,10 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         let opOS = null, valOS = null;
         try { opOS = await lerOperacao(env, os.id); if (opOS && (opOS.etapa === 'concluida' || opOS.etapa === 'validacao')) valOS = await lerValidacaoOp(env, os.id); } catch { opOS = null; }
         const cdfAptoOS = !!(opOS && opOS.etapa === 'concluida' && valOS && valOS.decisao === 'validada');
-        return html(paginaColetaOSDetalhe(escOuEng, os, acomp, { somenteLeitura: !escritorio, op: opOS, val: valOS, cdfApto: cdfAptoOS }));
+        // Pedido de avaliação no Google desta coleta (só leitura do registro; best-effort).
+        let avaliacaoHTML = '';
+        try { if (os.status === 'concluida') avaliacaoHTML = blocoAvaliacaoOS(os, await infoAvaliacaoOS(env, os), !!escritorio); } catch { avaliacaoHTML = ''; }
+        return html(paginaColetaOSDetalhe(escOuEng, os, acomp, { somenteLeitura: !escritorio, op: opOS, val: valOS, cdfApto: cdfAptoOS, avaliacaoHTML }));
       }
       if (pathname === '/coletas/editar' && request.method === 'GET') {
         if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });

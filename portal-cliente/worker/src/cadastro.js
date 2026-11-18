@@ -1627,6 +1627,7 @@ export function paginaInicio(user, stats) {
     ${card('/cadastro', '🏢', 'Cadastro & Clientes', 'Empresas e pessoas físicas, com contatos embutidos. Busca rápida.', badge(s.clientes != null ? `${num(s.clientes)} clientes` : null))}
     ${card('/coletas', '📋', 'Ordens de Coleta', 'Abra e acompanhe as coletas. Comprovante com QR de rastreio.', badge(s.coletasAbertas != null ? `${num(s.coletasAbertas)} em aberto` : null, s.coletasAbertas > 0))}
     ${card('/leads', '📥', 'Leads do site', 'Solicitações que chegam pelo formulário do site.', badge(s.leadsNovos != null ? `${num(s.leadsNovos)} novos` : null, s.leadsNovos > 0))}
+    ${card('/avaliacoes', '⭐', 'Avaliações no Google', 'Pedido de avaliação por e-mail depois da coleta: ligar/desligar, lista “não enviar e-mail” e registro.')}
     ${card('/propostas', '📄', 'Propostas & Contratos', 'Emita a proposta comercial e o contrato básico, prontos para PDF.')}
     ${card('/operacao', '🏭', 'Operação (doca)', 'Recepção, triagem, processamento e saída. Balanço de massa.', badge(s.aReceber != null && s.aReceber > 0 ? `${num(s.aReceber)} a receber` : null, true))}
     ${card('/cargas', '🚛', 'Entrada por Cargas', 'Consolidação, pesagem, fotos, lotes com etiqueta QR e filas por destino.')}

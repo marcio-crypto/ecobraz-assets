@@ -20,6 +20,7 @@ import { lerChavesKV } from './kv-lote.js';
 import { MATERIAIS as TRIAGEM_DOCA } from './operacional.js';
 import { REGRAS_MATERIAIS, estimarPesoKg } from './cadastro.js';
 import { isoBR, minutosEntre, percentil, segundaDaSemana, situacaoPrazo, avaliarLoteGrande, perfilDoLead, ehPedidoDeColeta, medido, INICIO_MEDICAO_TXT } from './atendimento.js';
+import { lerAvaliacoes, camposAvaliacao, ROTULO_MOTIVO } from './avaliacao.js';
 
 export class ErroUso extends Error {}
 
@@ -368,6 +369,16 @@ function novoContexto(env) {
     }
     return { porFone, porDoc };
   });
+  // Lista "não enviar e-mail" (descadastrados e inválidos: carga do E-goi + os que a
+  // equipe marcou). Map e-mail → { motivo, em }. Vazia enquanto a carga não for feita.
+  ctx.naoEnviar = () => uma('naoEnviar', async () => {
+    const m = new Map();
+    if (ctx.db) {
+      try { const r = await ctx.db.prepare('SELECT email, motivo, em FROM email_nao_enviar LIMIT 100000').all(); for (const x of (r && r.results) || []) if (x.email) m.set(String(x.email).toLowerCase(), x); }
+      catch { /* lista ainda não criada */ }
+    }
+    return m;
+  });
   // Estatística de coletas por cliente (chave = CNPJ/CPF, ou p+id sem documento), com a
   // MESMA regra de clientes_pj_por_ultima_coleta: negócios ganhos do Ploomes (data de
   // abertura) + OS concluídas do sistema novo (data agendada; sem ela, a de criação).
@@ -637,14 +648,25 @@ async function ferrClientes(env, args) {
     const bl = await ctx.bloqueios();
     // Telefones das pessoas vinculadas às empresas candidatas.
     const pjPids = lista.filter((g) => g.tipo === 'PJ').flatMap((g) => g.pids);
-    const fonesPessoas = new Map();
+    const fonesPessoas = new Map(), emailsPessoas = new Map();
     if (pjPids.length) {
-      const ps = await consultaEmFatias(db, () => "SELECT p.company_id AS c, p.telefone AS f FROM contatos p WHERE p.tipo='PF' AND p.company_id IN (SELECT value FROM json_each(?1)) AND COALESCE(p.telefone,'') <> ''", pjPids);
-      for (const x of ps) { const l = fonesPessoas.get(x.c) || []; l.push(x.f); fonesPessoas.set(x.c, l); }
+      const ps = await consultaEmFatias(db, () => "SELECT p.company_id AS c, p.telefone AS f, p.email AS m FROM contatos p WHERE p.tipo='PF' AND p.company_id IN (SELECT value FROM json_each(?1)) AND (COALESCE(p.telefone,'') <> '' OR COALESCE(p.email,'') LIKE '%@%')", pjPids);
+      for (const x of ps) {
+        if (x.f) { const l = fonesPessoas.get(x.c) || []; l.push(x.f); fonesPessoas.set(x.c, l); }
+        if (x.m) { const l = emailsPessoas.get(x.c) || []; l.push(x.m); emailsPessoas.set(x.c, l); }
+      }
     }
-    const bloqueado = (g) => motivoDeBloqueio(bl, g.k, [...fonesDaFicha(fichaDe(g)), ...g.fonesTexto, ...g.pids.flatMap((pid) => fonesPessoas.get(pid) || [])]) != null;
+    // Lista "não enviar e-mail": cliente com e-mail em que TODOS estão na lista não aceita e-mail.
+    const ne = await ctx.naoEnviar();
+    const semEmailLivre = (g) => {
+      if (!ne.size) return false;
+      const f = fichaDe(g);
+      const es = separarEmails(f && f.email, (f && Array.isArray(f.contatos) ? f.contatos : []).filter((c) => c && (c.nome || c.email || c.fone)).map((c) => c.email), g.emails, g.pids.flatMap((pid) => emailsPessoas.get(pid) || []));
+      return es.length > 0 && es.every((e) => ne.has(e));
+    };
+    const bloqueado = (g) => motivoDeBloqueio(bl, g.k, [...fonesDaFicha(fichaDe(g)), ...g.fonesTexto, ...g.pids.flatMap((pid) => fonesPessoas.get(pid) || [])]) != null || semEmailLivre(g);
     lista = lista.filter((g) => (aceita ? !bloqueado(g) : bloqueado(g)));
-    ctx.aviso('aceita_email: o filtro usa a mesma regra do campo de cada cliente — documento e telefones da base, das pessoas da empresa e da ficha do sistema novo.');
+    ctx.aviso('aceita_email: o filtro usa a mesma regra do campo de cada cliente — documento, telefones e e-mails da base, das pessoas da empresa e da ficha do sistema novo.');
   }
   // 5) Ordem: com filtro de última coleta, da mais recente; senão, por nome.
   const porData = !!(ultDe || ultAte);
@@ -661,7 +683,7 @@ async function ferrClientes(env, args) {
   if (termos.length) ctx.aviso('material: procura nas OS não canceladas (concluídas e em aberto); "material_encontrado_em" mostra em quais OS o material apareceu.');
   if (tipo !== 'PJ') ctx.aviso('PF = pessoa física que é cliente; contatos de empresas ficam dentro da empresa (por isso o total difere de "pessoas físicas" da visao_geral, que soma os dois).');
   ctx.aviso('Coletas: OS concluídas do sistema novo + negócios ganhos do Ploomes (data de abertura). Peso e materiais só existem para OS do sistema novo.');
-  ctx.aviso('Descadastro de e-mail não é gravado no sistema (fica no E-goi, que bloqueia o envio sozinho); aceita_email = "não" vem de opt-out do WhatsApp ou de empresa retirada das campanhas.');
+  ctx.aviso('aceita_email = "não" vem de: opt-out do WhatsApp, empresa retirada das campanhas ou TODOS os e-mails do cliente na lista "não enviar e-mail" do sistema (descadastrados e inválidos — carga do E-goi e marcações da equipe; vazia até a carga ser feita). E-mail que está nessa lista sai de "emails" e aparece em "emails_nao_enviar". Descadastros feitos no E-goi DEPOIS da carga só entram aqui com nova carga.');
   return saida(ctx, a, {
     total, pagina, porPagina, itens, filtros, titulo: 'Clientes',
     extra: { contagem: { com_cnpj_ou_cpf: total - semDoc, sem_documento: semDoc } },
@@ -710,6 +732,7 @@ async function detalharClientes(ctx, grupos, { stats, ossPorDoc, termos }) {
   const fichasRaw = await ctx.lerVarios(fichaIds.map((id) => `cli:${id}`));
   const ficha = (g) => { const id = fichaPorDoc.get(g.k); if (!id) return null; try { const raw = fichasRaw.get(`cli:${id}`); return raw ? JSON.parse(raw) : null; } catch { return null; } };
   const bl = await ctx.bloqueios();
+  const ne = await ctx.naoEnviar();
   const pesos = await ctx.pesos();
   const mats = await ctx.mats();
   const leads = await ctx.leads();
@@ -727,7 +750,10 @@ async function detalharClientes(ctx, grupos, { stats, ossPorDoc, termos }) {
   return base.map(({ g, rows, f, pes, contatosFicha, end }) => {
     const pj = g.tipo === 'PJ';
     const r0 = rows[0] || {};
-    const emails = separarEmails(f && f.email, contatosFicha.map((c) => c.email), rows.map((r) => r.email), pes.map((x) => x.email));
+    const todosEmails = separarEmails(f && f.email, contatosFicha.map((c) => c.email), rows.map((r) => r.email), pes.map((x) => x.email));
+    // Os que estão na lista "não enviar e-mail" saem de "emails" (ficam em emails_nao_enviar).
+    const emailsFora = ne.size ? todosEmails.filter((e) => ne.has(e)) : [];
+    const emails = emailsFora.length ? todosEmails.filter((e) => !ne.has(e)) : todosEmails;
     const docsDoCliente = [g.k, ...rows.map((r) => r.documento), ...pes.map((x) => x.documento)];
     const fones = fonesSemDocs(docsDoCliente, fonesDaFicha(f), rows.map((r) => r.telefone), pes.map((x) => x.telefone));
     let coord = null; try { const raw = geo.get(`geocep:${end.cep}`); const v = raw ? JSON.parse(raw) : null; if (v && Number.isFinite(Number(v.lat)) && Number.isFinite(Number(v.lon)) && v.lat && v.lon) coord = { lat: Number(v.lat), lon: Number(v.lon) }; } catch { coord = null; }
@@ -741,13 +767,15 @@ async function detalharClientes(ctx, grupos, { stats, ossPorDoc, termos }) {
     const emAberto = lista.filter((o) => o.cobranca && o.cobranca.status !== 'pago' && o.status !== 'cancelada');
     const valorAberto = r2(emAberto.reduce((t, o) => t + (Number(o.cobranca.valor) || 0), 0));
     // Descadastro (o que o sistema conhece): opt-out do WhatsApp e empresa excluída.
-    const motivo = motivoDeBloqueio(bl, g.k, [...fonesDaFicha(f), ...rows.map((r) => r.telefone), ...pes.map((x) => x.telefone)]);
+    const motivo = motivoDeBloqueio(bl, g.k, [...fonesDaFicha(f), ...rows.map((r) => r.telefone), ...pes.map((x) => x.telefone)])
+      || (todosEmails.length && !emails.length ? 'todos os e-mails do cliente estão na lista "não enviar e-mail" (descadastrado ou inválido)' : null);
     const origemFicha = String((f && f.origem) || '');
-    const origem = g.pids.some((id) => Number(id) < 900000000) || origemFicha.startsWith('ploomes') ? 'ploomes' : (origemFicha === 'adote' ? 'adote' : (lDocs.has(g.k) || emails.some((e) => lEmails.has(e)) ? 'site' : (g.semCadastro ? 'sem cadastro na base' : 'sistema')));
+    const origem = g.pids.some((id) => Number(id) < 900000000) || origemFicha.startsWith('ploomes') ? 'ploomes' : (origemFicha === 'adote' ? 'adote' : (lDocs.has(g.k) || todosEmails.some((e) => lEmails.has(e)) ? 'site' : (g.semCadastro ? 'sem cadastro na base' : 'sistema')));
     const cadastro = rows.map((r) => diaBR(r.criado_em)).filter(Boolean).sort()[0] || diaBR(f && f.criadoEm) || null;
     const contatoPrincipal = pj ? (contatosFicha[0]
       ? { nome: limpar(contatosFicha[0].nome) || null, cargo: limpar(contatosFicha[0].cargo) || null, email: separarEmails(contatosFicha[0].email)[0] || null, telefone: (() => { const x = fonesSemDocs(docsDoCliente, contatosFicha[0].fone); return x.celulares[0] || x.telefones[0] || null; })() }
       : (() => { const x = pes.find((q) => q.email || q.telefone); if (!x) return null; const fx = fonesSemDocs(docsDoCliente, x.telefone); return { nome: limpar(x.nome) || null, cargo: null, email: separarEmails(x.email)[0] || null, telefone: fx.celulares[0] || fx.telefones[0] || null }; })()) : undefined;
+    if (contatoPrincipal && contatoPrincipal.email && ne.has(contatoPrincipal.email)) contatoPrincipal.email = null;
     const item = {
       id: idCliente(g.k, g.tipo, g.pids),
       tipo: g.tipo,
@@ -755,7 +783,7 @@ async function detalharClientes(ctx, grupos, { stats, ossPorDoc, termos }) {
       nome_fantasia: pj ? (limpar((f && f.nomeFantasia) || r0.nome_fantasia) || null) : undefined,
       cnpj: pj ? (!g.k.startsWith('p') && g.k.length === 14 ? fmtCNPJ(g.k) : null) : undefined,
       cpf: !pj ? (mascararCPF(g.k) || null) : undefined,
-      emails, celulares: fones.celulares, telefones: fones.telefones,
+      emails, emails_nao_enviar: emailsFora.length ? emailsFora : undefined, celulares: fones.celulares, telefones: fones.telefones,
       contato_principal: contatoPrincipal,
       cidade: end.cidade || null, uf: end.uf || null, cep: fmtCep(end.cep) || null, bairro: end.bairro || null,
       latitude: coord ? coord.lat : null, longitude: coord ? coord.lon : null,
@@ -841,6 +869,8 @@ async function detalharColetas(ctx, lista, vinc) {
   const ops = await ctx.lerVarios(lista.map((o) => `op:${o.id}`));
   const leadIds = lista.map((o) => vinc.leadPorOS.get(o.id)).filter(Boolean).map((l) => `lead:${l.id}`);
   const leadsRaw = await ctx.lerVarios(leadIds);
+  // Pedido de avaliação no Google de cada OS concluída (registro próprio; sem dado pessoal).
+  const avals = await lerAvaliacoes(ctx.env, lista.filter((o) => o.status === 'concluida').map((o) => o.id));
   // Ids dos clientes (PJ pelo CNPJ; PF pela linha da base — nunca pelo CPF).
   const docs = [...new Set((await Promise.all(lista.map((o) => ctx.docDaOS(o)))).filter(Boolean))];
   const pidPF = new Map();
@@ -887,6 +917,7 @@ async function detalharColetas(ctx, lista, vinc) {
       prazo_alvo: prazoAlvo ? isoBR(prazoAlvo) : undefined,
       prazo_cumprido: sitPrazo ? sitPrazo.cumpriu : undefined,
       prazo_situacao: sitPrazo ? sitPrazo.texto : undefined,
+      ...camposAvaliacao(avals.get(o.id)),
       data_cancelamento: o.status === 'cancelada' ? (diaBR(o.canceladaEm || rec.canceladaEm) || diaBR(rec.atualizadoEm) || null) : null,
       data_cancelamento_estimada: o.status === 'cancelada' ? !(o.canceladaEm || rec.canceladaEm) : undefined,
       motivo_cancelamento: o.status === 'cancelada' ? (textoSeguro(semCauda(rec.motivoCancelamento, 300)) || null) : undefined,
@@ -1034,7 +1065,23 @@ async function ferrMetricasDiarias(env, args) {
   const dias = [];
   for (let d = de; d <= ate; d = somaDias(d, 1)) dias.push(d);
   const blank = () => ({ total: 0, pf: 0, pj: 0 });
-  const m = new Map(dias.map((d) => [d, { dia: d, os_criadas: blank(), os_agendadas: blank(), os_concluidas: blank(), os_canceladas: blank(), peso_total_kg: 0, _mat: new Map(), _cid: new Map(), valor_cobrado: 0, valor_recebido: 0, leads_recebidos: 0, leads_convertidos_em_os: 0, conclusoes_estimadas: 0 }]));
+  const m = new Map(dias.map((d) => [d, { dia: d, os_criadas: blank(), os_agendadas: blank(), os_concluidas: blank(), os_canceladas: blank(), peso_total_kg: 0, _mat: new Map(), _cid: new Map(), valor_cobrado: 0, valor_recebido: 0, leads_recebidos: 0, leads_convertidos_em_os: 0, conclusoes_estimadas: 0, avaliacoes_google: { pedidos_email: 0, pedidos_whatsapp: 0, nao_enviados: 0, nao_enviados_por_motivo: {}, testes: 0 } }]));
+  // Pedidos de avaliação no Google: contagem no dia em que o pedido saiu (ou em que se
+  // decidiu não enviar), horário de Brasília.
+  if (ctx.db) {
+    try {
+      const ini = new Date(Date.parse(`${de}T00:00:00-03:00`)).toISOString(), fim = new Date(Date.parse(`${somaDias(ate, 1)}T00:00:00-03:00`)).toISOString();
+      const r = await ctx.db.prepare('SELECT COALESCE(pedida_em, processado_em) AS em, status, motivo FROM avaliacao_pedidos WHERE COALESCE(pedida_em, processado_em) >= ?1 AND COALESCE(pedida_em, processado_em) < ?2').bind(ini, fim).all();
+      for (const x of (r && r.results) || []) {
+        const d = m.get(diaBR(x.em)); if (!d) continue;
+        const a = d.avaliacoes_google;
+        if (x.status === 'enviado') a.pedidos_email++;
+        else if (x.status === 'whatsapp') a.pedidos_whatsapp++;
+        else if (x.status === 'teste') a.testes++;
+        else if (x.status === 'nao_enviado') { a.nao_enviados++; const k = ROTULO_MOTIVO[x.motivo] || x.motivo || 'outro'; a.nao_enviados_por_motivo[k] = (a.nao_enviados_por_motivo[k] || 0) + 1; }
+      }
+    } catch { /* registro de avaliações ainda não criado */ }
+  }
   const conta = (dia, campo, tipo) => { const x = m.get(dia); if (!x) return null; x[campo].total++; if (tipo) x[campo][tipo.toLowerCase()]++; return x; };
   // Cancelamentos antigos sem data → estimativa pela última atualização (lida da OS).
   const cancTodos = oss.filter((o) => o.status === 'cancelada' && !o.canceladaEm).map((o) => o.id);
@@ -1088,10 +1135,11 @@ async function ferrMetricasDiarias(env, args) {
   const todos = dias.map((d) => { const x = m.get(d); const out = { ...x, peso_total_kg: r2(x.peso_total_kg), valor_cobrado: r2(x.valor_cobrado), valor_recebido: r2(x.valor_recebido), materiais_mais_coletados: top(x._mat), cidades_com_mais_coletas: top(x._cid) }; delete out._mat; delete out._cid; return out; });
   const fatia = todos.slice((pagina - 1) * porPagina, pagina * porPagina);
   ctx.aviso('Dia de conclusão das OS antigas é estimado pela data agendada (conclusoes_estimadas mostra quantas no dia); exato a partir de 18/11/2026.');
+  ctx.aviso('avaliacoes_google = pedidos de avaliação no Google por dia: pedidos_email (enviados ao cliente), pedidos_whatsapp (marcados pela equipe na OS), nao_enviados com o motivo (sem e-mail, descadastrado, bloqueio, já pedido em 12 meses, casa/família…) e testes (modo de teste: e-mail só para a equipe). Tudo zero enquanto a função estiver desligada.');
   ctx.aviso(`leads_convertidos_em_os = leads recebidos no dia que viraram OS: vínculo exato quando a OS foi gerada a partir do pedido; pedidos de antes de ${INICIO_MEDICAO_TXT}, vínculo provável (OS do mesmo cliente em até 30 dias). Valores: cobranças de OS + vendas do portal; pedidos não pagos antigos somem do sistema em 35–90 dias.`);
   return saida(ctx, a, {
     total: todos.length, pagina, porPagina, itens: fatia, filtros: { de, ate }, titulo: 'Métricas por dia',
-    linha: (x) => `${x.dia} — criadas ${x.os_criadas.total} (PF ${x.os_criadas.pf}/PJ ${x.os_criadas.pj}) · concluídas ${x.os_concluidas.total} · canceladas ${x.os_canceladas.total} · ${x.peso_total_kg} kg · cobrado R$ ${x.valor_cobrado} · recebido R$ ${x.valor_recebido} · leads ${x.leads_recebidos} (${x.leads_convertidos_em_os} viraram OS)`,
+    linha: (x) => `${x.dia} — criadas ${x.os_criadas.total} (PF ${x.os_criadas.pf}/PJ ${x.os_criadas.pj}) · concluídas ${x.os_concluidas.total} · canceladas ${x.os_canceladas.total} · ${x.peso_total_kg} kg · cobrado R$ ${x.valor_cobrado} · recebido R$ ${x.valor_recebido} · leads ${x.leads_recebidos} (${x.leads_convertidos_em_os} viraram OS) · avaliações pedidas ${x.avaliacoes_google.pedidos_email + x.avaliacoes_google.pedidos_whatsapp} (não enviadas ${x.avaliacoes_google.nao_enviados})`,
   });
 }
 
@@ -1273,11 +1321,14 @@ async function ferrBloqueiosContato(env, args) {
     });
   }
   for (const [doc, x] of bl.porDoc) itens.push({ canal: 'Campanhas (diretoria)', documento: doc.length === 14 ? fmtCNPJ(doc) : mascararCPF(doc) || null, email: null, clientes: [{ id: doc.length === 14 ? `PJ-${doc}` : null, nome: limpar(x.nome) || null }], data: diaBR(x.em) || null, motivo: 'empresa retirada das campanhas pela diretoria' });
+  // Lista "não enviar e-mail" do sistema (descadastrados e inválidos).
+  for (const [email, x] of await ctx.naoEnviar()) itens.push({ canal: 'E-mail (lista não enviar)', email, clientes: [], data: diaBR(x.em) || null, motivo: x.motivo === 'invalido' ? 'e-mail inválido (voltou)' : 'pediu para não receber e-mails' });
   let lista = itens;
-  if (canalF) lista = lista.filter((i) => normTxt(i.canal).includes(canalF));
+  const semHifen = (s) => normTxt(s).replace(/-/g, '');
+  if (canalF) lista = lista.filter((i) => semHifen(i.canal).includes(semHifen(canalF)));
   lista.sort((x, y) => String(y.data || '').localeCompare(String(x.data || '')));
   const total = lista.length;
-  ctx.aviso('Descadastros de e-mail feitos pelo link do E-goi ficam no E-goi (que bloqueia o envio sozinho) e não são lidos aqui; o sistema guarda só os do WhatsApp e as empresas retiradas das campanhas.');
+  ctx.aviso('E-mail: a lista "não enviar e-mail" do sistema traz os descadastrados e inválidos da carga do E-goi e os que a equipe marcou (vazia até a carga ser feita). Descadastros feitos no E-goi DEPOIS da carga só entram aqui com nova carga — o E-goi continua bloqueando sozinho os envios feitos por ele.');
   return saida(ctx, a, {
     total, pagina, porPagina, itens: lista.slice((pagina - 1) * porPagina, pagina * porPagina), filtros: { canal: canalF }, titulo: 'Bloqueios de contato',
     linha: (b) => [b.canal, b.telefone || b.documento, b.email, (b.clientes || []).map((c) => c.nome).filter(Boolean).join(', '), b.data, b.motivo].filter(Boolean).join(' — '),
@@ -1326,12 +1377,12 @@ const PAG = { pagina: { type: 'number', description: 'página, a partir de 1' },
 export const FERRAMENTAS_CONSULTA = [
   {
     name: 'clientes',
-    description: 'Clientes da Ecobraz EM LOTE, com filtros — para listas de campanha (PF e PJ separados) e reativação. Só leitura. Filtros opcionais: tipo (PF | PJ | todos), ultima_coleta_de / ultima_coleta_ate (AAAA-MM-DD ou AAAA-MM; última coleta/atendimento concluído, somando sistema novo e histórico do Ploomes), nunca_coletou (true), cadastrado_de / cadastrado_ate, cidade, uf, cep_prefixo (ex.: "013"), material (ex.: "geladeira"; procura nos itens das OS, aceita sinônimos), tem_os_aberta (true/false), aceita_email (true/false), tem_email (true/false), origem (ploomes | sistema | site). Cada cliente traz: id, tipo, nome, CNPJ ou CPF mascarado, e-mails, celulares, telefones, contato principal (PJ), cidade/UF/CEP/bairro (sem rua), coordenadas e distância até a Praça da Sé quando houver, datas de cadastro e de 1ª/última coleta, total de coletas, peso, materiais, OS aberta, aceita_email + motivo_bloqueio e situação de cobrança (com filtro de material, também material_encontrado_em: as OS onde o material apareceu). JSON: total, pagina, paginas, itens (até 200 por página; padrão 50) e contagem (com e sem CNPJ/CPF). Exemplo: {"tipo":"PF","ultima_coleta_de":"2025-11-01","ultima_coleta_ate":"2026-11-17","aceita_email":true,"por_pagina":200,"campos":["nome","emails","celulares","cidade","ultima_coleta"]}',
+    description: 'Clientes da Ecobraz EM LOTE, com filtros — para listas de campanha (PF e PJ separados) e reativação. Só leitura. Filtros opcionais: tipo (PF | PJ | todos), ultima_coleta_de / ultima_coleta_ate (AAAA-MM-DD ou AAAA-MM; última coleta/atendimento concluído, somando sistema novo e histórico do Ploomes), nunca_coletou (true), cadastrado_de / cadastrado_ate, cidade, uf, cep_prefixo (ex.: "013"), material (ex.: "geladeira"; procura nos itens das OS, aceita sinônimos), tem_os_aberta (true/false), aceita_email (true/false), tem_email (true/false), origem (ploomes | sistema | site). Cada cliente traz: id, tipo, nome, CNPJ ou CPF mascarado, e-mails, celulares, telefones, contato principal (PJ), cidade/UF/CEP/bairro (sem rua), coordenadas e distância até a Praça da Sé quando houver, datas de cadastro e de 1ª/última coleta, total de coletas, peso, materiais, OS aberta, aceita_email + motivo_bloqueio (e emails_nao_enviar: os e-mails do cliente que estão na lista "não enviar e-mail" e por isso ficam fora de "emails") e situação de cobrança (com filtro de material, também material_encontrado_em: as OS onde o material apareceu). JSON: total, pagina, paginas, itens (até 200 por página; padrão 50) e contagem (com e sem CNPJ/CPF). Exemplo: {"tipo":"PF","ultima_coleta_de":"2025-11-01","ultima_coleta_ate":"2026-11-17","aceita_email":true,"por_pagina":200,"campos":["nome","emails","celulares","cidade","ultima_coleta"]}',
     inputSchema: { type: 'object', properties: { tipo: { type: 'string', enum: ['PF', 'PJ', 'todos'] }, ultima_coleta_de: { type: 'string' }, ultima_coleta_ate: { type: 'string' }, nunca_coletou: { type: 'boolean' }, cadastrado_de: { type: 'string' }, cadastrado_ate: { type: 'string' }, cidade: { type: 'string' }, uf: { type: 'string' }, cep_prefixo: { type: 'string' }, material: { type: 'string' }, tem_os_aberta: { type: 'boolean' }, aceita_email: { type: 'boolean' }, tem_email: { type: 'boolean' }, origem: { type: 'string', enum: ['ploomes', 'sistema', 'site'] }, ...PAG } },
   },
   {
     name: 'coletas_periodo',
-    description: 'Ordens de Coleta (OS) num período, com filtros — acompanhar coletas por dia. Só leitura. Obrigatórios: de, ate (AAAA-MM-DD ou AAAA-MM). campo_data escolhe qual data cai no período: criacao (padrão) | agendada | concluida | cancelada. Filtros opcionais: status (agendada | aguardando_roteiro | em_transporte | na_unidade | concluida | cancelada), tipo_cliente (PF | PJ), cidade, material, motorista (nome, ou "sem motorista"), origem (canal do pedido, ex.: site, portal-coleta; ou "sem_pedido"). Cada OS traz: número, status, cliente (id, tipo, nome), cidade e CEP, datas de criação/agendamento/conclusão/cancelamento (com marcação quando estimada), data_hora_criacao e data_hora_conclusao (horário de Brasília), lead_id (pedido de origem quando o vínculo é exato), lote grande com prazo_alvo / prazo_cumprido / prazo_situacao (prazo de 72h), motivo do cancelamento, motorista e veículo, materiais declarados e pesados, peso, modalidade, valor cobrado e pagamento, origem do pedido (lead_id, data e hora do pedido, vínculo exato ou provável, UTM e gclid quando houver) e documentos (CDF, NF e MTR com número). Exemplo: {"de":"2026-11-17","ate":"2026-11-17","campo_data":"concluida"}',
+    description: 'Ordens de Coleta (OS) num período, com filtros — acompanhar coletas por dia. Só leitura. Obrigatórios: de, ate (AAAA-MM-DD ou AAAA-MM). campo_data escolhe qual data cai no período: criacao (padrão) | agendada | concluida | cancelada. Filtros opcionais: status (agendada | aguardando_roteiro | em_transporte | na_unidade | concluida | cancelada), tipo_cliente (PF | PJ), cidade, material, motorista (nome, ou "sem motorista"), origem (canal do pedido, ex.: site, portal-coleta; ou "sem_pedido"). Cada OS traz: número, status, cliente (id, tipo, nome), cidade e CEP, datas de criação/agendamento/conclusão/cancelamento (com marcação quando estimada), data_hora_criacao e data_hora_conclusao (horário de Brasília), lead_id (pedido de origem quando o vínculo é exato), lote grande com prazo_alvo / prazo_cumprido / prazo_situacao (prazo de 72h), motivo do cancelamento, motorista e veículo, materiais declarados e pesados, peso, modalidade, valor cobrado e pagamento, origem do pedido (lead_id, data e hora do pedido, vínculo exato ou provável, UTM e gclid quando houver), pedido de avaliação no Google (avaliacao_pedida_em, avaliacao_canal = email | whatsapp | nenhum, motivo_nao_enviado) e documentos (CDF, NF e MTR com número). Exemplo: {"de":"2026-11-17","ate":"2026-11-17","campo_data":"concluida"}',
     inputSchema: { type: 'object', properties: { de: { type: 'string' }, ate: { type: 'string' }, campo_data: { type: 'string', enum: ['criacao', 'agendada', 'concluida', 'cancelada'] }, status: { type: 'string' }, tipo_cliente: { type: 'string', enum: ['PF', 'PJ'] }, cidade: { type: 'string' }, material: { type: 'string' }, motorista: { type: 'string' }, origem: { type: 'string' }, ...PAG }, required: ['de', 'ate'] },
   },
   {
@@ -1346,7 +1397,7 @@ export const FERRAMENTAS_CONSULTA = [
   },
   {
     name: 'metricas_diarias',
-    description: 'Métricas POR DIA entre de e ate (obrigatórios, AAAA-MM-DD; até 2 anos, 31 dias por página): OS criadas, agendadas, concluídas e canceladas separadas em PF e PJ; peso total; materiais mais coletados; cidades com mais coletas; valor cobrado e recebido; leads recebidos e convertidos em OS. Só leitura. Exemplo: {"de":"2026-11-01","ate":"2026-11-17"}',
+    description: 'Métricas POR DIA entre de e ate (obrigatórios, AAAA-MM-DD; até 2 anos, 31 dias por página): OS criadas, agendadas, concluídas e canceladas separadas em PF e PJ; peso total; materiais mais coletados; cidades com mais coletas; valor cobrado e recebido; leads recebidos e convertidos em OS; pedidos de avaliação no Google (enviados por e-mail, pelo WhatsApp e não enviados por motivo). Só leitura. Exemplo: {"de":"2026-11-01","ate":"2026-11-17"}',
     inputSchema: { type: 'object', properties: { de: { type: 'string' }, ate: { type: 'string' }, ...PAG }, required: ['de', 'ate'] },
   },
   {
@@ -1356,7 +1407,7 @@ export const FERRAMENTAS_CONSULTA = [
   },
   {
     name: 'bloqueios_contato',
-    description: 'Quem pediu para NÃO receber contato: opt-out do WhatsApp (inclui quem respondeu SAIR) e empresas retiradas das campanhas pela diretoria — com telefone ou documento, e-mail e cliente ligados quando houver, data, canal e motivo. Use antes de montar qualquer lista de campanha. Só leitura. Filtro opcional: canal (whatsapp | campanhas). Exemplo: {}',
+    description: 'Quem pediu para NÃO receber contato: opt-out do WhatsApp (inclui quem respondeu SAIR), empresas retiradas das campanhas pela diretoria e a lista "não enviar e-mail" do sistema (descadastrados e inválidos: carga do E-goi + marcados pela equipe) — com telefone ou documento, e-mail e cliente ligados quando houver, data, canal e motivo. Use antes de montar qualquer lista de campanha. Só leitura. Filtro opcional: canal (whatsapp | campanhas | email). Exemplo: {}',
     inputSchema: { type: 'object', properties: { canal: { type: 'string' }, ...PAG } },
   },
   {

@@ -33,8 +33,11 @@ bucket_name = "ecobraz-arquivos"
 # Cron diário — alertas de vencimento dos Documentos da Empresa (11:00 UTC = 8h de Brasília).
 # 06:00 UTC (3h de Brasília): completa o índice de OS antigas (consultas do Claude) —
 # de madrugada, para não disputar o índice com a equipe trabalhando.
+# A cada 10 min das 11:00 às 22:50 UTC (08:00–19:50 de Brasília): pedidos de avaliação no
+# Google das coletas concluídas — só age com a chave em "teste" ou "ligado" (tela
+# /avaliacoes). O texto do gatilho precisa ser IGUAL ao CRON_AVALIACAO de src/avaliacao.js.
 [triggers]
-crons = ["0 11 * * *", "0 6 * * *"]
+crons = ["0 11 * * *", "0 6 * * *", "*/10 11-22 * * *"]
 
 # Limite do conector do Claude (pedido do Marcio, 17/11): 60 consultas por minuto.
 # O código usa este limitador da Cloudflare quando ele existe (env.MCP_LIMITE); sem

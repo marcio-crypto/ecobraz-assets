@@ -746,6 +746,7 @@ export function paginaColetaOSDetalhe(user, os, acomp, extras) {
   ${reaHTML}
   ${acompHTML}
   ${registroHTML}
+  ${(extras && extras.avaliacaoHTML) || ''}
   <div class="card">
     <table role="presentation" style="width:100%;border-collapse:collapse;font-size:13.5px">
       ${linha('Cliente', os.clienteNome)}${linha('Documento', os.clienteDoc)}
