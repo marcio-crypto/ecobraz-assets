@@ -34,6 +34,14 @@ bucket_name = "ecobraz-arquivos"
 [triggers]
 crons = ["0 11 * * *"]
 
+# Limite do conector do Claude (pedido do Marcio, 17/11): 60 consultas por minuto.
+# O código usa este limitador da Cloudflare quando ele existe (env.MCP_LIMITE); sem
+# ele, cai num contador próprio. Não é segredo.
+[[ratelimits]]
+name = "MCP_LIMITE"
+namespace_id = "1001"
+simple = { limit = 60, period = 60 }
+
 # Endereço OFICIAL do sistema (domínio próprio na Cloudflare: Worker "ecobraz-portal").
 # Fixa todos os links (login por e-mail, retorno do Google, QR de validação) neste domínio.
 # Se um dia mudar o domínio, basta trocar aqui. Não é segredo — é uma URL pública.
