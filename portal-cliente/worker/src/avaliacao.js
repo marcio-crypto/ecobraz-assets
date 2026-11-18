@@ -8,7 +8,8 @@
 //     ou registra por que não enviou.
 //   • NÃO mexe no fechamento da coleta (app do motorista, escritório, doca): só LÊ o
 //     índice de OS. Se a OS deixar de estar concluída antes da hora, nada é enviado.
-//   • Um pedido por cliente a cada 12 meses (chave: CNPJ/CPF; sem documento, o e-mail).
+//   • Um pedido por cliente a cada 12 meses (chave: CNPJ/CPF; sem documento, o e-mail), e
+//     o mesmo endereço de e-mail não recebe dois pedidos em 12 meses (CNPJs diferentes).
 //   • Não recebe: casa/família, bloqueio de contato, já pedido em 12 meses, sem e-mail e
 //     e-mail na lista "não enviar e-mail" (descadastrados e inválidos).
 //   • Registro em D1 (avaliacao_pedidos — uma linha por OS; o registro da OS no KV não é
@@ -52,6 +53,10 @@ const ANTIGA_SEM_DATA_DIAS = 60;    // OS sem data marcada: criada há mais de 6
 const CHAVE_CFG = 'cfg:avaliacao';        // a chave: { modo, desde, ligadoEm, por, atualizadoEm }
 const CHAVE_CASA = 'cfg:avaliacao:casa';  // a lista casa/família: { casa: [...] }
 const MODOS = ['desligado', 'teste', 'ligado'];
+// Erros em que NÃO dá para saber se o e-mail saiu (o serviço pode ter recebido o pedido).
+// Registro encerrado com um deles fica "envio não confirmado" e conta na regra dos 12 meses.
+const INCERTOS = new Set(['tempo_esgotado', 'rede']);
+const SQL_INCERTO = "erro IN ('tempo_esgotado','rede')";
 const CASA_PADRAO = ['ecobraz', 'villanova'];
 
 // Motivos de "não enviado" (texto que aparece na OS e no conector).
@@ -80,23 +85,29 @@ export function camposAvaliacao(row, concluidaEm) {
 // A chave (modo) e a lista casa/família ficam em registros SEPARADOS: salvar a lista nunca
 // regrava a chave. Qualquer falha de leitura da chave cai em DESLIGADO (o seguro); falha
 // na leitura da lista marca casaErro e a rodada não envia nada.
-async function lerChave(env) {
+// `estrito`: falha de leitura é ERRO (quem chama decide o lado seguro); sem ele, cai em DESLIGADO.
+async function lerChave(env, estrito) {
   const kv = env && env.PORTAL_KV;
   let c = null;
-  try { const raw = kv ? await kv.get(CHAVE_CFG) : null; c = raw ? JSON.parse(raw) : null; } catch { c = null; }
+  try { const raw = kv ? await kv.get(CHAVE_CFG) : null; c = raw ? JSON.parse(raw) : null; } catch (e) { if (estrito) throw e; c = null; }
   const modo = c && MODOS.includes(c.modo) ? c.modo : 'desligado';
-  return { modo, desde: (c && c.desde) || '', ligadoEm: (c && c.ligadoEm) || '', por: (c && c.por) || '', atualizadoEm: (c && c.atualizadoEm) || '' };
+  // A 1ª versão guardava a lista casa/família junto com a chave: continua valendo (e é
+  // carregada adiante) enquanto a lista não for salva no registro próprio.
+  const casaAntiga = c && Array.isArray(c.casa) ? c.casa.map((x) => limpar(x)).filter(Boolean).slice(0, 80) : null;
+  return { modo, desde: (c && c.desde) || '', ligadoEm: (c && c.ligadoEm) || '', por: (c && c.por) || '', atualizadoEm: (c && c.atualizadoEm) || '', casaAntiga: casaAntiga && casaAntiga.length ? casaAntiga : null };
 }
-async function lerCasa(env) {
+async function lerCasa(env, casaAntiga) {
   const kv = env && env.PORTAL_KV;
-  let k = null, casaErro = false;
-  try { const raw = kv ? await kv.get(CHAVE_CASA) : null; k = raw ? JSON.parse(raw) : null; } catch { k = null; casaErro = true; }
-  const lista = k && Array.isArray(k.casa) ? k.casa.map((s) => limpar(s)).filter(Boolean).slice(0, 80) : [];
+  let k = null, casaErro = false, existe = false;
+  try { const raw = kv ? await kv.get(CHAVE_CASA) : null; existe = raw != null; k = raw ? JSON.parse(raw) : null; } catch { k = null; casaErro = true; }
+  let lista = k && Array.isArray(k.casa) ? k.casa.map((x) => limpar(x)).filter(Boolean).slice(0, 80) : [];
+  if (!existe && !casaErro && casaAntiga) lista = casaAntiga;
   // Lista vazia volta ao padrão: o filtro da casa nunca fica desligado.
   return { casa: lista.length ? lista : CASA_PADRAO, casaErro };
 }
 export async function lerConfigAvaliacao(env) {
-  return { ...(await lerChave(env)), ...(await lerCasa(env)) };
+  const chave = await lerChave(env);
+  return { ...chave, ...(await lerCasa(env, chave.casaAntiga)) };
 }
 // A partir de quando uma coleta concluída entra no envio. Em TESTE: desde que o teste foi
 // ligado. LIGADO de verdade: só coletas concluídas DEPOIS de ligar de verdade — as do
@@ -108,11 +119,12 @@ export async function salvarModoAvaliacao(env, modo, por) {
   const agora = new Date().toISOString();
   const desde = modo === 'desligado' ? '' : (atual.modo === 'desligado' || !atual.desde ? agora : atual.desde);
   const novo = { modo, desde, ligadoEm: modo === 'ligado' ? (atual.modo === 'ligado' && atual.ligadoEm ? atual.ligadoEm : agora) : '', por: String(por || '').slice(0, 120), atualizadoEm: agora };
+  if (atual.casaAntiga) novo.casa = atual.casaAntiga; // lista da 1ª versão: nunca é descartada por uma troca de chave
   await env.PORTAL_KV.put(CHAVE_CFG, JSON.stringify(novo));
   // Mudou a chave: as novas tentativas que estavam na fila (envio que tinha falhado) são
   // encerradas — nada que nasceu num modo é enviado em outro.
   if (atual.modo !== modo && env.DB_PLOOMES) {
-    try { await env.DB_PLOOMES.prepare("UPDATE avaliacao_pedidos SET motivo = CASE WHEN modo='teste' THEN 'teste' ELSE 'falha_envio' END, status='nao_enviado', canal='nenhum', reserva=NULL WHERE status='pendente'").run(); } catch { /* sem tabela ainda: nada na fila */ }
+    try { await env.DB_PLOOMES.prepare(`UPDATE avaliacao_pedidos SET motivo = CASE WHEN ${SQL_INCERTO} THEN 'envio_nao_confirmado' WHEN modo='teste' THEN 'teste' ELSE 'falha_envio' END, status='nao_enviado', canal='nenhum', reserva=NULL WHERE status='pendente'`).run(); } catch { /* sem tabela ainda: nada na fila */ }
   }
   await auditar(env, por, 'chave', `${atual.modo} → ${modo}`);
   return novo;
@@ -149,9 +161,22 @@ export function quandoEnviar(concluidaEm) {
 const EMAIL_INTEIRO = /^[a-z0-9_%+&-]+(\.[a-z0-9_%+&-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/;
 export const emailsDe = (v) => {
   const out = [];
-  for (const bruto of String(v == null ? '' : v).toLowerCase().split(/[\s,;|<>()\[\]"·:\/]+/)) {
-    const t = bruto.replace(/^[.'’]+|[.'’]+$/g, '');
-    if (t.length <= 254 && EMAIL_INTEIRO.test(t) && !out.includes(t)) out.push(t);
+  for (const palavra of String(v == null ? '' : v).toLowerCase().split(/\s+/)) {
+    if (!palavra.includes('@')) continue;
+    // Dentro de uma palavra (sem espaço), vírgula, barra, aspas etc. só podem separar
+    // endereços INTEIROS: "joao,silva@x.com" e "maria/joao@x.com" são descartados — não
+    // viram "silva@x.com"/"joao@x.com".
+    const achados = []; let inteira = true;
+    for (const bruto of palavra.split(/[,;|"\/·]+/)) {
+      let t = bruto;
+      const dentro = t.match(/<([^<>]*)>/); if (dentro) t = dentro[1];   // nome<a@b.com>
+      t = t.replace(/^[(\[<]+|[)\]>]+$/g, '');                            // (a@b.com) [a@b.com]
+      const rotulo = t.match(/^[a-z-]{1,12}:(.+)$/); if (rotulo) t = rotulo[1]; // e-mail:a@b.com
+      t = t.replace(/^[.'’]+|[.'’]+$/g, '');
+      if (!t) continue;
+      if (t.length <= 254 && EMAIL_INTEIRO.test(t)) achados.push(t); else { inteira = false; break; }
+    }
+    if (inteira) for (const t of achados) if (!out.includes(t)) out.push(t);
   }
   return out;
 };
@@ -293,14 +318,19 @@ async function garantirTabelas(db) {
   if (!db || prontas.has(db)) return;
   // Tudo num lote só (uma ida ao banco).
   await db.batch([
-    db.prepare('CREATE TABLE IF NOT EXISTS avaliacao_pedidos (os_id TEXT PRIMARY KEY, os_numero TEXT, chave TEXT, perfil TEXT, status TEXT NOT NULL, canal TEXT, motivo TEXT, concluida_em TEXT, previsto_em TEXT, processado_em TEXT, pedida_em TEXT, por TEXT, para TEXT, tentativas INTEGER DEFAULT 0, erro TEXT, modo TEXT, reserva TEXT, status_antes TEXT, cliente_id TEXT)'),
+    db.prepare('CREATE TABLE IF NOT EXISTS avaliacao_pedidos (os_id TEXT PRIMARY KEY, os_numero TEXT, chave TEXT, perfil TEXT, status TEXT NOT NULL, canal TEXT, motivo TEXT, concluida_em TEXT, previsto_em TEXT, processado_em TEXT, pedida_em TEXT, por TEXT, para TEXT, tentativas INTEGER DEFAULT 0, erro TEXT, modo TEXT, reserva TEXT, status_antes TEXT, cliente_id TEXT, para_h TEXT)'),
     db.prepare('CREATE INDEX IF NOT EXISTS avaliacao_pedidos_chave ON avaliacao_pedidos (chave)'),
     db.prepare('CREATE INDEX IF NOT EXISTS avaliacao_pedidos_proc ON avaliacao_pedidos (processado_em)'),
     db.prepare('CREATE TABLE IF NOT EXISTS email_nao_enviar (email TEXT PRIMARY KEY, motivo TEXT, origem TEXT, em TEXT, por TEXT)'),
     db.prepare('CREATE TABLE IF NOT EXISTS avaliacao_auditoria (id INTEGER PRIMARY KEY AUTOINCREMENT, em TEXT, por TEXT, acao TEXT, detalhe TEXT)'),
   ]);
-  // Tabela criada pela 1ª versão (sem cliente_id): acrescenta a coluna.
-  try { await db.prepare('SELECT cliente_id FROM avaliacao_pedidos LIMIT 0').all(); } catch { await db.prepare('ALTER TABLE avaliacao_pedidos ADD COLUMN cliente_id TEXT').run(); }
+  // Tabela criada por versão anterior (sem cliente_id e/ou para_h): acrescenta o que faltar.
+  try { await db.prepare('SELECT cliente_id, para_h FROM avaliacao_pedidos LIMIT 0').all(); }
+  catch {
+    for (const col of ['cliente_id', 'para_h']) {
+      try { await db.prepare(`ALTER TABLE avaliacao_pedidos ADD COLUMN ${col} TEXT`).run(); } catch (e) { if (!/duplicate column/i.test(String((e && e.message) || e))) throw e; }
+    }
+  }
   prontas.add(db);
 }
 // Quem mudou o quê (chave, listas). O detalhe nunca leva e-mail inteiro de cliente.
@@ -333,26 +363,44 @@ export async function lerAvaliacoes(env, osIds, opcoes) {
   return out;
 }
 export async function lerAvaliacao(env, osId) { return (await lerAvaliacoes(env, [osId])).get(String(osId || '')) || null; }
-// Já houve pedido para este cliente nos últimos 12 meses? Casa pela chave (CNPJ/CPF; sem
-// documento, qualquer e-mail do cliente) ou pela mesma ficha. Em teste, os testes também
-// contam, para o ensaio se comportar como o envio de verdade. Falha de leitura = erro.
-async function pedidoRecente(db, d, osId, agoraMs, contarTeste) {
+// Resumo (hash) do endereço de destino: serve para a regra "o mesmo endereço não recebe dois
+// pedidos em 12 meses" sem guardar o e-mail de quem recebeu.
+async function resumoEmail(email) {
+  const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`avaliacao:${String(email || '').toLowerCase()}`));
+  return [...new Uint8Array(h)].slice(0, 16).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+// As três consultas que decidem um envio, numa ida só ao banco (falha de leitura = ERRO):
+//  1. já houve pedido para este CLIENTE em 12 meses? Casa pela chave (CNPJ/CPF; sem
+//     documento, qualquer e-mail do cliente) ou pela mesma ficha;
+//  2. quais e-mails do cliente estão na lista "não enviar e-mail";
+//  3. quais ENDEREÇOS do cliente já receberam pedido em 12 meses (por outro CNPJ/CPF).
+// O que conta como "pedido": enviado e WhatsApp; "enviando" e "envio não confirmado" (pode
+// ter saído) — estes dois só quando nasceram no mesmo tipo de envio (os de teste não seguram
+// o envio de verdade); em teste, os testes também contam (ensaio fiel).
+async function consultasDoEnvio(db, d, osId, agoraMs, contarTeste, resumos) {
   const chaves = [...new Set([...(d.chaves || []), d.chave].filter(Boolean))];
-  if (!chaves.length && !d.clienteId) return null;
   const desde = new Date(agoraMs - DIAS_12_MESES * 86400e3).toISOString();
-  const st = contarTeste ? "('enviado','enviando','whatsapp','teste')" : "('enviado','enviando','whatsapp')";
-  // "Envio não confirmado" também conta: o e-mail pode ter saído.
-  return await db.prepare(`SELECT os_numero, status FROM avaliacao_pedidos WHERE (chave IN (SELECT value FROM json_each(?1)) OR (?4 <> '' AND cliente_id = ?4)) AND os_id <> ?2 AND (status IN ${st} OR (status = 'nao_enviado' AND motivo = 'envio_nao_confirmado')) AND COALESCE(pedida_em, processado_em) >= ?3 LIMIT 1`).bind(JSON.stringify(chaves), String(osId), desde, d.clienteId || '').first();
+  const t = contarTeste ? 1 : 0;
+  const conta = "(status IN ('enviado','whatsapp') OR ((status = 'enviando' OR (status = 'nao_enviado' AND motivo = 'envio_nao_confirmado')) AND (?4 = 1 OR COALESCE(modo,'') <> 'teste')) OR (?4 = 1 AND status = 'teste'))";
+  const r = await db.batch([
+    db.prepare(`SELECT os_numero FROM avaliacao_pedidos WHERE (chave IN (SELECT value FROM json_each(?1)) OR (?5 <> '' AND cliente_id = ?5)) AND os_id <> ?2 AND COALESCE(pedida_em, processado_em) >= ?3 AND ${conta} LIMIT 1`).bind(JSON.stringify(chaves), String(osId), desde, t, d.clienteId || ''),
+    db.prepare('SELECT email, motivo FROM email_nao_enviar WHERE email IN (SELECT value FROM json_each(?1))').bind(JSON.stringify(d.emails.map((x) => x.email))),
+    db.prepare(`SELECT para_h FROM avaliacao_pedidos WHERE para_h IN (SELECT value FROM json_each(?1)) AND os_id <> ?2 AND COALESCE(pedida_em, processado_em) >= ?3 AND ${conta}`).bind(JSON.stringify(resumos), String(osId), desde, t),
+  ]);
+  const linhas = (i) => (r && r[i] && r[i].results) || null;
+  if (!Array.isArray(r) || r.length !== 3 || !linhas(0) || !linhas(1) || !linhas(2)) throw new Error('consultas_do_envio_sem_resposta');
+  const lista = new Map(); for (const x of linhas(1)) lista.set(x.email, x);
+  return { recente: linhas(0)[0] || null, lista, destinos: new Set(linhas(2).map((x) => x.para_h)) };
 }
 // Bloqueios de contato já conhecidos pelo sistema (os mesmos do conector): telefones que
 // pediram para sair do WhatsApp e empresas retiradas das campanhas pela diretoria.
 // Tabela que ainda não existe = sem bloqueios; qualquer outra falha de leitura é ERRO.
 async function bloqueiosDeContato(db) {
   const porFone = new Set(), porDoc = new Set();
-  try { const r = await db.prepare('SELECT tel FROM wa_optout ORDER BY em DESC LIMIT 5000').all(); for (const x of (r && r.results) || []) { let t = digits(x.tel); if (t.startsWith('55') && t.length >= 12) t = t.slice(2); if (t) porFone.add(semNove(t)); } }
-  catch (e) { if (!semTabela(e)) throw e; }
-  try { const r = await db.prepare('SELECT doc FROM wa_excluidos ORDER BY em DESC LIMIT 5000').all(); for (const x of (r && r.results) || []) { const d = digits(x.doc); if (d) porDoc.add(d); } }
-  catch (e) { if (!semTabela(e)) throw e; }
+  const TETO = 50000; // se um dia passar disso, para tudo (erro) em vez de conferir só uma parte
+  const ler = async (sql) => { try { const r = await db.prepare(`${sql} LIMIT ${TETO + 1}`).all(); const l = (r && r.results) || []; if (l.length > TETO) throw new Error('bloqueios_demais_para_conferir'); return l; } catch (e) { if (semTabela(e)) return []; throw e; } };
+  for (const x of await ler('SELECT tel FROM wa_optout')) { let t = digits(x.tel); if (t.startsWith('55') && t.length >= 12) t = t.slice(2); if (t) porFone.add(semNove(t)); }
+  for (const x of await ler('SELECT doc FROM wa_excluidos')) { const d = digits(x.doc); if (d) porDoc.add(d); }
   return { porFone, porDoc };
 }
 
@@ -419,7 +467,7 @@ async function lerKVEstrito(kv, chaves) {
   if (!lista.length) return out;
   let lote = null;
   try { lote = await kv.get(lista); } catch { lote = null; } // sem leitura em lote (ou falha — as leituras abaixo acusam)
-  if (lote instanceof Map) { for (const k of lista) out.set(k, lote.has(k) ? lote.get(k) : null); return out; }
+  if (lote instanceof Map) { for (const k of lista) out.set(k, lote.has(k) ? lote.get(k) : null); out.emLote = true; return out; }
   for (const k of lista) out.set(k, await kv.get(k));
   return out;
 }
@@ -462,15 +510,19 @@ async function processarUma(env, cfg, ctx, os, cli, linha0, fichaSumiu) {
   if (retomada && agora - Date.parse(linha.processado_em) < TRAVADO_MIN * 60e3) return 'ignorada';
   const d = dadosDoCliente(os, cli);
   const base = { os_id: os.id, os_numero: os.numero || '', chave: d.chave, perfil: d.perfil, concluida_em: os.concluidaEm, previsto_em: new Date(alvo).toISOString(), processado_em: agoraISO, modo: cfg.modo, cliente_id: d.clienteId };
-  // Registra "não enviado". Numa retomada o motivo é sempre "envio não confirmado": a 1ª
-  // tentativa pode ter saído. Só mexe no registro se ele continua como foi lido.
+  // Registra "não enviado". Quando não dá para saber se uma tentativa anterior saiu (retomada,
+  // ou nova tentativa cujo último erro foi tempo esgotado/rede), o motivo é sempre "envio não
+  // confirmado". Só mexe no registro se ele continua como foi lido.
+  const duvida = retomada || !!(linha && INCERTOS.has(linha.erro));
   const nao = async (motivo) => {
-    if (linha) await db.prepare("UPDATE avaliacao_pedidos SET status='nao_enviado', canal='nenhum', motivo=?2, processado_em=?3, reserva=NULL WHERE os_id=?1 AND status=?4 AND COALESCE(reserva,'')=?5").bind(os.id, retomada ? 'envio_nao_confirmado' : motivo, agoraISO, linha.status, linha.reserva || '').run();
+    if (linha) await db.prepare("UPDATE avaliacao_pedidos SET status='nao_enviado', canal='nenhum', motivo=?2, processado_em=?3, reserva=NULL WHERE os_id=?1 AND status=?4 AND COALESCE(reserva,'')=?5").bind(os.id, duvida ? 'envio_nao_confirmado' : motivo, agoraISO, linha.status, linha.reserva || '').run();
     else await gravarFinal(db, base, { status: 'nao_enviado', canal: 'nenhum', motivo });
     return 'nao_enviado';
   };
   // Nada que nasceu num modo (teste/ligado) é enviado em outro.
   if (linha && linha.modo && linha.modo !== cfg.modo) return await nao(linha.modo === 'teste' ? 'teste' : 'falha_envio');
+  // A OS foi reaberta enquanto este envio estava em andamento: a retomada não reenvia.
+  if (retomada && linha.status_antes === 'reaberta') return await nao('envio_nao_confirmado');
   if (agora - alvo > VALIDADE_H * MS_H) return await nao('prazo_expirado');
   // Regras, nesta ordem (a primeira que valer é o motivo que aparece na OS).
   if (coletaAntiga(os)) return await nao('coleta_antiga');
@@ -478,24 +530,31 @@ async function processarUma(env, cfg, ctx, os, cli, linha0, fichaSumiu) {
   if (ehDaCasa(cfg.casa, { nomes: d.nomes, doc: d.doc, emails: d.emails.map((x) => x.email) })) return await nao('casa_familia');
   if (!ctx.bloqueios) ctx.bloqueios = await bloqueiosDeContato(db);
   if ((d.doc && ctx.bloqueios.porDoc.has(d.doc)) || d.fones.some((f) => ctx.bloqueios.porFone.has(semNove(f)))) return await nao('bloqueio');
-  if (await pedidoRecente(db, d, os.id, agora, cfg.modo === 'teste')) return await nao('ja_pedido_12m');
+  const resumos = await Promise.all(d.emails.map((x) => resumoEmail(x.email)));
+  const q = await consultasDoEnvio(db, d, os.id, agora, cfg.modo === 'teste', resumos);
+  if (q.recente) return await nao('ja_pedido_12m');
   if (!d.emails.length) return await nao('sem_email');
-  // Lista "não enviar e-mail": descadastrado no 1º e-mail = não envia; inválido = tenta o próximo.
-  const lista = await consultarNaoEnviar(env, d.emails.map((x) => x.email), { estrito: true });
-  let alvoEmail = null, motivoLista = '';
-  for (const cand of d.emails) {
-    const b = lista.get(cand.email);
-    if (!b) { alvoEmail = cand; break; }
-    if (!motivoLista) motivoLista = b.motivo === 'invalido' ? 'email_invalido' : 'descadastrado';
-    if (b.motivo !== 'invalido') break;
+  // Escolha do endereço, na ordem de preferência. Descadastrado = não envia para o cliente;
+  // inválido = tenta o próximo; endereço que já recebeu pedido em 12 meses (por outro
+  // CNPJ/CPF) = tenta o próximo.
+  let alvoEmail = null, resumoAlvo = '', motivoSem = '';
+  for (let i = 0; i < d.emails.length; i++) {
+    const cand = d.emails[i], b = q.lista.get(cand.email);
+    if (b) { if (!motivoSem) motivoSem = b.motivo === 'invalido' ? 'email_invalido' : 'descadastrado'; if (b.motivo !== 'invalido') break; continue; }
+    if (q.destinos.has(resumos[i])) { if (!motivoSem) motivoSem = 'ja_pedido_12m'; continue; }
+    alvoEmail = cand; resumoAlvo = resumos[i]; break;
   }
-  if (!alvoEmail) return await nao(motivoLista || 'descadastrado');
+  if (!alvoEmail) return await nao(motivoSem || 'descadastrado');
+  // A chave pode ter sido desligada (ou trocada) no meio da rodada: confere de novo antes de
+  // cada envio. Mudou — ou não deu para ler — → a rodada para aqui, sem enviar.
+  const chaveAgora = await lerChave(env);
+  if (chaveAgora.modo !== cfg.modo || chaveAgora.desde !== cfg.desde || chaveAgora.ligadoEm !== cfg.ligadoEm) return 'parar';
   // Reserva: só quem grava a própria marca envia (duas rodadas ao mesmo tempo não viram dois
   // e-mails). Sem documento, a chave dos 12 meses é o e-mail que de fato recebe.
   const chaveReg = d.doc ? d.chave : `e:${alvoEmail.email}`;
   const marca = `${agora}-${Math.random().toString(36).slice(2, 10)}`;
-  if (!linha) await db.prepare("INSERT OR IGNORE INTO avaliacao_pedidos (os_id, os_numero, chave, perfil, status, canal, concluida_em, previsto_em, processado_em, por, para, tentativas, modo, reserva, cliente_id) VALUES (?1,?2,?3,?4,'enviando','email',?5,?6,?7,'sistema',?8,1,?9,?10,?11)").bind(os.id, base.os_numero, chaveReg, base.perfil, base.concluida_em, base.previsto_em, agoraISO, mascarar(alvoEmail.email), cfg.modo, marca, d.clienteId).run();
-  else await db.prepare("UPDATE avaliacao_pedidos SET status='enviando', canal='email', processado_em=?2, para=?3, tentativas=COALESCE(tentativas,0)+1, modo=?4, reserva=?5, chave=?6, cliente_id=?9 WHERE os_id=?1 AND status=?7 AND COALESCE(reserva,'')=?8").bind(os.id, agoraISO, mascarar(alvoEmail.email), cfg.modo, marca, chaveReg, linha.status, linha.reserva || '', d.clienteId).run();
+  if (!linha) await db.prepare("INSERT OR IGNORE INTO avaliacao_pedidos (os_id, os_numero, chave, perfil, status, canal, concluida_em, previsto_em, processado_em, por, para, tentativas, modo, reserva, cliente_id, para_h) VALUES (?1,?2,?3,?4,'enviando','email',?5,?6,?7,'sistema',?8,1,?9,?10,?11,?12)").bind(os.id, base.os_numero, chaveReg, base.perfil, base.concluida_em, base.previsto_em, agoraISO, mascarar(alvoEmail.email), cfg.modo, marca, d.clienteId, resumoAlvo).run();
+  else await db.prepare("UPDATE avaliacao_pedidos SET status='enviando', canal='email', processado_em=?2, para=?3, tentativas=COALESCE(tentativas,0)+1, modo=?4, reserva=?5, chave=?6, cliente_id=?9, para_h=?10 WHERE os_id=?1 AND status=?7 AND COALESCE(reserva,'')=?8").bind(os.id, agoraISO, mascarar(alvoEmail.email), cfg.modo, marca, chaveReg, linha.status, linha.reserva || '', d.clienteId, resumoAlvo).run();
   const minha = await db.prepare('SELECT status, reserva, tentativas FROM avaliacao_pedidos WHERE os_id = ?1').bind(os.id).first();
   if (!minha || minha.reserva !== marca || minha.status !== 'enviando') return 'ignorada';
   const msg = montarMensagem({ perfil: d.perfil, primeiro: primeiroNome(alvoEmail.nome), empresa: d.empresa, link: env.AVALIACAO_LINK });
@@ -511,15 +570,19 @@ async function processarUma(env, cfg, ctx, os, cli, linha0, fichaSumiu) {
     else await db.prepare("UPDATE avaliacao_pedidos SET status='enviado', canal='email', motivo=NULL, pedida_em=?3, erro=NULL, reserva=NULL WHERE os_id=?1 AND reserva=?2").bind(os.id, marca, agoraISO).run();
     return teste ? 'teste' : 'enviado';
   }
+  const erro = String(envio.erro || 'erro').slice(0, 40);
   // 409 = o Resend já tinha um pedido com esta chave (conteúdo diferente ou ainda em curso):
   // pode ter saído — não repete.
-  const incerto = envio.erro === 'resend_409';
-  const acabou = incerto || envio.definitivo || (Number(minha.tentativas) || 1) >= MAX_TENTATIVAS;
-  const erro = String(envio.erro || 'erro').slice(0, 40);
+  const repetido = erro === 'resend_409';
+  // Recusa que não é culpa do endereço (chave ou domínio do serviço, limite, serviço fora do
+  // ar): não gasta as 6 tentativas — fica na fila até o prazo de 24 horas.
+  const doServico = /^resend_(401|403|429|5\d\d)$/.test(erro);
+  const acabou = repetido || envio.definitivo || (!doServico && (Number(minha.tentativas) || 1) >= MAX_TENTATIVAS);
   console.error('avaliacao_envio_falhou', os.numero || os.id, erro, acabou ? 'definitivo' : 'vai_tentar_de_novo');
   // Retomada que falhou de novo continua "enviando" (para a próxima tentativa seguir como retomada).
   if (retomada && !acabou) { await db.prepare('UPDATE avaliacao_pedidos SET erro=?3 WHERE os_id=?1 AND reserva=?2').bind(os.id, marca, erro).run(); return 'falha'; }
-  await db.prepare('UPDATE avaliacao_pedidos SET status=?3, canal=?4, motivo=?5, erro=?6, reserva=NULL WHERE os_id=?1 AND reserva=?2').bind(os.id, marca, acabou ? 'nao_enviado' : 'pendente', acabou ? 'nenhum' : 'email', acabou ? (incerto || retomada ? 'envio_nao_confirmado' : 'falha_envio') : null, erro).run();
+  const incerto = repetido || retomada || INCERTOS.has(erro);
+  await db.prepare('UPDATE avaliacao_pedidos SET status=?3, canal=?4, motivo=?5, erro=?6, reserva=NULL WHERE os_id=?1 AND reserva=?2').bind(os.id, marca, acabou ? 'nao_enviado' : 'pendente', acabou ? 'nenhum' : 'email', acabou ? (incerto ? 'envio_nao_confirmado' : 'falha_envio') : null, erro).run();
   return 'falha';
 }
 
@@ -534,7 +597,10 @@ export async function processarAvaliacoes(env, opcoes) {
   const res = { modo: chave.modo, candidatas: 0, enviados: 0, testes: 0, nao_enviados: 0, falhas: 0 };
   if (chave.modo === 'desligado' || !env || !env.DB_PLOOMES || !env.PORTAL_KV) return res;
   if (!dentroDaJanela(agoraMs)) { res.fora_do_horario = true; return res; }
-  const cfg = { ...chave, ...(await lerCasa(env)) };
+  // Sem o serviço de e-mail configurado nada é tratado (nem vira "falha"): quando for
+  // resolvido, o que ainda estiver no prazo sai.
+  if (!env.RESEND_API_KEY) { res.erro = 'sem_chave_email'; console.error('avaliacao_parada', res.erro); return res; }
+  const cfg = { ...chave, ...(await lerCasa(env, chave.casaAntiga)) };
   if (cfg.casaErro) { res.erro = 'lista_casa_ilegivel'; console.error('avaliacao_parada', res.erro); return res; }
   const inicio = Date.parse(inicioDoEnvio(cfg));
   if (!Number.isFinite(inicio)) return res;
@@ -543,7 +609,7 @@ export async function processarAvaliacoes(env, opcoes) {
   // Faxina: nova tentativa de coleta que saiu do período, e "enviando" travado há tanto tempo
   // que não dá mais para retomar com segurança — encerra com o motivo certo.
   try {
-    await db.prepare("UPDATE avaliacao_pedidos SET motivo = CASE WHEN status='enviando' THEN 'envio_nao_confirmado' WHEN modo='teste' THEN 'teste' ELSE 'prazo_expirado' END, status='nao_enviado', canal='nenhum', reserva=NULL WHERE (status='pendente' AND concluida_em < ?1) OR (status='enviando' AND processado_em < ?2)")
+    await db.prepare(`UPDATE avaliacao_pedidos SET motivo = CASE WHEN status='enviando' OR ${SQL_INCERTO} THEN 'envio_nao_confirmado' WHEN modo='teste' THEN 'teste' ELSE 'prazo_expirado' END, status='nao_enviado', canal='nenhum', reserva=NULL WHERE (status='pendente' AND concluida_em < ?1) OR (status='enviando' AND processado_em < ?2)`)
       .bind(new Date(piso).toISOString(), new Date(agoraMs - RETOMA_MAX_H * MS_H).toISOString()).run();
   } catch (e) { if (!semTabela(e)) throw e; }
   const cands = [];
@@ -566,40 +632,48 @@ export async function processarAvaliacoes(env, opcoes) {
     if (r.status === 'enviando') return agoraMs - Date.parse(r.processado_em) >= TRAVADO_MIN * 60e3;
     return reaberturaVencida(r, c.concluidaEm);
   };
-  const fila = cands.filter(naVez).sort((a, b) => a.alvo - b.alvo).slice(0, MAX_EXAME);
+  const fila = cands.filter(naVez).sort((a, b) => a.alvo - b.alvo);
   res.candidatas = fila.length;
   if (!fila.length) return res;
-  const regs = await lerKVEstrito(env.PORTAL_KV, fila.map((c) => `os:${c.id}`));
-  const oss = new Map();
-  for (const c of fila) {
-    const raw = regs.get(`os:${c.id}`);
-    if (!raw) continue; // sem registro: nada a fazer
-    try { oss.set(c.id, JSON.parse(raw)); } catch { console.error('avaliacao_os_ilegivel', c.id); }
-  }
-  const fichas = await lerKVEstrito(env.PORTAL_KV, [...new Set([...oss.values()].map(idFicha).filter(Boolean))].map((id) => `cli:${id}`));
   const ctx = { agoraMs, bloqueios: null, envios: 0 };
   const espera = Number.isFinite(o.pausaMs) ? o.pausaMs : PAUSA_ENVIO_MS;
-  let acoes = 0, erros = 0;
-  for (const c of fila) {
-    if (acoes >= MAX_ACOES) break;
-    const os = oss.get(c.id);
-    if (!os) continue;
-    const fid = idFicha(os);
-    const raw = fid ? fichas.get(`cli:${fid}`) : null;
-    let cli = null;
-    // Cadastro ilegível: não dá para aplicar as regras → esta OS não é tratada (fica para a próxima rodada).
-    if (raw) { try { cli = JSON.parse(raw); } catch { console.error('avaliacao_cadastro_ilegivel', os.numero || c.id); continue; } }
-    try {
-      const antes = ctx.envios;
-      const r = await processarUma(env, cfg, ctx, os, cli, ja.get(c.id) || null, !!fid && !cli);
-      if (r === 'enviado') res.enviados++; else if (r === 'teste') res.testes++; else if (r === 'nao_enviado') res.nao_enviados++; else if (r === 'falha') res.falhas++;
-      if (r !== 'ignorada') acoes++;
-      if (ctx.envios > antes && espera > 0) await dormir(espera);
-    } catch (e) {
-      res.falhas++; erros++;
-      console.error('avaliacao_erro', os.numero || c.id, String((e && e.message) || e).slice(0, 120));
-      if (erros >= 3) { res.erro = 'falhas_seguidas'; break; } // banco ou KV fora do ar: para a rodada
+  let acoes = 0, erros = 0, parar = false;
+  // A fila é olhada em partes de 40 OS (até 5 partes), parando nas 5 decisões da rodada:
+  // OS que não dão em nada (registro defasado, cadastro ilegível) não seguram as de trás.
+  for (let ini = 0; ini < fila.length && ini < MAX_EXAME * 5 && acoes < MAX_ACOES && !parar; ini += MAX_EXAME) {
+    const parte = fila.slice(ini, ini + MAX_EXAME);
+    const regs = await lerKVEstrito(env.PORTAL_KV, parte.map((c) => `os:${c.id}`));
+    const oss = new Map();
+    for (const c of parte) {
+      const raw = regs.get(`os:${c.id}`);
+      if (!raw) continue; // sem registro: nada a fazer
+      try { oss.set(c.id, JSON.parse(raw)); } catch { console.error('avaliacao_os_ilegivel', c.id); }
     }
+    const fichas = await lerKVEstrito(env.PORTAL_KV, [...new Set([...oss.values()].map(idFicha).filter(Boolean))].map((id) => `cli:${id}`));
+    for (const c of parte) {
+      if (acoes >= MAX_ACOES) break;
+      const os = oss.get(c.id);
+      if (!os) continue;
+      const fid = idFicha(os);
+      const raw = fid ? fichas.get(`cli:${fid}`) : null;
+      let cli = null;
+      // Cadastro ilegível: não dá para aplicar as regras → esta OS não é tratada (fica para a próxima rodada).
+      if (raw) { try { cli = JSON.parse(raw); } catch { console.error('avaliacao_cadastro_ilegivel', os.numero || c.id); continue; } }
+      try {
+        const antes = ctx.envios;
+        const r = await processarUma(env, cfg, ctx, os, cli, ja.get(c.id) || null, !!fid && !cli);
+        // A chave mudou no meio da rodada (desligaram, ou trocaram o modo): para sem enviar mais nada.
+        if (r === 'parar') { res.erro = 'chave_mudou'; parar = true; break; }
+        if (r === 'enviado') res.enviados++; else if (r === 'teste') res.testes++; else if (r === 'nao_enviado') res.nao_enviados++; else if (r === 'falha') res.falhas++;
+        if (r !== 'ignorada') acoes++;
+        if (ctx.envios > antes && espera > 0) await dormir(espera);
+      } catch (e) {
+        res.falhas++; erros++;
+        console.error('avaliacao_erro', os.numero || c.id, String((e && e.message) || e).slice(0, 120));
+        if (erros >= 3) { res.erro = 'falhas_seguidas'; parar = true; break; } // banco ou KV fora do ar: para a rodada
+      }
+    }
+    if (!regs.emLote) break; // sem leitura em lote no KV: uma parte só por rodada
   }
   return res;
 }
@@ -612,13 +686,26 @@ export async function processarAvaliacoes(env, opcoes) {
 export async function registrarReabertura(env, os, por) {
   const db = env && env.DB_PLOOMES;
   if (!db || !os || !os.id || os.status === 'concluida' || !os.concluidaEm) return { ok: true, nada: true };
-  const chave = await lerChave(env);
-  if (chave.modo === 'desligado' || !(Date.parse(os.concluidaEm) >= Date.parse(inicioDoEnvio(chave)))) return { ok: true, nada: true };
+  // Leitura ESTRITA da chave: se não der para saber se o envio está ligado, a reabertura é
+  // registrada assim mesmo (o lado seguro é não enviar).
+  let chave = null;
+  try { chave = await lerChave(env, true); } catch { chave = null; }
+  if (chave && (chave.modo === 'desligado' || !(Date.parse(os.concluidaEm) >= Date.parse(inicioDoEnvio(chave))))) return { ok: true, nada: true };
   await garantirTabelas(db);
-  const agora = new Date().toISOString();
-  await db.prepare("UPDATE avaliacao_pedidos SET status='nao_enviado', canal='nenhum', motivo='reaberta', processado_em=?2, reserva=NULL WHERE os_id=?1 AND status='pendente'").bind(String(os.id), agora).run();
-  await db.prepare("INSERT OR IGNORE INTO avaliacao_pedidos (os_id, os_numero, chave, perfil, status, canal, motivo, concluida_em, processado_em, por, tentativas, modo, cliente_id) VALUES (?1,?2,'','','nao_enviado','nenhum','reaberta',?3,?4,?5,0,?6,?7)")
-    .bind(String(os.id), os.numero || '', os.concluidaEm, agora, String(por || 'sistema').trim().toLowerCase().slice(0, 120), chave.modo, idFicha(os)).run();
+  const agoraMs = Date.now(), agora = new Date(agoraMs).toISOString();
+  const quem = String(por || 'sistema').trim().toLowerCase().slice(0, 120);
+  await db.batch([
+    // nova tentativa que estava na fila: encerra (se o último erro deixou dúvida, "não confirmado")
+    db.prepare(`UPDATE avaliacao_pedidos SET motivo = CASE WHEN ${SQL_INCERTO} THEN 'envio_nao_confirmado' ELSE 'reaberta' END, status='nao_enviado', canal='nenhum', processado_em=?2, reserva=NULL WHERE os_id=?1 AND status='pendente'`).bind(String(os.id), agora),
+    // "enviando" travado: a retomada não acontece mais; fica "envio não confirmado"
+    db.prepare("UPDATE avaliacao_pedidos SET status='nao_enviado', canal='nenhum', motivo='envio_nao_confirmado', reserva=NULL WHERE os_id=?1 AND status='enviando' AND processado_em < ?2").bind(String(os.id), new Date(agoraMs - TRAVADO_MIN * 60e3).toISOString()),
+    // "enviando" de agora há pouco (pode estar saindo neste instante): não dá para encerrar,
+    // mas fica a marca — se a rodada que enviava morreu, a retomada NÃO reenvia
+    db.prepare("UPDATE avaliacao_pedidos SET status_antes='reaberta' WHERE os_id=?1 AND status='enviando'").bind(String(os.id)),
+    // reabertura já registrada: renova a hora (só uma conclusão DEPOIS desta reabertura volta a valer)
+    db.prepare("UPDATE avaliacao_pedidos SET processado_em=?2, concluida_em=?3, por=?4 WHERE os_id=?1 AND status='nao_enviado' AND motivo='reaberta'").bind(String(os.id), agora, os.concluidaEm, quem),
+    db.prepare("INSERT OR IGNORE INTO avaliacao_pedidos (os_id, os_numero, chave, perfil, status, canal, motivo, concluida_em, processado_em, por, tentativas, modo, cliente_id) VALUES (?1,?2,'','','nao_enviado','nenhum','reaberta',?3,?4,?5,0,?6,?7)").bind(String(os.id), os.numero || '', os.concluidaEm, agora, quem, (chave && chave.modo) || '', idFicha(os)),
+  ]);
   return { ok: true };
 }
 
@@ -716,7 +803,9 @@ export async function dadosPaginaAvaliacoes(env) {
     try { const r = await db.prepare(`SELECT ${COLUNAS} FROM avaliacao_pedidos ORDER BY COALESCE(pedida_em, processado_em) DESC LIMIT 60`).all(); ultimos = (r && r.results) || []; } catch { ultimos = []; }
     try { const r = await db.prepare('SELECT status, motivo, COUNT(*) AS n FROM avaliacao_pedidos WHERE COALESCE(pedida_em, processado_em) >= ?1 GROUP BY status, motivo').bind(new Date(Date.now() - 7 * 86400e3).toISOString()).all(); semana = (r && r.results) || []; } catch { semana = []; }
   }
-  return { cfg, ultimos, semana, auditoria: await listarAuditoria(env, 12), naoEnviar: await contarNaoEnviar(env), resendOk: !!(env && env.RESEND_API_KEY), remetente: remetente(env), testePara: emailTeste(env), link: (env && env.AVALIACAO_LINK) || LINK_PADRAO };
+  // O serviço de e-mail está recusando os envios (chave, domínio ou limite)? Mostra na tela.
+  const recusa = (ultimos.find((r) => r.status === 'pendente' && /^resend_(401|403|429)$/.test(String(r.erro || ''))) || {}).erro || '';
+  return { cfg, ultimos, semana, recusa, auditoria: await listarAuditoria(env, 12), naoEnviar: await contarNaoEnviar(env), resendOk: !!(env && env.RESEND_API_KEY), remetente: remetente(env), testePara: emailTeste(env), link: (env && env.AVALIACAO_LINK) || LINK_PADRAO };
 }
 
 // --- Telas --------------------------------------------------------------------------------------
@@ -781,6 +870,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:#F7FAF9;border:1px sol
   <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:12px 0 14px"><h1 style="font-size:20px;margin:0">⭐ Pedido de avaliação no Google</h1>
     <span style="font-size:11px;font-weight:800;padding:4px 11px;border-radius:20px;color:${COR_MODO[cfg.modo]}">${ROTULO_MODO[cfg.modo]}${cfg.desde ? ` · desde ${esc(textoBR(cfg.desde))}` : ''}</span></div>
   ${d.resendOk ? '' : '<div class="card" style="border-color:#F3C6C6;background:#FDECEC;color:#9B1C1C;font-size:13px;font-weight:700">O serviço de e-mail (Resend) não está configurado neste sistema — nenhum pedido sai enquanto isso não for resolvido.</div>'}
+  ${d.recusa ? `<div class="card" style="border-color:#F3C6C6;background:#FDECEC;color:#9B1C1C;font-size:13px;font-weight:700">O serviço de e-mail está RECUSANDO os envios (código ${esc(d.recusa)}${d.recusa === 'resend_429' ? ': limite do plano atingido' : ': chave ou domínio não aceito'}). Os pedidos ficam na fila por até 24 horas e saem sozinhos quando isso for resolvido no Resend.</div>` : ''}
   <div class="card">
     <div class="sec">Chave</div>
     ${bModo('desligado', 'Desligado', 'Nada é enviado. É o padrão.', false)}
@@ -831,7 +921,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:#F7FAF9;border:1px sol
   </div>
   <div class="card">
     <div class="sec">Como funciona</div>
-    <div style="font-size:13px;color:#4F6469;line-height:1.7">• Sai 2 horas depois de a coleta ficar <b>concluída</b>, só entre 08h e 20h (fora disso, às 08h seguintes). O sistema confere a cada 10 minutos.<br>• Um pedido por cliente a cada 12 meses (pelo CNPJ/CPF; sem documento, pelo e-mail).<br>• Não recebem: casa e família, cliente com bloqueio de contato, quem já recebeu em 12 meses, quem não tem e-mail e quem está na lista “não enviar e-mail”. O motivo aparece na OS.<br>• Também não sai: coleta marcada como concluída mais de 10 dias depois da data dela (coleta antiga) e coleta que foi <b>reaberta</b> depois de concluída — só uma conclusão nova volta a valer.<br>• Contato marcado como inativo/desligado no cadastro não recebe.<br>• Se o sistema não conseguir ler as listas ou o cadastro, ele <b>não envia</b> e tenta de novo na rodada seguinte.<br>• Sem e-mail? Peça pelo WhatsApp e marque <b>“Pedi pelo WhatsApp”</b> na OS — vale como pedido feito.<br>• Texto simples, sem imagem. O link é o do Google, sem rastreio.</div>
+    <div style="font-size:13px;color:#4F6469;line-height:1.7">• Sai 2 horas depois de a coleta ficar <b>concluída</b>, só entre 08h e 20h (fora disso, às 08h seguintes). O sistema confere a cada 10 minutos.<br>• Um pedido por cliente a cada 12 meses (pelo CNPJ/CPF; sem documento, pelo e-mail). O mesmo endereço de e-mail também não recebe dois pedidos em 12 meses, ainda que seja contato de empresas diferentes — nesse caso o pedido vai para o contato seguinte da empresa, se houver.<br>• Não recebem: casa e família, cliente com bloqueio de contato, quem já recebeu em 12 meses, quem não tem e-mail e quem está na lista “não enviar e-mail”. O motivo aparece na OS.<br>• Também não sai: coleta marcada como concluída mais de 10 dias depois da data dela (coleta antiga) e coleta que foi <b>reaberta</b> depois de concluída — só uma conclusão nova volta a valer.<br>• Contato marcado como inativo/desligado no cadastro não recebe.<br>• Se o sistema não conseguir ler as listas ou o cadastro, ele <b>não envia</b> e tenta de novo na rodada seguinte.<br>• Sem e-mail? Peça pelo WhatsApp e marque <b>“Pedi pelo WhatsApp”</b> na OS — vale como pedido feito.<br>• Texto simples, sem imagem. O link é o do Google, sem rastreio.</div>
     <label>Pessoa física — assunto: ${esc(exemplo.assunto)}</label><pre>${esc(exemplo.texto)}</pre>
     <label>Empresa — assunto: ${esc(exemploPJ.assunto)}</label><pre>${esc(exemploPJ.texto)}</pre>
   </div>
@@ -858,9 +948,9 @@ function carga(){var f=$('arq').files[0],m=$('mCarga');if(!f){m.textContent='Esc
     for(i=0;i<linhas.length;i++){var t=linhas[i].toLowerCase(),cels=t.split(/[\\s,;|<>()\\[\\]"]+/),e='';
       for(var c=0;c<cels.length;c++){var x=cels[c].replace(/^[.']+|[.']+$/g,'');if(x.length<=254&&RE.test(x)){e=x;break;}}
       if(!e)continue;var resto=t.replace(e,' '),tipo='';
-      if(/inativ|remov|descadastr|unsubscri|opt.?out|cancel|reclama|spam|complain/.test(resto))tipo='descadastrado';
-      else if(/bounce|inv[aá]lid|invalid|hard|inexistente/.test(resto))tipo='invalido';
-      else if(/\\bativo\\b|\\bactive\\b|subscribed|inscrito|confirmad/.test(resto))tipo='ativo';
+      if(/\\b(inativ[oa]s?|removid[oa]s?|removed|descadastr\\w*|unsubscri\\w*|opt[- ]?out|cancelad[oa]s?|cancell?ed|reclama\\w*|spam|complain\\w*)\\b/.test(resto))tipo='descadastrado';
+      else if(/\\b(bounce[ds]?|hard|inv[aá]lid[oa]s?|invalid|inexistente)\\b/.test(resto))tipo='invalido';
+      else if(/\\b(ativ[oa]s?|active|subscribed|inscrit[oa]s?|confirmad[oa]s?)\\b/.test(resto))tipo='ativo';
       if(tipo==='descadastrado'||tipo==='invalido')temSaida=true;
       achados.push({e:e,t:tipo});}
     var mapa={},pulados=0,semSituacao=0,ditosAtivos=0;
