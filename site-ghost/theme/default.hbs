@@ -242,6 +242,29 @@
             "email": "contato@ecobraz.org.br",
             "availableLanguage": ["pt-BR"]
           },
+          {{!-- Ação de pedir a coleta (F039, 18/11/2026): diz a buscadores e a
+               assistentes de IA onde o pedido é feito. É pedido, não
+               confirmação: os textos repetem o que as páginas já publicam.
+               Mudou o endereço do formulário? Atualizar aqui também. --}}
+          "potentialAction": {
+            "@type": "ScheduleAction",
+            "name": "Solicitar coleta",
+            "description": "Pedido de coleta pelo formulário do site. O envio ainda não confirma a coleta: a equipe avalia o pedido e responde em até 24h úteis.",
+            "target": [
+              {
+                "@type": "EntryPoint",
+                "urlTemplate": "{{@site.url}}/agendamento/",
+                "inLanguage": "pt-BR",
+                "actionPlatform": ["https://schema.org/DesktopWebPlatform", "https://schema.org/MobileWebPlatform"]
+              },
+              {
+                "@type": "EntryPoint",
+                "urlTemplate": "{{@site.url}}/request-a-collection/",
+                "inLanguage": "en",
+                "actionPlatform": ["https://schema.org/DesktopWebPlatform", "https://schema.org/MobileWebPlatform"]
+              }
+            ]
+          },
           "sameAs": [
             "https://circulareconomy.europa.eu/platform/en/good-practices/ecobrazs-adote-um-bairro-adopt-neighborhood-programme",
             "https://share.google/DrfOh7JDdkShOvcQy",

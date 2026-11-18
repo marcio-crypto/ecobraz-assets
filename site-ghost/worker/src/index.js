@@ -31,7 +31,7 @@ export default {
     if (url.pathname === '/health') {
       let cofre = null;
       try { if (env.LEADS_COFRE) cofre = (await env.LEADS_COFRE.list({limit:1000})).keys.length; } catch {}
-      return json({ok:true, service:'ecobraz-coletas', version:12, destino:'portal', ploomes:'desativado', form:'adaptativo', leads_no_cofre:cofre}, 200, cors);
+      return json({ok:true, service:'ecobraz-coletas', version:13, destino:'portal', ploomes:'desativado', form:'adaptativo', leads_no_cofre:cofre}, 200, cors);
     }
     if (url.pathname !== '/api/coletas' || request.method !== 'POST') return json({ok:false, error:'not_found'}, 404, cors);
     if (!allowed.has(origin)) return json({ok:false, error:'origin_not_allowed'}, 403, cors);
@@ -115,10 +115,19 @@ function normalize(v, request) {
 // sessão, domínio de quem indicou e caminho de entrada. Nenhum dado pessoal.
 // Valores fora do esperado são descartados (o campo vem do navegador).
 const CANAIS = {busca_organica:'organic', chat_ia:'ai', busca_paga:'cpc', perfil_google:'organic', social:'social', email:'email', indicacao:'referral', direto:'(none)', campanha:''};
+// Assistentes de IA (F041, 18/11/2026). O ChatGPT marca o próprio link com
+// utm_source=chatgpt.com, sem utm_medium, e muitas vezes abre o link sem indicar
+// de onde veio. Sem esta regra o pedido ficava como "campanha". A mesma lista
+// existe no site (AI_HOSTS e AI_UTM em main.js); aqui ela corrige também o
+// pedido que chega de página ainda em cache.
+const FONTE_IA = /(^|\.)(chatgpt\.com|openai\.com|perplexity\.ai|claude\.ai|copilot\.microsoft\.com|copilot\.com|gemini\.google\.com|bard\.google\.com|notebooklm\.google\.com|meta\.ai|grok\.com|x\.ai|deepseek\.com|you\.com|phind\.com|mistral\.ai|poe\.com|duck\.ai)$|^(chatgpt|openai|perplexity|claude|copilot|gemini|bard|grok|deepseek|mistral|phind|poe)$/;
 function origemDoLead(v, clean) {
-  const canal = Object.hasOwn(CANAIS, String(v.origin_channel || '')) ? String(v.origin_channel) : '';
+  let canal = Object.hasOwn(CANAIS, String(v.origin_channel || '')) ? String(v.origin_channel) : '';
   const host = clean(v.origin_referrer, 120).toLowerCase().replace(/[^a-z0-9.\-]/g, '');
   const caminho = clean(v.landing_path, 300).split('?')[0].split('#')[0];
+  const fonte = clean(v.utm_source, 200).toLowerCase().replace(/^www\./, '');
+  const pago = /cpc|ppc|paid/.test(clean(v.utm_medium, 200).toLowerCase());
+  if (!pago && ((['', 'campanha'].includes(canal) && FONTE_IA.test(fonte)) || (['', 'indicacao'].includes(canal) && FONTE_IA.test(host)))) canal = 'chat_ia';
   return {origin_channel: canal, origin_referrer: host, landing_path: caminho.startsWith('/') ? caminho : ''};
 }
 // O portal já recebe utm_source e utm_medium. Quando a visita não veio de
@@ -130,6 +139,9 @@ function comOrigemDerivada(lead) {
     paraOPortal.utm_source = origin_referrer || (origin_channel === 'direto' ? '(direct)' : origin_channel);
     paraOPortal.utm_medium = CANAIS[origin_channel];
   }
+  // Assistente de IA que marcou o link (utm_source preenchido, utm_medium vazio):
+  // a fonte fica como veio e o meio vai como "ai", para o escritório ver a origem.
+  if (origin_channel === 'chat_ia' && paraOPortal.utm_source && !paraOPortal.utm_medium) paraOPortal.utm_medium = CANAIS.chat_ia;
   return paraOPortal;
 }
 // Registra o lead na caixa de entrada do escritório, no sistema próprio (portal).

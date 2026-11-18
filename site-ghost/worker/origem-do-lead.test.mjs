@@ -60,6 +60,41 @@ test('chat de IA e acesso direto', async () => {
   assert.deepEqual([direto.portal.utm_source, direto.portal.utm_medium], ['(direct)', '(none)']);
 });
 
+test('assistente de IA que marca o próprio link (utm_source=chatgpt.com, sem utm_medium) vira chat de IA', async () => {
+  // Página nova: o site já classifica como chat_ia e manda a UTM como veio.
+  const novo = await envia({origin_channel: 'chat_ia', origin_referrer: '', utm_source: 'chatgpt.com', landing_path: '/coleta-de-lixo-eletronico/'});
+  assert.equal(novo.cofre.origin_channel, 'chat_ia');
+  assert.deepEqual([novo.portal.utm_source, novo.portal.utm_medium], ['chatgpt.com', 'ai']);
+  // Página em cache: o site antigo manda "campanha"; o Worker corrige.
+  const cache = await envia({origin_channel: 'campanha', origin_referrer: '', utm_source: 'chatgpt.com'});
+  assert.equal(cache.cofre.origin_channel, 'chat_ia');
+  assert.deepEqual([cache.portal.utm_source, cache.portal.utm_medium], ['chatgpt.com', 'ai']);
+  // Nome curto, sem domínio, e as outras três origens pedidas.
+  for (const fonte of ['perplexity', 'gemini.google.com', 'copilot.microsoft.com', 'www.perplexity.ai']) {
+    const r = await envia({origin_channel: 'campanha', utm_source: fonte});
+    assert.equal(r.cofre.origin_channel, 'chat_ia', fonte);
+    assert.equal(r.portal.utm_medium, 'ai', fonte);
+  }
+});
+
+test('indicação cujo domínio é de assistente de IA vira chat de IA; busca e campanha comum não mudam', async () => {
+  const ia = await envia({origin_channel: 'indicacao', origin_referrer: 'copilot.microsoft.com'});
+  assert.equal(ia.cofre.origin_channel, 'chat_ia');
+  assert.deepEqual([ia.portal.utm_source, ia.portal.utm_medium], ['copilot.microsoft.com', 'ai']);
+  const busca = await envia({origin_channel: 'busca_organica', origin_referrer: 'google.com'});
+  assert.equal(busca.cofre.origin_channel, 'busca_organica');
+  const campanha = await envia({origin_channel: 'campanha', utm_source: 'egoi', utm_medium: 'email'});
+  assert.equal(campanha.cofre.origin_channel, 'campanha');
+  assert.deepEqual([campanha.portal.utm_source, campanha.portal.utm_medium], ['egoi', 'email']);
+  // Anúncio pago com nome de assistente na fonte continua sendo anúncio.
+  const pago = await envia({origin_channel: 'busca_paga', utm_source: 'chatgpt.com', utm_medium: 'cpc'});
+  assert.equal(pago.cofre.origin_channel, 'busca_paga');
+  assert.equal(pago.portal.utm_medium, 'cpc');
+  // Meio já preenchido por quem montou o link não é trocado.
+  const comMeio = await envia({origin_channel: 'chat_ia', utm_source: 'chatgpt.com', utm_medium: 'referral'});
+  assert.equal(comMeio.portal.utm_medium, 'referral');
+});
+
 test('UTM de campanha nunca é sobrescrita', async () => {
   const r = await envia({origin_channel: 'campanha', origin_referrer: 'linkedin.com', utm_source: 'linkedin', utm_medium: 'social', utm_campaign: 'ecobraz_pj_202611'});
   assert.deepEqual([r.portal.utm_source, r.portal.utm_medium, r.portal.utm_campaign], ['linkedin', 'social', 'ecobraz_pj_202611']);

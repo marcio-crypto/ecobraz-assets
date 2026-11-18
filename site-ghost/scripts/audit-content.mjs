@@ -87,6 +87,37 @@ for (const [formFile, isPt] of collectionForms) {
   // A armadilha antiga (name="website", fora da tela mas visível para assistentes de IA)
   // não pode voltar: se preenchida, o pedido real era descartado em silêncio.
   if (form.includes('name="website"')) errors.push(`${formFile}: honeypot antigo name="website" voltou — use ecb_nao_preencher dentro de bloco display:none`);
+  // Formulário declarado como ferramenta para assistentes de IA (WebMCP, F040,
+  // decisão do Marcio de 18/11/2026). Sem toolautosubmit: quem envia é a pessoa,
+  // depois de conferir os dados e o consentimento. Ligar o envio automático é
+  // decisão do Marcio, não ajuste técnico.
+  if (!/<form[^>]*\stoolname="[a-z_]{3,30}"[^>]*\stooldescription="[^"]{40,500}"/.test(form)) errors.push(`${formFile}: <form> sem toolname/tooldescription (WebMCP, F040) ou descrição acima de 500 caracteres`);
+  if (/<form[^>]*\stoolautosubmit[\s>=]/.test(form)) errors.push(`${formFile}: toolautosubmit ligado — o envio automático por assistente de IA exige decisão do Marcio`);
+  for (const campo of ['profile', 'material_category', 'service_consent', 'marketing_consent']) {
+    if (!new RegExp(`name="${campo}"[^>]*toolparamdescription="[^"]{10,150}"`).test(form)) errors.push(`${formFile}: campo ${campo} sem toolparamdescription (WebMCP, F040)`);
+  }
+}
+
+// Ação de pedir a coleta nos dados da organização (F039, 18/11/2026). O bloco de
+// dados estruturados do tema precisa continuar sendo JSON válido e apontar para
+// os dois formulários (PT e EN).
+{
+  const layout = fs.readFileSync(path.join(root, 'default.hbs'), 'utf8');
+  const bloco = layout.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
+  if (!bloco) errors.push('default.hbs: bloco de dados estruturados não encontrado');
+  else {
+    const limpo = bloco[1]
+      .replace(/\{\{!--[\s\S]*?--\}\}/g, '')
+      .replace(/\{\{@site\.url\}\}/g, 'https://ecobraz.org')
+      .replace(/\{\{asset "([^"]+)"\}\}/g, 'https://ecobraz.org/assets/$1');
+    try {
+      const org = (JSON.parse(limpo)['@graph'] || []).find((n) => String(n['@id'] || '').endsWith('/#organization'));
+      const alvos = org && org.potentialAction ? [].concat(org.potentialAction.target || []).map((t) => t.urlTemplate) : [];
+      for (const esperado of ['https://ecobraz.org/agendamento/', 'https://ecobraz.org/request-a-collection/']) {
+        if (!alvos.includes(esperado)) errors.push(`default.hbs: dados da organização sem a ação de pedir a coleta apontando para ${esperado} (F039)`);
+      }
+    } catch (erro) { errors.push(`default.hbs: dados estruturados deixaram de ser JSON válido (${erro.message})`); }
+  }
 }
 
 const redirectsText = fs.readFileSync(path.join(root, 'redirects.yaml'), 'utf8');
