@@ -40,10 +40,17 @@ const JANELA_INI = 8 * 60;          // 08:00 (minutos do dia, Brasília)
 const JANELA_FIM = 20 * 60;         // 20:00
 const VALIDADE_H = 24;              // passou disso da hora prevista, não envia mais (pedido atrasado não sai)
 const DIAS_12_MESES = 365;
-const MAX_POR_RODADA = 5;           // OS tratadas por rodada (30 por hora — o volume é de 6 a 30 por dia)
+const MAX_ACOES = 5;                // decisões por rodada: envio ou "não enviado" (30 por hora — o volume é de 6 a 30 por dia)
+const MAX_EXAME = 40;               // OS olhadas por rodada (as que não dão em nada não travam a fila)
 const MAX_TENTATIVAS = 6;           // falha de envio: tenta de novo até 6 vezes…
 const PAUSA_TENTATIVA_MIN = 30;     // …com 30 min entre as tentativas
-const CHAVE_CFG = 'cfg:avaliacao';
+const TRAVADO_MIN = 20;             // "enviando" há mais que isso = a rodada que enviava morreu no meio → retoma
+const RETOMA_MAX_H = 20;            // …só enquanto a chave de idempotência do Resend (24h) ainda vale
+const PAUSA_ENVIO_MS = 600;         // respiro entre dois envios (o Resend aceita 2 por segundo)
+const ANTIGA_DIAS = 10;             // concluída no sistema mais de 10 dias depois da data da coleta = "coleta antiga"
+const ANTIGA_SEM_DATA_DIAS = 60;    // OS sem data marcada: criada há mais de 60 dias
+const CHAVE_CFG = 'cfg:avaliacao';        // a chave: { modo, desde, ligadoEm, por, atualizadoEm }
+const CHAVE_CASA = 'cfg:avaliacao:casa';  // a lista casa/família: { casa: [...] }
 const MODOS = ['desligado', 'teste', 'ligado'];
 const CASA_PADRAO = ['ecobraz', 'villanova'];
 
@@ -52,10 +59,15 @@ export const ROTULO_MOTIVO = {
   sem_email: 'sem e-mail', descadastrado: 'descadastrado', email_invalido: 'e-mail inválido',
   bloqueio: 'bloqueio', ja_pedido_12m: 'já pedido em 12 meses', casa_familia: 'casa/família',
   teste: 'modo de teste (e-mail só para a equipe)', falha_envio: 'falha no envio', prazo_expirado: 'prazo de envio expirado',
+  coleta_antiga: 'coleta antiga (concluída no sistema muito depois da data)', reaberta: 'coleta reaberta depois de concluída',
+  sem_cadastro: 'cadastro do cliente não encontrado', envio_nao_confirmado: 'envio não confirmado (pode ter saído)',
 };
+// A reabertura registrada deixa de valer quando a OS é concluída DE NOVO depois dela
+// (conclusão nova). Reconclusão automática com a hora antiga (anterior à reabertura) não conta.
+const reaberturaVencida = (row, concluidaEm) => !!(row && row.status === 'nao_enviado' && row.motivo === 'reaberta' && Date.parse(concluidaEm) > Date.parse(row.processado_em));
 // Campos que saem na OS / conector a partir da linha do registro.
-export function camposAvaliacao(row) {
-  if (!row) return { avaliacao_pedida_em: null, avaliacao_canal: null, motivo_nao_enviado: null };
+export function camposAvaliacao(row, concluidaEm) {
+  if (!row || reaberturaVencida(row, concluidaEm)) return { avaliacao_pedida_em: null, avaliacao_canal: null, motivo_nao_enviado: null };
   const pedido = row.status === 'enviado' || row.status === 'whatsapp';
   return {
     avaliacao_pedida_em: pedido ? isoBR(row.pedida_em || row.processado_em) : null,
@@ -65,32 +77,53 @@ export function camposAvaliacao(row) {
 }
 
 // --- Chave liga/desliga (KV) ---------------------------------------------------------------
-// Qualquer falha de leitura cai em DESLIGADO (o seguro).
-export async function lerConfigAvaliacao(env) {
+// A chave (modo) e a lista casa/família ficam em registros SEPARADOS: salvar a lista nunca
+// regrava a chave. Qualquer falha de leitura da chave cai em DESLIGADO (o seguro); falha
+// na leitura da lista marca casaErro e a rodada não envia nada.
+async function lerChave(env) {
+  const kv = env && env.PORTAL_KV;
   let c = null;
-  try { const raw = env && env.PORTAL_KV ? await env.PORTAL_KV.get(CHAVE_CFG) : null; c = raw ? JSON.parse(raw) : null; } catch { c = null; }
+  try { const raw = kv ? await kv.get(CHAVE_CFG) : null; c = raw ? JSON.parse(raw) : null; } catch { c = null; }
   const modo = c && MODOS.includes(c.modo) ? c.modo : 'desligado';
-  const casa = c && Array.isArray(c.casa) ? c.casa.map((s) => limpar(s)).filter(Boolean).slice(0, 80) : CASA_PADRAO;
-  return { modo, desde: (c && c.desde) || '', ligadoEm: (c && c.ligadoEm) || '', por: (c && c.por) || '', atualizadoEm: (c && c.atualizadoEm) || '', casa };
+  return { modo, desde: (c && c.desde) || '', ligadoEm: (c && c.ligadoEm) || '', por: (c && c.por) || '', atualizadoEm: (c && c.atualizadoEm) || '' };
 }
-// "desde" = quando saiu de desligado: só coletas concluídas DEPOIS disso entram (ligar a
-// chave nunca dispara pedido para coleta antiga).
+async function lerCasa(env) {
+  const kv = env && env.PORTAL_KV;
+  let k = null, casaErro = false;
+  try { const raw = kv ? await kv.get(CHAVE_CASA) : null; k = raw ? JSON.parse(raw) : null; } catch { k = null; casaErro = true; }
+  const lista = k && Array.isArray(k.casa) ? k.casa.map((s) => limpar(s)).filter(Boolean).slice(0, 80) : [];
+  // Lista vazia volta ao padrão: o filtro da casa nunca fica desligado.
+  return { casa: lista.length ? lista : CASA_PADRAO, casaErro };
+}
+export async function lerConfigAvaliacao(env) {
+  return { ...(await lerChave(env)), ...(await lerCasa(env)) };
+}
+// A partir de quando uma coleta concluída entra no envio. Em TESTE: desde que o teste foi
+// ligado. LIGADO de verdade: só coletas concluídas DEPOIS de ligar de verdade — as do
+// período de teste (mesmo as que ainda não tinham sido tratadas) nunca viram e-mail real.
+export const inicioDoEnvio = (cfg) => (cfg && cfg.modo === 'ligado' ? (cfg.ligadoEm || cfg.desde || '') : ((cfg && cfg.desde) || ''));
 export async function salvarModoAvaliacao(env, modo, por) {
   if (!MODOS.includes(modo) || !env || !env.PORTAL_KV) return null;
   const atual = await lerConfigAvaliacao(env);
   const agora = new Date().toISOString();
   const desde = modo === 'desligado' ? '' : (atual.modo === 'desligado' || !atual.desde ? agora : atual.desde);
-  const novo = { modo, desde, ligadoEm: modo === 'ligado' ? (atual.modo === 'ligado' && atual.ligadoEm ? atual.ligadoEm : agora) : '', por: String(por || '').slice(0, 120), atualizadoEm: agora, casa: atual.casa };
+  const novo = { modo, desde, ligadoEm: modo === 'ligado' ? (atual.modo === 'ligado' && atual.ligadoEm ? atual.ligadoEm : agora) : '', por: String(por || '').slice(0, 120), atualizadoEm: agora };
   await env.PORTAL_KV.put(CHAVE_CFG, JSON.stringify(novo));
+  // Mudou a chave: as novas tentativas que estavam na fila (envio que tinha falhado) são
+  // encerradas — nada que nasceu num modo é enviado em outro.
+  if (atual.modo !== modo && env.DB_PLOOMES) {
+    try { await env.DB_PLOOMES.prepare("UPDATE avaliacao_pedidos SET motivo = CASE WHEN modo='teste' THEN 'teste' ELSE 'falha_envio' END, status='nao_enviado', canal='nenhum', reserva=NULL WHERE status='pendente'").run(); } catch { /* sem tabela ainda: nada na fila */ }
+  }
+  await auditar(env, por, 'chave', `${atual.modo} → ${modo}`);
   return novo;
 }
 export async function salvarCasaAvaliacao(env, texto, por) {
   if (!env || !env.PORTAL_KV) return null;
-  const atual = await lerConfigAvaliacao(env);
+  const antes = await lerConfigAvaliacao(env);
   const casa = [...new Set(String(texto || '').split(/\r?\n|;/).map((s) => limpar(s).slice(0, 80)).filter((s) => s.length >= 4))].slice(0, 80);
-  const novo = { modo: atual.modo, desde: atual.desde, ligadoEm: atual.ligadoEm, por: String(por || '').slice(0, 120), atualizadoEm: new Date().toISOString(), casa };
-  await env.PORTAL_KV.put(CHAVE_CFG, JSON.stringify(novo));
-  return novo;
+  await env.PORTAL_KV.put(CHAVE_CASA, JSON.stringify({ casa, por: String(por || '').slice(0, 120), atualizadoEm: new Date().toISOString() }));
+  await auditar(env, por, 'lista casa/família', `${antes.casa.length} → ${casa.length || CASA_PADRAO.length} entrada(s)${casa.length ? '' : ' (vazia: voltou ao padrão)'}`);
+  return { casa: casa.length ? casa : CASA_PADRAO };
 }
 
 // --- Horário ----------------------------------------------------------------------------------
@@ -110,12 +143,22 @@ export function quandoEnviar(concluidaEm) {
 }
 
 // --- Nome, destinatário e chave do cliente ---------------------------------------------------
-const EMAIL_RE = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi;
-export const emailsDe = (v) => [...new Set((String(v == null ? '' : v).toLowerCase().match(EMAIL_RE) || []).filter((e) => e.length <= 254 && !e.includes('..')))];
+// E-mails de um texto. Cada termo é validado POR INTEIRO: endereço com acento ou caractere
+// fora do padrão é DESCARTADO, nunca aproveitado pela metade ("joão.x@…" não pode virar
+// "o.x@…", que é o endereço de outra pessoa).
+const EMAIL_INTEIRO = /^[a-z0-9_%+&-]+(\.[a-z0-9_%+&-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/;
+export const emailsDe = (v) => {
+  const out = [];
+  for (const bruto of String(v == null ? '' : v).toLowerCase().split(/[\s,;|<>()\[\]"·:\/]+/)) {
+    const t = bruto.replace(/^[.'’]+|[.'’]+$/g, '');
+    if (t.length <= 254 && EMAIL_INTEIRO.test(t) && !out.includes(t)) out.push(t);
+  }
+  return out;
+};
 const TITULOS = new Set(['sr', 'sra', 'srta', 'dr', 'dra', 'eng', 'prof', 'profa', 'dona', 'seu']);
-const NAO_PESSOA = new Set(['financeiro', 'compras', 'recepcao', 'comercial', 'administrativo', 'administracao', 'adm', 'rh', 'ti', 'contato', 'atendimento', 'portaria', 'almoxarifado', 'manutencao', 'facilities', 'suporte', 'diretoria', 'gerencia', 'sac', 'fiscal', 'logistica', 'expedicao', 'vendas', 'marketing', 'juridico', 'contabilidade', 'secretaria', 'escritorio', 'geral', 'empresa', 'cliente', 'responsavel', 'departamento', 'setor', 'sem', 'nao']);
+const NAO_PESSOA = new Set(['financeiro', 'compras', 'recepcao', 'recepcionista', 'comercial', 'administrativo', 'administracao', 'adm', 'rh', 'dp', 'pessoal', 'ti', 'cpd', 'informatica', 'tecnologia', 'infra', 'infraestrutura', 'contato', 'atendimento', 'portaria', 'porteiro', 'porteira', 'zelador', 'zeladora', 'zeladoria', 'sindico', 'sindica', 'condominio', 'almoxarifado', 'estoque', 'deposito', 'manutencao', 'predial', 'facilities', 'suporte', 'diretoria', 'diretor', 'diretora', 'gerencia', 'gerente', 'supervisor', 'supervisora', 'coordenador', 'coordenadora', 'encarregado', 'encarregada', 'sac', 'fiscal', 'nfe', 'nf', 'xml', 'faturamento', 'cobranca', 'tesouraria', 'logistica', 'expedicao', 'operacao', 'operacoes', 'producao', 'vendas', 'marketing', 'juridico', 'contabilidade', 'secretaria', 'escritorio', 'engenharia', 'qualidade', 'sustentabilidade', 'seguranca', 'servicos', 'gerais', 'geral', 'equipe', 'central', 'matriz', 'filial', 'unidade', 'loja', 'obra', 'empresa', 'cliente', 'responsavel', 'proprietario', 'proprietaria', 'morador', 'moradora', 'espolio', 'departamento', 'setor', 'falar', 'procurar', 'tratar', 'aos', 'cuidados', 'sem', 'nao']);
 // Primeiro nome para a saudação ("MARIA DA SILVA" → "Maria"). '' quando não parece nome de
-// pessoa (setor, número, e-mail) — aí a mensagem começa com "Olá!".
+// pessoa (setor, cargo, número, e-mail) — aí a mensagem começa com "Olá!".
 export function primeiroNome(nome) {
   const partes = String(nome == null ? '' : nome).replace(/[·|,;()\[\]<>"]/g, ' ').trim().split(/\s+/).filter(Boolean);
   for (const bruto of partes.slice(0, 2)) {
@@ -123,12 +166,13 @@ export function primeiroNome(nome) {
     const p = bruto.replace(/^[^\p{L}]+|[^\p{L}]+$/gu, '');
     const n = semAcentoMin(p).replace(/\./g, '');
     if (TITULOS.has(n)) continue; // "Dr. João" → João
-    if (p.length < 2 || /\d/.test(bruto) || NAO_PESSOA.has(n)) return '';
+    if (p.length < 2 || /\d/.test(bruto) || /[\/\\]/.test(bruto) || NAO_PESSOA.has(n)) return '';
     return (p === p.toUpperCase() || p === p.toLowerCase()) ? p[0].toUpperCase() + p.slice(1).toLowerCase() : p;
   }
   return '';
 }
-const contatoInativo = (c) => /inativ|deslig|saiu|nao trabalha|ex-func|bloque/.test(semAcentoMin(c && c.status));
+// Contato marcado como fora da empresa / não contatar (campo "Status" do contato na ficha).
+const contatoInativo = (c) => /inativ|deslig|demit|saiu|nao trabalha|ex-func|bloque|falec|nao contat|aposent|afastad/.test(semAcentoMin(c && c.status));
 const fonesNac = (v) => {
   const out = [];
   for (const parte of String(v == null ? '' : v).split(/\s*(?:\/|;|,|\||·|\be\b|\bou\b)\s*/i)) {
@@ -139,20 +183,26 @@ const fonesNac = (v) => {
   }
   return out;
 };
+// O WhatsApp às vezes guarda o celular SEM o 9 da frente: compara os dois jeitos como iguais.
+const semNove = (d) => (d.length === 11 && d[2] === '9' ? d.slice(0, 2) + d.slice(3) : d);
 // Tudo o que as regras precisam saber do cliente de uma OS. `cli` = ficha (pode faltar).
 // E-mails em ordem de preferência — empresa: o contato da OS (quem acompanhou a coleta),
 // depois o e-mail geral da ficha, depois os demais contatos; pessoa física: o da ficha.
+// E-mail de contato marcado como inativo/desligado nunca entra (nem como e-mail geral).
 export function dadosDoCliente(os, cli) {
   const o = os || {}, c = cli || {};
   const doc = [o.clienteDoc, c.cnpj, c.cpf].map(digits).find((d) => d.length === 14 || d.length === 11) || '';
   const perfil = doc.length === 14 ? 'PJ' : (doc.length === 11 ? 'PF' : (c.tipo === 'PJ' ? 'PJ' : (c.tipo === 'PF' ? 'PF' : '')));
   const txt = String(o.contato || '');
   const emailOs = emailsDe(txt)[0] || '';
-  let nomeOs = txt.split(/[·|,;]/)[0].replace(/[^\p{L} .'’-]+/gu, ' ').replace(/\s+/g, ' ').trim();
+  const trecho1 = txt.split(/[·|,;]/)[0];
+  let nomeOs = trecho1.includes('@') ? '' : trecho1.replace(/[^\p{L} .'’-]+/gu, ' ').replace(/\s+/g, ' ').trim();
   if (nomeOs.length < 2) nomeOs = '';
-  const contatos = (Array.isArray(c.contatos) ? c.contatos : []).filter((x) => x && !contatoInativo(x));
+  const todosContatos = (Array.isArray(c.contatos) ? c.contatos : []).filter(Boolean);
+  const contatos = todosContatos.filter((x) => !contatoInativo(x));
+  const inativos = new Set(todosContatos.filter(contatoInativo).flatMap((x) => emailsDe(x.email)));
   const cands = [];
-  const poe = (email, nome) => { for (const e of emailsDe(email)) if (!cands.some((x) => x.email === e)) cands.push({ email: e, nome: limpar(nome) }); };
+  const poe = (email, nome) => { for (const e of emailsDe(email)) if (!inativos.has(e) && !cands.some((x) => x.email === e)) cands.push({ email: e, nome: limpar(nome) }); };
   if (perfil === 'PJ') {
     poe(emailOs, nomeOs);
     const nOs = semAcentoMin(nomeOs);
@@ -173,8 +223,13 @@ export function dadosDoCliente(os, cli) {
   const empresa = perfil === 'PJ' ? limpar(c.nomeFantasia || c.razaoSocial || o.clienteNome).replace(/[\r\n\t]+/g, ' ').slice(0, 80) : '';
   const nomes = [o.clienteNome, c.razaoSocial, c.nomeFantasia, c.nome].map(limpar).filter(Boolean);
   const fones = [...new Set([c.fone, c.telefone, c.celular, ...contatos.map((x) => x.fone), txt].flatMap(fonesNac))];
-  const chave = doc ? 'd:' + doc : (cands[0] ? 'e:' + cands[0].email : (o.clienteId ? 'c:' + String(o.clienteId).slice(0, 60) : ''));
-  return { doc, perfil, empresa, nomes, fones, emails: cands, chave, clienteNome: limpar(o.clienteNome || nomes[0] || '') };
+  // Chave da regra dos 12 meses: o CNPJ/CPF; sem documento, o e-mail (todos os do cliente
+  // contam, para o pedido não se repetir só porque mudou o contato da OS). A ficha
+  // (clienteId) também liga duas coletas do mesmo cliente.
+  const clienteId = String(o.clienteId || '').replace(/[^a-zA-Z0-9_]/g, '').slice(0, 60);
+  const chaves = doc ? ['d:' + doc] : cands.map((x) => 'e:' + x.email);
+  const chave = chaves[0] || (clienteId ? 'c:' + clienteId : '');
+  return { doc, perfil, empresa, nomes, fones, emails: cands, chave, chaves, clienteId, clienteNome: limpar(o.clienteNome || nomes[0] || '') };
 }
 // Casa e família: entra por CNPJ/CPF, por e-mail/domínio ou por pedaço do nome (4+ letras),
 // que vale para o nome do cliente e para o domínio do e-mail. Devolve a entrada que casou.
@@ -215,33 +270,56 @@ const remetente = (env) => String((env && env.AVALIACAO_FROM) || REMETENTE_PADRA
 const emailTeste = (env) => emailsDe((env && env.AVALIACAO_TESTE_PARA) || remetente(env))[0] || '';
 const mascarar = (e) => { const [u, d] = String(e || '').split('@'); return d ? `${u.slice(0, 2)}***@${d}` : ''; };
 
-// Envio pelo Resend, em texto simples. Chave de idempotência: o mesmo pedido repetido em
-// até 24h não vira dois e-mails. `definitivo` = tentar de novo não resolve.
+// Envio pelo Resend, em texto simples, com limite de 15 segundos. Chave de idempotência: o
+// mesmo pedido repetido em até 24h não vira dois e-mails. `definitivo` = repetir não resolve.
 async function enviarResend(env, { para, assunto, texto, idem }) {
   if (!env || !env.RESEND_API_KEY) return { ok: false, definitivo: false, erro: 'sem_chave_email' };
   const from = remetente(env);
   const payload = { from, to: [para], subject: assunto, text: texto, reply_to: String(env.AVALIACAO_REPLY_TO || from) };
   let r;
   try {
-    r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${env.RESEND_API_KEY}`, 'Idempotency-Key': String(idem || '').slice(0, 200) }, body: JSON.stringify(payload) });
-  } catch { return { ok: false, definitivo: false, erro: 'rede' }; }
+    const init = { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${env.RESEND_API_KEY}`, 'Idempotency-Key': String(idem || '').slice(0, 200) }, body: JSON.stringify(payload) };
+    if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') init.signal = AbortSignal.timeout(15000);
+    r = await fetch('https://api.resend.com/emails', init);
+  } catch (e) { return { ok: false, definitivo: false, erro: e && e.name === 'TimeoutError' ? 'tempo_esgotado' : 'rede' }; }
   if (r.ok) { let id = ''; try { id = String((await r.json()).id || ''); } catch { id = ''; } return { ok: true, id }; }
   return { ok: false, definitivo: r.status === 400 || r.status === 422, erro: `resend_${r.status}` };
 }
 
 // --- Registro (D1) ----------------------------------------------------------------------------
+const semTabela = (e) => /no such table/i.test(String((e && e.message) || e));
 const prontas = new WeakSet();
 async function garantirTabelas(db) {
   if (!db || prontas.has(db)) return;
-  await db.prepare('CREATE TABLE IF NOT EXISTS avaliacao_pedidos (os_id TEXT PRIMARY KEY, os_numero TEXT, chave TEXT, perfil TEXT, status TEXT NOT NULL, canal TEXT, motivo TEXT, concluida_em TEXT, previsto_em TEXT, processado_em TEXT, pedida_em TEXT, por TEXT, para TEXT, tentativas INTEGER DEFAULT 0, erro TEXT, modo TEXT, reserva TEXT, status_antes TEXT)').run();
-  await db.prepare('CREATE INDEX IF NOT EXISTS avaliacao_pedidos_chave ON avaliacao_pedidos (chave)').run();
-  await db.prepare('CREATE INDEX IF NOT EXISTS avaliacao_pedidos_proc ON avaliacao_pedidos (processado_em)').run();
-  await db.prepare('CREATE TABLE IF NOT EXISTS email_nao_enviar (email TEXT PRIMARY KEY, motivo TEXT, origem TEXT, em TEXT, por TEXT)').run();
+  // Tudo num lote só (uma ida ao banco).
+  await db.batch([
+    db.prepare('CREATE TABLE IF NOT EXISTS avaliacao_pedidos (os_id TEXT PRIMARY KEY, os_numero TEXT, chave TEXT, perfil TEXT, status TEXT NOT NULL, canal TEXT, motivo TEXT, concluida_em TEXT, previsto_em TEXT, processado_em TEXT, pedida_em TEXT, por TEXT, para TEXT, tentativas INTEGER DEFAULT 0, erro TEXT, modo TEXT, reserva TEXT, status_antes TEXT, cliente_id TEXT)'),
+    db.prepare('CREATE INDEX IF NOT EXISTS avaliacao_pedidos_chave ON avaliacao_pedidos (chave)'),
+    db.prepare('CREATE INDEX IF NOT EXISTS avaliacao_pedidos_proc ON avaliacao_pedidos (processado_em)'),
+    db.prepare('CREATE TABLE IF NOT EXISTS email_nao_enviar (email TEXT PRIMARY KEY, motivo TEXT, origem TEXT, em TEXT, por TEXT)'),
+    db.prepare('CREATE TABLE IF NOT EXISTS avaliacao_auditoria (id INTEGER PRIMARY KEY AUTOINCREMENT, em TEXT, por TEXT, acao TEXT, detalhe TEXT)'),
+  ]);
+  // Tabela criada pela 1ª versão (sem cliente_id): acrescenta a coluna.
+  try { await db.prepare('SELECT cliente_id FROM avaliacao_pedidos LIMIT 0').all(); } catch { await db.prepare('ALTER TABLE avaliacao_pedidos ADD COLUMN cliente_id TEXT').run(); }
   prontas.add(db);
 }
-const COLUNAS = 'os_id, os_numero, chave, perfil, status, canal, motivo, concluida_em, previsto_em, processado_em, pedida_em, por, para, tentativas, erro, modo, status_antes';
+// Quem mudou o quê (chave, listas). O detalhe nunca leva e-mail inteiro de cliente.
+async function auditar(env, por, acao, detalhe) {
+  const db = env && env.DB_PLOOMES; if (!db) return;
+  try {
+    await garantirTabelas(db);
+    await db.prepare('INSERT INTO avaliacao_auditoria (em, por, acao, detalhe) VALUES (?1,?2,?3,?4)').bind(new Date().toISOString(), String(por || '').slice(0, 120), String(acao || '').slice(0, 40), String(detalhe || '').slice(0, 200)).run();
+  } catch { /* a auditoria nunca derruba a ação */ }
+}
+export async function listarAuditoria(env, n) {
+  const db = env && env.DB_PLOOMES; if (!db) return [];
+  try { const r = await db.prepare('SELECT em, por, acao, detalhe FROM avaliacao_auditoria ORDER BY id DESC LIMIT ?1').bind(Math.min(50, Math.max(1, Number(n) || 12))).all(); return (r && r.results) || []; } catch { return []; }
+}
+const COLUNAS = 'os_id, os_numero, chave, perfil, status, canal, motivo, concluida_em, previsto_em, processado_em, pedida_em, por, para, tentativas, erro, modo, status_antes, reserva';
 // Linhas do registro por OS (Map os_id → linha). Tabela ainda não criada = nada registrado.
-export async function lerAvaliacoes(env, osIds) {
+// `estrito` (a rodada de envio): qualquer outra falha de leitura é ERRO — nunca "nada
+// registrado" (falha de leitura não pode virar permissão para enviar).
+export async function lerAvaliacoes(env, osIds, opcoes) {
   const out = new Map();
   const db = env && env.DB_PLOOMES;
   const ids = [...new Set((osIds || []).map((x) => String(x || '')).filter(Boolean))];
@@ -251,30 +329,37 @@ export async function lerAvaliacoes(env, osIds) {
       const r = await db.prepare(`SELECT ${COLUNAS} FROM avaliacao_pedidos WHERE os_id IN (SELECT value FROM json_each(?1))`).bind(JSON.stringify(ids.slice(i, i + 400))).all();
       for (const x of (r && r.results) || []) out.set(x.os_id, x);
     }
-  } catch { /* sem registro ainda */ }
+  } catch (e) { if (opcoes && opcoes.estrito && !semTabela(e)) throw e; }
   return out;
 }
 export async function lerAvaliacao(env, osId) { return (await lerAvaliacoes(env, [osId])).get(String(osId || '')) || null; }
-// Já houve pedido para este cliente nos últimos 12 meses? (em teste, os testes também
-// contam, para o ensaio se comportar como o envio de verdade.)
-async function pedidoRecente(db, chave, osId, agoraMs, contarTeste) {
-  if (!chave) return null;
+// Já houve pedido para este cliente nos últimos 12 meses? Casa pela chave (CNPJ/CPF; sem
+// documento, qualquer e-mail do cliente) ou pela mesma ficha. Em teste, os testes também
+// contam, para o ensaio se comportar como o envio de verdade. Falha de leitura = erro.
+async function pedidoRecente(db, d, osId, agoraMs, contarTeste) {
+  const chaves = [...new Set([...(d.chaves || []), d.chave].filter(Boolean))];
+  if (!chaves.length && !d.clienteId) return null;
   const desde = new Date(agoraMs - DIAS_12_MESES * 86400e3).toISOString();
   const st = contarTeste ? "('enviado','enviando','whatsapp','teste')" : "('enviado','enviando','whatsapp')";
-  return await db.prepare(`SELECT os_numero, status, COALESCE(pedida_em, processado_em) AS em FROM avaliacao_pedidos WHERE chave = ?1 AND os_id <> ?2 AND status IN ${st} AND COALESCE(pedida_em, processado_em) >= ?3 ORDER BY COALESCE(pedida_em, processado_em) DESC LIMIT 1`).bind(chave, String(osId), desde).first();
+  // "Envio não confirmado" também conta: o e-mail pode ter saído.
+  return await db.prepare(`SELECT os_numero, status FROM avaliacao_pedidos WHERE (chave IN (SELECT value FROM json_each(?1)) OR (?4 <> '' AND cliente_id = ?4)) AND os_id <> ?2 AND (status IN ${st} OR (status = 'nao_enviado' AND motivo = 'envio_nao_confirmado')) AND COALESCE(pedida_em, processado_em) >= ?3 LIMIT 1`).bind(JSON.stringify(chaves), String(osId), desde, d.clienteId || '').first();
 }
 // Bloqueios de contato já conhecidos pelo sistema (os mesmos do conector): telefones que
 // pediram para sair do WhatsApp e empresas retiradas das campanhas pela diretoria.
+// Tabela que ainda não existe = sem bloqueios; qualquer outra falha de leitura é ERRO.
 async function bloqueiosDeContato(db) {
   const porFone = new Set(), porDoc = new Set();
-  try { const r = await db.prepare('SELECT tel FROM wa_optout ORDER BY em DESC LIMIT 5000').all(); for (const x of (r && r.results) || []) { let t = digits(x.tel); if (t.startsWith('55') && t.length >= 12) t = t.slice(2); if (t) porFone.add(t); } } catch { /* sem campanhas ainda */ }
-  try { const r = await db.prepare('SELECT doc FROM wa_excluidos ORDER BY em DESC LIMIT 5000').all(); for (const x of (r && r.results) || []) { const d = digits(x.doc); if (d) porDoc.add(d); } } catch { /* sem exclusões */ }
+  try { const r = await db.prepare('SELECT tel FROM wa_optout ORDER BY em DESC LIMIT 5000').all(); for (const x of (r && r.results) || []) { let t = digits(x.tel); if (t.startsWith('55') && t.length >= 12) t = t.slice(2); if (t) porFone.add(semNove(t)); } }
+  catch (e) { if (!semTabela(e)) throw e; }
+  try { const r = await db.prepare('SELECT doc FROM wa_excluidos ORDER BY em DESC LIMIT 5000').all(); for (const x of (r && r.results) || []) { const d = digits(x.doc); if (d) porDoc.add(d); } }
+  catch (e) { if (!semTabela(e)) throw e; }
   return { porFone, porDoc };
 }
 
 // --- Lista "não enviar e-mail" (descadastrados e inválidos) -----------------------------------
 const MOTIVOS_LISTA = ['descadastrado', 'invalido'];
-export async function consultarNaoEnviar(env, emails) {
+// `estrito` (a rodada de envio): falha de leitura é ERRO, nunca "não está na lista".
+export async function consultarNaoEnviar(env, emails, opcoes) {
   const out = new Map();
   const db = env && env.DB_PLOOMES;
   const lista = [...new Set((emails || []).flatMap(emailsDe))];
@@ -282,31 +367,36 @@ export async function consultarNaoEnviar(env, emails) {
   try {
     const r = await db.prepare('SELECT email, motivo, origem, em FROM email_nao_enviar WHERE email IN (SELECT value FROM json_each(?1))').bind(JSON.stringify(lista)).all();
     for (const x of (r && r.results) || []) out.set(x.email, x);
-  } catch { /* lista ainda não criada */ }
+  } catch (e) { if (opcoes && opcoes.estrito && !semTabela(e)) throw e; }
   return out;
 }
-// `itens` = [{ e: email, m: 'descadastrado' | 'invalido' }] (até 1.000 por chamada).
+// `itens` = [{ e: email, m: 'descadastrado' | 'invalido' }] (até 1.000 por chamada). Quem já
+// está como "descadastrado" nunca é rebaixado para "inválido" por uma carga posterior, e a
+// data da 1ª entrada é mantida.
 export async function adicionarNaoEnviar(env, itens, { origem, por } = {}) {
   const db = env && env.DB_PLOOMES;
   if (!db) return { ok: false, gravados: 0 };
   const limpos = new Map();
   for (const it of (Array.isArray(itens) ? itens : []).slice(0, 1000)) {
     const e = emailsDe(it && it.e)[0]; if (!e) continue;
-    limpos.set(e, MOTIVOS_LISTA.includes(it && it.m) ? it.m : 'descadastrado');
+    const m = MOTIVOS_LISTA.includes(it && it.m) ? it.m : 'descadastrado';
+    if (limpos.get(e) !== 'descadastrado') limpos.set(e, m);
   }
   if (!limpos.size) return { ok: true, gravados: 0 };
   await garantirTabelas(db);
   const arr = [...limpos].map(([e, m]) => ({ e, m }));
   for (let i = 0; i < arr.length; i += 250) {
-    await db.prepare("INSERT OR REPLACE INTO email_nao_enviar (email, motivo, origem, em, por) SELECT json_extract(value,'$.e'), json_extract(value,'$.m'), ?2, ?3, ?4 FROM json_each(?1)")
+    await db.prepare("INSERT INTO email_nao_enviar (email, motivo, origem, em, por) SELECT json_extract(value,'$.e'), json_extract(value,'$.m'), ?2, ?3, ?4 FROM json_each(?1) WHERE true ON CONFLICT(email) DO UPDATE SET motivo = CASE WHEN email_nao_enviar.motivo = 'descadastrado' THEN 'descadastrado' ELSE excluded.motivo END")
       .bind(JSON.stringify(arr.slice(i, i + 250)), String(origem || 'manual').slice(0, 30), new Date().toISOString(), String(por || '').slice(0, 120)).run();
   }
+  await auditar(env, por, 'lista não enviar', arr.length === 1 ? `incluiu ${mascarar(arr[0].e)} (${arr[0].m === 'invalido' ? 'inválido' : 'descadastrado'})` : `carga de ${arr.length} e-mail(s)`);
   return { ok: true, gravados: arr.length };
 }
-export async function removerNaoEnviar(env, email) {
+export async function removerNaoEnviar(env, email, por) {
   const db = env && env.DB_PLOOMES; const e = emailsDe(email)[0];
   if (!db || !e) return { ok: false };
   try { await db.prepare('DELETE FROM email_nao_enviar WHERE email = ?1').bind(e).run(); } catch { return { ok: false }; }
+  await auditar(env, por, 'lista não enviar', `tirou ${mascarar(e)}`);
   return { ok: true };
 }
 export async function contarNaoEnviar(env) {
@@ -320,30 +410,78 @@ export async function contarNaoEnviar(env) {
 }
 
 // --- Decisão e envio de UMA OS ------------------------------------------------------------------
+const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
+// Leitura ESTRITA do KV (a rodada de envio): chave que não existe = null; falha de leitura é
+// ERRO — nunca "não existe". Uma operação para até 100 chaves quando há leitura em lote.
+async function lerKVEstrito(kv, chaves) {
+  const out = new Map();
+  const lista = [...new Set((chaves || []).filter(Boolean))].slice(0, 100);
+  if (!lista.length) return out;
+  let lote = null;
+  try { lote = await kv.get(lista); } catch { lote = null; } // sem leitura em lote (ou falha — as leituras abaixo acusam)
+  if (lote instanceof Map) { for (const k of lista) out.set(k, lote.has(k) ? lote.get(k) : null); return out; }
+  for (const k of lista) out.set(k, await kv.get(k));
+  return out;
+}
+const idFicha = (os) => String((os && os.clienteId) || '').replace(/[^a-zA-Z0-9_]/g, '');
+// Coleta "antiga": a OS só foi marcada como concluída no sistema muito depois da coleta
+// (ex.: arrumação de OS atrasadas). O cliente não recebe pedido sobre coleta de semanas atrás.
+function coletaAntiga(os) {
+  const t = Date.parse(os.concluidaEm);
+  const dia = /^\d{4}-\d{2}-\d{2}$/.test(String(os.dataAgendada || '')) ? Date.parse(`${os.dataAgendada}T12:00:00-03:00`) : NaN;
+  if (Number.isFinite(dia)) return t - dia > ANTIGA_DIAS * 86400e3;
+  const c = Date.parse(os.criadoEm || '');
+  return Number.isFinite(c) && t - c > ANTIGA_SEM_DATA_DIAS * 86400e3;
+}
 async function gravarFinal(db, base, campos) {
   const v = { ...base, ...campos };
-  await db.prepare('INSERT OR IGNORE INTO avaliacao_pedidos (os_id, os_numero, chave, perfil, status, canal, motivo, concluida_em, previsto_em, processado_em, pedida_em, por, para, tentativas, erro, modo) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16)')
-    .bind(v.os_id, v.os_numero || '', v.chave || '', v.perfil || '', v.status, v.canal || 'nenhum', v.motivo || null, v.concluida_em || null, v.previsto_em || null, v.processado_em, v.pedida_em || null, v.por || 'sistema', v.para || null, Number(v.tentativas) || 0, v.erro || null, v.modo || '').run();
+  await db.prepare('INSERT OR IGNORE INTO avaliacao_pedidos (os_id, os_numero, chave, perfil, status, canal, motivo, concluida_em, previsto_em, processado_em, pedida_em, por, para, tentativas, erro, modo, cliente_id) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17)')
+    .bind(v.os_id, v.os_numero || '', v.chave || '', v.perfil || '', v.status, v.canal || 'nenhum', v.motivo || null, v.concluida_em || null, v.previsto_em || null, v.processado_em, v.pedida_em || null, v.por || 'sistema', v.para || null, Number(v.tentativas) || 0, v.erro || null, v.modo || '', v.cliente_id || '').run();
 }
 // Devolve: 'enviado' | 'teste' | 'nao_enviado' | 'falha' | 'ignorada' (nada a fazer agora).
-async function processarUma(env, cfg, ctx, os, cli, linha) {
+// `linha0` = registro que a OS já tem (só entram aqui: sem registro, "pendente" — envio que
+// falhou e vai tentar de novo —, "enviando" travado e reabertura vencida).
+async function processarUma(env, cfg, ctx, os, cli, linha0, fichaSumiu) {
   const db = env.DB_PLOOMES, agora = ctx.agoraMs, agoraISO = new Date(agora).toISOString();
   // A OS precisa CONTINUAR concluída (o registro completo é a verdade, não o índice).
   if (!os || os.status !== 'concluida' || !os.concluidaEm) return 'ignorada';
-  if (Date.parse(os.concluidaEm) < Date.parse(cfg.desde)) return 'ignorada';
+  const tConc = Date.parse(os.concluidaEm);
+  if (!Number.isFinite(tConc) || !(tConc >= Date.parse(inicioDoEnvio(cfg)))) return 'ignorada';
   const alvo = quandoEnviar(os.concluidaEm);
   if (alvo == null || alvo > agora) return 'ignorada';
+  let linha = linha0 || null;
+  // Reaberta e concluída DE NOVO depois: o registro da reabertura deixa de valer.
+  if (reaberturaVencida(linha, os.concluidaEm)) {
+    await db.prepare("DELETE FROM avaliacao_pedidos WHERE os_id=?1 AND status='nao_enviado' AND motivo='reaberta' AND processado_em=?2").bind(os.id, linha.processado_em).run();
+    linha = null;
+  }
+  // Retomada: o registro ficou em "enviando" porque a rodada que enviava morreu no meio.
+  const retomada = !!(linha && linha.status === 'enviando');
+  if (linha && !retomada && linha.status !== 'pendente') return 'ignorada';
+  if (linha && !retomada && agora - Date.parse(linha.processado_em) < PAUSA_TENTATIVA_MIN * 60e3) return 'ignorada';
+  if (retomada && agora - Date.parse(linha.processado_em) < TRAVADO_MIN * 60e3) return 'ignorada';
   const d = dadosDoCliente(os, cli);
-  const base = { os_id: os.id, os_numero: os.numero || '', chave: d.chave, perfil: d.perfil, concluida_em: os.concluidaEm, previsto_em: new Date(alvo).toISOString(), processado_em: agoraISO, modo: cfg.modo };
-  const nao = async (motivo, extra) => { if (linha) await db.prepare("UPDATE avaliacao_pedidos SET status='nao_enviado', canal='nenhum', motivo=?2, processado_em=?3, reserva=NULL WHERE os_id=?1 AND status='pendente'").bind(os.id, motivo, agoraISO).run(); else await gravarFinal(db, base, { status: 'nao_enviado', canal: 'nenhum', motivo, ...(extra || {}) }); return 'nao_enviado'; };
+  const base = { os_id: os.id, os_numero: os.numero || '', chave: d.chave, perfil: d.perfil, concluida_em: os.concluidaEm, previsto_em: new Date(alvo).toISOString(), processado_em: agoraISO, modo: cfg.modo, cliente_id: d.clienteId };
+  // Registra "não enviado". Numa retomada o motivo é sempre "envio não confirmado": a 1ª
+  // tentativa pode ter saído. Só mexe no registro se ele continua como foi lido.
+  const nao = async (motivo) => {
+    if (linha) await db.prepare("UPDATE avaliacao_pedidos SET status='nao_enviado', canal='nenhum', motivo=?2, processado_em=?3, reserva=NULL WHERE os_id=?1 AND status=?4 AND COALESCE(reserva,'')=?5").bind(os.id, retomada ? 'envio_nao_confirmado' : motivo, agoraISO, linha.status, linha.reserva || '').run();
+    else await gravarFinal(db, base, { status: 'nao_enviado', canal: 'nenhum', motivo });
+    return 'nao_enviado';
+  };
+  // Nada que nasceu num modo (teste/ligado) é enviado em outro.
+  if (linha && linha.modo && linha.modo !== cfg.modo) return await nao(linha.modo === 'teste' ? 'teste' : 'falha_envio');
   if (agora - alvo > VALIDADE_H * MS_H) return await nao('prazo_expirado');
   // Regras, nesta ordem (a primeira que valer é o motivo que aparece na OS).
+  if (coletaAntiga(os)) return await nao('coleta_antiga');
+  if (fichaSumiu) return await nao('sem_cadastro'); // a OS aponta para um cadastro que não existe mais
   if (ehDaCasa(cfg.casa, { nomes: d.nomes, doc: d.doc, emails: d.emails.map((x) => x.email) })) return await nao('casa_familia');
-  if ((d.doc && ctx.bloqueios.porDoc.has(d.doc)) || d.fones.some((f) => ctx.bloqueios.porFone.has(f))) return await nao('bloqueio');
-  if (await pedidoRecente(db, d.chave, os.id, agora, cfg.modo === 'teste')) return await nao('ja_pedido_12m');
+  if (!ctx.bloqueios) ctx.bloqueios = await bloqueiosDeContato(db);
+  if ((d.doc && ctx.bloqueios.porDoc.has(d.doc)) || d.fones.some((f) => ctx.bloqueios.porFone.has(semNove(f)))) return await nao('bloqueio');
+  if (await pedidoRecente(db, d, os.id, agora, cfg.modo === 'teste')) return await nao('ja_pedido_12m');
   if (!d.emails.length) return await nao('sem_email');
   // Lista "não enviar e-mail": descadastrado no 1º e-mail = não envia; inválido = tenta o próximo.
-  const lista = await consultarNaoEnviar(env, d.emails.map((x) => x.email));
+  const lista = await consultarNaoEnviar(env, d.emails.map((x) => x.email), { estrito: true });
   let alvoEmail = null, motivoLista = '';
   for (const cand of d.emails) {
     const b = lista.get(cand.email);
@@ -352,72 +490,136 @@ async function processarUma(env, cfg, ctx, os, cli, linha) {
     if (b.motivo !== 'invalido') break;
   }
   if (!alvoEmail) return await nao(motivoLista || 'descadastrado');
-  // Reserva: só quem grava a própria marca envia (duas rodadas ao mesmo tempo não viram dois e-mails).
-  if (linha && linha.status === 'pendente' && agora - Date.parse(linha.processado_em) < PAUSA_TENTATIVA_MIN * 60e3) return 'ignorada';
+  // Reserva: só quem grava a própria marca envia (duas rodadas ao mesmo tempo não viram dois
+  // e-mails). Sem documento, a chave dos 12 meses é o e-mail que de fato recebe.
+  const chaveReg = d.doc ? d.chave : `e:${alvoEmail.email}`;
   const marca = `${agora}-${Math.random().toString(36).slice(2, 10)}`;
-  if (!linha) await db.prepare("INSERT OR IGNORE INTO avaliacao_pedidos (os_id, os_numero, chave, perfil, status, canal, concluida_em, previsto_em, processado_em, por, para, tentativas, modo, reserva) VALUES (?1,?2,?3,?4,'enviando','email',?5,?6,?7,'sistema',?8,1,?9,?10)").bind(os.id, base.os_numero, base.chave, base.perfil, base.concluida_em, base.previsto_em, agoraISO, mascarar(alvoEmail.email), cfg.modo, marca).run();
-  else await db.prepare("UPDATE avaliacao_pedidos SET status='enviando', canal='email', processado_em=?2, para=?3, tentativas=COALESCE(tentativas,0)+1, modo=?4, reserva=?5 WHERE os_id=?1 AND status='pendente'").bind(os.id, agoraISO, mascarar(alvoEmail.email), cfg.modo, marca).run();
+  if (!linha) await db.prepare("INSERT OR IGNORE INTO avaliacao_pedidos (os_id, os_numero, chave, perfil, status, canal, concluida_em, previsto_em, processado_em, por, para, tentativas, modo, reserva, cliente_id) VALUES (?1,?2,?3,?4,'enviando','email',?5,?6,?7,'sistema',?8,1,?9,?10,?11)").bind(os.id, base.os_numero, chaveReg, base.perfil, base.concluida_em, base.previsto_em, agoraISO, mascarar(alvoEmail.email), cfg.modo, marca, d.clienteId).run();
+  else await db.prepare("UPDATE avaliacao_pedidos SET status='enviando', canal='email', processado_em=?2, para=?3, tentativas=COALESCE(tentativas,0)+1, modo=?4, reserva=?5, chave=?6, cliente_id=?9 WHERE os_id=?1 AND status=?7 AND COALESCE(reserva,'')=?8").bind(os.id, agoraISO, mascarar(alvoEmail.email), cfg.modo, marca, chaveReg, linha.status, linha.reserva || '', d.clienteId).run();
   const minha = await db.prepare('SELECT status, reserva, tentativas FROM avaliacao_pedidos WHERE os_id = ?1').bind(os.id).first();
   if (!minha || minha.reserva !== marca || minha.status !== 'enviando') return 'ignorada';
   const msg = montarMensagem({ perfil: d.perfil, primeiro: primeiroNome(alvoEmail.nome), empresa: d.empresa, link: env.AVALIACAO_LINK });
   const teste = cfg.modo !== 'ligado';
+  // A chave de idempotência é a mesma em toda tentativa desta OS: se a anterior chegou ao
+  // Resend, repetir devolve o mesmo resultado sem mandar outro e-mail.
   const envio = teste
     ? await enviarResend(env, { para: emailTeste(env), assunto: `[TESTE · ${d.clienteNome || 'cliente'} · ${os.numero || ''}] ${msg.assunto}`.slice(0, 200), texto: `MODO DE TESTE — este e-mail NÃO foi para o cliente.\nIria para: ${alvoEmail.email}\nOS: ${os.numero || ''} · modelo: ${msg.modelo === 'PJ' ? 'empresa' : 'pessoa física'}\n\n— texto que o cliente receberia —\n\nAssunto: ${msg.assunto}\n\n${msg.texto}`, idem: `avaliacao-teste-${os.id}` })
     : await enviarResend(env, { para: alvoEmail.email, assunto: msg.assunto, texto: msg.texto, idem: `avaliacao-${os.id}` });
+  ctx.envios = (ctx.envios || 0) + 1;
   if (envio.ok) {
     if (teste) await db.prepare("UPDATE avaliacao_pedidos SET status='teste', canal='nenhum', motivo='teste', pedida_em=NULL, erro=NULL, reserva=NULL WHERE os_id=?1 AND reserva=?2").bind(os.id, marca).run();
     else await db.prepare("UPDATE avaliacao_pedidos SET status='enviado', canal='email', motivo=NULL, pedida_em=?3, erro=NULL, reserva=NULL WHERE os_id=?1 AND reserva=?2").bind(os.id, marca, agoraISO).run();
     return teste ? 'teste' : 'enviado';
   }
-  const acabou = envio.definitivo || (Number(minha.tentativas) || 1) >= MAX_TENTATIVAS;
-  await db.prepare('UPDATE avaliacao_pedidos SET status=?3, canal=?4, motivo=?5, erro=?6, reserva=NULL WHERE os_id=?1 AND reserva=?2').bind(os.id, marca, acabou ? 'nao_enviado' : 'pendente', acabou ? 'nenhum' : 'email', acabou ? 'falha_envio' : null, String(envio.erro || 'erro').slice(0, 40)).run();
-  console.error('avaliacao_envio_falhou', os.numero || os.id, envio.erro, acabou ? 'definitivo' : 'vai_tentar_de_novo');
+  // 409 = o Resend já tinha um pedido com esta chave (conteúdo diferente ou ainda em curso):
+  // pode ter saído — não repete.
+  const incerto = envio.erro === 'resend_409';
+  const acabou = incerto || envio.definitivo || (Number(minha.tentativas) || 1) >= MAX_TENTATIVAS;
+  const erro = String(envio.erro || 'erro').slice(0, 40);
+  console.error('avaliacao_envio_falhou', os.numero || os.id, erro, acabou ? 'definitivo' : 'vai_tentar_de_novo');
+  // Retomada que falhou de novo continua "enviando" (para a próxima tentativa seguir como retomada).
+  if (retomada && !acabou) { await db.prepare('UPDATE avaliacao_pedidos SET erro=?3 WHERE os_id=?1 AND reserva=?2').bind(os.id, marca, erro).run(); return 'falha'; }
+  await db.prepare('UPDATE avaliacao_pedidos SET status=?3, canal=?4, motivo=?5, erro=?6, reserva=NULL WHERE os_id=?1 AND reserva=?2').bind(os.id, marca, acabou ? 'nao_enviado' : 'pendente', acabou ? 'nenhum' : 'email', acabou ? (incerto || retomada ? 'envio_nao_confirmado' : 'falha_envio') : null, erro).run();
   return 'falha';
 }
 
 // --- A rodada (chamada pelo agendamento) -------------------------------------------------------
+// Qualquer falha de leitura (lista casa/família, registros, lista "não enviar", bloqueios,
+// OS, cadastro) faz a rodada NÃO enviar — falha de leitura nunca vira permissão para enviar.
 export async function processarAvaliacoes(env, opcoes) {
   const o = opcoes || {};
   const agoraMs = Number.isFinite(o.agoraMs) ? o.agoraMs : Date.now();
-  const cfg = await lerConfigAvaliacao(env);
-  const res = { modo: cfg.modo, candidatas: 0, enviados: 0, testes: 0, nao_enviados: 0, falhas: 0 };
-  if (cfg.modo === 'desligado' || !env || !env.DB_PLOOMES || !env.PORTAL_KV) return res;
+  // Desligado (o padrão): uma única leitura e mais nada.
+  const chave = await lerChave(env);
+  const res = { modo: chave.modo, candidatas: 0, enviados: 0, testes: 0, nao_enviados: 0, falhas: 0 };
+  if (chave.modo === 'desligado' || !env || !env.DB_PLOOMES || !env.PORTAL_KV) return res;
   if (!dentroDaJanela(agoraMs)) { res.fora_do_horario = true; return res; }
-  const desde = Date.parse(cfg.desde);
-  if (!Number.isFinite(desde)) return res;
-  const piso = Math.max(desde, agoraMs - 10 * 86400e3);
+  const cfg = { ...chave, ...(await lerCasa(env)) };
+  if (cfg.casaErro) { res.erro = 'lista_casa_ilegivel'; console.error('avaliacao_parada', res.erro); return res; }
+  const inicio = Date.parse(inicioDoEnvio(cfg));
+  if (!Number.isFinite(inicio)) return res;
+  const piso = Math.max(inicio, agoraMs - 10 * 86400e3);
+  const db = env.DB_PLOOMES;
+  // Faxina: nova tentativa de coleta que saiu do período, e "enviando" travado há tanto tempo
+  // que não dá mais para retomar com segurança — encerra com o motivo certo.
+  try {
+    await db.prepare("UPDATE avaliacao_pedidos SET motivo = CASE WHEN status='enviando' THEN 'envio_nao_confirmado' WHEN modo='teste' THEN 'teste' ELSE 'prazo_expirado' END, status='nao_enviado', canal='nenhum', reserva=NULL WHERE (status='pendente' AND concluida_em < ?1) OR (status='enviando' AND processado_em < ?2)")
+      .bind(new Date(piso).toISOString(), new Date(agoraMs - RETOMA_MAX_H * MS_H).toISOString()).run();
+  } catch (e) { if (!semTabela(e)) throw e; }
   const cands = [];
   for (const x of await listarColetasOS(env)) {
     if (!x || !x.id || x.status !== 'concluida' || !x.concluidaEm) continue;
     const t = Date.parse(x.concluidaEm);
     if (!Number.isFinite(t) || t < piso) continue;
     const alvo = quandoEnviar(x.concluidaEm);
-    if (alvo != null && alvo <= agoraMs) cands.push({ id: x.id, alvo });
+    if (alvo != null && alvo <= agoraMs) cands.push({ id: String(x.id), alvo, concluidaEm: x.concluidaEm });
   }
   if (!cands.length) return res;
-  const db = env.DB_PLOOMES;
   await garantirTabelas(db);
-  const ja = await lerAvaliacoes(env, cands.map((c) => c.id));
-  // Entram: OS ainda sem registro e as que falharam no envio há mais de 30 min (nova tentativa).
-  const fila = cands.filter((c) => { const r = ja.get(c.id); return !r || (r.status === 'pendente' && !(agoraMs - Date.parse(r.processado_em) < PAUSA_TENTATIVA_MIN * 60e3)); }).sort((a, b) => a.alvo - b.alvo).slice(0, MAX_POR_RODADA);
+  const ja = await lerAvaliacoes(env, cands.map((c) => c.id), { estrito: true });
+  // Entram: OS ainda sem registro; envio que falhou há mais de 30 min (nova tentativa);
+  // "enviando" travado há mais de 20 min (retomada); reabertura vencida (conclusão nova).
+  const naVez = (c) => {
+    const r = ja.get(c.id);
+    if (!r) return true;
+    if (r.status === 'pendente') return !(agoraMs - Date.parse(r.processado_em) < PAUSA_TENTATIVA_MIN * 60e3);
+    if (r.status === 'enviando') return agoraMs - Date.parse(r.processado_em) >= TRAVADO_MIN * 60e3;
+    return reaberturaVencida(r, c.concluidaEm);
+  };
+  const fila = cands.filter(naVez).sort((a, b) => a.alvo - b.alvo).slice(0, MAX_EXAME);
   res.candidatas = fila.length;
   if (!fila.length) return res;
-  const regs = await lerChavesKV(env.PORTAL_KV, fila.map((c) => `os:${c.id}`));
+  const regs = await lerKVEstrito(env.PORTAL_KV, fila.map((c) => `os:${c.id}`));
   const oss = new Map();
-  for (const c of fila) { try { const raw = regs.get(`os:${c.id}`); if (raw) oss.set(c.id, JSON.parse(raw)); } catch { /* registro ilegível: fica para a próxima rodada */ } }
-  const cliIds = [...new Set([...oss.values()].map((x) => String(x.clienteId || '').replace(/[^a-zA-Z0-9_]/g, '')).filter(Boolean))];
-  const fichas = await lerChavesKV(env.PORTAL_KV, cliIds.map((id) => `cli:${id}`));
-  const ctx = { agoraMs, bloqueios: await bloqueiosDeContato(db) };
   for (const c of fila) {
+    const raw = regs.get(`os:${c.id}`);
+    if (!raw) continue; // sem registro: nada a fazer
+    try { oss.set(c.id, JSON.parse(raw)); } catch { console.error('avaliacao_os_ilegivel', c.id); }
+  }
+  const fichas = await lerKVEstrito(env.PORTAL_KV, [...new Set([...oss.values()].map(idFicha).filter(Boolean))].map((id) => `cli:${id}`));
+  const ctx = { agoraMs, bloqueios: null, envios: 0 };
+  const espera = Number.isFinite(o.pausaMs) ? o.pausaMs : PAUSA_ENVIO_MS;
+  let acoes = 0, erros = 0;
+  for (const c of fila) {
+    if (acoes >= MAX_ACOES) break;
     const os = oss.get(c.id);
+    if (!os) continue;
+    const fid = idFicha(os);
+    const raw = fid ? fichas.get(`cli:${fid}`) : null;
     let cli = null;
-    try { const raw = os && os.clienteId ? fichas.get(`cli:${String(os.clienteId).replace(/[^a-zA-Z0-9_]/g, '')}`) : null; cli = raw ? JSON.parse(raw) : null; } catch { cli = null; }
+    // Cadastro ilegível: não dá para aplicar as regras → esta OS não é tratada (fica para a próxima rodada).
+    if (raw) { try { cli = JSON.parse(raw); } catch { console.error('avaliacao_cadastro_ilegivel', os.numero || c.id); continue; } }
     try {
-      const r = await processarUma(env, cfg, ctx, os, cli, ja.get(c.id) || null);
+      const antes = ctx.envios;
+      const r = await processarUma(env, cfg, ctx, os, cli, ja.get(c.id) || null, !!fid && !cli);
       if (r === 'enviado') res.enviados++; else if (r === 'teste') res.testes++; else if (r === 'nao_enviado') res.nao_enviados++; else if (r === 'falha') res.falhas++;
-    } catch (e) { res.falhas++; console.error('avaliacao_erro', (os && os.numero) || c.id, String((e && e.message) || e).slice(0, 120)); }
+      if (r !== 'ignorada') acoes++;
+      if (ctx.envios > antes && espera > 0) await dormir(espera);
+    } catch (e) {
+      res.falhas++; erros++;
+      console.error('avaliacao_erro', os.numero || c.id, String((e && e.message) || e).slice(0, 120));
+      if (erros >= 3) { res.erro = 'falhas_seguidas'; break; } // banco ou KV fora do ar: para a rodada
+    }
   }
   return res;
+}
+
+// --- Reabertura (a OS saiu de "concluída") -----------------------------------------------------
+// Chamado depois que o escritório muda o status de uma OS. Se ela ESTAVA concluída (dentro do
+// período de envio) e deixou de estar, o pedido automático daquela conclusão não sai mais —
+// nem se o sistema reconcluir a OS sozinho com a hora antiga. Só uma conclusão NOVA (depois
+// da reabertura) volta a valer. Não faz nada (nem lê nada) para OS que nunca foi concluída.
+export async function registrarReabertura(env, os, por) {
+  const db = env && env.DB_PLOOMES;
+  if (!db || !os || !os.id || os.status === 'concluida' || !os.concluidaEm) return { ok: true, nada: true };
+  const chave = await lerChave(env);
+  if (chave.modo === 'desligado' || !(Date.parse(os.concluidaEm) >= Date.parse(inicioDoEnvio(chave)))) return { ok: true, nada: true };
+  await garantirTabelas(db);
+  const agora = new Date().toISOString();
+  await db.prepare("UPDATE avaliacao_pedidos SET status='nao_enviado', canal='nenhum', motivo='reaberta', processado_em=?2, reserva=NULL WHERE os_id=?1 AND status='pendente'").bind(String(os.id), agora).run();
+  await db.prepare("INSERT OR IGNORE INTO avaliacao_pedidos (os_id, os_numero, chave, perfil, status, canal, motivo, concluida_em, processado_em, por, tentativas, modo, cliente_id) VALUES (?1,?2,'','','nao_enviado','nenhum','reaberta',?3,?4,?5,0,?6,?7)")
+    .bind(String(os.id), os.numero || '', os.concluidaEm, agora, String(por || 'sistema').trim().toLowerCase().slice(0, 120), chave.modo, idFicha(os)).run();
+  return { ok: true };
 }
 
 // --- "Pedi pelo WhatsApp" (marcação da equipe na OS) -----------------------------------------
@@ -428,13 +630,18 @@ export async function marcarWhatsapp(env, os, cli, por) {
   if (os.status !== 'concluida') return { ok: false, message: 'Só dá para marcar depois que a coleta está concluída.' };
   await garantirTabelas(db);
   const atual = await lerAvaliacao(env, os.id);
-  if (atual && (atual.status === 'enviado' || atual.status === 'enviando')) return { ok: false, message: 'O pedido desta coleta já saiu por e-mail.' };
+  if (atual && atual.status === 'enviado') return { ok: false, message: 'O pedido desta coleta já saiu por e-mail.' };
   if (atual && atual.status === 'whatsapp') return { ok: true, ja: true };
+  // "Enviando" há pouco = o e-mail está saindo agora; travado há mais de 20 min, pode marcar por cima.
+  if (atual && atual.status === 'enviando' && Date.now() - Date.parse(atual.processado_em) < TRAVADO_MIN * 60e3) return { ok: false, message: 'O e-mail desta coleta está saindo agora. Recarregue a página em um minuto.' };
   const agora = new Date().toISOString();
   const d = dadosDoCliente(os, cli);
   const quem = String(por || '').trim().toLowerCase().slice(0, 120);
-  if (atual) await db.prepare("UPDATE avaliacao_pedidos SET status_antes=status, status='whatsapp', canal='whatsapp', pedida_em=?2, por=?3, chave=CASE WHEN COALESCE(chave,'')='' THEN ?4 ELSE chave END, reserva=NULL WHERE os_id=?1").bind(os.id, agora, quem, d.chave).run();
-  else await db.prepare("INSERT OR IGNORE INTO avaliacao_pedidos (os_id, os_numero, chave, perfil, status, canal, concluida_em, processado_em, pedida_em, por, tentativas, modo) VALUES (?1,?2,?3,?4,'whatsapp','whatsapp',?5,?6,?6,?7,0,'manual')").bind(os.id, os.numero || '', d.chave, d.perfil, os.concluidaEm || null, agora, quem).run();
+  // Só grava se o registro continua como foi lido (o envio automático não é atropelado).
+  if (atual) await db.prepare("UPDATE avaliacao_pedidos SET status_antes=CASE WHEN status='enviando' THEN 'nao_enviado' ELSE status END, motivo=CASE WHEN status='enviando' THEN 'envio_nao_confirmado' ELSE motivo END, status='whatsapp', canal='whatsapp', pedida_em=?2, por=?3, chave=CASE WHEN COALESCE(chave,'')='' THEN ?4 ELSE chave END, cliente_id=CASE WHEN COALESCE(cliente_id,'')='' THEN ?7 ELSE cliente_id END, reserva=NULL WHERE os_id=?1 AND status=?5 AND COALESCE(reserva,'')=?6").bind(os.id, agora, quem, d.chave, atual.status, atual.reserva || '', d.clienteId).run();
+  else await db.prepare("INSERT OR IGNORE INTO avaliacao_pedidos (os_id, os_numero, chave, perfil, status, canal, concluida_em, processado_em, pedida_em, por, tentativas, modo, cliente_id) VALUES (?1,?2,?3,?4,'whatsapp','whatsapp',?5,?6,?6,?7,0,'manual',?8)").bind(os.id, os.numero || '', d.chave, d.perfil, os.concluidaEm || null, agora, quem, d.clienteId).run();
+  const depois = await lerAvaliacao(env, os.id);
+  if (!depois || depois.status !== 'whatsapp') return { ok: false, message: 'O registro desta coleta mudou agora mesmo. Recarregue a página e confira.' };
   return { ok: true };
 }
 // Desfazer a marcação (clique errado): volta ao que era; se não havia nada, o registro some
@@ -499,7 +706,7 @@ export async function conferirDominio(env) {
 // Situação da avaliação de UMA OS (bloco na tela da OS).
 export async function infoAvaliacaoOS(env, os) {
   const [cfg, row] = await Promise.all([lerConfigAvaliacao(env), lerAvaliacao(env, os && os.id)]);
-  return { cfg, row, previstoMs: os && os.concluidaEm ? quandoEnviar(os.concluidaEm) : null };
+  return { cfg, row: reaberturaVencida(row, os && os.concluidaEm) ? null : row, previstoMs: os && os.concluidaEm ? quandoEnviar(os.concluidaEm) : null };
 }
 export async function dadosPaginaAvaliacoes(env) {
   const cfg = await lerConfigAvaliacao(env);
@@ -509,7 +716,7 @@ export async function dadosPaginaAvaliacoes(env) {
     try { const r = await db.prepare(`SELECT ${COLUNAS} FROM avaliacao_pedidos ORDER BY COALESCE(pedida_em, processado_em) DESC LIMIT 60`).all(); ultimos = (r && r.results) || []; } catch { ultimos = []; }
     try { const r = await db.prepare('SELECT status, motivo, COUNT(*) AS n FROM avaliacao_pedidos WHERE COALESCE(pedida_em, processado_em) >= ?1 GROUP BY status, motivo').bind(new Date(Date.now() - 7 * 86400e3).toISOString()).all(); semana = (r && r.results) || []; } catch { semana = []; }
   }
-  return { cfg, ultimos, semana, naoEnviar: await contarNaoEnviar(env), resendOk: !!(env && env.RESEND_API_KEY), remetente: remetente(env), testePara: emailTeste(env), link: (env && env.AVALIACAO_LINK) || LINK_PADRAO };
+  return { cfg, ultimos, semana, auditoria: await listarAuditoria(env, 12), naoEnviar: await contarNaoEnviar(env), resendOk: !!(env && env.RESEND_API_KEY), remetente: remetente(env), testePara: emailTeste(env), link: (env && env.AVALIACAO_LINK) || LINK_PADRAO };
 }
 
 // --- Telas --------------------------------------------------------------------------------------
@@ -519,7 +726,8 @@ function resultadoTexto(r) {
   if (r.status === 'enviado') return `✅ pedido enviado por e-mail${r.para ? ` (${r.para})` : ''}`;
   if (r.status === 'whatsapp') return `✅ pedido pelo WhatsApp${r.por && r.por !== 'sistema' ? ` — marcado por ${r.por}` : ''}`;
   if (r.status === 'teste') return `🧪 teste — e-mail só para a equipe${r.para ? ` (iria para ${r.para})` : ''}`;
-  if (r.status === 'pendente' || r.status === 'enviando') return `⏳ envio em andamento${r.erro ? ` (última tentativa: ${r.erro})` : ''}`;
+  if (r.status === 'pendente') return `⏳ o envio falhou — o sistema vai tentar de novo${r.erro ? ` (última tentativa: ${r.erro})` : ''}`;
+  if (r.status === 'enviando') return `⏳ envio em andamento${r.erro ? ` (última tentativa: ${r.erro})` : ''}`;
   return `— não enviado: ${ROTULO_MOTIVO[r.motivo] || r.motivo || 'motivo não registrado'}${r.erro ? ` (${r.erro})` : ''}`;
 }
 // Bloco "Avaliação no Google" da tela da OS. `pode` = sessão do escritório (pode marcar).
@@ -529,12 +737,12 @@ export function blocoAvaliacaoOS(os, info, pode) {
   let texto = '', botao = '';
   const bMarcar = '<button class="btn btn-g" style="padding:9px 12px;font-size:12.5px" onclick="avalWpp(\'marcar\')">💬 Pedi pelo WhatsApp</button>';
   if (row) {
-    texto = `${resultadoTexto(row)} · ${esc(textoBR(row.pedida_em || row.processado_em))}`;
+    texto = `${esc(resultadoTexto(row))} · ${esc(textoBR(row.pedida_em || row.processado_em))}`;
     if (row.status === 'whatsapp') botao = '<button class="btn btn-g" style="padding:9px 12px;font-size:12.5px" onclick="avalWpp(\'desfazer\')">Desfazer</button>';
-    else if (row.status !== 'enviado' && row.status !== 'enviando') botao = bMarcar;
-    if (row.status === 'nao_enviado' && row.motivo === 'sem_email') texto += ' — peça pelo WhatsApp e marque aqui.';
+    else if (row.status !== 'enviado' && !(row.status === 'enviando' && Date.now() - Date.parse(row.processado_em) < TRAVADO_MIN * 60e3)) botao = bMarcar;
+    if (row.status === 'nao_enviado' && ['sem_email', 'reaberta', 'coleta_antiga', 'falha_envio', 'prazo_expirado', 'email_invalido'].includes(row.motivo)) texto += ' — se quiser, peça pelo WhatsApp e marque aqui.';
   } else if (!cfg || cfg.modo === 'desligado') { texto = 'O envio automático está desligado.'; botao = bMarcar; }
-  else if (!os.concluidaEm || Date.parse(os.concluidaEm) < Date.parse(cfg.desde)) { texto = 'Coleta concluída antes de o envio automático ser ligado — não entra no envio.'; botao = bMarcar; }
+  else if (!os.concluidaEm || !(Date.parse(os.concluidaEm) >= Date.parse(inicioDoEnvio(cfg)))) { texto = cfg.modo === 'ligado' ? 'Coleta concluída antes de o envio ser ligado de verdade — não entra no envio.' : 'Coleta concluída antes de o envio automático ser ligado — não entra no envio.'; botao = bMarcar; }
   else if (previstoMs && Date.now() - previstoMs > VALIDADE_H * MS_H) { texto = 'Prazo de envio passou — o pedido automático não sai mais.'; botao = bMarcar; }
   else { texto = `⏳ ${cfg.modo === 'teste' ? 'Teste previsto' : 'Envio previsto'} para ${esc(textoBR(previstoMs))} (2 horas depois da conclusão, entre 08h e 20h).`; botao = bMarcar; }
   return `<div class="card" style="margin-bottom:14px;border-left:4px solid #F2B705">
@@ -551,6 +759,7 @@ export function paginaAvaliacoes(user, d, podeLigar) {
   const naoPorMotivo = d.semana.filter((x) => x.status === 'nao_enviado').map((x) => `${esc(ROTULO_MOTIVO[x.motivo] || x.motivo || 'outro')}: <b>${Number(x.n) || 0}</b>`).join(' · ');
   const bModo = (modo, rotulo, explica, trava) => `<button class="btn ${cfg.modo === modo ? 'btn-d' : 'btn-g'}" ${trava ? 'disabled style="opacity:.5;cursor:not-allowed"' : ''} onclick="modo('${modo}')">${cfg.modo === modo ? '● ' : ''}${rotulo}</button><div style="font-size:11.5px;color:#7c8a87;margin:4px 0 12px;line-height:1.5">${explica}</div>`;
   const linhas = d.ultimos.map((r) => `<tr><td style="padding:7px 8px 7px 0;border-top:1px solid #EEF1F0;white-space:nowrap;color:#4F6469">${esc(textoBR(r.pedida_em || r.processado_em))}</td><td style="padding:7px 8px 7px 0;border-top:1px solid #EEF1F0;white-space:nowrap"><a href="/coletas/os?id=${esc(r.os_id)}" style="color:#0B5B66;font-weight:700;text-decoration:none">${esc(r.os_numero || 'OS')}</a></td><td style="padding:7px 0;border-top:1px solid #EEF1F0">${esc(resultadoTexto(r))}</td></tr>`).join('');
+  const mudancas = (d.auditoria || []).map((a) => `<div style="padding:7px 0;border-top:1px solid #EEF1F0;font-size:12.5px;line-height:1.5;overflow-wrap:anywhere"><span style="color:#7c8a87">${esc(textoBR(a.em))} · ${esc(a.por || '')}</span><br><b>${esc(a.acao || '')}</b>: ${esc(a.detalhe || '')}</div>`).join('');
   const exemplo = montarMensagem({ perfil: 'PF', primeiro: 'Maria', empresa: '', link: d.link });
   const exemploPJ = montarMensagem({ perfil: 'PJ', primeiro: 'Carlos', empresa: 'Empresa Exemplo Ltda', link: d.link });
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Avaliações no Google — Ecobraz</title>
@@ -577,7 +786,8 @@ pre{white-space:pre-wrap;word-break:break-word;background:#F7FAF9;border:1px sol
     ${bModo('desligado', 'Desligado', 'Nada é enviado. É o padrão.', false)}
     ${bModo('teste', 'Teste', `O e-mail vai <b>só para ${esc(d.testePara)}</b>, com o nome do cliente no assunto. <b>Nada vai para o cliente.</b> Use nos 3 primeiros dias.`, false)}
     ${bModo('ligado', 'Ligado de verdade', podeLigar ? 'O pedido vai para o cliente, 2 horas depois da coleta concluída (entre 08h e 20h).' : 'O pedido vai para o cliente. <b>Só a diretoria (Marcio) pode ligar.</b>', !podeLigar && cfg.modo !== 'ligado')}
-    <div class="msg">Ligar a chave vale só para coletas concluídas <b>depois</b> de ligar — nenhuma coleta antiga recebe pedido.${cfg.por ? ` Última mudança: ${esc(cfg.por)}, ${esc(textoBR(cfg.atualizadoEm))}.` : ''}</div>
+    <div class="msg">Ligar a chave vale só para coletas concluídas <b>depois</b> de ligar — nenhuma coleta antiga recebe pedido. As coletas do período de teste também <b>não</b> recebem e-mail quando você liga de verdade.${cfg.por ? ` Última mudança: ${esc(cfg.por)}, ${esc(textoBR(cfg.atualizadoEm))}.` : ''}</div>
+    ${cfg.casaErro ? '<div class="msg" style="color:#9B1C1C;font-weight:700">Não consegui ler a lista “casa e família” agora — enquanto isso, nenhum pedido sai. Recarregue a página; se continuar, salve a lista de novo.</div>' : ''}
     <div id="mModo" class="msg"></div>
   </div>
   <div class="card">
@@ -605,19 +815,23 @@ pre{white-space:pre-wrap;word-break:break-word;background:#F7FAF9;border:1px sol
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn btn-g" onclick="lista('consultar')">Consultar</button><button class="btn btn-p" onclick="lista('adicionar')">Colocar na lista</button><button class="btn btn-g" onclick="lista('remover')">Tirar da lista</button></div>
     <div id="mLista" class="msg">Cliente respondeu “remover”? Coloque o e-mail dele aqui.</div>
     <label style="margin-top:18px">Carga de um arquivo (lista do E-goi)</label>
-    <div style="font-size:12.5px;color:#4F6469;line-height:1.55;margin-bottom:8px">Arquivo <b>.csv</b> ou <b>.txt</b>, do jeito que o E-goi exporta: basta ter o e-mail em cada linha. Se a linha disser “removido”, “bounce” ou parecido, o motivo é lido dela; linha que disser “ativo” é ignorada; senão vale o escolhido abaixo. O arquivo é lido no seu navegador e só os e-mails sobem para o sistema.</div>
+    <div style="font-size:12.5px;color:#4F6469;line-height:1.55;margin-bottom:8px">Arquivo <b>.csv</b> ou <b>.txt</b>, do jeito que o E-goi exporta: basta ter o e-mail em cada linha. Se a linha disser “removido”, “bounce” ou parecido, o motivo é lido dela; senão vale o escolhido abaixo. Linha que disser “ativo” só é pulada quando o mesmo arquivo também tem linhas de removidos (exportação completa). Antes de gravar, o sistema mostra a contagem e pede confirmação. O arquivo é lido no seu navegador e só os e-mails sobem para o sistema.</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input id="arq" type="file" accept=".csv,.txt,text/csv,text/plain" style="flex:1;min-width:220px"><select id="aMotivo" style="width:auto"><option value="descadastrado">são descadastrados</option><option value="invalido">são inválidos</option></select><button class="btn btn-p" onclick="carga()">Carregar</button></div>
     <div id="mCarga" class="msg"></div>
   </div>
   <div class="card">
     <div class="sec">Casa e família (nunca recebem)</div>
-    <div style="font-size:12.5px;color:#4F6469;line-height:1.55">Um por linha: pedaço do nome (4 letras ou mais), CNPJ/CPF, e-mail ou domínio.</div>
+    <div style="font-size:12.5px;color:#4F6469;line-height:1.55">Um por linha: pedaço do nome (4 letras ou mais), CNPJ/CPF, e-mail ou domínio. Se a lista ficar vazia, volta sozinha ao padrão (ecobraz, villanova).</div>
     <textarea id="casa" rows="4" style="margin-top:8px">${esc(cfg.casa.join('\n'))}</textarea>
     <div style="display:flex;gap:10px;align-items:center;margin-top:8px"><button class="btn btn-g" onclick="salvarCasa()">Salvar lista</button><span id="mCasa" class="msg" style="margin:0"></span></div>
   </div>
   <div class="card">
+    <div class="sec">Últimas mudanças (chave e listas)</div>
+    ${mudancas || '<div style="font-size:13px;color:#8fa39f">Nenhuma mudança registrada ainda.</div>'}
+  </div>
+  <div class="card">
     <div class="sec">Como funciona</div>
-    <div style="font-size:13px;color:#4F6469;line-height:1.7">• Sai 2 horas depois de a coleta ficar <b>concluída</b>, só entre 08h e 20h (fora disso, às 08h seguintes). O sistema confere a cada 10 minutos.<br>• Um pedido por cliente a cada 12 meses (pelo CNPJ/CPF; sem documento, pelo e-mail).<br>• Não recebem: casa e família, cliente com bloqueio de contato, quem já recebeu em 12 meses, quem não tem e-mail e quem está na lista “não enviar e-mail”. O motivo aparece na OS.<br>• Sem e-mail? Peça pelo WhatsApp e marque <b>“Pedi pelo WhatsApp”</b> na OS — vale como pedido feito.<br>• Texto simples, sem imagem. O link é o do Google, sem rastreio.</div>
+    <div style="font-size:13px;color:#4F6469;line-height:1.7">• Sai 2 horas depois de a coleta ficar <b>concluída</b>, só entre 08h e 20h (fora disso, às 08h seguintes). O sistema confere a cada 10 minutos.<br>• Um pedido por cliente a cada 12 meses (pelo CNPJ/CPF; sem documento, pelo e-mail).<br>• Não recebem: casa e família, cliente com bloqueio de contato, quem já recebeu em 12 meses, quem não tem e-mail e quem está na lista “não enviar e-mail”. O motivo aparece na OS.<br>• Também não sai: coleta marcada como concluída mais de 10 dias depois da data dela (coleta antiga) e coleta que foi <b>reaberta</b> depois de concluída — só uma conclusão nova volta a valer.<br>• Contato marcado como inativo/desligado no cadastro não recebe.<br>• Se o sistema não conseguir ler as listas ou o cadastro, ele <b>não envia</b> e tenta de novo na rodada seguinte.<br>• Sem e-mail? Peça pelo WhatsApp e marque <b>“Pedi pelo WhatsApp”</b> na OS — vale como pedido feito.<br>• Texto simples, sem imagem. O link é o do Google, sem rastreio.</div>
     <label>Pessoa física — assunto: ${esc(exemplo.assunto)}</label><pre>${esc(exemplo.texto)}</pre>
     <label>Empresa — assunto: ${esc(exemploPJ.assunto)}</label><pre>${esc(exemploPJ.texto)}</pre>
   </div>
@@ -640,16 +854,27 @@ function exemplo(t){var m=$('mConf');m.textContent='Enviando…';post('/api/aval
 function lista(a){var e=$('lEmail').value.trim(),m=$('mLista');if(!e){m.textContent='Digite o e-mail.';return;}m.textContent='…';post('/api/avaliacoes/nao-enviar',{acao:a,email:e,motivo:$('lMotivo').value}).then(function(j){m.textContent=j.message||(j.ok?'Feito.':'Não foi possível.');if(j.ok&&j.total!=null)$('tLista').textContent=j.total;}).catch(function(){m.textContent='Sem conexão.';});}
 function salvarCasa(){var m=$('mCasa');m.textContent='Salvando…';post('/api/avaliacoes/casa',{texto:$('casa').value}).then(function(j){m.textContent=j.ok?'Salvo.':(j.message||'Não foi possível salvar.');}).catch(function(){m.textContent='Sem conexão.';});}
 function carga(){var f=$('arq').files[0],m=$('mCarga');if(!f){m.textContent='Escolha o arquivo.';return;}var padrao=$('aMotivo').value;var r=new FileReader();
-  r.onload=function(){var re=/[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}/i,mapa={},linhas=String(r.result||'').split(/\\r?\\n/);
-    var ativos=0;
-    for(var i=0;i<linhas.length;i++){var t=linhas[i].toLowerCase(),x=t.match(re);if(!x)continue;var resto=t.replace(x[0],' '),mo=padrao;
-      if(/inativ|remov|descadastr|unsubscri|opt.?out|cancel|reclama|spam|complain/.test(resto))mo='descadastrado';
-      else if(/bounce|inv[aá]lid|invalid|hard|inexistente/.test(resto))mo='invalido';
-      else if(/\\bativo\\b|\\bactive\\b|subscribed|inscrito|confirmad/.test(resto)){ativos++;continue;}
-      mapa[x[0]]=mo;}
-    var itens=Object.keys(mapa).map(function(e){return{e:e,m:mapa[e]};});if(!itens.length){m.textContent='Não achei nenhum e-mail para a lista nesse arquivo'+(ativos?' ('+ativos+' linha(s) de contatos ATIVOS foram ignoradas)':'')+'.';return;}
-    var nInv=itens.filter(function(q){return q.m==='invalido';}).length;
-    if(!confirm('Achei '+itens.length+' e-mail(s) diferentes: '+(itens.length-nInv)+' descadastrado(s) e '+nInv+' inválido(s).'+(ativos?' Ignorei '+ativos+' linha(s) de contatos ATIVOS.':'')+' Colocar na lista “não enviar e-mail”?'))return;var pos=0,gravados=0;
+  r.onload=function(){var RE=/^[a-z0-9_%+&-]+(\\.[a-z0-9_%+&-]+)*@[a-z0-9-]+(\\.[a-z0-9-]+)*\\.[a-z]{2,}$/,linhas=String(r.result||'').split(/\\r?\\n/),achados=[],temSaida=false,i;
+    for(i=0;i<linhas.length;i++){var t=linhas[i].toLowerCase(),cels=t.split(/[\\s,;|<>()\\[\\]"]+/),e='';
+      for(var c=0;c<cels.length;c++){var x=cels[c].replace(/^[.']+|[.']+$/g,'');if(x.length<=254&&RE.test(x)){e=x;break;}}
+      if(!e)continue;var resto=t.replace(e,' '),tipo='';
+      if(/inativ|remov|descadastr|unsubscri|opt.?out|cancel|reclama|spam|complain/.test(resto))tipo='descadastrado';
+      else if(/bounce|inv[aá]lid|invalid|hard|inexistente/.test(resto))tipo='invalido';
+      else if(/\\bativo\\b|\\bactive\\b|subscribed|inscrito|confirmad/.test(resto))tipo='ativo';
+      if(tipo==='descadastrado'||tipo==='invalido')temSaida=true;
+      achados.push({e:e,t:tipo});}
+    var mapa={},pulados=0,semSituacao=0,ditosAtivos=0;
+    for(i=0;i<achados.length;i++){var a=achados[i],mo=a.t;
+      if(mo==='ativo'){if(temSaida){pulados++;continue;}ditosAtivos++;mo=padrao;}
+      else if(!mo){semSituacao++;mo=padrao;}
+      if(mapa[a.e]!=='descadastrado')mapa[a.e]=mo;}
+    var itens=Object.keys(mapa).map(function(k){return{e:k,m:mapa[k]};});if(!itens.length){m.textContent='Não achei nenhum e-mail para a lista nesse arquivo'+(pulados?' ('+pulados+' linha(s) de contatos ATIVOS foram puladas)':'')+'.';return;}
+    var nInv=itens.filter(function(q){return q.m==='invalido';}).length,rot=padrao==='invalido'?'inválidos':'descadastrados';
+    var aviso='Achei '+itens.length+' e-mail(s) diferentes: '+(itens.length-nInv)+' como descadastrado(s) e '+nInv+' como inválido(s).';
+    if(semSituacao)aviso+='\\n'+semSituacao+' linha(s) não diziam a situação: entraram como '+rot+' (o que você escolheu).';
+    if(pulados)aviso+='\\nPulei '+pulados+' linha(s) de contatos ATIVOS.';
+    if(ditosAtivos)aviso+='\\nATENÇÃO: '+ditosAtivos+' linha(s) dizem "ativo/confirmado", mas o arquivo não tem nenhuma linha de removido — tratei o arquivo INTEIRO como lista de quem NÃO deve receber. Se este arquivo for a lista de contatos ATIVOS, cancele.';
+    if(!confirm(aviso+'\\n\\nColocar na lista “não enviar e-mail”?')){m.textContent='Cancelado: nada foi gravado.';return;}var pos=0,gravados=0;
     (function proximo(){if(pos>=itens.length){m.textContent='Pronto: '+gravados+' e-mail(s) na lista. Recarregue a página para ver o total.';return;}m.textContent='Carregando… '+pos+' de '+itens.length;
       post('/api/avaliacoes/nao-enviar',{acao:'importar',itens:itens.slice(pos,pos+500)}).then(function(j){if(!j.ok){m.textContent='Parou em '+pos+' de '+itens.length+': '+(j.message||'erro')+'. Pode carregar o mesmo arquivo de novo — não duplica.';return;}gravados+=j.gravados||0;pos+=500;proximo();}).catch(function(){m.textContent='Sem conexão (parou em '+pos+'). Pode carregar o mesmo arquivo de novo — não duplica.';});})();};
   r.onerror=function(){m.textContent='Não consegui ler o arquivo.';};r.readAsText(f);}

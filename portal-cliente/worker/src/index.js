@@ -85,7 +85,7 @@ import { agentesDe } from './agente.js';
 import { atenderMcpClaude, lerConexaoClaude, gerarConexaoClaude, revogarConexaoClaude, paginaConexaoClaude, listarAuditoriaClaude } from './mcp-claude.js';
 import { mudancaComHistorico, registrarHistoricoLead, listarHistoricoLead, deLocalBR, leadsAbertosDoCliente, leadSemOSValida, medido, INICIO_MEDICAO_TXT } from './atendimento.js';
 import { LEAD_RESOLVIDO as LEAD_JA_RESOLVIDO } from './cadastro.js';
-import { CRON_AVALIACAO, processarAvaliacoes, lerConfigAvaliacao, salvarModoAvaliacao, salvarCasaAvaliacao, consultarNaoEnviar, adicionarNaoEnviar, removerNaoEnviar, contarNaoEnviar, marcarWhatsapp, desfazerWhatsapp, enviarExemplo, conferirDominio, infoAvaliacaoOS, dadosPaginaAvaliacoes, blocoAvaliacaoOS, paginaAvaliacoes } from './avaliacao.js';
+import { CRON_AVALIACAO, processarAvaliacoes, lerConfigAvaliacao, salvarModoAvaliacao, salvarCasaAvaliacao, consultarNaoEnviar, adicionarNaoEnviar, removerNaoEnviar, contarNaoEnviar, marcarWhatsapp, desfazerWhatsapp, registrarReabertura, emailsDe, enviarExemplo, conferirDominio, infoAvaliacaoOS, dadosPaginaAvaliacoes, blocoAvaliacaoOS, paginaAvaliacoes } from './avaliacao.js';
 import { servirIcone, servirManifest, servirServiceWorker } from './pwa.js';
 import { googleConfigurado, iniciarGoogle, callbackGoogle, botaoGoogle } from './google-auth.js';
 
@@ -2215,10 +2215,10 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
           const acao = String(b.acao || '');
           if (acao === 'importar') { const r = await adicionarNaoEnviar(env, b.itens, { origem: 'egoi', por: autor }); return json({ ok: r.ok, gravados: r.gravados }); }
           const email = String(b.email || '').trim().toLowerCase();
-          if (!/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(email)) return json({ ok: false, message: 'E-mail inválido.' }, 400);
+          if (emailsDe(email)[0] !== email) return json({ ok: false, message: 'E-mail inválido (confira se não tem acento, espaço ou vírgula).' }, 400);
           if (acao === 'consultar') { const x = (await consultarNaoEnviar(env, [email])).get(email); return json({ ok: true, message: x ? `Está na lista (${x.motivo === 'invalido' ? 'e-mail inválido' : 'pediu para sair'}${x.em ? `, desde ${String(x.em).slice(0, 10).split('-').reverse().join('/')}` : ''}): não recebe.` : 'Não está na lista — pode receber.' }); }
           if (acao === 'adicionar') { await adicionarNaoEnviar(env, [{ e: email, m: b.motivo === 'invalido' ? 'invalido' : 'descadastrado' }], { origem: 'manual', por: autor }); return json({ ok: true, message: 'Colocado na lista: este e-mail não recebe mais.', total: (await contarNaoEnviar(env)).total }); }
-          if (acao === 'remover') { await removerNaoEnviar(env, email); return json({ ok: true, message: 'Tirado da lista.', total: (await contarNaoEnviar(env)).total }); }
+          if (acao === 'remover') { const r = await removerNaoEnviar(env, email, autor); return json({ ok: !!r.ok, message: r.ok ? 'Tirado da lista.' : 'Não foi possível tirar da lista agora. Tente de novo.', total: (await contarNaoEnviar(env)).total }); }
           return json({ ok: false, message: 'Ação inválida.' }, 400);
         }
         return json({ ok: false, message: 'Rota não encontrada.' }, 404);
@@ -2601,6 +2601,10 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         // motorista abre com os botões liberados (caso OS-2026-0046, 15/09).
         if (b.status === 'em_transporte') { try { await prepararNovaTentativa(env, b.id); } catch (error) { console.error('preparar_tentativa_falhou', safeError(error)); } }
         const os = await atualizarStatusOS(env, b.id, b.status, { motivo: b.motivo });
+        // Pedido de avaliação no Google: a OS que SAIU de "concluída" não recebe mais o pedido
+        // daquela conclusão. Não faz nada (nem lê nada) para OS que nunca foi concluída nem na
+        // conclusão. Best-effort: nunca bloqueia a mudança de status.
+        try { await registrarReabertura(env, os, escritorio.email || ''); } catch (error) { console.error('avaliacao_reabertura_falhou', safeError(error)); }
         // Aviso "coleta realizada" ao cliente na conclusão — do SISTEMA NOVO (sem Ploomes).
         // Best-effort, de-dup por KV, nunca bloqueia a mudança de status.
         try {

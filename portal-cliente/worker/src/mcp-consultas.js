@@ -917,7 +917,7 @@ async function detalharColetas(ctx, lista, vinc) {
       prazo_alvo: prazoAlvo ? isoBR(prazoAlvo) : undefined,
       prazo_cumprido: sitPrazo ? sitPrazo.cumpriu : undefined,
       prazo_situacao: sitPrazo ? sitPrazo.texto : undefined,
-      ...camposAvaliacao(avals.get(o.id)),
+      ...camposAvaliacao(avals.get(o.id), o.concluidaEm || rec.concluidaEm),
       data_cancelamento: o.status === 'cancelada' ? (diaBR(o.canceladaEm || rec.canceladaEm) || diaBR(rec.atualizadoEm) || null) : null,
       data_cancelamento_estimada: o.status === 'cancelada' ? !(o.canceladaEm || rec.canceladaEm) : undefined,
       motivo_cancelamento: o.status === 'cancelada' ? (textoSeguro(semCauda(rec.motivoCancelamento, 300)) || null) : undefined,
