@@ -105,6 +105,10 @@
     form.querySelectorAll('[data-utm]').forEach((input) => { input.value = params.get(input.dataset.utm) || storedUtm(input.dataset.utm); });
     form.querySelectorAll('[data-origin]').forEach((input) => { input.value = storedOrigin(input.dataset.origin); });
 
+    // Segunda barreira anti-spam (18/11/2026): tempo entre a página abrir e o envio.
+    // O Worker recusa envio em menos de 3 segundos e a página mostra o aviso abaixo.
+    const formShownAt = Date.now();
+
     // form_start_coleta: dispara uma única vez, na primeira interação real com o formulário.
     let formStarted = false;
     form.addEventListener('input', () => {
@@ -180,6 +184,7 @@
         // também na versão em inglês do formulário (mesmo script para os dois).
         const buttonLabel = button.textContent;
         const payload = Object.fromEntries(new FormData(form).entries());
+        payload.form_elapsed_ms = String(Date.now() - formShownAt);
         // Registra a declaração hospitalar na descrição, para constar no CRM.
         if (payload.hospital_declaration === 'yes') {
             payload.material_description = `${payload.material_description || ''}\n[Gerador declara ausência de contaminação química, biológica ou radioativa e retirada prévia de fontes/controlados por responsável habilitado.]`;
@@ -200,6 +205,26 @@
                     const first = form.querySelector(`[name="${detail.fields[0]}"]`);
                     if (first) { first.scrollIntoView({behavior: 'smooth', block: 'center'}); first.focus({preventScroll: true}); }
                     track('form_error_coleta', {page_path: window.location.pathname, error_type: 'validation', fields: detail.fields.join(',')});
+                    return;
+                }
+                // Armadilha anti-spam ou envio rápido demais: em vez de fingir sucesso
+                // (como era até 18/11/2026), avisa e dá o caminho. O campo-armadilha é
+                // limpo para que uma segunda tentativa legítima passe.
+                if (detail && detail.error === 'blocked_form') {
+                    const armadilha = form.querySelector('[name="ecb_nao_preencher"]');
+                    if (armadilha) armadilha.value = '';
+                    const linkWa = document.querySelector('a[href*="wa.me/"]');
+                    const wa = (linkWa && linkWa.href) || 'https://wa.me/5511912728412';
+                    const emIngles = (document.documentElement.lang || '').toLowerCase().indexOf('en') === 0;
+                    status.textContent = emIngles
+                        ? 'We could not confirm this submission. Wait a few seconds and send it again, or '
+                        : 'Não conseguimos confirmar este envio. Espere alguns segundos e envie de novo, ou ';
+                    const a = document.createElement('a');
+                    a.href = wa; a.rel = 'noopener';
+                    a.textContent = emIngles ? 'message the team on WhatsApp' : 'fale com a equipe pelo WhatsApp';
+                    status.appendChild(a); status.appendChild(document.createTextNode('.'));
+                    status.className = 'form-status is-error';
+                    track('form_error_coleta', {page_path: window.location.pathname, error_type: 'blocked'});
                     return;
                 }
                 throw new Error((detail && detail.error) || 'submission_failed');

@@ -83,7 +83,10 @@ for (const [formFile, isPt] of collectionForms) {
   if (!form.includes('value="pessoa_fisica" checked')) errors.push(`${formFile}: profile toggle must preselect pessoa_fisica`);
   if (!form.includes('data-collection-form')) errors.push(`${formFile}: missing data-collection-form hook`);
   if (!form.includes('data-form-status')) errors.push(`${formFile}: missing data-form-status hook`);
-  if (!form.includes('name="website"')) errors.push(`${formFile}: missing anti-spam honeypot field`);
+  if (!form.includes('name="ecb_nao_preencher"')) errors.push(`${formFile}: missing anti-spam honeypot field`);
+  // A armadilha antiga (name="website", fora da tela mas visível para assistentes de IA)
+  // não pode voltar: se preenchida, o pedido real era descartado em silêncio.
+  if (form.includes('name="website"')) errors.push(`${formFile}: honeypot antigo name="website" voltou — use ecb_nao_preencher dentro de bloco display:none`);
 }
 
 const redirectsText = fs.readFileSync(path.join(root, 'redirects.yaml'), 'utf8');
