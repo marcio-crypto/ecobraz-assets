@@ -179,7 +179,7 @@ export const REGRA_EMAIL = EMAIL_INTEIRO.source;
 // da OS: "Maria maria@x.com 11 9…") um nome antes do e-mail é normal e continua aceito.
 function lerEmails(v, opcoes) {
   const campo = !!(opcoes && opcoes.campo);
-  const bons = []; let ruins = 0;
+  const bons = []; let ruins = 0, ruimAntes = false;
   const palavras = String(v == null ? '' : v).slice(0, MAX_CAMPO).toLowerCase().split(/\s+/);
   let soltas = []; // palavras soltas seguidas, logo antes da palavra atual
   for (let i = 0; i < palavras.length; i++) {
@@ -209,13 +209,15 @@ function lerEmails(v, opcoes) {
     const resto = pedacos[pedacos.length - 1];
     if (resto && !resto.includes('@') && PALAVRA_SOLTA.test(resto)) soltas = [resto];
     // Fim do domínio cortado por um espaço ("souza@empresa.com .br"): o endereço lido estaria errado.
-    // (quando o que vem logo depois é o pedaço que falta: ".br", ".com.br", ". br", "br" — com ou sem ">", ")", ";" colado)
-    if (inteira && achados.length && /^(?:\.[a-z]{2,6}(?![a-z0-9@])|\.?\s?br(?![a-z0-9@]))/.test(palavras.slice(i + 1, i + 3).join(' '))) inteira = false;
+    // (quando o que vem logo depois é o pedaço que falta: ".br", ".com.br", ". br", "br", "m.br" — com ou sem ">", ")", ";" colado.
+    //  "Brás", "BR-116" e "br" depois de um endereço que já termina em .br não são corte.)
+    const depois = palavras.slice(i + 1, i + 3).join(' ');
+    if (inteira && achados.length && (/^(?:\.[a-z]{2,6}|[a-z](?:\.[a-z]{2,6})+)(?![\p{L}\p{N}@])/u.test(depois) || (!achados[achados.length - 1].endsWith('.br') && /^\.?\s?br(?![\p{L}\p{N}@-])/u.test(depois)))) inteira = false;
     if (inteira && campo && achados.length && !/^[<(\[]/.test(palavra) && nomeNaoBate(antes, achados[0])) inteira = false;
-    if (inteira) { for (const t of achados) if (!bons.includes(t)) bons.push(t); }
+    if (inteira) { if (!bons.length && achados.length) ruimAntes = ruins > 0; for (const t of achados) if (!bons.includes(t)) bons.push(t); }
     else if (/[^@\s]@/.test(palavra)) ruins++; // "@perfil" de rede social não conta como e-mail
   }
-  return { bons, ruins };
+  return { bons, ruins, ruimAntes };
 }
 const PALAVRA_SOLTA = /^[\p{L}\p{N}._'’-]+$/u;
 // Rótulo antes do endereço: os de e-mail ("e-mail:", "mailto:", "principal") e os nomes de
@@ -255,7 +257,7 @@ function emailsParaBloqueio(v) {
   if (!bruto.includes('@')) return [];
   const out = new Set(lerEmails(bruto).bons);
   for (const t of new Set([bruto, semAcentoMin(bruto)])) {
-    const variantes = [t, t.replace(/\s*\.\s*/g, '.'), t.replace(/([a-z0-9])[\s,;]+(?=[a-z0-9._%+&-]{0,80}@)/g, '$1.'), t.replace(/([a-z0-9])[\s,;]+(?=[a-z0-9._%+&-]{0,80}@)/g, '$1')];
+    const variantes = [t, t.replace(/(\.[a-z]{2,})[\s.,;]+br\b/g, '$1.br'), t.replace(/\s*\.\s*/g, '.'), t.replace(/([a-z0-9])[\s,;]+(?=[a-z0-9._%+&-]{0,80}@)/g, '$1.'), t.replace(/([a-z0-9])[\s,;]+(?=[a-z0-9._%+&-]{0,80}@)/g, '$1')];
     // Em volta de cada "@" (janela curta): o custo cresce com o tamanho do texto, não com o quadrado.
     for (const x of variantes) for (let i = x.indexOf('@'); i !== -1; i = x.indexOf('@', i + 1)) for (const e of x.slice(Math.max(0, i - 80), i + 260).match(EMAIL_SOLTO) || []) if (e.length <= 254) out.add(e);
   }
@@ -281,7 +283,8 @@ export function primeiroNome(nome) {
 const contatoInativo = (c) => /inativ|deslig|demit|saiu|nao trabalha|ex-func|bloque|falec|nao contat|aposent|afastad/.test(semAcentoMin(c && c.status));
 const fonesNac = (v) => {
   const out = [];
-  for (const parte of String(v == null ? '' : v).slice(0, 500).split(/\s*(?:\/|;|,|\||·|\be\b|\bou\b)\s*/i)) {
+  // (sem corte de tamanho: todo telefone do campo conta para o bloqueio; os espaços em volta somem em digits)
+  for (const parte of String(v == null ? '' : v).split(/\/|;|,|\||·|\be\b|\bou\b/i)) {
     let d = digits(parte);
     if (d.startsWith('55') && (d.length === 12 || d.length === 13)) d = d.slice(2);
     if (d.startsWith('0') && (d.length === 11 || d.length === 12)) d = d.slice(1);
@@ -300,7 +303,10 @@ export function dadosDoCliente(os, cli) {
   const doc = [o.clienteDoc, c.cnpj, c.cpf].map(digits).find((d) => d.length === 14 || d.length === 11) || '';
   const perfil = doc.length === 14 ? 'PJ' : (doc.length === 11 ? 'PF' : (c.tipo === 'PJ' ? 'PJ' : (c.tipo === 'PF' ? 'PF' : '')));
   const txt = String(o.contato || '');
-  const emailOs = emailsDe(txt)[0] || '';
+  // Se o 1º endereço do contato da OS foi descartado (mal formado), o seguinte do mesmo texto
+  // não é aproveitado: ele pode ser de outra pessoa (e a saudação levaria o nome da primeira).
+  const lidoOs = lerEmails(txt);
+  const emailOs = lidoOs.ruimAntes ? '' : (lidoOs.bons[0] || '');
   const trecho1 = txt.split(/[·|,;]/)[0];
   let nomeOs = trecho1.includes('@') ? '' : trecho1.replace(/[^\p{L} .'’-]+/gu, ' ').replace(/\s+/g, ' ').trim();
   if (nomeOs.length < 2) nomeOs = '';
@@ -345,7 +351,7 @@ export function dadosDoCliente(os, cli) {
   // contam, para o pedido não se repetir só porque mudou o contato da OS). A ficha
   // (clienteId) também liga duas coletas do mesmo cliente.
   const clienteId = String(o.clienteId || '').replace(/[^a-zA-Z0-9_]/g, '').slice(0, 60);
-  const chaves = doc ? ['d:' + doc] : cands.map((x) => 'e:' + x.email);
+  const chaves = doc ? ['d:' + doc] : [...new Set([...cands.map((x) => 'e:' + x.email), ...emailsTodos.map((e) => 'e:' + e)])];
   const chave = chaves[0] || (clienteId ? 'c:' + clienteId : '');
   return { doc, perfil, empresa, nomes, fones, emails: cands, emailsTodos, campoGrande, emailMalFormado, chave, chaves, clienteId, clienteNome: limpar(o.clienteNome || nomes[0] || '') };
 }
@@ -1326,7 +1332,7 @@ function carga(){var f=$('arq').files[0],m=$('mCarga');if(!f){m.textContent='Esc
     for(i=0;i<linhas.length;i++){var t=linhas[i].normalize('NFC').toLowerCase(),cels=t.split(/[\\s,;|<>()\\[\\]"]+/),e='';
       for(var c=0;c<cels.length;c++){var x=cels[c].replace(/^[.']+|[.']+$/g,'');if(x.length<=254&&RE.test(x)){e=x;break;}}
       if(!e)continue;var resto=t.replace(e,' ').replace(/_/g,' '),tipo='';
-      if(/\\b(inativ[oa]s?|removid[oa]s?|removed|descadastr\\w*|unsubscri\\w*|opt[- ]?out|cancelad[oa]s?|cancelou|cancell?ed|reclama\\w*|spam|complain\\w*)\\b/.test(resto)||/(?:\\b(?:n[^a-z\\s]o|nao|not)[\\s-]+(?:(?:est[aá]|foi|[eé]|is|was)[\\s-]+)?|\\b(?:no|non)[\\s-]+|(?:^|[^a-z-])(?:in|un)[\\s-]+)(?:ativ[oa]s?|active|subscribed|inscrit[oa]s?|confirmad[oa]s?)\\b/.test(resto.replace(/\\bopt[\\s-]?in\\b/g,' ')))tipo='descadastrado';
+      if(/\\b(inativ[oa]s?|removid[oa]s?|removed|descadastr\\w*|unsubscri\\w*|opt[- ]?out|cancelad[oa]s?|cancelou|cancell?ed|reclama\\w*|spam|complain\\w*)\\b/.test(resto)||/(?:\\b(?:n[^a-z\\s]o|nao|not|nunca|never)[\\s-]+(?:(?:est\\S?|foi|is|was|\\S)[\\s-]+)?(?:mais[\\s-]+)?|\\b(?:no|non)[\\s-]+(?:longer[\\s-]+)?|(?:^|[^a-z-])(?:in|un)[\\s-]+)(?:ativ[oa]s?|active|subscribed|inscrit[oa]s?|confirmad[oa]s?)\\b/.test(resto.replace(/\\bopt[\\s-]?in\\b/g,' ')))tipo='descadastrado';
       else if(/\\b(bounce[ds]?|hard|inv[aá]lid[oa]s?|invalid|inexistente)\\b/.test(resto))tipo='invalido';
       else if(/\\b(ativ[oa]s?|active|subscribed|inscrit[oa]s?|confirmad[oa]s?)\\b/.test(resto))tipo='ativo';
       if(tipo==='descadastrado'||tipo==='invalido')temSaida=true;
