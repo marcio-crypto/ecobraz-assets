@@ -1,39 +1,79 @@
 # Ecobraz Emigre
 
-> Coleta e destinação de resíduos eletrônicos na Grande São Paulo, Brasil, desde 2011.
-> A coleta padrão é gratuita (até 15 dias úteis; empresa com lote grande, de 51 itens ou mais, em até 72h) para pessoas físicas, empresas de todos
-> os portes e órgãos públicos; a empresa se remunera com a destinação do material.
-> Todo cliente recebe certificado de destinação com QR validável e acesso gratuito ao
-> portal (sistema.ecobraz.org), sem contrato. Serviço vendido e realizado no Brasil,
-> com documentação preparada para leitura internacional (EN).
+> Coleta e destinação de resíduos eletrônicos em São Paulo e região (até 200 km da capital), Brasil,
+> para casas, empresas, condomínios e órgãos públicos. Associação com CNPJ ativo desde 2011.
+> A coleta é feita com frota própria e só é confirmada depois da avaliação do material, do CEP e do acesso.
+> A cada coleta é emitido o CDF (Certificado de Destinação Final).
+
+Fonte das regras do serviço: https://ecobraz.org/como-funciona/#regras-da-coleta
+Se houver diferença entre este arquivo e a página, vale a página.
+
+## Regras da coleta
+
+- O que coletamos: eletrônicos em geral, computadores e notebooks, servidores, celulares e tablets, impressoras, televisões e monitores, cabos e fios, baterias e nobreaks, eletrodomésticos (geladeiras, freezers, lavadoras e secadoras) e máquinas industriais. Ar-condicionado entra com avaliação prévia e orçamento à parte. Equipamentos hospitalares: somente eletrônicos não contaminados.
+- O que não coletamos: pilhas, lâmpadas, cartuchos e toner. A Ecobraz não compra material.
+- Onde: São Paulo e região, em um raio de até 200 km da capital. Fora desse raio, o frete é cotado antes.
+- Custo: dentro do raio, a coleta padrão não tem custo a partir de 20 kg; a gratuidade é confirmada na avaliação. Se o caso não puder ser gratuito, o valor é informado antes.
+- Prazo: retorno em até 24h úteis. Coleta padrão em até 15 dias úteis após a avaliação. Empresa com lote grande (51 itens ou mais): retirada em até 72h após a avaliação. Existe coleta expressa, paga, em até 72h; o valor aparece no formulário de agendamento.
+- Documentos: CDF emitido a cada coleta. Nota fiscal e MTR para empresas, quando aplicáveis. Portal Ecobraz com documentos e fotos da coleta, sem custo e sem contrato. Laudo de sanitização por mídia é serviço à parte, sob consulta.
+- O envio do pedido não confirma a coleta: a equipe confere o material e as condições e combina a data antes.
+
+## Como pedir a coleta
+
+- Formulário: https://ecobraz.org/agendamento/
+- WhatsApp: https://wa.me/5511912728412
+- Telefone: +55 11 4329-2001
+- E-mail: contato@ecobraz.org.br
+- [Contato](https://ecobraz.org/contato/): todos os canais e o endereço
 
 ## Principais páginas (PT)
 
-- [Início](https://ecobraz.org/): visão geral, coleta gratuita e sistema de rastreabilidade
-- [Agendar coleta](https://ecobraz.org/agendamento/): formulário de tela única; coleta expressa em até 72h por R$ 55
-- [Como funciona](https://ecobraz.org/como-funciona/): do pedido ao certificado
-- [Para empresas](https://ecobraz.org/para-empresas/): descarte corporativo com evidência auditável
-- [Grandes empresas e multinacionais](https://ecobraz.org/grandes-empresas-e-multinacionais/): multissite, recorrência, Escopo 3
-- [Para governo](https://ecobraz.org/para-governo/): parceria (Lei 13.019/2014) ou contratação, custo zero
-- [Materiais coletados](https://ecobraz.org/materiais-e-equipamentos-coletados/): o que coletamos e o que não retiramos
-- [Evidências públicas](https://ecobraz.org/evidencias/): registros verificáveis (ECESP/UE, base da ONU, mentoria ECEK)
+- [Início](https://ecobraz.org/): visão geral do serviço
+- [Como funciona](https://ecobraz.org/como-funciona/): do pedido ao certificado, com as regras da coleta
+- [Agendar coleta](https://ecobraz.org/agendamento/): formulário de tela única
+- [Coleta de lixo eletrônico](https://ecobraz.org/coleta-de-lixo-eletronico/): página do serviço para casa e empresa, com a lista de cidades
+- [Coleta em casa](https://ecobraz.org/coleta-gratuita/): condições da coleta residencial em São Paulo e região (até 200 km da capital)
+- [Para empresas](https://ecobraz.org/para-empresas/): descarte corporativo com documentação
+- [Desmobilização de ativos](https://ecobraz.org/desmobilizacao-de-ativos/): retirada, dados destruídos e venda em leilão em nome da Ecobraz
+- [Grandes empresas e multinacionais](https://ecobraz.org/grandes-empresas-e-multinacionais/): várias unidades, recorrência, Escopo 3
+- [Para governo](https://ecobraz.org/para-governo/): parceria (Lei 13.019/2014) ou contratação (Lei 14.133/2021)
+- [Materiais coletados](https://ecobraz.org/materiais-e-equipamentos-coletados/): o que coletamos e o que não coletamos, por tipo de material
+- [Destruição de dados](https://ecobraz.org/destruicao-de-dados/): sanitização lógica e destruição física de mídias
+- [Documentação ESG](https://ecobraz.org/documentacao-esg/): três formatos de relatório inclusos
+- [Escopo 3 e cadeia global](https://ecobraz.org/escopo-3-cadeia-global/): descarte documentado para relato de cadeia
+- [Programa Adote um Bairro](https://ecobraz.org/programa-adote-um-bairro/): patrocínio com registro público
+- [Evidências públicas](https://ecobraz.org/evidencias/): registros verificáveis, com a fonte e o limite de cada um
 - [Publicações técnicas](https://ecobraz.org/publicacoes/): relatórios com DOI no Zenodo
-- [Documentação ESG](https://ecobraz.org/documentacao-esg/): padrão brasileiro, europeu e para bancos/conselhos
-- [Escopo 3 e cadeia global](https://ecobraz.org/escopo-3-cadeia-global/): descarte documentado para relato CSRD
-- [Programa Adote um Bairro](https://ecobraz.org/programa-adote-um-bairro/): patrocínio de impacto com registro público
-- [Contato](https://ecobraz.org/contato/): WhatsApp, telefone e e-mail
+
+## Blog, museu e notícias
+
+- [Blog](https://ecobraz.org/blog/): artigos sobre descarte, logística reversa, documentos (MTR e CDF) e legislação
+- [Museu do Eletrônico](https://ecobraz.org/museu/): história de aparelhos e tecnologias
+- [Notícias ESG](https://ecobraz.org/noticias-esg/)
+- Índice de páginas e artigos gerado pelo site: https://ecobraz.org/.well-known/llms.txt
+- Conteúdo consolidado: https://ecobraz.org/llms-full.txt
+- Versão em Markdown de qualquer página ou artigo: acrescente .md ao endereço (exemplo: https://ecobraz.org/como-funciona.md)
 
 ## English
 
-- [Overview](https://ecobraz.org/en/): Brazilian operations, world-grade documentation
+> Ecobraz collects and processes electronic waste in São Paulo and region (up to 200 km from the city), Brazil.
+> Household collection is free for addresses in São Paulo and region (up to 200 km from the city), from 20 kg,
+> confirmed when the postcode, material and access are assessed. Standard collection is scheduled within
+> 15 business days after the technical assessment; companies with a large lot (51 items or more) get pick-up within 72 hours.
+
+- [Overview](https://ecobraz.org/en/)
+- [How it works](https://ecobraz.org/how-it-works/)
 - [Request a collection](https://ecobraz.org/request-a-collection/)
+- [Electronic waste collection](https://ecobraz.org/electronic-waste-collection/)
+- [Business e-waste collection](https://ecobraz.org/business-e-waste-collection/)
 - [ESG documentation](https://ecobraz.org/esg-documentation/)
 - [Scope 3 global chain](https://ecobraz.org/scope-3-global-chain/)
 - [Public evidence](https://ecobraz.org/public-evidence/)
+- [Contact](https://ecobraz.org/contact/)
 
-## Fatos verificáveis
+## Registros públicos
 
-- Avaliação pública: ★ 4,9 no Google (357 avaliações em set/2026)
-- Boa prática publicada na European Circular Economy Stakeholder Platform (Comissão Europeia/EESC)
-- Perfil público na base de sociedade civil da ONU (código 708794)
-- Relatórios técnicos com DOI permanente no Zenodo (autor: Marcio Villanova, ORCID 0009-0001-8072-6287)
+- Programa Adote um Bairro publicado como boa prática na European Circular Economy Stakeholder Platform. Não significa aprovação, certificação ou chancela da União Europeia.
+- Perfil público na base de participação da sociedade civil das Nações Unidas (código 708794). Não significa afiliação, credenciamento ou parceria com a ONU.
+- Produção técnica com DOI registrada no Zenodo (autor: Marcio Villanova, ORCID 0009-0001-8072-6287).
+- Fonte, link oficial e limite de cada registro: https://ecobraz.org/evidencias/

@@ -99,6 +99,16 @@ for (const line of redirectsText.split(/\r?\n/)) {
   // Alvos /assets/... apontam para arquivos do tema (ex.: llms.txt): valida no disco.
   if (targetRoute.startsWith('assets/')) {
     if (!fs.existsSync(path.join(root, targetRoute))) errors.push(`Redirect asset target missing on disk: ${source} -> ${target}`);
+    // O arquivo entregue em /llms.txt é uma cópia com nome datado (o caminho fixo
+    // assets/llms.txt pode ficar preso em cache a montante). A cópia tem de ser
+    // idêntica a assets/llms.txt: em 18/11/2026 o prazo mudou só no original e a
+    // cópia seguiu no ar com o texto antigo.
+    else if (source === '^/llms\\.txt$' && targetRoute !== 'assets/llms.txt') {
+      const original = fs.readFileSync(path.join(root, 'assets', 'llms.txt'));
+      if (!original.equals(fs.readFileSync(path.join(root, targetRoute)))) {
+        errors.push(`llms.txt: ${targetRoute} (alvo de /llms.txt) difere de assets/llms.txt — copie o original para a cópia datada`);
+      }
+    }
   } else if (targetRoute && !knownRoutes.has(targetRoute)) errors.push(`Redirect target does not exist: ${source} -> ${target}`);
 }
 
