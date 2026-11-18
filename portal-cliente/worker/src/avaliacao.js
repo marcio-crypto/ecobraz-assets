@@ -159,8 +159,13 @@ export function quandoEnviar(concluidaEm) {
 // fora do padrão é DESCARTADO, nunca aproveitado pela metade ("joão.x@…" não pode virar
 // "o.x@…", que é o endereço de outra pessoa).
 const EMAIL_INTEIRO = /^[a-z0-9_%+&-]+(\.[a-z0-9_%+&-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/;
-export const emailsDe = (v) => {
-  const out = [];
+// A mesma regra de formato da carga de arquivo da tela /avaliacoes (lá ela vai escrita no script da página).
+export const REGRA_EMAIL = EMAIL_INTEIRO.source;
+// Lê os e-mails de um texto. `bons` = endereços bem formados. `ruins` = quantas palavras
+// tinham cara de e-mail (algo@…) mas estavam mal formadas (domínio cortado, "|" no meio,
+// texto grudado, acento…) — essas são descartadas INTEIRAS e nunca viram destinatário.
+function lerEmails(v) {
+  const bons = []; let ruins = 0;
   for (const palavra of String(v == null ? '' : v).toLowerCase().split(/\s+/)) {
     if (!palavra.includes('@')) continue;
     // Dentro de uma palavra (sem espaço), vírgula, barra, aspas etc. só podem separar
@@ -176,10 +181,13 @@ export const emailsDe = (v) => {
       if (!t) continue;
       if (t.length <= 254 && EMAIL_INTEIRO.test(t)) achados.push(t); else { inteira = false; break; }
     }
-    if (inteira) for (const t of achados) if (!out.includes(t)) out.push(t);
+    if (inteira) { for (const t of achados) if (!bons.includes(t)) bons.push(t); }
+    else if (/[^@\s]@/.test(palavra)) ruins++; // "@perfil" de rede social não conta como e-mail
   }
-  return out;
-};
+  return { bons, ruins };
+}
+export const emailsDe = (v) => lerEmails(v).bons;
+export const temEmailMalFormado = (v) => lerEmails(v).ruins > 0;
 const TITULOS = new Set(['sr', 'sra', 'srta', 'dr', 'dra', 'eng', 'prof', 'profa', 'dona', 'seu']);
 const NAO_PESSOA = new Set(['financeiro', 'compras', 'recepcao', 'recepcionista', 'comercial', 'administrativo', 'administracao', 'adm', 'rh', 'dp', 'pessoal', 'ti', 'cpd', 'informatica', 'tecnologia', 'infra', 'infraestrutura', 'contato', 'atendimento', 'portaria', 'porteiro', 'porteira', 'zelador', 'zeladora', 'zeladoria', 'sindico', 'sindica', 'condominio', 'almoxarifado', 'estoque', 'deposito', 'manutencao', 'predial', 'facilities', 'suporte', 'diretoria', 'diretor', 'diretora', 'gerencia', 'gerente', 'supervisor', 'supervisora', 'coordenador', 'coordenadora', 'encarregado', 'encarregada', 'sac', 'fiscal', 'nfe', 'nf', 'xml', 'faturamento', 'cobranca', 'tesouraria', 'logistica', 'expedicao', 'operacao', 'operacoes', 'producao', 'vendas', 'marketing', 'juridico', 'contabilidade', 'secretaria', 'escritorio', 'engenharia', 'qualidade', 'sustentabilidade', 'seguranca', 'servicos', 'gerais', 'geral', 'equipe', 'central', 'matriz', 'filial', 'unidade', 'loja', 'obra', 'empresa', 'cliente', 'responsavel', 'proprietario', 'proprietaria', 'morador', 'moradora', 'espolio', 'departamento', 'setor', 'falar', 'procurar', 'tratar', 'aos', 'cuidados', 'sem', 'nao']);
 // Primeiro nome para a saudação ("MARIA DA SILVA" → "Maria"). '' quando não parece nome de
@@ -248,13 +256,16 @@ export function dadosDoCliente(os, cli) {
   const empresa = perfil === 'PJ' ? limpar(c.nomeFantasia || c.razaoSocial || o.clienteNome).replace(/[\r\n\t]+/g, ' ').slice(0, 80) : '';
   const nomes = [o.clienteNome, c.razaoSocial, c.nomeFantasia, c.nome].map(limpar).filter(Boolean);
   const fones = [...new Set([c.fone, c.telefone, c.celular, ...contatos.map((x) => x.fone), txt].flatMap(fonesNac))];
+  // Há e-mail MAL FORMADO no cadastro ou no contato da OS? Ele nunca é usado; se não sobrar
+  // outro endereço, o motivo que fica na OS é "e-mail inválido" (e não "sem e-mail").
+  const emailMalFormado = [c.email, txt, ...contatos.map((x) => x.email)].some(temEmailMalFormado);
   // Chave da regra dos 12 meses: o CNPJ/CPF; sem documento, o e-mail (todos os do cliente
   // contam, para o pedido não se repetir só porque mudou o contato da OS). A ficha
   // (clienteId) também liga duas coletas do mesmo cliente.
   const clienteId = String(o.clienteId || '').replace(/[^a-zA-Z0-9_]/g, '').slice(0, 60);
   const chaves = doc ? ['d:' + doc] : cands.map((x) => 'e:' + x.email);
   const chave = chaves[0] || (clienteId ? 'c:' + clienteId : '');
-  return { doc, perfil, empresa, nomes, fones, emails: cands, chave, chaves, clienteId, clienteNome: limpar(o.clienteNome || nomes[0] || '') };
+  return { doc, perfil, empresa, nomes, fones, emails: cands, emailMalFormado, chave, chaves, clienteId, clienteNome: limpar(o.clienteNome || nomes[0] || '') };
 }
 // Casa e família: entra por CNPJ/CPF, por e-mail/domínio ou por pedaço do nome (4+ letras),
 // que vale para o nome do cliente e para o domínio do e-mail. Devolve a entrada que casou.
@@ -533,7 +544,8 @@ async function processarUma(env, cfg, ctx, os, cli, linha0, fichaSumiu) {
   const resumos = await Promise.all(d.emails.map((x) => resumoEmail(x.email)));
   const q = await consultasDoEnvio(db, d, os.id, agora, cfg.modo === 'teste', resumos);
   if (q.recente) return await nao('ja_pedido_12m');
-  if (!d.emails.length) return await nao('sem_email');
+  // Nenhum endereço bem formado: não tenta o envio. Havia um mal formado → "e-mail inválido".
+  if (!d.emails.length) return await nao(d.emailMalFormado ? 'email_invalido' : 'sem_email');
   // Escolha do endereço, na ordem de preferência. Descadastrado = não envia para o cliente;
   // inválido = tenta o próximo; endereço que já recebeu pedido em 12 meses (por outro
   // CNPJ/CPF) = tenta o próximo.
@@ -921,7 +933,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:#F7FAF9;border:1px sol
   </div>
   <div class="card">
     <div class="sec">Como funciona</div>
-    <div style="font-size:13px;color:#4F6469;line-height:1.7">• Sai 2 horas depois de a coleta ficar <b>concluída</b>, só entre 08h e 20h (fora disso, às 08h seguintes). O sistema confere a cada 10 minutos.<br>• Um pedido por cliente a cada 12 meses (pelo CNPJ/CPF; sem documento, pelo e-mail). O mesmo endereço de e-mail também não recebe dois pedidos em 12 meses, ainda que seja contato de empresas diferentes — nesse caso o pedido vai para o contato seguinte da empresa, se houver.<br>• Não recebem: casa e família, cliente com bloqueio de contato, quem já recebeu em 12 meses, quem não tem e-mail e quem está na lista “não enviar e-mail”. O motivo aparece na OS.<br>• Também não sai: coleta marcada como concluída mais de 10 dias depois da data dela (coleta antiga) e coleta que foi <b>reaberta</b> depois de concluída — só uma conclusão nova volta a valer.<br>• Contato marcado como inativo/desligado no cadastro não recebe.<br>• Se o sistema não conseguir ler as listas ou o cadastro, ele <b>não envia</b> e tenta de novo na rodada seguinte.<br>• Sem e-mail? Peça pelo WhatsApp e marque <b>“Pedi pelo WhatsApp”</b> na OS — vale como pedido feito.<br>• Texto simples, sem imagem. O link é o do Google, sem rastreio.</div>
+    <div style="font-size:13px;color:#4F6469;line-height:1.7">• Sai 2 horas depois de a coleta ficar <b>concluída</b>, só entre 08h e 20h (fora disso, às 08h seguintes). O sistema confere a cada 10 minutos.<br>• Um pedido por cliente a cada 12 meses (pelo CNPJ/CPF; sem documento, pelo e-mail). O mesmo endereço de e-mail também não recebe dois pedidos em 12 meses, ainda que seja contato de empresas diferentes — nesse caso o pedido vai para o contato seguinte da empresa, se houver.<br>• Não recebem: casa e família, cliente com bloqueio de contato, quem já recebeu em 12 meses, quem não tem e-mail, quem tem e-mail mal formado no cadastro (endereço cortado, com “|” no meio, texto grudado — aparece como “e-mail inválido”) e quem está na lista “não enviar e-mail”. O motivo aparece na OS.<br>• Também não sai: coleta marcada como concluída mais de 10 dias depois da data dela (coleta antiga) e coleta que foi <b>reaberta</b> depois de concluída — só uma conclusão nova volta a valer.<br>• Contato marcado como inativo/desligado no cadastro não recebe.<br>• Se o sistema não conseguir ler as listas ou o cadastro, ele <b>não envia</b> e tenta de novo na rodada seguinte.<br>• Sem e-mail? Peça pelo WhatsApp e marque <b>“Pedi pelo WhatsApp”</b> na OS — vale como pedido feito.<br>• Texto simples, sem imagem. O link é o do Google, sem rastreio.</div>
     <label>Pessoa física — assunto: ${esc(exemplo.assunto)}</label><pre>${esc(exemplo.texto)}</pre>
     <label>Empresa — assunto: ${esc(exemploPJ.assunto)}</label><pre>${esc(exemploPJ.texto)}</pre>
   </div>
