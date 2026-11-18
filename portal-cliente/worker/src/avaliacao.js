@@ -52,6 +52,7 @@ const TRAVADO_MIN = 20;             // "enviando" há mais que isso = a rodada q
 const RETOMA_MAX_H = 20;            // …só enquanto a chave de idempotência do Resend (24h) ainda vale
 const PAUSA_ENVIO_MS = 600;         // respiro entre dois envios (o Resend aceita 2 por segundo)
 const ANTIGA_DIAS = 10;             // concluída no sistema mais de 10 dias depois da data da coleta = "coleta antiga"
+const MAX_EMAILS_CADASTRO = 1000;   // acima disso a conferência na lista "não enviar" não é feita (e não envia)
 const ANTIGA_SEM_DATA_DIAS = 60;    // OS sem data marcada: criada há mais de 60 dias
 const CHAVE_CFG = 'cfg:avaliacao';        // a chave: { modo, desde, ligadoEm, por, atualizadoEm }
 const CHAVE_CASA = 'cfg:avaliacao:casa';  // a lista casa/família: { casa: [...] }
@@ -69,6 +70,7 @@ export const ROTULO_MOTIVO = {
   teste: 'modo de teste (e-mail só para a equipe)', falha_envio: 'falha no envio', prazo_expirado: 'prazo de envio expirado',
   coleta_antiga: 'coleta antiga (concluída no sistema muito depois da data)', reaberta: 'coleta reaberta depois de concluída',
   sem_cadastro: 'cadastro do cliente não encontrado', envio_nao_confirmado: 'envio não confirmado (pode ter saído)',
+  cadastro_grande: 'cadastro com e-mails demais para conferir',
 };
 // A reabertura registrada deixa de valer quando a OS é concluída DE NOVO depois dela
 // (conclusão nova). Reconclusão automática com a hora antiga (anterior à reabertura) não conta.
@@ -167,22 +169,33 @@ export const REGRA_EMAIL = EMAIL_INTEIRO.source;
 // Lê os e-mails de um texto. `bons` = endereços bem formados. `ruins` = quantas palavras
 // tinham cara de e-mail (algo@…) mas estavam mal formadas (domínio cortado, "|" no meio,
 // texto grudado, acento…) — essas são descartadas INTEIRAS e nunca viram destinatário.
-// `campo: true` = o texto vem de um CAMPO de e-mail do cadastro (não de texto livre). Aí uma
-// palavra solta logo antes do endereço ("maria clara@gmail.com") é tratada como erro de
-// digitação — espaço no lugar de ponto — e o endereço é descartado, em vez de virar
-// "clara@gmail.com", que é de outra pessoa. Em texto livre (contato da OS: "Maria
-// maria@x.com 11 9…") um nome antes do e-mail é normal e continua aceito.
+// `campo: true` = o texto vem de um CAMPO de e-mail do cadastro (não de texto livre). Aí
+// palavras soltas logo antes do endereço ("maria clara@gmail.com", "vitor, souza@x.com") são
+// tratadas como erro de digitação — espaço ou vírgula no lugar do ponto — e o endereço é
+// descartado, em vez de virar "clara@gmail.com", que é de outra pessoa. Continuam aceitos:
+// rótulo conhecido ("financeiro fin@x.com"), conectivo, telefone e o NOME da pessoa quando
+// ele aparece no próprio endereço ("Sergio Souza sergio.souza@x.com"). Em texto livre (contato
+// da OS: "Maria maria@x.com 11 9…") um nome antes do e-mail é normal e continua aceito.
 function lerEmails(v, opcoes) {
   const campo = !!(opcoes && opcoes.campo);
-  const bons = []; let ruins = 0, anterior = '';
-  for (const palavra of String(v == null ? '' : v).toLowerCase().split(/\s+/)) {
-    const antes = anterior; anterior = palavra;
-    if (!palavra.includes('@')) continue;
+  const bons = []; let ruins = 0;
+  const palavras = String(v == null ? '' : v).toLowerCase().split(/\s+/);
+  let soltas = []; // palavras soltas seguidas, logo antes da palavra atual
+  for (let i = 0; i < palavras.length; i++) {
+    const palavra = palavras[i];
+    if (!palavra.includes('@')) {
+      // vírgula, ponto e vírgula ou barra no FIM não desfazem a palavra solta ("vitor, souza@…")
+      const limpa = palavra.replace(/[,;\/|]+$/, '');
+      if (limpa && PALAVRA_SOLTA.test(limpa)) soltas.push(limpa); else soltas = [];
+      continue;
+    }
+    const antes = soltas; soltas = [];
     // Dentro de uma palavra (sem espaço), vírgula, barra, aspas etc. só podem separar
     // endereços INTEIROS: "joao,silva@x.com" e "maria/joao@x.com" são descartados — não
     // viram "silva@x.com"/"joao@x.com".
     const achados = []; let inteira = true;
-    for (const bruto of palavra.split(/[,;|"\/·]+/)) {
+    const pedacos = palavra.split(/[,;|"\/·]+/);
+    for (const bruto of pedacos) {
       let t = bruto;
       const dentro = t.match(/<([^<>]*)>/); if (dentro) t = dentro[1];   // nome<a@b.com>
       t = t.replace(/^[(\[<]+|[)\]>]+$/g, '');                            // (a@b.com) [a@b.com]
@@ -191,31 +204,53 @@ function lerEmails(v, opcoes) {
       if (!t) continue;
       if (t.length <= 254 && EMAIL_INTEIRO.test(t)) achados.push(t); else { inteira = false; break; }
     }
-    // Num CAMPO de e-mail, palavra solta logo antes do endereço é erro de digitação (espaço no lugar
-    // de ponto) — a não ser que seja um rótulo conhecido, um conectivo ou o começo do próprio endereço.
-    if (inteira && campo && achados.length && palavraSoltaAntes(antes, achados[0], palavra)) inteira = false;
+    // "a@x.com;maria clara@x.com": o pedaço solto no fim desta palavra fica "antes" da próxima.
+    const resto = pedacos[pedacos.length - 1];
+    if (resto && !resto.includes('@') && PALAVRA_SOLTA.test(resto)) soltas = [resto];
+    // Fim do domínio cortado por um espaço ("souza@empresa.com .br"): o endereço lido estaria errado.
+    // (só quando a palavra seguinte é o pedaço que falta: ".br", ".com.br")
+    if (inteira && achados.length && /^\.[a-z]{2,6}(?:\.[a-z]{2,6})*[.,;]?$/.test(palavras[i + 1] || '')) inteira = false;
+    if (inteira && campo && achados.length && !/^[<(\[]/.test(palavra) && nomeNaoBate(antes, achados[0])) inteira = false;
     if (inteira) { for (const t of achados) if (!bons.includes(t)) bons.push(t); }
     else if (/[^@\s]@/.test(palavra)) ruins++; // "@perfil" de rede social não conta como e-mail
   }
   return { bons, ruins };
 }
-// Rótulo antes do endereço: os de e-mail ("e-mail:", "mailto:") e os nomes de setor/cargo
-// ("financeiro:", "compras:"). "joao:silva@x.com" NÃO é rótulo — é descartado, não vira "silva@x.com".
-const ROTULOS_EMAIL = new Set(['e-mail', 'email', 'mail', 'mailto', 'correio']);
+const PALAVRA_SOLTA = /^[\p{L}\p{N}._'’-]+$/u;
+// Rótulo antes do endereço: os de e-mail ("e-mail:", "mailto:", "principal") e os nomes de
+// setor/cargo ("financeiro:", "compras:"). "joao:silva@x.com" NÃO é rótulo — é descartado.
+const ROTULOS_EMAIL = new Set(['e-mail', 'email', 'mail', 'mailto', 'correio', 'principal', 'pessoal', 'particular', 'trabalho', 'corporativo', 'profissional', 'alternativo', 'secundario', 'outro', 'novo', 'copia', 'cc', 'nf-e', 'boleto', 'boletos']);
 const ehRotulo = (p) => { const n = semAcentoMin(p).replace(/[.:]+$/, ''); return ROTULOS_EMAIL.has(n) || NAO_PESSOA.has(n); };
-// "maria clara@gmail.com" → true (descarta). "financeiro fin@x.com", "a@x.com ou b@x.com" e
-// "maria maria.silva@x.com" (o nome da pessoa antes do endereço dela) → false (aceita).
-function palavraSoltaAntes(antes, email, palavra) {
-  if (!/^[\p{L}\p{N}._'’-]+$/u.test(antes) || !/\p{L}/u.test(antes)) return false; // nada antes, ou veio com pontuação ("fin:", "a@b.com,")
-  if (/^[<(\[]/.test(palavra) || ['e', 'ou', 'and'].includes(antes) || ehRotulo(antes)) return false;
-  const n = semAcentoMin(antes).replace(/[^a-z0-9]/g, '');
-  return !(n.length >= 3 && String(email).split('@')[0].replace(/[^a-z0-9]/g, '').startsWith(n));
+// As palavras soltas antes do endereço (num campo de e-mail) NÃO batem com ele? Só contam as
+// que têm letra e não são conectivo nem rótulo; basta uma delas aparecer no endereço
+// ("Sergio Souza ssouza@x.com") para ser o nome da pessoa, e não um pedaço do endereço.
+function nomeNaoBate(soltas, email) {
+  const comLetra = (soltas || []).filter((x) => /\p{L}/u.test(x) && !['e', 'ou', 'and'].includes(x) && !ehRotulo(x));
+  if (!comLetra.length) return false;
+  const local = String(email).split('@')[0].replace(/[^a-z0-9]/g, '');
+  return !comLetra.some((x) => { const n = semAcentoMin(x).replace(/[^a-z0-9]/g, ''); return n.length >= 3 && local.includes(n); });
 }
 export const emailsDe = (v) => lerEmails(v).bons;
 export const temEmailMalFormado = (v) => lerEmails(v).ruins > 0;
 // Para os campos de e-mail do cadastro (o geral da ficha e o de cada contato).
 const emailsDoCampo = (v) => lerEmails(v, { campo: true }).bons;
 const campoMalFormado = (v) => lerEmails(v, { campo: true }).ruins > 0;
+// Leitura mais LARGA, só para BLOQUEAR (lista "não enviar", contato inativo, casa e família):
+// todo trecho com cara de endereço conta — com rótulo desconhecido ("fin:joao@x.com"), palavra
+// solta antes, vírgula no meio — e também os endereços que a pessoa PROVAVELMENTE quis digitar
+// ("maria clara@x.com" → maria.clara@ e mariaclara@; "a@x.com .br" → a@x.com.br; sem acento).
+// Na dúvida, entra. NUNCA é usada para escolher destinatário.
+const EMAIL_SOLTO = /[a-z0-9_%+&-]+(?:\.[a-z0-9_%+&-]+)*@[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}/g;
+function emailsParaBloqueio(v) {
+  const bruto = String(v == null ? '' : v).toLowerCase().slice(0, 20000);
+  if (!bruto.includes('@')) return [];
+  const out = new Set(lerEmails(bruto).bons);
+  for (const t of new Set([bruto, semAcentoMin(bruto)])) {
+    const variantes = [t, t.replace(/\s*\.\s*/g, '.'), t.replace(/([a-z0-9])[\s,;]+(?=[a-z0-9._%+&-]*@)/g, '$1.'), t.replace(/([a-z0-9])[\s,;]+(?=[a-z0-9._%+&-]*@)/g, '$1')];
+    for (const x of variantes) for (const e of x.match(EMAIL_SOLTO) || []) if (e.length <= 254) out.add(e);
+  }
+  return [...out];
+}
 const TITULOS = new Set(['sr', 'sra', 'srta', 'dr', 'dra', 'eng', 'prof', 'profa', 'dona', 'seu']);
 const NAO_PESSOA = new Set(['financeiro', 'compras', 'recepcao', 'recepcionista', 'comercial', 'administrativo', 'administracao', 'adm', 'rh', 'dp', 'pessoal', 'ti', 'cpd', 'informatica', 'tecnologia', 'infra', 'infraestrutura', 'contato', 'atendimento', 'portaria', 'porteiro', 'porteira', 'zelador', 'zeladora', 'zeladoria', 'sindico', 'sindica', 'condominio', 'almoxarifado', 'estoque', 'deposito', 'manutencao', 'predial', 'facilities', 'suporte', 'diretoria', 'diretor', 'diretora', 'gerencia', 'gerente', 'supervisor', 'supervisora', 'coordenador', 'coordenadora', 'encarregado', 'encarregada', 'sac', 'fiscal', 'nfe', 'nf', 'xml', 'faturamento', 'cobranca', 'tesouraria', 'logistica', 'expedicao', 'operacao', 'operacoes', 'producao', 'vendas', 'marketing', 'juridico', 'contabilidade', 'secretaria', 'escritorio', 'engenharia', 'qualidade', 'sustentabilidade', 'seguranca', 'servicos', 'gerais', 'geral', 'equipe', 'central', 'matriz', 'filial', 'unidade', 'loja', 'obra', 'empresa', 'cliente', 'responsavel', 'proprietario', 'proprietaria', 'morador', 'moradora', 'espolio', 'departamento', 'setor', 'falar', 'procurar', 'tratar', 'aos', 'cuidados', 'sem', 'nao']);
 // Primeiro nome para a saudação ("MARIA DA SILVA" → "Maria"). '' quando não parece nome de
@@ -261,7 +296,7 @@ export function dadosDoCliente(os, cli) {
   if (nomeOs.length < 2) nomeOs = '';
   const todosContatos = (Array.isArray(c.contatos) ? c.contatos : []).filter(Boolean);
   const contatos = todosContatos.filter((x) => !contatoInativo(x));
-  const inativos = new Set(todosContatos.filter(contatoInativo).flatMap((x) => emailsDoCampo(x.email)));
+  const inativos = new Set(todosContatos.filter(contatoInativo).flatMap((x) => emailsParaBloqueio(x.email)));
   const cands = [];
   const poe = (email, nome) => { for (const e of emailsDoCampo(email)) if (!inativos.has(e) && !cands.some((x) => x.email === e)) cands.push({ email: e, nome: limpar(nome) }); };
   if (perfil === 'PJ') {
@@ -293,14 +328,16 @@ export function dadosDoCliente(os, cli) {
   // SEM corte: a conferência na lista tem de cobrir todos (e todos os candidatos a destinatário).
   // Aqui vale a leitura mais LARGA (todo endereço que der para ler do cadastro): para bloquear,
   // na dúvida entra; para ENVIAR (acima), na dúvida fica de fora.
-  const emailsTodos = [...new Set([...cands.map((x) => x.email), ...emailsDe(c.email), ...emailsDe(txt), ...todosContatos.flatMap((x) => emailsDe(x.email))])];
+  const emailsTodos = [...new Set([...cands.map((x) => x.email), ...emailsParaBloqueio(c.email), ...emailsParaBloqueio(txt), ...todosContatos.flatMap((x) => emailsParaBloqueio(x.email))])];
+  // Para a lista casa e família: os mesmos, menos os de contato inativo (como sempre foi).
+  const emailsCasa = emailsTodos.filter((e) => !inativos.has(e));
   // Chave da regra dos 12 meses: o CNPJ/CPF; sem documento, o e-mail (todos os do cliente
   // contam, para o pedido não se repetir só porque mudou o contato da OS). A ficha
   // (clienteId) também liga duas coletas do mesmo cliente.
   const clienteId = String(o.clienteId || '').replace(/[^a-zA-Z0-9_]/g, '').slice(0, 60);
   const chaves = doc ? ['d:' + doc] : cands.map((x) => 'e:' + x.email);
   const chave = chaves[0] || (clienteId ? 'c:' + clienteId : '');
-  return { doc, perfil, empresa, nomes, fones, emails: cands, emailsTodos, emailMalFormado, chave, chaves, clienteId, clienteNome: limpar(o.clienteNome || nomes[0] || '') };
+  return { doc, perfil, empresa, nomes, fones, emails: cands, emailsTodos, emailsCasa, emailMalFormado, chave, chaves, clienteId, clienteNome: limpar(o.clienteNome || nomes[0] || '') };
 }
 // Casa e família: entra por CNPJ/CPF, por e-mail/domínio ou por pedaço do nome (4+ letras),
 // que vale para o nome do cliente e para o domínio do e-mail. Devolve a entrada que casou.
@@ -437,7 +474,7 @@ async function consultasDoEnvio(db, d, osId, agoraMs, contarTeste, resumos) {
   // A lista é conferida para TODOS os e-mails do cliente e TODOS os candidatos a destinatário
   // — sem corte. Cadastro absurdamente grande não é conferido pela metade: dá erro e não envia.
   const todos = [...new Set([...(d.emailsTodos || []), ...d.emails.map((x) => x.email)])];
-  if (todos.length > 1000) throw new Error('emails_demais_no_cadastro');
+  if (todos.length > MAX_EMAILS_CADASTRO) throw new Error('emails_demais_no_cadastro');
   const desde = new Date(agoraMs - DIAS_12_MESES * 86400e3).toISOString();
   const t = contarTeste ? 1 : 0;
   // "Em andamento" = há uma tentativa em curso (enviando) ou na fila para tentar de novo
@@ -589,14 +626,19 @@ async function processarUma(env, cfg, ctx, os, cli, linha0, fichaSumiu) {
   if (linha && linha.modo && linha.modo !== cfg.modo) return await nao(linha.modo === 'teste' ? 'teste' : 'falha_envio');
   // A OS foi reaberta enquanto este envio estava em andamento: nem a retomada nem uma nova
   // tentativa reenviam (mesmo que a OS tenha sido reconcluída sozinha com a hora antiga).
-  if (linha && linha.status_antes === 'reaberta') return await nao('reaberta');
+  // Com uma conclusão NOVA (posterior à do registro), a tentativa antiga que com certeza não
+  // saiu dá lugar a um envio normal; se pode ter saído (dúvida), fica "envio não confirmado".
+  if (linha && linha.status_antes === 'reaberta' && (duvida || !(Date.parse(os.concluidaEm) > Date.parse(linha.concluida_em || '')))) return await nao('reaberta');
   if (agora - alvo > VALIDADE_H * MS_H) return await nao('prazo_expirado');
   // Regras, nesta ordem (a primeira que valer é o motivo que aparece na OS).
   if (coletaAntiga(os)) return await nao('coleta_antiga');
   if (fichaSumiu) return await nao('sem_cadastro'); // a OS aponta para um cadastro que não existe mais
-  if (ehDaCasa(cfg.casa, { nomes: d.nomes, doc: d.doc, emails: d.emails.map((x) => x.email) })) return await nao('casa_familia');
+  if (ehDaCasa(cfg.casa, { nomes: d.nomes, doc: d.doc, emails: d.emailsCasa })) return await nao('casa_familia');
   if (!ctx.bloqueios) ctx.bloqueios = await bloqueiosDeContato(db);
   if ((d.doc && ctx.bloqueios.porDoc.has(d.doc)) || d.fones.some((f) => ctx.bloqueios.porFone.has(semNove(f)))) return await nao('bloqueio');
+  // Cadastro absurdamente grande (mais de 1.000 e-mails): não dá para conferir todos na lista
+  // "não enviar" — não envia e registra o motivo (decisão final: não fica dando erro a cada rodada).
+  if (new Set([...d.emailsTodos, ...d.emails.map((x) => x.email)]).size > MAX_EMAILS_CADASTRO) return await nao('cadastro_grande');
   const resumos = await Promise.all(d.emails.map((x) => resumoEmail(x.email)));
   const q = await consultasDoEnvio(db, d, os.id, agora, cfg.modo === 'teste', resumos);
   // Descadastro bloqueia o CLIENTE INTEIRO: basta UM e-mail dele (o geral, o do contato da OS
@@ -636,7 +678,7 @@ async function processarUma(env, cfg, ctx, os, cli, linha0, fichaSumiu) {
   const chaveReg = d.doc ? d.chave : `e:${alvoEmail.email}`;
   const marca = `${agora}-${Math.random().toString(36).slice(2, 10)}`;
   if (!linha) await db.prepare("INSERT OR IGNORE INTO avaliacao_pedidos (os_id, os_numero, chave, perfil, status, canal, concluida_em, previsto_em, processado_em, por, para, tentativas, modo, reserva, cliente_id, para_h) VALUES (?1,?2,?3,?4,'enviando','email',?5,?6,?7,'sistema',?8,1,?9,?10,?11,?12)").bind(os.id, base.os_numero, chaveReg, base.perfil, base.concluida_em, base.previsto_em, agoraISO, mascarar(alvoEmail.email), cfg.modo, marca, d.clienteId, resumoAlvo).run();
-  else await db.prepare("UPDATE avaliacao_pedidos SET status='enviando', canal='email', processado_em=?2, para=?3, tentativas=COALESCE(tentativas,0)+1, modo=?4, reserva=?5, chave=?6, cliente_id=?9, para_h=?10 WHERE os_id=?1 AND status=?7 AND COALESCE(reserva,'')=?8").bind(os.id, agoraISO, mascarar(alvoEmail.email), cfg.modo, marca, chaveReg, linha.status, linha.reserva || '', d.clienteId, resumoAlvo).run();
+  else await db.prepare("UPDATE avaliacao_pedidos SET status='enviando', canal='email', processado_em=?2, para=?3, tentativas=COALESCE(tentativas,0)+1, modo=?4, reserva=?5, chave=?6, cliente_id=?9, para_h=?10, concluida_em=?11, previsto_em=?12, status_antes=NULL WHERE os_id=?1 AND status=?7 AND COALESCE(reserva,'')=?8").bind(os.id, agoraISO, mascarar(alvoEmail.email), cfg.modo, marca, chaveReg, linha.status, linha.reserva || '', d.clienteId, resumoAlvo, base.concluida_em, base.previsto_em).run();
   const minha = await db.prepare('SELECT status, reserva, tentativas FROM avaliacao_pedidos WHERE os_id = ?1').bind(os.id).first();
   if (!minha || minha.reserva !== marca || minha.status !== 'enviando') return 'ignorada';
   const msg = montarMensagem({ perfil: d.perfil, primeiro: primeiroNome(alvoEmail.nome), empresa: d.empresa, link: env.AVALIACAO_LINK });
@@ -674,12 +716,36 @@ async function processarUma(env, cfg, ctx, os, cli, linha0, fichaSumiu) {
   return 'falha';
 }
 
+// Envio "em andamento" (na fila para nova tentativa, ou "enviando" travado) de OS que DEIXOU de
+// estar concluída — por qualquer tela: escritório, app do motorista, reagendamento. Esse envio
+// não vai ser retomado; encerra já, para as outras coletas do mesmo cliente não ficarem
+// esperando por ele. Motivo: "reaberta" (só uma conclusão NOVA volta a valer) ou, se o e-mail
+// pode ter saído, "envio não confirmado". O índice pode estar atrasado: antes de encerrar,
+// confere no registro completo da OS. Qualquer falha de leitura é ERRO (a rodada não segue).
+async function encerrarOrfas(env, db, concluidas, agoraMs) {
+  const r = await db.prepare("SELECT os_id, status, processado_em FROM avaliacao_pedidos WHERE status IN ('pendente','enviando') LIMIT 500").all();
+  const orfas = ((r && r.results) || []).filter((x) => !concluidas.has(String(x.os_id)) && (x.status === 'pendente' || agoraMs - Date.parse(x.processado_em) >= TRAVADO_MIN * 60e3)).slice(0, 50);
+  if (!orfas.length) return 0;
+  const regs = await lerKVEstrito(env.PORTAL_KV, orfas.map((x) => `os:${x.os_id}`));
+  const agoraISO = new Date(agoraMs).toISOString(); let n = 0;
+  for (const x of orfas) {
+    const raw = regs.get(`os:${x.os_id}`); let os = null;
+    if (raw) { try { os = JSON.parse(raw); } catch { continue; } } // registro ilegível: não mexe
+    if (os && os.status === 'concluida') continue;                  // continua concluída: não é órfã
+    const u = await db.prepare(`UPDATE avaliacao_pedidos SET motivo = CASE WHEN status='enviando' OR ${SQL_INCERTO} THEN 'envio_nao_confirmado' ELSE 'reaberta' END, status='nao_enviado', canal='nenhum', processado_em=?2, reserva=NULL WHERE os_id=?1 AND status=?3 AND processado_em=?4`).bind(String(x.os_id), agoraISO, x.status, x.processado_em).run();
+    n += Number(u && u.meta && u.meta.changes) || 0;
+  }
+  if (n) console.log('avaliacao_orfas_encerradas', n);
+  return n;
+}
+
 // --- A rodada (chamada pelo agendamento) -------------------------------------------------------
 // Qualquer falha de leitura (lista casa/família, registros, lista "não enviar", bloqueios,
 // OS, cadastro) faz a rodada NÃO enviar — falha de leitura nunca vira permissão para enviar.
 export async function processarAvaliacoes(env, opcoes) {
   const o = opcoes || {};
-  const agoraMs = Number.isFinite(o.agoraMs) ? o.agoraMs : Date.now();
+  const inicioReal = Date.now(); // o tempo gasto nas leituras do começo da rodada também conta para o horário
+  const agoraMs = Number.isFinite(o.agoraMs) ? o.agoraMs : inicioReal;
   // Desligado (o padrão): uma única leitura e mais nada.
   const chave = await lerChave(env);
   const res = { modo: chave.modo, candidatas: 0, enviados: 0, testes: 0, nao_enviados: 0, falhas: 0 };
@@ -700,9 +766,10 @@ export async function processarAvaliacoes(env, opcoes) {
     await db.prepare(`UPDATE avaliacao_pedidos SET motivo = CASE WHEN status='enviando' OR ${SQL_INCERTO} THEN 'envio_nao_confirmado' WHEN modo='teste' THEN 'teste' ELSE 'prazo_expirado' END, status='nao_enviado', canal='nenhum', reserva=NULL WHERE (status='pendente' AND concluida_em < ?1) OR (status='enviando' AND processado_em < ?2)`)
       .bind(new Date(piso).toISOString(), new Date(agoraMs - RETOMA_MAX_H * MS_H).toISOString()).run();
   } catch (e) { if (!semTabela(e)) throw e; }
-  const cands = [];
+  const cands = [], concluidas = new Set();
   for (const x of await listarColetasOS(env)) {
     if (!x || !x.id || x.status !== 'concluida' || !x.concluidaEm) continue;
+    concluidas.add(String(x.id));
     const t = Date.parse(x.concluidaEm);
     if (!Number.isFinite(t) || t < piso) continue;
     const alvo = quandoEnviar(x.concluidaEm);
@@ -710,6 +777,7 @@ export async function processarAvaliacoes(env, opcoes) {
   }
   if (!cands.length) return res;
   await garantirTabelas(db);
+  await encerrarOrfas(env, db, concluidas, agoraMs);
   const ja = await lerAvaliacoes(env, cands.map((c) => c.id), { estrito: true });
   // Entram: OS ainda sem registro; envio que falhou há mais de 30 min (nova tentativa);
   // "enviando" travado há mais de 20 min (retomada); reabertura vencida (conclusão nova).
@@ -723,7 +791,7 @@ export async function processarAvaliacoes(env, opcoes) {
   const fila = cands.filter(naVez).sort((a, b) => a.alvo - b.alvo);
   res.candidatas = fila.length;
   if (!fila.length) return res;
-  const ctx = { agoraMs, bloqueios: null, envios: 0, inicioReal: Date.now() };
+  const ctx = { agoraMs, bloqueios: null, envios: 0, inicioReal };
   const espera = Number.isFinite(o.pausaMs) ? o.pausaMs : PAUSA_ENVIO_MS;
   let acoes = 0, erros = 0, parar = false;
   // A fila é olhada em partes de 40 OS (até 5 partes), parando nas 5 decisões da rodada:
@@ -814,7 +882,7 @@ export async function marcarWhatsapp(env, os, cli, por) {
   const d = dadosDoCliente(os, cli);
   const quem = String(por || '').trim().toLowerCase().slice(0, 120);
   // Só grava se o registro continua como foi lido (o envio automático não é atropelado).
-  if (atual) await db.prepare("UPDATE avaliacao_pedidos SET status_antes=CASE WHEN status='enviando' THEN 'nao_enviado' ELSE status END, motivo=CASE WHEN status='enviando' THEN 'envio_nao_confirmado' ELSE motivo END, status='whatsapp', canal='whatsapp', pedida_em=?2, por=?3, chave=CASE WHEN COALESCE(chave,'')='' THEN ?4 ELSE chave END, cliente_id=CASE WHEN COALESCE(cliente_id,'')='' THEN ?7 ELSE cliente_id END, reserva=NULL WHERE os_id=?1 AND status=?5 AND COALESCE(reserva,'')=?6").bind(os.id, agora, quem, d.chave, atual.status, atual.reserva || '', d.clienteId).run();
+  if (atual) await db.prepare("UPDATE avaliacao_pedidos SET status_antes=CASE WHEN status='enviando' OR status_antes='reaberta' THEN 'nao_enviado' ELSE status END, motivo=CASE WHEN status='enviando' THEN 'envio_nao_confirmado' WHEN status_antes='reaberta' THEN (CASE WHEN " + SQL_INCERTO + " THEN 'envio_nao_confirmado' ELSE 'reaberta' END) ELSE motivo END, status='whatsapp', canal='whatsapp', pedida_em=?2, por=?3, chave=CASE WHEN COALESCE(chave,'')='' THEN ?4 ELSE chave END, cliente_id=CASE WHEN COALESCE(cliente_id,'')='' THEN ?7 ELSE cliente_id END, reserva=NULL WHERE os_id=?1 AND status=?5 AND COALESCE(reserva,'')=?6").bind(os.id, agora, quem, d.chave, atual.status, atual.reserva || '', d.clienteId).run();
   else await db.prepare("INSERT OR IGNORE INTO avaliacao_pedidos (os_id, os_numero, chave, perfil, status, canal, concluida_em, processado_em, pedida_em, por, tentativas, modo, cliente_id) VALUES (?1,?2,?3,?4,'whatsapp','whatsapp',?5,?6,?6,?7,0,'manual',?8)").bind(os.id, os.numero || '', d.chave, d.perfil, os.concluidaEm || null, agora, quem, d.clienteId).run();
   const depois = await lerAvaliacao(env, os.id);
   if (!depois || depois.status !== 'whatsapp') return { ok: false, message: 'O registro desta coleta mudou agora mesmo. Recarregue a página e confira.' };
@@ -1204,7 +1272,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:#F7FAF9;border:1px sol
   </div>
   <div class="card">
     <div class="sec">Como funciona</div>
-    <div style="font-size:13px;color:#4F6469;line-height:1.7">• Sai 2 horas depois de a coleta ficar <b>concluída</b>, só entre 08h e 20h (fora disso, às 08h seguintes). O sistema confere a cada 10 minutos.<br>• Um pedido por cliente a cada 12 meses (pelo CNPJ/CPF; sem documento, pelo e-mail). O mesmo endereço de e-mail também não recebe dois pedidos em 12 meses, ainda que seja contato de empresas diferentes — nesse caso o pedido vai para o contato seguinte da empresa, se houver.<br>• Não recebem: casa e família, cliente com bloqueio de contato, quem já recebeu em 12 meses, quem não tem e-mail, quem tem e-mail mal formado no cadastro (endereço cortado, com “|” no meio, texto grudado — aparece como “e-mail inválido”) e quem está na lista “não enviar e-mail”. O motivo aparece na OS.<br>• Também não sai: coleta marcada como concluída mais de 10 dias depois da data dela (coleta antiga) e coleta que foi <b>reaberta</b> depois de concluída — só uma conclusão nova volta a valer.<br>• Contato marcado como inativo/desligado no cadastro não recebe.<br>• Se o sistema não conseguir ler as listas ou o cadastro, ele <b>não envia</b> e tenta de novo na rodada seguinte.<br>• <b>Descadastro bloqueia o cliente inteiro:</b> se qualquer e-mail do cliente (o geral, o do contato da coleta ou o de qualquer contato) estiver na lista como “pediu para sair”, o pedido não vai para nenhum e-mail dele. E-mail inválido (voltou) ou mal formado é diferente: o pedido pode ir para outro e-mail bom do cliente.<br>• Sem e-mail? Peça pelo WhatsApp e marque <b>“Pedi pelo WhatsApp”</b> na OS — vale como pedido feito.<br>• Texto simples, sem imagem. O link é o do Google, sem rastreio.</div>
+    <div style="font-size:13px;color:#4F6469;line-height:1.7">• Sai 2 horas depois de a coleta ficar <b>concluída</b>, só entre 08h e 20h (fora disso, às 08h seguintes). O sistema confere a cada 10 minutos.<br>• Um pedido por cliente a cada 12 meses (pelo CNPJ/CPF; sem documento, pelo e-mail). O mesmo endereço de e-mail também não recebe dois pedidos em 12 meses, ainda que seja contato de empresas diferentes — nesse caso o pedido vai para o contato seguinte da empresa, se houver.<br>• Se o serviço de e-mail não responde num envio (não dá para saber se saiu), as outras coletas do mesmo cliente <b>esperam</b> o desfecho dele, para ninguém receber dois pedidos.<br>• Não recebem: casa e família, cliente com bloqueio de contato, quem já recebeu em 12 meses, quem não tem e-mail, quem tem e-mail mal formado no cadastro (endereço cortado, com “|” no meio, texto grudado — aparece como “e-mail inválido”) e quem está na lista “não enviar e-mail”. O motivo aparece na OS.<br>• Também não sai: coleta marcada como concluída mais de 10 dias depois da data dela (coleta antiga) e coleta que foi <b>reaberta</b> depois de concluída — só uma conclusão nova volta a valer.<br>• Contato marcado como inativo/desligado no cadastro não recebe.<br>• Se o sistema não conseguir ler as listas ou o cadastro, ele <b>não envia</b> e tenta de novo na rodada seguinte.<br>• <b>Descadastro bloqueia o cliente inteiro:</b> se qualquer e-mail do cliente (o geral, o do contato da coleta ou o de qualquer contato) estiver na lista como “pediu para sair”, o pedido não vai para nenhum e-mail dele. E-mail inválido (voltou) ou mal formado é diferente: o pedido pode ir para outro e-mail bom do cliente.<br>• Sem e-mail? Peça pelo WhatsApp e marque <b>“Pedi pelo WhatsApp”</b> na OS — vale como pedido feito.<br>• Texto simples, sem imagem. O link é o do Google, sem rastreio.</div>
     <label>Pessoa física — assunto: ${esc(exemplo.assunto)}</label><pre>${esc(exemplo.texto)}</pre>
     <label>Empresa — assunto: ${esc(exemploPJ.assunto)}</label><pre>${esc(exemploPJ.texto)}</pre>
   </div>
@@ -1233,7 +1301,7 @@ function carga(){var f=$('arq').files[0],m=$('mCarga');if(!f){m.textContent='Esc
     for(i=0;i<linhas.length;i++){var t=linhas[i].toLowerCase(),cels=t.split(/[\\s,;|<>()\\[\\]"]+/),e='';
       for(var c=0;c<cels.length;c++){var x=cels[c].replace(/^[.']+|[.']+$/g,'');if(x.length<=254&&RE.test(x)){e=x;break;}}
       if(!e)continue;var resto=t.replace(e,' ').replace(/_/g,' '),tipo='';
-      if(/\\b(inativ[oa]s?|removid[oa]s?|removed|descadastr\\w*|unsubscri\\w*|opt[- ]?out|cancelad[oa]s?|cancelou|cancell?ed|reclama\\w*|spam|complain\\w*)\\b/.test(resto))tipo='descadastrado';
+      if(/\\b(inativ[oa]s?|removid[oa]s?|removed|descadastr\\w*|unsubscri\\w*|opt[- ]?out|cancelad[oa]s?|cancelou|cancell?ed|reclama\\w*|spam|complain\\w*)\\b/.test(resto)||/\\b(n[aã]o|not|in|un)[\\s-]+(ativ[oa]s?|active|subscribed|inscrit[oa]s?|confirmad[oa]s?)\\b/.test(resto))tipo='descadastrado';
       else if(/\\b(bounce[ds]?|hard|inv[aá]lid[oa]s?|invalid|inexistente)\\b/.test(resto))tipo='invalido';
       else if(/\\b(ativ[oa]s?|active|subscribed|inscrit[oa]s?|confirmad[oa]s?)\\b/.test(resto))tipo='ativo';
       if(tipo==='descadastrado'||tipo==='invalido')temSaida=true;
