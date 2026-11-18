@@ -83,7 +83,7 @@ import { listarVeiculos, lerVeiculo, salvarVeiculo, paginaFrota, paginaVeiculoFo
 import { carregarEquipeNoEnv, listarUsuarios, lerUsuario, salvarUsuario, importarUsuarios, paginaEquipe, paginaUsuarioForm, paginaEquipeImportar } from './equipe.js';
 import { agentesDe } from './agente.js';
 import { atenderMcpClaude, lerConexaoClaude, gerarConexaoClaude, revogarConexaoClaude, paginaConexaoClaude, listarAuditoriaClaude } from './mcp-claude.js';
-import { mudancaComHistorico, registrarHistoricoLead, listarHistoricoLead, deLocalBR, leadsAbertosDoCliente } from './atendimento.js';
+import { mudancaComHistorico, registrarHistoricoLead, listarHistoricoLead, deLocalBR, leadsAbertosDoCliente, leadSemOSValida, medido, INICIO_MEDICAO_TXT } from './atendimento.js';
 import { LEAD_RESOLVIDO as LEAD_JA_RESOLVIDO } from './cadastro.js';
 import { servirIcone, servirManifest, servirServiceWorker } from './pwa.js';
 import { googleConfigurado, iniciarGoogle, callbackGoogle, botaoGoogle } from './google-auth.js';
@@ -2082,7 +2082,9 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         const historico = await listarHistoricoLead(env, l.id);
         let clienteSugeridoId = '';
         try { clienteSugeridoId = await clienteDoPedido(env, l); } catch { clienteSugeridoId = ''; }
-        return html(paginaLeadDetalhe(escritorio, l, { historico, clienteSugeridoId }));
+        let osCancelada = false;
+        if (l.osId) { try { const o = await lerColetaOS(env, l.osId); osCancelada = !!(o && o.status === 'cancelada'); } catch { osCancelada = false; } }
+        return html(paginaLeadDetalhe(escritorio, l, { historico, clienteSugeridoId, osCancelada }));
       }
       if (pathname === '/api/leads/tratar' && request.method === 'POST') {
         if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
@@ -2103,6 +2105,8 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         if (!b || !b.id) return json({ ok: false, error: 'dados' }, 400);
         const l = await lerLead(env, b.id);
         if (!l) return json({ ok: false, error: 'nao_encontrado' }, 404);
+        // Pedido já encerrado (tratado / sem retorno): não há 1º contato a registrar.
+        if (LEAD_JA_RESOLVIDO.has(l.status)) return json({ ok: false, error: 'encerrado', message: 'Este pedido já foi encerrado.' }, 409);
         // "Aguardando pagamento" continua como está (a liberação automática depende dele).
         const novo = (l.status || 'novo') === 'novo' ? 'contatado' : l.status;
         const mud = mudancaComHistorico(l, novo, { por: escritorio.email || '', evento: 'contato', contato: true });
@@ -2134,7 +2138,7 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
           name: String(b.nome || '').trim().slice(0, 200), company: String(b.empresa || '').trim().slice(0, 200),
           email: String(b.email || '').trim().toLowerCase().slice(0, 320), phone: String(b.fone || '').trim().slice(0, 50),
           profile: b.perfil === 'pessoa_fisica' ? 'pessoa_fisica' : 'empresa', documento: (docN.length === 11 || docN.length === 14) ? docN : '',
-          material_category: `Pedido por ${canais[canal]} (registrado pela equipe)`, volume: String(b.volume || '').trim().slice(0, 60),
+          material_category: `${b.tipo === 'desmobilizacao' ? 'Desmobilização de Ativos — pedido' : 'Pedido'} por ${canais[canal]} (registrado pela equipe)`, volume: String(b.volume || '').trim().slice(0, 60),
           material_description: String(b.descricao || '').slice(0, 4000), city: String(b.cidade || '').trim().slice(0, 80), state: String(b.uf || '').trim().toUpperCase().slice(0, 2),
           source: canal,
         };
@@ -2197,18 +2201,23 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         let patrocinadores = []; try { patrocinadores = await listarPatrocinadores(env); } catch { /* ok */ }
         let veiculos = []; try { veiculos = await listarVeiculos(env); } catch { /* ok */ }
         // Pedidos (leads) em aberto deste cliente, para a coleta nascer ligada ao pedido
-        // certo. Veio da tela do pedido (?lead=): ele já vem escolhido. Sem isso, só
-        // pré-seleciona quando há UM pedido em aberto, feito nos últimos 30 dias.
+        // certo — só pedidos da medição (desde 18/11/2026); pedido antigo nunca é oferecido
+        // (o vínculo dele é o provável e o registro antigo não é tocado). Veio da tela do
+        // pedido (?lead=): ele já vem escolhido. Sem isso, só pré-seleciona quando há UM
+        // pedido em aberto dos últimos 30 dias que ainda não foi tratado — ou que foi
+        // convertido nesta mesma ficha.
         let pedidos = [], leadSel = '';
         try {
           const idxLeads = await listarLeads(env);
-          pedidos = leadsAbertosDoCliente(idxLeads, cli);
+          const comOS = idxLeads.some((x) => x && x.osId);
+          const osCanceladas = comOS ? new Set((await listarColetasOS(env)).filter((o) => o && o.status === 'cancelada').map((o) => o.id)) : new Set();
+          pedidos = leadsAbertosDoCliente(idxLeads, cli, { osCanceladas });
           const pedido = String(url.searchParams.get('lead') || '').replace(/[^a-zA-Z0-9_]/g, '');
           if (pedido) {
             let p = pedidos.find((x) => x.id === pedido);
-            if (!p) { const e = idxLeads.find((x) => x && x.id === pedido); if (e && !e.osId && e.status !== 'excluido') { p = e; pedidos = [e, ...pedidos]; } }
+            if (!p) { const e = idxLeads.find((x) => x && x.id === pedido); if (e && medido(e) && leadSemOSValida(e, osCanceladas) && e.status !== 'excluido') { p = e; pedidos = [e, ...pedidos]; } }
             if (p) leadSel = p.id;
-          } else if (pedidos.length === 1 && Date.parse(pedidos[0].criadoEm) >= Date.now() - 30 * 86400e3) leadSel = pedidos[0].id;
+          } else if (pedidos.length === 1 && Date.parse(pedidos[0].criadoEm) >= Date.now() - 30 * 86400e3 && (pedidos[0].status !== 'tratado' || pedidos[0].clienteId === cli.id)) leadSel = pedidos[0].id;
         } catch { pedidos = []; leadSel = ''; }
         return html(paginaGerarColeta(escritorio, cli, agentes, patrocinadores, veiculos, { pedidos, leadSel }));
       }
@@ -2482,11 +2491,17 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         // ainda não gerou coleta. Os campos do vínculo saem do lead, nunca do corpo.
         const pedidoId = String(b.leadId || '').replace(/[^a-zA-Z0-9_]/g, '').slice(0, 60);
         delete b.leadId; delete b.leadOrigem;
-        let leadOrig = null;
+        let leadOrig = null, osAnterior = null;
         if (pedidoId) {
           leadOrig = await lerLead(env, pedidoId);
           if (!leadOrig || leadOrig.status === 'excluido') return json({ ok: false, error: 'Pedido de origem não encontrado — recarregue a página.' }, 400);
-          if (leadOrig.osId) return json({ ok: false, error: `Este pedido já gerou a coleta ${leadOrig.osNumero || ''} — escolha “coleta sem pedido registrado” ou outro pedido.` }, 409);
+          // Pedido de antes da medição: não é ligado (o vínculo dele é o provável; o registro antigo não muda).
+          if (!medido(leadOrig)) return json({ ok: false, error: `Este pedido é anterior a ${INICIO_MEDICAO_TXT} e não pode ser ligado — escolha “coleta sem pedido registrado”.` }, 400);
+          // Já gerou coleta: só pode gerar outra se aquela foi CANCELADA.
+          if (leadOrig.osId) {
+            osAnterior = await lerColetaOS(env, leadOrig.osId);
+            if (!osAnterior || osAnterior.status !== 'cancelada') return json({ ok: false, error: `Este pedido já gerou a coleta ${leadOrig.osNumero || ''} — escolha “coleta sem pedido registrado” ou outro pedido.` }, 409);
+          }
         }
         const os = await criarColetaOS(env, b, escritorio.email, leadOrig ? { lead: leadOrig } : undefined);
         if (leadOrig) {
@@ -2495,7 +2510,7 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
             const l = (await lerLead(env, leadOrig.id)) || leadOrig;
             l.osId = os.id; l.osNumero = os.numero; l.osCriadaEm = os.criadoEm;
             if (!l.clienteId && os.clienteId) l.clienteId = os.clienteId;
-            const mud = mudancaComHistorico(l, LEAD_JA_RESOLVIDO.has(l.status) ? null : 'tratado', { por: escritorio.email || '', evento: 'os_criada', detalhe: os.numero });
+            const mud = mudancaComHistorico(l, LEAD_JA_RESOLVIDO.has(l.status) ? null : 'tratado', { por: escritorio.email || '', evento: 'os_criada', detalhe: osAnterior ? `${os.numero} (substitui ${osAnterior.numero || 'OS'} cancelada)` : os.numero });
             if (!l.tratadoEm && l.status === 'tratado') { l.tratadoPor = escritorio.email || ''; l.tratadoEm = nowS(); }
             await salvarLead(env, l);
             await registrarHistoricoLead(env, mud.historico);

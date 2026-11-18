@@ -19,7 +19,7 @@ import { listarColetasOS, materialIndiceOS } from './coletas.js';
 import { lerChavesKV } from './kv-lote.js';
 import { MATERIAIS as TRIAGEM_DOCA } from './operacional.js';
 import { REGRAS_MATERIAIS, estimarPesoKg } from './cadastro.js';
-import { isoBR, minutosEntre, percentil, segundaDaSemana, situacaoPrazo, avaliarLoteGrande, perfilDoLead, ehPedidoDeColeta } from './atendimento.js';
+import { isoBR, minutosEntre, percentil, segundaDaSemana, situacaoPrazo, avaliarLoteGrande, perfilDoLead, ehPedidoDeColeta, medido, INICIO_MEDICAO_TXT } from './atendimento.js';
 
 export class ErroUso extends Error {}
 
@@ -415,13 +415,13 @@ function dataConclusao(o, pesos) {
 }
 
 // Vínculo pedido (lead) → OS.
-//   EXATO: a OS nasceu do pedido — a OS guarda leadId e o pedido guarda osId (desde
-//   18/11/2026, botão "Gerar coleta deste pedido" / campo "Pedido de origem").
-//   PROVÁVEL: só para o HISTÓRICO ANTIGO (pedidos feitos antes de CORTE_VINCULO_EXATO):
-//   a 1ª OS do mesmo cliente (documento ou e-mail) criada em até 30 dias depois do
-//   pedido, entre as OS que não têm pedido exato.
+//   EXATO: a OS nasceu do pedido — o pedido guarda osId (a OS atual; se uma OS foi
+//   cancelada e outra gerada, vale a nova) e a OS guarda leadId. Só pedidos da medição
+//   (desde 18/11/2026 01:11, ver atendimento.js).
+//   PROVÁVEL: só para o HISTÓRICO ANTIGO (pedidos de antes da medição): a 1ª OS do
+//   mesmo cliente (documento ou e-mail) criada em até 30 dias depois do pedido, entre
+//   as OS que não têm pedido exato.
 // `tipo` (id do lead → 'exato' | 'provavel') diz qual dos dois.
-export const CORTE_VINCULO_EXATO = '2026-11-19';
 async function vinculosLeadOS(ctx) {
   return ctx.vinculos ? ctx.vinculos : (ctx.vinculos = await calcularVinculos(ctx));
 }
@@ -432,10 +432,10 @@ async function calcularVinculos(ctx) {
   const leadPorId = new Map(leads.map((l) => [l.id, l]));
   const osPorId = new Map(oss.map((o) => [o.id, o]));
   const liga = (l, o, t) => { osPorLead.set(l.id, o); leadPorOS.set(o.id, l); tipo.set(l.id, t); };
-  for (const o of oss) { const l = o.leadId ? leadPorId.get(o.leadId) : null; if (l && !osPorLead.has(l.id) && !leadPorOS.has(o.id)) liga(l, o, 'exato'); }
   for (const l of leads) { const o = l.osId ? osPorId.get(l.osId) : null; if (o && !osPorLead.has(l.id) && !leadPorOS.has(o.id)) liga(l, o, 'exato'); }
-  // Provável: só pedidos antigos ainda sem vínculo exato, e só OS sem pedido exato.
-  const antigos = leads.filter((l) => !osPorLead.has(l.id) && diaBR(l.criadoEm) < CORTE_VINCULO_EXATO);
+  for (const o of oss) { const l = o.leadId ? leadPorId.get(o.leadId) : null; if (l && !l.osId && !osPorLead.has(l.id) && !leadPorOS.has(o.id)) liga(l, o, 'exato'); }
+  // Provável: só pedidos antigos (de antes da medição) sem vínculo exato, e só OS sem pedido exato.
+  const antigos = leads.filter((l) => !osPorLead.has(l.id) && !medido(l));
   if (!antigos.length) return { osPorLead, leadPorOS, tipo };
   const docs = [...new Set((await Promise.all(oss.map((o) => ctx.docDaOS(o)))).filter(Boolean))];
   const emailsPorDoc = new Map();
@@ -826,7 +826,8 @@ async function ferrColetasPeriodo(env, args) {
   const itens = await detalharColetas(ctx, fatia, vinc || await vinculosLeadOS(ctx));
   if (campo === 'concluida') ctx.aviso('Data de conclusão: registrada exatamente a partir de 18/11/2026; antes disso vem do app do motorista quando guardado, ou é estimada pela data agendada (data_conclusao_estimada = true).');
   if (campo === 'cancelada') ctx.aviso('Data de cancelamento: registrada a partir de 18/11/2026; cancelamentos anteriores usam a última atualização da OS (data_cancelamento_estimada = true).');
-  ctx.aviso(`Pedido de origem: desde 18/11/2026 a OS gerada a partir de um pedido grava o pedido (lead_id; origem_pedido.vinculo = "exato"). Pedidos feitos antes de ${CORTE_VINCULO_EXATO.split('-').reverse().join('/')} usam o vínculo "provável" (pedido do mesmo cliente até 30 dias antes). Sem pedido ligado, modalidade = "padrão" e origem vazia.`);
+  ctx.aviso(`Pedido de origem: desde ${INICIO_MEDICAO_TXT} a OS gerada a partir de um pedido grava o pedido (lead_id; origem_pedido.vinculo = "exato"). Pedidos de antes disso usam o vínculo "provável" (pedido do mesmo cliente até 30 dias antes). Sem pedido ligado, modalidade = "padrão" e origem vazia.`);
+  ctx.aviso('data_hora_conclusao = hora do encerramento no app do motorista. Coleta que não passa pelo app (transportadora, ou concluída pelo escritório/doca) fica com a hora em que foi marcada como concluída — pode ser depois da retirada real.');
   return saida(ctx, a, {
     total, pagina, porPagina, itens, filtros, titulo: `Coletas (${campo})`,
     linha: (o) => [o.numero, o.status_rotulo, o.cliente && `${o.cliente.nome} (${o.cliente.tipo})`, o.cidade, `criada ${o.data_hora_criacao || o.data_criacao}`, o.data_agendada && `agendada ${o.data_agendada}`, o.data_conclusao && `concluída ${o.data_conclusao}${o.data_conclusao_estimada ? ' (estimada)' : ''}`, o.motorista && `🚚 ${o.motorista}`, o.peso_kg != null && `${o.peso_kg} kg`, o.lead_id && `pedido ${o.lead_id}`, o.prazo_alvo && `🏭 prazo ${o.prazo_alvo} — ${o.prazo_situacao}`].filter(Boolean).join(' — '),
@@ -972,7 +973,8 @@ async function ferrLeads(env, args) {
     const os = vinc.osPorLead.get(l.id);
     const tipoVinc = os ? (vinc.tipo.get(l.id) || 'provavel') : '';
     const pf = perfilDoc(r.documento) || perfilIdx(l) || perfilDoRec(r) || (l.empresa ? 'PJ' : 'PF');
-    const pcEm = r.primeiroContatoEm || l.primeiroContatoEm || '';
+    // 1º contato só de pedido da medição (o de pedido antigo seria a hora de um clique de hoje).
+    const pcEm = medido({ ...l, ...r }) ? (r.primeiroContatoEm || l.primeiroContatoEm || '') : '';
     const minPC = pcEm ? minutosEntre(l.criadoEm, pcEm) : null;
     const prazoAlvo = r.prazoAlvoEm || l.prazoAlvoEm || '';
     const sitPrazo = prazoDoPedido({ ...l, status: r.status || l.status }, os, tipoVinc, prazoAlvo);
@@ -1009,9 +1011,9 @@ async function ferrLeads(env, args) {
     };
     return item;
   });
-  ctx.aviso(`"virou OS" / os_vinculada: vínculo EXATO quando a OS foi gerada a partir do pedido (desde 18/11/2026). Pedidos feitos antes de ${CORTE_VINCULO_EXATO.split('-').reverse().join('/')} usam o vínculo PROVÁVEL (OS do mesmo cliente, por documento ou e-mail, até 30 dias depois). os_gerada = nome antigo do mesmo campo.`);
-  ctx.aviso('data_hora = hora do pedido no horário de Brasília. primeiro_contato_em = 1ª ação de alguém da equipe sobre o pedido ("Registrei o contato", tratado, sem retorno ou coleta gerada); registrado a partir de 18/11/2026 — pedidos anteriores ficam vazios. Ações automáticas do sistema não contam.');
-  ctx.aviso('"quem_atendeu" é gravado a partir de 18/11/2026; leads tratados antes ficam vazios. Lote grande (prazo de 72h) é marcado nos pedidos que chegam a partir de 18/11/2026.');
+  ctx.aviso(`"virou OS" / os_vinculada: vínculo EXATO quando a OS foi gerada a partir do pedido (pedidos desde ${INICIO_MEDICAO_TXT}). Pedidos de antes disso usam o vínculo PROVÁVEL (OS do mesmo cliente, por documento ou e-mail, até 30 dias depois). os_gerada = nome antigo do mesmo campo.`);
+  ctx.aviso(`data_hora = hora do pedido no horário de Brasília. primeiro_contato_em = 1ª ação de alguém da equipe sobre o pedido ("Registrei o contato", tratado, sem retorno ou coleta gerada); só para pedidos desde ${INICIO_MEDICAO_TXT} — os anteriores ficam vazios. Ações automáticas do sistema não contam.`);
+  ctx.aviso(`"quem_atendeu" é gravado a partir de 18/11/2026; leads tratados antes ficam vazios. Lote grande (empresa com 51+ itens ou desmobilização; prazo de 72h) é marcado nos pedidos desde ${INICIO_MEDICAO_TXT}. horas_ate_coleta_concluida usa a hora de conclusão da OS (encerramento no app do motorista; fora do app, a hora em que foi marcada como concluída).`);
   return saida(ctx, a, {
     total, pagina, porPagina, itens, filtros, titulo: 'Leads',
     linha: (l) => [l.data_hora || l.data, l.perfil, l.nome || l.empresa, l.email, l.celular, l.cidade, l.material, l.status, l.prioridade !== 'normal' && l.prioridade, l.minutos_ate_primeiro_contato != null && `1º contato em ${l.minutos_ate_primeiro_contato} min${l.primeiro_contato_por ? ` (${l.primeiro_contato_por})` : ''}`, l.os_vinculada && `OS ${l.os_vinculada.numero} (${l.os_vinculada.vinculo})`, l.prazo_situacao && `prazo: ${l.prazo_situacao}`].filter(Boolean).join(' — '),
@@ -1086,7 +1088,7 @@ async function ferrMetricasDiarias(env, args) {
   const todos = dias.map((d) => { const x = m.get(d); const out = { ...x, peso_total_kg: r2(x.peso_total_kg), valor_cobrado: r2(x.valor_cobrado), valor_recebido: r2(x.valor_recebido), materiais_mais_coletados: top(x._mat), cidades_com_mais_coletas: top(x._cid) }; delete out._mat; delete out._cid; return out; });
   const fatia = todos.slice((pagina - 1) * porPagina, pagina * porPagina);
   ctx.aviso('Dia de conclusão das OS antigas é estimado pela data agendada (conclusoes_estimadas mostra quantas no dia); exato a partir de 18/11/2026.');
-  ctx.aviso(`leads_convertidos_em_os = leads recebidos no dia que viraram OS: vínculo exato quando a OS foi gerada a partir do pedido; pedidos de antes de ${CORTE_VINCULO_EXATO.split('-').reverse().join('/')}, vínculo provável (OS do mesmo cliente em até 30 dias). Valores: cobranças de OS + vendas do portal; pedidos não pagos antigos somem do sistema em 35–90 dias.`);
+  ctx.aviso(`leads_convertidos_em_os = leads recebidos no dia que viraram OS: vínculo exato quando a OS foi gerada a partir do pedido; pedidos de antes de ${INICIO_MEDICAO_TXT}, vínculo provável (OS do mesmo cliente em até 30 dias). Valores: cobranças de OS + vendas do portal; pedidos não pagos antigos somem do sistema em 35–90 dias.`);
   return saida(ctx, a, {
     total: todos.length, pagina, porPagina, itens: fatia, filtros: { de, ate }, titulo: 'Métricas por dia',
     linha: (x) => `${x.dia} — criadas ${x.os_criadas.total} (PF ${x.os_criadas.pf}/PJ ${x.os_criadas.pj}) · concluídas ${x.os_concluidas.total} · canceladas ${x.os_canceladas.total} · ${x.peso_total_kg} kg · cobrado R$ ${x.valor_cobrado} · recebido R$ ${x.valor_recebido} · leads ${x.leads_recebidos} (${x.leads_convertidos_em_os} viraram OS)`,
@@ -1122,7 +1124,7 @@ async function ferrTemposAtendimento(env, args) {
   // Perfil e lote grande: o índice já traz (desde 18/11/2026). Pedidos antigos sem
   // perfil, ou sem a marca de lote grande, são lidos para aplicar a MESMA regra agora.
   const LIM = 1500;
-  const antigo = (l) => diaBR(l.criadoEm) < CORTE_VINCULO_EXATO;
+  const antigo = (l) => !medido(l);
   const perfilDoIndice = (l) => perfilDoLead({ documento: l.documento, perfil: l.perfil === 'PJ' ? 'empresa' : (l.perfil === 'PF' ? 'pessoa_fisica' : '') });
   const precisaLer = leads.filter((l) => (antigo(l) && !l.loteGrande) || !perfilDoIndice(l)).map((l) => l.id);
   const ler = precisaLer.slice(0, LIM);
@@ -1135,7 +1137,7 @@ async function ferrTemposAtendimento(env, args) {
     const perfilIdx = l.perfil === 'PJ' || l.perfil === 'PF' ? l.perfil : '';
     const perfil = perfilDoLead({ documento: l.documento || (r && r.documento), perfil: r ? r.perfil : '' }) || perfilIdx || '';
     let lote = !!l.loteGrande;
-    if (!lote && r && diaBR(l.criadoEm) < CORTE_VINCULO_EXATO && avaliarLoteGrande(r, env).loteGrande) { lote = true; retroativos++; }
+    if (!lote && r && antigo(l) && avaliarLoteGrande(r, env).loteGrande) { lote = true; retroativos++; }
     info.set(l.id, { perfil, lote });
   }
   const semanas = new Map();
@@ -1148,7 +1150,7 @@ async function ferrTemposAtendimento(env, args) {
     const grupos = ['geral', ...(perfil === 'PF' ? ['pf'] : perfil === 'PJ' ? ['pj'] : []), ...(lote ? ['lote_grande'] : [])];
     s.pedidos.total++; if (perfil === 'PF') s.pedidos.pf++; else if (perfil === 'PJ') s.pedidos.pj++; else s.pedidos.sem_perfil++; if (lote) s.pedidos.lote_grande++;
     // Pedido → 1º contato (minutos): só o registrado (desde 18/11/2026).
-    if (l.primeiroContatoEm) { const m = minutosEntre(l.criadoEm, l.primeiroContatoEm); if (m != null) poe(s, '_pc', grupos, Math.max(0, m)); } else s.sem_primeiro_contato++;
+    if (l.primeiroContatoEm && !antigo(l)) { const m = minutosEntre(l.criadoEm, l.primeiroContatoEm); if (m != null) poe(s, '_pc', grupos, Math.max(0, m)); } else s.sem_primeiro_contato++;
     // Pedido → coleta concluída (horas).
     const os = vinc.osPorLead.get(l.id);
     const tipoVinc = os ? (vinc.tipo.get(l.id) || 'provavel') : '';
@@ -1177,7 +1179,7 @@ async function ferrTemposAtendimento(env, args) {
   const fatia = todas.slice((pagina - 1) * porPagina, pagina * porPagina);
   ctx.aviso('Semanas de segunda a domingo, pelo dia do PEDIDO (horário de Brasília). Só pedidos de coleta (propostas de carbono/ESG/Adote e chamados de suporte ficam fora). n = quantos pedidos entraram no cálculo; mediana = valor do meio; p80 = 80% dos pedidos ficaram abaixo desse tempo.');
   ctx.aviso('Pedido → 1º contato (minutos): só pedidos com o 1º contato REGISTRADO, o que começou em 18/11/2026 — semanas anteriores saem vazias (n = 0). É a 1ª ação de alguém da equipe no sistema ("Registrei o contato", tratado, sem retorno ou coleta gerada); ações automáticas não contam.');
-  ctx.aviso(`Pedido → coleta concluída (horas): pedido_ate_coleta_concluida_h usa só o vínculo EXATO (OS gerada a partir do pedido) e a hora registrada da conclusão. pedido_ate_coleta_concluida_h_estimado é o HISTÓRICO: pedidos de antes de ${CORTE_VINCULO_EXATO.split('-').reverse().join('/')} ligados pelo vínculo provável (OS do mesmo cliente em até 30 dias) e, sem hora de conclusão registrada, o dia estimado ao meio-dia (conclusoes_estimadas).`);
+  ctx.aviso(`Pedido → coleta concluída (horas): pedido_ate_coleta_concluida_h usa só o vínculo EXATO (OS gerada a partir do pedido) e a hora registrada da conclusão — o encerramento no app do motorista; coleta fora do app (transportadora, ou concluída pelo escritório/doca) usa a hora em que foi marcada como concluída, que pode ser depois da retirada real. pedido_ate_coleta_concluida_h_estimado é o HISTÓRICO: pedidos de antes de ${INICIO_MEDICAO_TXT} ligados pelo vínculo provável (OS do mesmo cliente em até 30 dias) e, sem hora de conclusão registrada, o dia estimado ao meio-dia (conclusoes_estimadas).`);
   if (retroativos) ctx.aviso(`Lote grande: ${retroativos} pedido(s) de antes de 18/11/2026 foram classificados agora pela mesma regra (empresa com 51+ itens ou desmobilização) — na época o pedido não era marcado nem tinha prazo de 72h.`);
   ctx.aviso('prazo_72h_lote_grande (pedidos marcados desde 18/11/2026): cumprido / atrasou = coleta concluída antes / depois do prazo; no_prazo = ainda dentro das 72h; vencido_sem_coleta = passou das 72h sem coleta concluída; sem_coleta_encerrado = pedido encerrado sem coleta ligada (sem retorno, tratado sem OS ligada ou OS cancelada).');
   return saida(ctx, a, {

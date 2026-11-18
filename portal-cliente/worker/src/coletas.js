@@ -650,8 +650,9 @@ function gerar(){var ag=g('agente').split('|');var ehTransp=g('quemColeta')==='t
   var pOn=document.getElementById('patroOn');
   if(pOn&&pOn.checked){var pp=g('patro').split('|');if(!pp[0]){document.getElementById('m').textContent='Escolha a empresa patrocinadora ou desmarque o patrocínio.';return;}rec.patrocinadorId=pp[0];rec.patrocinadorNome=pp[1]||'';}
   if(!rec.endereco){document.getElementById('m').textContent='Informe o endereço da coleta.';return;}
+  if(window.__gerando)return;window.__gerando=true; // clique duplo não gera 2 coletas
   document.getElementById('m').textContent='Gerando…';
-  fetch('/api/coletas/criar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(rec)}).then(r=>r.json()).then(j=>{if(j.ok){location.href='/coletas/os?id='+j.id;}else{document.getElementById('m').textContent=j.error||'Erro ao gerar.';}}).catch(()=>document.getElementById('m').textContent='Sem conexão.');}
+  fetch('/api/coletas/criar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(rec)}).then(r=>r.json()).then(j=>{if(j.ok){location.href='/coletas/os?id='+j.id;}else{window.__gerando=false;document.getElementById('m').textContent=j.error||'Erro ao gerar.';}}).catch(()=>{window.__gerando=false;document.getElementById('m').textContent='Sem conexão.';});}
 </script></body></html>`;
 }
 

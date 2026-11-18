@@ -7,7 +7,7 @@
 import { botaoGoogle } from './google-auth.js';
 import { sincronizarClienteEgoi } from './egoi.js';
 import { SEGMENTOS } from './premium.js';
-import { marcarLoteGrande, registrarHistoricoLead, avisarLoteGrande, textoBR, minutosEntre, situacaoPrazo, agoraLocalBR } from './atendimento.js';
+import { marcarLoteGrande, registrarHistoricoLead, avisarLoteGrande, textoBR, minutosEntre, situacaoPrazo, agoraLocalBR, medido } from './atendimento.js';
 
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const agora = () => { try { return new Date().toISOString(); } catch { return ''; } };
@@ -1211,7 +1211,7 @@ export async function salvarLead(env, rec) {
     idx[i].status = rec.status;
     // Campos do atendimento também no índice: a caixa de entrada e as consultas do
     // Claude leem o índice sem abrir lead por lead.
-    for (const k of ['primeiroContatoEm', 'clienteId', 'osId', 'osNumero', 'loteGrande', 'prazoAlvoEm']) if (rec[k] !== undefined && rec[k] !== '') idx[i][k] = rec[k];
+    for (const k of ['primeiroContatoEm', 'clienteId', 'osId', 'osNumero', 'loteGrande', 'prazoAlvoEm', 'medicao']) if (rec[k] !== undefined && rec[k] !== '') idx[i][k] = rec[k];
     await env.PORTAL_KV.put('leads:index', JSON.stringify(idx));
   }
   return rec;
@@ -1394,6 +1394,8 @@ export async function ingestLead(env, body, opcoes) {
     prioridade: triagem.tipo === 'prioritaria' ? 'alta' : '',
     // Data E hora do pedido (UTC; as telas mostram no horário de Brasília).
     criadoEm: (o.manual && o.criadoEm) || agora(),
+    // Entrou pelo código da medição (18/11/2026): conta para 1º contato e vínculo exato.
+    medicao: 1,
   };
   if (o.manual) {
     rec.registradoEm = agora();
@@ -1413,7 +1415,7 @@ export async function ingestLead(env, body, opcoes) {
     const extra = {};
     if (rec.loteGrande) { extra.loteGrande = true; extra.prazoAlvoEm = rec.prazoAlvoEm; }
     if (rec.primeiroContatoEm) extra.primeiroContatoEm = rec.primeiroContatoEm;
-    idx.unshift({ id, nome: nome || empresa || email, empresa, email, documento: rec.documento, cidade: rec.cidade, status: rec.status, criadoEm: rec.criadoEm, triagem: triagem.tipo, prioridade: rec.prioridade, origem: rec.origem, perfil, ...extra });
+    idx.unshift({ id, nome: nome || empresa || email, empresa, email, documento: rec.documento, cidade: rec.cidade, status: rec.status, criadoEm: rec.criadoEm, triagem: triagem.tipo, prioridade: rec.prioridade, origem: rec.origem, perfil, medicao: 1, ...extra });
     await env.PORTAL_KV.put('leads:index', JSON.stringify(idx));
     // Histórico: o pedido entrou (na hora do cliente) e, quando registrado à mão, por quem.
     await registrarHistoricoLead(env, { leadId: id, de: null, para: 'novo', em: rec.criadoEm, por: o.manual ? rec.registradoPor : `sistema (${rec.origem})`, evento: 'pedido_recebido', detalhe: o.manual ? `registrado à mão em ${textoBR(rec.registradoEm)} — canal: ${rec.canal}` : (rec.loteGrande ? 'lote grande' : '') });
@@ -1443,7 +1445,7 @@ export function paginaLeads(user, leads) {
     if (!leadPendente(l)) return pilula('#EEF1F0', '#4F6469', '🏭 LOTE GRANDE');
     const sit = situacaoPrazo(l.prazoAlvoEm, {});
     if (sit && sit.situacao === 'vencido') return pilula('#FDE8E8', '#9B1C1C', `🏭 LOTE GRANDE · PRAZO VENCIDO`, '#F3C6C6');
-    return pilula('#FFE9C7', '#8A4B00', `🏭 LOTE GRANDE · coletar até ${esc(textoBR(l.prazoAlvoEm).slice(0, 11))}h`, '#F2C173');
+    return pilula('#FFE9C7', '#8A4B00', `🏭 LOTE GRANDE · coletar até ${esc(textoBR(l.prazoAlvoEm))}`, '#F2C173');
   };
   const seloTriagem = (l) => {
     if (l.prioridade === 'alta') return pilula('#FFE9C7', '#8A4B00', '🌟 PRIORITÁRIA', '#F2C173');
@@ -1466,6 +1468,7 @@ export function paginaLeads(user, leads) {
     <div style="font-size:12px;color:#7c8a87;line-height:1.55;margin-bottom:12px">Pedido que chegou por WhatsApp, telefone, e-mail ou pessoalmente. Use a <b>hora em que o cliente pediu</b> — é ela que mede o tempo até a coleta.</div>
     <div class="g2"><div><label>Canal</label><select id="nCanal">${op('whatsapp', 'WhatsApp')}${op('telefone', 'Telefone')}${op('email', 'E-mail')}${op('presencial', 'Pessoalmente')}${op('outro', 'Outro')}</select></div>
       <div><label>Data e hora do pedido (Brasília)</label><input id="nQuando" type="datetime-local" value="${esc(agoraLocalBR())}"></div></div>
+    <div><label>Tipo de pedido</label><select id="nTipo">${op('coleta', 'Coleta de eletrônicos')}${op('desmobilizacao', 'Desmobilização de ativos (empresa)')}</select></div>
     <div class="g2"><div><label>Perfil</label><select id="nPerfil">${op('empresa', 'Empresa (PJ)')}${op('pessoa_fisica', 'Pessoa física')}</select></div>
       <div><label>CNPJ ou CPF (se souber)</label><input id="nDoc" inputmode="numeric"></div></div>
     <div class="g2"><div><label>Empresa</label><input id="nEmpresa"></div><div><label>Nome do contato</label><input id="nNome"></div></div>
@@ -1490,7 +1493,7 @@ export function paginaLeads(user, leads) {
 (function(){var b=document.getElementById('bNovo'),f=document.getElementById('fNovo');if(b)b.onclick=function(){f.style.display=f.style.display==='none'?'block':'none';};
 function v(id){var el=document.getElementById(id);return el?String(el.value||'').trim():'';}
 var s=document.getElementById('nSalvar'),m=document.getElementById('nMsg');
-if(s)s.onclick=function(){var corpo={canal:v('nCanal'),quando:v('nQuando'),primeiraResposta:v('nResp'),perfil:v('nPerfil'),documento:v('nDoc'),empresa:v('nEmpresa'),nome:v('nNome'),fone:v('nFone'),email:v('nEmail'),cidade:v('nCidade'),uf:v('nUf').toUpperCase(),volume:v('nItens')?(v('nItens')+' itens'):v('nVolume'),descricao:v('nDesc')};
+if(s)s.onclick=function(){var corpo={canal:v('nCanal'),tipo:v('nTipo'),quando:v('nQuando'),primeiraResposta:v('nResp'),perfil:v('nPerfil'),documento:v('nDoc'),empresa:v('nEmpresa'),nome:v('nNome'),fone:v('nFone'),email:v('nEmail'),cidade:v('nCidade'),uf:v('nUf').toUpperCase(),volume:v('nItens')?(v('nItens')+' itens'):v('nVolume'),descricao:v('nDesc')};
   if(!corpo.empresa&&!corpo.nome){m.textContent='Informe a empresa ou o nome do contato.';return;}
   if(!corpo.quando){m.textContent='Informe a data e hora do pedido.';return;}
   s.disabled=true;m.textContent='Registrando…';
@@ -1528,6 +1531,8 @@ export function paginaLeadDetalhe(user, lead, extras) {
   // lead.clienteId pode ser o id numérico do contato no Ploomes (cliente já existente do
   // site) — a rota resolve para a ficha certa em clienteSugeridoId.
   const clienteParaColeta = x.clienteSugeridoId || (/^\d+$/.test(String(lead.clienteId || '')) ? '' : (lead.clienteId || ''));
+  // Vínculo exato só para pedido da medição (desde 18/11/2026) sem OS — ou com a OS cancelada.
+  const podeLigarOS = medido(lead) && (!lead.osId || !!x.osCancelada);
   const linha = (l, v) => v ? `<tr><td style="padding:8px 0;border-top:1px solid #EEF1F0;color:#6B7B78;width:38%">${esc(l)}</td><td style="padding:8px 0;border-top:1px solid #EEF1F0;font-weight:600">${esc(v)}</td></tr>` : '';
   const utm = lead.utm && (lead.utm.source || lead.utm.campaign) ? [lead.utm.source, lead.utm.medium, lead.utm.campaign, lead.utm.content, lead.utm.term].filter(Boolean).join(' · ') : '';
   const resolvido = LEAD_RESOLVIDO.has(lead.status);
@@ -1553,7 +1558,7 @@ export function paginaLeadDetalhe(user, lead, extras) {
       ${linha('Pedido recebido em', textoBR(lead.criadoEm) || dataBR(lead.criadoEm))}
       ${lead.registradoEm ? linha('Registrado à mão', `${textoBR(lead.registradoEm)}${lead.registradoPor ? ` — ${lead.registradoPor}` : ''}${lead.canal ? ` · canal: ${lead.canal}` : ''}`) : ''}
       ${linha('Primeiro contato', contatoTxt)}
-      ${lead.osId ? linha('Coleta gerada', lead.osNumero || lead.osId) : ''}
+      ${lead.osId ? linha('Coleta gerada', `${lead.osNumero || lead.osId}${x.osCancelada ? ' — cancelada (dá para gerar outra coleta para este pedido)' : ''}`) : ''}
       ${linha('Perfil', lead.perfil === 'empresa' ? 'Empresa' : (lead.perfil === 'pessoa_fisica' ? 'Pessoa física' : lead.perfil))}
       ${linha('Empresa', lead.empresa)}
       ${linha('E-mail', lead.email)}
@@ -1571,7 +1576,7 @@ export function paginaLeadDetalhe(user, lead, extras) {
   ${(Array.isArray(lead.fotos) && lead.fotos.length) ? `<div class="card" style="margin-top:12px"><div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#7c8a87;margin-bottom:10px">📷 Fotos enviadas pelo cliente</div><div style="display:flex;flex-wrap:wrap;gap:10px">${lead.fotos.map((f) => `<a href="/coletas/anexo?key=${encodeURIComponent(f.key)}" target="_blank" rel="noopener"><img src="/coletas/anexo?key=${encodeURIComponent(f.key)}" alt="${esc(f.nome || 'foto')}" style="width:130px;height:100px;object-fit:cover;border:1px solid #E4EBE9;border-radius:8px;background:#fff"></a>`).join('')}</div></div>` : ''}
   <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
     ${podeContato ? '<button class="btn btn-p" id="bcont">📞 Registrei o contato</button>' : ''}
-    ${clienteParaColeta && !lead.osId ? `<a class="btn btn-p" href="/coletas/nova?cliente=${encodeURIComponent(clienteParaColeta)}&lead=${encodeURIComponent(lead.id)}">＋ Gerar coleta deste pedido</a>` : ''}
+    ${clienteParaColeta && podeLigarOS ? `<a class="btn btn-p" href="/coletas/nova?cliente=${encodeURIComponent(clienteParaColeta)}&lead=${encodeURIComponent(lead.id)}">＋ Gerar coleta deste pedido</a>` : ''}
     ${lead.clienteId ? '' : `<a class="btn ${clienteParaColeta ? 'btn-g' : 'btn-p'}" href="/cadastro/novo?tipo=${lead.perfil === 'pessoa_fisica' ? 'PF' : 'PJ'}&lead=${esc(lead.id)}">➜ Converter em cliente</a>`}
     <button class="btn btn-g" id="btrat" ${lead.status === 'tratado' ? 'disabled style="opacity:.5"' : ''}>${lead.status === 'tratado' ? '✓ Tratado' : 'Marcar como tratado'}</button>
     <button class="btn btn-g" id="bsr" ${lead.status === 'sem_retorno' ? 'disabled style="opacity:.5"' : ''}>${lead.status === 'sem_retorno' ? '✓ Sem retorno' : 'Sem retorno'}</button>

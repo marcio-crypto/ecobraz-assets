@@ -14,11 +14,22 @@
 //     ou pedido de desmobilização de ativos → coleta em até 72h do pedido. Destaque
 //     na caixa de entrada, e-mail na hora para a Débora e prazo-alvo na OS.
 //     Ajustáveis por variável do Worker: LOTE_GRANDE_MIN_ITENS (51),
-//     LOTE_GRANDE_PRAZO_HORAS (72), LOTE_GRANDE_PALAVRAS ("desmobiliza") e
-//     LOTE_GRANDE_AVISO_EMAILS (destinatários do aviso).
+//     LOTE_GRANDE_PRAZO_HORAS (72), LOTE_GRANDE_PALAVRAS ("desmobiliza"),
+//     LOTE_GRANDE_AVISO_EMAILS (destinatários do aviso; padrão: a Débora) e
+//     LOTE_GRANDE_MAX_AVISOS_HORA (10 e-mails por hora, no máximo).
 
 const MS_H = 3600e3;
 const digits = (s) => String(s == null ? '' : s).replace(/\D/g, '');
+
+// --- Início da medição ------------------------------------------------------------------
+// A medição começou na publicação de 18/11/2026 às 04:11 UTC (01:11 de Brasília). Pedido
+// "medido" = entrou pelo código novo: grava medicao=1 (os que chegaram entre a publicação
+// e essa marca valem pela hora). Pedido ANTERIOR nunca ganha 1º contato nem vínculo exato:
+// a hora real do contato é desconhecida e o vínculo dele continua o "provável" — assim
+// nenhum registro antigo é alterado por essas regras.
+export const INICIO_MEDICAO = '2026-11-18T04:11:00.000Z';
+export const INICIO_MEDICAO_TXT = '18/11/2026 01:11';
+export const medido = (l) => !!l && (l.medicao === 1 || Date.parse(l.criadoEm) >= Date.parse(INICIO_MEDICAO));
 const semAcentoMin = (s) => String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 const escH = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -88,17 +99,26 @@ export function regrasLoteGrande(env) {
 // alarme falso (e e-mail) vindo de formulário de proposta com texto livre.
 const ORIGEM_NAO_COLETA = /^(carbono|esg|adote|portal-chamado)/;
 export const ehPedidoDeColeta = (l) => !ORIGEM_NAO_COLETA.test(String((l && l.origem) || ''));
-// É lote grande? Empresa (PJ) com itens ≥ mínimo, ou pedido de desmobilização de ativos.
+// Triagem que já responde "não coletamos" / "só itens perigosos": não vira lote grande.
+const TRIAGEM_SEM_COLETA = new Set(['barrado', 'so_perigosos']);
+// É lote grande? Só EMPRESA (PJ): 51+ itens declarados, ou pedido de desmobilização de
+// ativos. A desmobilização vale só por campo ESTRUTURADO — categoria do material, página
+// de origem do formulário (as páginas de desmobilização do site mandam
+// "origem=desmobilizacao-…") ou campanha —, nunca pelo texto livre que a pessoa digita
+// ("não é desmobilização" não pode disparar alarme).
 export function avaliarLoteGrande(lead, env) {
   const r = regrasLoteGrande(env);
   const l = lead || {};
   const perfil = perfilDoLead(l);
   const itens = itensDoLead(l);
-  if (!ehPedidoDeColeta(l)) return { loteGrande: false, motivo: '', itens, perfil };
-  const texto = semAcentoMin([l.material, l.volume, l.descricao, l.pagina, l.utm && l.utm.campaign].filter(Boolean).join(' '));
-  if (r.palavras.some((p) => texto.includes(p))) return { loteGrande: true, motivo: 'desmobilização de ativos', itens, perfil };
-  if (perfil === 'PJ' && itens != null && itens >= r.minItens) return { loteGrande: true, motivo: `empresa com ${String(l.volume || `${itens} itens`).trim()}`, itens, perfil };
-  return { loteGrande: false, motivo: '', itens, perfil };
+  const nao = { loteGrande: false, motivo: '', itens, perfil };
+  if (!ehPedidoDeColeta(l) || perfil !== 'PJ') return nao;
+  const tri = l.triagem && typeof l.triagem === 'object' ? l.triagem.tipo : l.triagem;
+  if (TRIAGEM_SEM_COLETA.has(tri)) return nao;
+  const estruturado = semAcentoMin([l.material, l.pagina, l.utm && l.utm.campaign].filter(Boolean).join(' '));
+  if (r.palavras.some((p) => estruturado.includes(p))) return { loteGrande: true, motivo: 'desmobilização de ativos', itens, perfil };
+  if (itens != null && itens >= r.minItens) return { loteGrande: true, motivo: `empresa com ${String(l.volume || `${itens} itens`).trim()}`, itens, perfil };
+  return nao;
 }
 // Marca o lead (antes de gravar): loteGrande, motivo e prazo-alvo (pedido + 72h).
 export function marcarLoteGrande(lead, env) {
@@ -135,7 +155,8 @@ const COM_CONTATO = new Set(['contatado', 'tratado', 'sem_retorno']);
 // desta medição existir) não ganha "primeiro contato" agora — a hora real é desconhecida.
 const JA_RESOLVIDO = new Set(['tratado', 'sem_retorno', 'excluido']);
 // Aplica a mudança no registro (não grava): devolve o que mudou para o histórico.
-// humano=false (ação automática do sistema) nunca marca o primeiro contato.
+// humano=false (ação automática do sistema) nunca marca o primeiro contato, nem pedido
+// anterior ao início da medição (medido = false).
 // contato=true/false força a decisão (ex.: botão "Registrei o contato").
 export function aplicarStatusLead(lead, novo, { por, humano = true, contato } = {}) {
   const de = lead.status || 'novo';
@@ -143,7 +164,7 @@ export function aplicarStatusLead(lead, novo, { por, humano = true, contato } = 
   if (novo) lead.status = novo;
   let primeiroContato = false;
   const conta = contato != null ? !!contato : (COM_CONTATO.has(lead.status) && !JA_RESOLVIDO.has(de));
-  if (humano && conta && !lead.primeiroContatoEm) {
+  if (humano && conta && !lead.primeiroContatoEm && medido(lead)) {
     lead.primeiroContatoEm = em;
     lead.primeiroContatoPor = String(por || '').trim().toLowerCase().slice(0, 120);
     primeiroContato = true;
@@ -202,6 +223,12 @@ export async function avisarLoteGrande(env, lead, { por } = {}) {
   if (!dest.length) return { enviado: false, motivo: 'sem_destinatario' };
   const chave = `notif:lotegrande:${lead.id}`;
   if (env.PORTAL_KV && await env.PORTAL_KV.get(chave)) return { enviado: false, motivo: 'ja_avisado' };
+  // Teto por hora (o formulário do site é público): passado o teto, o pedido continua
+  // marcado e em destaque na caixa de entrada — só o e-mail deixa de sair.
+  const maxHora = Math.max(1, Math.round(Number(env.LOTE_GRANDE_MAX_AVISOS_HORA)) || 10);
+  const chaveHora = `notif:lotegrande:hora:${new Date().toISOString().slice(0, 13)}`;
+  const nHora = env.PORTAL_KV ? (Number(await env.PORTAL_KV.get(chaveHora)) || 0) : 0;
+  if (nHora >= maxHora) { console.error('aviso_lote_grande_teto_hora', nHora); return { enviado: false, motivo: 'limite_hora' }; }
   const quem = String(lead.empresa || lead.nome || 'Empresa').slice(0, 80);
   const prazo = textoBR(lead.prazoAlvoEm);
   const link = `https://sistema.ecobraz.org/leads/lead?id=${encodeURIComponent(lead.id)}`;
@@ -221,20 +248,26 @@ export async function avisarLoteGrande(env, lead, { por } = {}) {
   if (env.RESEND_REPLY_TO) payload.reply_to = env.RESEND_REPLY_TO;
   const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${env.RESEND_API_KEY}` }, body: JSON.stringify(payload) });
   if (!r.ok) throw new Error('resend_lote_grande_' + r.status);
-  if (env.PORTAL_KV) await env.PORTAL_KV.put(chave, '1', { expirationTtl: 60 * 60 * 24 * 90 });
+  if (env.PORTAL_KV) {
+    await env.PORTAL_KV.put(chave, '1', { expirationTtl: 60 * 60 * 24 * 90 });
+    await env.PORTAL_KV.put(chaveHora, String(nHora + 1), { expirationTtl: 2 * 60 * 60 });
+  }
   return { enviado: true, para: dest.length };
 }
 
 // --- Pedidos em aberto de um cliente (para ligar a OS ao pedido certo) ----------------
-// Leads dos últimos `dias` ainda sem OS, do mesmo cliente (ficha convertida, CNPJ/CPF ou
-// e-mail), do mais recente para o mais antigo.
-export function leadsAbertosDoCliente(leadsIdx, cli, { dias = 60, agoraMs } = {}) {
+// Leads MEDIDOS (de depois do início da medição) dos últimos `dias`, sem OS (ou cuja OS
+// foi cancelada — `osCanceladas`), do mesmo cliente (ficha convertida, CNPJ/CPF ou
+// e-mail), do mais recente para o mais antigo. Pedido antigo nunca entra: o vínculo
+// dele é o provável e o registro antigo não é tocado.
+export const leadSemOSValida = (l, osCanceladas) => !l.osId || !!(osCanceladas && osCanceladas.has(l.osId));
+export function leadsAbertosDoCliente(leadsIdx, cli, { dias = 60, agoraMs, osCanceladas } = {}) {
   if (!cli) return [];
   const doc = digits(cli.tipo === 'PJ' ? cli.cnpj : cli.cpf);
   const emails = new Set([cli.email, ...(Array.isArray(cli.contatos) ? cli.contatos.map((c) => c && c.email) : [])].map((e) => String(e || '').trim().toLowerCase()).filter((e) => e.includes('@')));
   const limite = (Number.isFinite(agoraMs) ? agoraMs : Date.now()) - dias * 86400e3;
   return (Array.isArray(leadsIdx) ? leadsIdx : [])
-    .filter((l) => l && l.id && !l.osId && !['excluido', 'sem_retorno'].includes(l.status) && Date.parse(l.criadoEm) >= limite)
+    .filter((l) => l && l.id && medido(l) && leadSemOSValida(l, osCanceladas) && !['excluido', 'sem_retorno'].includes(l.status) && Date.parse(l.criadoEm) >= limite)
     .filter((l) => (l.clienteId && l.clienteId === cli.id) || (doc.length >= 11 && digits(l.documento) === doc) || (l.email && emails.has(String(l.email).trim().toLowerCase())))
     .sort((a, b) => String(b.criadoEm).localeCompare(String(a.criadoEm)))
     .slice(0, 8);
