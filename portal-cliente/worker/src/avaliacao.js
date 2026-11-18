@@ -212,7 +212,7 @@ function lerEmails(v, opcoes) {
     // (quando o que vem logo depois é o pedaço que falta: ".br", ".com.br", ". br", "br", "m.br" — com ou sem ">", ")", ";" colado.
     //  "Brás", "BR-116" e "br" depois de um endereço que já termina em .br não são corte.)
     const depois = palavras.slice(i + 1, i + 3).join(' ');
-    if (inteira && achados.length && (/^(?:\.[a-z]{2,6}|[a-z](?:\.[a-z]{2,6})+)(?![\p{L}\p{N}@])/u.test(depois) || (!achados[achados.length - 1].endsWith('.br') && /^\.?\s?br(?![\p{L}\p{N}@-])/u.test(depois)))) inteira = false;
+    if (inteira && achados.length && (/^(?:\.[a-z]{2,6}|[a-z]\.br)(?![\p{L}\p{N}@])/u.test(depois) || (!achados[achados.length - 1].endsWith('.br') && /^\.?\s?br(?![\p{L}\p{N}@-])/u.test(depois)))) inteira = false;
     if (inteira && campo && achados.length && !/^[<(\[]/.test(palavra) && nomeNaoBate(antes, achados[0])) inteira = false;
     if (inteira) { if (!bons.length && achados.length) ruimAntes = ruins > 0; for (const t of achados) if (!bons.includes(t)) bons.push(t); }
     else if (/[^@\s]@/.test(palavra)) ruins++; // "@perfil" de rede social não conta como e-mail
@@ -351,8 +351,11 @@ export function dadosDoCliente(os, cli) {
   // contam, para o pedido não se repetir só porque mudou o contato da OS). A ficha
   // (clienteId) também liga duas coletas do mesmo cliente.
   const clienteId = String(o.clienteId || '').replace(/[^a-zA-Z0-9_]/g, '').slice(0, 60);
-  const chaves = doc ? ['d:' + doc] : [...new Set([...cands.map((x) => 'e:' + x.email), ...emailsTodos.map((e) => 'e:' + e)])];
-  const chave = chaves[0] || (clienteId ? 'c:' + clienteId : '');
+  // A chave GRAVADA no registro é só o documento, o destinatário de verdade ou a ficha; os e-mails
+  // da leitura larga entram apenas na CONSULTA (para um endereço que já recebeu continuar contando).
+  const chavesCand = doc ? ['d:' + doc] : cands.map((x) => 'e:' + x.email);
+  const chaves = doc ? chavesCand : [...new Set([...chavesCand, ...emailsTodos.map((e) => 'e:' + e)])];
+  const chave = chavesCand[0] || (clienteId ? 'c:' + clienteId : '');
   return { doc, perfil, empresa, nomes, fones, emails: cands, emailsTodos, campoGrande, emailMalFormado, chave, chaves, clienteId, clienteNome: limpar(o.clienteNome || nomes[0] || '') };
 }
 // Casa e família: entra por CNPJ/CPF, por e-mail/domínio ou por pedaço do nome (4+ letras),
@@ -1332,7 +1335,7 @@ function carga(){var f=$('arq').files[0],m=$('mCarga');if(!f){m.textContent='Esc
     for(i=0;i<linhas.length;i++){var t=linhas[i].normalize('NFC').toLowerCase(),cels=t.split(/[\\s,;|<>()\\[\\]"]+/),e='';
       for(var c=0;c<cels.length;c++){var x=cels[c].replace(/^[.']+|[.']+$/g,'');if(x.length<=254&&RE.test(x)){e=x;break;}}
       if(!e)continue;var resto=t.replace(e,' ').replace(/_/g,' '),tipo='';
-      if(/\\b(inativ[oa]s?|removid[oa]s?|removed|descadastr\\w*|unsubscri\\w*|opt[- ]?out|cancelad[oa]s?|cancelou|cancell?ed|reclama\\w*|spam|complain\\w*)\\b/.test(resto)||/(?:\\b(?:n[^a-z\\s]o|nao|not|nunca|never)[\\s-]+(?:(?:est\\S?|foi|is|was|\\S)[\\s-]+)?(?:mais[\\s-]+)?|\\b(?:no|non)[\\s-]+(?:longer[\\s-]+)?|(?:^|[^a-z-])(?:in|un)[\\s-]+)(?:ativ[oa]s?|active|subscribed|inscrit[oa]s?|confirmad[oa]s?)\\b/.test(resto.replace(/\\bopt[\\s-]?in\\b/g,' ')))tipo='descadastrado';
+      if(/\\b(inativ[oa]s?|removid[oa]s?|removed|descadastr\\w*|unsubscri\\w*|opt[- ]?out|cancelad[oa]s?|cancelou|cancell?ed|reclama\\w*|spam|complain\\w*)\\b/.test(resto)||/(?:\\b(?:n[^a-z\\s]o|nao|not|nunca|never)(?:[^\\S\\t]|-)+(?:(?:est[^\\s|;,·-]?|foi|is|was|[^\\s|;,·-])(?:[^\\S\\t]|-)+)?(?:mais(?:[^\\S\\t]|-)+)?|\\b(?:no|non)(?:[^\\S\\t]|-)+(?:longer(?:[^\\S\\t]|-)+)?|(?:^|[^a-z-])(?:in|un)(?:[^\\S\\t]|-)+)(?:ativ[oa]s?|active|subscribed|inscrit[oa]s?|confirmad[oa]s?)\\b/.test(resto.replace(/\\bopt[\\s-]?in\\b/g,' ')))tipo='descadastrado';
       else if(/\\b(bounce[ds]?|hard|inv[aá]lid[oa]s?|invalid|inexistente)\\b/.test(resto))tipo='invalido';
       else if(/\\b(ativ[oa]s?|active|subscribed|inscrit[oa]s?|confirmad[oa]s?)\\b/.test(resto))tipo='ativo';
       if(tipo==='descadastrado'||tipo==='invalido')temSaida=true;
