@@ -175,12 +175,17 @@ export const REGRA_EMAIL = EMAIL_INTEIRO.source;
 // endereço, separada dele só por espaço ("maria clara@x.com", "maria mariano@x.com", "Maria
 // maria@x.com", "financeiro fin@x.com"), ou "@" sem nada antes ("maria @x.com") → o endereço é
 // DESCARTADO e conta como mal formado ("e-mail inválido", se não sobrar outro e-mail bem
-// formado). O pedaço depois do espaço nunca é adivinhado. NÃO é palavra colada (continua
-// aceito): começo do texto; palavra que termina em ":" "·" ")" "]" ">" (no texto livre também
+// formado). O pedaço depois do espaço nunca é adivinhado. Também descartados: espaço logo
+// DEPOIS de um @ ("maria@ clara@x.com", "maria @ clara@x.com") e ponto ou "_" solto entre a
+// palavra e o endereço ("maria . clara@x.com"). NÃO é palavra colada (continua aceito): começo
+// do texto; palavra que termina em ":" "·" ")" "]" ">" "»" ou em aspas (no texto livre também
 // "," ";" "/" "|" — num campo de e-mail eles valem como erro de digitação no lugar do ponto);
-// endereço entre "<>", "()", "[]" ou depois de "rótulo:"; outro endereço antes; só números
-// (telefone); conectivo entre dois endereços ("a@x.com e b@x.com"). É a mesma detecção do
-// diagnóstico do conector (palavraColada, enderecoNoInicio e arrobaSemNome, mais abaixo).
+// endereço que começa com "<", "(", "[", aspas ou "rótulo:" (no texto livre também "," ";");
+// outro endereço antes; só números (telefone); conectivo entre dois endereços ("a@x.com e
+// b@x.com"). Os 3 casos que o diagnóstico do conector conta usam a mesma detecção
+// (palavraColada, enderecoNoInicio e arrobaSemNome, mais abaixo); a leitura descarta também os
+// dois casos acima, que o diagnóstico não conta (para a contagem de antes e a de depois usarem
+// o mesmo critério).
 // Num CAMPO de e-mail vale ainda a conferência que já existia (nada que era descartado passa a
 // ser aceito): nome em qualquer ponto do trecho solto logo antes do endereço — mesmo com traço
 // ou número no meio ("vitor - souza@x.com", "vitor 11 souza@x.com") — descarta o endereço.
@@ -194,12 +199,12 @@ function lerEmails(v, opcoes) {
   const interno = !!(opcoes && opcoes.interno);
   const bons = []; let ruins = 0, ruimAntes = false;
   const palavras = String(v == null ? '' : v).slice(0, MAX_CAMPO).toLowerCase().split(/\s+/);
-  let nomeNoTrecho = false; // há palavra com letra (fora conectivo) no trecho solto logo antes da palavra atual
+  let nomeNoTrecho = false; // há palavra com letra (fora conectivo e rótulo) no trecho solto logo antes da palavra atual
   for (let i = 0; i < palavras.length; i++) {
     const palavra = palavras[i];
     if (!palavra.includes('@')) {
       // vírgula, ponto e vírgula ou barra no FIM não desfazem o trecho solto ("vitor, souza@…")
-      const limpa = palavra.replace(/[,;\/|]+$/, '');
+      const limpa = semSeparadorNoFim(palavra);
       if (limpa && PALAVRA_SOLTA.test(limpa)) { if (palavraDeNome(limpa)) nomeNoTrecho = true; } else nomeNoTrecho = false;
       continue;
     }
@@ -209,7 +214,9 @@ function lerEmails(v, opcoes) {
     nomeNoTrecho = !!resto && !resto.includes('@') && PALAVRA_SOLTA.test(resto) && palavraDeNome(resto);
     if (!interno) {
       if (arrobaSemNome(palavra, palavras[i + 1])) { ruins++; continue; }                                             // "maria @x.com"
-      if (enderecoNoInicio(palavra) && palavraColada(palavras[i - 1], palavras[i - 2], campo)) { ruins++; continue; } // "maria clara@x.com"
+      if (/@$/.test(palavras[i - 1] || '')) { ruins++; continue; }                                                   // "maria@ clara@x.com", "maria @ clara@x.com"
+      let j = i - 1; while (j > 0 && /^[._]+$/.test(palavras[j])) j--;                                              // "maria . clara@x.com"
+      if (enderecoNoInicio(palavra) && palavraColada(palavras[j], palavras[j - 1], campo)) { ruins++; continue; }    // "maria clara@x.com"
       if (campo && nomeAntes && !/^[<(\[]/.test(palavra) && /[^@\s]@/.test(palavra)) { ruins++; continue; }          // "vitor - souza@x.com" (campo)
     }
     // Dentro de uma palavra (sem espaço), vírgula, barra, aspas etc. só podem separar
@@ -233,10 +240,13 @@ function lerEmails(v, opcoes) {
     if (inteira && achados.length && (/^(?:\.[a-z]{2,6}|[a-z]\.br)(?![\p{L}\p{N}@])(?![a-z0-9._%+&-]*@)/u.test(depois) || (!achados[achados.length - 1].endsWith('.br') && /^\.?\s?br(?![\p{L}\p{N}@-])(?![a-z0-9._%+&-]*@)/u.test(depois)))) inteira = false;
     if (inteira && achados.length && /\.(?:co|ne|or)$/.test(achados[achados.length - 1]) && /^(?:co m|ne t|or g)(?![\p{L}\p{N}@.'’-])/u.test(achados[achados.length - 1].slice(-2) + ' ' + depois)) inteira = false;
     if (inteira) { if (!bons.length && achados.length) ruimAntes = ruins > 0; for (const t of achados) if (!bons.includes(t)) bons.push(t); }
-    else if (/[^@\s]@/.test(palavra)) ruins++; // "@perfil" de rede social não conta como e-mail
+    else if (/[^@\s]@/.test(palavra)) ruins++; // "@perfil" de rede social não conta como e-mail (com ponto, "@maria.silva", conta: ver arrobaSemNome)
   }
   return { bons, ruins, ruimAntes };
 }
+// Tira "," ";" "/" "|" do FIM da palavra — sem expressão regular, para o custo ser linear mesmo
+// com milhares desses sinais seguidos.
+const semSeparadorNoFim = (s) => { let k = s.length; while (k > 0 && ',;/|'.includes(s[k - 1])) k--; return s.slice(0, k); };
 const PALAVRA_SOLTA = /^[\p{L}\p{N}._'’-]+$/u;
 // (as mesmas palavras que a conferência de antes contava como "nome": com letra, fora conectivo e rótulo)
 const palavraDeNome = (p) => /\p{L}/u.test(p) && !['e', 'ou', 'and'].includes(p) && !ehRotulo(p);
@@ -261,7 +271,8 @@ const EMAIL_SOLTO = /[a-z0-9_%+&-]+(?:\.[a-z0-9_%+&-]+)*@[a-z0-9-]+(?:\.[a-z0-9-
 function emailsParaBloqueio(v) {
   const bruto = String(v == null ? '' : v).slice(0, MAX_CAMPO).toLowerCase();
   if (!bruto.includes('@')) return [];
-  const out = new Set(lerEmails(bruto).bons);
+  // Leitura de antes de 19/11 (aceita o pedaço depois do espaço): para BLOQUEAR, na dúvida entra.
+  const out = new Set(lerEmails(bruto, { interno: true }).bons);
   for (const t of new Set([bruto, semAcentoMin(bruto)])) {
     const variantes = [t, t.replace(/(\.[a-z]{2,})[\s.,;]+br\b/g, '$1.br'), t.replace(/\s*\.\s*/g, '.'), t.replace(/([a-z0-9])[\s,;]+(?=[a-z0-9._%+&-]{0,80}@)/g, '$1.'), t.replace(/([a-z0-9])[\s,;]+(?=[a-z0-9._%+&-]{0,80}@)/g, '$1')];
     // Em volta de cada "@" (janela curta): o custo cresce com o tamanho do texto, não com o quadrado.
@@ -273,15 +284,16 @@ function emailsParaBloqueio(v) {
 // Palavra COLADA antes de um endereço: separada dele só por espaço, com letra e sem pontuação de
 // separação no fim. É o caso "maria clara@x.com": não dá para saber se a palavra é parte do
 // endereço (espaço no lugar do ponto) ou um nome/rótulo antes dele. NÃO é colada: começo do
-// texto; palavra que termina em ":" "·" ")" "]" ">" (no texto livre também "," ";" "/" "|" — num
-// campo de e-mail eles são tratados como erro de digitação no lugar do ponto); outro endereço
-// antes ("a@x.com b@x.com"); só números (telefone); conectivo entre dois endereços
-// ("a@x.com e b@x.com"). `ant` = palavra imediatamente antes; `antAnt` = a anterior a ela.
+// texto; palavra que termina em ":" "·" ")" "]" ">" "»" ou em aspas/"<"/"("/"[" (no texto livre
+// também "," ";" "/" "|" — num campo de e-mail eles são tratados como erro de digitação no lugar
+// do ponto); palavra com "@" ("a@x.com b@x.com"; "maria@ clara@x.com" é descartado à parte, em
+// lerEmails); só números (telefone); conectivo entre dois endereços ("a@x.com e b@x.com").
+// `ant` = palavra imediatamente antes; `antAnt` = a anterior a ela.
 function palavraColada(ant, antAnt, campo) {
   const p = String(ant || '');
   if (!p) return false;
   if ((campo ? /[:·)\]>»]$/ : /[:·)\]>»,;\/|]$/).test(p)) return false;
-  const cauda = p.replace(/[,;\/|]+$/, '').split(/[,;|"\/·<>()\[\]:]+/).pop() || '';
+  const cauda = semSeparadorNoFim(p).split(/[,;|"\/·<>()\[\]:]+/).pop() || '';
   if (!cauda || cauda.includes('@') || !/\p{L}/u.test(cauda)) return false;
   if (['e', 'ou', 'and', 'or'].includes(cauda) && String(antAnt || '').includes('@')) return false;
   return true;
@@ -300,14 +312,16 @@ const arrobaSemNome = (palavra, prox) => { const t = String(palavra || '').repla
 //   contato_da_os ............... texto livre do contato da OS com palavra + espaço + endereço;
 //   campo_de_email_do_cadastro .. e-mail geral da ficha ou de um contato com palavra + espaço + endereço;
 //   espaco_antes_do_arroba ...... "maria @x.com" (falta a parte de antes do @), em qualquer campo.
-// `leitura` = como a regra EM VIGOR lê o e-mail desta coleta: envia | envia_ao_pedaco_depois_do_espaco
-// (o destinatário é o pedaço depois do espaço, que não aparece inteiro em nenhum outro campo) |
-// envia_a_email_bem_formado (há um dos casos, mas o destinatário é um e-mail bem formado, inteiro em algum campo) |
-// email_invalido | sem_email | cadastro_grande.
+// `leitura` = como a regra EM VIGOR lê o e-mail desta coleta (só a leitura do endereço: não olha
+// status da OS, listas de bloqueio, 12 meses nem casa/família): envia (há destinatário bem formado) |
+// envia_ao_pedaco_depois_do_espaco (o destinatário seria o pedaço depois do espaço, que nenhum campo
+// traz bem formado — possível só pela regra de antes de 19/11; com a de 19/11 não acontece) |
+// envia_a_email_bem_formado (há um dos casos, mas o destinatário é um e-mail que a leitura aceita
+// em algum campo) | email_invalido | sem_email | cadastro_grande.
 export const REGRA_LEITURA_EMAIL = 'espaço antes da arroba (palavra colada antes do endereço, ou arroba sem nada antes) = e-mail inválido, em qualquer campo (desde 19/11/2026)';
 function varrerEspacos(v, campo) {
   const palavras = String(v == null ? '' : v).slice(0, MAX_CAMPO).toLowerCase().split(/\s+/).filter(Boolean);
-  const r = { colados: [], limpos: [], arroba: false, palavras: [] };
+  const r = { colados: [], arroba: false, palavras: [] };
   for (let i = 0; i < palavras.length; i++) {
     const p = palavras[i];
     if (!p.includes('@')) continue;
@@ -315,13 +329,10 @@ function varrerEspacos(v, campo) {
     const m = p.match(/^\.*([a-z0-9_%+&-]+(?:\.[a-z0-9_%+&-]+)*@[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,})/);
     if (m && enderecoNoInicio(p) && palavraColada(palavras[i - 1], palavras[i - 2], campo)) {
       r.colados.push(m[1]);
-      const ant = semAcentoMin(String(palavras[i - 1]).replace(/[,;\/|]+$/, '').split(/[,;|"\/·<>()\[\]:]+/).pop()).replace(/[^a-z0-9]/g, '');
+      const ant = semAcentoMin(semSeparadorNoFim(String(palavras[i - 1])).split(/[,;|"\/·<>()\[\]:]+/).pop()).replace(/[^a-z0-9]/g, '');
       const pedacos = m[1].split('@')[0].split(/[._+-]+/);
       r.palavras.push(ehRotulo(ant) ? 'rotulo' : (ant.length >= 3 && pedacos.some((q) => q.startsWith(ant)) ? 'comeco_do_endereco' : 'outra'));
-      continue;
     }
-    const t = p.replace(/^[<(\["'’]+|[)\]>"'’.,;:]+$/g, '');
-    if (t.length <= 254 && EMAIL_INTEIRO.test(t)) r.limpos.push(t);
   }
   return r;
 }
@@ -336,7 +347,9 @@ export function diagnosticoEmailAvaliacao(os, cli) {
   if (vOs.arroba || vCampos.some((x) => x.arroba)) casos.push('espaco_antes_do_arroba');
   const d = dadosDoCliente(o, c);
   const colados = new Set([...vOs.colados, ...vCampos.flatMap((x) => x.colados)]);
-  const limpos = new Set([...vOs.limpos, ...vCampos.flatMap((x) => x.limpos)]);
+  // "Limpo" = endereço que a leitura EM VIGOR aceita em algum campo, em qualquer formato
+  // ("a@x.com;b@x.com", "e-mail:a@x.com", "Nome<a@x.com>").
+  const limpos = new Set([...lerEmails(o.contato).bons, ...[c.email, ...contatos.map((x) => x.email)].flatMap((x) => lerEmails(x, { campo: true }).bons)]);
   const destino = d.emails[0] ? d.emails[0].email : '';
   let leitura;
   if (d.campoGrande) leitura = 'cadastro_grande';
@@ -406,7 +419,8 @@ export function dadosDoCliente(os, cli) {
       const m = contatos.find((x) => nomeDe(x) === nOs) || (parciais.length === 1 ? parciais[0] : null);
       if (m) poe(m.email, m.nome);
     }
-    for (const e of emailsDoCampo(c.email)) { const dono = contatos.find((x) => emailsDoCampo(x.email).includes(e)); poe(e, dono ? dono.nome : ''); }
+    const doContato = contatos.map((x) => emailsDoCampo(x.email)); // lido uma vez só (cadastro grande não multiplica o custo)
+    for (const e of emailsDoCampo(c.email)) { const k = doContato.findIndex((l) => l.includes(e)); poe(e, k >= 0 ? contatos[k].nome : ''); }
     for (const x of contatos) poe(x.email, x.nome);
   } else {
     poe(c.email, c.nome || nomeOs);
@@ -1387,7 +1401,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:#F7FAF9;border:1px sol
   </div>
   <div class="card">
     <div class="sec">Como funciona</div>
-    <div style="font-size:13px;color:#4F6469;line-height:1.7">• Sai 2 horas depois de a coleta ficar <b>concluída</b>, só entre 08h e 20h (fora disso, às 08h seguintes). O sistema confere a cada 10 minutos.<br>• Um pedido por cliente a cada 12 meses (pelo CNPJ/CPF; sem documento, pelo e-mail). O mesmo endereço de e-mail também não recebe dois pedidos em 12 meses, ainda que seja contato de empresas diferentes — nesse caso o pedido vai para o contato seguinte da empresa, se houver.<br>• Se o serviço de e-mail não responde num envio (não dá para saber se saiu), as outras coletas do mesmo cliente <b>esperam</b> o desfecho dele, para ninguém receber dois pedidos.<br>• Não recebem: casa e família, cliente com bloqueio de contato, quem já recebeu em 12 meses, quem não tem e-mail, quem tem e-mail mal formado no cadastro (endereço cortado, com “|” no meio, texto grudado — aparece como “e-mail inválido”) e quem está na lista “não enviar e-mail”. O motivo aparece na OS.<br>• Também não sai: coleta marcada como concluída mais de 10 dias depois da data dela (coleta antiga) e coleta que foi <b>reaberta</b> depois de concluída — só uma conclusão nova volta a valer.<br>• Contato marcado como inativo/desligado no cadastro não recebe.<br>• Se o sistema não conseguir ler as listas ou o cadastro, ele <b>não envia</b> e tenta de novo na rodada seguinte.<br>• <b>Descadastro bloqueia o cliente inteiro:</b> se qualquer e-mail do cliente (o geral, o do contato da coleta ou o de qualquer contato) estiver na lista como “pediu para sair”, o pedido não vai para nenhum e-mail dele. E-mail inválido (voltou) ou mal formado é diferente: o pedido pode ir para outro e-mail bom do cliente.<br>• Sem e-mail? Peça pelo WhatsApp e marque <b>“Pedi pelo WhatsApp”</b> na OS — vale como pedido feito.<br>• Texto simples, sem imagem. O link é o do Google, sem rastreio.</div>
+    <div style="font-size:13px;color:#4F6469;line-height:1.7">• Sai 2 horas depois de a coleta ficar <b>concluída</b>, só entre 08h e 20h (fora disso, às 08h seguintes). O sistema confere a cada 10 minutos.<br>• Um pedido por cliente a cada 12 meses (pelo CNPJ/CPF; sem documento, pelo e-mail). O mesmo endereço de e-mail também não recebe dois pedidos em 12 meses, ainda que seja contato de empresas diferentes — nesse caso o pedido vai para o contato seguinte da empresa, se houver.<br>• Se o serviço de e-mail não responde num envio (não dá para saber se saiu), as outras coletas do mesmo cliente <b>esperam</b> o desfecho dele, para ninguém receber dois pedidos.<br>• Não recebem: casa e família, cliente com bloqueio de contato, quem já recebeu em 12 meses, quem não tem e-mail, quem tem e-mail mal formado no cadastro (endereço cortado, com “|” no meio, texto grudado, palavra colada antes do endereço como “maria clara@…”, espaço antes do @ — aparece como “e-mail inválido”) e quem está na lista “não enviar e-mail”. O motivo aparece na OS.<br>• Também não sai: coleta marcada como concluída mais de 10 dias depois da data dela (coleta antiga) e coleta que foi <b>reaberta</b> depois de concluída — só uma conclusão nova volta a valer.<br>• Contato marcado como inativo/desligado no cadastro não recebe.<br>• Se o sistema não conseguir ler as listas ou o cadastro, ele <b>não envia</b> e tenta de novo na rodada seguinte.<br>• <b>Descadastro bloqueia o cliente inteiro:</b> se qualquer e-mail do cliente (o geral, o do contato da coleta ou o de qualquer contato) estiver na lista como “pediu para sair”, o pedido não vai para nenhum e-mail dele. E-mail inválido (voltou) ou mal formado é diferente: o pedido pode ir para outro e-mail bom do cliente.<br>• Sem e-mail? Peça pelo WhatsApp e marque <b>“Pedi pelo WhatsApp”</b> na OS — vale como pedido feito.<br>• Texto simples, sem imagem. O link é o do Google, sem rastreio.</div>
     <label>Pessoa física — assunto: ${esc(exemplo.assunto)}</label><pre>${esc(exemplo.texto)}</pre>
     <label>Empresa — assunto: ${esc(exemploPJ.assunto)}</label><pre>${esc(exemploPJ.texto)}</pre>
   </div>
