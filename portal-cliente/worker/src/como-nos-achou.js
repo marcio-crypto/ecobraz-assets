@@ -41,9 +41,10 @@ export const rotuloComo = (c) => ROTULOS.get(String(c || '')) || 'não informado
 // fim de uma palavra). Precisa ter ao menos uma letra ou um número; só texto (nada de objeto).
 export const limparTextoOutro = (t) => {
   if (typeof t !== 'string') return '';
-  // Invisíveis: tudo o que o Unicode marca como "ignorável" (espaço de largura zero, hífen suave,
-  // letras de preenchimento coreanas…).
-  const s = t.slice(0, 2000).replace(/<[^<>]{0,200}>/g, ' ').replace(/[\u0000-\u001f\u007f<>]+/g, ' ').replace(/[\p{Default_Ignorable_Code_Point}\p{Cf}]+/gu, '').replace(/\s+/g, ' ').trim();
+  // Invisíveis: as letras de preenchimento coreanas (usadas como espaço) viram espaço; o resto do
+  // que o Unicode marca como "ignorável" (espaço de largura zero, hífen suave…) some — menos os
+  // seletores de variação e o "junta-emoji", que fazem parte de emoji como ♻️ e 1️⃣.
+  const s = t.slice(0, 2000).replace(/<[^<>]{0,200}>/g, ' ').replace(/[\u0000-\u001f\u007f<>]+/g, ' ').replace(/[\u115F\u1160\u3164\uFFA0]/g, ' ').replace(/(?![\uFE00-\uFE0F\u200D])[\p{Default_Ignorable_Code_Point}\p{Cf}]/gu, '').replace(/\s+/g, ' ').trim();
   if (!/[\p{L}\p{N}]/u.test(s)) return '';
   if (s.length <= COMO_OUTRO_MAX) return s;
   const corte = s.slice(0, COMO_OUTRO_MAX + 1).replace(/\s+\S*$/, '').trim();
