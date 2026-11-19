@@ -170,27 +170,48 @@ export const REGRA_EMAIL = EMAIL_INTEIRO.source;
 // Lê os e-mails de um texto. `bons` = endereços bem formados. `ruins` = quantas palavras
 // tinham cara de e-mail (algo@…) mas estavam mal formadas (domínio cortado, "|" no meio,
 // texto grudado, acento…) — essas são descartadas INTEIRAS e nunca viram destinatário.
-// `campo: true` = o texto vem de um CAMPO de e-mail do cadastro (não de texto livre). Aí
-// palavras soltas logo antes do endereço ("maria clara@gmail.com", "vitor, souza@x.com") são
-// tratadas como erro de digitação — espaço ou vírgula no lugar do ponto — e o endereço é
-// descartado, em vez de virar "clara@gmail.com", que é de outra pessoa. Continuam aceitos:
-// rótulo conhecido ("financeiro fin@x.com"), conectivo, telefone e o NOME da pessoa quando
-// ele aparece no próprio endereço ("Sergio Souza sergio.souza@x.com"). Em texto livre (contato
-// da OS: "Maria maria@x.com 11 9…") um nome antes do e-mail é normal e continua aceito.
+// ESPAÇO ANTES DO @ (decisão do Marcio, 19/11/2026: "na dúvida, não envia"), em QUALQUER campo
+// do cliente — contato da OS, e-mail da ficha e e-mail de cada contato: palavra colada antes do
+// endereço, separada dele só por espaço ("maria clara@x.com", "maria mariano@x.com", "Maria
+// maria@x.com", "financeiro fin@x.com"), ou "@" sem nada antes ("maria @x.com") → o endereço é
+// DESCARTADO e conta como mal formado ("e-mail inválido", se não sobrar outro e-mail bem
+// formado). O pedaço depois do espaço nunca é adivinhado. NÃO é palavra colada (continua
+// aceito): começo do texto; palavra que termina em ":" "·" ")" "]" ">" (no texto livre também
+// "," ";" "/" "|" — num campo de e-mail eles valem como erro de digitação no lugar do ponto);
+// endereço entre "<>", "()", "[]" ou depois de "rótulo:"; outro endereço antes; só números
+// (telefone); conectivo entre dois endereços ("a@x.com e b@x.com"). É a mesma detecção do
+// diagnóstico do conector (palavraColada, enderecoNoInicio e arrobaSemNome, mais abaixo).
+// Num CAMPO de e-mail vale ainda a conferência que já existia (nada que era descartado passa a
+// ser aceito): nome em qualquer ponto do trecho solto logo antes do endereço — mesmo com traço
+// ou número no meio ("vitor - souza@x.com", "vitor 11 souza@x.com") — descarta o endereço.
+// Desde 19/11 sem a exceção de antes para o nome que "bate" com o endereço. Rótulo e conectivo
+// separados do endereço por telefone ou traço continuam fora dessa conta ("tel 1133334444 joao@x.com").
+// `campo: true` = o texto vem de um CAMPO de e-mail do cadastro (não de texto livre).
+// `interno: true` = configuração da própria Ecobraz (remetente e endereço de teste, definidos na
+// Cloudflare): lida como antes de 19/11, sem a regra do espaço, que vale para dados do CLIENTE.
 function lerEmails(v, opcoes) {
   const campo = !!(opcoes && opcoes.campo);
+  const interno = !!(opcoes && opcoes.interno);
   const bons = []; let ruins = 0, ruimAntes = false;
   const palavras = String(v == null ? '' : v).slice(0, MAX_CAMPO).toLowerCase().split(/\s+/);
-  let soltas = []; // palavras soltas seguidas, logo antes da palavra atual
+  let nomeNoTrecho = false; // há palavra com letra (fora conectivo) no trecho solto logo antes da palavra atual
   for (let i = 0; i < palavras.length; i++) {
     const palavra = palavras[i];
     if (!palavra.includes('@')) {
-      // vírgula, ponto e vírgula ou barra no FIM não desfazem a palavra solta ("vitor, souza@…")
+      // vírgula, ponto e vírgula ou barra no FIM não desfazem o trecho solto ("vitor, souza@…")
       const limpa = palavra.replace(/[,;\/|]+$/, '');
-      if (limpa && PALAVRA_SOLTA.test(limpa)) soltas.push(limpa); else soltas = [];
+      if (limpa && PALAVRA_SOLTA.test(limpa)) { if (palavraDeNome(limpa)) nomeNoTrecho = true; } else nomeNoTrecho = false;
       continue;
     }
-    const antes = soltas; soltas = [];
+    const nomeAntes = nomeNoTrecho;
+    // "a@x.com;maria clara@x.com": o pedaço solto no fim desta palavra fica "antes" da próxima.
+    const resto = palavra.split(/[,;|"\/·]+/).pop();
+    nomeNoTrecho = !!resto && !resto.includes('@') && PALAVRA_SOLTA.test(resto) && palavraDeNome(resto);
+    if (!interno) {
+      if (arrobaSemNome(palavra, palavras[i + 1])) { ruins++; continue; }                                             // "maria @x.com"
+      if (enderecoNoInicio(palavra) && palavraColada(palavras[i - 1], palavras[i - 2], campo)) { ruins++; continue; } // "maria clara@x.com"
+      if (campo && nomeAntes && !/^[<(\[]/.test(palavra) && /[^@\s]@/.test(palavra)) { ruins++; continue; }          // "vitor - souza@x.com" (campo)
+    }
     // Dentro de uma palavra (sem espaço), vírgula, barra, aspas etc. só podem separar
     // endereços INTEIROS: "joao,silva@x.com" e "maria/joao@x.com" são descartados — não
     // viram "silva@x.com"/"joao@x.com".
@@ -205,44 +226,28 @@ function lerEmails(v, opcoes) {
       if (!t) continue;
       if (t.length <= 254 && EMAIL_INTEIRO.test(t)) achados.push(t); else { inteira = false; break; }
     }
-    // "a@x.com;maria clara@x.com": o pedaço solto no fim desta palavra fica "antes" da próxima.
-    const resto = pedacos[pedacos.length - 1];
-    if (resto && !resto.includes('@') && PALAVRA_SOLTA.test(resto)) soltas = [resto];
     // Fim do domínio cortado por um espaço ("souza@empresa.com .br"): o endereço lido estaria errado.
     // (quando o que vem logo depois é o pedaço que falta: ".br", ".com.br", ". br", "br", "m.br" — com ou sem ">", ")", ";" colado.
     //  "Brás", "BR-116" e "br" depois de um endereço que já termina em .br não são corte.)
     const depois = palavras.slice(i + 1, i + 3).join(' ');
     if (inteira && achados.length && (/^(?:\.[a-z]{2,6}|[a-z]\.br)(?![\p{L}\p{N}@])(?![a-z0-9._%+&-]*@)/u.test(depois) || (!achados[achados.length - 1].endsWith('.br') && /^\.?\s?br(?![\p{L}\p{N}@-])(?![a-z0-9._%+&-]*@)/u.test(depois)))) inteira = false;
     if (inteira && achados.length && /\.(?:co|ne|or)$/.test(achados[achados.length - 1]) && /^(?:co m|ne t|or g)(?![\p{L}\p{N}@.'’-])/u.test(achados[achados.length - 1].slice(-2) + ' ' + depois)) inteira = false;
-    if (inteira && campo && achados.length && !/^[<(\[]/.test(palavra) && nomeNaoBate(antes, achados[0])) inteira = false;
     if (inteira) { if (!bons.length && achados.length) ruimAntes = ruins > 0; for (const t of achados) if (!bons.includes(t)) bons.push(t); }
     else if (/[^@\s]@/.test(palavra)) ruins++; // "@perfil" de rede social não conta como e-mail
   }
   return { bons, ruins, ruimAntes };
 }
 const PALAVRA_SOLTA = /^[\p{L}\p{N}._'’-]+$/u;
+// (as mesmas palavras que a conferência de antes contava como "nome": com letra, fora conectivo e rótulo)
+const palavraDeNome = (p) => /\p{L}/u.test(p) && !['e', 'ou', 'and'].includes(p) && !ehRotulo(p);
 // Rótulo antes do endereço: os de e-mail ("e-mail:", "mailto:", "principal") e os nomes de
 // setor/cargo ("financeiro:", "compras:"). "joao:silva@x.com" NÃO é rótulo — é descartado.
 const ROTULOS_EMAIL = new Set(['e-mail', 'email', 'mail', 'mailto', 'correio', 'principal', 'particular', 'alternativo', 'secundario', 'copia', 'cc', 'nf-e', 'boleto', 'boletos', 'tel', 'telefone', 'fone', 'cel', 'celular', 'whatsapp', 'contador', 'contadora', 'socio', 'socia']);
 const ehRotulo = (p) => { const n = semAcentoMin(p).replace(/[.:]+$/, ''); return ROTULOS_EMAIL.has(n) || NAO_PESSOA.has(n); };
-// As palavras soltas antes do endereço (num campo de e-mail) NÃO batem com ele? Só contam as
-// que têm letra e não são conectivo nem rótulo. Para ser o NOME da pessoa (e não um pedaço do
-// endereço), uma delas tem de bater com o COMEÇO de um pedaço do endereço ("Sergio Souza
-// sergio.souza@x.com", "Maria maria@x.com") ou ser o sobrenome depois das iniciais ("Sergio
-// Souza ssouza@x.com"). "ana santana@x.com" e "mara amaral@x.com" NÃO batem. Nome repetido
-// ("Maria Clara maria clara@x.com"): a última palavra é parte do endereço → não bate. Na dúvida
-// ("silvana silva@x.com", "Carlos, compras@x.com") o endereço é descartado e a OS mostra "e-mail inválido".
-function nomeNaoBate(soltas, email) {
-  const nomes = (soltas || []).filter((x) => /\p{L}/u.test(x) && !['e', 'ou', 'and'].includes(x) && !ehRotulo(x)).map((x) => semAcentoMin(x).replace(/[^a-z0-9]/g, '')).filter(Boolean);
-  if (!nomes.length) return false; // nada, só números, conectivos ou rótulos
-  const ultima = nomes[nomes.length - 1];
-  if (nomes.indexOf(ultima) !== nomes.length - 1) return true;
-  const pedacos = String(email).split('@')[0].split(/[._+-]+/).map((x) => x.replace(/[^a-z0-9]/g, '')).filter(Boolean);
-  const iniciais = nomes.map((x) => x[0]).join('');
-  const bate = (n) => n.length >= 3 && pedacos.some((q) => q.startsWith(n) || (q.endsWith(n) && q.length - n.length <= 2 && [...q.slice(0, q.length - n.length)].every((ch) => iniciais.includes(ch))));
-  return !nomes.some(bate);
-}
 export const emailsDe = (v) => lerEmails(v).bons;
+// Configuração da própria Ecobraz (remetente, endereço de teste) e o remetente que o Resend
+// devolve nos avisos: leitura de antes de 19/11 (ver `interno` acima). Nunca é dado de cliente.
+const emailsDaConfig = (v) => lerEmails(v, { interno: true }).bons;
 export const temEmailMalFormado = (v) => lerEmails(v).ruins > 0;
 // Para os campos de e-mail do cadastro (o geral da ficha e o de cada contato).
 const emailsDoCampo = (v) => lerEmails(v, { campo: true }).bons;
@@ -299,7 +304,7 @@ const arrobaSemNome = (palavra, prox) => { const t = String(palavra || '').repla
 // (o destinatário é o pedaço depois do espaço, que não aparece inteiro em nenhum outro campo) |
 // envia_a_email_bem_formado (há um dos casos, mas o destinatário é um e-mail bem formado, inteiro em algum campo) |
 // email_invalido | sem_email | cadastro_grande.
-export const REGRA_LEITURA_EMAIL = 'palavra antes do endereço: aceita no texto livre; no campo de e-mail, aceita se for nome/rótulo';
+export const REGRA_LEITURA_EMAIL = 'espaço antes da arroba (palavra colada antes do endereço, ou arroba sem nada antes) = e-mail inválido, em qualquer campo (desde 19/11/2026)';
 function varrerEspacos(v, campo) {
   const palavras = String(v == null ? '' : v).slice(0, MAX_CAMPO).toLowerCase().split(/\s+/).filter(Boolean);
   const r = { colados: [], limpos: [], arroba: false, palavras: [] };
@@ -470,7 +475,7 @@ export function montarMensagem({ perfil, primeiro, empresa, link }) {
   };
 }
 const remetente = (env) => String((env && env.AVALIACAO_FROM) || REMETENTE_PADRAO);
-const emailTeste = (env) => emailsDe((env && env.AVALIACAO_TESTE_PARA) || remetente(env))[0] || '';
+const emailTeste = (env) => emailsDaConfig((env && env.AVALIACAO_TESTE_PARA) || remetente(env))[0] || '';
 // Mostra no máximo 2 letras do começo — e menos quando o endereço é curto (nunca ele inteiro).
 const mascarar = (e) => { const [u, d] = String(e || '').split('@'); return d ? `${u.slice(0, u.length > 3 ? 2 : (u.length > 1 ? 1 : 0))}***@${d}` : ''; };
 
@@ -1111,8 +1116,8 @@ async function tratarAvisoResend(env, id, ev) {
   const lista = Array.isArray(dados.to) ? dados.to : (dados.to ? [dados.to] : []);
   const destinos = [...new Set(lista.flatMap((x) => emailsDe(String(x == null ? '' : x))))];
   const unico = destinos.length === 1 ? destinos[0] : '';
-  const doRemetente = emailsDe(remetente(env))[0] || '';
-  const doPedido = !!doRemetente && emailsDe(String(dados.from || '')).includes(doRemetente);
+  const doRemetente = emailsDaConfig(remetente(env))[0] || '';
+  const doPedido = !!doRemetente && emailsDaConfig(String(dados.from || '')).includes(doRemetente);
   const ehTeste = /@resend\.dev$/.test(unico); // endereços de teste do próprio Resend
   // "Da empresa" = mesmo domínio do remetente (ou o endereço que recebe os testes): não entra na lista.
   const ehCasa = !!unico && !ehTeste && (unico === emailTeste(env) || (!!doRemetente && unico.endsWith(`@${doRemetente.split('@')[1]}`)));
