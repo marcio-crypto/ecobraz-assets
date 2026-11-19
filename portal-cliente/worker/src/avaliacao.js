@@ -205,9 +205,6 @@ export const REGRA_EMAIL = EMAIL_INTEIRO.source;
 function lerEmails(v, opcoes) {
   const campo = !!(opcoes && opcoes.campo);
   const interno = !!(opcoes && opcoes.interno);
-  // provedor:false = sem a regra do "@gmail" (2ª parte de 19/11/2026) — SÓ para a coluna "antes" do
-  // diagnóstico repetir exatamente a leitura publicada antes dela.
-  const provedor = !(opcoes && opcoes.provedor === false);
   const bons = []; let ruins = 0, ruimAntes = false;
   const palavras = String(v == null ? '' : v).slice(0, MAX_CAMPO).toLowerCase().split(/\s+/);
   let nomeNoTrecho = false; // há palavra com letra (fora conectivo e rótulo) no trecho solto logo antes da palavra atual
@@ -228,7 +225,7 @@ function lerEmails(v, opcoes) {
     const resto = palavra.split(/[,;|"\/·]+/).pop();
     nomeNoTrecho = !!resto && !resto.includes('@') && PALAVRA_SOLTA.test(resto) && palavraDeNome(resto);
     if (!interno) {
-      if (arrobaSemNome(palavra, palavras[i + 1], provedor)) { ruins++; continue; }                                             // "maria @x.com"
+      if (arrobaSemNome(palavra, palavras[i + 1])) { ruins++; continue; }                                             // "maria @x.com"
       let j = i - 1; while (j > 0 && /^[._]+$/.test(palavras[j])) j--;                                              // "maria . clara@x.com"
       if (/@$/.test(palavras[j] || '')) { ruins++; continue; }                                                       // "maria@ clara@x.com", "maria @ . clara@x.com"
       if (enderecoNoInicio(palavra) && palavraColada(palavras[j], palavras[j - 1], campo)) { ruins++; continue; }    // "maria clara@x.com"
@@ -328,7 +325,7 @@ const DOMINIO_SOLTO = /^[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}/;
 // também contam (lado seguro: não envia); erros de digitação do provedor ("@gmial") e "maria.gmail.com ·
 // joao@…" (sem "@") não são reconhecidos.
 const PROVEDOR_SOLTO = /^(?:gmail|googlemail|hotmail|outlook|live|msn|yahoo|ymail|icloud|uol|bol|terra|globo|ig)(?![\p{L}\p{N}_-])/u;
-const arrobaSemNome = (palavra, prox, provedor = true) => { const t = String(palavra || '').replace(/^[<(\["'’]+/, ''); return t.startsWith('@') && (DOMINIO_SOLTO.test(t.slice(1)) || (provedor && PROVEDOR_SOLTO.test(t.slice(1))) || (t === '@' && (DOMINIO_SOLTO.test(String(prox || '')) || (provedor && PROVEDOR_SOLTO.test(String(prox || '')))))); };
+const arrobaSemNome = (palavra, prox) => { const t = String(palavra || '').replace(/^[<(\["'’]+/, ''); return t.startsWith('@') && (DOMINIO_SOLTO.test(t.slice(1)) || PROVEDOR_SOLTO.test(t.slice(1)) || (t === '@' && (DOMINIO_SOLTO.test(String(prox || '')) || PROVEDOR_SOLTO.test(String(prox || ''))))); };
 
 // --- Diagnóstico do e-mail de uma coleta (conector; só códigos, nunca o e-mail) ------------------
 // Os três casos de "espaço antes do @" (pedido do Marcio, 19/11/2026), procurados no texto BRUTO
@@ -344,9 +341,10 @@ const arrobaSemNome = (palavra, prox, provedor = true) => { const t = String(pal
 // envia_a_email_bem_formado (há um dos casos, mas o destinatário é um e-mail que a leitura aceita
 // em algum campo) | email_invalido | sem_email | cadastro_grande.
 // `saudacao` = 'nome' | 'ola' | null (sem destinatário). `regra_anterior` (só quando algo muda) =
-// leitura, saudação e destinatário ('o_mesmo' | 'outro_endereco' | 'nenhum_agora') pela regra de
-// antes da 2ª parte de 19/11/2026 (mesmo campo + "Olá!").
-export const REGRA_LEITURA_EMAIL = 'espaço antes da arroba (palavra colada antes do endereço, ou arroba sem nada antes) = e-mail inválido, em qualquer campo (desde 19/11/2026); se o 1º endereço de um campo é descartado, os seguintes do mesmo campo também não são usados; pessoa física: "Olá!" (sem nome) quando o e-mail escolhido não é o 1º da ficha (os dois desde 19/11/2026, 2ª parte)';
+// leitura, saudação e destinatário ('o_mesmo' | 'outro_endereco' | 'nenhum_agora') pela regra da
+// publicação anterior (366/367): ficha de pessoa física sem nome levava, no 1º e-mail da ficha, o
+// nome do contato da OS. Leitura e destinatário não mudaram — só essa saudação.
+export const REGRA_LEITURA_EMAIL = 'espaço antes da arroba (palavra colada antes do endereço, ou arroba sem nada antes) = e-mail inválido, em qualquer campo (desde 19/11/2026); se o 1º endereço de um campo é descartado, os seguintes do mesmo campo também não são usados; pessoa física: "Olá!" (sem nome) quando o e-mail escolhido não é o 1º da ficha (os dois desde 19/11/2026, 2ª parte) e também quando a ficha não tem nome — o nome do contato da OS não é usado (desde 19/11/2026, decisão das 16:24 da Itália)';
 function varrerEspacos(v, campo) {
   const palavras = String(v == null ? '' : v).slice(0, MAX_CAMPO).toLowerCase().split(/\s+/).filter(Boolean);
   const r = { colados: [], arroba: false, palavras: [] };
@@ -391,7 +389,8 @@ export function diagnosticoEmailAvaliacao(os, cli) {
   const saudacaoDe = (dd) => { const alvo = destinoDe(dd) ? dd.emails[0] : null; return alvo ? (primeiroNome(alvo.nome) && alvo.saudar !== false ? 'nome' : 'ola') : null; };
   const leitura = leituraDe(d), saudacao = saudacaoDe(d);
   const r = { casos, leitura, saudacao, palavras: [...vOs.palavras, ...vCampos.flatMap((x) => x.palavras)] };
-  // Como era antes da decisão de 19/11/2026 (2ª parte: mesmo campo + "Olá!") — só quando muda algo.
+  // Como era na publicação anterior (366/367: ficha de pessoa física sem nome levava o nome do
+  // contato da OS) — só quando muda algo.
   const leituraAntes = leituraDe(dAntes), saudacaoAntes = saudacaoDe(dAntes);
   const destinoMudou = destinoDe(d) !== destinoDe(dAntes);
   if (leituraAntes !== leitura || saudacaoAntes !== saudacao || destinoMudou) {
@@ -437,20 +436,19 @@ const semNove = (d) => (d.length === 11 && d[2] === '9' ? d.slice(0, 2) + d.slic
 // depois os dos demais contatos.
 // E-mail de contato marcado como inativo/desligado nunca entra (nem como e-mail geral).
 // `opcoes.regraAnterior === true` = SÓ para o diagnóstico do conector (contagem de antes × depois):
-// lê os campos como antes da decisão de 19/11/2026 (2ª parte) — os endereços seguintes de um campo
-// com o 1º descartado ainda eram usados, a saudação usava o nome ligado ao endereço sempre que
-// ele parecia nome de pessoa, e "@gmail" sem ".com" não contava como mal formado — ou seja, repete
-// a publicação anterior. O envio e as telas nunca passam isto.
+// repete EXATAMENTE a publicação anterior (366/367) — a única diferença é a saudação da pessoa
+// física com ficha sem nome, que lá usava o nome do contato da OS no 1º e-mail da ficha. O envio e
+// as telas nunca passam isto.
 export function dadosDoCliente(os, cli, opcoes) {
   const o = os || {}, c = cli || {};
   const anterior = !!(opcoes && opcoes.regraAnterior === true);
-  const doCampo = anterior ? (v) => lerEmails(v, { campo: true, provedor: false }).bons : emailsDoCampo;
+  const doCampo = emailsDoCampo;
   const doc = [o.clienteDoc, c.cnpj, c.cpf].map(digits).find((d) => d.length === 14 || d.length === 11) || '';
   const perfil = doc.length === 14 ? 'PJ' : (doc.length === 11 ? 'PF' : (c.tipo === 'PJ' ? 'PJ' : (c.tipo === 'PF' ? 'PF' : '')));
   const txt = String(o.contato || '');
   // Se o 1º endereço do contato da OS foi descartado (mal formado), o seguinte do mesmo texto
   // não é aproveitado: ele pode ser de outra pessoa (e a saudação levaria o nome da primeira).
-  const lidoOs = lerEmails(txt, anterior ? { provedor: false } : undefined);
+  const lidoOs = lerEmails(txt);
   const emailOs = lidoOs.ruimAntes ? '' : (lidoOs.bons[0] || '');
   const trecho1 = txt.split(/[·|,;]/)[0];
   let nomeOs = trecho1.includes('@') ? '' : trecho1.replace(/[^\p{L} .'’-]+/gu, ' ').replace(/\s+/g, ' ').trim();
@@ -474,18 +472,21 @@ export function dadosDoCliente(os, cli, opcoes) {
     for (const e of doCampo(c.email)) { const k = doContato.findIndex((l) => l.includes(e)); poe(e, k >= 0 ? contatos[k].nome : ''); }
     for (const x of contatos) poe(x.email, x.nome);
   } else {
-    poe(c.email, c.nome || nomeOs);
-    poe(emailOs, c.nome || nomeOs);
+    // Nome da saudação: só o nome da FICHA. Ficha sem nome → "Olá!", mesmo no 1º e-mail da ficha:
+    // o nome do contato da OS não é mais usado — pode ser de outra pessoa (decisão do Marcio,
+    // 19/11/2026, 16:24 da Itália). `anterior` (só o diagnóstico) repete a publicação 366/367,
+    // em que a ficha sem nome levava o nome do contato da OS.
+    const nomeFicha = anterior ? (c.nome || nomeOs) : c.nome;
+    poe(c.email, nomeFicha);
+    poe(emailOs, nomeFicha);
     for (const x of contatos) poe(x.email, x.nome || c.nome);
     // Pessoa física (e cadastro sem CPF/CNPJ nem tipo): "Oi, [nome]!" só quando o e-mail escolhido
-    // é o 1º da ficha. Qualquer outro (contato da OS, outro contato, o 2º da ficha, ficha sem
-    // e-mail) → "Olá!": pode ser de outra pessoa (decisão do Marcio, 19/11/2026). `saudar` = pode
-    // usar o nome; o nome fica no candidato. Limite: a regra é pela POSIÇÃO — "joao@… (filho);
-    // maria@…" na ficha ainda leva "Oi, [nome da ficha]!" para joao@.
-    if (!anterior) {
-      const primeiroDaFicha = doCampo(c.email)[0] || '';
-      for (const x of cands) x.saudar = !!primeiroDaFicha && x.email === primeiroDaFicha;
-    }
+    // é o 1º da ficha (e a ficha tem nome). Qualquer outro (contato da OS, outro contato, o 2º da
+    // ficha, ficha sem e-mail) → "Olá!": pode ser de outra pessoa (decisão do Marcio, 19/11/2026).
+    // `saudar` = pode usar o nome; o nome fica no candidato. Limite: a regra é pela POSIÇÃO —
+    // "joao@… (filho); maria@…" na ficha ainda leva "Oi, [nome da ficha]!" para joao@.
+    const primeiroDaFicha = doCampo(c.email)[0] || '';
+    for (const x of cands) x.saudar = !!primeiroDaFicha && x.email === primeiroDaFicha;
   }
   const empresa = perfil === 'PJ' ? limpar(c.nomeFantasia || c.razaoSocial || o.clienteNome).replace(/[\r\n\t]+/g, ' ').slice(0, 80) : '';
   const nomes = [o.clienteNome, c.razaoSocial, c.nomeFantasia, c.nome].map(limpar).filter(Boolean);
@@ -494,9 +495,7 @@ export function dadosDoCliente(os, cli, opcoes) {
   // outro endereço, o motivo que fica na OS é "e-mail inválido" (e não "sem e-mail").
   // Campo grande demais para ser lido por inteiro: o cadastro não é conferido pela metade (não envia).
   const campoGrande = [c.email, txt, ...todosContatos.map((x) => x.email)].some((x) => String(x == null ? '' : x).length > MAX_CAMPO);
-  const emailMalFormado = anterior
-    ? (lerEmails(txt, { provedor: false }).ruins > 0 || [c.email, ...contatos.map((x) => x.email)].some((x) => lerEmails(x, { campo: true, provedor: false }).ruins > 0))
-    : (temEmailMalFormado(txt) || [c.email, ...contatos.map((x) => x.email)].some(campoMalFormado));
+  const emailMalFormado = temEmailMalFormado(txt) || [c.email, ...contatos.map((x) => x.email)].some(campoMalFormado);
   // TODOS os e-mails bem formados do cliente: o geral da ficha, o do contato da OS e o de
   // QUALQUER contato (inclusive os marcados como inativos). É neles que vale a regra
   // "descadastro bloqueia o cliente inteiro".
@@ -1463,7 +1462,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:#F7FAF9;border:1px sol
   </div>
   <div class="card">
     <div class="sec">Como funciona</div>
-    <div style="font-size:13px;color:#4F6469;line-height:1.7">• Sai 2 horas depois de a coleta ficar <b>concluída</b>, só entre 08h e 20h (fora disso, às 08h seguintes). O sistema confere a cada 10 minutos.<br>• Um pedido por cliente a cada 12 meses (pelo CNPJ/CPF; sem documento, pelo e-mail). O mesmo endereço de e-mail também não recebe dois pedidos em 12 meses, ainda que seja contato de empresas diferentes — nesse caso o pedido vai para o contato seguinte da empresa, se houver.<br>• Se o serviço de e-mail não responde num envio (não dá para saber se saiu), as outras coletas do mesmo cliente <b>esperam</b> o desfecho dele, para ninguém receber dois pedidos.<br>• Não recebem: casa e família, cliente com bloqueio de contato, quem já recebeu em 12 meses, quem não tem e-mail, quem tem e-mail mal formado no cadastro (endereço cortado, com “|” no meio, texto grudado, palavra colada antes do endereço como “maria clara@…”, espaço antes do @ — aparece como “e-mail inválido”) e quem está na lista “não enviar e-mail”. O motivo aparece na OS.<br>• Também não sai: coleta marcada como concluída mais de 10 dias depois da data dela (coleta antiga) e coleta que foi <b>reaberta</b> depois de concluída — só uma conclusão nova volta a valer.<br>• Contato marcado como inativo/desligado no cadastro não recebe.<br>• Se o sistema não conseguir ler as listas ou o cadastro, ele <b>não envia</b> e tenta de novo na rodada seguinte.<br>• <b>Descadastro bloqueia o cliente inteiro:</b> se qualquer e-mail do cliente (o geral, o do contato da coleta ou o de qualquer contato) estiver na lista como “pediu para sair”, o pedido não vai para nenhum e-mail dele. E-mail inválido (voltou) ou mal formado é diferente: o pedido pode ir para outro e-mail bom do cliente — exceto quando o <b>primeiro</b> endereço de um campo é mal formado: aí os outros desse <b>mesmo campo</b> também não são usados.<br>• Pessoa física: “Oi, [nome]!” só quando o e-mail usado é o <b>primeiro da ficha</b>; se for outro (o do contato da coleta, de outro contato, o segundo da ficha), o texto começa com “Olá!”, sem nome.<br>• Sem e-mail? Peça pelo WhatsApp e marque <b>“Pedi pelo WhatsApp”</b> na OS — vale como pedido feito.<br>• Texto simples, sem imagem. O link é o do Google, sem rastreio.</div>
+    <div style="font-size:13px;color:#4F6469;line-height:1.7">• Sai 2 horas depois de a coleta ficar <b>concluída</b>, só entre 08h e 20h (fora disso, às 08h seguintes). O sistema confere a cada 10 minutos.<br>• Um pedido por cliente a cada 12 meses (pelo CNPJ/CPF; sem documento, pelo e-mail). O mesmo endereço de e-mail também não recebe dois pedidos em 12 meses, ainda que seja contato de empresas diferentes — nesse caso o pedido vai para o contato seguinte da empresa, se houver.<br>• Se o serviço de e-mail não responde num envio (não dá para saber se saiu), as outras coletas do mesmo cliente <b>esperam</b> o desfecho dele, para ninguém receber dois pedidos.<br>• Não recebem: casa e família, cliente com bloqueio de contato, quem já recebeu em 12 meses, quem não tem e-mail, quem tem e-mail mal formado no cadastro (endereço cortado, com “|” no meio, texto grudado, palavra colada antes do endereço como “maria clara@…”, espaço antes do @ — aparece como “e-mail inválido”) e quem está na lista “não enviar e-mail”. O motivo aparece na OS.<br>• Também não sai: coleta marcada como concluída mais de 10 dias depois da data dela (coleta antiga) e coleta que foi <b>reaberta</b> depois de concluída — só uma conclusão nova volta a valer.<br>• Contato marcado como inativo/desligado no cadastro não recebe.<br>• Se o sistema não conseguir ler as listas ou o cadastro, ele <b>não envia</b> e tenta de novo na rodada seguinte.<br>• <b>Descadastro bloqueia o cliente inteiro:</b> se qualquer e-mail do cliente (o geral, o do contato da coleta ou o de qualquer contato) estiver na lista como “pediu para sair”, o pedido não vai para nenhum e-mail dele. E-mail inválido (voltou) ou mal formado é diferente: o pedido pode ir para outro e-mail bom do cliente — exceto quando o <b>primeiro</b> endereço de um campo é mal formado: aí os outros desse <b>mesmo campo</b> também não são usados.<br>• Pessoa física: “Oi, [nome]!” só quando o e-mail usado é o <b>primeiro da ficha</b> e a ficha tem nome (o nome é o da ficha); se for outro (o do contato da coleta, de outro contato, o segundo da ficha) ou se a ficha <b>não tem nome</b>, o texto começa com “Olá!”, sem nome — o nome do contato da coleta não é usado.<br>• Sem e-mail? Peça pelo WhatsApp e marque <b>“Pedi pelo WhatsApp”</b> na OS — vale como pedido feito.<br>• Texto simples, sem imagem. O link é o do Google, sem rastreio.</div>
     <label>Pessoa física — assunto: ${esc(exemplo.assunto)}</label><pre>${esc(exemplo.texto)}</pre>
     <label>Empresa — assunto: ${esc(exemploPJ.assunto)}</label><pre>${esc(exemploPJ.texto)}</pre>
   </div>
