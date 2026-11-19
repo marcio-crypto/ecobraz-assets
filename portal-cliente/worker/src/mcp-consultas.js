@@ -19,8 +19,8 @@ import { listarColetasOS, materialIndiceOS } from './coletas.js';
 import { lerChavesKV } from './kv-lote.js';
 import { MATERIAIS as TRIAGEM_DOCA } from './operacional.js';
 import { REGRAS_MATERIAIS, estimarPesoKg } from './cadastro.js';
-import { isoBR, minutosEntre, percentil, segundaDaSemana, situacaoPrazo, avaliarLoteGrande, perfilDoLead, ehPedidoDeColeta, medido, INICIO_MEDICAO_TXT } from './atendimento.js';
-import { lerAvaliacoes, camposAvaliacao, ROTULO_MOTIVO, contarAvisos } from './avaliacao.js';
+import { isoBR, minutosEntre, percentil, segundaDaSemana, situacaoPrazo, avaliarLoteGrande, perfilDoLead, ehPedidoDeColeta, medido, INICIO_MEDICAO_TXT, primeiroContatoDoHistorico } from './atendimento.js';
+import { lerAvaliacoes, camposAvaliacao, ROTULO_MOTIVO, contarAvisos, diagnosticoEmailAvaliacao, REGRA_LEITURA_EMAIL } from './avaliacao.js';
 
 export class ErroUso extends Error {}
 
@@ -851,15 +851,66 @@ async function ferrColetasPeriodo(env, args) {
   lista.sort((x, y) => dataRef(x).localeCompare(dataRef(y)) || String(x.numero).localeCompare(String(y.numero)));
   const total = lista.length;
   const fatia = lista.slice((pagina - 1) * porPagina, pagina * porPagina);
+  // Diagnóstico do e-mail do pedido de avaliação (só quando pedido em `campos`): por coleta e
+  // somado no período inteiro — códigos e contagens, nunca o e-mail.
+  const querDiag = (camposPedidos(a) || []).includes('email_avaliacao');
+  const diag = querDiag ? await diagnosticoEmails(ctx, lista, { de, ate, campo_data: campo }) : null;
   const itens = await detalharColetas(ctx, fatia, vinc || await vinculosLeadOS(ctx));
+  if (diag) fatia.forEach((o, i) => { if (itens[i]) { const dg = diag.porOS.get(o.id); itens[i].email_avaliacao = dg ? { casos: dg.casos, leitura: dg.leitura } : null; } });
   if (campo === 'concluida') ctx.aviso('Data de conclusão: registrada exatamente a partir de 18/11/2026; antes disso vem do app do motorista quando guardado, ou é estimada pela data agendada (data_conclusao_estimada = true).');
   if (campo === 'cancelada') ctx.aviso('Data de cancelamento: registrada a partir de 18/11/2026; cancelamentos anteriores usam a última atualização da OS (data_cancelamento_estimada = true).');
   ctx.aviso(`Pedido de origem: desde ${INICIO_MEDICAO_TXT} a OS gerada a partir de um pedido grava o pedido (lead_id; origem_pedido.vinculo = "exato"). Pedidos de antes disso usam o vínculo "provável" (pedido do mesmo cliente até 30 dias antes). Sem pedido ligado, modalidade = "padrão" e origem vazia.`);
   ctx.aviso('data_hora_conclusao = hora do encerramento no app do motorista. Coleta que não passa pelo app (transportadora, ou concluída pelo escritório/doca) fica com a hora em que foi marcada como concluída — pode ser depois da retirada real.');
+  if (diag) ctx.aviso('email_avaliacao = como o pedido de avaliação no Google lê o e-mail da coleta (contato da OS + ficha do cliente), pela regra em vigor (regra_de_leitura). casos: contato_da_os (palavra solta + espaço antes do endereço, no texto livre do contato da OS), campo_de_email_do_cadastro (o mesmo no e-mail da ficha ou de um contato) e espaco_antes_do_arroba (espaço logo antes da arroba, sem nada antes dela). leitura: envia | envia_ao_pedaco_depois_do_espaco (o destinatário seria o pedaço depois do espaço) | envia_a_email_bem_formado (há um dos casos, mas o destinatário é um e-mail bem formado) | email_invalido | sem_email | cadastro_grande. resumo_email_avaliacao soma o período inteiro (coletas e cadastros distintos); palavra_antes_do_endereco conta as ocorrências por tipo da palavra solta (rotulo: e-mail, financeiro…; comeco_do_endereco: a palavra é o começo do próprio endereço; outra). Só leitura; nenhum e-mail sai na resposta.');
   return saida(ctx, a, {
-    total, pagina, porPagina, itens, filtros, titulo: `Coletas (${campo})`,
+    total, pagina, porPagina, itens, filtros, titulo: `Coletas (${campo})`, extra: diag ? { resumo_email_avaliacao: diag.resumo } : undefined,
     linha: (o) => [o.numero, o.status_rotulo, o.cliente && `${o.cliente.nome} (${o.cliente.tipo})`, o.cidade, `criada ${o.data_hora_criacao || o.data_criacao}`, o.data_agendada && `agendada ${o.data_agendada}`, o.data_conclusao && `concluída ${o.data_conclusao}${o.data_conclusao_estimada ? ' (estimada)' : ''}`, o.motorista && `🚚 ${o.motorista}`, o.peso_kg != null && `${o.peso_kg} kg`, o.lead_id && `pedido ${o.lead_id}`, o.prazo_alvo && `🏭 prazo ${o.prazo_alvo} — ${o.prazo_situacao}`].filter(Boolean).join(' — '),
   });
+}
+
+// Diagnóstico do e-mail do pedido de avaliação de todas as coletas da lista (registro completo da
+// OS + ficha do cliente — os mesmos dados que o envio usa). Devolve o diagnóstico por OS e o
+// resumo do período (contagens; cadastros = fichas distintas).
+async function diagnosticoEmails(ctx, lista, periodo) {
+  const regs = await ctx.lerVarios(lista.map((o) => `os:${o.id}`));
+  const recs = new Map();
+  for (const o of lista) { try { const raw = regs.get(`os:${o.id}`); recs.set(o.id, raw ? JSON.parse(raw) : null); } catch { recs.set(o.id, null); } }
+  const idF = (rec) => String((rec && rec.clienteId) || '').replace(/[^a-zA-Z0-9_]/g, '');
+  const fichaIds = [...new Set(lista.map((o) => idF(recs.get(o.id))).filter(Boolean))];
+  const fichas = await ctx.lerVarios(fichaIds.map((id) => `cli:${id}`));
+  const vazio = () => ({ coletas: 0, cadastros: new Set(), leitura: {} });
+  const grupos = { contato_da_os: vazio(), campo_de_email_do_cadastro: vazio(), espaco_antes_do_arroba: vazio(), algum_caso: vazio(), todas: vazio() };
+  const palavras = { rotulo: 0, comeco_do_endereco: 0, outra: 0 };
+  const porOS = new Map();
+  let semRegistro = 0, fichaIlegivel = 0;
+  for (const o of lista) {
+    const rec = recs.get(o.id);
+    if (!rec) { semRegistro++; continue; }
+    const fid = idF(rec);
+    let cli = null;
+    if (fid) { try { const raw = fichas.get(`cli:${fid}`); cli = raw ? JSON.parse(raw) : null; } catch { cli = null; fichaIlegivel++; } }
+    const dg = diagnosticoEmailAvaliacao(rec, cli);
+    porOS.set(o.id, dg);
+    const conta = (g) => { g.coletas++; if (fid && cli) g.cadastros.add(fid); g.leitura[dg.leitura] = (g.leitura[dg.leitura] || 0) + 1; };
+    conta(grupos.todas);
+    for (const k of dg.casos) conta(grupos[k]);
+    if (dg.casos.length) conta(grupos.algum_caso);
+    for (const w of dg.palavras) palavras[w] = (palavras[w] || 0) + 1;
+  }
+  const fecha = (g) => ({ coletas: g.coletas, cadastros: g.cadastros.size, leitura: g.leitura });
+  return {
+    porOS,
+    resumo: {
+      regra_de_leitura: REGRA_LEITURA_EMAIL, periodo,
+      coletas: grupos.todas.coletas, cadastros: grupos.todas.cadastros.size,
+      por_caso: { contato_da_os: fecha(grupos.contato_da_os), campo_de_email_do_cadastro: fecha(grupos.campo_de_email_do_cadastro), espaco_antes_do_arroba: fecha(grupos.espaco_antes_do_arroba) },
+      algum_caso: fecha(grupos.algum_caso),
+      todas: fecha(grupos.todas),
+      palavra_antes_do_endereco: palavras,
+      ...(semRegistro ? { coletas_sem_registro: semRegistro } : {}),
+      ...(fichaIlegivel ? { fichas_ilegiveis: fichaIlegivel } : {}),
+    },
+  };
 }
 
 async function detalharColetas(ctx, lista, vinc) {
@@ -947,6 +998,29 @@ async function detalharColetas(ctx, lista, vinc) {
 // C) LEADS
 // ===================================================================================
 const STATUS_LEAD = { novo: 'novo', 'aguardando-pagamento': 'novo', contatado: 'contatado', tratado: 'contatado', sem_retorno: 'perdido' };
+// Lote grande de um pedido — a MESMA regra em leads e tempos_atendimento: marcado no próprio
+// pedido (desde 18/11/2026 01:11, com prazo de 72h) ou, pedido anterior a isso, classificado
+// AGORA pela mesma regra (empresa com 51+ itens ou desmobilização): "classificado depois", sem
+// prazo. `r` = registro completo do pedido (sem ele, só vale a marca do índice).
+function loteDoPedido(l, r, env) {
+  if ((l && l.loteGrande) || (r && r.loteGrande)) return { lote: true, depois: false, motivo: (r && r.loteGrandeMotivo) || '' };
+  if (r && !medido({ ...(l || {}), ...r })) { const a = avaliarLoteGrande(r, env); if (a.loteGrande) return { lote: true, depois: true, motivo: a.motivo }; }
+  return { lote: false, depois: false, motivo: '' };
+}
+// 1º contato dos pedidos ANTERIORES ao corte (18/11/2026 01:11), pelo histórico do pedido (D1):
+// a 1ª ação de alguém da equipe depois do corte, com o pedido ainda sem contato (decisão do
+// Marcio, 19/11/2026). Map id → { em, por }. Falha de leitura → vazio, com aviso.
+async function primeirosContatosAntigos(ctx, ids) {
+  const out = new Map();
+  const lista = [...new Set((ids || []).filter(Boolean).map(String))];
+  if (!ctx.db || !lista.length) return out;
+  try {
+    const rows = await consultaEmFatias(ctx.db, () => 'SELECT lead_id AS l, status_anterior AS de, status_novo AS para, em, por, evento FROM lead_historico WHERE lead_id IN (SELECT value FROM json_each(?1))', lista);
+    const porLead = new Map(); for (const r of rows) { const a = porLead.get(r.l) || []; a.push(r); porLead.set(r.l, a); }
+    for (const [id, linhas] of porLead) { const pc = primeiroContatoDoHistorico(linhas); if (pc) out.set(id, pc); }
+  } catch (e) { if (!/no such table/i.test(String((e && e.message) || e))) ctx.aviso(`Histórico dos pedidos indisponível agora: o 1º contato dos pedidos anteriores a ${INICIO_MEDICAO_TXT} saiu vazio.`); }
+  return out;
+}
 // Prioridade do pedido: lote grande (empresa 51+ itens ou desmobilização — prazo de 72h,
 // marcado desde 18/11/2026) > prioritária (triagem: volume/valor alto) > normal.
 const prioridadeDoLead = (l) => (l.loteGrande ? 'lote_grande' : (l.prioridade === 'alta' ? 'prioritaria' : 'normal'));
@@ -978,7 +1052,17 @@ async function ferrLeads(env, args) {
   let lista = (await ctx.leads()).filter((l) => { const d = diaBR(l.criadoEm); return (!de || d >= de) && (!ate || d <= ate); });
   if (status) lista = lista.filter((l) => statusDe(l) === statusOk[status]);
   if (origem) lista = lista.filter((l) => normTxt(l.origem).includes(origem));
-  if (prioridade) lista = lista.filter((l) => prioridadeDoLead(l) === prioridade);
+  if (prioridade) {
+    // Lote grande pela MESMA regra de tempos_atendimento: pedido anterior a 18/11/2026 01:11 sem a
+    // marca é lido e classificado agora ("classificado depois").
+    const LIMP = 1500;
+    const semMarca = lista.filter((l) => !l.loteGrande && !medido(l));
+    const regsP = await ctx.lerVarios(semMarca.slice(0, LIMP).map((l) => `lead:${l.id}`));
+    if (semMarca.length > LIMP) ctx.aviso(`Prioridade: ${semMarca.length - LIMP} pedidos antigos não foram lidos (limite por consulta) — a prioridade deles saiu só do índice. Reduza o período para precisão total.`);
+    const recP = new Map(); for (const l of semMarca.slice(0, LIMP)) { try { const raw = regsP.get(`lead:${l.id}`); if (raw) recP.set(l.id, JSON.parse(raw)); } catch { /* registro ilegível: vale o índice */ } }
+    const prioDe = (l) => (loteDoPedido(l, recP.get(l.id) || null, env).lote ? 'lote_grande' : (l.prioridade === 'alta' ? 'prioritaria' : 'normal'));
+    lista = lista.filter((l) => prioDe(l) === prioridade);
+  }
   // Perfil: o DOCUMENTO manda (CNPJ = PJ, CPF = PF) — o formulário do portal marca
   // "empresa" até para pessoa física; sem documento, o perfil gravado no índice (desde
   // 18/11) ou no próprio lead.
@@ -997,6 +1081,7 @@ async function ferrLeads(env, args) {
   const total = lista.length;
   const fatia = lista.slice((pagina - 1) * porPagina, pagina * porPagina);
   const regs = await ctx.lerVarios(fatia.map((l) => `lead:${l.id}`));
+  const pcAntigos = await primeirosContatosAntigos(ctx, fatia.filter((l) => !medido(l)).map((l) => l.id));
   const itens = fatia.map((l) => {
     let r = {}; try { const raw = regs.get(`lead:${l.id}`); r = raw ? JSON.parse(raw) : {}; } catch { r = {}; }
     const doc = digits(r.documento || l.documento);
@@ -1004,8 +1089,13 @@ async function ferrLeads(env, args) {
     const os = vinc.osPorLead.get(l.id);
     const tipoVinc = os ? (vinc.tipo.get(l.id) || 'provavel') : '';
     const pf = perfilDoc(r.documento) || perfilIdx(l) || perfilDoRec(r) || (l.empresa ? 'PJ' : 'PF');
-    // 1º contato só de pedido da medição (o de pedido antigo seria a hora de um clique de hoje).
-    const pcEm = medido({ ...l, ...r }) ? (r.primeiroContatoEm || l.primeiroContatoEm || '') : '';
+    // 1º contato: o gravado no pedido; pedido ANTERIOR ao corte, o do histórico (1ª ação da equipe
+    // depois do corte, com o pedido ainda sem contato) — nunca um valor sem essa confirmação.
+    const novoPedido = medido({ ...l, ...r });
+    const pcHist = novoPedido ? null : (pcAntigos.get(l.id) || null);
+    const pcEm = novoPedido ? (r.primeiroContatoEm || l.primeiroContatoEm || '') : (pcHist ? pcHist.em : '');
+    const pcPor = novoPedido ? limpar(r.primeiroContatoPor) : (pcHist ? pcHist.por : '');
+    const lg = loteDoPedido(l, r, env);
     const minPC = pcEm ? minutosEntre(l.criadoEm, pcEm) : null;
     const prazoAlvo = r.prazoAlvoEm || l.prazoAlvoEm || '';
     const sitPrazo = prazoDoPedido({ ...l, status: r.status || l.status }, os, tipoVinc, prazoAlvo);
@@ -1026,13 +1116,14 @@ async function ferrLeads(env, args) {
       consentimento_marketing: r.consentimentoMkt === true ? 'sim' : 'não informado',
       origem: limpar(r.origem || l.origem) || null, utm: utmDe(r.utm), gclid: gclidDe(r.pagina) || null,
       status: statusDe(l), status_sistema: l.status || 'novo',
-      prioridade: prioridadeDoLead(r.loteGrande ? { ...l, loteGrande: true } : l),
-      lote_grande_motivo: r.loteGrande ? (textoSeguro(r.loteGrandeMotivo, 120) || 'lote grande') : null,
+      prioridade: lg.lote ? 'lote_grande' : prioridadeDoLead({ ...l, loteGrande: false }),
+      lote_grande_motivo: lg.lote ? (textoSeguro(lg.motivo, 120) || 'lote grande') : null,
+      lote_grande_classificado_depois: lg.depois ? true : undefined,
       prazo_alvo: prazoAlvo ? isoBR(prazoAlvo) : null,
       prazo_cumprido: sitPrazo ? sitPrazo.cumpriu : null,
       prazo_situacao: sitPrazo ? sitPrazo.texto : null,
       primeiro_contato_em: pcEm ? isoBR(pcEm) : null,
-      primeiro_contato_por: pcEm ? (limpar(r.primeiroContatoPor) || null) : null,
+      primeiro_contato_por: pcEm ? (pcPor || null) : null,
       minutos_ate_primeiro_contato: minPC != null ? Math.max(0, minPC) : null,
       horas_ate_coleta_concluida: hColeta != null ? Math.max(0, hColeta) : null,
       os_vinculada: osVinc,
@@ -1043,11 +1134,11 @@ async function ferrLeads(env, args) {
     return item;
   });
   ctx.aviso(`"virou OS" / os_vinculada: vínculo EXATO quando a OS foi gerada a partir do pedido (pedidos desde ${INICIO_MEDICAO_TXT}). Pedidos de antes disso usam o vínculo PROVÁVEL (OS do mesmo cliente, por documento ou e-mail, até 30 dias depois). os_gerada = nome antigo do mesmo campo.`);
-  ctx.aviso(`data_hora = hora do pedido no horário de Brasília. primeiro_contato_em = 1ª ação de alguém da equipe sobre o pedido ("Registrei o contato", tratado, sem retorno ou coleta gerada); só para pedidos desde ${INICIO_MEDICAO_TXT} — os anteriores ficam vazios. Ações automáticas do sistema não contam.`);
-  ctx.aviso(`"quem_atendeu" é gravado a partir de 18/11/2026; leads tratados antes ficam vazios. Lote grande (empresa com 51+ itens ou desmobilização; prazo de 72h) é marcado nos pedidos desde ${INICIO_MEDICAO_TXT}. horas_ate_coleta_concluida usa a hora de conclusão da OS (encerramento no app do motorista; fora do app, a hora em que foi marcada como concluída).`);
+  ctx.aviso(`data_hora = hora do pedido no horário de Brasília. primeiro_contato_em = 1ª ação de alguém da equipe sobre o pedido ("Registrei o contato", tratado, sem retorno ou coleta gerada); ações automáticas do sistema não contam. Pedido de antes de ${INICIO_MEDICAO_TXT} também tem 1º contato quando a 1ª ação da equipe aconteceu depois disso (tirado do histórico do pedido; o tempo conta desde o pedido); o que já tinha sido atendido antes fica vazio (hora desconhecida).`);
+  ctx.aviso(`"quem_atendeu" é gravado a partir de 18/11/2026; leads tratados antes ficam vazios. Lote grande (empresa com 51+ itens ou desmobilização; prazo de 72h) é marcado nos pedidos desde ${INICIO_MEDICAO_TXT}; pedidos anteriores que pela mesma regra seriam lote grande saem como lote_grande com lote_grande_classificado_depois = true (sem prazo) — a mesma regra de tempos_atendimento. horas_ate_coleta_concluida usa a hora de conclusão da OS (encerramento no app do motorista; fora do app, a hora em que foi marcada como concluída).`);
   return saida(ctx, a, {
     total, pagina, porPagina, itens, filtros, titulo: 'Leads',
-    linha: (l) => [l.data_hora || l.data, l.perfil, l.nome || l.empresa, l.email, l.celular, l.cidade, l.material, l.status, l.prioridade !== 'normal' && l.prioridade, l.minutos_ate_primeiro_contato != null && `1º contato em ${l.minutos_ate_primeiro_contato} min${l.primeiro_contato_por ? ` (${l.primeiro_contato_por})` : ''}`, l.os_vinculada && `OS ${l.os_vinculada.numero} (${l.os_vinculada.vinculo})`, l.prazo_situacao && `prazo: ${l.prazo_situacao}`].filter(Boolean).join(' — '),
+    linha: (l) => [l.data_hora || l.data, l.perfil, l.nome || l.empresa, l.email, l.celular, l.cidade, l.material, l.status, l.prioridade !== 'normal' && (l.lote_grande_classificado_depois ? 'lote_grande (classificado depois)' : l.prioridade), l.minutos_ate_primeiro_contato != null && `1º contato em ${l.minutos_ate_primeiro_contato} min${l.primeiro_contato_por ? ` (${l.primeiro_contato_por})` : ''}`, l.os_vinculada && `OS ${l.os_vinculada.numero} (${l.os_vinculada.vinculo})`, l.prazo_situacao && `prazo: ${l.prazo_situacao}`].filter(Boolean).join(' — '),
   });
 }
 
@@ -1198,10 +1289,12 @@ async function ferrTemposAtendimento(env, args) {
     let r = null; try { const raw = regs.get(`lead:${l.id}`); r = raw ? JSON.parse(raw) : null; } catch { r = null; }
     const perfilIdx = l.perfil === 'PJ' || l.perfil === 'PF' ? l.perfil : '';
     const perfil = perfilDoLead({ documento: l.documento || (r && r.documento), perfil: r ? r.perfil : '' }) || perfilIdx || '';
-    let lote = !!l.loteGrande;
-    if (!lote && r && antigo(l) && avaliarLoteGrande(r, env).loteGrande) { lote = true; retroativos++; }
-    info.set(l.id, { perfil, lote });
+    const lg = loteDoPedido(l, r, env); // a MESMA regra da função leads
+    if (lg.depois) retroativos++;
+    info.set(l.id, { perfil, lote: lg.lote });
   }
+  // 1º contato dos pedidos anteriores ao corte: do histórico (a mesma regra da função leads).
+  const pcAntigos = await primeirosContatosAntigos(ctx, leads.filter(antigo).map((l) => l.id));
   const semanas = new Map();
   for (let s = de; s <= ate; s = somaDias(s, 7)) semanas.set(s, { semana_inicio: s, semana_fim: somaDias(s, 6), _pc: { geral: [], pf: [], pj: [], lote_grande: [] }, _col: { geral: [], pf: [], pj: [], lote_grande: [] }, _colEst: { geral: [], pf: [], pj: [], lote_grande: [] }, pedidos: { total: 0, pf: 0, pj: 0, sem_perfil: 0, lote_grande: 0 }, sem_primeiro_contato: 0, sem_coleta_concluida: 0, conclusoes_estimadas: 0, prazo_72h_lote_grande: { cumprido: 0, atrasou: 0, no_prazo: 0, vencido_sem_coleta: 0, sem_coleta_encerrado: 0, concluida_sem_hora: 0 } });
   const totalPeriodo = { _pc: { geral: [], pf: [], pj: [], lote_grande: [] }, _col: { geral: [], pf: [], pj: [], lote_grande: [] }, _colEst: { geral: [], pf: [], pj: [], lote_grande: [] } };
@@ -1211,8 +1304,9 @@ async function ferrTemposAtendimento(env, args) {
     const { perfil, lote } = info.get(l.id) || { perfil: '', lote: false };
     const grupos = ['geral', ...(perfil === 'PF' ? ['pf'] : perfil === 'PJ' ? ['pj'] : []), ...(lote ? ['lote_grande'] : [])];
     s.pedidos.total++; if (perfil === 'PF') s.pedidos.pf++; else if (perfil === 'PJ') s.pedidos.pj++; else s.pedidos.sem_perfil++; if (lote) s.pedidos.lote_grande++;
-    // Pedido → 1º contato (minutos): só o registrado (desde 18/11/2026).
-    if (l.primeiroContatoEm && !antigo(l)) { const m = minutosEntre(l.criadoEm, l.primeiroContatoEm); if (m != null) poe(s, '_pc', grupos, Math.max(0, m)); } else s.sem_primeiro_contato++;
+    // Pedido → 1º contato (minutos): o registrado; pedido anterior ao corte, o do histórico.
+    const pcEm = antigo(l) ? ((pcAntigos.get(l.id) || {}).em || '') : (l.primeiroContatoEm || '');
+    if (pcEm) { const m = minutosEntre(l.criadoEm, pcEm); if (m != null) poe(s, '_pc', grupos, Math.max(0, m)); } else s.sem_primeiro_contato++;
     // Pedido → coleta concluída (horas).
     const os = vinc.osPorLead.get(l.id);
     const tipoVinc = os ? (vinc.tipo.get(l.id) || 'provavel') : '';
@@ -1240,9 +1334,9 @@ async function ferrTemposAtendimento(env, args) {
   const todas = [...semanas.values()].map((s) => { const { _pc, _col, _colEst, ...resto } = s; return { ...resto, ...fecha({ _pc, _col, _colEst }) }; });
   const fatia = todas.slice((pagina - 1) * porPagina, pagina * porPagina);
   ctx.aviso('Semanas de segunda a domingo, pelo dia do PEDIDO (horário de Brasília). Só pedidos de coleta (propostas de carbono/ESG/Adote e chamados de suporte ficam fora). n = quantos pedidos entraram no cálculo; mediana = valor do meio; p80 = 80% dos pedidos ficaram abaixo desse tempo.');
-  ctx.aviso('Pedido → 1º contato (minutos): só pedidos com o 1º contato REGISTRADO, o que começou em 18/11/2026 — semanas anteriores saem vazias (n = 0). É a 1ª ação de alguém da equipe no sistema ("Registrei o contato", tratado, sem retorno ou coleta gerada); ações automáticas não contam.');
+  ctx.aviso(`Pedido → 1º contato (minutos): só pedidos com o 1º contato REGISTRADO, o que começou em ${INICIO_MEDICAO_TXT}. É a 1ª ação de alguém da equipe no sistema ("Registrei o contato", tratado, sem retorno ou coleta gerada); ações automáticas não contam. Pedido de antes disso entra quando a 1ª ação da equipe aconteceu depois (o tempo conta desde o pedido); o que já tinha sido atendido antes fica fora (hora desconhecida).`);
   ctx.aviso(`Pedido → coleta concluída (horas): pedido_ate_coleta_concluida_h usa só o vínculo EXATO (OS gerada a partir do pedido) e a hora registrada da conclusão — o encerramento no app do motorista; coleta fora do app (transportadora, ou concluída pelo escritório/doca) usa a hora em que foi marcada como concluída, que pode ser depois da retirada real. pedido_ate_coleta_concluida_h_estimado é o HISTÓRICO: pedidos de antes de ${INICIO_MEDICAO_TXT} ligados pelo vínculo provável (OS do mesmo cliente em até 30 dias) e, sem hora de conclusão registrada, o dia estimado ao meio-dia (conclusoes_estimadas).`);
-  if (retroativos) ctx.aviso(`Lote grande: ${retroativos} pedido(s) de antes de 18/11/2026 foram classificados agora pela mesma regra (empresa com 51+ itens ou desmobilização) — na época o pedido não era marcado nem tinha prazo de 72h.`);
+  if (retroativos) ctx.aviso(`Lote grande: ${retroativos} pedido(s) de antes de ${INICIO_MEDICAO_TXT} foram classificados agora pela mesma regra (empresa com 51+ itens ou desmobilização) — na época o pedido não era marcado nem tinha prazo de 72h. A função leads mostra os mesmos, com lote_grande_classificado_depois = true.`);
   ctx.aviso('prazo_72h_lote_grande (pedidos marcados desde 18/11/2026): cumprido / atrasou = coleta concluída antes / depois do prazo; no_prazo = ainda dentro das 72h; vencido_sem_coleta = passou das 72h sem coleta concluída; sem_coleta_encerrado = pedido encerrado sem coleta ligada (sem retorno, tratado sem OS ligada ou OS cancelada).');
   return saida(ctx, a, {
     total: todas.length, pagina, porPagina, itens: fatia, filtros: { de, ate },
@@ -1396,12 +1490,12 @@ export const FERRAMENTAS_CONSULTA = [
   },
   {
     name: 'coletas_periodo',
-    description: 'Ordens de Coleta (OS) num período, com filtros — acompanhar coletas por dia. Só leitura. Obrigatórios: de, ate (AAAA-MM-DD ou AAAA-MM). campo_data escolhe qual data cai no período: criacao (padrão) | agendada | concluida | cancelada. Filtros opcionais: status (agendada | aguardando_roteiro | em_transporte | na_unidade | concluida | cancelada), tipo_cliente (PF | PJ), cidade, material, motorista (nome, ou "sem motorista"), origem (canal do pedido, ex.: site, portal-coleta; ou "sem_pedido"). Cada OS traz: número, status, cliente (id, tipo, nome), cidade e CEP, datas de criação/agendamento/conclusão/cancelamento (com marcação quando estimada), data_hora_criacao e data_hora_conclusao (horário de Brasília), lead_id (pedido de origem quando o vínculo é exato), lote grande com prazo_alvo / prazo_cumprido / prazo_situacao (prazo de 72h), motivo do cancelamento, motorista e veículo, materiais declarados e pesados, peso, modalidade, valor cobrado e pagamento, origem do pedido (lead_id, data e hora do pedido, vínculo exato ou provável, UTM e gclid quando houver), pedido de avaliação no Google (avaliacao_pedida_em, avaliacao_canal = email | whatsapp | nenhum, motivo_nao_enviado) e documentos (CDF, NF e MTR com número). Exemplo: {"de":"2026-11-17","ate":"2026-11-17","campo_data":"concluida"}',
+    description: 'Ordens de Coleta (OS) num período, com filtros — acompanhar coletas por dia. Só leitura. Obrigatórios: de, ate (AAAA-MM-DD ou AAAA-MM). campo_data escolhe qual data cai no período: criacao (padrão) | agendada | concluida | cancelada. Filtros opcionais: status (agendada | aguardando_roteiro | em_transporte | na_unidade | concluida | cancelada), tipo_cliente (PF | PJ), cidade, material, motorista (nome, ou "sem motorista"), origem (canal do pedido, ex.: site, portal-coleta; ou "sem_pedido"). Cada OS traz: número, status, cliente (id, tipo, nome), cidade e CEP, datas de criação/agendamento/conclusão/cancelamento (com marcação quando estimada), data_hora_criacao e data_hora_conclusao (horário de Brasília), lead_id (pedido de origem quando o vínculo é exato), lote grande com prazo_alvo / prazo_cumprido / prazo_situacao (prazo de 72h), motivo do cancelamento, motorista e veículo, materiais declarados e pesados, peso, modalidade, valor cobrado e pagamento, origem do pedido (lead_id, data e hora do pedido, vínculo exato ou provável, UTM e gclid quando houver), pedido de avaliação no Google (avaliacao_pedida_em, avaliacao_canal = email | whatsapp | nenhum, motivo_nao_enviado) e documentos (CDF, NF e MTR com número). Opcional: pedir "email_avaliacao" em campos traz, por OS, como o pedido de avaliação lê o e-mail (casos de espaço antes do @ e leitura: envia | e-mail inválido | sem e-mail…, sem mostrar o e-mail) e resumo_email_avaliacao do período inteiro. Exemplo: {"de":"2026-11-17","ate":"2026-11-17","campo_data":"concluida"}',
     inputSchema: { type: 'object', properties: { de: { type: 'string' }, ate: { type: 'string' }, campo_data: { type: 'string', enum: ['criacao', 'agendada', 'concluida', 'cancelada'] }, status: { type: 'string' }, tipo_cliente: { type: 'string', enum: ['PF', 'PJ'] }, cidade: { type: 'string' }, material: { type: 'string' }, motorista: { type: 'string' }, origem: { type: 'string' }, ...PAG }, required: ['de', 'ate'] },
   },
   {
     name: 'leads',
-    description: 'Leads (pedidos que chegam pelo formulário do site, pelo portal do cliente, WhatsApp/telefone/e-mail registrados pela equipe e demais canais), com filtros. Só leitura. Filtros opcionais: de, ate (AAAA-MM-DD), status (novo | contatado | virou_os | perdido), perfil (PF | PJ), origem (ex.: website, portal-coleta, whatsapp), prioridade (lote_grande | prioritaria | normal). Cada lead traz: id, data e data_hora do pedido (horário de Brasília), perfil, nome, empresa, e-mail, celular, cidade/UF/CEP, material e mensagem, triagem, modalidade, origem com UTM e gclid, status, prioridade (lote grande = empresa com 51+ itens ou desmobilização, prazo de 72h: prazo_alvo / prazo_cumprido / prazo_situacao), primeiro_contato_em, primeiro_contato_por, minutos_ate_primeiro_contato, horas_ate_coleta_concluida, os_vinculada (número, status, vínculo exato ou provável, hora de criação e de conclusão; os_gerada = nome antigo) e quem atendeu. Exemplo: {"de":"2026-11-01","ate":"2026-11-17","status":"novo","perfil":"PJ"}',
+    description: 'Leads (pedidos que chegam pelo formulário do site, pelo portal do cliente, WhatsApp/telefone/e-mail registrados pela equipe e demais canais), com filtros. Só leitura. Filtros opcionais: de, ate (AAAA-MM-DD), status (novo | contatado | virou_os | perdido), perfil (PF | PJ), origem (ex.: website, portal-coleta, whatsapp), prioridade (lote_grande | prioritaria | normal). Cada lead traz: id, data e data_hora do pedido (horário de Brasília), perfil, nome, empresa, e-mail, celular, cidade/UF/CEP, material e mensagem, triagem, modalidade, origem com UTM e gclid, status, prioridade (lote grande = empresa com 51+ itens ou desmobilização, prazo de 72h: prazo_alvo / prazo_cumprido / prazo_situacao; pedido anterior a 18/11/2026 01:11 classificado depois pela mesma regra: lote_grande_classificado_depois = true, sem prazo), primeiro_contato_em, primeiro_contato_por, minutos_ate_primeiro_contato, horas_ate_coleta_concluida, os_vinculada (número, status, vínculo exato ou provável, hora de criação e de conclusão; os_gerada = nome antigo) e quem atendeu. Exemplo: {"de":"2026-11-01","ate":"2026-11-17","status":"novo","perfil":"PJ"}',
     inputSchema: { type: 'object', properties: { de: { type: 'string' }, ate: { type: 'string' }, status: { type: 'string', enum: ['novo', 'contatado', 'virou_os', 'perdido'] }, perfil: { type: 'string', enum: ['PF', 'PJ'] }, origem: { type: 'string' }, prioridade: { type: 'string', enum: ['lote_grande', 'prioritaria', 'normal'] }, ...PAG } },
   },
   {

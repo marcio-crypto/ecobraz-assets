@@ -7,7 +7,7 @@
 import { botaoGoogle } from './google-auth.js';
 import { sincronizarClienteEgoi } from './egoi.js';
 import { SEGMENTOS } from './premium.js';
-import { marcarLoteGrande, registrarHistoricoLead, avisarLoteGrande, textoBR, minutosEntre, situacaoPrazo, agoraLocalBR, medido } from './atendimento.js';
+import { marcarLoteGrande, registrarHistoricoLead, avisarLoteGrande, textoBR, minutosEntre, situacaoPrazo, agoraLocalBR, medido, primeiroContatoDoHistorico } from './atendimento.js';
 
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const agora = () => { try { return new Date().toISOString(); } catch { return ''; } };
@@ -1536,15 +1536,20 @@ export function paginaLeadDetalhe(user, lead, extras) {
   const linha = (l, v) => v ? `<tr><td style="padding:8px 0;border-top:1px solid #EEF1F0;color:#6B7B78;width:38%">${esc(l)}</td><td style="padding:8px 0;border-top:1px solid #EEF1F0;font-weight:600">${esc(v)}</td></tr>` : '';
   const utm = lead.utm && (lead.utm.source || lead.utm.campaign) ? [lead.utm.source, lead.utm.medium, lead.utm.campaign, lead.utm.content, lead.utm.term].filter(Boolean).join(' · ') : '';
   const resolvido = LEAD_RESOLVIDO.has(lead.status);
-  const minContato = lead.primeiroContatoEm ? minutosEntre(lead.criadoEm, lead.primeiroContatoEm) : null;
-  const semContatoHa = !lead.primeiroContatoEm && !resolvido ? minutosEntre(lead.criadoEm, new Date().toISOString()) : null;
+  // 1º contato: o gravado no pedido; pedido ANTERIOR ao corte (18/11/2026 01:11), o do
+  // histórico — a 1ª ação da equipe depois do corte, com o pedido ainda sem contato (o mesmo
+  // critério do conector).
+  const pcHist = medido(lead) ? null : primeiroContatoDoHistorico(historico);
+  const pc = medido(lead) ? (lead.primeiroContatoEm ? { em: lead.primeiroContatoEm, por: lead.primeiroContatoPor } : null) : pcHist;
+  const minContato = pc ? minutosEntre(lead.criadoEm, pc.em) : null;
+  const semContatoHa = !pc && !lead.primeiroContatoEm && !resolvido ? minutosEntre(lead.criadoEm, new Date().toISOString()) : null;
   const sitPrazo = lead.loteGrande && lead.prazoAlvoEm && !lead.osId ? situacaoPrazo(lead.prazoAlvoEm, {}) : null;
   const banner = lead.loteGrande ? `<div style="background:#FFF6E8;border:1px solid #F2C173;border-radius:12px;padding:12px 14px;margin:0 0 12px;font-size:13.5px;color:#7A4600;line-height:1.55"><b>🏭 LOTE GRANDE</b> — ${esc(lead.loteGrandeMotivo || 'empresa com volume grande')}. Prazo-alvo da coleta: <b>${esc(textoBR(lead.prazoAlvoEm) || '—')}</b> (${esc(lead.prazoHoras || 72)}h do pedido)${lead.osId ? ` · coleta gerada: <a href="/coletas/os?id=${esc(lead.osId)}" style="color:#7A4600;font-weight:800">${esc(lead.osNumero || 'abrir OS')}</a>` : (sitPrazo ? ` · <b>${esc(sitPrazo.texto)}</b>` : '')}.</div>` : '';
-  const contatoTxt = lead.primeiroContatoEm
-    ? `${textoBR(lead.primeiroContatoEm)}${lead.primeiroContatoPor ? ` — ${lead.primeiroContatoPor}` : ''}${minContato != null ? ` (${duracaoTexto(minContato)} depois do pedido)` : ''}`
+  const contatoTxt = pc
+    ? `${textoBR(pc.em)}${pc.por ? ` — ${pc.por}` : ''}${minContato != null ? ` (${duracaoTexto(minContato)} depois do pedido)` : ''}`
     : (semContatoHa != null ? `ainda sem contato registrado — pedido aguardando há ${duracaoTexto(semContatoHa)}` : '');
   const linhasHist = historico.map((h) => `<tr><td style="padding:6px 8px 6px 0;border-top:1px solid #EEF1F0;white-space:nowrap;color:#4F6469">${esc(textoBR(h.em))}</td><td style="padding:6px 0;border-top:1px solid #EEF1F0"><b>${esc(ROTULO_EVENTO_LEAD[h.evento] || h.evento || 'Alteração')}</b>${h.de && h.para && h.de !== h.para ? ` · ${esc(ROTULO_STATUS_LEAD[h.de] || h.de)} → ${esc(ROTULO_STATUS_LEAD[h.para] || h.para)}` : ''}${h.detalhe ? ` · ${esc(h.detalhe)}` : ''}<div style="font-size:11.5px;color:#9aa7a4">${esc(h.por || '')}</div></td></tr>`).join('');
-  const podeContato = !lead.primeiroContatoEm && !resolvido;
+  const podeContato = !pc && !lead.primeiroContatoEm && !resolvido;
   return `${head(lead.nome || lead.empresa || 'Lead')}<body>${topo(user, 'leads')}
 <div class="wrap">
   <a href="/leads" style="font-size:13px;font-weight:800;text-decoration:none;color:#4F6469">← Todos os leads</a>

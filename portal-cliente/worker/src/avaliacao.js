@@ -264,6 +264,81 @@ function emailsParaBloqueio(v) {
   }
   return [...out];
 }
+// --- "Espaço antes do @" ------------------------------------------------------------------------
+// Palavra COLADA antes de um endereço: separada dele só por espaço, com letra e sem pontuação de
+// separação no fim. É o caso "maria clara@x.com": não dá para saber se a palavra é parte do
+// endereço (espaço no lugar do ponto) ou um nome/rótulo antes dele. NÃO é colada: começo do
+// texto; palavra que termina em ":" "·" ")" "]" ">" (no texto livre também "," ";" "/" "|" — num
+// campo de e-mail eles são tratados como erro de digitação no lugar do ponto); outro endereço
+// antes ("a@x.com b@x.com"); só números (telefone); conectivo entre dois endereços
+// ("a@x.com e b@x.com"). `ant` = palavra imediatamente antes; `antAnt` = a anterior a ela.
+function palavraColada(ant, antAnt, campo) {
+  const p = String(ant || '');
+  if (!p) return false;
+  if ((campo ? /[:·)\]>»]$/ : /[:·)\]>»,;\/|]$/).test(p)) return false;
+  const cauda = p.replace(/[,;\/|]+$/, '').split(/[,;|"\/·<>()\[\]:]+/).pop() || '';
+  if (!cauda || cauda.includes('@') || !/\p{L}/u.test(cauda)) return false;
+  if (['e', 'ou', 'and', 'or'].includes(cauda) && String(antAnt || '').includes('@')) return false;
+  return true;
+}
+// O endereço começa já no início da palavra (sem "<", "(", "[", aspas nem "rótulo:" antes dele)?
+// Só nesse caso a palavra de antes pode estar "colada" nele.
+const enderecoNoInicio = (palavra) => /^[.a-z0-9_%+&-]/.test(palavra) && !/^[^@]*[:<(\[\]"'’]/.test(palavra);
+// "@dominio.com" — espaço logo antes do @ ("maria @x.com"): falta a parte de antes do @.
+const DOMINIO_SOLTO = /^[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}/;
+const arrobaSemNome = (palavra, prox) => { const t = String(palavra || '').replace(/^[<(\["'’]+/, ''); return t.startsWith('@') && (DOMINIO_SOLTO.test(t.slice(1)) || (t === '@' && DOMINIO_SOLTO.test(String(prox || '')))); };
+
+// --- Diagnóstico do e-mail de uma coleta (conector; só códigos, nunca o e-mail) ------------------
+// Os três casos de "espaço antes do @" (pedido do Marcio, 19/11/2026), procurados no texto BRUTO
+// dos campos — a detecção não depende da regra de leitura em vigor, então a contagem de antes e
+// a de depois da mudança usam o mesmo critério:
+//   contato_da_os ............... texto livre do contato da OS com palavra + espaço + endereço;
+//   campo_de_email_do_cadastro .. e-mail geral da ficha ou de um contato com palavra + espaço + endereço;
+//   espaco_antes_do_arroba ...... "maria @x.com" (falta a parte de antes do @), em qualquer campo.
+// `leitura` = como a regra EM VIGOR lê o e-mail desta coleta: envia | envia_ao_pedaco_depois_do_espaco
+// (o destinatário é o pedaço depois do espaço, que não aparece inteiro em nenhum outro campo) |
+// envia_a_email_bem_formado (há um dos casos, mas o destinatário é um e-mail bem formado, inteiro em algum campo) |
+// email_invalido | sem_email | cadastro_grande.
+export const REGRA_LEITURA_EMAIL = 'palavra antes do endereço: aceita no texto livre; no campo de e-mail, aceita se for nome/rótulo';
+function varrerEspacos(v, campo) {
+  const palavras = String(v == null ? '' : v).slice(0, MAX_CAMPO).toLowerCase().split(/\s+/).filter(Boolean);
+  const r = { colados: [], limpos: [], arroba: false, palavras: [] };
+  for (let i = 0; i < palavras.length; i++) {
+    const p = palavras[i];
+    if (!p.includes('@')) continue;
+    if (arrobaSemNome(p, palavras[i + 1])) { r.arroba = true; continue; }
+    const m = p.match(/^\.*([a-z0-9_%+&-]+(?:\.[a-z0-9_%+&-]+)*@[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,})/);
+    if (m && enderecoNoInicio(p) && palavraColada(palavras[i - 1], palavras[i - 2], campo)) {
+      r.colados.push(m[1]);
+      const ant = semAcentoMin(String(palavras[i - 1]).replace(/[,;\/|]+$/, '').split(/[,;|"\/·<>()\[\]:]+/).pop()).replace(/[^a-z0-9]/g, '');
+      const pedacos = m[1].split('@')[0].split(/[._+-]+/);
+      r.palavras.push(ehRotulo(ant) ? 'rotulo' : (ant.length >= 3 && pedacos.some((q) => q.startsWith(ant)) ? 'comeco_do_endereco' : 'outra'));
+      continue;
+    }
+    const t = p.replace(/^[<(\["'’]+|[)\]>"'’.,;:]+$/g, '');
+    if (t.length <= 254 && EMAIL_INTEIRO.test(t)) r.limpos.push(t);
+  }
+  return r;
+}
+export function diagnosticoEmailAvaliacao(os, cli) {
+  const o = os || {}, c = cli || {};
+  const contatos = (Array.isArray(c.contatos) ? c.contatos : []).filter(Boolean);
+  const vOs = varrerEspacos(o.contato, false);
+  const vCampos = [c.email, ...contatos.map((x) => x.email)].map((x) => varrerEspacos(x, true));
+  const casos = [];
+  if (vOs.colados.length) casos.push('contato_da_os');
+  if (vCampos.some((x) => x.colados.length)) casos.push('campo_de_email_do_cadastro');
+  if (vOs.arroba || vCampos.some((x) => x.arroba)) casos.push('espaco_antes_do_arroba');
+  const d = dadosDoCliente(o, c);
+  const colados = new Set([...vOs.colados, ...vCampos.flatMap((x) => x.colados)]);
+  const limpos = new Set([...vOs.limpos, ...vCampos.flatMap((x) => x.limpos)]);
+  const destino = d.emails[0] ? d.emails[0].email : '';
+  let leitura;
+  if (d.campoGrande) leitura = 'cadastro_grande';
+  else if (destino) leitura = colados.has(destino) && !limpos.has(destino) ? 'envia_ao_pedaco_depois_do_espaco' : (casos.length ? 'envia_a_email_bem_formado' : 'envia');
+  else leitura = d.emailMalFormado ? 'email_invalido' : 'sem_email';
+  return { casos, leitura, palavras: [...vOs.palavras, ...vCampos.flatMap((x) => x.palavras)] };
+}
 const TITULOS = new Set(['sr', 'sra', 'srta', 'dr', 'dra', 'eng', 'prof', 'profa', 'dona', 'seu']);
 const NAO_PESSOA = new Set(['financeiro', 'compras', 'recepcao', 'recepcionista', 'comercial', 'administrativo', 'administracao', 'adm', 'rh', 'dp', 'pessoal', 'ti', 'cpd', 'informatica', 'tecnologia', 'infra', 'infraestrutura', 'contato', 'atendimento', 'portaria', 'porteiro', 'porteira', 'zelador', 'zeladora', 'zeladoria', 'sindico', 'sindica', 'condominio', 'almoxarifado', 'estoque', 'deposito', 'manutencao', 'predial', 'facilities', 'suporte', 'diretoria', 'diretor', 'diretora', 'gerencia', 'gerente', 'supervisor', 'supervisora', 'coordenador', 'coordenadora', 'encarregado', 'encarregada', 'sac', 'fiscal', 'nfe', 'nf', 'xml', 'faturamento', 'cobranca', 'tesouraria', 'logistica', 'expedicao', 'operacao', 'operacoes', 'producao', 'vendas', 'marketing', 'juridico', 'contabilidade', 'secretaria', 'escritorio', 'engenharia', 'qualidade', 'sustentabilidade', 'seguranca', 'servicos', 'gerais', 'geral', 'equipe', 'central', 'matriz', 'filial', 'unidade', 'loja', 'obra', 'empresa', 'cliente', 'responsavel', 'proprietario', 'proprietaria', 'morador', 'moradora', 'espolio', 'departamento', 'setor', 'falar', 'procurar', 'tratar', 'aos', 'cuidados', 'sem', 'nao']);
 // Primeiro nome para a saudação ("MARIA DA SILVA" → "Maria"). '' quando não parece nome de

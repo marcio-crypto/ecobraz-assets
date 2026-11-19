@@ -24,9 +24,9 @@ const digits = (s) => String(s == null ? '' : s).replace(/\D/g, '');
 // --- Início da medição ------------------------------------------------------------------
 // A medição começou na publicação de 18/11/2026 às 04:11 UTC (01:11 de Brasília). Pedido
 // "medido" = entrou pelo código novo: grava medicao=1 (os que chegaram entre a publicação
-// e essa marca valem pela hora). Pedido ANTERIOR nunca ganha 1º contato nem vínculo exato:
-// a hora real do contato é desconhecida e o vínculo dele continua o "provável" — assim
-// nenhum registro antigo é alterado por essas regras.
+// e essa marca valem pela hora). Pedido ANTERIOR não ganha vínculo exato (o vínculo dele
+// continua o "provável"). O 1º contato dele só vale quando a 1ª ação da equipe aconteceu
+// depois do corte (decisão do Marcio, 19/11/2026 — ver aplicarStatusLead).
 export const INICIO_MEDICAO = '2026-11-18T04:11:00.000Z';
 export const INICIO_MEDICAO_TXT = '18/11/2026 01:11';
 export const medido = (l) => !!l && (l.medicao === 1 || Date.parse(l.criadoEm) >= Date.parse(INICIO_MEDICAO));
@@ -154,9 +154,13 @@ const COM_CONTATO = new Set(['contatado', 'tratado', 'sem_retorno']);
 // Status de pedido já resolvido. Um pedido que JÁ ESTAVA resolvido (ex.: tratado antes
 // desta medição existir) não ganha "primeiro contato" agora — a hora real é desconhecida.
 const JA_RESOLVIDO = new Set(['tratado', 'sem_retorno', 'excluido']);
+// Status de pedido que ainda NÃO teve resposta de ninguém da equipe.
+const SEM_CONTATO_AINDA = new Set(['', 'novo', 'aguardando-pagamento']);
 // Aplica a mudança no registro (não grava): devolve o que mudou para o histórico.
-// humano=false (ação automática do sistema) nunca marca o primeiro contato, nem pedido
-// anterior ao início da medição (medido = false).
+// humano=false (ação automática do sistema) nunca marca o primeiro contato.
+// Pedido ANTERIOR ao corte (18/11/2026 01:11) também ganha o 1º contato quando a 1ª ação da
+// equipe acontece depois do corte — isto é, quando ele ainda estava sem contato (decisão do
+// Marcio, 19/11/2026). Pedido antigo que já tinha sido atendido antes do corte não ganha nada.
 // contato=true/false força a decisão (ex.: botão "Registrei o contato").
 export function aplicarStatusLead(lead, novo, { por, humano = true, contato } = {}) {
   const de = lead.status || 'novo';
@@ -164,12 +168,29 @@ export function aplicarStatusLead(lead, novo, { por, humano = true, contato } = 
   if (novo) lead.status = novo;
   let primeiroContato = false;
   const conta = contato != null ? !!contato : (COM_CONTATO.has(lead.status) && !JA_RESOLVIDO.has(de));
-  if (humano && conta && !lead.primeiroContatoEm && medido(lead)) {
+  if (humano && conta && !lead.primeiroContatoEm && (medido(lead) || SEM_CONTATO_AINDA.has(de))) {
     lead.primeiroContatoEm = em;
     lead.primeiroContatoPor = String(por || '').trim().toLowerCase().slice(0, 120);
     primeiroContato = true;
   }
   return { de, para: lead.status, em, primeiroContato };
+}
+
+// 1º contato de um pedido ANTERIOR ao corte, tirado do HISTÓRICO: a 1ª ação de alguém da
+// equipe (não do sistema) sobre o pedido, quando ele ainda estava sem contato. O histórico só
+// existe desde o corte — então essa 1ª ação aconteceu depois dele. Se a 1ª ação registrada já
+// encontrou o pedido atendido (ex.: "em contato" desde antes do corte), o 1º contato foi antes
+// e a hora é desconhecida: devolve null. `linhas` = linhas do histórico do pedido
+// ({ de, para, em, por, evento }), em qualquer ordem. Devolve { em, por } ou null.
+export function primeiroContatoDoHistorico(linhas) {
+  const humanas = (Array.isArray(linhas) ? linhas : [])
+    .filter((h) => h && h.em && !['pedido_recebido', 'excluido'].includes(h.evento) && String(h.por || '').trim() && !/^sistema/i.test(String(h.por).trim()))
+    .sort((a, b) => String(a.em).localeCompare(String(b.em)));
+  const h = humanas[0];
+  if (!h || !(Date.parse(h.em) >= Date.parse(INICIO_MEDICAO))) return null;
+  if (!SEM_CONTATO_AINDA.has(h.de || '')) return null;
+  if (!(h.evento === 'contato' || h.evento === 'primeiro_contato' || COM_CONTATO.has(h.para))) return null;
+  return { em: h.em, por: String(h.por).trim().toLowerCase().slice(0, 120) };
 }
 
 // --- Histórico (D1) -------------------------------------------------------------------------
