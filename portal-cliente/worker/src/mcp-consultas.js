@@ -19,7 +19,7 @@ import { listarColetasOS, materialIndiceOS } from './coletas.js';
 import { lerChavesKV } from './kv-lote.js';
 import { MATERIAIS as TRIAGEM_DOCA } from './operacional.js';
 import { REGRAS_MATERIAIS, estimarPesoKg } from './cadastro.js';
-import { isoBR, minutosEntre, percentil, segundaDaSemana, situacaoPrazo, avaliarLoteGrande, perfilDoLead, ehPedidoDeColeta, medido, INICIO_MEDICAO_TXT, primeiroContatoDoHistorico } from './atendimento.js';
+import { isoBR, minutosEntre, percentil, segundaDaSemana, situacaoPrazo, avaliarLoteGrande, perfilDoLead, ehPedidoDeColeta, medido, INICIO_MEDICAO, INICIO_MEDICAO_TXT, primeiroContatoDoHistorico } from './atendimento.js';
 import { lerAvaliacoes, camposAvaliacao, ROTULO_MOTIVO, contarAvisos, diagnosticoEmailAvaliacao, REGRA_LEITURA_EMAIL } from './avaliacao.js';
 import { COMO_OPCOES, COMO_NAO_INFORMADO, comoValido, rotuloComo } from './como-nos-achou.js';
 
@@ -1044,7 +1044,8 @@ function loteDoPedido(l, r, env) {
 }
 // 1º contato dos pedidos ANTERIORES ao corte (18/11/2026 01:11), pelo histórico do pedido (D1):
 // a 1ª ação de alguém da equipe depois do corte, com o pedido ainda sem contato (decisão do
-// Marcio, 19/11/2026). Map id → { em, por }. Falha de leitura → vazio, com aviso.
+// Marcio, 19/11/2026). Map id → { em, por }. Tabela ainda inexistente → vazio, sem aviso (de
+// propósito: nada foi registrado ainda); outra falha de leitura → vazio, com aviso.
 async function primeirosContatosAntigos(ctx, ids) {
   const out = new Map();
   const lista = [...new Set((ids || []).filter(Boolean).map(String))];
@@ -1090,11 +1091,13 @@ async function ferrLeads(env, args) {
   if (prioridade) {
     // Lote grande pela MESMA regra de tempos_atendimento: pedido anterior a 18/11/2026 01:11 sem a
     // marca é lido e classificado agora ("classificado depois").
+    // Acima do limite por consulta, recusa (em vez de classificar uma parte só pelo índice e sair
+    // diferente de tempos_atendimento). Os pedidos antigos são um conjunto fechado (162 em 19/11/2026).
     const LIMP = 1500;
     const semMarca = lista.filter((l) => !l.loteGrande && !medido(l));
-    const regsP = await ctx.lerVarios(semMarca.slice(0, LIMP).map((l) => `lead:${l.id}`));
-    if (semMarca.length > LIMP) ctx.aviso(`Prioridade: ${semMarca.length - LIMP} pedidos antigos não foram lidos (limite por consulta) — a prioridade deles saiu só do índice. Reduza o período para precisão total.`);
-    const recP = new Map(); for (const l of semMarca.slice(0, LIMP)) { try { const raw = regsP.get(`lead:${l.id}`); if (raw) recP.set(l.id, JSON.parse(raw)); } catch { /* registro ilegível: vale o índice */ } }
+    if (semMarca.length > LIMP) throw new ErroUso(`Prioridade: ${semMarca.length} pedidos antigos sem marca no período, acima de ${LIMP} por consulta. Use um período menor (de / ate).`);
+    const regsP = await ctx.lerVarios(semMarca.map((l) => `lead:${l.id}`));
+    const recP = new Map(); for (const l of semMarca) { try { const raw = regsP.get(`lead:${l.id}`); if (raw) recP.set(l.id, JSON.parse(raw)); } catch { /* registro ilegível: vale o índice */ } }
     const prioDe = (l) => (loteDoPedido(l, recP.get(l.id) || null, env).lote ? 'lote_grande' : (l.prioridade === 'alta' ? 'prioritaria' : 'normal'));
     lista = lista.filter((l) => prioDe(l) === prioridade);
   }
@@ -1170,7 +1173,7 @@ async function ferrLeads(env, args) {
   });
   ctx.aviso(`"virou OS" / os_vinculada: vínculo EXATO quando a OS foi gerada a partir do pedido (pedidos desde ${INICIO_MEDICAO_TXT}). Pedidos de antes disso usam o vínculo PROVÁVEL (OS do mesmo cliente, por documento ou e-mail, até 30 dias depois). os_gerada = nome antigo do mesmo campo.`);
   ctx.aviso(`data_hora = hora do pedido no horário de Brasília. primeiro_contato_em = 1ª ação de alguém da equipe sobre o pedido ("Registrei o contato", tratado, sem retorno ou coleta gerada); ações automáticas do sistema não contam. Pedido de antes de ${INICIO_MEDICAO_TXT} também tem 1º contato quando a 1ª ação da equipe aconteceu depois disso (tirado do histórico do pedido; o tempo conta desde o pedido); o que já tinha sido atendido antes fica vazio (hora desconhecida).`);
-  ctx.aviso(`"quem_atendeu" é gravado a partir de 18/11/2026; leads tratados antes ficam vazios. Lote grande (empresa com 51+ itens ou desmobilização; prazo de 72h) é marcado nos pedidos desde ${INICIO_MEDICAO_TXT}; pedidos anteriores que pela mesma regra seriam lote grande saem como lote_grande com lote_grande_classificado_depois = true (sem prazo) — a mesma regra de tempos_atendimento. horas_ate_coleta_concluida usa a hora de conclusão da OS (encerramento no app do motorista; fora do app, a hora em que foi marcada como concluída).`);
+  ctx.aviso(`"quem_atendeu" é gravado a partir de 18/11/2026; leads tratados antes ficam vazios. Lote grande (empresa com 51+ itens ou desmobilização; prazo de 72h) é marcado nos pedidos desde ${INICIO_MEDICAO_TXT}; pedidos anteriores que pela mesma regra seriam lote grande saem como lote_grande com lote_grande_classificado_depois = true (sem prazo) — a mesma regra de tempos_atendimento. Isso vale também para pedido antigo marcado como prioritário: se pela regra ele é lote grande, sai de prioridade=prioritaria e entra em prioridade=lote_grande. horas_ate_coleta_concluida usa a hora de conclusão da OS (encerramento no app do motorista; fora do app, a hora em que foi marcada como concluída).`);
   return saida(ctx, a, {
     total, pagina, porPagina, itens, filtros, titulo: 'Leads',
     linha: (l) => [l.data_hora || l.data, l.perfil, l.nome || l.empresa, l.email, l.celular, l.cidade, l.material, l.status, l.prioridade !== 'normal' && (l.lote_grande_classificado_depois ? 'lote_grande (classificado depois)' : l.prioridade), l.minutos_ate_primeiro_contato != null && `1º contato em ${l.minutos_ate_primeiro_contato} min${l.primeiro_contato_por ? ` (${l.primeiro_contato_por})` : ''}`, l.os_vinculada && `OS ${l.os_vinculada.numero} (${l.os_vinculada.vinculo})`, l.prazo_situacao && `prazo: ${l.prazo_situacao}`].filter(Boolean).join(' — '),
@@ -1314,9 +1317,13 @@ async function ferrTemposAtendimento(env, args) {
   const LIM = 1500;
   const antigo = (l) => !medido(l);
   const perfilDoIndice = (l) => perfilDoLead({ documento: l.documento, perfil: l.perfil === 'PJ' ? 'empresa' : (l.perfil === 'PF' ? 'pessoa_fisica' : '') });
-  const precisaLer = leads.filter((l) => (antigo(l) && !l.loteGrande) || !perfilDoIndice(l)).map((l) => l.id);
-  const ler = precisaLer.slice(0, LIM);
-  if (precisaLer.length > LIM) ctx.aviso(`${precisaLer.length - LIM} pedidos não foram lidos (limite por consulta) — perfil e lote grande deles saíram só do índice. Reduza o período para precisão total.`);
+  const precisaLer = leads.filter((l) => antigo(l) && (!l.loteGrande || !perfilDoIndice(l))).map((l) => l.id);
+  // Acima do limite por consulta, recusa (perfil e lote grande de uma parte sairiam só do índice,
+  // diferentes da função leads). Só pedidos ANTIGOS são lidos — um conjunto fechado (162 em
+  // 19/11/2026): o pedido novo grava perfil e lote grande no índice na criação, e o registro dele
+  // não traria nada a mais (pedido sem documento nem perfil, como a Coleta Expressa, fica sem perfil).
+  if (precisaLer.length > LIM) throw new ErroUso(`Este período tem ${precisaLer.length} pedidos antigos a ler um a um, acima de ${LIM} por consulta. Use um período menor (de / ate).`);
+  const ler = precisaLer;
   const regs = await ctx.lerVarios(ler.map((id) => `lead:${id}`));
   let retroativos = 0;
   const info = new Map();
@@ -1370,6 +1377,9 @@ async function ferrTemposAtendimento(env, args) {
   const fatia = todas.slice((pagina - 1) * porPagina, pagina * porPagina);
   ctx.aviso('Semanas de segunda a domingo, pelo dia do PEDIDO (horário de Brasília). Só pedidos de coleta (propostas de carbono/ESG/Adote e chamados de suporte ficam fora). n = quantos pedidos entraram no cálculo; mediana = valor do meio; p80 = 80% dos pedidos ficaram abaixo desse tempo.');
   ctx.aviso(`Pedido → 1º contato (minutos): só pedidos com o 1º contato REGISTRADO, o que começou em ${INICIO_MEDICAO_TXT}. É a 1ª ação de alguém da equipe no sistema ("Registrei o contato", tratado, sem retorno ou coleta gerada); ações automáticas não contam. Pedido de antes disso entra quando a 1ª ação da equipe aconteceu depois (o tempo conta desde o pedido); o que já tinha sido atendido antes fica fora (hora desconhecida).`);
+  // Viés das semanas antigas (leitura independente de 19/11/2026): só quando o período as inclui.
+  const semanaDoCorte = segundaDaSemana(diaBR(INICIO_MEDICAO));
+  if (de <= semanaDoCorte) ctx.aviso(`Nas semanas que começam antes de ${semanaDoCorte}, o 1º contato só traz os pedidos de antes do corte atendidos DEPOIS dele (os mais demorados): a mediana e o p80 dessas semanas não representam o atendimento da época. A semana de ${semanaDoCorte} mistura pedidos de antes e de depois do corte (${INICIO_MEDICAO_TXT}).`);
   ctx.aviso(`Pedido → coleta concluída (horas): pedido_ate_coleta_concluida_h usa só o vínculo EXATO (OS gerada a partir do pedido) e a hora registrada da conclusão — o encerramento no app do motorista; coleta fora do app (transportadora, ou concluída pelo escritório/doca) usa a hora em que foi marcada como concluída, que pode ser depois da retirada real. pedido_ate_coleta_concluida_h_estimado é o HISTÓRICO: pedidos de antes de ${INICIO_MEDICAO_TXT} ligados pelo vínculo provável (OS do mesmo cliente em até 30 dias) e, sem hora de conclusão registrada, o dia estimado ao meio-dia (conclusoes_estimadas).`);
   if (retroativos) ctx.aviso(`Lote grande: ${retroativos} pedido(s) de antes de ${INICIO_MEDICAO_TXT} foram classificados agora pela mesma regra (empresa com 51+ itens ou desmobilização) — na época o pedido não era marcado nem tinha prazo de 72h. A função leads mostra os mesmos, com lote_grande_classificado_depois = true.`);
   ctx.aviso('prazo_72h_lote_grande (pedidos marcados desde 18/11/2026): cumprido / atrasou = coleta concluída antes / depois do prazo; no_prazo = ainda dentro das 72h; vencido_sem_coleta = passou das 72h sem coleta concluída; sem_coleta_encerrado = pedido encerrado sem coleta ligada (sem retorno, tratado sem OS ligada ou OS cancelada).');

@@ -6,8 +6,9 @@
 //     hora; aqui ficam os conversores para o horário de Brasília (UTC-3, sem verão).
 //   • Histórico do lead (D1, tabela lead_historico): cada mudança de status, com quem e
 //     quando. No próprio lead: primeiroContatoEm / primeiroContatoPor (a 1ª ação de
-//     alguém da equipe sobre o pedido). Ações automáticas do sistema entram no
-//     histórico, mas NÃO contam como primeiro contato.
+//     alguém da equipe sobre o pedido — só nos pedidos desde o corte de 18/11/2026; os
+//     anteriores têm o 1º contato tirado do histórico). Ações automáticas do sistema
+//     entram no histórico, mas NÃO contam como primeiro contato.
 //   • Vínculo EXATO lead → OS: a OS gerada a partir do pedido grava leadId e o lead
 //     guarda osId/osNumero. O vínculo "provável" fica só para o histórico antigo.
 //   • Lote grande (decisão do Marcio, 18/11/2026): empresa (PJ) com 51 itens ou mais,
@@ -26,7 +27,7 @@ const digits = (s) => String(s == null ? '' : s).replace(/\D/g, '');
 // "medido" = entrou pelo código novo: grava medicao=1 (os que chegaram entre a publicação
 // e essa marca valem pela hora). Pedido ANTERIOR não ganha vínculo exato (o vínculo dele
 // continua o "provável"). O 1º contato dele só vale quando a 1ª ação da equipe aconteceu
-// depois do corte (decisão do Marcio, 19/11/2026 — ver aplicarStatusLead).
+// depois do corte (decisão do Marcio, 19/11/2026 — ver primeiroContatoDoHistorico).
 export const INICIO_MEDICAO = '2026-11-18T04:11:00.000Z';
 export const INICIO_MEDICAO_TXT = '18/11/2026 01:11';
 export const medido = (l) => !!l && (l.medicao === 1 || Date.parse(l.criadoEm) >= Date.parse(INICIO_MEDICAO));
@@ -154,13 +155,20 @@ const COM_CONTATO = new Set(['contatado', 'tratado', 'sem_retorno']);
 // Status de pedido já resolvido. Um pedido que JÁ ESTAVA resolvido (ex.: tratado antes
 // desta medição existir) não ganha "primeiro contato" agora — a hora real é desconhecida.
 const JA_RESOLVIDO = new Set(['tratado', 'sem_retorno', 'excluido']);
-// Status de pedido que ainda NÃO teve resposta de ninguém da equipe.
+// Status em que o pedido PODE estar sem resposta da equipe. Atenção: "aguardando-pagamento"
+// também pode já ter tido contato ("Registrei o contato" não muda esse status — a liberação
+// automática depende dele). Usado só no 1º contato dos pedidos antigos, pelo histórico (abaixo).
 const SEM_CONTATO_AINDA = new Set(['', 'novo', 'aguardando-pagamento']);
 // Aplica a mudança no registro (não grava): devolve o que mudou para o histórico.
 // humano=false (ação automática do sistema) nunca marca o primeiro contato.
-// Pedido ANTERIOR ao corte (18/11/2026 01:11) também ganha o 1º contato quando a 1ª ação da
-// equipe acontece depois do corte — isto é, quando ele ainda estava sem contato (decisão do
-// Marcio, 19/11/2026). Pedido antigo que já tinha sido atendido antes do corte não ganha nada.
+// Só pedido MEDIDO (desde o corte de 18/11/2026 01:11) grava o 1º contato no próprio registro.
+// Pedido ANTERIOR ao corte tem o 1º contato tirado SEMPRE do histórico (primeiroContatoDoHistorico:
+// a 1ª ação da equipe depois do corte, com o pedido ainda sem contato — decisão do Marcio,
+// 19/11/2026). É o que as telas e o conector mostram; daqui em diante o registro não guarda um
+// valor diferente do mostrado (leitura independente de 19/11/2026). Pedidos antigos alterados
+// entre a publicação 363 e esta podem ter um valor gravado: o conector não o usa, e a tela do
+// pedido só olha se ele existe (para esconder "aguardando há…" e o botão "Registrei o contato") —
+// sem efeito em pedido encerrado, que é o caso de todos os antigos.
 // contato=true/false força a decisão (ex.: botão "Registrei o contato").
 export function aplicarStatusLead(lead, novo, { por, humano = true, contato } = {}) {
   const de = lead.status || 'novo';
@@ -168,7 +176,7 @@ export function aplicarStatusLead(lead, novo, { por, humano = true, contato } = 
   if (novo) lead.status = novo;
   let primeiroContato = false;
   const conta = contato != null ? !!contato : (COM_CONTATO.has(lead.status) && !JA_RESOLVIDO.has(de));
-  if (humano && conta && !lead.primeiroContatoEm && (medido(lead) || SEM_CONTATO_AINDA.has(de))) {
+  if (humano && conta && !lead.primeiroContatoEm && medido(lead)) {
     lead.primeiroContatoEm = em;
     lead.primeiroContatoPor = String(por || '').trim().toLowerCase().slice(0, 120);
     primeiroContato = true;
@@ -176,12 +184,21 @@ export function aplicarStatusLead(lead, novo, { por, humano = true, contato } = 
   return { de, para: lead.status, em, primeiroContato };
 }
 
-// 1º contato de um pedido ANTERIOR ao corte, tirado do HISTÓRICO: a 1ª ação de alguém da
-// equipe (não do sistema) sobre o pedido, quando ele ainda estava sem contato. O histórico só
-// existe desde o corte — então essa 1ª ação aconteceu depois dele. Se a 1ª ação registrada já
-// encontrou o pedido atendido (ex.: "em contato" desde antes do corte), o 1º contato foi antes
-// e a hora é desconhecida: devolve null. `linhas` = linhas do histórico do pedido
-// ({ de, para, em, por, evento }), em qualquer ordem. Devolve { em, por } ou null.
+// 1º contato de um pedido ANTERIOR ao corte (18/11/2026 01:11), tirado do HISTÓRICO: a 1ª ação
+// de alguém da equipe (não do sistema) registrada para o pedido. Só vale se essa ação aconteceu
+// a partir do corte (a hora é conferida abaixo), se encontrou o pedido ainda sem contato ("novo"
+// ou "aguardando pagamento") e se foi um contato ("Registrei o contato", em contato, tratado ou sem
+// retorno — coleta gerada não, porque pedido antigo não se liga a OS). Se a 1ª ação encontrou o
+// pedido já encerrado (o sistema não reabre pedido), o 1º contato foi antes e a hora é
+// desconhecida: devolve null.
+// Limites registrados: pedido em "aguardando pagamento" que já tinha tido contato ANTES do corte
+// (sem registro) teria o 1º contato contado só na 1ª ação depois dele; e pedido antigo parado
+// por semanas, atendido depois do corte, entraria nos tempos com semanas de atraso. Em
+// 19/11/2026 nenhum pedido antigo estava aberto (conferido pela situação no sistema de todos os
+// 162) e só 2 tinham 1º contato pelo histórico (630 e 845 min) — os dois casos não têm como
+// acontecer de novo. O conector avisa que as semanas antes do corte trazem só esses pedidos.
+// `linhas` = linhas do histórico do pedido ({ de, para, em, por, evento }), em qualquer ordem.
+// Devolve { em, por } ou null.
 export function primeiroContatoDoHistorico(linhas) {
   const humanas = (Array.isArray(linhas) ? linhas : [])
     .filter((h) => h && h.em && !['pedido_recebido', 'excluido'].includes(h.evento) && String(h.por || '').trim() && !/^sistema/i.test(String(h.por).trim()))
