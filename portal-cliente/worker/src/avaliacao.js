@@ -177,23 +177,31 @@ export const REGRA_EMAIL = EMAIL_INTEIRO.source;
 // DESCARTADO e conta como mal formado ("e-mail inválido", se não sobrar outro e-mail bem
 // formado). O pedaço depois do espaço nunca é adivinhado. Também descartados: espaço logo
 // DEPOIS de um @ ("maria@ clara@x.com", "maria @ clara@x.com") e ponto ou "_" solto entre a
-// palavra e o endereço ("maria . clara@x.com"). NÃO é palavra colada (continua aceito): começo
-// do texto; palavra que termina em ":" "·" ")" "]" ">" "»" ou em aspas (no texto livre também
-// "," ";" "/" "|" — num campo de e-mail eles valem como erro de digitação no lugar do ponto);
-// endereço que começa com "<", "(", "[", aspas ou "rótulo:" (no texto livre também "," ";");
+// palavra e o endereço ("maria . clara@x.com"), inclusive juntos ("maria @ . clara@x.com"). NÃO é
+// palavra colada (continua aceito): começo do texto; palavra que termina em ":" "·" ")" "]" ">"
+// "»" ou em aspas retas " (as curvas ” e a simples ' não separam: a palavra fica colada) (no texto
+// livre também "," ";" "/" "|" — num campo de e-mail eles valem como erro de digitação no lugar do
+// ponto); endereço que começa com "<", "(", "[", aspas ou "rótulo:" (no texto livre também "," ";"
+// "/" "|" "·"; num campo de e-mail, nome antes dele descarta — ver a conferência do trecho abaixo —,
+// exceto entre "<>", "()" ou "[]");
 // outro endereço antes; só números (telefone); conectivo entre dois endereços ("a@x.com e
 // b@x.com"). Os 3 casos que o diagnóstico do conector conta usam a mesma detecção
 // (palavraColada, enderecoNoInicio e arrobaSemNome, mais abaixo); a leitura descarta também os
 // dois casos acima, que o diagnóstico não conta (para a contagem de antes e a de depois usarem
 // o mesmo critério).
 // Num CAMPO de e-mail vale ainda a conferência que já existia (nada que era descartado passa a
-// ser aceito): nome em qualquer ponto do trecho solto logo antes do endereço — mesmo com traço
-// ou número no meio ("vitor - souza@x.com", "vitor 11 souza@x.com") — descarta o endereço.
+// ser aceito): nome em qualquer ponto do trecho solto logo antes do endereço — mesmo com hífen,
+// meia-risca, travessão, número ou "," ";" "/" "|" soltos no meio ("vitor - souza@x.com", "vitor –
+// souza@x.com", "vitor 11 souza@x.com", "vitor , souza@x.com") — descarta o endereço (exceto
+// endereço entre "<>", "()" ou "[]"). Outro sinal solto no meio (aspas curvas, "#") desfaz o trecho:
+// limite registrado ("vitor “ souza@x.com" é aceito, como na versão de antes de 19/11).
 // Desde 19/11 sem a exceção de antes para o nome que "bate" com o endereço. Rótulo e conectivo
 // separados do endereço por telefone ou traço continuam fora dessa conta ("tel 1133334444 joao@x.com").
 // `campo: true` = o texto vem de um CAMPO de e-mail do cadastro (não de texto livre).
-// `interno: true` = configuração da própria Ecobraz (remetente e endereço de teste, definidos na
-// Cloudflare): lida como antes de 19/11, sem a regra do espaço, que vale para dados do CLIENTE.
+// `interno: true` = leitura de antes de 19/11, sem a regra do espaço. Usada SÓ em dois lugares, os
+// dois do lado seguro: a configuração da própria Ecobraz (remetente e endereço de teste, definidos
+// na Cloudflare) e a leitura LARGA para BLOQUEAR (emailsParaBloqueio). Nunca escolhe destinatário
+// entre os dados do cliente (só o endereço do escritório que recebe os e-mails do modo de teste).
 function lerEmails(v, opcoes) {
   const campo = !!(opcoes && opcoes.campo);
   const interno = !!(opcoes && opcoes.interno);
@@ -205,7 +213,11 @@ function lerEmails(v, opcoes) {
     if (!palavra.includes('@')) {
       // vírgula, ponto e vírgula ou barra no FIM não desfazem o trecho solto ("vitor, souza@…")
       const limpa = semSeparadorNoFim(palavra);
-      if (limpa && PALAVRA_SOLTA.test(limpa)) { if (palavraDeNome(limpa)) nomeNoTrecho = true; } else nomeNoTrecho = false;
+      // "," ";" "/" "|", meia-risca, travessão e marcador SOLTOS ("vitor , souza@…", "vitor – souza@…"; o Word
+      // troca " - " por " – ") também não desfazem o trecho
+      if (!limpa) { /* só "," ";" "/" "|": não desfaz o trecho */ }
+      else if (PALAVRA_SOLTA.test(limpa) || /^[‐-―−*•]+$/u.test(limpa)) { if (palavraDeNome(limpa)) nomeNoTrecho = true; }
+      else nomeNoTrecho = false;
       continue;
     }
     const nomeAntes = nomeNoTrecho;
@@ -214,8 +226,8 @@ function lerEmails(v, opcoes) {
     nomeNoTrecho = !!resto && !resto.includes('@') && PALAVRA_SOLTA.test(resto) && palavraDeNome(resto);
     if (!interno) {
       if (arrobaSemNome(palavra, palavras[i + 1])) { ruins++; continue; }                                             // "maria @x.com"
-      if (/@$/.test(palavras[i - 1] || '')) { ruins++; continue; }                                                   // "maria@ clara@x.com", "maria @ clara@x.com"
       let j = i - 1; while (j > 0 && /^[._]+$/.test(palavras[j])) j--;                                              // "maria . clara@x.com"
+      if (/@$/.test(palavras[j] || '')) { ruins++; continue; }                                                       // "maria@ clara@x.com", "maria @ . clara@x.com"
       if (enderecoNoInicio(palavra) && palavraColada(palavras[j], palavras[j - 1], campo)) { ruins++; continue; }    // "maria clara@x.com"
       if (campo && nomeAntes && !/^[<(\[]/.test(palavra) && /[^@\s]@/.test(palavra)) { ruins++; continue; }          // "vitor - souza@x.com" (campo)
     }
@@ -284,9 +296,9 @@ function emailsParaBloqueio(v) {
 // Palavra COLADA antes de um endereço: separada dele só por espaço, com letra e sem pontuação de
 // separação no fim. É o caso "maria clara@x.com": não dá para saber se a palavra é parte do
 // endereço (espaço no lugar do ponto) ou um nome/rótulo antes dele. NÃO é colada: começo do
-// texto; palavra que termina em ":" "·" ")" "]" ">" "»" ou em aspas/"<"/"("/"[" (no texto livre
-// também "," ";" "/" "|" — num campo de e-mail eles são tratados como erro de digitação no lugar
-// do ponto); palavra com "@" ("a@x.com b@x.com"; "maria@ clara@x.com" é descartado à parte, em
+// texto; palavra que termina em ":" "·" ")" "]" ">" "»" ou em aspas retas "/"<"/"("/"[" (no texto
+// livre também "," ";" "/" "|" — num campo de e-mail eles são tratados como erro de digitação no
+// lugar do ponto); palavra com "@" ("a@x.com b@x.com"; "maria@ clara@x.com" é descartado à parte, em
 // lerEmails); só números (telefone); conectivo entre dois endereços ("a@x.com e b@x.com").
 // `ant` = palavra imediatamente antes; `antAnt` = a anterior a ela.
 function palavraColada(ant, antAnt, campo) {
