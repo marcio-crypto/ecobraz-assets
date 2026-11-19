@@ -862,7 +862,7 @@ async function ferrColetasPeriodo(env, args) {
   if (campo === 'cancelada') ctx.aviso('Data de cancelamento: registrada a partir de 18/11/2026; cancelamentos anteriores usam a última atualização da OS (data_cancelamento_estimada = true).');
   ctx.aviso(`Pedido de origem: desde ${INICIO_MEDICAO_TXT} a OS gerada a partir de um pedido grava o pedido (lead_id; origem_pedido.vinculo = "exato"). Pedidos de antes disso usam o vínculo "provável" (pedido do mesmo cliente até 30 dias antes). Sem pedido ligado, modalidade = "padrão" e origem vazia.`);
   ctx.aviso('data_hora_conclusao = hora do encerramento no app do motorista. Coleta que não passa pelo app (transportadora, ou concluída pelo escritório/doca) fica com a hora em que foi marcada como concluída — pode ser depois da retirada real.');
-  ctx.aviso('como_nos_achou = resposta da equipe a "Como nos achou?" (obrigatória na criação da OS a partir da publicação de 19/11/2026; pode ser corrigida na edição). OS criada antes disso = "não informado" — nada foi preenchido por adivinhação. como_nos_achou_sugestao_do_pedido = a opção que o canal do pedido do site indicava (vem marcada na tela; a equipe pode trocar). Contagem por dia e por origem: função agendamentos_por_origem.');
+  ctx.aviso('como_nos_achou = resposta da equipe a "Como nos achou?" (obrigatória na criação da OS a partir da publicação de 19/11/2026; pode ser corrigida na edição). OS criada antes disso fica "não informado" (a não ser que a equipe informe depois, na edição) — nada foi preenchido por adivinhação. como_nos_achou_sugestao_do_pedido = a opção que o canal do pedido do site indicava (vem marcada na tela; a equipe pode trocar). Contagem por dia e por origem: função agendamentos_por_origem.');
   if (diag) ctx.aviso('email_avaliacao = como o pedido de avaliação no Google lê o e-mail da coleta (contato da OS + ficha do cliente), pela regra em vigor (regra_de_leitura). É SÓ a leitura do endereço: não considera status da OS, listas de bloqueio, regra dos 12 meses nem casa/família ("envia" não quer dizer que o pedido vai sair; para as coletas que entram no pedido, use campo_data=concluida). casos: contato_da_os (palavra solta + espaço antes do endereço, no texto livre do contato da OS), campo_de_email_do_cadastro (o mesmo no e-mail da ficha ou de um contato) e espaco_antes_do_arroba (espaço logo antes da arroba, sem nada antes dela). leitura: envia (há destinatário bem formado) | envia_ao_pedaco_depois_do_espaco (o destinatário seria o pedaço depois do espaço — só pela regra de antes de 19/11/2026; pela regra atual não acontece) | envia_a_email_bem_formado (há um dos casos, mas o destinatário é um e-mail que a leitura aceita em algum campo) | email_invalido | sem_email | cadastro_grande. Peça também "numero" em campos para saber de qual coleta é cada item. resumo_email_avaliacao (só no formato json) soma o período inteiro (coletas e cadastros distintos); palavra_antes_do_endereco conta as ocorrências por tipo da palavra solta (rotulo: e-mail, financeiro…; comeco_do_endereco: a palavra é o começo do próprio endereço; outra). Só leitura; nenhum e-mail sai na resposta.');
   return saida(ctx, a, {
     total, pagina, porPagina, itens, filtros, titulo: `Coletas (${campo})`, extra: diag ? { resumo_email_avaliacao: diag.resumo } : undefined,
@@ -1511,11 +1511,14 @@ async function ferrAgendamentosPorOrigem(env, args) {
   const hoje = diaBR(new Date().toISOString());
   const fim = ate < hoje ? ate : hoje;
   const porDia = new Map();
-  const numeracao = new Map(); // ano → { nums (distintos), maior }: buraco na numeração = OS fora do índice (poda por tamanho)
+  // Integridade do índice (ele é podado por tamanho, saindo primeiro as OS fechadas mais antigas):
+  // números EMITIDOS por ano (os:seq, gravado a cada OS criada) × números presentes no índice.
+  const presentes = new Map(); // ano → Map(número → criadoEm)
+  let seqOS = null; try { const raw = env.PORTAL_KV ? await env.PORTAL_KV.get('os:seq') : null; seqOS = raw ? JSON.parse(raw) : {}; } catch { seqOS = null; }
   let primeiraComOrigem = '';
   for (const o of await ctx.oss()) {
     const num = /^OS-(\d{4})-(\d{1,6})$/.exec(String((o && o.numero) || ''));
-    if (num) { const n = numeracao.get(num[1]) || { nums: new Set(), maior: 0 }; n.nums.add(Number(num[2])); n.maior = Math.max(n.maior, Number(num[2])); numeracao.set(num[1], n); }
+    if (num) { const m = presentes.get(num[1]) || new Map(); if (!m.has(Number(num[2]))) m.set(Number(num[2]), String(o.criadoEm || '')); presentes.set(num[1], m); }
     const d = diaBR(o && o.criadoEm);
     if (!d || d < de || d > fim) continue;
     const c = comoValido(o.como) ? o.como : COMO_NAO_INFORMADO;
@@ -1523,6 +1526,24 @@ async function ferrAgendamentosPorOrigem(env, args) {
     let x = porDia.get(d); if (!x) { x = { total: 0, canceladas: 0, por_origem: zeroComo() }; porDia.set(d, x); }
     x.total++; x.por_origem[c]++; if (o.status === 'cancelada') x.canceladas++;
   }
+  // OS que faltam no índice, por ano, e a hora a partir da qual TODAS as OS criadas estão nele (a
+  // OS seguinte ao último número faltante — números crescem com o tempo). Sem os:seq legível,
+  // só os buracos entre os números presentes (pode subestimar).
+  const anosNum = [...new Set([...Object.keys(seqOS || {}), ...presentes.keys()])].filter((x) => /^\d{4}$/.test(x)).sort();
+  const faltam = []; let ultimoFaltante = null;
+  for (const ano of anosNum) {
+    const p = presentes.get(ano) || new Map();
+    let emitidos = Math.min(Number((seqOS || {})[ano]) || 0, 1e6); for (const n of p.keys()) if (n > emitidos) emitidos = n;
+    let falt = 0, maior = 0; for (let n = 1; n <= emitidos; n++) if (!p.has(n)) { falt++; maior = n; }
+    if (falt) { faltam.push(`${falt} de ${ano}`); ultimoFaltante = { ano, n: maior }; }
+  }
+  let completoDepois = '';
+  if (ultimoFaltante) {
+    const seguinte = [...presentes.entries()].filter(([ano]) => ano >= ultimoFaltante.ano).flatMap(([ano, m]) => [...m.entries()].filter(([n]) => ano > ultimoFaltante.ano || n > ultimoFaltante.n).map(([n, em]) => ({ ano, n, em })))
+      .sort((x, y) => x.ano.localeCompare(y.ano) || x.n - y.n)[0];
+    completoDepois = seguinte ? seguinte.em : '';
+  }
+  const diaCompleto = completoDepois ? diaBR(completoDepois) : '';
   const dias = [];
   const semanas = new Map();
   const periodo = { total: 0, canceladas: 0, por_origem: zeroComo() };
@@ -1531,7 +1552,8 @@ async function ferrAgendamentosPorOrigem(env, args) {
     const x = porDia.get(d) || { total: 0, canceladas: 0, por_origem: zeroComo() };
     const dow = new Date(Date.parse(d + 'T12:00:00Z')).getUTCDay();
     const emAndamento = d === hoje;
-    dias.push({ data: d, dia_semana: DIAS_SEMANA[dow], ...(emAndamento ? { dia_em_andamento: true } : {}), ...fecharAgendamentos({ total: x.total, canceladas: x.canceladas, por_origem: { ...x.por_origem } }) });
+    const podeFaltar = !!ultimoFaltante && (!diaCompleto || d <= diaCompleto);
+    dias.push({ data: d, dia_semana: DIAS_SEMANA[dow], ...(emAndamento ? { dia_em_andamento: true } : {}), ...(podeFaltar ? { pode_faltar_os_no_indice: true } : {}), ...fecharAgendamentos({ total: x.total, canceladas: x.canceladas, por_origem: { ...x.por_origem } }) });
     const seg = segundaDaSemana(d);
     let s = semanas.get(seg); if (!s) { s = { semana_inicio: seg, semana_fim: somaDias(seg, 6), dias: 0, emAndamento: false, acc: { total: 0, canceladas: 0, por_origem: zeroComo() } }; semanas.set(seg, s); }
     s.dias++; if (emAndamento) s.emAndamento = true; somarAgendamento(s.acc, x); somarAgendamento(periodo, x);
@@ -1544,13 +1566,13 @@ async function ferrAgendamentosPorOrigem(env, args) {
     media_por_dia: media(totalCompletos, diasCompletos), media_por_dia_util: media(totalUteis, diasUteis),
     ...(fim === hoje && fim >= de ? { hoje: { data: hoje, total: (porDia.get(hoje) || { total: 0 }).total } } : {}),
     primeira_os_com_origem_no_periodo: primeiraComOrigem ? isoBR(primeiraComOrigem) : null,
+    ...(ultimoFaltante ? { indice_completo_depois_de: completoDepois ? isoBR(completoDepois) : null } : {}),
   };
   if (de > hoje) ctx.aviso(`O período começa depois de hoje (${hoje}): nenhum dia contado.`);
   else if (ate > hoje) ctx.aviso(`Dias depois de hoje (${hoje}) não entram (ate_contado).`);
   ctx.aviso('Agendamento = OS criada no dia (horário de Brasília), em qualquer status; as canceladas depois continuam contando e aparecem em "canceladas". media_por_dia e media_por_dia_util usam só os dias COMPLETOS: hoje aparece com dia_em_andamento (o que já foi criado até agora) e fica fora das médias. media_por_dia_util = segunda a sexta (feriados não são descontados). Semana com menos de 7 dias no período: semana_incompleta e dias_contados.');
-  ctx.aviso('Origem = resposta da equipe a "Como nos achou?" na criação da OS (obrigatória a partir da publicação de 19/11/2026; pode ser corrigida na edição). OS criada antes disso = nao_informado: nada foi preenchido por adivinhação. Quando a OS nasce de um pedido do site com canal claro, a opção vem marcada (a equipe pode trocar). primeira_os_com_origem_no_periodo = a OS mais antiga DO PERÍODO que tem a origem informada (não é a data em que o campo passou a existir).');
-  const faltam = [...numeracao.entries()].filter(([, n]) => n.maior > n.nums.size).map(([ano, n]) => `${n.maior - n.nums.size} de ${ano}`);
-  if (faltam.length) ctx.aviso(`Atenção: o índice de OS não tem todos os números (${faltam.join('; ')}). O índice é podado por tamanho (saem primeiro as OS fechadas mais antigas) — a contagem dos dias mais antigos pode sair MENOR do que a real.`);
+  ctx.aviso('Origem = resposta da equipe a "Como nos achou?" na criação da OS (obrigatória a partir da publicação de 19/11/2026; pode ser corrigida na edição). OS criada antes disso fica nao_informado (a não ser que a equipe informe depois, na edição): nada foi preenchido por adivinhação. Quando a OS nasce de um pedido do site com canal claro, a opção vem marcada (a equipe pode trocar). primeira_os_com_origem_no_periodo = a OS mais antiga DO PERÍODO que tem a origem informada (não é a data em que o campo passou a existir).');
+  if (faltam.length) ctx.aviso(`Atenção: faltam OS no índice de OS (${faltam.join('; ')}${seqOS ? '' : ' — sem a numeração emitida legível, conta só os buracos entre os números presentes'}). O índice é podado por tamanho (saem primeiro as OS fechadas mais antigas). ${completoDepois ? `As OS criadas depois de ${isoBR(completoDepois)} estão todas no índice; nos dias até ${diaCompleto} (pode_faltar_os_no_indice) a contagem pode sair MENOR do que a real.` : 'Não dá para saber a partir de quando a contagem está completa.'}`);
   const origensDe = (po) => CODIGOS_COMO.filter((c) => po[c]).map((c) => `${c === COMO_NAO_INFORMADO ? 'não informado' : rotuloComo(c)}: ${po[c]}`).join(', ');
   return saida(ctx, a, {
     total: dias.length, pagina, porPagina, itens: dias.slice((pagina - 1) * porPagina, pagina * porPagina), filtros: { de, ate }, titulo: 'Agendamentos por origem (por dia)',
@@ -1558,7 +1580,7 @@ async function ferrAgendamentosPorOrigem(env, args) {
     linha: (x) => `${x.data} (${x.dia_semana}${x.dia_em_andamento ? ', em andamento' : ''}) — ${x.total} OS${x.canceladas ? ` (${x.canceladas} cancelada(s) depois)` : ''}${x.total ? ' — ' + origensDe(x.por_origem) : ''}`,
     rodape: (corpo) => {
       const p = corpo.periodo_inteiro; if (!p) return '';
-      const linhas = (corpo.semanas || []).map((s) => `• semana ${s.semana_inicio} a ${s.semana_fim}${s.semana_incompleta ? ` (${s.dias_contados} dia(s) no período${s.semana_em_andamento ? ', em andamento' : ''})` : ''}: ${s.total} OS, ${s.informadas} com origem${s.total ? ' — ' + origensDe(s.por_origem) : ''}`);
+      const linhas = (corpo.semanas || []).map((s) => `• semana ${s.semana_inicio} a ${s.semana_fim}${s.semana_incompleta ? ` (${s.dias_contados} dia(s) no período${s.semana_em_andamento ? ', em andamento' : ''})` : (s.semana_em_andamento ? ' (em andamento)' : '')}: ${s.total} OS, ${s.informadas} com origem${s.total ? ' — ' + origensDe(s.por_origem) : ''}`);
       const medias = p.media_por_dia != null ? ` (média ${p.media_por_dia} por dia completo${p.media_por_dia_util != null ? `; ${p.media_por_dia_util} por dia útil` : ''})` : '';
       return [`Período ${p.de} a ${p.ate_contado || p.ate}: ${p.total} OS criadas${medias}${p.hoje ? `, ${p.hoje.total} delas hoje (dia em andamento)` : ''}, ${p.informadas} com origem (${p.percentual_informadas ?? 0}%), ${p.canceladas} cancelada(s) depois.`, ...linhas].join('\n');
     },

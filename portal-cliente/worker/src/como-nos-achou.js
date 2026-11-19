@@ -41,11 +41,16 @@ export const rotuloComo = (c) => ROTULOS.get(String(c || '')) || 'não informado
 // fim de uma palavra). Precisa ter ao menos uma letra ou um número; só texto (nada de objeto).
 export const limparTextoOutro = (t) => {
   if (typeof t !== 'string') return '';
-  const s = t.slice(0, 2000).replace(/<[^<>]{0,200}>/g, ' ').replace(/[\u0000-\u001f\u007f<>]+/g, ' ').replace(/\p{Cf}+/gu, '').replace(/\s+/g, ' ').trim();
+  // Invisíveis: tudo o que o Unicode marca como "ignorável" (espaço de largura zero, hífen suave,
+  // letras de preenchimento coreanas…).
+  const s = t.slice(0, 2000).replace(/<[^<>]{0,200}>/g, ' ').replace(/[\u0000-\u001f\u007f<>]+/g, ' ').replace(/[\p{Default_Ignorable_Code_Point}\p{Cf}]+/gu, '').replace(/\s+/g, ' ').trim();
   if (!/[\p{L}\p{N}]/u.test(s)) return '';
   if (s.length <= COMO_OUTRO_MAX) return s;
   const corte = s.slice(0, COMO_OUTRO_MAX + 1).replace(/\s+\S*$/, '').trim();
-  return corte && corte.length <= COMO_OUTRO_MAX ? corte : s.slice(0, COMO_OUTRO_MAX).trim(); // palavra única longa: corte seco
+  if (corte && corte.length <= COMO_OUTRO_MAX) return corte;
+  // Palavra única longa: corte seco, sem partir um caractere (emoji) ao meio.
+  let out = ''; for (const ch of s) { if (out.length + ch.length > COMO_OUTRO_MAX) break; out += ch; }
+  return out.trim();
 };
 // Confere o que veio do formulário. null = inválido (sem escolha, opção fora da lista ou "Outro"
 // sem texto). { codigo, outro } = válido (outro = '' quando a escolha não é "Outro").
@@ -57,7 +62,10 @@ export function lerComo(codigo, outroTexto) {
   return { codigo: c, outro };
 }
 
-// --- Canal do pedido do site (mesmas listas e mesma ordem do site) ---------------------------
+// --- Canal do pedido do site (mesmas listas do site; ordem do site, com os ajustes abaixo) -------
+// Limites herdados das regras do site (o site classifica igual): e-mail com "perfil"/"gbp" na
+// campanha vira Google Maps; qualquer subdomínio do Google como origem (mail., docs., maps.) vira
+// busca orgânica.
 const AI_HOSTS = /(^|\.)(chatgpt\.com|openai\.com|perplexity\.ai|claude\.ai|copilot\.microsoft\.com|copilot\.com|gemini\.google\.com|bard\.google\.com|notebooklm\.google\.com|meta\.ai|grok\.com|x\.ai|deepseek\.com|you\.com|phind\.com|mistral\.ai|poe\.com|duck\.ai)$/;
 const AI_UTM = /^(chatgpt|openai|perplexity|claude|copilot|gemini|bard|grok|deepseek|mistral|phind|poe)$/;
 const SEARCH_HOSTS = /(^|\.)(google\.[a-z.]+|bing\.com|duckduckgo\.com|yahoo\.com|ecosia\.org|brave\.com|yandex\.[a-z]+|baidu\.com|startpage\.com|qwant\.com)$/;
@@ -73,8 +81,9 @@ export function canalDoPedido(lead) {
   // Assistente de IA: a FONTE tem de ser de IA (como no site). Só o medium "ai" com outra fonte é
   // UTM própria = campanha.
   if (AI_HOSTS.test(source) || AI_UTM.test(source)) return 'chat_ia';
-  // Indicação de outro site, rede social e acesso direto traduzidos pelo worker do site: a fonte é o
-  // domínio de quem indicou (pode ter "perfil", "newsletter"…) — a equipe escolhe.
+  // medium "referral" / "social" / "(none)": indicação de outro site, rede social ou acesso direto
+  // (traduzidos pelo worker do site, ou UTM própria com esse medium). A fonte pode ser o domínio de
+  // quem indicou (com "perfil", "newsletter"…) — não decide nada: a equipe escolhe.
   if (medium === 'referral' || medium === 'social' || medium === '(none)') return '';
   if (/gbp|google_business|perfil/.test(`${source} ${campaign}`)) return 'perfil_google';
   if (medium === 'email' || /egoi|newsletter/.test(source)) return 'email';
