@@ -857,13 +857,13 @@ async function ferrColetasPeriodo(env, args) {
   const querDiag = (camposPedidos(a) || []).includes('email_avaliacao');
   const diag = querDiag ? await diagnosticoEmails(ctx, lista, { de, ate, campo_data: campo }) : null;
   const itens = await detalharColetas(ctx, fatia, vinc || await vinculosLeadOS(ctx));
-  if (diag) fatia.forEach((o, i) => { if (itens[i]) { const dg = diag.porOS.get(o.id); itens[i].email_avaliacao = dg ? { casos: dg.casos, leitura: dg.leitura } : null; } });
+  if (diag) fatia.forEach((o, i) => { if (itens[i]) { const dg = diag.porOS.get(o.id); itens[i].email_avaliacao = dg ? { casos: dg.casos, leitura: dg.leitura, saudacao: dg.saudacao, ...(dg.regra_anterior ? { regra_anterior: dg.regra_anterior } : {}) } : null; } });
   if (campo === 'concluida') ctx.aviso('Data de conclusão: registrada exatamente a partir de 18/11/2026; antes disso vem do app do motorista quando guardado, ou é estimada pela data agendada (data_conclusao_estimada = true).');
   if (campo === 'cancelada') ctx.aviso('Data de cancelamento: registrada a partir de 18/11/2026; cancelamentos anteriores usam a última atualização da OS (data_cancelamento_estimada = true).');
   ctx.aviso(`Pedido de origem: desde ${INICIO_MEDICAO_TXT} a OS gerada a partir de um pedido grava o pedido (lead_id; origem_pedido.vinculo = "exato"). Pedidos de antes disso usam o vínculo "provável" (pedido do mesmo cliente até 30 dias antes). Sem pedido ligado, modalidade = "padrão" e origem vazia.`);
   ctx.aviso('data_hora_conclusao = hora do encerramento no app do motorista. Coleta que não passa pelo app (transportadora, ou concluída pelo escritório/doca) fica com a hora em que foi marcada como concluída — pode ser depois da retirada real.');
   ctx.aviso('como_nos_achou = resposta da equipe a "Como nos achou?" (obrigatória na criação da OS a partir da publicação de 19/11/2026; pode ser corrigida na edição). OS criada antes disso fica "não informado" (a não ser que a equipe informe depois, na edição) — nada foi preenchido por adivinhação. como_nos_achou_sugestao_do_pedido = a opção que o canal do pedido do site indicava (vem marcada na tela; a equipe pode trocar). Contagem por dia e por origem: função agendamentos_por_origem.');
-  if (diag) ctx.aviso('email_avaliacao = como o pedido de avaliação no Google lê o e-mail da coleta (contato da OS + ficha do cliente), pela regra em vigor (regra_de_leitura). É SÓ a leitura do endereço: não considera status da OS, listas de bloqueio, regra dos 12 meses nem casa/família ("envia" não quer dizer que o pedido vai sair; para as coletas que entram no pedido, use campo_data=concluida). casos: contato_da_os (palavra solta + espaço antes do endereço, no texto livre do contato da OS), campo_de_email_do_cadastro (o mesmo no e-mail da ficha ou de um contato) e espaco_antes_do_arroba (espaço logo antes da arroba, sem nada antes dela). leitura: envia (há destinatário bem formado) | envia_ao_pedaco_depois_do_espaco (o destinatário seria o pedaço depois do espaço — só pela regra de antes de 19/11/2026; pela regra atual não acontece) | envia_a_email_bem_formado (há um dos casos, mas o destinatário é um e-mail que a leitura aceita em algum campo) | email_invalido | sem_email | cadastro_grande. Peça também "numero" em campos para saber de qual coleta é cada item. resumo_email_avaliacao (só no formato json) soma o período inteiro (coletas e cadastros distintos); palavra_antes_do_endereco conta as ocorrências por tipo da palavra solta (rotulo: e-mail, financeiro…; comeco_do_endereco: a palavra é o começo do próprio endereço; outra). Só leitura; nenhum e-mail sai na resposta.');
+  if (diag) ctx.aviso('email_avaliacao = como o pedido de avaliação no Google lê o e-mail da coleta (contato da OS + ficha do cliente), pela regra em vigor (regra_de_leitura). É SÓ a leitura do endereço: não considera status da OS, listas de bloqueio, regra dos 12 meses nem casa/família ("envia" não quer dizer que o pedido vai sair; para as coletas que entram no pedido, use campo_data=concluida). casos: contato_da_os (palavra solta + espaço antes do endereço, no texto livre do contato da OS), campo_de_email_do_cadastro (o mesmo no e-mail da ficha ou de um contato) e espaco_antes_do_arroba (espaço logo antes da arroba, sem nada antes dela). leitura: envia (há destinatário bem formado) | envia_ao_pedaco_depois_do_espaco (o destinatário seria o pedaço depois do espaço — só pela regra de antes de 19/11/2026; pela regra atual não acontece) | envia_a_email_bem_formado (há um dos casos, mas o destinatário é um e-mail que a leitura aceita em algum campo) | email_invalido | sem_email | cadastro_grande | sem_cadastro (a OS aponta para um cadastro que não existe mais: o envio para aí; um erro de leitura isolado do cadastro também aparece assim) | cadastro_nao_lido (esta consulta não chegou a ler o cadastro — limite de leituras; peça um período menor). saudacao: nome ("Oi, Maria!" / "Olá, Carlos.") | ola ("Olá!", sem nome) | null (sem destinatário) — pessoa física só leva o nome quando o e-mail escolhido é o 1º da ficha (desde 19/11/2026, 2ª parte). regra_anterior (só nas coletas em que algo muda) = leitura, saudação e destinatário (o_mesmo | outro_endereco | nenhum_agora) pela regra de antes da 2ª parte de 19/11/2026 (sem a regra do mesmo campo e sem o "Olá!"). Peça também "numero" em campos para saber de qual coleta é cada item. resumo_email_avaliacao (só no formato json) soma o período inteiro (coletas e cadastros distintos); palavra_antes_do_endereco conta as ocorrências por tipo da palavra solta (rotulo: e-mail, financeiro…; comeco_do_endereco: a palavra é o começo do próprio endereço; outra); regra_anterior soma a comparação com a regra de antes (as saudações contam só coletas com destinatário; de_nome_para_ola e de_ola_para_nome = coletas que trocam de saudação, inclusive por trocar de destinatário). A coluna regra_anterior repete a leitura publicada antes desta mudança (sem a regra do mesmo campo, sem o "Olá!" e sem contar como mal formada a arroba seguida de provedor de e-mail sem “.com” — gmail, hotmail, outlook…); casos usa a detecção de hoje. Só leitura; nenhum e-mail sai na resposta.');
   return saida(ctx, a, {
     total, pagina, porPagina, itens, filtros, titulo: `Coletas (${campo})`, extra: diag ? { resumo_email_avaliacao: diag.resumo } : undefined,
     linha: (o) => [o.numero, o.status_rotulo, o.cliente && `${o.cliente.nome} (${o.cliente.tipo})`, o.cidade, `criada ${o.data_hora_criacao || o.data_criacao}`, o.data_agendada && `agendada ${o.data_agendada}`, o.data_conclusao && `concluída ${o.data_conclusao}${o.data_conclusao_estimada ? ' (estimada)' : ''}`, o.motorista && `🚚 ${o.motorista}`, o.peso_kg != null && `${o.peso_kg} kg`, o.lead_id && `pedido ${o.lead_id}`, o.prazo_alvo && `🏭 prazo ${o.prazo_alvo} — ${o.prazo_situacao}`, o.como_nos_achou && `achou: ${o.como_nos_achou}${o.como_nos_achou_outro ? ` (${o.como_nos_achou_outro})` : ''}`].filter(Boolean).join(' — '),
@@ -883,21 +883,39 @@ async function diagnosticoEmails(ctx, lista, periodo) {
   const vazio = () => ({ coletas: 0, cadastros: new Set(), leitura: {} });
   const grupos = { contato_da_os: vazio(), campo_de_email_do_cadastro: vazio(), espaco_antes_do_arroba: vazio(), algum_caso: vazio(), todas: vazio() };
   const palavras = { rotulo: 0, comeco_do_endereco: 0, outra: 0 };
+  // Comparação com a regra de antes da 2ª parte de 19/11/2026 (mesmo campo + "Olá!").
+  const soma = (m, k) => { if (k) m[k] = (m[k] || 0) + 1; };
+  const comp = { leitura: {}, saudacao: {}, saudacao_agora: {}, mudou: vazio(), destinatario: {}, de_nome_para_ola: vazio(), de_ola_para_nome: vazio() };
   const porOS = new Map();
   let semRegistro = 0, fichaIlegivel = 0;
   for (const o of lista) {
     const rec = recs.get(o.id);
     if (!rec) { semRegistro++; continue; }
     const fid = idF(rec);
-    let cli = null;
-    if (fid) { try { const raw = fichas.get(`cli:${fid}`); cli = raw ? JSON.parse(raw) : null; } catch { cli = null; fichaIlegivel++; } }
-    const dg = diagnosticoEmailAvaliacao(rec, cli);
+    let cli = null, ilegivel = false;
+    if (fid) { try { const raw = fichas.get(`cli:${fid}`); cli = raw ? JSON.parse(raw) : null; } catch { cli = null; fichaIlegivel++; ilegivel = true; } }
+    let dg = diagnosticoEmailAvaliacao(rec, cli);
+    // A OS aponta para um cadastro que não existe mais (a chave foi lida e veio vazia): o envio de
+    // verdade para em "cadastro do cliente não encontrado" (sem_cadastro). Cadastro que esta
+    // consulta NÃO chegou a ler (limite de leituras): cadastro_nao_lido. Nos dois casos fica fora
+    // da comparação de saudação. (Limite: erro de leitura de uma chave isolada chega como "vazia".)
+    const lida = fid ? fichas.has(`cli:${fid}`) : true;
+    if (fid && !cli && !ilegivel) dg = { casos: dg.casos, leitura: lida ? 'sem_cadastro' : 'cadastro_nao_lido', saudacao: null, palavras: dg.palavras };
     porOS.set(o.id, dg);
     const conta = (g) => { g.coletas++; if (fid && cli) g.cadastros.add(fid); g.leitura[dg.leitura] = (g.leitura[dg.leitura] || 0) + 1; };
     conta(grupos.todas);
     for (const k of dg.casos) conta(grupos[k]);
     if (dg.casos.length) conta(grupos.algum_caso);
     for (const w of dg.palavras) palavras[w] = (palavras[w] || 0) + 1;
+    const ant = dg.regra_anterior;
+    soma(comp.leitura, ant ? ant.leitura : dg.leitura);
+    soma(comp.saudacao, ant ? ant.saudacao : dg.saudacao);
+    soma(comp.saudacao_agora, dg.saudacao);
+    if (ant) {
+      conta(comp.mudou); soma(comp.destinatario, ant.destinatario);
+      if (ant.saudacao === 'nome' && dg.saudacao === 'ola') conta(comp.de_nome_para_ola);
+      if (ant.saudacao === 'ola' && dg.saudacao === 'nome') conta(comp.de_ola_para_nome);
+    }
   }
   const fecha = (g) => ({ coletas: g.coletas, cadastros: g.cadastros.size, leitura: g.leitura });
   return {
@@ -909,6 +927,17 @@ async function diagnosticoEmails(ctx, lista, periodo) {
       algum_caso: fecha(grupos.algum_caso),
       todas: fecha(grupos.todas),
       palavra_antes_do_endereco: palavras,
+      saudacao: comp.saudacao_agora,
+      // leitura e saudação de TODAS as coletas pela regra de antes da 2ª parte de 19/11/2026;
+      // coletas_que_mudam = as que mudam de leitura, de saudação ou de destinatário (leitura dentro
+      // dele = a leitura de agora). As saudações só contam coletas COM destinatário (a soma pode
+      // ser menor que `coletas`).
+      regra_anterior: {
+        leitura: comp.leitura, saudacao: comp.saudacao,
+        coletas_que_mudam: fecha(comp.mudou), destinatario: comp.destinatario,
+        de_nome_para_ola: { coletas: comp.de_nome_para_ola.coletas, cadastros: comp.de_nome_para_ola.cadastros.size },
+        de_ola_para_nome: { coletas: comp.de_ola_para_nome.coletas, cadastros: comp.de_ola_para_nome.cadastros.size },
+      },
       ...(semRegistro ? { coletas_sem_registro: semRegistro } : {}),
       ...(fichaIlegivel ? { fichas_ilegiveis: fichaIlegivel } : {}),
     },
@@ -1596,7 +1625,7 @@ export const FERRAMENTAS_CONSULTA = [
   },
   {
     name: 'coletas_periodo',
-    description: 'Ordens de Coleta (OS) num período, com filtros — acompanhar coletas por dia. Só leitura. Obrigatórios: de, ate (AAAA-MM-DD ou AAAA-MM). campo_data escolhe qual data cai no período: criacao (padrão) | agendada | concluida | cancelada. Filtros opcionais: status (agendada | aguardando_roteiro | em_transporte | na_unidade | concluida | cancelada), tipo_cliente (PF | PJ), cidade, material, motorista (nome, ou "sem motorista"), origem (canal do pedido, ex.: site, portal-coleta; ou "sem_pedido"). Cada OS traz: número, status, cliente (id, tipo, nome), cidade e CEP, datas de criação/agendamento/conclusão/cancelamento (com marcação quando estimada), data_hora_criacao e data_hora_conclusao (horário de Brasília), lead_id (pedido de origem quando o vínculo é exato), lote grande com prazo_alvo / prazo_cumprido / prazo_situacao (prazo de 72h), motivo do cancelamento, motorista e veículo, materiais declarados e pesados, peso, modalidade, valor cobrado e pagamento, origem do pedido (lead_id, data e hora do pedido, vínculo exato ou provável, UTM e gclid quando houver), pedido de avaliação no Google (avaliacao_pedida_em, avaliacao_canal = email | whatsapp | nenhum, motivo_nao_enviado) e documentos (CDF, NF e MTR com número); "Como nos achou?" da equipe (como_nos_achou: Busca no Google, Google Maps, Assistente de IA, Indicação de alguém, Cliente antigo, E-mail da Ecobraz, Anúncio, Outro + como_nos_achou_outro, ou "não informado" nas OS criadas antes da publicação de 19/11/2026). Opcional: pedir "email_avaliacao" em campos traz, por OS, como o pedido de avaliação lê o e-mail (casos de espaço antes do @ e leitura: envia | e-mail inválido | sem e-mail…, sem mostrar o e-mail) e resumo_email_avaliacao do período inteiro. Exemplo: {"de":"2026-11-17","ate":"2026-11-17","campo_data":"concluida"}',
+    description: 'Ordens de Coleta (OS) num período, com filtros — acompanhar coletas por dia. Só leitura. Obrigatórios: de, ate (AAAA-MM-DD ou AAAA-MM). campo_data escolhe qual data cai no período: criacao (padrão) | agendada | concluida | cancelada. Filtros opcionais: status (agendada | aguardando_roteiro | em_transporte | na_unidade | concluida | cancelada), tipo_cliente (PF | PJ), cidade, material, motorista (nome, ou "sem motorista"), origem (canal do pedido, ex.: site, portal-coleta; ou "sem_pedido"). Cada OS traz: número, status, cliente (id, tipo, nome), cidade e CEP, datas de criação/agendamento/conclusão/cancelamento (com marcação quando estimada), data_hora_criacao e data_hora_conclusao (horário de Brasília), lead_id (pedido de origem quando o vínculo é exato), lote grande com prazo_alvo / prazo_cumprido / prazo_situacao (prazo de 72h), motivo do cancelamento, motorista e veículo, materiais declarados e pesados, peso, modalidade, valor cobrado e pagamento, origem do pedido (lead_id, data e hora do pedido, vínculo exato ou provável, UTM e gclid quando houver), pedido de avaliação no Google (avaliacao_pedida_em, avaliacao_canal = email | whatsapp | nenhum, motivo_nao_enviado) e documentos (CDF, NF e MTR com número); "Como nos achou?" da equipe (como_nos_achou: Busca no Google, Google Maps, Assistente de IA, Indicação de alguém, Cliente antigo, E-mail da Ecobraz, Anúncio, Outro + como_nos_achou_outro, ou "não informado" nas OS criadas antes da publicação de 19/11/2026). Opcional: pedir "email_avaliacao" em campos traz, por OS, como o pedido de avaliação lê o e-mail (casos de espaço antes do @ e leitura: envia | e-mail inválido | sem e-mail…, sem mostrar o e-mail), a saudação (com o nome ou "Olá!"), a comparação com a regra de antes da 2ª parte de 19/11/2026 (regra_anterior) e resumo_email_avaliacao do período inteiro. Exemplo: {"de":"2026-11-17","ate":"2026-11-17","campo_data":"concluida"}',
     inputSchema: { type: 'object', properties: { de: { type: 'string' }, ate: { type: 'string' }, campo_data: { type: 'string', enum: ['criacao', 'agendada', 'concluida', 'cancelada'] }, status: { type: 'string' }, tipo_cliente: { type: 'string', enum: ['PF', 'PJ'] }, cidade: { type: 'string' }, material: { type: 'string' }, motorista: { type: 'string' }, origem: { type: 'string' }, ...PAG }, required: ['de', 'ate'] },
   },
   {
