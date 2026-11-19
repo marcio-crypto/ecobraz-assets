@@ -344,7 +344,7 @@ const arrobaSemNome = (palavra, prox) => { const t = String(palavra || '').repla
 // leitura, saudação e destinatário ('o_mesmo' | 'outro_endereco' | 'nenhum_agora') pela regra da
 // publicação anterior (366/367): ficha de pessoa física sem nome levava, no 1º e-mail da ficha, o
 // nome do contato da OS. Leitura e destinatário não mudaram — só essa saudação.
-export const REGRA_LEITURA_EMAIL = 'espaço antes da arroba (palavra colada antes do endereço, ou arroba sem nada antes) = e-mail inválido, em qualquer campo (desde 19/11/2026); se o 1º endereço de um campo é descartado, os seguintes do mesmo campo também não são usados; pessoa física: "Olá!" (sem nome) quando o e-mail escolhido não é o 1º da ficha (os dois desde 19/11/2026, 2ª parte) e também quando a ficha não tem nome — o nome do contato da OS não é usado (desde 19/11/2026, decisão das 16:24 da Itália)';
+export const REGRA_LEITURA_EMAIL = 'espaço antes da arroba (palavra colada antes do endereço, ou arroba sem nada antes) = e-mail inválido, em qualquer campo (desde 19/11/2026); se o 1º endereço de um campo é descartado, os seguintes do mesmo campo também não são usados; pessoa física (e cadastro sem CPF/CNPJ nem tipo): "Oi, [nome]!" só com o nome da ficha e só quando o e-mail escolhido é o 1º da ficha; senão "Olá!", sem nome — também quando a ficha não tem nome; o nome do contato da OS não é usado (desde 19/11/2026)';
 function varrerEspacos(v, campo) {
   const palavras = String(v == null ? '' : v).slice(0, MAX_CAMPO).toLowerCase().split(/\s+/).filter(Boolean);
   const r = { colados: [], arroba: false, palavras: [] };
@@ -442,7 +442,6 @@ const semNove = (d) => (d.length === 11 && d[2] === '9' ? d.slice(0, 2) + d.slic
 export function dadosDoCliente(os, cli, opcoes) {
   const o = os || {}, c = cli || {};
   const anterior = !!(opcoes && opcoes.regraAnterior === true);
-  const doCampo = emailsDoCampo;
   const doc = [o.clienteDoc, c.cnpj, c.cpf].map(digits).find((d) => d.length === 14 || d.length === 11) || '';
   const perfil = doc.length === 14 ? 'PJ' : (doc.length === 11 ? 'PF' : (c.tipo === 'PJ' ? 'PJ' : (c.tipo === 'PF' ? 'PF' : '')));
   const txt = String(o.contato || '');
@@ -457,7 +456,7 @@ export function dadosDoCliente(os, cli, opcoes) {
   const contatos = todosContatos.filter((x) => !contatoInativo(x));
   const inativos = new Set(todosContatos.filter(contatoInativo).flatMap((x) => emailsParaBloqueio(x.email)));
   const cands = [];
-  const poe = (email, nome) => { for (const e of doCampo(email)) if (!inativos.has(e) && !cands.some((x) => x.email === e)) cands.push({ email: e, nome: limpar(nome) }); };
+  const poe = (email, nome) => { for (const e of emailsDoCampo(email)) if (!inativos.has(e) && !cands.some((x) => x.email === e)) cands.push({ email: e, nome: limpar(nome) }); };
   if (perfil === 'PJ') {
     poe(emailOs, nomeOs);
     const nOs = semAcentoMin(nomeOs);
@@ -468,15 +467,16 @@ export function dadosDoCliente(os, cli, opcoes) {
       const m = contatos.find((x) => nomeDe(x) === nOs) || (parciais.length === 1 ? parciais[0] : null);
       if (m) poe(m.email, m.nome);
     }
-    const doContato = contatos.map((x) => doCampo(x.email)); // lido uma vez só (cadastro grande não multiplica o custo)
-    for (const e of doCampo(c.email)) { const k = doContato.findIndex((l) => l.includes(e)); poe(e, k >= 0 ? contatos[k].nome : ''); }
+    const doContato = contatos.map((x) => emailsDoCampo(x.email)); // lido uma vez só (cadastro grande não multiplica o custo)
+    for (const e of emailsDoCampo(c.email)) { const k = doContato.findIndex((l) => l.includes(e)); poe(e, k >= 0 ? contatos[k].nome : ''); }
     for (const x of contatos) poe(x.email, x.nome);
   } else {
     // Nome da saudação: só o nome da FICHA. Ficha sem nome → "Olá!", mesmo no 1º e-mail da ficha:
     // o nome do contato da OS não é mais usado — pode ser de outra pessoa (decisão do Marcio,
-    // 19/11/2026, 16:24 da Itália). `anterior` (só o diagnóstico) repete a publicação 366/367,
-    // em que a ficha sem nome levava o nome do contato da OS.
-    const nomeFicha = anterior ? (c.nome || nomeOs) : c.nome;
+    // 19/11/2026, 16:24 da Itália). Só TEXTO conta como nome (um valor que não é texto, como false,
+    // não vira "Oi, False!"). `anterior` (só o diagnóstico) repete a publicação 366/367, em que a
+    // ficha sem nome levava o nome do contato da OS.
+    const nomeFicha = anterior ? (c.nome || nomeOs) : (typeof c.nome === 'string' ? c.nome : '');
     poe(c.email, nomeFicha);
     poe(emailOs, nomeFicha);
     for (const x of contatos) poe(x.email, x.nome || c.nome);
@@ -485,7 +485,7 @@ export function dadosDoCliente(os, cli, opcoes) {
     // ficha, ficha sem e-mail) → "Olá!": pode ser de outra pessoa (decisão do Marcio, 19/11/2026).
     // `saudar` = pode usar o nome; o nome fica no candidato. Limite: a regra é pela POSIÇÃO —
     // "joao@… (filho); maria@…" na ficha ainda leva "Oi, [nome da ficha]!" para joao@.
-    const primeiroDaFicha = doCampo(c.email)[0] || '';
+    const primeiroDaFicha = emailsDoCampo(c.email)[0] || '';
     for (const x of cands) x.saudar = !!primeiroDaFicha && x.email === primeiroDaFicha;
   }
   const empresa = perfil === 'PJ' ? limpar(c.nomeFantasia || c.razaoSocial || o.clienteNome).replace(/[\r\n\t]+/g, ' ').slice(0, 80) : '';
@@ -1462,7 +1462,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:#F7FAF9;border:1px sol
   </div>
   <div class="card">
     <div class="sec">Como funciona</div>
-    <div style="font-size:13px;color:#4F6469;line-height:1.7">• Sai 2 horas depois de a coleta ficar <b>concluída</b>, só entre 08h e 20h (fora disso, às 08h seguintes). O sistema confere a cada 10 minutos.<br>• Um pedido por cliente a cada 12 meses (pelo CNPJ/CPF; sem documento, pelo e-mail). O mesmo endereço de e-mail também não recebe dois pedidos em 12 meses, ainda que seja contato de empresas diferentes — nesse caso o pedido vai para o contato seguinte da empresa, se houver.<br>• Se o serviço de e-mail não responde num envio (não dá para saber se saiu), as outras coletas do mesmo cliente <b>esperam</b> o desfecho dele, para ninguém receber dois pedidos.<br>• Não recebem: casa e família, cliente com bloqueio de contato, quem já recebeu em 12 meses, quem não tem e-mail, quem tem e-mail mal formado no cadastro (endereço cortado, com “|” no meio, texto grudado, palavra colada antes do endereço como “maria clara@…”, espaço antes do @ — aparece como “e-mail inválido”) e quem está na lista “não enviar e-mail”. O motivo aparece na OS.<br>• Também não sai: coleta marcada como concluída mais de 10 dias depois da data dela (coleta antiga) e coleta que foi <b>reaberta</b> depois de concluída — só uma conclusão nova volta a valer.<br>• Contato marcado como inativo/desligado no cadastro não recebe.<br>• Se o sistema não conseguir ler as listas ou o cadastro, ele <b>não envia</b> e tenta de novo na rodada seguinte.<br>• <b>Descadastro bloqueia o cliente inteiro:</b> se qualquer e-mail do cliente (o geral, o do contato da coleta ou o de qualquer contato) estiver na lista como “pediu para sair”, o pedido não vai para nenhum e-mail dele. E-mail inválido (voltou) ou mal formado é diferente: o pedido pode ir para outro e-mail bom do cliente — exceto quando o <b>primeiro</b> endereço de um campo é mal formado: aí os outros desse <b>mesmo campo</b> também não são usados.<br>• Pessoa física: “Oi, [nome]!” só quando o e-mail usado é o <b>primeiro da ficha</b> e a ficha tem nome (o nome é o da ficha); se for outro (o do contato da coleta, de outro contato, o segundo da ficha) ou se a ficha <b>não tem nome</b>, o texto começa com “Olá!”, sem nome — o nome do contato da coleta não é usado.<br>• Sem e-mail? Peça pelo WhatsApp e marque <b>“Pedi pelo WhatsApp”</b> na OS — vale como pedido feito.<br>• Texto simples, sem imagem. O link é o do Google, sem rastreio.</div>
+    <div style="font-size:13px;color:#4F6469;line-height:1.7">• Sai 2 horas depois de a coleta ficar <b>concluída</b>, só entre 08h e 20h (fora disso, às 08h seguintes). O sistema confere a cada 10 minutos.<br>• Um pedido por cliente a cada 12 meses (pelo CNPJ/CPF; sem documento, pelo e-mail). O mesmo endereço de e-mail também não recebe dois pedidos em 12 meses, ainda que seja contato de empresas diferentes — nesse caso o pedido vai para o contato seguinte da empresa, se houver.<br>• Se o serviço de e-mail não responde num envio (não dá para saber se saiu), as outras coletas do mesmo cliente <b>esperam</b> o desfecho dele, para ninguém receber dois pedidos.<br>• Não recebem: casa e família, cliente com bloqueio de contato, quem já recebeu em 12 meses, quem não tem e-mail, quem tem e-mail mal formado no cadastro (endereço cortado, com “|” no meio, texto grudado, palavra colada antes do endereço como “maria clara@…”, espaço antes do @ — aparece como “e-mail inválido”) e quem está na lista “não enviar e-mail”. O motivo aparece na OS.<br>• Também não sai: coleta marcada como concluída mais de 10 dias depois da data dela (coleta antiga) e coleta que foi <b>reaberta</b> depois de concluída — só uma conclusão nova volta a valer.<br>• Contato marcado como inativo/desligado no cadastro não recebe.<br>• Se o sistema não conseguir ler as listas ou o cadastro, ele <b>não envia</b> e tenta de novo na rodada seguinte.<br>• <b>Descadastro bloqueia o cliente inteiro:</b> se qualquer e-mail do cliente (o geral, o do contato da coleta ou o de qualquer contato) estiver na lista como “pediu para sair”, o pedido não vai para nenhum e-mail dele. E-mail inválido (voltou) ou mal formado é diferente: o pedido pode ir para outro e-mail bom do cliente — exceto quando o <b>primeiro</b> endereço de um campo é mal formado: aí os outros desse <b>mesmo campo</b> também não são usados.<br>• Pessoa física (e cadastro sem CPF/CNPJ): “Oi, [nome]!” só quando o e-mail usado é o <b>primeiro da ficha</b> e a ficha tem nome (o nome é o da ficha); se for outro (o do contato da coleta, de outro contato, o segundo da ficha) ou se a ficha <b>não tem nome</b>, o texto começa com “Olá!”, sem nome — o nome do contato da coleta não é usado.<br>• Sem e-mail? Peça pelo WhatsApp e marque <b>“Pedi pelo WhatsApp”</b> na OS — vale como pedido feito.<br>• Texto simples, sem imagem. O link é o do Google, sem rastreio.</div>
     <label>Pessoa física — assunto: ${esc(exemplo.assunto)}</label><pre>${esc(exemplo.texto)}</pre>
     <label>Empresa — assunto: ${esc(exemploPJ.assunto)}</label><pre>${esc(exemploPJ.texto)}</pre>
   </div>
