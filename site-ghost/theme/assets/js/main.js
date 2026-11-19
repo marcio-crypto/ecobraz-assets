@@ -50,13 +50,61 @@
     } catch (_) { /* armazenamento indisponível não deve quebrar a página */ }
     const storedOrigin = (key) => { try { return sessionStorage.getItem(`ecb_${key}`) || ''; } catch (_) { return ''; } };
 
+    // WhatsApp com mensagem pronta (A053, 19/11/2026). O WhatsApp é o principal
+    // caminho de pedido pelo site e chegava em branco: a equipe não sabia de que
+    // página nem de que canal a pessoa vinha. A conversa abre com uma frase que a
+    // pessoa pode editar, com a página e, quando o site sabe, o canal. Link que já
+    // traz texto próprio fica como está.
+    const paginaIngles = (document.documentElement.lang || '').toLowerCase().indexOf('en') === 0;
+    const nomeCanalWhatsapp = () => {
+        const canal = storedOrigin('origin_channel');
+        const host = `${storedOrigin('origin_referrer')} ${storedUtm('utm_source')}`.toLowerCase();
+        if (canal === 'busca_organica') {
+            if (/google\./.test(host)) return 'Google';
+            if (/bing\./.test(host)) return 'Bing';
+            return paginaIngles ? 'search' : 'busca';
+        }
+        if (canal === 'chat_ia') {
+            const nomes = [[/chatgpt|openai/, 'ChatGPT'], [/perplexity/, 'Perplexity'], [/gemini|bard/, 'Gemini'], [/claude/, 'Claude'], [/copilot/, 'Copilot'], [/deepseek/, 'DeepSeek'], [/grok|x\.ai/, 'Grok'], [/meta\.ai/, 'Meta AI']];
+            const achado = nomes.find(([padrao]) => padrao.test(host));
+            return achado ? achado[1] : (paginaIngles ? 'AI assistant' : 'assistente de IA');
+        }
+        if (canal === 'busca_paga') return paginaIngles ? 'ad' : 'anúncio';
+        if (canal === 'perfil_google') return 'Google Maps';
+        if (canal === 'email') return paginaIngles ? 'Ecobraz e-mail' : 'e-mail da Ecobraz';
+        if (canal === 'social') {
+            const redes = [[/linkedin|lnkd/, 'LinkedIn'], [/instagram/, 'Instagram'], [/facebook/, 'Facebook'], [/youtube/, 'YouTube']];
+            const rede = redes.find(([padrao]) => padrao.test(host));
+            return rede ? rede[1] : (paginaIngles ? 'social media' : 'rede social');
+        }
+        return '';
+    };
+    const mensagemWhatsapp = () => {
+        const caminho = window.location.pathname;
+        const titulo = (document.title || '').split(/\s[|–—]\s/)[0].trim().slice(0, 70);
+        const pagina = caminho === '/' || caminho === '/en/' ? (paginaIngles ? 'home page' : 'página inicial') : (titulo || caminho);
+        const canal = nomeCanalWhatsapp();
+        const detalhe = paginaIngles ? `page: ${pagina}${canal ? `, via ${canal}` : ''}` : `página: ${pagina}${canal ? `, via ${canal}` : ''}`;
+        if (paginaIngles) return `Hello! I came from the Ecobraz website (${detalhe}). I'd like to arrange a collection.`;
+        const pedido = /desmobilizacao/.test(caminho) ? 'Quero falar sobre desmobilização de ativos.' : 'Quero agendar uma coleta.';
+        return `Olá! Vim pelo site da Ecobraz (${detalhe}). ${pedido}`;
+    };
+    try {
+        const textoWhatsapp = encodeURIComponent(mensagemWhatsapp());
+        document.querySelectorAll('a[href*="wa.me/"], a[href*="api.whatsapp.com/send"]').forEach((link) => {
+            const href = link.getAttribute('href') || '';
+            if (/[?&]text=/.test(href)) return;
+            link.setAttribute('href', `${href}${href.includes('?') ? '&' : '?'}text=${textoWhatsapp}`);
+        });
+    } catch (_) { /* sem a mensagem pronta, o link original continua funcionando */ }
+
     // Micro-conversões: WhatsApp, telefone, e-mail e todos os CTAs identificados.
     document.addEventListener('click', (event) => {
         const link = event.target.closest('a, button');
         if (!link) return;
         const ctaId = link.dataset.track || '';
         const href = link.getAttribute('href') || '';
-        if (href.includes('wa.me') || href.includes('api.whatsapp.com')) track('contact_whatsapp', {cta_id: ctaId || 'whatsapp', page_path: window.location.pathname});
+        if (href.includes('wa.me') || href.includes('api.whatsapp.com')) track('contact_whatsapp', {cta_id: ctaId || 'whatsapp', page_path: window.location.pathname, origin_channel: storedOrigin('origin_channel') || 'desconhecido'});
         else if (href.startsWith('tel:')) track('contact_phone', {cta_id: ctaId || 'telefone', page_path: window.location.pathname});
         else if (href.startsWith('mailto:')) track('contact_email', {cta_id: ctaId || 'email', page_path: window.location.pathname});
         else if (ctaId) track('cta_click', {cta_id: ctaId, page_path: window.location.pathname});
@@ -79,6 +127,14 @@
             consentBar.querySelector('[data-consent-accept]').textContent = 'Accept';
             consentBar.querySelector('[data-consent-decline]').textContent = 'Decline';
         }
+        // A faixa não cobre o WhatsApp flutuante (A054, 19/11/2026): enquanto ela
+        // está aberta, o botão sobe para logo acima dela.
+        const waFlutuante = document.querySelector('.hx-wa-float');
+        const ajustaFlutuante = () => {
+            if (!waFlutuante) return;
+            waFlutuante.style.bottom = consentBar.hidden ? '' : `${consentBar.offsetHeight + 12}px`;
+        };
+        window.addEventListener('resize', ajustaFlutuante, {passive: true});
         const readConsent = () => { try { return localStorage.getItem('ecb_consent'); } catch (_) { return 'unavailable'; } };
         const applyConsent = (state) => {
             try { localStorage.setItem('ecb_consent', state); } catch (_) {}
@@ -89,6 +145,7 @@
             // Pixel de anúncios da OpenAI: mesma regra do E-goi.
             if (state === 'granted' && typeof window.ecbCarregaOpenAIAds === 'function') window.ecbCarregaOpenAIAds();
             consentBar.hidden = true;
+            ajustaFlutuante();
             track('consent_choice', {choice: state});
         };
         // Sem escolha guardada — ou sem localStorage (modo privado, storage
@@ -96,9 +153,10 @@
         // para esta página, mas o visitante consegue aceitar ou recusar.
         const escolhaGuardada = readConsent();
         if (!escolhaGuardada || escolhaGuardada === 'unavailable') consentBar.hidden = false;
+        ajustaFlutuante();
         consentBar.querySelector('[data-consent-accept]').addEventListener('click', () => applyConsent('granted'));
         consentBar.querySelector('[data-consent-decline]').addEventListener('click', () => applyConsent('denied'));
-        document.querySelectorAll('[data-consent-open]').forEach((el) => el.addEventListener('click', (event) => { event.preventDefault(); consentBar.hidden = false; }));
+        document.querySelectorAll('[data-consent-open]').forEach((el) => el.addEventListener('click', (event) => { event.preventDefault(); consentBar.hidden = false; ajustaFlutuante(); }));
     }
 
     const form = document.querySelector('[data-collection-form]');
