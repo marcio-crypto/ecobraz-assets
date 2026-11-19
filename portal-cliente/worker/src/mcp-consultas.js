@@ -1512,22 +1512,24 @@ async function ferrAgendamentosPorOrigem(env, args) {
   const fim = ate < hoje ? ate : hoje;
   const porDia = new Map();
   // Índice de OS podado por tamanho (coletas.js, salvarIndiceOS: acima de 900.000 caracteres saem
-  // primeiro as OS FECHADAS mais antigas). Só perto desse teto pode ter havido poda — e só se o
-  // sistema já emitiu mais números de OS (os:seq) do que o índice tem. Aí a contagem está completa
-  // a partir da OS fechada mais antiga que ficou no índice; os dias até ela podem sair com MENOS.
-  // Longe do teto (o caso em 19/11/2026), nada é marcado — um buraco na numeração por outro motivo
-  // (criação que falhou, consulta no meio de uma criação) não vira alarme.
+  // primeiro as OS FECHADAS do fim do índice — as inseridas há mais tempo). Só pode ter havido poda
+  // se o sistema já emitiu mais números de OS (os:seq) do que o índice tem E o índice está perto do
+  // teto. Aí a contagem está completa a partir da ÚLTIMA OS fechada na ordem do índice (a próxima a
+  // ser podada; uma OS antiga que voltou para a frente do índice ao mudar de status não conta como
+  // fronteira). Sem nenhuma fechada no índice: todos os dias ficam marcados. Longe do teto (o caso
+  // em 19/11/2026), nada é marcado. Limites registrados: um buraco na numeração que não vem de poda
+  // (criação que falhou, consulta no meio de uma criação, OS perdida numa gravação simultânea) não
+  // vira aviso longe do teto e, perto dele, aparece como "podado"; uma OS fechada que volta para a
+  // frente do índice pode deixar a fronteira atrasada até ela ser podada de novo.
   const LIMITE_INDICE_OS = 900000;
   const todasOS = await ctx.oss();
   let podado = false, completoDesde = '';
-  if (JSON.stringify(todasOS).length >= 0.85 * LIMITE_INDICE_OS) {
-    let seqOS = null; try { const raw = env.PORTAL_KV ? await env.PORTAL_KV.get('os:seq') : null; seqOS = raw ? JSON.parse(raw) : null; } catch { seqOS = null; }
-    let emitidos = 0; for (const v of Object.values(seqOS && typeof seqOS === 'object' ? seqOS : {})) emitidos += Math.max(0, Math.min(Number(v) || 0, 1e6));
-    podado = !seqOS || emitidos > new Set(todasOS.map((o) => o.numero).filter(Boolean)).size;
-    if (podado) {
-      for (const o of todasOS) if ((o.status === 'concluida' || o.status === 'cancelada') && o.criadoEm && (!completoDesde || String(o.criadoEm) < completoDesde)) completoDesde = String(o.criadoEm);
-      if (!completoDesde) for (const o of todasOS) if (o.criadoEm && (!completoDesde || String(o.criadoEm) < completoDesde)) completoDesde = String(o.criadoEm);
-    }
+  let seqOS = null; try { const raw = env.PORTAL_KV ? await env.PORTAL_KV.get('os:seq') : null; seqOS = raw ? JSON.parse(raw) : null; } catch { seqOS = null; }
+  let emitidos = 0; for (const v of Object.values(seqOS && typeof seqOS === 'object' ? seqOS : {})) emitidos += Math.max(0, Math.min(Number(v) || 0, 1e6));
+  const faltaNumero = !seqOS || emitidos > new Set(todasOS.map((o) => o.numero).filter(Boolean)).size;
+  if (faltaNumero && JSON.stringify(todasOS).length >= 0.85 * LIMITE_INDICE_OS) {
+    podado = true;
+    for (let i = todasOS.length - 1; i >= 0; i--) { const o = todasOS[i]; if ((o.status === 'concluida' || o.status === 'cancelada') && o.criadoEm) { completoDesde = String(o.criadoEm); break; } }
   }
   const diaLimite = podado ? (completoDesde ? diaBR(completoDesde) : '9999-12-31') : '';
   let primeiraComOrigem = '';
