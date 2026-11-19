@@ -862,7 +862,7 @@ async function ferrColetasPeriodo(env, args) {
   if (campo === 'cancelada') ctx.aviso('Data de cancelamento: registrada a partir de 18/11/2026; cancelamentos anteriores usam a última atualização da OS (data_cancelamento_estimada = true).');
   ctx.aviso(`Pedido de origem: desde ${INICIO_MEDICAO_TXT} a OS gerada a partir de um pedido grava o pedido (lead_id; origem_pedido.vinculo = "exato"). Pedidos de antes disso usam o vínculo "provável" (pedido do mesmo cliente até 30 dias antes). Sem pedido ligado, modalidade = "padrão" e origem vazia.`);
   ctx.aviso('data_hora_conclusao = hora do encerramento no app do motorista. Coleta que não passa pelo app (transportadora, ou concluída pelo escritório/doca) fica com a hora em que foi marcada como concluída — pode ser depois da retirada real.');
-  ctx.aviso('como_nos_achou = resposta da equipe a "Como nos achou?" (obrigatória na criação da OS desde 19/11/2026; pode ser corrigida na edição). OS criada antes do campo = "não informado" — nada foi preenchido por adivinhação. como_nos_achou_sugestao_do_pedido = a opção que o canal do pedido do site indicava (vem marcada na tela; a equipe pode trocar). Contagem por dia e por origem: função agendamentos_por_origem.');
+  ctx.aviso('como_nos_achou = resposta da equipe a "Como nos achou?" (obrigatória na criação da OS a partir da publicação de 19/11/2026; pode ser corrigida na edição). OS criada antes disso = "não informado" — nada foi preenchido por adivinhação. como_nos_achou_sugestao_do_pedido = a opção que o canal do pedido do site indicava (vem marcada na tela; a equipe pode trocar). Contagem por dia e por origem: função agendamentos_por_origem.');
   if (diag) ctx.aviso('email_avaliacao = como o pedido de avaliação no Google lê o e-mail da coleta (contato da OS + ficha do cliente), pela regra em vigor (regra_de_leitura). É SÓ a leitura do endereço: não considera status da OS, listas de bloqueio, regra dos 12 meses nem casa/família ("envia" não quer dizer que o pedido vai sair; para as coletas que entram no pedido, use campo_data=concluida). casos: contato_da_os (palavra solta + espaço antes do endereço, no texto livre do contato da OS), campo_de_email_do_cadastro (o mesmo no e-mail da ficha ou de um contato) e espaco_antes_do_arroba (espaço logo antes da arroba, sem nada antes dela). leitura: envia (há destinatário bem formado) | envia_ao_pedaco_depois_do_espaco (o destinatário seria o pedaço depois do espaço — só pela regra de antes de 19/11/2026; pela regra atual não acontece) | envia_a_email_bem_formado (há um dos casos, mas o destinatário é um e-mail que a leitura aceita em algum campo) | email_invalido | sem_email | cadastro_grande. Peça também "numero" em campos para saber de qual coleta é cada item. resumo_email_avaliacao (só no formato json) soma o período inteiro (coletas e cadastros distintos); palavra_antes_do_endereco conta as ocorrências por tipo da palavra solta (rotulo: e-mail, financeiro…; comeco_do_endereco: a palavra é o começo do próprio endereço; outra). Só leitura; nenhum e-mail sai na resposta.');
   return saida(ctx, a, {
     total, pagina, porPagina, itens, filtros, titulo: `Coletas (${campo})`, extra: diag ? { resumo_email_avaliacao: diag.resumo } : undefined,
@@ -963,9 +963,9 @@ async function detalharColetas(ctx, lista, vinc) {
       data_criacao: diaBR(o.criadoEm) || null,
       data_hora_criacao: isoBR(o.criadoEm),
       lead_id: (tipoVinc === 'exato' && lead.id) || rec.leadId || o.leadId || null,
-      // "Como nos achou?" (desde 19/11/2026): OS de antes do campo = "não informado".
+      // "Como nos achou?" (obrigatório a partir da publicação de 19/11/2026): OS de antes do campo = "não informado".
       como_nos_achou: rotuloComo(comoValido(rec.comoNosAchou) ? rec.comoNosAchou : o.como),
-      como_nos_achou_outro: (rec.comoNosAchou || o.como) === 'outro' ? (textoSeguro(semCauda(rec.comoNosAchouOutro, 60)) || null) : undefined,
+      como_nos_achou_outro: (rec.comoNosAchou || o.como) === 'outro' ? (textoSeguro(rec.comoNosAchouOutro, 60) || null) : undefined,
       como_nos_achou_sugestao_do_pedido: comoValido(rec.comoNosAchouSugerido) ? rotuloComo(rec.comoNosAchouSugerido) : undefined,
       data_agendada: o.dataAgendada || null,
       data_conclusao: conc.dia || null, data_conclusao_estimada: conc.dia ? conc.estimada : undefined,
@@ -1506,42 +1506,61 @@ async function ferrAgendamentosPorOrigem(env, args) {
   const ctx = novoContexto(env);
   const { de, ate } = periodoObrigatorio(a, 370);
   const { pagina, porPagina } = paginacao(a, 31);
+  // Hoje (Brasília): dias DEPOIS de hoje não entram; hoje entra marcado "em andamento" e fica fora
+  // das médias (um dia pela metade, ou dias futuros contados como zero, puxariam a média para baixo).
+  const hoje = diaBR(new Date().toISOString());
+  const fim = ate < hoje ? ate : hoje;
   const porDia = new Map();
-  let desde = '';
+  const numeracao = new Map(); // ano → { nums (distintos), maior }: buraco na numeração = OS fora do índice (poda por tamanho)
+  let primeiraComOrigem = '';
   for (const o of await ctx.oss()) {
+    const num = /^OS-(\d{4})-(\d{1,6})$/.exec(String((o && o.numero) || ''));
+    if (num) { const n = numeracao.get(num[1]) || { nums: new Set(), maior: 0 }; n.nums.add(Number(num[2])); n.maior = Math.max(n.maior, Number(num[2])); numeracao.set(num[1], n); }
     const d = diaBR(o && o.criadoEm);
-    if (!d || d < de || d > ate) continue;
+    if (!d || d < de || d > fim) continue;
     const c = comoValido(o.como) ? o.como : COMO_NAO_INFORMADO;
-    if (c !== COMO_NAO_INFORMADO && (!desde || String(o.criadoEm) < desde)) desde = String(o.criadoEm);
+    if (c !== COMO_NAO_INFORMADO && (!primeiraComOrigem || String(o.criadoEm) < primeiraComOrigem)) primeiraComOrigem = String(o.criadoEm);
     let x = porDia.get(d); if (!x) { x = { total: 0, canceladas: 0, por_origem: zeroComo() }; porDia.set(d, x); }
     x.total++; x.por_origem[c]++; if (o.status === 'cancelada') x.canceladas++;
   }
   const dias = [];
   const semanas = new Map();
   const periodo = { total: 0, canceladas: 0, por_origem: zeroComo() };
-  let diasUteis = 0, totalUteis = 0;
-  for (let d = de; d <= ate; d = somaDias(d, 1)) {
+  let diasCompletos = 0, totalCompletos = 0, diasUteis = 0, totalUteis = 0;
+  for (let d = de; d <= fim; d = somaDias(d, 1)) {
     const x = porDia.get(d) || { total: 0, canceladas: 0, por_origem: zeroComo() };
     const dow = new Date(Date.parse(d + 'T12:00:00Z')).getUTCDay();
-    dias.push({ data: d, dia_semana: DIAS_SEMANA[dow], ...fecharAgendamentos({ total: x.total, canceladas: x.canceladas, por_origem: { ...x.por_origem } }) });
+    const emAndamento = d === hoje;
+    dias.push({ data: d, dia_semana: DIAS_SEMANA[dow], ...(emAndamento ? { dia_em_andamento: true } : {}), ...fecharAgendamentos({ total: x.total, canceladas: x.canceladas, por_origem: { ...x.por_origem } }) });
     const seg = segundaDaSemana(d);
-    let s = semanas.get(seg); if (!s) { s = { semana_inicio: seg, semana_fim: somaDias(seg, 6), dias_no_periodo: 0, acc: { total: 0, canceladas: 0, por_origem: zeroComo() } }; semanas.set(seg, s); }
-    s.dias_no_periodo++; somarAgendamento(s.acc, x); somarAgendamento(periodo, x);
-    if (dow >= 1 && dow <= 5) { diasUteis++; totalUteis += x.total; }
+    let s = semanas.get(seg); if (!s) { s = { semana_inicio: seg, semana_fim: somaDias(seg, 6), dias: 0, emAndamento: false, acc: { total: 0, canceladas: 0, por_origem: zeroComo() } }; semanas.set(seg, s); }
+    s.dias++; if (emAndamento) s.emAndamento = true; somarAgendamento(s.acc, x); somarAgendamento(periodo, x);
+    if (!emAndamento) { diasCompletos++; totalCompletos += x.total; if (dow >= 1 && dow <= 5) { diasUteis++; totalUteis += x.total; } }
   }
-  const listaSemanas = [...semanas.values()].map((s) => ({ semana_inicio: s.semana_inicio, semana_fim: s.semana_fim, semana_incompleta: s.dias_no_periodo < 7 ? true : undefined, ...fecharAgendamentos(s.acc) }));
-  const nDias = dias.length;
-  const resumo = { de, ate, dias: nDias, ...fecharAgendamentos(periodo), media_por_dia: nDias ? Math.round((periodo.total / nDias) * 10) / 10 : null, media_por_dia_util: diasUteis ? Math.round((totalUteis / diasUteis) * 10) / 10 : null, origem_registrada_desde: desde ? isoBR(desde) : null };
-  ctx.aviso('Agendamento = OS criada no dia (horário de Brasília), em qualquer status; as canceladas depois continuam contando e aparecem em "canceladas". media_por_dia_util = segunda a sexta (feriados não são descontados).');
-  ctx.aviso('Origem = resposta da equipe a "Como nos achou?" na criação da OS (obrigatória desde 19/11/2026; pode ser corrigida na edição). OS criada antes do campo = nao_informado: nada foi preenchido por adivinhação. Quando a OS nasce de um pedido do site com canal claro, a opção vem marcada (a equipe pode trocar).');
+  const media = (t, n) => (n ? Math.round((t / n) * 10) / 10 : null);
+  const listaSemanas = [...semanas.values()].map((s) => ({ semana_inicio: s.semana_inicio, semana_fim: s.semana_fim, dias_contados: s.dias, ...(s.dias < 7 ? { semana_incompleta: true } : {}), ...(s.emAndamento ? { semana_em_andamento: true } : {}), ...fecharAgendamentos(s.acc) }));
+  const resumo = {
+    de, ate, ate_contado: fim >= de ? fim : null, dias: dias.length, dias_completos: diasCompletos, ...fecharAgendamentos(periodo),
+    media_por_dia: media(totalCompletos, diasCompletos), media_por_dia_util: media(totalUteis, diasUteis),
+    ...(fim === hoje && fim >= de ? { hoje: { data: hoje, total: (porDia.get(hoje) || { total: 0 }).total } } : {}),
+    primeira_os_com_origem_no_periodo: primeiraComOrigem ? isoBR(primeiraComOrigem) : null,
+  };
+  if (de > hoje) ctx.aviso(`O período começa depois de hoje (${hoje}): nenhum dia contado.`);
+  else if (ate > hoje) ctx.aviso(`Dias depois de hoje (${hoje}) não entram (ate_contado).`);
+  ctx.aviso('Agendamento = OS criada no dia (horário de Brasília), em qualquer status; as canceladas depois continuam contando e aparecem em "canceladas". media_por_dia e media_por_dia_util usam só os dias COMPLETOS: hoje aparece com dia_em_andamento (o que já foi criado até agora) e fica fora das médias. media_por_dia_util = segunda a sexta (feriados não são descontados). Semana com menos de 7 dias no período: semana_incompleta e dias_contados.');
+  ctx.aviso('Origem = resposta da equipe a "Como nos achou?" na criação da OS (obrigatória a partir da publicação de 19/11/2026; pode ser corrigida na edição). OS criada antes disso = nao_informado: nada foi preenchido por adivinhação. Quando a OS nasce de um pedido do site com canal claro, a opção vem marcada (a equipe pode trocar). primeira_os_com_origem_no_periodo = a OS mais antiga DO PERÍODO que tem a origem informada (não é a data em que o campo passou a existir).');
+  const faltam = [...numeracao.entries()].filter(([, n]) => n.maior > n.nums.size).map(([ano, n]) => `${n.maior - n.nums.size} de ${ano}`);
+  if (faltam.length) ctx.aviso(`Atenção: o índice de OS não tem todos os números (${faltam.join('; ')}). O índice é podado por tamanho (saem primeiro as OS fechadas mais antigas) — a contagem dos dias mais antigos pode sair MENOR do que a real.`);
+  const origensDe = (po) => CODIGOS_COMO.filter((c) => po[c]).map((c) => `${c === COMO_NAO_INFORMADO ? 'não informado' : rotuloComo(c)}: ${po[c]}`).join(', ');
   return saida(ctx, a, {
-    total: nDias, pagina, porPagina, itens: dias.slice((pagina - 1) * porPagina, pagina * porPagina), filtros: { de, ate }, titulo: 'Agendamentos por origem (por dia)',
+    total: dias.length, pagina, porPagina, itens: dias.slice((pagina - 1) * porPagina, pagina * porPagina), filtros: { de, ate }, titulo: 'Agendamentos por origem (por dia)',
     extra: { origens: COMO_OPCOES.map(([codigo, rotulo]) => ({ codigo, rotulo })).concat([{ codigo: COMO_NAO_INFORMADO, rotulo: 'não informado' }]), semanas: listaSemanas, periodo_inteiro: resumo },
-    linha: (x) => `${x.data} (${x.dia_semana}) — ${x.total} OS${x.canceladas ? ` (${x.canceladas} cancelada(s) depois)` : ''}${x.total ? ' — ' + CODIGOS_COMO.filter((c) => x.por_origem[c]).map((c) => `${c === COMO_NAO_INFORMADO ? 'não informado' : rotuloComo(c)}: ${x.por_origem[c]}`).join(', ') : ''}`,
+    linha: (x) => `${x.data} (${x.dia_semana}${x.dia_em_andamento ? ', em andamento' : ''}) — ${x.total} OS${x.canceladas ? ` (${x.canceladas} cancelada(s) depois)` : ''}${x.total ? ' — ' + origensDe(x.por_origem) : ''}`,
     rodape: (corpo) => {
       const p = corpo.periodo_inteiro; if (!p) return '';
-      const linhas = (corpo.semanas || []).map((s) => `• semana ${s.semana_inicio} a ${s.semana_fim}${s.semana_incompleta ? ' (incompleta no período)' : ''}: ${s.total} OS, ${s.informadas} com origem — ${CODIGOS_COMO.filter((c) => s.por_origem[c]).map((c) => `${c === COMO_NAO_INFORMADO ? 'não informado' : rotuloComo(c)}: ${s.por_origem[c]}`).join(', ')}`);
-      return [`Período ${p.de} a ${p.ate}: ${p.total} OS criadas (${p.media_por_dia} por dia; ${p.media_por_dia_util} por dia útil), ${p.informadas} com origem (${p.percentual_informadas ?? 0}%), ${p.canceladas} cancelada(s) depois.`, ...linhas].join('\n');
+      const linhas = (corpo.semanas || []).map((s) => `• semana ${s.semana_inicio} a ${s.semana_fim}${s.semana_incompleta ? ` (${s.dias_contados} dia(s) no período${s.semana_em_andamento ? ', em andamento' : ''})` : ''}: ${s.total} OS, ${s.informadas} com origem${s.total ? ' — ' + origensDe(s.por_origem) : ''}`);
+      const medias = p.media_por_dia != null ? ` (média ${p.media_por_dia} por dia completo${p.media_por_dia_util != null ? `; ${p.media_por_dia_util} por dia útil` : ''})` : '';
+      return [`Período ${p.de} a ${p.ate_contado || p.ate}: ${p.total} OS criadas${medias}${p.hoje ? `, ${p.hoje.total} delas hoje (dia em andamento)` : ''}, ${p.informadas} com origem (${p.percentual_informadas ?? 0}%), ${p.canceladas} cancelada(s) depois.`, ...linhas].join('\n');
     },
   });
 }
@@ -1558,7 +1577,7 @@ export const FERRAMENTAS_CONSULTA = [
   },
   {
     name: 'coletas_periodo',
-    description: 'Ordens de Coleta (OS) num período, com filtros — acompanhar coletas por dia. Só leitura. Obrigatórios: de, ate (AAAA-MM-DD ou AAAA-MM). campo_data escolhe qual data cai no período: criacao (padrão) | agendada | concluida | cancelada. Filtros opcionais: status (agendada | aguardando_roteiro | em_transporte | na_unidade | concluida | cancelada), tipo_cliente (PF | PJ), cidade, material, motorista (nome, ou "sem motorista"), origem (canal do pedido, ex.: site, portal-coleta; ou "sem_pedido"). Cada OS traz: número, status, cliente (id, tipo, nome), cidade e CEP, datas de criação/agendamento/conclusão/cancelamento (com marcação quando estimada), data_hora_criacao e data_hora_conclusao (horário de Brasília), lead_id (pedido de origem quando o vínculo é exato), lote grande com prazo_alvo / prazo_cumprido / prazo_situacao (prazo de 72h), motivo do cancelamento, motorista e veículo, materiais declarados e pesados, peso, modalidade, valor cobrado e pagamento, origem do pedido (lead_id, data e hora do pedido, vínculo exato ou provável, UTM e gclid quando houver), pedido de avaliação no Google (avaliacao_pedida_em, avaliacao_canal = email | whatsapp | nenhum, motivo_nao_enviado) e documentos (CDF, NF e MTR com número); "Como nos achou?" da equipe (como_nos_achou: Busca no Google, Google Maps, Assistente de IA, Indicação de alguém, Cliente antigo, E-mail da Ecobraz, Anúncio, Outro + como_nos_achou_outro, ou "não informado" nas OS de antes de 19/11/2026). Opcional: pedir "email_avaliacao" em campos traz, por OS, como o pedido de avaliação lê o e-mail (casos de espaço antes do @ e leitura: envia | e-mail inválido | sem e-mail…, sem mostrar o e-mail) e resumo_email_avaliacao do período inteiro. Exemplo: {"de":"2026-11-17","ate":"2026-11-17","campo_data":"concluida"}',
+    description: 'Ordens de Coleta (OS) num período, com filtros — acompanhar coletas por dia. Só leitura. Obrigatórios: de, ate (AAAA-MM-DD ou AAAA-MM). campo_data escolhe qual data cai no período: criacao (padrão) | agendada | concluida | cancelada. Filtros opcionais: status (agendada | aguardando_roteiro | em_transporte | na_unidade | concluida | cancelada), tipo_cliente (PF | PJ), cidade, material, motorista (nome, ou "sem motorista"), origem (canal do pedido, ex.: site, portal-coleta; ou "sem_pedido"). Cada OS traz: número, status, cliente (id, tipo, nome), cidade e CEP, datas de criação/agendamento/conclusão/cancelamento (com marcação quando estimada), data_hora_criacao e data_hora_conclusao (horário de Brasília), lead_id (pedido de origem quando o vínculo é exato), lote grande com prazo_alvo / prazo_cumprido / prazo_situacao (prazo de 72h), motivo do cancelamento, motorista e veículo, materiais declarados e pesados, peso, modalidade, valor cobrado e pagamento, origem do pedido (lead_id, data e hora do pedido, vínculo exato ou provável, UTM e gclid quando houver), pedido de avaliação no Google (avaliacao_pedida_em, avaliacao_canal = email | whatsapp | nenhum, motivo_nao_enviado) e documentos (CDF, NF e MTR com número); "Como nos achou?" da equipe (como_nos_achou: Busca no Google, Google Maps, Assistente de IA, Indicação de alguém, Cliente antigo, E-mail da Ecobraz, Anúncio, Outro + como_nos_achou_outro, ou "não informado" nas OS criadas antes da publicação de 19/11/2026). Opcional: pedir "email_avaliacao" em campos traz, por OS, como o pedido de avaliação lê o e-mail (casos de espaço antes do @ e leitura: envia | e-mail inválido | sem e-mail…, sem mostrar o e-mail) e resumo_email_avaliacao do período inteiro. Exemplo: {"de":"2026-11-17","ate":"2026-11-17","campo_data":"concluida"}',
     inputSchema: { type: 'object', properties: { de: { type: 'string' }, ate: { type: 'string' }, campo_data: { type: 'string', enum: ['criacao', 'agendada', 'concluida', 'cancelada'] }, status: { type: 'string' }, tipo_cliente: { type: 'string', enum: ['PF', 'PJ'] }, cidade: { type: 'string' }, material: { type: 'string' }, motorista: { type: 'string' }, origem: { type: 'string' }, ...PAG }, required: ['de', 'ate'] },
   },
   {
@@ -1573,7 +1592,7 @@ export const FERRAMENTAS_CONSULTA = [
   },
   {
     name: 'agendamentos_por_origem',
-    description: 'AGENDAMENTOS (OS criadas) POR DIA E POR ORIGEM entre de e ate (obrigatórios, AAAA-MM-DD; até 370 dias; 31 dias por página) — para a leitura semanal de onde vêm os agendamentos. Origem = resposta da equipe a "Como nos achou?" na criação da OS (busca_google, google_maps, assistente_ia, indicacao, cliente_antigo, email_ecobraz, anuncio, outro; nao_informado = OS de antes do campo, que existe desde 19/11/2026). Cada dia traz total, informadas, nao_informadas, percentual_informadas, canceladas (das criadas no dia, quantas foram canceladas depois) e por_origem; semanas (segunda a domingo) e periodo_inteiro trazem os mesmos totais, mais média por dia e por dia útil. Só leitura. Exemplo: {"de":"2026-11-17","ate":"2026-11-23"}',
+    description: 'AGENDAMENTOS (OS criadas) POR DIA E POR ORIGEM entre de e ate (obrigatórios, AAAA-MM-DD; até 370 dias; 31 dias por página) — para a leitura semanal de onde vêm os agendamentos. Origem = resposta da equipe a "Como nos achou?" na criação da OS (busca_google, google_maps, assistente_ia, indicacao, cliente_antigo, email_ecobraz, anuncio, outro; nao_informado = OS criada antes do campo, que passou a ser obrigatório na publicação de 19/11/2026). Cada dia traz total, informadas, nao_informadas, percentual_informadas, canceladas (das criadas no dia, quantas foram canceladas depois) e por_origem; hoje vem com dia_em_andamento e dias depois de hoje não entram. semanas (segunda a domingo, com dias_contados) trazem os mesmos totais; periodo_inteiro traz os totais e a média por dia e por dia útil, só dos dias completos (hoje fica fora da média). Só leitura. Exemplo: {"de":"2026-11-17","ate":"2026-11-23"}',
     inputSchema: { type: 'object', properties: { de: { type: 'string' }, ate: { type: 'string' }, ...PAG }, required: ['de', 'ate'] },
   },
   {

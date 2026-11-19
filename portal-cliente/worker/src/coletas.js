@@ -566,16 +566,19 @@ export function paginaColetasLista(user, coletas, q, cliCtx, negocios, aba) {
 // e o já escolhido — a coleta nasce ligada ao pedido certo (vínculo exato lead → OS).
 // Bloco "Como nos achou?" (criação e edição da OS): uma fileira de botões — um clique escolhe.
 // `sel` = código já escolhido (edição) ou ''; o script da página põe a sugestão do pedido.
-function blocoComoNosAchou(sel, outro, { obrigatorio, primeiro } = {}) {
+function blocoComoNosAchou(sel, outro, { obrigatorio, primeiro, semTitulo } = {}) {
   const s = comoValido(sel) ? sel : '';
   return `<style>.como{display:inline-block;width:auto;border:1.5px solid #cfe0dd;background:#fff;color:#00333B;border-radius:999px;padding:8px 13px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin:0;line-height:1.2}.como.on{background:#00333B;color:#fff;border-color:#00333B}</style>
-    <div class="sec"${primeiro ? ' style="margin-top:0"' : ''}>Como nos achou?${obrigatorio ? ' <span style="color:#B23A2E">*</span>' : ''}</div>
+    ${semTitulo ? '' : `<div class="sec"${primeiro ? ' style="margin-top:0"' : ''}>Como nos achou?${obrigatorio ? ' <span style="color:#B23A2E">*</span>' : ''}</div>`}
     <div id="comoBox" style="display:flex;flex-wrap:wrap;gap:7px;margin-top:6px">${COMO_OPCOES.map(([c, r]) => `<button type="button" class="como${c === s ? ' on' : ''}" data-v="${esc(c)}" onclick="escolherComo('${esc(c)}',true)">${esc(r)}</button>`).join('')}</div>
-    <input id="comoOutro" maxlength="${COMO_OUTRO_MAX}" value="${esc(s === 'outro' ? (outro || '') : '')}" placeholder="Qual? (ex.: feira, panfleto, placa na rua)" style="margin-top:8px;${s === 'outro' ? '' : 'display:none'}">
+    <input id="comoOutro" maxlength="${COMO_OUTRO_MAX}" value="${esc(s === 'outro' ? (outro || '') : '')}" placeholder="Qual? (ex.: feira, panfleto, placa na rua — sem telefone nem e-mail)" style="margin-top:8px;${s === 'outro' ? '' : 'display:none'}">
     <div id="comoDica" style="font-size:11px;color:#9aa7a4;margin:6px 0 2px"></div>`;
 }
+// `comoAviso(txt)` = aviso em vermelho LOGO ABAIXO das opções (o aviso do botão fica longe, no
+// fim da página — no celular a Debora não o veria).
 const scriptComoNosAchou = (sel) => `var comoSel=${JSON.stringify(comoValido(sel) ? sel : '')},comoManual=false;
-function escolherComo(v,manual){comoSel=v;if(manual)comoManual=true;[].forEach.call(document.querySelectorAll('.como'),function(b){b.className='como'+(b.getAttribute('data-v')===v?' on':'');});var o=document.getElementById('comoOutro');o.style.display=v==='outro'?'block':'none';if(v==='outro'&&manual)o.focus();if(manual)document.getElementById('comoDica').textContent='';}`;
+function comoAviso(t){var d=document.getElementById('comoDica');d.textContent=t||'';d.style.color=t?'#B23A2E':'#9aa7a4';d.style.fontWeight=t?'700':'400';}
+function escolherComo(v,manual){comoSel=v;if(manual)comoManual=true;[].forEach.call(document.querySelectorAll('.como'),function(b){b.className='como'+(b.getAttribute('data-v')===v?' on':'');});var o=document.getElementById('comoOutro');o.style.display=v==='outro'?'block':'none';if(v==='outro'&&manual)o.focus();if(manual)comoAviso('');}`;
 
 export function paginaGerarColeta(user, cliente, agentes, patrocinadores, veiculos, pedidosCtx) {
   const pc = pedidosCtx || {};
@@ -670,11 +673,11 @@ function toggleTransp(){var t=g('quemColeta')==='transportadora';document.getEle
 ${scriptComoNosAchou('')}
 var COMO_SUG=${JSON.stringify(sugestoes)};
 // Pedido do site com canal claro: a opção já vem marcada (até a Debora clicar em outra).
-function sugerirComo(){if(comoManual)return;var l=document.getElementById('leadId');var s=l&&COMO_SUG[l.value];escolherComo(s?s.codigo:'',false);document.getElementById('comoDica').textContent=s?'Marcado pelo canal do pedido do site ('+s.rotulo+'). Se não for isso, é só clicar em outra opção.':'';}
+function sugerirComo(){if(comoManual)return;var l=document.getElementById('leadId');var s=l&&COMO_SUG[l.value];escolherComo(s?s.codigo:'',false);comoAviso('');document.getElementById('comoDica').textContent=s?'Marcado pelo canal do pedido do site ('+s.rotulo+'). Se não for isso, é só clicar em outra opção.':'';}
 sugerirComo();
 function gerar(){var ag=g('agente').split('|');var ehTransp=g('quemColeta')==='transportadora';
-  if(!comoSel){document.getElementById('m').textContent='Escolha “Como nos achou?” (no começo da página).';document.getElementById('comoBox').scrollIntoView({block:'center'});return;}
-  if(comoSel==='outro'&&!g('comoOutro')){document.getElementById('m').textContent='Em “Outro”, escreva em poucas palavras como o cliente nos achou.';document.getElementById('comoOutro').focus();return;}
+  if(!comoSel){document.getElementById('m').textContent='Escolha “Como nos achou?” (no começo da página).';comoAviso('Escolha uma opção para gerar a coleta.');document.getElementById('comoBox').scrollIntoView({block:'center'});return;}
+  if(comoSel==='outro'&&!/[A-Za-z0-9À-ÿ]/.test(g('comoOutro'))){document.getElementById('m').textContent='Em “Outro”, escreva em poucas palavras como o cliente nos achou.';comoAviso('Em “Outro”, escreva em poucas palavras como o cliente nos achou.');document.getElementById('comoOutro').focus();return;}
   if(ehTransp&&!g('tNome')){document.getElementById('m').textContent='Informe o nome da transportadora.';return;}
   var certs=[].slice.call(document.querySelectorAll('.cert:checked')).map(function(c){return c.value;});
   var rec={clienteId:'${esc(cliente.id)}',clienteNome:${JSON.stringify(nome)},clienteDoc:${JSON.stringify(cliente.tipo === 'PJ' ? (cliente.cnpj || '') : (cliente.cpf || ''))},
@@ -909,8 +912,13 @@ export function paginaEditarColeta(user, os, contatos, agentes, veiculos) {
   <h1 style="font-size:20px;margin:10px 0 2px">Editar coleta</h1>
   <p style="font-size:12.5px;color:#8fa39f;margin:0 0 14px">${esc(os.numero)} · ${esc(os.clienteNome || '')}</p>
   <div class="card">
-    ${blocoComoNosAchou(os.comoNosAchou, os.comoNosAchouOutro, { primeiro: true })}
-    ${comoValido(os.comoNosAchou) ? '' : '<div style="font-size:11.5px;color:#8a6a16;margin:2px 0 4px">Esta coleta está como <b>não informado</b> (foi criada antes deste campo existir). Só escolha se souber de verdade como o cliente nos achou.</div>'}
+    ${comoValido(os.comoNosAchou) ? blocoComoNosAchou(os.comoNosAchou, os.comoNosAchouOutro, { primeiro: true }) : `<div class="sec" style="margin-top:0">Como nos achou?</div>
+    <div id="comoFechado" style="font-size:12.5px;color:#4F6469;margin:6px 0 4px;line-height:1.5"><b>Não informado</b> (coleta criada antes deste campo existir). <button type="button" onclick="abrirComo()" style="display:inline-block;width:auto;margin:0 0 0 4px;padding:5px 11px;font-size:12px;font-weight:700;border-radius:999px;border:1.5px solid #cfe0dd;background:#fff;color:#00333B;cursor:pointer;font-family:inherit">Informar</button></div>
+    <div id="comoAberto" style="display:none">
+      <div style="font-size:11.5px;color:#8a6a16;margin:2px 0 4px">Só escolha se souber de verdade como o cliente nos achou.</div>
+      ${blocoComoNosAchou('', '', { semTitulo: true })}
+      <button type="button" onclick="fecharComo()" style="display:inline-block;width:auto;margin:2px 0 6px;padding:5px 11px;font-size:12px;font-weight:700;border-radius:999px;border:1.5px solid #cfe0dd;background:#fff;color:#4F6469;cursor:pointer;font-family:inherit">Cancelar — continua não informado</button>
+    </div>`}
     <div class="sec">Local &amp; agendamento</div>
     <label>Endereço da coleta</label><textarea id="endereco" rows="2">${esc(os.endereco || '')}</textarea>
     <div class="g2"><div><label>Data</label><input id="data" type="date" value="${esc(os.dataAgendada || '')}"></div><div><label>Janela (opcional)</label><input id="janela" value="${esc(os.janela || '')}" placeholder="ex.: 09h–12h"></div></div>
@@ -991,10 +999,13 @@ export function paginaEditarColeta(user, os, contatos, agentes, veiculos) {
 function g(id){var el=document.getElementById(id);return el?el.value.trim():'';}
 function toggleTransp(){var t=g('quemColeta')==='transportadora';document.getElementById('boxMotorista').style.display=t?'none':'grid';document.getElementById('boxTransp').style.display=t?'block':'none';}
 ${scriptComoNosAchou(os.comoNosAchou)}
+// OS "não informado": as opções ficam fechadas (um toque sem querer no celular não grava origem).
+function abrirComo(){document.getElementById('comoFechado').style.display='none';document.getElementById('comoAberto').style.display='block';}
+function fecharComo(){escolherComo('',false);comoAviso('');var o=document.getElementById('comoOutro');if(o)o.value='';document.getElementById('comoAberto').style.display='none';document.getElementById('comoFechado').style.display='block';}
 function salvar(){var ag=g('agente').split('|');
   var certs=[].slice.call(document.querySelectorAll('.cert:checked')).map(function(c){return c.value;});
   var ehTransp=g('quemColeta')==='transportadora';
-  if(comoSel==='outro'&&!g('comoOutro')){document.getElementById('m').textContent='Em “Outro”, escreva em poucas palavras como o cliente nos achou.';document.getElementById('comoOutro').focus();return;}
+  if(comoSel==='outro'&&!/[A-Za-z0-9À-ÿ]/.test(g('comoOutro'))){document.getElementById('m').textContent='Em “Outro”, escreva em poucas palavras como o cliente nos achou.';comoAviso('Em “Outro”, escreva em poucas palavras como o cliente nos achou.');document.getElementById('comoOutro').focus();return;}
   if(ehTransp&&!g('tNome')){document.getElementById('m').textContent='Informe o nome da transportadora.';return;}
   var rec={id:'${esc(os.id)}',endereco:g('endereco'),dataAgendada:g('data'),janela:g('janela'),contato:g('contato'),material:g('material'),quantidade:g('quantidade'),acondicionamento:g('acondicionamento'),obs:g('obs'),obsInterna:g('obsInterna'),itensTexto:g('itens'),veiculoPlaca:ehTransp?'':g('veiculo'),certificados:certs,agenteEmail:ehTransp?'':(ag[0]||''),agenteNome:ehTransp?'':(ag[1]||''),
     transportadora:ehTransp?{nome:g('tNome'),cnpj:g('tCnpj'),placa:g('tPlaca'),motorista:g('tMot'),fone:g('tFone')}:null};
