@@ -136,17 +136,28 @@
         };
         window.addEventListener('resize', ajustaFlutuante, {passive: true});
         const readConsent = () => { try { return localStorage.getItem('ecb_consent'); } catch (_) { return 'unavailable'; } };
+        // Resposta rápida ao toque (F051, 19/11/2026): o "Aceitar" é o elemento
+        // mais tocado do site e era o toque mais lento medido (cerca de 95 ms de
+        // processamento num celular simulado). A faixa some na hora; o trabalho
+        // pesado (consentimento no gtag e no Clarity, E-goi, pixel da OpenAI e o
+        // evento) roda logo depois da tela ser redesenhada, na mesma ordem de antes.
+        const depoisDoDesenho = (fn) => {
+            if (typeof window.requestAnimationFrame === 'function') window.requestAnimationFrame(() => setTimeout(fn, 0));
+            else setTimeout(fn, 0);
+        };
         const applyConsent = (state) => {
             try { localStorage.setItem('ecb_consent', state); } catch (_) {}
-            if (typeof window.gtag === 'function') window.gtag('consent', 'update', {ad_storage: state, ad_user_data: state, ad_personalization: state, analytics_storage: state});
-            if (typeof window.clarity === 'function') window.clarity('consent', state === 'granted');
-            // E-goi (Connected Sites) só entra depois do aceite explícito.
-            if (state === 'granted' && typeof window.ecbCarregaEgoi === 'function') window.ecbCarregaEgoi();
-            // Pixel de anúncios da OpenAI: mesma regra do E-goi.
-            if (state === 'granted' && typeof window.ecbCarregaOpenAIAds === 'function') window.ecbCarregaOpenAIAds();
             consentBar.hidden = true;
             ajustaFlutuante();
-            track('consent_choice', {choice: state});
+            depoisDoDesenho(() => {
+                if (typeof window.gtag === 'function') window.gtag('consent', 'update', {ad_storage: state, ad_user_data: state, ad_personalization: state, analytics_storage: state});
+                if (typeof window.clarity === 'function') window.clarity('consent', state === 'granted');
+                // E-goi (Connected Sites) só entra depois do aceite explícito.
+                if (state === 'granted' && typeof window.ecbCarregaEgoi === 'function') window.ecbCarregaEgoi();
+                // Pixel de anúncios da OpenAI: mesma regra do E-goi.
+                if (state === 'granted' && typeof window.ecbCarregaOpenAIAds === 'function') window.ecbCarregaOpenAIAds();
+                track('consent_choice', {choice: state});
+            });
         };
         // Sem escolha guardada — ou sem localStorage (modo privado, storage
         // bloqueado) — mostra o banner; nesse último caso a escolha vale só
