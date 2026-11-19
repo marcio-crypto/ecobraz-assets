@@ -9,6 +9,7 @@ import { lerCliente } from './cadastro.js';
 import { abasEquipe } from './os-utils.js';
 import { lerChavesKV } from './kv-lote.js';
 import { situacaoPrazo, textoBR } from './atendimento.js';
+import { COMO_OPCOES, COMO_OUTRO_MAX, comoValido, rotuloComo, lerComo } from './como-nos-achou.js';
 import qrcode from 'qrcode-generator';
 
 const TE = new TextEncoder();
@@ -108,6 +109,7 @@ function resumoIndiceOS(rec) {
   if (rec.canceladaEm) r.canceladaEm = rec.canceladaEm;
   if (rec.leadId) r.leadId = rec.leadId;
   if (rec.prazoAlvoEm) r.prazoAlvoEm = rec.prazoAlvoEm;
+  if (rec.comoNosAchou) r.como = rec.comoNosAchou; // "Como nos achou?" (código); sem ele = não informado
   return r;
 }
 // Grava o índice de OS. O antigo `.slice(0, 900000)` CORTAVA O JSON NO MEIO quando o
@@ -170,9 +172,11 @@ function limparTransportadora(t) {
   };
 }
 
-// `origem` (opcional) = { lead }: o pedido (lead) de onde a coleta nasceu, JÁ CONFERIDO
-// pela rota — nunca vem do corpo da requisição. Grava o vínculo EXATO lead → OS e, se o
-// pedido for lote grande, o prazo-alvo (hora do pedido + 72h).
+// `origem` (opcional) = { lead, comoSugerido }: o pedido (lead) de onde a coleta nasceu, JÁ
+// CONFERIDO pela rota — nunca vem do corpo da requisição. Grava o vínculo EXATO lead → OS e, se o
+// pedido for lote grande, o prazo-alvo (hora do pedido + 72h). `comoSugerido` = a opção de "Como
+// nos achou?" que o canal do pedido indicava (só para conferir depois se a sugestão foi mantida).
+// "Como nos achou?" (dados.comoNosAchou / comoNosAchouOutro) já vem conferido pela rota.
 export async function criarColetaOS(env, dados, criadoPor, origem) {
   const d = dados || {};
   const numero = await proximoNumero(env);
@@ -197,6 +201,10 @@ export async function criarColetaOS(env, dados, criadoPor, origem) {
   // Transportadora e motorista próprio são excludentes: com transportadora, a OS
   // não pertence à rota de nenhum motorista (e não aparece no app de ninguém).
   if (rec.transportadora) { rec.agenteEmail = ''; rec.agenteNome = ''; }
+  const como = lerComo(d.comoNosAchou, d.comoNosAchouOutro);
+  if (como) { rec.comoNosAchou = como.codigo; if (como.outro) rec.comoNosAchouOutro = como.outro; }
+  const sug = String((origem && origem.comoSugerido) || '');
+  if (comoValido(sug) && sug !== 'outro') rec.comoNosAchouSugerido = sug;
   const lo = origem && origem.lead;
   if (lo && lo.id) {
     rec.leadId = String(lo.id).slice(0, 60);
@@ -215,6 +223,7 @@ export async function criarColetaOS(env, dados, criadoPor, origem) {
     { const placa = placaDaOS(rec); if (placa) resumo.placa = placa; }
     if (rec.leadId) resumo.leadId = rec.leadId;
     if (rec.prazoAlvoEm) resumo.prazoAlvoEm = rec.prazoAlvoEm;
+    if (rec.comoNosAchou) resumo.como = rec.comoNosAchou;
     idx.unshift(resumo);
     await salvarIndiceOS(env, idx);
   }
@@ -449,11 +458,15 @@ export async function atualizarColetaOS(env, id, dados) {
     if (rec.transportadora) { rec.agenteEmail = ''; rec.agenteNome = ''; }
     else delete rec.transportadora;
   }
+  // "Como nos achou?": correção pela equipe (a rota já recusou valor inválido). Sem o campo no
+  // pedido de edição, fica como está — OS antiga continua "não informado" até alguém escolher.
+  const como = d.comoNosAchou != null && String(d.comoNosAchou).trim() ? lerComo(d.comoNosAchou, d.comoNosAchouOutro) : null;
+  if (como) { rec.comoNosAchou = como.codigo; if (como.outro) rec.comoNosAchouOutro = como.outro; else delete rec.comoNosAchouOutro; }
   rec.atualizadoEm = agora();
   if (env.PORTAL_KV) {
     await env.PORTAL_KV.put(`os:${id}`, JSON.stringify(rec));
     const idx = await listarColetasOS(env); const i = idx.findIndex((x) => x.id === id);
-    if (i >= 0) { idx[i].cidade = cidadeDoEndereco(rec.endereco); idx[i].dataAgendada = rec.dataAgendada; idx[i].agenteNome = rec.agenteNome; idx[i].agenteEmail = rec.agenteEmail; if (rec.transportadora) idx[i].transp = rec.transportadora.nome; else delete idx[i].transp; if (!idx[i].clienteDoc && rec.clienteDoc) idx[i].clienteDoc = rec.clienteDoc; idx[i].mat = materialIndiceOS(rec); const placa = placaDaOS(rec); if (placa) idx[i].placa = placa; else delete idx[i].placa; await salvarIndiceOS(env, idx); }
+    if (i >= 0) { if (rec.comoNosAchou) idx[i].como = rec.comoNosAchou; idx[i].cidade = cidadeDoEndereco(rec.endereco); idx[i].dataAgendada = rec.dataAgendada; idx[i].agenteNome = rec.agenteNome; idx[i].agenteEmail = rec.agenteEmail; if (rec.transportadora) idx[i].transp = rec.transportadora.nome; else delete idx[i].transp; if (!idx[i].clienteDoc && rec.clienteDoc) idx[i].clienteDoc = rec.clienteDoc; idx[i].mat = materialIndiceOS(rec); const placa = placaDaOS(rec); if (placa) idx[i].placa = placa; else delete idx[i].placa; await salvarIndiceOS(env, idx); }
   }
   return rec;
 }
@@ -551,13 +564,29 @@ export function paginaColetasLista(user, coletas, q, cliCtx, negocios, aba) {
 
 // `pedidosCtx` (opcional) = { pedidos, leadSel }: pedidos (leads) em aberto deste cliente
 // e o já escolhido — a coleta nasce ligada ao pedido certo (vínculo exato lead → OS).
+// Bloco "Como nos achou?" (criação e edição da OS): uma fileira de botões — um clique escolhe.
+// `sel` = código já escolhido (edição) ou ''; o script da página põe a sugestão do pedido.
+function blocoComoNosAchou(sel, outro, { obrigatorio, primeiro } = {}) {
+  const s = comoValido(sel) ? sel : '';
+  return `<style>.como{display:inline-block;width:auto;border:1.5px solid #cfe0dd;background:#fff;color:#00333B;border-radius:999px;padding:8px 13px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin:0;line-height:1.2}.como.on{background:#00333B;color:#fff;border-color:#00333B}</style>
+    <div class="sec"${primeiro ? ' style="margin-top:0"' : ''}>Como nos achou?${obrigatorio ? ' <span style="color:#B23A2E">*</span>' : ''}</div>
+    <div id="comoBox" style="display:flex;flex-wrap:wrap;gap:7px;margin-top:6px">${COMO_OPCOES.map(([c, r]) => `<button type="button" class="como${c === s ? ' on' : ''}" data-v="${esc(c)}" onclick="escolherComo('${esc(c)}',true)">${esc(r)}</button>`).join('')}</div>
+    <input id="comoOutro" maxlength="${COMO_OUTRO_MAX}" value="${esc(s === 'outro' ? (outro || '') : '')}" placeholder="Qual? (ex.: feira, panfleto, placa na rua)" style="margin-top:8px;${s === 'outro' ? '' : 'display:none'}">
+    <div id="comoDica" style="font-size:11px;color:#9aa7a4;margin:6px 0 2px"></div>`;
+}
+const scriptComoNosAchou = (sel) => `var comoSel=${JSON.stringify(comoValido(sel) ? sel : '')},comoManual=false;
+function escolherComo(v,manual){comoSel=v;if(manual)comoManual=true;[].forEach.call(document.querySelectorAll('.como'),function(b){b.className='como'+(b.getAttribute('data-v')===v?' on':'');});var o=document.getElementById('comoOutro');o.style.display=v==='outro'?'block':'none';if(v==='outro'&&manual)o.focus();if(manual)document.getElementById('comoDica').textContent='';}`;
+
 export function paginaGerarColeta(user, cliente, agentes, patrocinadores, veiculos, pedidosCtx) {
   const pc = pedidosCtx || {};
   const pedidos = Array.isArray(pc.pedidos) ? pc.pedidos : [];
   const leadSel = String(pc.leadSel || '');
+  // Sugestão de "Como nos achou?" de cada pedido (calculada pela rota a partir do canal do pedido).
+  const sugestoes = {};
+  for (const p of pedidos) if (p && p.id && comoValido(p.comoSugerido) && p.comoSugerido !== 'outro') sugestoes[String(p.id).replace(/[^a-zA-Z0-9_]/g, '')] = { codigo: p.comoSugerido, rotulo: rotuloComo(p.comoSugerido) };
   const rotuloPedido = (p) => [textoBR(p.criadoEm) || '', p.nome || p.empresa || '', p.origem ? `via ${p.origem}` : '', p.loteGrande ? `🏭 LOTE GRANDE — coletar até ${textoBR(p.prazoAlvoEm)}` : (p.prioridade === 'alta' ? '🌟 prioritária' : '')].filter(Boolean).join(' · ');
   const blocoPedido = pedidos.length ? `<div class="sec" style="margin-top:0">Pedido de origem</div>
-    <select id="leadId">
+    <select id="leadId" onchange="sugerirComo()">
       <option value="">— coleta sem pedido registrado —</option>
       ${pedidos.map((p) => `<option value="${esc(p.id)}"${p.id === leadSel ? ' selected' : ''}>${esc(rotuloPedido(p))}</option>`).join('')}
     </select>
@@ -586,6 +615,7 @@ export function paginaGerarColeta(user, cliente, agentes, patrocinadores, veicul
   <p style="font-size:12.5px;color:#8fa39f;margin:0 0 14px">Gerando a Ordem de Coleta para <b>${esc(nome)}</b>.</p>
   <div class="card">
     ${blocoPedido}
+    ${blocoComoNosAchou('', '', { obrigatorio: true, primeiro: !blocoPedido })}
     <div class="sec">Local &amp; agendamento</div>
     <label>Endereço da coleta</label>
     ${temEnd2 ? `<div style="font-size:11.5px;color:#0B5B66;font-weight:700;margin:-2px 0 6px">Este cliente tem 2 endereços — escolha o correto:</div>
@@ -637,7 +667,14 @@ export function paginaGerarColeta(user, cliente, agentes, patrocinadores, veicul
 function g(id){var el=document.getElementById(id);return el?el.value.trim():'';}
 function togglePatro(){var on=document.getElementById('patroOn').checked;document.getElementById('patroBox').style.display=on?'block':'none';}
 function toggleTransp(){var t=g('quemColeta')==='transportadora';document.getElementById('boxMotorista').style.display=t?'none':'grid';document.getElementById('boxTransp').style.display=t?'block':'none';}
+${scriptComoNosAchou('')}
+var COMO_SUG=${JSON.stringify(sugestoes)};
+// Pedido do site com canal claro: a opção já vem marcada (até a Debora clicar em outra).
+function sugerirComo(){if(comoManual)return;var l=document.getElementById('leadId');var s=l&&COMO_SUG[l.value];escolherComo(s?s.codigo:'',false);document.getElementById('comoDica').textContent=s?'Marcado pelo canal do pedido do site ('+s.rotulo+'). Se não for isso, é só clicar em outra opção.':'';}
+sugerirComo();
 function gerar(){var ag=g('agente').split('|');var ehTransp=g('quemColeta')==='transportadora';
+  if(!comoSel){document.getElementById('m').textContent='Escolha “Como nos achou?” (no começo da página).';document.getElementById('comoBox').scrollIntoView({block:'center'});return;}
+  if(comoSel==='outro'&&!g('comoOutro')){document.getElementById('m').textContent='Em “Outro”, escreva em poucas palavras como o cliente nos achou.';document.getElementById('comoOutro').focus();return;}
   if(ehTransp&&!g('tNome')){document.getElementById('m').textContent='Informe o nome da transportadora.';return;}
   var certs=[].slice.call(document.querySelectorAll('.cert:checked')).map(function(c){return c.value;});
   var rec={clienteId:'${esc(cliente.id)}',clienteNome:${JSON.stringify(nome)},clienteDoc:${JSON.stringify(cliente.tipo === 'PJ' ? (cliente.cnpj || '') : (cliente.cpf || ''))},
@@ -646,7 +683,7 @@ function gerar(){var ag=g('agente').split('|');var ehTransp=g('quemColeta')==='t
     itensTexto:g('itens'),veiculoPlaca:ehTransp?'':g('veiculo'),certificados:certs,
     agenteEmail:ehTransp?'':(ag[0]||''),agenteNome:ehTransp?'':(ag[1]||''),
     transportadora:ehTransp?{nome:g('tNome'),cnpj:g('tCnpj'),placa:g('tPlaca'),motorista:g('tMot'),fone:g('tFone')}:null,
-    leadId:g('leadId')};
+    leadId:g('leadId'),comoNosAchou:comoSel,comoNosAchouOutro:comoSel==='outro'?g('comoOutro'):''};
   var pOn=document.getElementById('patroOn');
   if(pOn&&pOn.checked){var pp=g('patro').split('|');if(!pp[0]){document.getElementById('m').textContent='Escolha a empresa patrocinadora ou desmarque o patrocínio.';return;}rec.patrocinadorId=pp[0];rec.patrocinadorNome=pp[1]||'';}
   if(!rec.endereco){document.getElementById('m').textContent='Informe o endereço da coleta.';return;}
@@ -752,6 +789,7 @@ export function paginaColetaOSDetalhe(user, os, acomp, extras) {
       ${linha('Cliente', os.clienteNome)}${linha('Documento', os.clienteDoc)}
       ${linha('Endereço da coleta', os.endereco)}
       ${linha('Data da coleta', [dataBR(os.dataAgendada), os.janela].filter(Boolean).join(' · '))}
+      ${ro ? '' : linha('Como nos achou?', `${rotuloComo(os.comoNosAchou)}${os.comoNosAchou === 'outro' && os.comoNosAchouOutro ? ` — ${os.comoNosAchouOutro}` : ''}`)}
       ${linha('Contato no local', os.contato)}
       ${os.transportadora
         ? linha('Transportadora', [os.transportadora.nome, os.transportadora.cnpj ? 'CNPJ ' + os.transportadora.cnpj : '', os.transportadora.placa ? 'placa ' + os.transportadora.placa : '', os.transportadora.motorista ? 'motorista ' + os.transportadora.motorista : '', os.transportadora.fone].filter(Boolean).join(' · '))
@@ -871,6 +909,8 @@ export function paginaEditarColeta(user, os, contatos, agentes, veiculos) {
   <h1 style="font-size:20px;margin:10px 0 2px">Editar coleta</h1>
   <p style="font-size:12.5px;color:#8fa39f;margin:0 0 14px">${esc(os.numero)} · ${esc(os.clienteNome || '')}</p>
   <div class="card">
+    ${blocoComoNosAchou(os.comoNosAchou, os.comoNosAchouOutro, { primeiro: true })}
+    ${comoValido(os.comoNosAchou) ? '' : '<div style="font-size:11.5px;color:#8a6a16;margin:2px 0 4px">Esta coleta está como <b>não informado</b> (foi criada antes deste campo existir). Só escolha se souber de verdade como o cliente nos achou.</div>'}
     <div class="sec">Local &amp; agendamento</div>
     <label>Endereço da coleta</label><textarea id="endereco" rows="2">${esc(os.endereco || '')}</textarea>
     <div class="g2"><div><label>Data</label><input id="data" type="date" value="${esc(os.dataAgendada || '')}"></div><div><label>Janela (opcional)</label><input id="janela" value="${esc(os.janela || '')}" placeholder="ex.: 09h–12h"></div></div>
@@ -950,12 +990,15 @@ export function paginaEditarColeta(user, os, contatos, agentes, veiculos) {
 <script>
 function g(id){var el=document.getElementById(id);return el?el.value.trim():'';}
 function toggleTransp(){var t=g('quemColeta')==='transportadora';document.getElementById('boxMotorista').style.display=t?'none':'grid';document.getElementById('boxTransp').style.display=t?'block':'none';}
+${scriptComoNosAchou(os.comoNosAchou)}
 function salvar(){var ag=g('agente').split('|');
   var certs=[].slice.call(document.querySelectorAll('.cert:checked')).map(function(c){return c.value;});
   var ehTransp=g('quemColeta')==='transportadora';
+  if(comoSel==='outro'&&!g('comoOutro')){document.getElementById('m').textContent='Em “Outro”, escreva em poucas palavras como o cliente nos achou.';document.getElementById('comoOutro').focus();return;}
   if(ehTransp&&!g('tNome')){document.getElementById('m').textContent='Informe o nome da transportadora.';return;}
   var rec={id:'${esc(os.id)}',endereco:g('endereco'),dataAgendada:g('data'),janela:g('janela'),contato:g('contato'),material:g('material'),quantidade:g('quantidade'),acondicionamento:g('acondicionamento'),obs:g('obs'),obsInterna:g('obsInterna'),itensTexto:g('itens'),veiculoPlaca:ehTransp?'':g('veiculo'),certificados:certs,agenteEmail:ehTransp?'':(ag[0]||''),agenteNome:ehTransp?'':(ag[1]||''),
     transportadora:ehTransp?{nome:g('tNome'),cnpj:g('tCnpj'),placa:g('tPlaca'),motorista:g('tMot'),fone:g('tFone')}:null};
+  if(comoSel){rec.comoNosAchou=comoSel;rec.comoNosAchouOutro=comoSel==='outro'?g('comoOutro'):'';}
   if(!rec.endereco){document.getElementById('m').textContent='Informe o endereço da coleta.';return;}
   document.getElementById('m').textContent='Salvando…';
   fetch('/api/coletas/editar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(rec)}).then(function(r){return r.json();}).then(function(j){if(j.ok){location.href='/coletas/os?id=${esc(os.id)}';}else{document.getElementById('m').textContent=j.message||j.error||'Erro ao salvar.';}}).catch(function(){document.getElementById('m').textContent='Sem conexão.';});}

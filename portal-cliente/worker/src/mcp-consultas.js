@@ -21,6 +21,7 @@ import { MATERIAIS as TRIAGEM_DOCA } from './operacional.js';
 import { REGRAS_MATERIAIS, estimarPesoKg } from './cadastro.js';
 import { isoBR, minutosEntre, percentil, segundaDaSemana, situacaoPrazo, avaliarLoteGrande, perfilDoLead, ehPedidoDeColeta, medido, INICIO_MEDICAO_TXT, primeiroContatoDoHistorico } from './atendimento.js';
 import { lerAvaliacoes, camposAvaliacao, ROTULO_MOTIVO, contarAvisos, diagnosticoEmailAvaliacao, REGRA_LEITURA_EMAIL } from './avaliacao.js';
+import { COMO_OPCOES, COMO_NAO_INFORMADO, comoValido, rotuloComo } from './como-nos-achou.js';
 
 export class ErroUso extends Error {}
 
@@ -861,10 +862,11 @@ async function ferrColetasPeriodo(env, args) {
   if (campo === 'cancelada') ctx.aviso('Data de cancelamento: registrada a partir de 18/11/2026; cancelamentos anteriores usam a última atualização da OS (data_cancelamento_estimada = true).');
   ctx.aviso(`Pedido de origem: desde ${INICIO_MEDICAO_TXT} a OS gerada a partir de um pedido grava o pedido (lead_id; origem_pedido.vinculo = "exato"). Pedidos de antes disso usam o vínculo "provável" (pedido do mesmo cliente até 30 dias antes). Sem pedido ligado, modalidade = "padrão" e origem vazia.`);
   ctx.aviso('data_hora_conclusao = hora do encerramento no app do motorista. Coleta que não passa pelo app (transportadora, ou concluída pelo escritório/doca) fica com a hora em que foi marcada como concluída — pode ser depois da retirada real.');
+  ctx.aviso('como_nos_achou = resposta da equipe a "Como nos achou?" (obrigatória na criação da OS desde 19/11/2026; pode ser corrigida na edição). OS criada antes do campo = "não informado" — nada foi preenchido por adivinhação. como_nos_achou_sugestao_do_pedido = a opção que o canal do pedido do site indicava (vem marcada na tela; a equipe pode trocar). Contagem por dia e por origem: função agendamentos_por_origem.');
   if (diag) ctx.aviso('email_avaliacao = como o pedido de avaliação no Google lê o e-mail da coleta (contato da OS + ficha do cliente), pela regra em vigor (regra_de_leitura). É SÓ a leitura do endereço: não considera status da OS, listas de bloqueio, regra dos 12 meses nem casa/família ("envia" não quer dizer que o pedido vai sair; para as coletas que entram no pedido, use campo_data=concluida). casos: contato_da_os (palavra solta + espaço antes do endereço, no texto livre do contato da OS), campo_de_email_do_cadastro (o mesmo no e-mail da ficha ou de um contato) e espaco_antes_do_arroba (espaço logo antes da arroba, sem nada antes dela). leitura: envia (há destinatário bem formado) | envia_ao_pedaco_depois_do_espaco (o destinatário seria o pedaço depois do espaço — só pela regra de antes de 19/11/2026; pela regra atual não acontece) | envia_a_email_bem_formado (há um dos casos, mas o destinatário é um e-mail que a leitura aceita em algum campo) | email_invalido | sem_email | cadastro_grande. Peça também "numero" em campos para saber de qual coleta é cada item. resumo_email_avaliacao (só no formato json) soma o período inteiro (coletas e cadastros distintos); palavra_antes_do_endereco conta as ocorrências por tipo da palavra solta (rotulo: e-mail, financeiro…; comeco_do_endereco: a palavra é o começo do próprio endereço; outra). Só leitura; nenhum e-mail sai na resposta.');
   return saida(ctx, a, {
     total, pagina, porPagina, itens, filtros, titulo: `Coletas (${campo})`, extra: diag ? { resumo_email_avaliacao: diag.resumo } : undefined,
-    linha: (o) => [o.numero, o.status_rotulo, o.cliente && `${o.cliente.nome} (${o.cliente.tipo})`, o.cidade, `criada ${o.data_hora_criacao || o.data_criacao}`, o.data_agendada && `agendada ${o.data_agendada}`, o.data_conclusao && `concluída ${o.data_conclusao}${o.data_conclusao_estimada ? ' (estimada)' : ''}`, o.motorista && `🚚 ${o.motorista}`, o.peso_kg != null && `${o.peso_kg} kg`, o.lead_id && `pedido ${o.lead_id}`, o.prazo_alvo && `🏭 prazo ${o.prazo_alvo} — ${o.prazo_situacao}`].filter(Boolean).join(' — '),
+    linha: (o) => [o.numero, o.status_rotulo, o.cliente && `${o.cliente.nome} (${o.cliente.tipo})`, o.cidade, `criada ${o.data_hora_criacao || o.data_criacao}`, o.data_agendada && `agendada ${o.data_agendada}`, o.data_conclusao && `concluída ${o.data_conclusao}${o.data_conclusao_estimada ? ' (estimada)' : ''}`, o.motorista && `🚚 ${o.motorista}`, o.peso_kg != null && `${o.peso_kg} kg`, o.lead_id && `pedido ${o.lead_id}`, o.prazo_alvo && `🏭 prazo ${o.prazo_alvo} — ${o.prazo_situacao}`, o.como_nos_achou && `achou: ${o.como_nos_achou}${o.como_nos_achou_outro ? ` (${o.como_nos_achou_outro})` : ''}`].filter(Boolean).join(' — '),
   });
 }
 
@@ -961,6 +963,10 @@ async function detalharColetas(ctx, lista, vinc) {
       data_criacao: diaBR(o.criadoEm) || null,
       data_hora_criacao: isoBR(o.criadoEm),
       lead_id: (tipoVinc === 'exato' && lead.id) || rec.leadId || o.leadId || null,
+      // "Como nos achou?" (desde 19/11/2026): OS de antes do campo = "não informado".
+      como_nos_achou: rotuloComo(comoValido(rec.comoNosAchou) ? rec.comoNosAchou : o.como),
+      como_nos_achou_outro: (rec.comoNosAchou || o.como) === 'outro' ? (textoSeguro(semCauda(rec.comoNosAchouOutro, 60)) || null) : undefined,
+      como_nos_achou_sugestao_do_pedido: comoValido(rec.comoNosAchouSugerido) ? rotuloComo(rec.comoNosAchouSugerido) : undefined,
       data_agendada: o.dataAgendada || null,
       data_conclusao: conc.dia || null, data_conclusao_estimada: conc.dia ? conc.estimada : undefined,
       data_hora_conclusao: o.status === 'concluida' ? isoBR(o.concluidaEm || rec.concluidaEm) : undefined,
@@ -1479,6 +1485,68 @@ async function ferrMateriais(env, args) {
 }
 
 // ===================================================================================
+// AGENDAMENTOS (OS criadas) POR DIA E POR ORIGEM — "Como nos achou?" (pedido do Marcio, 19/11/2026)
+// ===================================================================================
+// Conta pelo índice de OS (o código da origem fica nele): nenhuma leitura extra por OS. Agendamento =
+// OS CRIADA no dia (horário de Brasília), em qualquer status — as que foram canceladas depois
+// continuam contando e aparecem em `canceladas`. Sem origem registrada = nao_informado.
+const CODIGOS_COMO = [...COMO_OPCOES.map(([c]) => c), COMO_NAO_INFORMADO];
+const zeroComo = () => Object.fromEntries(CODIGOS_COMO.map((c) => [c, 0]));
+const DIAS_SEMANA = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+function somarAgendamento(acc, x) {
+  acc.total += x.total; acc.canceladas += x.canceladas;
+  for (const c of CODIGOS_COMO) acc.por_origem[c] += x.por_origem[c];
+}
+function fecharAgendamentos(acc) {
+  const informadas = acc.total - acc.por_origem[COMO_NAO_INFORMADO];
+  return { total: acc.total, informadas, nao_informadas: acc.por_origem[COMO_NAO_INFORMADO], percentual_informadas: acc.total ? Math.round((informadas / acc.total) * 1000) / 10 : null, canceladas: acc.canceladas, por_origem: acc.por_origem };
+}
+async function ferrAgendamentosPorOrigem(env, args) {
+  const a = args || {};
+  const ctx = novoContexto(env);
+  const { de, ate } = periodoObrigatorio(a, 370);
+  const { pagina, porPagina } = paginacao(a, 31);
+  const porDia = new Map();
+  let desde = '';
+  for (const o of await ctx.oss()) {
+    const d = diaBR(o && o.criadoEm);
+    if (!d || d < de || d > ate) continue;
+    const c = comoValido(o.como) ? o.como : COMO_NAO_INFORMADO;
+    if (c !== COMO_NAO_INFORMADO && (!desde || String(o.criadoEm) < desde)) desde = String(o.criadoEm);
+    let x = porDia.get(d); if (!x) { x = { total: 0, canceladas: 0, por_origem: zeroComo() }; porDia.set(d, x); }
+    x.total++; x.por_origem[c]++; if (o.status === 'cancelada') x.canceladas++;
+  }
+  const dias = [];
+  const semanas = new Map();
+  const periodo = { total: 0, canceladas: 0, por_origem: zeroComo() };
+  let diasUteis = 0, totalUteis = 0;
+  for (let d = de; d <= ate; d = somaDias(d, 1)) {
+    const x = porDia.get(d) || { total: 0, canceladas: 0, por_origem: zeroComo() };
+    const dow = new Date(Date.parse(d + 'T12:00:00Z')).getUTCDay();
+    dias.push({ data: d, dia_semana: DIAS_SEMANA[dow], ...fecharAgendamentos({ total: x.total, canceladas: x.canceladas, por_origem: { ...x.por_origem } }) });
+    const seg = segundaDaSemana(d);
+    let s = semanas.get(seg); if (!s) { s = { semana_inicio: seg, semana_fim: somaDias(seg, 6), dias_no_periodo: 0, acc: { total: 0, canceladas: 0, por_origem: zeroComo() } }; semanas.set(seg, s); }
+    s.dias_no_periodo++; somarAgendamento(s.acc, x); somarAgendamento(periodo, x);
+    if (dow >= 1 && dow <= 5) { diasUteis++; totalUteis += x.total; }
+  }
+  const listaSemanas = [...semanas.values()].map((s) => ({ semana_inicio: s.semana_inicio, semana_fim: s.semana_fim, semana_incompleta: s.dias_no_periodo < 7 ? true : undefined, ...fecharAgendamentos(s.acc) }));
+  const nDias = dias.length;
+  const resumo = { de, ate, dias: nDias, ...fecharAgendamentos(periodo), media_por_dia: nDias ? Math.round((periodo.total / nDias) * 10) / 10 : null, media_por_dia_util: diasUteis ? Math.round((totalUteis / diasUteis) * 10) / 10 : null, origem_registrada_desde: desde ? isoBR(desde) : null };
+  ctx.aviso('Agendamento = OS criada no dia (horário de Brasília), em qualquer status; as canceladas depois continuam contando e aparecem em "canceladas". media_por_dia_util = segunda a sexta (feriados não são descontados).');
+  ctx.aviso('Origem = resposta da equipe a "Como nos achou?" na criação da OS (obrigatória desde 19/11/2026; pode ser corrigida na edição). OS criada antes do campo = nao_informado: nada foi preenchido por adivinhação. Quando a OS nasce de um pedido do site com canal claro, a opção vem marcada (a equipe pode trocar).');
+  return saida(ctx, a, {
+    total: nDias, pagina, porPagina, itens: dias.slice((pagina - 1) * porPagina, pagina * porPagina), filtros: { de, ate }, titulo: 'Agendamentos por origem (por dia)',
+    extra: { origens: COMO_OPCOES.map(([codigo, rotulo]) => ({ codigo, rotulo })).concat([{ codigo: COMO_NAO_INFORMADO, rotulo: 'não informado' }]), semanas: listaSemanas, periodo_inteiro: resumo },
+    linha: (x) => `${x.data} (${x.dia_semana}) — ${x.total} OS${x.canceladas ? ` (${x.canceladas} cancelada(s) depois)` : ''}${x.total ? ' — ' + CODIGOS_COMO.filter((c) => x.por_origem[c]).map((c) => `${c === COMO_NAO_INFORMADO ? 'não informado' : rotuloComo(c)}: ${x.por_origem[c]}`).join(', ') : ''}`,
+    rodape: (corpo) => {
+      const p = corpo.periodo_inteiro; if (!p) return '';
+      const linhas = (corpo.semanas || []).map((s) => `• semana ${s.semana_inicio} a ${s.semana_fim}${s.semana_incompleta ? ' (incompleta no período)' : ''}: ${s.total} OS, ${s.informadas} com origem — ${CODIGOS_COMO.filter((c) => s.por_origem[c]).map((c) => `${c === COMO_NAO_INFORMADO ? 'não informado' : rotuloComo(c)}: ${s.por_origem[c]}`).join(', ')}`);
+      return [`Período ${p.de} a ${p.ate}: ${p.total} OS criadas (${p.media_por_dia} por dia; ${p.media_por_dia_util} por dia útil), ${p.informadas} com origem (${p.percentual_informadas ?? 0}%), ${p.canceladas} cancelada(s) depois.`, ...linhas].join('\n');
+    },
+  });
+}
+
+// ===================================================================================
 // Definições (descrições lidas pelo Claude para saber como chamar)
 // ===================================================================================
 const PAG = { pagina: { type: 'number', description: 'página, a partir de 1' }, por_pagina: { type: 'number', description: 'itens por página (máx. 200)' }, campos: { type: 'array', items: { type: 'string' }, description: 'opcional: só estes campos de cada item (economiza espaço em páginas grandes)' }, formato: { type: 'string', enum: ['json', 'texto'], description: 'json (padrão) ou texto' } };
@@ -1490,7 +1558,7 @@ export const FERRAMENTAS_CONSULTA = [
   },
   {
     name: 'coletas_periodo',
-    description: 'Ordens de Coleta (OS) num período, com filtros — acompanhar coletas por dia. Só leitura. Obrigatórios: de, ate (AAAA-MM-DD ou AAAA-MM). campo_data escolhe qual data cai no período: criacao (padrão) | agendada | concluida | cancelada. Filtros opcionais: status (agendada | aguardando_roteiro | em_transporte | na_unidade | concluida | cancelada), tipo_cliente (PF | PJ), cidade, material, motorista (nome, ou "sem motorista"), origem (canal do pedido, ex.: site, portal-coleta; ou "sem_pedido"). Cada OS traz: número, status, cliente (id, tipo, nome), cidade e CEP, datas de criação/agendamento/conclusão/cancelamento (com marcação quando estimada), data_hora_criacao e data_hora_conclusao (horário de Brasília), lead_id (pedido de origem quando o vínculo é exato), lote grande com prazo_alvo / prazo_cumprido / prazo_situacao (prazo de 72h), motivo do cancelamento, motorista e veículo, materiais declarados e pesados, peso, modalidade, valor cobrado e pagamento, origem do pedido (lead_id, data e hora do pedido, vínculo exato ou provável, UTM e gclid quando houver), pedido de avaliação no Google (avaliacao_pedida_em, avaliacao_canal = email | whatsapp | nenhum, motivo_nao_enviado) e documentos (CDF, NF e MTR com número). Opcional: pedir "email_avaliacao" em campos traz, por OS, como o pedido de avaliação lê o e-mail (casos de espaço antes do @ e leitura: envia | e-mail inválido | sem e-mail…, sem mostrar o e-mail) e resumo_email_avaliacao do período inteiro. Exemplo: {"de":"2026-11-17","ate":"2026-11-17","campo_data":"concluida"}',
+    description: 'Ordens de Coleta (OS) num período, com filtros — acompanhar coletas por dia. Só leitura. Obrigatórios: de, ate (AAAA-MM-DD ou AAAA-MM). campo_data escolhe qual data cai no período: criacao (padrão) | agendada | concluida | cancelada. Filtros opcionais: status (agendada | aguardando_roteiro | em_transporte | na_unidade | concluida | cancelada), tipo_cliente (PF | PJ), cidade, material, motorista (nome, ou "sem motorista"), origem (canal do pedido, ex.: site, portal-coleta; ou "sem_pedido"). Cada OS traz: número, status, cliente (id, tipo, nome), cidade e CEP, datas de criação/agendamento/conclusão/cancelamento (com marcação quando estimada), data_hora_criacao e data_hora_conclusao (horário de Brasília), lead_id (pedido de origem quando o vínculo é exato), lote grande com prazo_alvo / prazo_cumprido / prazo_situacao (prazo de 72h), motivo do cancelamento, motorista e veículo, materiais declarados e pesados, peso, modalidade, valor cobrado e pagamento, origem do pedido (lead_id, data e hora do pedido, vínculo exato ou provável, UTM e gclid quando houver), pedido de avaliação no Google (avaliacao_pedida_em, avaliacao_canal = email | whatsapp | nenhum, motivo_nao_enviado) e documentos (CDF, NF e MTR com número); "Como nos achou?" da equipe (como_nos_achou: Busca no Google, Google Maps, Assistente de IA, Indicação de alguém, Cliente antigo, E-mail da Ecobraz, Anúncio, Outro + como_nos_achou_outro, ou "não informado" nas OS de antes de 19/11/2026). Opcional: pedir "email_avaliacao" em campos traz, por OS, como o pedido de avaliação lê o e-mail (casos de espaço antes do @ e leitura: envia | e-mail inválido | sem e-mail…, sem mostrar o e-mail) e resumo_email_avaliacao do período inteiro. Exemplo: {"de":"2026-11-17","ate":"2026-11-17","campo_data":"concluida"}',
     inputSchema: { type: 'object', properties: { de: { type: 'string' }, ate: { type: 'string' }, campo_data: { type: 'string', enum: ['criacao', 'agendada', 'concluida', 'cancelada'] }, status: { type: 'string' }, tipo_cliente: { type: 'string', enum: ['PF', 'PJ'] }, cidade: { type: 'string' }, material: { type: 'string' }, motorista: { type: 'string' }, origem: { type: 'string' }, ...PAG }, required: ['de', 'ate'] },
   },
   {
@@ -1501,6 +1569,11 @@ export const FERRAMENTAS_CONSULTA = [
   {
     name: 'tempos_atendimento',
     description: 'TEMPOS DE ATENDIMENTO POR SEMANA (segunda a domingo, pelo dia do pedido), entre de e ate (obrigatórios, AAAA-MM-DD; até 53 semanas): mediana e percentil 80 do tempo pedido → primeiro contato (minutos) e pedido → coleta concluída (horas), separados em geral, PF, PJ e lote grande, com n (quantos pedidos entraram no cálculo); quantidade de pedidos; pedidos ainda sem 1º contato ou sem coleta concluída; cumprimento do prazo de 72h dos lotes grandes; e o histórico ESTIMADO (pedidos antigos, vínculo provável) em bloco separado. Traz também o resumo do período inteiro. Só leitura. Exemplo: {"de":"2026-10-01","ate":"2026-11-30"}',
+    inputSchema: { type: 'object', properties: { de: { type: 'string' }, ate: { type: 'string' }, ...PAG }, required: ['de', 'ate'] },
+  },
+  {
+    name: 'agendamentos_por_origem',
+    description: 'AGENDAMENTOS (OS criadas) POR DIA E POR ORIGEM entre de e ate (obrigatórios, AAAA-MM-DD; até 370 dias; 31 dias por página) — para a leitura semanal de onde vêm os agendamentos. Origem = resposta da equipe a "Como nos achou?" na criação da OS (busca_google, google_maps, assistente_ia, indicacao, cliente_antigo, email_ecobraz, anuncio, outro; nao_informado = OS de antes do campo, que existe desde 19/11/2026). Cada dia traz total, informadas, nao_informadas, percentual_informadas, canceladas (das criadas no dia, quantas foram canceladas depois) e por_origem; semanas (segunda a domingo) e periodo_inteiro trazem os mesmos totais, mais média por dia e por dia útil. Só leitura. Exemplo: {"de":"2026-11-17","ate":"2026-11-23"}',
     inputSchema: { type: 'object', properties: { de: { type: 'string' }, ate: { type: 'string' }, ...PAG }, required: ['de', 'ate'] },
   },
   {
@@ -1532,6 +1605,7 @@ export async function executarConsulta(env, nome, args) {
   if (nome === 'leads') return await ferrLeads(env, args);
   if (nome === 'metricas_diarias') return await ferrMetricasDiarias(env, args);
   if (nome === 'tempos_atendimento') return await ferrTemposAtendimento(env, args);
+  if (nome === 'agendamentos_por_origem') return await ferrAgendamentosPorOrigem(env, args);
   if (nome === 'agenda_capacidade') return await ferrAgendaCapacidade(env, args);
   if (nome === 'bloqueios_contato') return await ferrBloqueiosContato(env, args);
   if (nome === 'materiais') return await ferrMateriais(env, args);

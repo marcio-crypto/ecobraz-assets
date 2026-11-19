@@ -79,6 +79,7 @@ import { importarLoteAnexos, importarLoteAnexosContatos, completarAnexos, import
 import { fiscalPermitido, nomeFiscal, listarNotas, lerNota, importarLote, vincularNota, sugerirVinculoSync, paginaFiscalLogin, paginaFiscalHome, paginaFiscalResultado, paginaFiscalNota } from './fiscal.js';
 import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, emailsDoCliente, reindexarEmailsClientes, backfillEnderecos, paginaManutencao, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, clienteDeLead, arquivosDoCliente, paginaLeads, paginaLeadDetalhe, paginaInicio, listarClientesD1, contagensClientesD1, lerClienteD1, negociosDoCliente, espelharClienteD1, sincronizarKVparaD1, lerNegocioDetalheD1, paginaOSDetalhe, curarContatosKV, classificarPedido, atualizarIndexLead, excluirLead, acessosDaEmpresa, acessoRevogado, removerAcessoPelaFicha } from './cadastro.js';
 import { listarColetasOS, lerColetaOS, seloOS, criarColetaOS, atualizarStatusOS, atualizarColetaOS, anexarTelemetriaOS, registrarAnexoColeta, removerAnexoColeta, alvoAvisoColeta, salvarColetaOSDireto, paginaColetasLista, paginaGerarColeta, paginaEditarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga, definirCobrancaOS, anexarBoletoCobrancaOS, marcarCobrancaPagaOS, definirMtrOS, completarIndiceOS } from './coletas.js';
+import { lerComo, sugestaoComoDoPedido } from './como-nos-achou.js';
 import { listarVeiculos, lerVeiculo, salvarVeiculo, paginaFrota, paginaVeiculoForm, lerJornadaAtiva, abrirJornada, fecharJornada, registrarAbastecimento, tagColetaComVeiculo, servirFotoJornada, bannerJornada, paginaAbrirDia, paginaFecharDia, paginaAbastecer, placaDaColeta } from './frota.js';
 import { carregarEquipeNoEnv, listarUsuarios, lerUsuario, salvarUsuario, importarUsuarios, paginaEquipe, paginaUsuarioForm, paginaEquipeImportar } from './equipe.js';
 import { agentesDe } from './agente.js';
@@ -2293,6 +2294,12 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
             if (p) leadSel = p.id;
           } else if (pedidos.length === 1 && Date.parse(pedidos[0].criadoEm) >= Date.now() - 30 * 86400e3 && (pedidos[0].status !== 'tratado' || pedidos[0].clienteId === cli.id)) leadSel = pedidos[0].id;
         } catch { pedidos = []; leadSel = ''; }
+        // "Como nos achou?": sugestão pelo canal de cada pedido (UTM e página gravadas no pedido). Sem
+        // leitura possível, fica sem sugestão — a Debora escolhe. Poucos pedidos por cliente (até 20 lidos).
+        try {
+          const regs = await Promise.all(pedidos.slice(0, 20).map((p) => Promise.resolve(lerLead(env, p.id)).catch(() => null)));
+          pedidos = pedidos.map((p, i) => (i < regs.length ? { ...p, comoSugerido: sugestaoComoDoPedido(regs[i]) } : p));
+        } catch { /* sem sugestão */ }
         return html(paginaGerarColeta(escritorio, cli, agentes, patrocinadores, veiculos, { pedidos, leadSel }));
       }
       // Foto da carga registrada pelo motorista — visível para a EQUIPE (comercial/doca/
@@ -2421,6 +2428,8 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
         let b; try { b = await request.json(); } catch { b = null; }
         if (!b || !b.id) return json({ ok: false, error: 'dados' }, 400);
+        // "Como nos achou?" na edição: opcional (OS antiga pode continuar "não informado"); se vier, tem de ser válido.
+        if (b.comoNosAchou != null && String(b.comoNosAchou).trim() && !lerComo(b.comoNosAchou, b.comoNosAchouOutro)) return json({ ok: false, error: String(b.comoNosAchou).trim() === 'outro' ? 'Em “Outro”, escreva em poucas palavras como o cliente nos achou.' : '“Como nos achou?”: escolha uma das opções.' }, 400);
         const r = await atualizarColetaOS(env, b.id, b);
         if (!r) return json({ ok: false, error: 'nao_encontrada' }, 404);
         return json({ ok: true, id: r.id });
@@ -2564,6 +2573,11 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         if (!escritorio) return json({ ok: false, error: 'nao_autenticado' }, 401);
         let b; try { b = await request.json(); } catch { b = null; }
         if (!b || !String(b.endereco || '').trim()) return json({ ok: false, error: 'Informe o endereço da coleta.' }, 400);
+        // "Como nos achou?" é obrigatório (pedido do Marcio, 19/11/2026): uma opção da lista fixa;
+        // "Outro" com texto curto. A sugestão pelo canal do pedido é calculada aqui, nunca vem do corpo.
+        const como = lerComo(b.comoNosAchou, b.comoNosAchouOutro);
+        if (!como) return json({ ok: false, error: String(b.comoNosAchou || '').trim() === 'outro' ? 'Em “Outro”, escreva em poucas palavras como o cliente nos achou.' : 'Escolha “Como nos achou?”.' }, 400);
+        b.comoNosAchou = como.codigo; b.comoNosAchouOutro = como.outro;
         // Pedido de origem (vínculo EXATO lead → OS): confere que o pedido existe e
         // ainda não gerou coleta. Os campos do vínculo saem do lead, nunca do corpo.
         const pedidoId = String(b.leadId || '').replace(/[^a-zA-Z0-9_]/g, '').slice(0, 60);
@@ -2580,7 +2594,7 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
             if (!osAnterior || osAnterior.status !== 'cancelada') return json({ ok: false, error: `Este pedido já gerou a coleta ${leadOrig.osNumero || ''} — escolha “coleta sem pedido registrado” ou outro pedido.` }, 409);
           }
         }
-        const os = await criarColetaOS(env, b, escritorio.email, leadOrig ? { lead: leadOrig } : undefined);
+        const os = await criarColetaOS(env, b, escritorio.email, leadOrig ? { lead: leadOrig, comoSugerido: sugestaoComoDoPedido(leadOrig) } : undefined);
         if (leadOrig) {
           // O pedido passa a apontar para a OS (e sai da caixa de pendentes).
           try {
