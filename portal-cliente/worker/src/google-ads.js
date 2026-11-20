@@ -9,6 +9,7 @@
 // próprio Google — nada de lista comprada). O arquivo baixa direto do sistema
 // para a máquina do Marcio; nenhum terceiro no meio.
 import { telWhatsApp } from './whatsapp.js';
+import { listarColetasOS } from './coletas.js';
 
 const limpar = (s) => String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -43,8 +44,8 @@ export async function montarListaGoogleAds(env, escopo) {
       linhas = r.results || [];
       // Clientes que só existem no sistema novo (OS sem histórico de negócio).
       try {
-        const raw = env.PORTAL_KV ? await env.PORTAL_KV.get('os:index') : null;
-        const docs = raw ? [...new Set(JSON.parse(raw).filter((o) => o && o.status !== 'cancelada').map((o) => String(o.clienteDoc || '').replace(/\D/g, '')).filter(Boolean))] : [];
+        // Todas as OS: as do índice e as guardadas à parte (coletas.js, listarColetasOS).
+        const docs = [...new Set((await listarColetasOS(env)).filter((o) => o && o.status !== 'cancelada').map((o) => String(o.clienteDoc || '').replace(/\D/g, '')).filter(Boolean))];
         const jaDocs = new Set(linhas.map((l) => String(l.documento || '').replace(/\D/g, '')).filter(Boolean));
         const faltam = docs.filter((d) => !jaDocs.has(d));
         while (faltam.length) {

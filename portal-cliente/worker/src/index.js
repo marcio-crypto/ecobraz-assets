@@ -78,7 +78,7 @@ import { amostraContatosPloomes, paginaAmostraContatos, importarLoteContatos, es
 import { importarLoteAnexos, importarLoteAnexosContatos, completarAnexos, importarAnexosJanela, reprocessarFalhas, importarLoteDocumentos, recuperarDocumentos, estatisticasArquivos, paginaMigrarArquivos, diagnosticoAnexos, paginaDiagAnexos } from './ploomes-arquivos.js';
 import { fiscalPermitido, nomeFiscal, listarNotas, lerNota, importarLote, vincularNota, sugerirVinculoSync, paginaFiscalLogin, paginaFiscalHome, paginaFiscalResultado, paginaFiscalNota } from './fiscal.js';
 import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, emailsDoCliente, reindexarEmailsClientes, backfillEnderecos, paginaManutencao, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, clienteDeLead, arquivosDoCliente, paginaLeads, paginaLeadDetalhe, paginaInicio, listarClientesD1, contagensClientesD1, lerClienteD1, negociosDoCliente, espelharClienteD1, sincronizarKVparaD1, lerNegocioDetalheD1, paginaOSDetalhe, curarContatosKV, classificarPedido, atualizarIndexLead, excluirLead, acessosDaEmpresa, acessoRevogado, removerAcessoPelaFicha } from './cadastro.js';
-import { listarColetasOS, lerColetaOS, seloOS, criarColetaOS, atualizarStatusOS, atualizarColetaOS, anexarTelemetriaOS, registrarAnexoColeta, removerAnexoColeta, alvoAvisoColeta, salvarColetaOSDireto, paginaColetasLista, paginaGerarColeta, paginaEditarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga, definirCobrancaOS, anexarBoletoCobrancaOS, marcarCobrancaPagaOS, definirMtrOS, completarIndiceOS } from './coletas.js';
+import { listarColetasOS, lerColetaOS, seloOS, criarColetaOS, atualizarStatusOS, atualizarColetaOS, anexarTelemetriaOS, registrarAnexoColeta, removerAnexoColeta, alvoAvisoColeta, salvarColetaOSDireto, paginaColetasLista, paginaGerarColeta, paginaEditarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga, definirCobrancaOS, anexarBoletoCobrancaOS, marcarCobrancaPagaOS, definirMtrOS, completarIndiceOS, saudeIndiceOS, avisoTetoIndiceOS } from './coletas.js';
 import { lerComo, sugestaoComoDoPedido } from './como-nos-achou.js';
 import { listarVeiculos, lerVeiculo, salvarVeiculo, paginaFrota, paginaVeiculoForm, lerJornadaAtiva, abrirJornada, fecharJornada, registrarAbastecimento, tagColetaComVeiculo, servirFotoJornada, bannerJornada, paginaAbrirDia, paginaFecharDia, paginaAbastecer, placaDaColeta } from './frota.js';
 import { carregarEquipeNoEnv, listarUsuarios, lerUsuario, salvarUsuario, importarUsuarios, paginaEquipe, paginaUsuarioForm, paginaEquipeImportar } from './equipe.js';
@@ -97,6 +97,9 @@ const ACESSOS_FIXOS = [
   { email: 'marcio@ecobraz.org.br', listas: ['ESCRITORIO_EMAILS', 'AGENTE_EMAILS', 'OPERACAO_EMAILS', 'ENG_EMAILS', 'DIRETORIA_EMAILS', 'FISCAL_EMAILS', 'VALIDADOR_EMAILS'] },
   { email: 'contact@villanovaesg.com', listas: ['VALIDADOR_EMAILS'] },
 ];
+// Aviso do teto do índice de OS (70% e 85%): para o dono — o mesmo e-mail de ACESSOS_FIXOS — ou para
+// a lista OS_INDICE_AVISO_EMAILS, se ela for configurada.
+const destinatariosAvisoIndiceOS = (env) => String((env && env.OS_INDICE_AVISO_EMAILS) || ACESSOS_FIXOS[0].email).split(/[,;]+/);
 function garantirAcessosFixos(env) {
   const e = { ...env };
   for (const { email, listas } of ACESSOS_FIXOS) {
@@ -139,6 +142,8 @@ export default {
     catch (error) { console.error('cron_empdocs_erro', safeError(error)); }
     try { const r = await avisoResgatePendentes(env); console.log('cron_resgate', r); }
     catch (error) { console.error('cron_resgate_erro', safeError(error)); }
+    try { const r = await avisoTetoIndiceOS(env, destinatariosAvisoIndiceOS(env)); console.log('cron_aviso_teto_os', r); }
+    catch (error) { console.error('cron_aviso_teto_os_erro', safeError(error)); }
   },
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -150,14 +155,10 @@ export default {
         ok: true, service: 'ecobraz-portal', version: 29,
         // Nº de usuários no cadastro de equipe (KV) — só a contagem, nunca dados.
         equipeCadastrada: await (async () => { try { return (await listarUsuarios(env)).length; } catch { return -1; } })(),
-        // Integridade do índice de OS (só contagem/tamanho — nunca dados).
-        osIndex: await (async () => {
-          try {
-            const raw = env.PORTAL_KV ? await env.PORTAL_KV.get('os:index') : null;
-            if (!raw) return { ok: true, qtd: 0, bytes: 0 };
-            return { ok: true, qtd: JSON.parse(raw).length, bytes: raw.length };
-          } catch (e) { return { ok: false, erro: String(e && e.message || e).slice(0, 80) }; }
-        })(),
+        // Integridade do índice de OS e das OS guardadas à parte (só contagem/tamanho — nunca
+        // dados): osIndex { qtd, bytes, teto, percentualDoTeto, aviso } e osArquivo { guardadas,
+        // voltaramAoIndice }.
+        ...(await saudeIndiceOS(env)),
         // Só presença (true/false) — NUNCA os valores. Ajuda a confirmar a
         // configuração pelo navegador sem expor segredo nenhum.
         config: {

@@ -15,7 +15,7 @@
 //   6. Cada informação que não existe no banco sai vazia e é dita em "avisos" — nunca
 //      inventada. Estimativas vêm marcadas como estimativas.
 
-import { listarColetasOS, materialIndiceOS } from './coletas.js';
+import { listarColetasOSCompleta, materialIndiceOS, LIMITE_INDICE_OS } from './coletas.js';
 import { lerChavesKV } from './kv-lote.js';
 import { MATERIAIS as TRIAGEM_DOCA } from './operacional.js';
 import { REGRAS_MATERIAIS, estimarPesoKg } from './cadastro.js';
@@ -291,7 +291,17 @@ function novoContexto(env) {
     // com leitura em lote o uso real fica em dezenas). Se acabar, a resposta sai com aviso.
     orcamento: { restante: 850 },
     aviso(t) { if (!ctx.avisos.includes(t)) ctx.avisos.push(t); },
-    oss: () => uma('oss', async () => { try { const l = await listarColetasOS(env); return Array.isArray(l) ? l.filter((o) => o && o.id) : []; } catch { ctx.aviso('Índice de Ordens de Coleta indisponível agora.'); return []; } }),
+    // Todas as OS: as do índice e as guardadas à parte (coletas.js). `arquivoOS.erro` = as guardadas
+    // à parte não puderam ser lidas agora (a lista sai só com o índice — com aviso).
+    arquivoOS: { erro: '', guardadas: 0 },
+    oss: () => uma('oss', async () => {
+      try {
+        const r = await listarColetasOSCompleta(env);
+        ctx.arquivoOS = { erro: r.erroArquivo || '', guardadas: r.guardadas || 0 };
+        if (r.erroArquivo) ctx.aviso('As OS guardadas à parte (as fechadas mais antigas, que saem do índice quando ele chega ao teto de tamanho) não puderam ser lidas agora: a resposta pode sair com menos OS antigas.');
+        const l = r.lista; return Array.isArray(l) ? l.filter((o) => o && o.id) : [];
+      } catch { ctx.aviso('Índice de Ordens de Coleta indisponível agora.'); return []; }
+    }),
     opIndex: () => uma('op', async () => { const l = await kvJSON('op:index', []); return Array.isArray(l) ? l : []; }),
     leads: () => uma('leads', async () => { const l = await kvJSON('leads:index', []); return Array.isArray(l) ? l.filter((x) => x && x.id && x.status !== 'excluido') : []; }),
     cliIdx: () => uma('cli', async () => { const l = await kvJSON('cli:index', []); return Array.isArray(l) ? l : []; }),
@@ -1552,22 +1562,22 @@ async function ferrAgendamentosPorOrigem(env, args) {
   const fim = ate < hoje ? ate : hoje;
   const porDia = new Map();
   // Índice de OS podado por tamanho (coletas.js, salvarIndiceOS: acima de 900.000 caracteres saem
-  // primeiro as OS FECHADAS do fim do índice — as inseridas há mais tempo). Só pode ter havido poda
-  // se o sistema já emitiu mais números de OS (os:seq) do que o índice tem E o índice está perto do
-  // teto. Aí a contagem está completa a partir da ÚLTIMA OS fechada na ordem do índice (a próxima a
-  // ser podada; uma OS antiga que voltou para a frente do índice ao mudar de status não conta como
-  // fronteira). Sem nenhuma fechada no índice: todos os dias ficam marcados. Longe do teto (o caso
-  // em 19/11/2026), nada é marcado. Limites registrados: um buraco na numeração que não vem de poda
-  // (criação que falhou, consulta no meio de uma criação, OS perdida numa gravação simultânea) não
-  // vira aviso longe do teto e, perto dele, aparece como "podado"; uma OS fechada que volta para a
-  // frente do índice pode deixar a fronteira atrasada até ela ser podada de novo.
-  const LIMITE_INDICE_OS = 900000;
+  // primeiro as OS FECHADAS do fim do índice — as inseridas há mais tempo). Desde 20/11/2026 o que
+  // sai do índice fica guardado à parte e ctx.oss() devolve índice + guardadas: a contagem não
+  // perde nada. A marca pode_faltar_os_no_indice fica só para quando as guardadas à parte NÃO
+  // puderam ser lidas agora (ctx.arquivoOS.erro) — aí vale a regra de antes: houve poda se o
+  // sistema já emitiu mais números de OS (os:seq) do que a lista tem E o índice está perto do teto,
+  // e a contagem está completa a partir da ÚLTIMA OS fechada na ordem do índice (a próxima a ser
+  // podada). Sem nenhuma fechada no índice: todos os dias ficam marcados. Limites registrados: um
+  // buraco na numeração que não vem de poda (criação que falhou, OS perdida numa gravação
+  // simultânea) não vira aviso; uma OS fechada que volta para a frente do índice pode deixar a
+  // fronteira atrasada até ela ser podada de novo.
   const todasOS = await ctx.oss();
   let podado = false, completoDesde = '';
   let seqOS = null; try { const raw = env.PORTAL_KV ? await env.PORTAL_KV.get('os:seq') : null; seqOS = raw ? JSON.parse(raw) : null; } catch { seqOS = null; }
   let emitidos = 0; for (const v of Object.values(seqOS && typeof seqOS === 'object' ? seqOS : {})) emitidos += Math.max(0, Math.min(Number(v) || 0, 1e6));
   const faltaNumero = !seqOS || emitidos > new Set(todasOS.map((o) => o.numero).filter(Boolean)).size;
-  if (faltaNumero && JSON.stringify(todasOS).length >= 0.85 * LIMITE_INDICE_OS) {
+  if (ctx.arquivoOS.erro && faltaNumero && JSON.stringify(todasOS).length >= 0.85 * LIMITE_INDICE_OS) {
     podado = true;
     for (let i = todasOS.length - 1; i >= 0; i--) { const o = todasOS[i]; if ((o.status === 'concluida' || o.status === 'cancelada') && o.criadoEm) { completoDesde = String(o.criadoEm); break; } }
   }
@@ -1609,7 +1619,7 @@ async function ferrAgendamentosPorOrigem(env, args) {
   else if (ate > hoje) ctx.aviso(`Dias depois de hoje (${hoje}) não entram (ate_contado).`);
   ctx.aviso('Agendamento = OS criada no dia (horário de Brasília), em qualquer status; as canceladas depois continuam contando e aparecem em "canceladas". media_por_dia e media_por_dia_util usam só os dias COMPLETOS: hoje aparece com dia_em_andamento (o que já foi criado até agora) e fica fora das médias. media_por_dia_util = segunda a sexta (feriados não são descontados). Semana com menos de 7 dias no período: semana_incompleta e dias_contados.');
   ctx.aviso('Origem = resposta da equipe a "Como nos achou?" na criação da OS (obrigatória a partir da publicação de 19/11/2026; pode ser corrigida na edição). OS criada antes disso fica nao_informado (a não ser que a equipe informe depois, na edição): nada foi preenchido por adivinhação. Quando a OS nasce de um pedido do site com canal claro, a opção vem marcada (a equipe pode trocar). primeira_os_com_origem_no_periodo = a OS mais antiga DO PERÍODO que tem a origem informada (não é a data em que o campo passou a existir).');
-  if (podado && dias.some((x) => x.pode_faltar_os_no_indice)) ctx.aviso(`Atenção: o índice de OS chegou ao teto de tamanho e foi podado (saem primeiro as OS fechadas mais antigas). ${completoDesde ? `A contagem está completa a partir de ${isoBR(completoDesde)}; nos dias até ${diaBR(completoDesde)} (pode_faltar_os_no_indice) ela pode sair MENOR do que a real.` : 'Não dá para saber a partir de quando a contagem está completa.'}`);
+  if (podado && dias.some((x) => x.pode_faltar_os_no_indice)) ctx.aviso(`Atenção: o índice de OS chegou ao teto de tamanho e foi podado (saem primeiro as OS fechadas mais antigas), e as OS guardadas à parte não puderam ser lidas agora. ${completoDesde ? `A contagem está completa a partir de ${isoBR(completoDesde)}; nos dias até ${diaBR(completoDesde)} (pode_faltar_os_no_indice) ela pode sair MENOR do que a real.` : 'Não dá para saber a partir de quando a contagem está completa.'}`);
   const origensDe = (po) => CODIGOS_COMO.filter((c) => po[c]).map((c) => `${c === COMO_NAO_INFORMADO ? 'não informado' : rotuloComo(c)}: ${po[c]}`).join(', ');
   return saida(ctx, a, {
     total: dias.length, pagina, porPagina, itens: dias.slice((pagina - 1) * porPagina, pagina * porPagina), filtros: { de, ate }, titulo: 'Agendamentos por origem (por dia)',
@@ -1651,7 +1661,7 @@ export const FERRAMENTAS_CONSULTA = [
   },
   {
     name: 'agendamentos_por_origem',
-    description: 'AGENDAMENTOS (OS criadas) POR DIA E POR ORIGEM entre de e ate (obrigatórios, AAAA-MM-DD; até 370 dias; 31 dias por página) — para a leitura semanal de onde vêm os agendamentos. Origem = resposta da equipe a "Como nos achou?" na criação da OS (busca_google, google_maps, assistente_ia, indicacao, cliente_antigo, email_ecobraz, anuncio, outro; nao_informado = OS criada antes do campo, que passou a ser obrigatório na publicação de 19/11/2026). Cada dia traz total, informadas, nao_informadas, percentual_informadas, canceladas (das criadas no dia, quantas foram canceladas depois) e por_origem; hoje vem com dia_em_andamento e dias depois de hoje não entram. semanas (segunda a domingo, com dias_contados) trazem os mesmos totais; periodo_inteiro traz os totais e a média por dia e por dia útil, só dos dias completos (hoje fica fora da média). Se o índice de OS já tiver sido podado por tamanho, os dias que podem sair com menos vêm com pode_faltar_os_no_indice e periodo_inteiro traz contagem_completa_a_partir_de. Só leitura. Exemplo: {"de":"2026-11-17","ate":"2026-11-23"}',
+    description: 'AGENDAMENTOS (OS criadas) POR DIA E POR ORIGEM entre de e ate (obrigatórios, AAAA-MM-DD; até 370 dias; 31 dias por página) — para a leitura semanal de onde vêm os agendamentos. Origem = resposta da equipe a "Como nos achou?" na criação da OS (busca_google, google_maps, assistente_ia, indicacao, cliente_antigo, email_ecobraz, anuncio, outro; nao_informado = OS criada antes do campo, que passou a ser obrigatório na publicação de 19/11/2026). Cada dia traz total, informadas, nao_informadas, percentual_informadas, canceladas (das criadas no dia, quantas foram canceladas depois) e por_origem; hoje vem com dia_em_andamento e dias depois de hoje não entram. semanas (segunda a domingo, com dias_contados) trazem os mesmos totais; periodo_inteiro traz os totais e a média por dia e por dia útil, só dos dias completos (hoje fica fora da média). As OS que saem do índice quando ele chega ao teto de tamanho ficam guardadas à parte e continuam contando; só se elas não puderem ser lidas na hora, os dias que podem sair com menos vêm com pode_faltar_os_no_indice e periodo_inteiro traz contagem_completa_a_partir_de. Só leitura. Exemplo: {"de":"2026-11-17","ate":"2026-11-23"}',
     inputSchema: { type: 'object', properties: { de: { type: 'string' }, ate: { type: 'string' }, ...PAG }, required: ['de', 'ate'] },
   },
   {
