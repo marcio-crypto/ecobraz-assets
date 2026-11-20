@@ -2273,7 +2273,7 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         } else if (ql) coletas = coletas.filter((c) => `${c.numero || ''} ${c.clienteNome || ''}`.toLowerCase().includes(ql)); // busca cobre canceladas
         // sem busca: passa todas; a página separa por abas (Agendadas / Concluídas / Canceladas)
         const aba = (url.searchParams.get('aba') || '').trim();
-        return html(paginaColetasLista(escOuEng, coletas, q, cliCtx, negociosCli, aba, { arquivoIncompleto: !!(listaOS.erroArquivo || listaOS.ilegiveis) }));
+        return html(paginaColetasLista(escOuEng, coletas, q, cliCtx, negociosCli, aba, { arquivoIndisponivel: !!listaOS.erroArquivo, linhasIlegiveis: listaOS.ilegiveis || 0 }));
       }
       if (pathname === '/coletas/nova' && request.method === 'GET') {
         if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
