@@ -359,6 +359,8 @@ async function gravarNoArquivo(env, lista, exigeFechada) {
     const r = regs.get(String(x.id));
     if (!r || !r.lido) continue;
     let rec = null; if (r.v != null) { try { rec = JSON.parse(r.v); } catch { rec = null; } }
+    // Ficha com outro id (dado corrompido): não guarda nem corrige — a OS fica no índice como está.
+    if (rec && rec.id != null && String(rec.id) !== String(x.id)) { console.error('os_arquivo_ficha_outro_id', String(x.id)); continue; }
     const e = rec && rec.id ? entradaDoArquivo(rec, x) : x;
     if (exigeFechada.has(String(x.id)) && !fechadaOS(e)) { if (exigeFechada.get(String(x.id))) corrigidas.set(String(x.id), e); console.error('os_arquivo_entrada_desatualizada', String(x.id)); continue; }
     prontas.push({ id: String(x.id), e, v: r.v });
