@@ -1553,6 +1553,42 @@ function fecharAgendamentos(acc) {
   const informadas = acc.total - acc.por_origem[COMO_NAO_INFORMADO];
   return { total: acc.total, informadas, nao_informadas: acc.por_origem[COMO_NAO_INFORMADO], percentual_informadas: acc.total ? Math.round((informadas / acc.total) * 1000) / 10 : null, canceladas: acc.canceladas, por_origem: acc.por_origem };
 }
+// CLIENTES DISTINTOS (pedido do Marcio, 20/11/2026): várias OS do mesmo cliente na mesma retirada não
+// inflam a régua. Mesmo cliente = mesmo CNPJ/CPF (ainda que em dois cadastros; é o mesmo critério do
+// cliente.id do coletas_periodo); OS sem documento usa o documento que o mesmo cadastro (clienteId) tem
+// em outra OS e, se não houver, o próprio cadastro; sem documento e sem cadastro, a OS conta como um
+// cliente à parte (e é contada em os_sem_identificacao_do_cliente). Só acrescenta campos: nenhuma
+// contagem que já existia muda.
+const docValidoOS = (o) => { const d = digits(o && o.clienteDoc); return d.length === 11 || d.length === 14 ? d : ''; };
+function chaveClienteOS(o, docDoCadastro) {
+  const d = docValidoOS(o); if (d) return 'd' + d;
+  if (!o || !o.clienteId) return '';
+  const dc = docDoCadastro.get(String(o.clienteId));
+  return dc ? 'd' + dc : 'c' + String(o.clienteId);
+}
+const novoDiaAgendamentos = () => ({ total: 0, canceladas: 0, por_origem: zeroComo(), clis: new Set(), clisSemCanc: new Set(), clisOrigem: new Map() });
+const novoAcumClientes = () => ({ soma: 0, somaSemCanc: 0, porOrigem: zeroComo(), unicos: new Set(), unicosSemCanc: new Set(), diasCompletos: 0, somaCompletos: 0, somaSemCancCompletos: 0, diasUteis: 0, somaUteis: 0, somaSemCancUteis: 0 });
+function clientesDoDia(x) {
+  return { clientes_distintos: x.clis.size, clientes_distintos_sem_canceladas: x.clisSemCanc.size, clientes_distintos_por_origem: Object.fromEntries(CODIGOS_COMO.map((c) => [c, x.clisOrigem.has(c) ? x.clisOrigem.get(c).size : 0])) };
+}
+function somarClientes(k, x, completo, util) {
+  const cd = clientesDoDia(x);
+  k.soma += cd.clientes_distintos; k.somaSemCanc += cd.clientes_distintos_sem_canceladas;
+  for (const c of CODIGOS_COMO) k.porOrigem[c] += cd.clientes_distintos_por_origem[c];
+  for (const id of x.clis) k.unicos.add(id);
+  for (const id of x.clisSemCanc) k.unicosSemCanc.add(id);
+  if (completo) { k.diasCompletos++; k.somaCompletos += cd.clientes_distintos; k.somaSemCancCompletos += cd.clientes_distintos_sem_canceladas; }
+  if (completo && util) { k.diasUteis++; k.somaUteis += cd.clientes_distintos; k.somaSemCancUteis += cd.clientes_distintos_sem_canceladas; }
+}
+function fecharClientes(k) {
+  const media = (t, n) => (n ? Math.round((t / n) * 10) / 10 : null);
+  return {
+    clientes_distintos: k.soma, clientes_distintos_sem_canceladas: k.somaSemCanc, clientes_distintos_por_origem: k.porOrigem,
+    media_clientes_distintos_por_dia: media(k.somaCompletos, k.diasCompletos), media_clientes_distintos_por_dia_util: media(k.somaUteis, k.diasUteis),
+    media_clientes_distintos_sem_canceladas_por_dia: media(k.somaSemCancCompletos, k.diasCompletos), media_clientes_distintos_sem_canceladas_por_dia_util: media(k.somaSemCancUteis, k.diasUteis),
+    clientes_sem_repetir: k.unicos.size, clientes_sem_repetir_sem_canceladas: k.unicosSemCanc.size,
+  };
+}
 async function ferrAgendamentosPorOrigem(env, args) {
   const a = args || {};
   const ctx = novoContexto(env);
@@ -1585,54 +1621,66 @@ async function ferrAgendamentosPorOrigem(env, args) {
     for (let i = todasOS.length - 1; i >= 0; i--) { const o = todasOS[i]; if ((o.status === 'concluida' || o.status === 'cancelada') && o.criadoEm) { completoDesde = String(o.criadoEm); break; } }
   } else if (ctx.arquivoOS.ilegiveis) podado = true; // linhas guardadas ilegíveis: não dá para saber de que dias são — todos ficam marcados
   const diaLimite = podado ? (completoDesde ? diaBR(completoDesde) : '9999-12-31') : '';
-  let primeiraComOrigem = '';
+  let primeiraComOrigem = ''; let semIdentificacao = 0;
+  const docDoCadastro = new Map(); // cadastro → documento visto numa OS dele (para a OS do mesmo cadastro sem documento)
+  for (const o of todasOS) { const dd = docValidoOS(o); if (dd && o.clienteId && !docDoCadastro.has(String(o.clienteId))) docDoCadastro.set(String(o.clienteId), dd); }
   for (const o of todasOS) {
     const d = diaBR(o && o.criadoEm);
     if (!d || d < de || d > fim) continue;
     const c = comoValido(o.como) ? o.como : COMO_NAO_INFORMADO;
     if (c !== COMO_NAO_INFORMADO && (!primeiraComOrigem || String(o.criadoEm) < primeiraComOrigem)) primeiraComOrigem = String(o.criadoEm);
-    let x = porDia.get(d); if (!x) { x = { total: 0, canceladas: 0, por_origem: zeroComo() }; porDia.set(d, x); }
+    let x = porDia.get(d); if (!x) { x = novoDiaAgendamentos(); porDia.set(d, x); }
     x.total++; x.por_origem[c]++; if (o.status === 'cancelada') x.canceladas++;
+    let k = chaveClienteOS(o, docDoCadastro); if (!k) { k = 'o' + String(o.id || o.numero || `${d}#${x.total}`); semIdentificacao++; }
+    x.clis.add(k); if (o.status !== 'cancelada') x.clisSemCanc.add(k);
+    let so = x.clisOrigem.get(c); if (!so) { so = new Set(); x.clisOrigem.set(c, so); } so.add(k);
   }
   const dias = [];
   const semanas = new Map();
   const periodo = { total: 0, canceladas: 0, por_origem: zeroComo() };
+  const clientesPeriodo = novoAcumClientes();
   let diasCompletos = 0, totalCompletos = 0, diasUteis = 0, totalUteis = 0;
   for (let d = de; d <= fim; d = somaDias(d, 1)) {
-    const x = porDia.get(d) || { total: 0, canceladas: 0, por_origem: zeroComo() };
+    const x = porDia.get(d) || novoDiaAgendamentos();
     const dow = new Date(Date.parse(d + 'T12:00:00Z')).getUTCDay();
     const emAndamento = d === hoje;
     const podeFaltar = podado && d <= diaLimite;
-    dias.push({ data: d, dia_semana: DIAS_SEMANA[dow], ...(emAndamento ? { dia_em_andamento: true } : {}), ...(podeFaltar ? { pode_faltar_os_no_indice: true } : {}), ...fecharAgendamentos({ total: x.total, canceladas: x.canceladas, por_origem: { ...x.por_origem } }) });
+    dias.push({ data: d, dia_semana: DIAS_SEMANA[dow], ...(emAndamento ? { dia_em_andamento: true } : {}), ...(podeFaltar ? { pode_faltar_os_no_indice: true } : {}), ...fecharAgendamentos({ total: x.total, canceladas: x.canceladas, por_origem: { ...x.por_origem } }), ...clientesDoDia(x) });
     const seg = segundaDaSemana(d);
-    let s = semanas.get(seg); if (!s) { s = { semana_inicio: seg, semana_fim: somaDias(seg, 6), dias: 0, emAndamento: false, acc: { total: 0, canceladas: 0, por_origem: zeroComo() } }; semanas.set(seg, s); }
+    let s = semanas.get(seg); if (!s) { s = { semana_inicio: seg, semana_fim: somaDias(seg, 6), dias: 0, emAndamento: false, acc: { total: 0, canceladas: 0, por_origem: zeroComo() }, cli: novoAcumClientes() }; semanas.set(seg, s); }
     s.dias++; if (emAndamento) s.emAndamento = true; somarAgendamento(s.acc, x); somarAgendamento(periodo, x);
+    somarClientes(s.cli, x, !emAndamento, dow >= 1 && dow <= 5); somarClientes(clientesPeriodo, x, !emAndamento, dow >= 1 && dow <= 5);
     if (!emAndamento) { diasCompletos++; totalCompletos += x.total; if (dow >= 1 && dow <= 5) { diasUteis++; totalUteis += x.total; } }
   }
   const media = (t, n) => (n ? Math.round((t / n) * 10) / 10 : null);
-  const listaSemanas = [...semanas.values()].map((s) => ({ semana_inicio: s.semana_inicio, semana_fim: s.semana_fim, dias_contados: s.dias, ...(s.dias < 7 ? { semana_incompleta: true } : {}), ...(s.emAndamento ? { semana_em_andamento: true } : {}), ...fecharAgendamentos(s.acc) }));
+  const listaSemanas = [...semanas.values()].map((s) => ({ semana_inicio: s.semana_inicio, semana_fim: s.semana_fim, dias_contados: s.dias, ...(s.dias < 7 ? { semana_incompleta: true } : {}), ...(s.emAndamento ? { semana_em_andamento: true } : {}), ...fecharAgendamentos(s.acc), ...fecharClientes(s.cli) }));
   const resumo = {
     de, ate, ate_contado: fim >= de ? fim : null, dias: dias.length, dias_completos: diasCompletos, ...fecharAgendamentos(periodo),
     media_por_dia: media(totalCompletos, diasCompletos), media_por_dia_util: media(totalUteis, diasUteis),
-    ...(fim === hoje && fim >= de ? { hoje: { data: hoje, total: (porDia.get(hoje) || { total: 0 }).total } } : {}),
+    ...(fim === hoje && fim >= de ? { hoje: { data: hoje, total: (porDia.get(hoje) || { total: 0 }).total, clientes_distintos: porDia.has(hoje) ? porDia.get(hoje).clis.size : 0 } } : {}),
     primeira_os_com_origem_no_periodo: primeiraComOrigem ? isoBR(primeiraComOrigem) : null,
     ...(podado ? { indice_podado: true, contagem_completa_a_partir_de: completoDesde ? isoBR(completoDesde) : null } : {}),
+    ...fecharClientes(clientesPeriodo),
+    ...(semIdentificacao ? { os_sem_identificacao_do_cliente: semIdentificacao } : {}),
   };
   if (de > hoje) ctx.aviso(`O período começa depois de hoje (${hoje}): nenhum dia contado.`);
   else if (ate > hoje) ctx.aviso(`Dias depois de hoje (${hoje}) não entram (ate_contado).`);
   ctx.aviso('Agendamento = OS criada no dia (horário de Brasília), em qualquer status; as canceladas depois continuam contando e aparecem em "canceladas". media_por_dia e media_por_dia_util usam só os dias COMPLETOS: hoje aparece com dia_em_andamento (o que já foi criado até agora) e fica fora das médias. media_por_dia_util = segunda a sexta (feriados não são descontados). Semana com menos de 7 dias no período: semana_incompleta e dias_contados.');
   ctx.aviso('Origem = resposta da equipe a "Como nos achou?" na criação da OS (obrigatória a partir da publicação de 19/11/2026; pode ser corrigida na edição). OS criada antes disso fica nao_informado (a não ser que a equipe informe depois, na edição): nada foi preenchido por adivinhação. Quando a OS nasce de um pedido do site com canal claro, a opção vem marcada (a equipe pode trocar). primeira_os_com_origem_no_periodo = a OS mais antiga DO PERÍODO que tem a origem informada (não é a data em que o campo passou a existir).');
+  ctx.aviso(`Clientes distintos (desde 20/11/2026): clientes_distintos = clientes diferentes com OS criada no dia, contando as canceladas (como o total); clientes_distintos_sem_canceladas = só os que têm alguma OS do dia não cancelada. Mesmo cliente = mesmo CNPJ/CPF (ainda que em dois cadastros; o mesmo critério do cliente.id do coletas_periodo); OS sem documento usa o documento do mesmo cadastro (visto em outra OS dele) ou, sem nenhum, o próprio cadastro; OS sem documento e sem cadastro conta como um cliente à parte${semIdentificacao ? ` (${semIdentificacao} no período: os_sem_identificacao_do_cliente)` : ''}. clientes_distintos_por_origem: um cliente com OS de origens diferentes no mesmo dia conta em cada uma (a soma pode passar de clientes_distintos). Na semana e no período, clientes_distintos = SOMA dos dias (o mesmo cliente em dias diferentes conta uma vez por dia: são retiradas diferentes) e as médias usam só os dias completos, como as de total; clientes_sem_repetir = cada cliente uma vez só na semana ou no período.`);
   if (podado && dias.some((x) => x.pode_faltar_os_no_indice)) ctx.aviso(ctx.arquivoOS.erro ? `Atenção: o índice de OS chegou ao teto de tamanho e foi podado (saem primeiro as OS fechadas mais antigas), e as OS guardadas à parte não puderam ser lidas agora. ${completoDesde ? `A contagem está completa a partir de ${isoBR(completoDesde)}; nos dias até ${diaBR(completoDesde)} (pode_faltar_os_no_indice) ela pode sair MENOR do que a real.` : 'Não dá para saber a partir de quando a contagem está completa.'}` : `Atenção: ${ctx.arquivoOS.ilegiveis} OS guardada(s) à parte está(ão) ilegível(is) no banco e não dá para saber de que dia(s) é(são): todos os dias saem com pode_faltar_os_no_indice e podem sair MENORES do que a realidade.`);
   const origensDe = (po) => CODIGOS_COMO.filter((c) => po[c]).map((c) => `${c === COMO_NAO_INFORMADO ? 'não informado' : rotuloComo(c)}: ${po[c]}`).join(', ');
   return saida(ctx, a, {
     total: dias.length, pagina, porPagina, itens: dias.slice((pagina - 1) * porPagina, pagina * porPagina), filtros: { de, ate }, titulo: 'Agendamentos por origem (por dia)',
     extra: { origens: COMO_OPCOES.map(([codigo, rotulo]) => ({ codigo, rotulo })).concat([{ codigo: COMO_NAO_INFORMADO, rotulo: 'não informado' }]), semanas: listaSemanas, periodo_inteiro: resumo },
-    linha: (x) => `${x.data} (${x.dia_semana}${x.dia_em_andamento ? ', em andamento' : ''}${x.pode_faltar_os_no_indice ? ', pode faltar OS no índice' : ''}) — ${x.total} OS${x.canceladas ? ` (${x.canceladas} cancelada(s) depois)` : ''}${x.total ? ' — ' + origensDe(x.por_origem) : ''}`,
+    linha: (x) => `${x.data} (${x.dia_semana}${x.dia_em_andamento ? ', em andamento' : ''}${x.pode_faltar_os_no_indice ? ', pode faltar OS no índice' : ''}) — ${x.total} OS${x.canceladas ? ` (${x.canceladas} cancelada(s) depois)` : ''}${x.total ? ' — ' + origensDe(x.por_origem) : ''}${x.total ? ` — ${x.clientes_distintos} cliente(s) distinto(s)${x.clientes_distintos_sem_canceladas !== x.clientes_distintos ? ` (${x.clientes_distintos_sem_canceladas} sem as canceladas)` : ''}` : ''}`,
     rodape: (corpo) => {
       const p = corpo.periodo_inteiro; if (!p) return '';
-      const linhas = (corpo.semanas || []).map((s) => `• semana ${s.semana_inicio} a ${s.semana_fim}${s.semana_incompleta ? ` (${s.dias_contados} dia(s) no período${s.semana_em_andamento ? ', em andamento' : ''})` : (s.semana_em_andamento ? ' (em andamento)' : '')}: ${s.total} OS, ${s.informadas} com origem${s.total ? ' — ' + origensDe(s.por_origem) : ''}`);
+      const linhas = (corpo.semanas || []).map((s) => `• semana ${s.semana_inicio} a ${s.semana_fim}${s.semana_incompleta ? ` (${s.dias_contados} dia(s) no período${s.semana_em_andamento ? ', em andamento' : ''})` : (s.semana_em_andamento ? ' (em andamento)' : '')}: ${s.total} OS, ${s.informadas} com origem${s.total ? ' — ' + origensDe(s.por_origem) : ''}${s.total ? ` — clientes distintos (soma dos dias): ${s.clientes_distintos}; sem repetir na semana: ${s.clientes_sem_repetir}` : ''}`);
       const medias = p.media_por_dia != null ? ` (média ${p.media_por_dia} por dia completo${p.media_por_dia_util != null ? `; ${p.media_por_dia_util} por dia útil` : ''})` : '';
-      return [`Período ${p.de} a ${p.ate_contado || p.ate}: ${p.total} OS criadas${medias}${p.hoje ? `, ${p.hoje.total} delas hoje (dia em andamento)` : ''}, ${p.informadas} com origem (${p.percentual_informadas ?? 0}%), ${p.canceladas} cancelada(s) depois.`, ...linhas].join('\n');
+      const mediasCli = p.media_clientes_distintos_por_dia != null ? ` (média ${p.media_clientes_distintos_por_dia} por dia completo${p.media_clientes_distintos_por_dia_util != null ? `; ${p.media_clientes_distintos_por_dia_util} por dia útil` : ''})` : '';
+      const linhaCli = p.clientes_distintos != null ? `Clientes distintos (soma dos dias): ${p.clientes_distintos}${mediasCli}; ${p.clientes_distintos_sem_canceladas} sem as canceladas; sem repetir no período: ${p.clientes_sem_repetir}.` : '';
+      return [`Período ${p.de} a ${p.ate_contado || p.ate}: ${p.total} OS criadas${medias}${p.hoje ? `, ${p.hoje.total} delas hoje (dia em andamento)` : ''}, ${p.informadas} com origem (${p.percentual_informadas ?? 0}%), ${p.canceladas} cancelada(s) depois.`, ...(linhaCli ? [linhaCli] : []), ...linhas].join('\n');
     },
   });
 }
@@ -1664,7 +1712,7 @@ export const FERRAMENTAS_CONSULTA = [
   },
   {
     name: 'agendamentos_por_origem',
-    description: 'AGENDAMENTOS (OS criadas) POR DIA E POR ORIGEM entre de e ate (obrigatórios, AAAA-MM-DD; até 370 dias; 31 dias por página) — para a leitura semanal de onde vêm os agendamentos. Origem = resposta da equipe a "Como nos achou?" na criação da OS (busca_google, google_maps, assistente_ia, indicacao, cliente_antigo, email_ecobraz, anuncio, outro; nao_informado = OS criada antes do campo, que passou a ser obrigatório na publicação de 19/11/2026). Cada dia traz total, informadas, nao_informadas, percentual_informadas, canceladas (das criadas no dia, quantas foram canceladas depois) e por_origem; hoje vem com dia_em_andamento e dias depois de hoje não entram. semanas (segunda a domingo, com dias_contados) trazem os mesmos totais; periodo_inteiro traz os totais e a média por dia e por dia útil, só dos dias completos (hoje fica fora da média). As OS que saem do índice quando ele chega ao teto de tamanho ficam guardadas à parte e continuam contando; só se elas não puderem ser lidas na hora, os dias que podem sair com menos vêm com pode_faltar_os_no_indice e periodo_inteiro traz contagem_completa_a_partir_de. Só leitura. Exemplo: {"de":"2026-11-17","ate":"2026-11-23"}',
+    description: 'AGENDAMENTOS (OS criadas) POR DIA E POR ORIGEM entre de e ate (obrigatórios, AAAA-MM-DD; até 370 dias; 31 dias por página) — para a leitura semanal de onde vêm os agendamentos. Origem = resposta da equipe a "Como nos achou?" na criação da OS (busca_google, google_maps, assistente_ia, indicacao, cliente_antigo, email_ecobraz, anuncio, outro; nao_informado = OS criada antes do campo, que passou a ser obrigatório na publicação de 19/11/2026). Cada dia traz total, informadas, nao_informadas, percentual_informadas, canceladas (das criadas no dia, quantas foram canceladas depois) e por_origem; hoje vem com dia_em_andamento e dias depois de hoje não entram. semanas (segunda a domingo, com dias_contados) trazem os mesmos totais; periodo_inteiro traz os totais e a média por dia e por dia útil, só dos dias completos (hoje fica fora da média). As OS que saem do índice quando ele chega ao teto de tamanho ficam guardadas à parte e continuam contando; só se elas não puderem ser lidas na hora, os dias que podem sair com menos vêm com pode_faltar_os_no_indice e periodo_inteiro traz contagem_completa_a_partir_de. CLIENTES DISTINTOS (várias OS do mesmo cliente no mesmo dia contam uma vez): cada dia traz clientes_distintos (clientes diferentes com OS criada no dia, contando as canceladas, como o total), clientes_distintos_sem_canceladas e clientes_distintos_por_origem; semanas e periodo_inteiro trazem a soma dos dias, as médias por dia e por dia útil (só dias completos) e clientes_sem_repetir (cada cliente uma vez só). Mesmo cliente = mesmo CNPJ/CPF, ou o mesmo cadastro sem documento. Só leitura. Exemplo: {"de":"2026-11-17","ate":"2026-11-23"}',
     inputSchema: { type: 'object', properties: { de: { type: 'string' }, ate: { type: 'string' }, ...PAG }, required: ['de', 'ate'] },
   },
   {
