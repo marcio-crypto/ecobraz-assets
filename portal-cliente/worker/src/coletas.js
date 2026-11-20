@@ -218,34 +218,52 @@ const FECHADA_RECENTE_DIAS = 30;  // OS fechada há menos que isso não sai do �
 const fechadaOS = (x) => !!(x && (x.status === 'concluida' || x.status === 'cancelada'));
 const fechadaRecente = (x, corte) => Math.max(Date.parse((x && x.concluidaEm) || '') || 0, Date.parse((x && x.canceladaEm) || '') || 0) >= corte;
 // Escolhe o que sai (as fechadas do fim do índice — as inseridas há mais tempo — e que não foram
-// fechadas nos últimos 30 dias), guarda à parte e devolve o índice que fica (JSON) e as entradas que
-// saíram. soFechadas: nunca tira OS aberta nem recente (poda da madrugada); sem isso vale o último
-// caso de antes (índice ainda acima do TETO: saem as mais antigas restantes, quaisquer que sejam).
+// fechadas nos últimos 30 dias), guarda à parte e devolve o índice que fica (JSON), as entradas que
+// saíram e as CORRIGIDAS (estavam "fechada" no índice, mas a ficha diz que a OS está aberta: ficam no
+// índice, refeitas a partir da ficha). soFechadas: nunca tira OS aberta nem fechada há pouco (poda da
+// madrugada); sem isso vale o último caso (índice ainda acima do TETO): saem primeiro as fechadas há
+// pouco e, se ainda não bastar, as mais antigas de qualquer tipo (como antes).
 async function podarIndice(env, arr, opcoes) {
   const o = opcoes || {};
   let excesso = JSON.stringify(arr).length - Math.floor((o.alvo || PODA_ALVO_DIA) * LIMITE_INDICE_OS);
   const corte = Date.now() - FECHADA_RECENTE_DIAS * 86400e3;
-  const sai = new Set(); const exigeFechada = new Set();
+  // exigeFechada: id → true (fechada há mais de 30 dias: se a ficha disser "aberta", a entrada do índice é
+  // corrigida) ou false (fechada há pouco, último caso: só fica como está — logo depois de uma conclusão
+  // a ficha ainda pode ser lida na versão anterior por alguns segundos, e corrigir desfaria a conclusão).
+  const sai = new Set(); const exigeFechada = new Map();
   for (let i = arr.length - 1; i >= 0 && excesso > 0; i--) {
     const x = arr[i];
-    if (fechadaOS(x) && !fechadaRecente(x, corte)) { sai.add(x); if (x.id) exigeFechada.add(String(x.id)); excesso -= JSON.stringify(x).length + 1; }
+    if (fechadaOS(x) && !fechadaRecente(x, corte)) { sai.add(x); if (x.id) exigeFechada.set(String(x.id), true); excesso -= JSON.stringify(x).length + 1; }
   }
   if (!o.soFechadas) {
+    // Último caso: mesmo sem as fechadas antigas, o índice passa do TETO. Saem as fechadas há pouco
+    // (das mais antigas no índice para as mais novas) até o alvo do dia; se nem assim couber no teto,
+    // as mais antigas de qualquer tipo (como antes).
     let resto = sai.size ? arr.filter((x) => !sai.has(x)) : arr;
-    let jsonResto = JSON.stringify(resto);
-    while (jsonResto.length > LIMITE_INDICE_OS && resto.length) {
-      const fica = resto.slice(0, Math.max(1, Math.floor(resto.length * 0.9)) - 1);
-      for (const x of resto.slice(fica.length)) sai.add(x);
-      resto = fica; jsonResto = JSON.stringify(resto);
+    let tam = JSON.stringify(resto).length;
+    if (tam > LIMITE_INDICE_OS) {
+      const alvo = Math.floor((o.alvo || PODA_ALVO_DIA) * LIMITE_INDICE_OS);
+      for (let i = resto.length - 1; i >= 0 && tam > alvo; i--) { const x = resto[i]; if (fechadaOS(x)) { sai.add(x); if (x.id && !exigeFechada.has(String(x.id))) exigeFechada.set(String(x.id), false); tam -= JSON.stringify(x).length + 1; } }
+      if (tam > LIMITE_INDICE_OS) {
+        resto = arr.filter((x) => !sai.has(x));
+        let jsonResto = JSON.stringify(resto);
+        while (jsonResto.length > LIMITE_INDICE_OS && resto.length) {
+          const fica = resto.slice(0, Math.max(1, Math.floor(resto.length * 0.9)) - 1);
+          for (const x of resto.slice(fica.length)) sai.add(x);
+          resto = fica; jsonResto = JSON.stringify(resto);
+        }
+      }
     }
   }
-  const guardadas = await arquivarOS(env, [...sai], exigeFechada);
+  const { guardadas, corrigidas } = await arquivarOS(env, [...sai], exigeFechada);
   // Sai do índice só o que ficou guardado (entrada sem id não é OS: sai sem guardar).
   const podeSair = (x) => sai.has(x) && (!x || !x.id || guardadas.has(String(x.id)));
   const saiu = [...sai].filter(podeSair);
   const ficaram = sai.size - saiu.length;
-  if (ficaram) console.error('os_arquivo_nao_podou', { ficaram, guardadas: guardadas.size });
-  return { json: JSON.stringify(arr.filter((x) => !podeSair(x))), saiu, ficaram };
+  if (ficaram) console.error('os_arquivo_nao_podou', { ficaram, guardadas: guardadas.size, corrigidas: corrigidas.size });
+  const originais = new Map([...sai].filter((x) => x && x.id && corrigidas.has(String(x.id))).map((x) => [String(x.id), JSON.stringify(x)]));
+  const fica = arr.filter((x) => !podeSair(x)).map((x) => (x && x.id && corrigidas.has(String(x.id)) ? corrigidas.get(String(x.id)) : x));
+  return { json: JSON.stringify(fica), saiu, ficaram, corrigidas, originais };
 }
 async function salvarIndiceOS(env, idx) {
   if (!env.PORTAL_KV) return;
@@ -267,12 +285,17 @@ export async function podarIndiceAgendado(env) {
   if (antes <= Math.floor(PODA_MADRUGADA * LIMITE_INDICE_OS)) return { podou: 0, pct: pctDe(antes) };
   const r = await podarIndice(env, idx, { soFechadas: true, alvo: PODA_ALVO_MADRUGADA });
   const sairam = new Map(r.saiu.filter((x) => x && x.id).map((x) => [String(x.id), JSON.stringify(x)]));
-  if (!sairam.size) return { podou: 0, ficaram: r.ficaram, pct: pctDe(antes) };
+  if (!sairam.size && !r.corrigidas.size) return { podou: 0, ficaram: r.ficaram, pct: pctDe(antes) };
   const fresco = await lerIndiceOS(env);
-  const fica = fresco.filter((x) => !(x && x.id && sairam.get(String(x.id)) === JSON.stringify(x)));
+  const fica = []; let corrigidas = 0;
+  for (const x of fresco) {
+    const id = x && x.id ? String(x.id) : ''; const j = id ? JSON.stringify(x) : '';
+    if (id && sairam.get(id) === j) continue;
+    if (id && r.corrigidas.has(id) && r.originais.get(id) === j) { fica.push(r.corrigidas.get(id)); corrigidas++; } else fica.push(x);
+  }
   const json = JSON.stringify(fica);
   await env.PORTAL_KV.put('os:index', json);
-  return { podou: fresco.length - fica.length, ficaram: r.ficaram, pct: pctDe(antes), pctDepois: pctDe(json.length) };
+  return { podou: fresco.length - fica.length, ficaram: r.ficaram, corrigidas, pct: pctDe(antes), pctDepois: pctDe(json.length) };
 }
 // Entrada guardada à parte, refeita a partir do registro completo (a mesma de resumoIndiceOS): assim
 // a cópia guardada acompanha o registro, em vez de só receber remendos. Da entrada anterior fica só
@@ -301,31 +324,33 @@ async function lerRegistrosOS(env, ids) {
   return out;
 }
 // Guarda à parte, INTEIRAS, as OS que vão sair do índice: a entrada (refeita a partir do registro,
-// ver entradaDoArquivo) e o registro completo os:{id} (que também continua no KV). Devolve os ids
-// guardados. Registro que não pôde ser lido agora: essa OS não é guardada nem sai do índice (tenta de
+// ver entradaDoArquivo) e o registro completo os:{id} (que também continua no KV). Devolve
+// { guardadas: ids guardados, corrigidas }. Registro que não pôde ser lido agora: essa OS não é guardada nem sai do índice (tenta de
 // novo na próxima poda). Registro que não existe (só a entrada do índice): guarda a entrada como está.
-// `exigeFechada` (ids): escolhidas por estarem fechadas — se a ficha diz que a OS está ABERTA (a
-// entrada do índice estava desatualizada), ela não é guardada nem sai do índice. O D1 grava em lotes
+// `exigeFechada` (Map id → corrigível): escolhidas por estarem fechadas — se a ficha diz que a OS está
+// ABERTA (a entrada do índice estava desatualizada), ela não é guardada nem sai do índice; se a marca é
+// true, volta em `corrigidas` (id → entrada refeita a partir da ficha), para o índice ser corrigido. O D1 grava em lotes
 // de 25; lote recusado é tentado linha a linha (uma linha com problema não trava as outras); 3
 // recusas sem nenhum acerto, ou 5 seguidas, = D1 fora do ar: para (o que faltou fica no índice).
 // Tabela ausente (banco novo ou tabela apagada): recria e tenta de novo, uma vez. O sinal
 // os:arquivo:info liga a consulta ao arquivo nas leituras; se ele não puder ser gravado, nada sai.
 const LOTE_ARQUIVO = 25;
 async function arquivarOS(env, entradas, exigeFechada) {
+  const nada = () => ({ guardadas: new Set(), corrigidas: new Map() });
   const lista = (entradas || []).filter((x) => x && x.id);
-  if (!lista.length || !env.DB_PLOOMES || !env.PORTAL_KV) return new Set();
+  if (!lista.length || !env.DB_PLOOMES || !env.PORTAL_KV) return nada();
   for (let tentativa = 0; tentativa < 2; tentativa++) {
-    try { return await gravarNoArquivo(env, lista, exigeFechada || new Set()); }
+    try { return await gravarNoArquivo(env, lista, exigeFechada || new Map()); }
     catch (e) {
       const semTabela = semTabelaArquivo(e);
       if (semTabela) tabelaArquivoOk = false; // a tabela sumiu (ou o banco é novo): recria e tenta de novo, uma vez
-      if (!semTabela || tentativa) { console.error('os_arquivo_gravacao', String((e && e.message) || e).slice(0, 160)); return new Set(); }
+      if (!semTabela || tentativa) { console.error('os_arquivo_gravacao', String((e && e.message) || e).slice(0, 160)); return nada(); }
     }
   }
-  return new Set();
+  return nada();
 }
 async function gravarNoArquivo(env, lista, exigeFechada) {
-  const ok = new Set();
+  const ok = new Set(); const corrigidas = new Map();
   const db = env.DB_PLOOMES;
   await prepararArquivoOS(db);
   const regs = await lerRegistrosOS(env, lista.map((x) => String(x.id)));
@@ -335,10 +360,10 @@ async function gravarNoArquivo(env, lista, exigeFechada) {
     if (!r || !r.lido) continue;
     let rec = null; if (r.v != null) { try { rec = JSON.parse(r.v); } catch { rec = null; } }
     const e = rec && rec.id ? entradaDoArquivo(rec, x) : x;
-    if (exigeFechada.has(String(x.id)) && !fechadaOS(e)) { console.error('os_arquivo_entrada_desatualizada', String(x.id)); continue; }
+    if (exigeFechada.has(String(x.id)) && !fechadaOS(e)) { if (exigeFechada.get(String(x.id))) corrigidas.set(String(x.id), e); console.error('os_arquivo_entrada_desatualizada', String(x.id)); continue; }
     prontas.push({ id: String(x.id), e, v: r.v });
   }
-  if (!prontas.length) return ok;
+  if (!prontas.length) return { guardadas: ok, corrigidas };
   const em = agora();
   const sql = 'INSERT INTO os_arquivo (id, numero, criado_em, status, cliente_id, indice, registro, arquivado_em, atualizado_em) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8) ON CONFLICT(id) DO UPDATE SET numero = excluded.numero, criado_em = excluded.criado_em, status = excluded.status, cliente_id = excluded.cliente_id, indice = excluded.indice, registro = COALESCE(excluded.registro, os_arquivo.registro), arquivado_em = excluded.arquivado_em, atualizado_em = excluded.atualizado_em';
   const linha = (p) => db.prepare(sql).bind(p.id, String(p.e.numero || ''), String(p.e.criadoEm || ''), String(p.e.status || ''), String(p.e.clienteId || ''), JSON.stringify(p.e), p.v == null ? null : String(p.v), em);
@@ -354,12 +379,12 @@ async function gravarNoArquivo(env, lista, exigeFechada) {
       catch (e) { if (semTabelaArquivo(e)) throw e; recusas++; seguidas++; console.error('os_arquivo_gravacao_os', p.id, String((e && e.message) || e).slice(0, 120)); }
     }
   }
-  if (!gravadas.length) return ok;
+  if (!gravadas.length) return { guardadas: ok, corrigidas };
   let info = null; try { info = JSON.parse((await env.PORTAL_KV.get(CHAVE_ARQUIVO_INFO)) || 'null'); } catch { info = null; }
   await env.PORTAL_KV.put(CHAVE_ARQUIVO_INFO, JSON.stringify({ desde: (info && info.desde) || em, ultimo: em, n: novoSinal() }));
   esquecerArquivoLido(env);
   for (const p of gravadas) ok.add(p.id);
-  return ok;
+  return { guardadas: ok, corrigidas };
 }
 // OS que está no arquivo foi alterada (status, MTR, cobrança, edição, reagendamento): a cópia
 // guardada é refeita a partir do registro novo (entradaDoArquivo) e o registro completo é trocado; o
@@ -879,7 +904,7 @@ export function paginaColetasLista(user, coletas, q, cliCtx, negocios, aba, extr
   <a href="/coletas/nova?cliente=${esc(filtroCli.id)}" class="btn btn-p" style="margin-bottom:14px">＋ Nova coleta para este cliente</a>` : `<form method="get" action="/coletas" style="margin:0 0 12px"><input type="hidden" name="aba" value="${esc(abaAtiva)}"><input name="q" value="${esc(q)}" placeholder="🔎 Buscar por número (ex.: OS-2026-0001) ou cliente… e aperte Enter" autocomplete="off" style="width:100%;border:1px solid #DDE1E6;border-radius:10px;padding:11px 12px;font-size:14px;font-family:inherit"></form>
   <a href="/cadastro" class="btn btn-g" style="margin-bottom:14px">Abrir coleta a partir de um cliente →</a>`}
   ${extra && extra.arquivoIndisponivel ? '<div style="background:#FFF4DE;border:1px solid #f0dca8;border-radius:10px;padding:10px 13px;margin-bottom:12px;font-size:12.5px;color:#6b5312;line-height:1.5">⚠️ As OS mais antigas (guardadas à parte) não puderam ser lidas agora: esta lista e a busca podem estar <b>sem elas</b>. Antes de criar uma OS que você não achou, recarregue a página em alguns minutos.</div>' : ''}
-  ${extra && !extra.arquivoIndisponivel && extra.linhasIlegiveis ? `<div style="background:#FFF4DE;border:1px solid #f0dca8;border-radius:10px;padding:10px 13px;margin-bottom:12px;font-size:12.5px;color:#6b5312;line-height:1.5">⚠️ ${Number(extra.linhasIlegiveis)} OS antiga(s) guardada(s) à parte está(ão) ilegível(is) no banco e não aparece(m) nesta lista nem na busca. Avise quem cuida do sistema; antes de criar uma OS que você não achou, confira pelo número.</div>` : ''}
+  ${extra && !extra.arquivoIndisponivel && extra.linhasIlegiveis ? `<div style="background:#FFF4DE;border:1px solid #f0dca8;border-radius:10px;padding:10px 13px;margin-bottom:12px;font-size:12.5px;color:#6b5312;line-height:1.5">⚠️ ${Number(extra.linhasIlegiveis)} OS antiga(s) guardada(s) à parte está(ão) ilegível(is) no banco e não aparece(m) nesta lista nem na busca. Avise quem cuida do sistema. Antes de criar uma OS que você não achou, confirme com o cliente ou com a equipe se ela já existe.</div>` : ''}
   ${abasHTML}
   <div>${linhas}</div>
   ${histBlock}
