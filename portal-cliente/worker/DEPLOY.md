@@ -47,3 +47,18 @@ No Ploomes, pegue **uma empresa** para teste e no cadastro dela:
 - Trocar o endereço de teste por **`portal.ecobraz.org`** (configuração de domínio na Cloudflare).
 - Definir o **funil** onde o chamado deve cair (`PORTAL_OS_PIPELINE_ID`).
 - Remover o gatilho de publicação automática por push (deixar só publicação manual).
+
+## Atenção: OS guardadas à parte (desde 20/11/2026) — nunca voltar para versão antiga
+Perto do teto de tamanho, as OS fechadas mais antigas saem do índice de OS e ficam guardadas
+à parte no banco D1 (tabela `os_arquivo`). Só as versões do Worker a partir dessa mudança
+sabem ler essas OS. Por isso:
+- **Não publique uma versão anterior** (nem pelo botão "Rollback" da Cloudflare, nem disparando
+  este workflow a partir de outro ramo, como a `main` antes de receber estas mudanças). Numa
+  versão antiga, as OS guardadas à parte somem das telas, da busca, do portal e das consultas
+  (nada é apagado: o registro de cada OS continua no KV e a cópia continua no D1), e a poda
+  antiga volta a tirar OS do índice sem guardar.
+- **Se acontecer por engano:** publique de novo a versão atual deste ramo. As OS guardadas
+  voltam a aparecer na hora. As que a versão antiga tiver tirado do índice nesse meio tempo
+  não voltam sozinhas (o registro delas continua no KV): é preciso recolocá-las.
+- Para conferir a situação: `https://sistema.ecobraz.org/health` → `osIndex` (tamanho e
+  percentual do teto) e `osArquivo` (quantas OS estão guardadas à parte).

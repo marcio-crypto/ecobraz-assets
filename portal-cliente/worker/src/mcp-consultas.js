@@ -292,13 +292,15 @@ function novoContexto(env) {
     orcamento: { restante: 850 },
     aviso(t) { if (!ctx.avisos.includes(t)) ctx.avisos.push(t); },
     // Todas as OS: as do índice e as guardadas à parte (coletas.js). `arquivoOS.erro` = as guardadas
-    // à parte não puderam ser lidas agora (a lista sai só com o índice — com aviso).
-    arquivoOS: { erro: '', guardadas: 0 },
+    // à parte não puderam ser lidas agora (a lista sai só com o índice — com aviso); `ilegiveis` =
+    // algumas guardadas estão com a linha ilegível no banco (ficam de fora — com aviso).
+    arquivoOS: { erro: '', ilegiveis: 0, guardadas: 0 },
     oss: () => uma('oss', async () => {
       try {
         const r = await listarColetasOSCompleta(env);
-        ctx.arquivoOS = { erro: r.erroArquivo || '', guardadas: r.guardadas || 0 };
-        if (r.erroArquivo) ctx.aviso('As OS guardadas à parte (as fechadas mais antigas, que saem do índice quando ele chega ao teto de tamanho) não puderam ser lidas agora: a resposta pode sair com menos OS antigas.');
+        ctx.arquivoOS = { erro: r.erroArquivo || '', ilegiveis: r.ilegiveis || 0, guardadas: r.guardadas || 0 };
+        if (r.erroArquivo) ctx.aviso('As OS guardadas à parte (as fechadas mais antigas, que saem do índice perto do teto de tamanho) não puderam ser lidas agora: a resposta pode sair com menos OS antigas.');
+        if (r.ilegiveis) ctx.aviso(`${r.ilegiveis} OS guardada(s) à parte está(ão) com a linha ilegível no banco e fica(m) fora desta resposta: as contagens podem sair menores.`);
         const l = r.lista; return Array.isArray(l) ? l.filter((o) => o && o.id) : [];
       } catch { ctx.aviso('Índice de Ordens de Coleta indisponível agora.'); return []; }
     }),
@@ -1565,7 +1567,8 @@ async function ferrAgendamentosPorOrigem(env, args) {
   // primeiro as OS FECHADAS do fim do índice — as inseridas há mais tempo). Desde 20/11/2026 o que
   // sai do índice fica guardado à parte e ctx.oss() devolve índice + guardadas: a contagem não
   // perde nada. A marca pode_faltar_os_no_indice fica só para quando as guardadas à parte NÃO
-  // puderam ser lidas agora (ctx.arquivoOS.erro) — aí vale a regra de antes: houve poda se o
+  // puderam ser lidas (ctx.arquivoOS.erro; ou algumas estão ilegíveis no banco — aí não dá para saber
+  // de que dias são e todos ficam marcados). Com erro de leitura vale a regra de antes: houve poda se o
   // sistema já emitiu mais números de OS (os:seq) do que a lista tem E o índice está perto do teto,
   // e a contagem está completa a partir da ÚLTIMA OS fechada na ordem do índice (a próxima a ser
   // podada). Sem nenhuma fechada no índice: todos os dias ficam marcados. Limites registrados: um
@@ -1580,7 +1583,7 @@ async function ferrAgendamentosPorOrigem(env, args) {
   if (ctx.arquivoOS.erro && faltaNumero && JSON.stringify(todasOS).length >= 0.85 * LIMITE_INDICE_OS) {
     podado = true;
     for (let i = todasOS.length - 1; i >= 0; i--) { const o = todasOS[i]; if ((o.status === 'concluida' || o.status === 'cancelada') && o.criadoEm) { completoDesde = String(o.criadoEm); break; } }
-  }
+  } else if (ctx.arquivoOS.ilegiveis) podado = true; // linhas guardadas ilegíveis: não dá para saber de que dias são — todos ficam marcados
   const diaLimite = podado ? (completoDesde ? diaBR(completoDesde) : '9999-12-31') : '';
   let primeiraComOrigem = '';
   for (const o of todasOS) {
@@ -1619,7 +1622,7 @@ async function ferrAgendamentosPorOrigem(env, args) {
   else if (ate > hoje) ctx.aviso(`Dias depois de hoje (${hoje}) não entram (ate_contado).`);
   ctx.aviso('Agendamento = OS criada no dia (horário de Brasília), em qualquer status; as canceladas depois continuam contando e aparecem em "canceladas". media_por_dia e media_por_dia_util usam só os dias COMPLETOS: hoje aparece com dia_em_andamento (o que já foi criado até agora) e fica fora das médias. media_por_dia_util = segunda a sexta (feriados não são descontados). Semana com menos de 7 dias no período: semana_incompleta e dias_contados.');
   ctx.aviso('Origem = resposta da equipe a "Como nos achou?" na criação da OS (obrigatória a partir da publicação de 19/11/2026; pode ser corrigida na edição). OS criada antes disso fica nao_informado (a não ser que a equipe informe depois, na edição): nada foi preenchido por adivinhação. Quando a OS nasce de um pedido do site com canal claro, a opção vem marcada (a equipe pode trocar). primeira_os_com_origem_no_periodo = a OS mais antiga DO PERÍODO que tem a origem informada (não é a data em que o campo passou a existir).');
-  if (podado && dias.some((x) => x.pode_faltar_os_no_indice)) ctx.aviso(`Atenção: o índice de OS chegou ao teto de tamanho e foi podado (saem primeiro as OS fechadas mais antigas), e as OS guardadas à parte não puderam ser lidas agora. ${completoDesde ? `A contagem está completa a partir de ${isoBR(completoDesde)}; nos dias até ${diaBR(completoDesde)} (pode_faltar_os_no_indice) ela pode sair MENOR do que a real.` : 'Não dá para saber a partir de quando a contagem está completa.'}`);
+  if (podado && dias.some((x) => x.pode_faltar_os_no_indice)) ctx.aviso(ctx.arquivoOS.erro ? `Atenção: o índice de OS chegou ao teto de tamanho e foi podado (saem primeiro as OS fechadas mais antigas), e as OS guardadas à parte não puderam ser lidas agora. ${completoDesde ? `A contagem está completa a partir de ${isoBR(completoDesde)}; nos dias até ${diaBR(completoDesde)} (pode_faltar_os_no_indice) ela pode sair MENOR do que a real.` : 'Não dá para saber a partir de quando a contagem está completa.'}` : `Atenção: ${ctx.arquivoOS.ilegiveis} OS guardada(s) à parte está(ão) ilegível(is) no banco e não dá para saber de que dia(s) é(são): todos os dias saem com pode_faltar_os_no_indice e podem sair MENORES do que a realidade.`);
   const origensDe = (po) => CODIGOS_COMO.filter((c) => po[c]).map((c) => `${c === COMO_NAO_INFORMADO ? 'não informado' : rotuloComo(c)}: ${po[c]}`).join(', ');
   return saida(ctx, a, {
     total: dias.length, pagina, porPagina, itens: dias.slice((pagina - 1) * porPagina, pagina * porPagina), filtros: { de, ate }, titulo: 'Agendamentos por origem (por dia)',

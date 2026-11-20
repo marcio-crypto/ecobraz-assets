@@ -66,17 +66,23 @@ const STATUS = { agendada: 'Agendada', em_transporte: 'Em transporte', na_unidad
 const STATUS_COR = { agendada: '#8A6A16;background:#FFF4DE', em_transporte: '#0B5B66;background:#E3F0F3', na_unidade: '#6B3FA0;background:#EFE7FA', concluida: '#1E5B31;background:#E4F3E6', cancelada: '#8a4b45;background:#FBE9E7' };
 
 // --- Índice de OS (os:index) + ARQUIVO das OS que saem dele (pedido do Marcio, 20/11/2026) -------
-// O índice tem teto de tamanho (LIMITE_INDICE_OS). Quando passa do teto, as OS fechadas mais antigas
-// saem do índice — mas ANTES ficam guardadas à parte, inteiras: a entrada do índice e o registro
-// completo os:{id}, na tabela os_arquivo do D1 (sem teto prático). Quem só LÊ a lista
-// (listarColetasOS: telas, busca, portal do cliente, conector, relatórios) recebe índice + arquivo,
-// sem repetir — nenhuma OS some. Quem GRAVA o índice usa lerIndiceOS (só o índice); senão as OS
-// guardadas voltariam para o índice a cada gravação.
-const CHAVE_ARQUIVO_INFO = 'os:arquivo:info'; // sinal: já houve OS guardada à parte ({ desde, ultimo })
+// O índice tem teto de tamanho (LIMITE_INDICE_OS). Perto do teto, as OS fechadas mais antigas saem
+// do índice — mas ANTES ficam guardadas à parte, inteiras: a entrada do índice e o registro completo
+// os:{id}, na tabela os_arquivo do D1 (sem teto prático). A poda roda de madrugada (agendamento das
+// 06:00 UTC, podarIndiceAgendado: acima de 95% do teto, volta a 90%), longe do horário em que a
+// equipe grava OS; durante o dia só acontece se o índice passar do teto (e aí também volta a 90%,
+// para não podar a cada gravação). Quem só LÊ a lista (listarColetasOS: telas, busca, portal do
+// cliente, documentos, conector, relatórios) recebe índice + arquivo, sem repetir. Quem GRAVA o
+// índice usa lerIndiceOS (só o índice); senão as OS guardadas voltariam para o índice a cada
+// gravação. As filas de trabalho do dia (recepção/doca, nova carga, frota ao vivo) continuam lendo
+// só o índice (listarIndiceOS), como antes: nelas só entram coletas em andamento ou recentes.
+const CHAVE_ARQUIVO_INFO = 'os:arquivo:info'; // sinal: já houve OS guardada à parte ({ desde, ultimo, n })
 async function lerIndiceOS(env) {
   const raw = env.PORTAL_KV ? await env.PORTAL_KV.get('os:index') : null;
   return raw ? JSON.parse(raw) : [];
 }
+// Só o índice, sem as OS guardadas à parte — para as filas de trabalho do dia (ver acima).
+export async function listarIndiceOS(env) { return lerIndiceOS(env); }
 let tabelaArquivoOk = false;
 async function prepararArquivoOS(db) {
   if (tabelaArquivoOk) return;
@@ -85,41 +91,61 @@ async function prepararArquivoOS(db) {
   tabelaArquivoOk = true;
 }
 const semTabelaArquivo = (e) => /no such table/i.test(String((e && e.message) || e));
-// Consulta o arquivo quando ele pode ter OS: já houve arquivamento (sinal no KV) OU o índice está
-// perto do teto (≥ 85%: é só aí que a poda acontece). Longe do teto e sem sinal — o caso até o
-// índice encher —, nenhuma consulta a mais: a lista sai exatamente como antes.
+// Consulta o arquivo quando ele pode ter OS: já houve arquivamento (sinal no KV, ou o sinal não pôde
+// ser lido) OU o índice está a partir de 85% do teto (depois de uma poda ele fica em ~90%: cobre o
+// sinal que ainda não chegou a todas as regiões do KV). Antes disso — o caso até o índice encher —,
+// nenhuma consulta ao D1: a lista sai exatamente como antes (só 1 leitura a mais no KV, a do sinal).
 const arquivoNaLeitura = (raw, info) => !!info || String(raw || '').length >= Math.floor(0.85 * LIMITE_INDICE_OS);
-// Entradas guardadas à parte (só a entrada do índice de cada OS). Lança erro se o D1 falhar.
+// Entradas guardadas à parte (o texto JSON da entrada do índice de cada OS). Lança erro se o D1 falhar.
 async function lerArquivoOS(env) {
-  const db = env.DB_PLOOMES; if (!db) return { itens: [], ilegiveis: 0 };
+  const db = env.DB_PLOOMES; if (!db) return { textos: [], ids: [], ilegiveis: 0 };
   let r;
   try { r = await db.prepare('SELECT indice FROM os_arquivo ORDER BY criado_em DESC, id DESC').all(); }
-  catch (e) { if (semTabelaArquivo(e)) return { itens: [], ilegiveis: 0 }; throw e; }
-  const itens = []; let ilegiveis = 0;
-  for (const row of (r && r.results) || []) { try { const x = JSON.parse(row.indice); if (x && x.id) itens.push(x); else ilegiveis++; } catch { ilegiveis++; } }
-  return { itens, ilegiveis };
+  catch (e) { if (semTabelaArquivo(e)) return { textos: [], ids: [], ilegiveis: 0 }; throw e; }
+  const textos = [], ids = []; let ilegiveis = 0;
+  for (const row of (r && r.results) || []) { try { const x = JSON.parse(row.indice); if (x && x.id) { textos.push(row.indice); ids.push(String(x.id)); } else ilegiveis++; } catch { ilegiveis++; } }
+  return { textos, ids, ilegiveis };
+}
+// Memória curta da leitura do arquivo (por isolado do Worker): as telas que se atualizam sozinhas e o
+// /health (público) não consultam o D1 a cada chamada. Vale até 60 s e enquanto o sinal não mudar (ele
+// muda a cada arquivamento); alteração numa OS guardada apaga a memória deste isolado (nos outros, ela
+// aparece em até 60 s — o mesmo atraso do próprio KV). Cada chamada recebe objetos novos (o JSON é
+// relido), então quem mexe na lista não mexe na memória.
+const MEMORIA_ARQUIVO_MS = 60e3;
+const memoriaArquivo = new WeakMap(); // env.DB_PLOOMES → { chave, em, json, ids, ilegiveis }
+function esquecerArquivoLido(env) { if (env && env.DB_PLOOMES) memoriaArquivo.delete(env.DB_PLOOMES); }
+async function lerArquivoOSComMemoria(env, chave) {
+  const t = Date.now(); const m = memoriaArquivo.get(env.DB_PLOOMES);
+  if (m && m.chave === chave && t >= m.em && t - m.em < MEMORIA_ARQUIVO_MS) return m;
+  const r = await lerArquivoOS(env);
+  const novo = { chave, em: t, json: '[' + r.textos.join(',') + ']', ids: r.ids, ilegiveis: r.ilegiveis };
+  memoriaArquivo.set(env.DB_PLOOMES, novo);
+  return novo;
 }
 // Lista para LEITURA: índice + OS guardadas à parte (a entrada do índice vale quando a OS está nos
-// dois — ela voltou ao índice ao ser alterada). `erroArquivo` = o arquivo não pôde ser lido agora
-// (a lista sai só com o índice; o conector avisa).
+// dois — ela voltou ao índice ao ser alterada). `erroArquivo` = o arquivo não pôde ser lido agora (a
+// lista sai só com o índice; a lista de OS do escritório e o conector avisam); `ilegiveis` = linhas
+// do arquivo que não deu para ler (ficam de fora; também avisado).
 export async function listarColetasOSCompleta(env) {
   const [raw, info] = await Promise.all([
     env.PORTAL_KV ? env.PORTAL_KV.get('os:index') : null,
-    env.PORTAL_KV ? Promise.resolve(env.PORTAL_KV.get(CHAVE_ARQUIVO_INFO)).catch(() => 'erro') : null,
+    env.PORTAL_KV ? Promise.resolve().then(() => env.PORTAL_KV.get(CHAVE_ARQUIVO_INFO)).catch(() => 'erro') : null,
   ]);
   const idx = raw ? JSON.parse(raw) : [];
-  const out = { lista: idx, noIndice: idx.length, guardadas: 0, erroArquivo: '' };
+  const out = { lista: idx, noIndice: idx.length, guardadas: 0, erroArquivo: '', ilegiveis: 0 };
   if (!env.DB_PLOOMES || !arquivoNaLeitura(raw, info)) return out;
   try {
-    const { itens, ilegiveis } = await lerArquivoOS(env);
-    if (ilegiveis) out.erroArquivo = `${ilegiveis} linha(s) ilegível(is) no arquivo`;
-    if (itens.length) {
+    const m = await lerArquivoOSComMemoria(env, String(info || ''));
+    out.ilegiveis = m.ilegiveis;
+    if (m.ids.length) {
       const ids = new Set(idx.map((x) => x && x.id));
-      const fora = itens.filter((x) => !ids.has(x.id));
-      if (fora.length) { out.lista = idx.concat(fora); out.guardadas = fora.length; }
+      if (m.ids.some((id) => !ids.has(id))) {
+        const fora = JSON.parse(m.json).filter((x) => !ids.has(x.id));
+        out.lista = idx.concat(fora); out.guardadas = fora.length;
+      }
     }
-  } catch (e) { out.erroArquivo = String((e && e.message) || e).slice(0, 120); }
-  if (out.erroArquivo) console.error('os_arquivo_leitura', out.erroArquivo);
+  } catch (e) { out.erroArquivo = 'leitura'; console.error('os_arquivo_leitura', String((e && e.message) || e).slice(0, 120)); }
+  if (out.ilegiveis) console.error('os_arquivo_ilegiveis', out.ilegiveis);
   return out;
 }
 export async function listarColetasOS(env) {
@@ -175,20 +201,24 @@ function resumoIndiceOS(rec) {
 // cancelada), e só em último caso as mais antigas restantes. O texto gravado é sempre JSON
 // válido. Desde 20/11/2026, NADA sai do índice sem antes estar guardado no arquivo
 // (arquivarOS); o que não pôde ser guardado fica no índice (mesmo passando um pouco do teto)
-// e sai numa próxima gravação.
+// e sai numa próxima gravação. A poda leva o índice a 90% do teto (não só "até caber"): assim
+// ela não volta a acontecer a cada gravação seguinte.
 export const LIMITE_INDICE_OS = 900000;
-async function salvarIndiceOS(env, idx) {
-  if (!env.PORTAL_KV) return;
-  let arr = Array.isArray(idx) ? idx : [];
-  let json = JSON.stringify(arr);
-  if (json.length > LIMITE_INDICE_OS) {
-    let excesso = json.length - LIMITE_INDICE_OS;
-    const sai = new Set();
-    for (let i = arr.length - 1; i >= 0 && excesso > 0; i--) {
-      const x = arr[i];
-      if (x && (x.status === 'concluida' || x.status === 'cancelada')) { sai.add(x); excesso -= JSON.stringify(x).length + 1; }
-    }
-    // Último caso (o mesmo de antes): ainda acima do teto só com OS abertas.
+const PODA_ALVO = 0.9;       // depois de uma poda, o índice fica em até 90% do teto
+const PODA_MADRUGADA = 0.95; // a poda da madrugada começa quando o índice passa de 95% do teto
+const fechadaOS = (x) => !!(x && (x.status === 'concluida' || x.status === 'cancelada'));
+// Escolhe o que sai (as fechadas do fim do índice — as inseridas há mais tempo), guarda à parte e
+// devolve o índice que fica (JSON) e as entradas que saíram. soFechadas: nunca tira OS aberta (poda
+// da madrugada); sem isso vale o último caso de antes (índice acima do TETO só com OS abertas).
+async function podarIndice(env, arr, opcoes) {
+  const o = opcoes || {};
+  let excesso = JSON.stringify(arr).length - Math.floor(PODA_ALVO * LIMITE_INDICE_OS);
+  const sai = new Set();
+  for (let i = arr.length - 1; i >= 0 && excesso > 0; i--) {
+    const x = arr[i];
+    if (fechadaOS(x)) { sai.add(x); excesso -= JSON.stringify(x).length + 1; }
+  }
+  if (!o.soFechadas) {
     let resto = sai.size ? arr.filter((x) => !sai.has(x)) : arr;
     let jsonResto = JSON.stringify(resto);
     while (jsonResto.length > LIMITE_INDICE_OS && resto.length) {
@@ -196,106 +226,205 @@ async function salvarIndiceOS(env, idx) {
       for (const x of resto.slice(fica.length)) sai.add(x);
       resto = fica; jsonResto = JSON.stringify(resto);
     }
-    const guardadas = await arquivarOS(env, [...sai]);
-    // Sai do índice só o que ficou guardado (entrada sem id não é OS: sai sem guardar).
-    const podeSair = (x) => sai.has(x) && (!x || !x.id || guardadas.has(String(x.id)));
-    const ficaram = [...sai].filter((x) => !podeSair(x)).length;
-    if (ficaram) console.error('os_arquivo_nao_podou', { ficaram, guardadas: guardadas.size });
-    arr = arr.filter((x) => !podeSair(x)); json = JSON.stringify(arr);
   }
+  const guardadas = await arquivarOS(env, [...sai]);
+  // Sai do índice só o que ficou guardado (entrada sem id não é OS: sai sem guardar).
+  const podeSair = (x) => sai.has(x) && (!x || !x.id || guardadas.has(String(x.id)));
+  const saiu = [...sai].filter(podeSair);
+  const ficaram = sai.size - saiu.length;
+  if (ficaram) console.error('os_arquivo_nao_podou', { ficaram, guardadas: guardadas.size });
+  return { json: JSON.stringify(arr.filter((x) => !podeSair(x))), saiu, ficaram };
+}
+async function salvarIndiceOS(env, idx) {
+  if (!env.PORTAL_KV) return;
+  const arr = Array.isArray(idx) ? idx : [];
+  let json = JSON.stringify(arr);
+  if (json.length > LIMITE_INDICE_OS) json = (await podarIndice(env, arr)).json;
   await env.PORTAL_KV.put('os:index', json);
 }
-// Guarda à parte, INTEIRAS, as OS que vão sair do índice: a entrada do índice e o registro
-// completo os:{id} (que também continua no KV). Devolve os ids guardados. Registro que não pôde
-// ser lido agora: essa OS não é guardada nem sai do índice (tenta de novo na próxima gravação).
-// Registro que não existe (só a entrada do índice): guarda a entrada. Erro no D1: nada é guardado
-// e nada sai do índice. O sinal os:arquivo:info liga a consulta ao arquivo nas leituras.
-async function arquivarOS(env, entradas) {
-  const ok = new Set();
-  const lista = (entradas || []).filter((x) => x && x.id);
-  const db = env.DB_PLOOMES;
-  if (!lista.length || !db || !env.PORTAL_KV) return ok;
-  try {
-    await prepararArquivoOS(db);
-    const regs = await Promise.all(lista.map((x) => Promise.resolve().then(() => env.PORTAL_KV.get(`os:${x.id}`)).then((v) => ({ lido: true, v }), () => ({ lido: false }))));
-    const prontas = lista.map((x, i) => ({ x, r: regs[i] })).filter((p) => p.r.lido);
-    if (!prontas.length) return ok;
-    const em = agora();
-    const sql = 'INSERT INTO os_arquivo (id, numero, criado_em, status, cliente_id, indice, registro, arquivado_em, atualizado_em) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8) ON CONFLICT(id) DO UPDATE SET numero = excluded.numero, criado_em = excluded.criado_em, status = excluded.status, cliente_id = excluded.cliente_id, indice = excluded.indice, registro = COALESCE(excluded.registro, os_arquivo.registro), arquivado_em = excluded.arquivado_em, atualizado_em = excluded.atualizado_em';
-    await db.batch(prontas.map(({ x, r }) => db.prepare(sql).bind(String(x.id), String(x.numero || ''), String(x.criadoEm || ''), String(x.status || ''), String(x.clienteId || ''), JSON.stringify(x), r.v == null ? null : String(r.v), em)));
-    let info = null; try { info = JSON.parse((await env.PORTAL_KV.get(CHAVE_ARQUIVO_INFO)) || 'null'); } catch { info = null; }
-    await env.PORTAL_KV.put(CHAVE_ARQUIVO_INFO, JSON.stringify({ desde: (info && info.desde) || em, ultimo: em }));
-    for (const { x } of prontas) ok.add(String(x.id));
-  } catch (e) {
-    if (semTabelaArquivo(e)) tabelaArquivoOk = false; // a tabela sumiu: a próxima gravação recria
-    console.error('os_arquivo_gravacao', String((e && e.message) || e).slice(0, 160)); return new Set();
+// Poda da MADRUGADA (agendamento das 06:00 UTC = 03:00 de Brasília): acima de 95% do teto, guarda à
+// parte as OS fechadas mais antigas até o índice ficar em 90% — longe do horário em que a equipe e
+// os motoristas gravam OS (a gravação do índice não é atômica: duas ao mesmo tempo podem se
+// atropelar, e guardar à parte demora mais do que uma gravação comum). Relê o índice logo antes de
+// gravar e só tira as entradas que não mudaram nesse meio tempo (a que mudou fica e sai depois).
+export async function podarIndiceAgendado(env) {
+  if (!env || !env.PORTAL_KV || !env.DB_PLOOMES) return { podou: 0 };
+  const pctDe = (n) => Math.round((n / LIMITE_INDICE_OS) * 1000) / 10;
+  const idx = await lerIndiceOS(env);
+  const antes = JSON.stringify(idx).length;
+  if (antes <= Math.floor(PODA_MADRUGADA * LIMITE_INDICE_OS)) return { podou: 0, pct: pctDe(antes) };
+  const r = await podarIndice(env, idx, { soFechadas: true });
+  const sairam = new Map(r.saiu.filter((x) => x && x.id).map((x) => [String(x.id), JSON.stringify(x)]));
+  if (!sairam.size) return { podou: 0, ficaram: r.ficaram, pct: pctDe(antes) };
+  const fresco = await lerIndiceOS(env);
+  const fica = fresco.filter((x) => !(x && x.id && sairam.get(String(x.id)) === JSON.stringify(x)));
+  const json = JSON.stringify(fica);
+  await env.PORTAL_KV.put('os:index', json);
+  return { podou: fresco.length - fica.length, ficaram: r.ficaram, pct: pctDe(antes), pctDepois: pctDe(json.length) };
+}
+// Entrada guardada à parte, refeita a partir do registro completo (a mesma de resumoIndiceOS): assim
+// a cópia guardada acompanha o registro, em vez de só receber remendos. Da entrada anterior fica só
+// o que não existe no registro: a hora de conclusão estimada pelo app do motorista e a marca de
+// conclusão sem registro (completarIndiceOS).
+function entradaDoArquivo(rec, antiga) {
+  const e = resumoIndiceOS(rec);
+  if (antiga && e.status === 'concluida' && !e.concluidaEm) {
+    if (antiga.concluidaEm) e.concluidaEm = antiga.concluidaEm;
+    else if (antiga.conclSemReg) e.conclSemReg = antiga.conclSemReg;
   }
+  return e;
+}
+// Fichas os:{id} de várias OS: Map id → { lido: true, v } (v = null se não existe) ou { lido: false }
+// (não deu para ler agora). Leitura em lote (100 por vez); se o lote falhar, uma a uma.
+async function lerRegistrosOS(env, ids) {
+  const out = new Map(); const kv = env.PORTAL_KV;
+  for (let i = 0; i < ids.length; i += 100) {
+    const parte = ids.slice(i, i + 100); const chaves = parte.map((id) => `os:${id}`);
+    let m = null;
+    try { const r = await kv.get(chaves); if (r instanceof Map) m = r; } catch { m = null; }
+    if (m) { parte.forEach((id, k) => out.set(id, { lido: true, v: m.has(chaves[k]) ? m.get(chaves[k]) : null })); continue; }
+    const vals = await Promise.all(chaves.map((c) => Promise.resolve().then(() => kv.get(c)).then((v) => ({ lido: true, v }), () => ({ lido: false }))));
+    parte.forEach((id, k) => out.set(id, vals[k]));
+  }
+  return out;
+}
+// Guarda à parte, INTEIRAS, as OS que vão sair do índice: a entrada (refeita a partir do registro,
+// ver entradaDoArquivo) e o registro completo os:{id} (que também continua no KV). Devolve os ids
+// guardados. Registro que não pôde ser lido agora: essa OS não é guardada nem sai do índice (tenta de
+// novo na próxima poda). Registro que não existe (só a entrada do índice): guarda a entrada como está.
+// O D1 grava em lotes de 25; lote recusado é tentado linha a linha (uma linha com problema não trava
+// as outras); duas recusas seguidas = D1 fora do ar: para (o que faltou fica no índice). Tabela
+// ausente (banco novo ou tabela apagada): recria e tenta de novo, uma vez. O sinal
+// os:arquivo:info liga a consulta ao arquivo nas leituras; se ele não puder ser gravado, nada sai.
+const LOTE_ARQUIVO = 25;
+async function arquivarOS(env, entradas) {
+  const lista = (entradas || []).filter((x) => x && x.id);
+  if (!lista.length || !env.DB_PLOOMES || !env.PORTAL_KV) return new Set();
+  for (let tentativa = 0; tentativa < 2; tentativa++) {
+    try { return await gravarNoArquivo(env, lista); }
+    catch (e) {
+      const semTabela = semTabelaArquivo(e);
+      if (semTabela) tabelaArquivoOk = false; // a tabela sumiu (ou o banco é novo): recria e tenta de novo, uma vez
+      if (!semTabela || tentativa) { console.error('os_arquivo_gravacao', String((e && e.message) || e).slice(0, 160)); return new Set(); }
+    }
+  }
+  return new Set();
+}
+async function gravarNoArquivo(env, lista) {
+  const ok = new Set();
+  const db = env.DB_PLOOMES;
+  await prepararArquivoOS(db);
+  const regs = await lerRegistrosOS(env, lista.map((x) => String(x.id)));
+  const prontas = [];
+  for (const x of lista) {
+    const r = regs.get(String(x.id));
+    if (!r || !r.lido) continue;
+    let rec = null; if (r.v != null) { try { rec = JSON.parse(r.v); } catch { rec = null; } }
+    prontas.push({ id: String(x.id), e: rec && rec.id ? entradaDoArquivo(rec, x) : x, v: r.v });
+  }
+  if (!prontas.length) return ok;
+  const em = agora();
+  const sql = 'INSERT INTO os_arquivo (id, numero, criado_em, status, cliente_id, indice, registro, arquivado_em, atualizado_em) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8) ON CONFLICT(id) DO UPDATE SET numero = excluded.numero, criado_em = excluded.criado_em, status = excluded.status, cliente_id = excluded.cliente_id, indice = excluded.indice, registro = COALESCE(excluded.registro, os_arquivo.registro), arquivado_em = excluded.arquivado_em, atualizado_em = excluded.atualizado_em';
+  const linha = (p) => db.prepare(sql).bind(p.id, String(p.e.numero || ''), String(p.e.criadoEm || ''), String(p.e.status || ''), String(p.e.clienteId || ''), JSON.stringify(p.e), p.v == null ? null : String(p.v), em);
+  const gravadas = []; let recusas = 0;
+  for (let k = 0; k < prontas.length && recusas < 2; k += LOTE_ARQUIVO) {
+    const parte = prontas.slice(k, k + LOTE_ARQUIVO);
+    try { await db.batch(parte.map(linha)); gravadas.push(...parte); recusas = 0; continue; }
+    catch (e) { if (semTabelaArquivo(e)) throw e; console.error('os_arquivo_lote', String((e && e.message) || e).slice(0, 160)); }
+    for (const p of parte) {
+      if (recusas >= 2) break;
+      try { await linha(p).run(); gravadas.push(p); recusas = 0; }
+      catch (e) { if (semTabelaArquivo(e)) throw e; recusas++; console.error('os_arquivo_gravacao_os', p.id, String((e && e.message) || e).slice(0, 120)); }
+    }
+  }
+  if (!gravadas.length) return ok;
+  let info = null; try { info = JSON.parse((await env.PORTAL_KV.get(CHAVE_ARQUIVO_INFO)) || 'null'); } catch { info = null; }
+  await env.PORTAL_KV.put(CHAVE_ARQUIVO_INFO, JSON.stringify({ desde: (info && info.desde) || em, ultimo: em, n: Math.random().toString(36).slice(2, 10) }));
+  esquecerArquivoLido(env);
+  for (const p of gravadas) ok.add(p.id);
   return ok;
 }
-// OS que está no arquivo e fora do índice foi alterada (MTR, cobrança, edição…): a cópia guardada
-// recebe a MESMA mudança que a entrada do índice receberia (`aplicar`) e o registro completo novo.
-// Não está no arquivo (ou ainda não há arquivo): nada a fazer.
-async function atualizarArquivadaOS(env, rec, aplicar) {
-  const db = env.DB_PLOOMES; if (!db || !rec || !rec.id) return false;
+// OS que está no arquivo foi alterada (status, MTR, cobrança, edição, reagendamento): a cópia
+// guardada é refeita a partir do registro novo (entradaDoArquivo) e o registro completo é trocado.
+// Devolve a entrada nova — ou null: a OS não está no arquivo (ou ainda não há arquivo).
+async function atualizarArquivadaOS(env, rec) {
+  const db = env.DB_PLOOMES; if (!db || !rec || !rec.id) return null;
   try {
     const row = await db.prepare('SELECT indice FROM os_arquivo WHERE id = ?1').bind(String(rec.id)).first();
-    if (!row) return false;
-    const e = JSON.parse(row.indice); aplicar(e);
+    if (!row) return null;
+    let antiga = null; try { antiga = JSON.parse(row.indice); } catch { antiga = null; }
+    const e = entradaDoArquivo(rec, antiga);
     await db.prepare('UPDATE os_arquivo SET indice = ?2, status = ?3, registro = ?4, atualizado_em = ?5 WHERE id = ?1').bind(String(rec.id), JSON.stringify(e), String(e.status || ''), JSON.stringify(rec), agora()).run();
-    return true;
-  } catch (e) { if (!semTabelaArquivo(e)) console.error('os_arquivo_atualizacao', String((e && e.message) || e).slice(0, 160)); return false; }
+    esquecerArquivoLido(env);
+    return e;
+  } catch (e) { if (!semTabelaArquivo(e)) console.error('os_arquivo_atualizacao', String((e && e.message) || e).slice(0, 160)); return null; }
 }
-// Situação do índice e do arquivo para o /health — só contagens e tamanho, nunca dados.
-// percentualDoTeto = tamanho do índice ÷ teto. guardadas = OS no arquivo e fora do índice;
-// voltaramAoIndice = OS do arquivo que voltaram ao índice ao serem alteradas (contam uma vez só).
-export const NIVEIS_AVISO_INDICE = [85, 70];
+// Situação do índice e do arquivo para o /health (público) — só contagens e tamanho, nunca dados nem
+// mensagem de erro. bytes = caracteres do índice (o teto também é contado em caracteres).
+// guardadas = OS no arquivo; foraDoIndice = as que só aparecem pelo arquivo (as demais voltaram ao
+// índice ao mudar de status). Usa a memória curta da leitura do arquivo (lerArquivoOSComMemoria).
+export const NIVEIS_AVISO_INDICE = [100, 85, 70];
+const textoAvisoIndice = (pct) => (pct > 100
+  ? 'passou do teto: as OS fechadas mais antigas ainda não puderam ser guardadas à parte (nada foi apagado: elas continuam no índice e o sistema tenta de novo)'
+  : `passou de ${pct >= 85 ? 85 : 70}% do teto — perto do teto (a partir de 95%), as OS fechadas mais antigas saem do índice de madrugada e ficam guardadas à parte, inteiras`);
 export async function saudeIndiceOS(env) {
   const osIndex = { ok: true, qtd: 0, bytes: 0, teto: LIMITE_INDICE_OS, percentualDoTeto: 0, aviso: '' };
-  const osArquivo = { ok: true, guardadas: 0, voltaramAoIndice: 0 };
-  let raw = null, info = null, ids = new Set();
+  const osArquivo = { ok: true, guardadas: 0, foraDoIndice: 0 };
+  let raw = null, info = null, idx = [];
   try {
-    [raw, info] = await Promise.all([env.PORTAL_KV ? env.PORTAL_KV.get('os:index') : null, env.PORTAL_KV ? env.PORTAL_KV.get(CHAVE_ARQUIVO_INFO) : null]);
-    const idx = raw ? JSON.parse(raw) : [];
-    ids = new Set(idx.map((x) => x && x.id));
-    osIndex.qtd = idx.length; osIndex.bytes = raw ? raw.length : 0;
-    const pct = (osIndex.bytes / LIMITE_INDICE_OS) * 100;
-    osIndex.percentualDoTeto = Math.round(pct * 10) / 10;
-    const nivel = NIVEIS_AVISO_INDICE.find((n) => pct >= n);
-    if (nivel) osIndex.aviso = `passou de ${nivel}% do teto — no teto, as OS fechadas mais antigas saem do índice e ficam guardadas à parte (nenhuma se perde)`;
-  } catch (e) { return { osIndex: { ok: false, erro: String((e && e.message) || e).slice(0, 80) }, osArquivo }; }
+    [raw, info] = await Promise.all([env.PORTAL_KV ? env.PORTAL_KV.get('os:index') : null, env.PORTAL_KV ? Promise.resolve().then(() => env.PORTAL_KV.get(CHAVE_ARQUIVO_INFO)).catch(() => 'erro') : null]);
+  } catch { return { osIndex: { ok: false, erro: 'kv_indisponivel', teto: LIMITE_INDICE_OS }, osArquivo: { ok: false, erro: 'kv_indisponivel' } }; }
+  osIndex.bytes = raw ? raw.length : 0;
+  const pct = (osIndex.bytes / LIMITE_INDICE_OS) * 100;
+  osIndex.percentualDoTeto = Math.round(pct * 10) / 10;
+  if (pct >= 70) osIndex.aviso = textoAvisoIndice(pct);
+  try { idx = raw ? JSON.parse(raw) : []; osIndex.qtd = idx.length; }
+  catch { osIndex.ok = false; osIndex.erro = 'indice_ilegivel'; return { osIndex, osArquivo }; }
   if (env.DB_PLOOMES && arquivoNaLeitura(raw, info)) {
     try {
-      const r = await env.DB_PLOOMES.prepare('SELECT id FROM os_arquivo').all();
-      for (const row of (r && r.results) || []) { if (ids.has(row.id)) osArquivo.voltaramAoIndice++; else osArquivo.guardadas++; }
-    } catch (e) { if (!semTabelaArquivo(e)) { osArquivo.ok = false; osArquivo.erro = String((e && e.message) || e).slice(0, 80); } }
+      const m = await lerArquivoOSComMemoria(env, String(info || ''));
+      const noIdx = new Set(idx.map((x) => x && String(x.id)));
+      osArquivo.guardadas = m.ids.length; osArquivo.foraDoIndice = m.ids.filter((id) => !noIdx.has(id)).length;
+      if (m.ilegiveis) osArquivo.ilegiveis = m.ilegiveis;
+    } catch { osArquivo.ok = false; osArquivo.erro = 'd1_indisponivel'; }
   }
-  if (info) { try { const i = JSON.parse(info); osArquivo.desde = i.desde || ''; osArquivo.ultimo = i.ultimo || ''; } catch { /* sem datas */ } }
+  if (info && info !== 'erro') { try { const i = JSON.parse(info); osArquivo.desde = i.desde || ''; osArquivo.ultimo = i.ultimo || ''; } catch { /* sem datas */ } }
   return { osIndex, osArquivo };
 }
 // Aviso por e-mail quando o índice passa de 70% e de 85% do teto (pedido do Marcio, 20/11/2026):
-// UMA vez por nível (marca no KV). Se pular de menos de 70% direto para 85%+, sai um e-mail só (o
-// de 85%). `para` = lista de e-mails (quem chama decide). Roda no agendamento diário das 11:00 UTC.
+// UMA vez por nível (marca no KV, junto com o teto: se o teto mudar, os avisos voltam a valer). Se
+// pular de menos de 70% direto para 85%+, sai um e-mail só (o de 85%). Acima de 100% = a poda não
+// conseguiu guardar as OS (D1 com problema): sai o aviso de 100%, que volta a valer quando o índice
+// fica de novo abaixo do teto. `para` = lista de e-mails (quem chama decide). Roda no agendamento
+// diário das 11:00 UTC.
+const marcaAvisoIndice = (nivel) => `notif:indiceos:${LIMITE_INDICE_OS}:${nivel}`;
 export async function avisoTetoIndiceOS(env, para) {
   if (!env || !env.PORTAL_KV) return { enviado: false, motivo: 'sem_kv' };
   const raw = await env.PORTAL_KV.get('os:index');
   const bytes = raw ? raw.length : 0;
   const pct = (bytes / LIMITE_INDICE_OS) * 100;
-  const nivel = NIVEIS_AVISO_INDICE.find((n) => pct >= n);
-  if (!nivel) return { enviado: false, motivo: 'abaixo_de_70', pct: Math.round(pct * 10) / 10 };
-  if (await env.PORTAL_KV.get(`notif:indiceos:${nivel}`)) return { enviado: false, motivo: 'ja_avisado', nivel };
+  const pct1 = Math.round(pct * 10) / 10;
+  if (pct <= 100 && await env.PORTAL_KV.get(marcaAvisoIndice(100))) await env.PORTAL_KV.delete(marcaAvisoIndice(100));
+  const nivel = NIVEIS_AVISO_INDICE.find((n) => (n === 100 ? pct > 100 : pct >= n));
+  if (!nivel) return { enviado: false, motivo: 'abaixo_de_70', pct: pct1 };
+  if (await env.PORTAL_KV.get(marcaAvisoIndice(nivel))) return { enviado: false, motivo: 'ja_avisado', nivel };
   const dest = [...new Set((Array.isArray(para) ? para : []).map((s) => String(s || '').split('|')[0].trim().toLowerCase()).filter((s) => /^\S+@\S+\.\S+$/.test(s)))].slice(0, 10);
   if (!dest.length) return { enviado: false, motivo: 'sem_destinatario', nivel };
   if (!env.RESEND_API_KEY) return { enviado: false, motivo: 'sem_chave_email', nivel };
   let qtd = 0; try { qtd = raw ? JSON.parse(raw).length : 0; } catch { qtd = 0; }
-  const pctTxt = (Math.round(pct * 10) / 10).toLocaleString('pt-BR');
-  const assunto = `Sistema Ecobraz: a lista de OS passou de ${nivel}% do teto (nada a fazer agora)`;
-  const texto = `A lista de Ordens de Coleta (o índice que o sistema usa para montar as telas e as contagens) está em ${pctTxt}% do teto de tamanho: ${bytes.toLocaleString('pt-BR')} de ${LIMITE_INDICE_OS.toLocaleString('pt-BR')} caracteres, com ${qtd.toLocaleString('pt-BR')} OS.\n\nO que isso quer dizer: quando chegar a 100%, as OS fechadas mais antigas saem dessa lista e ficam guardadas à parte, inteiras. Nenhuma OS se perde: telas, busca, portal do cliente, documentos e as consultas do Claude continuam enxergando todas.\n\nNada a fazer agora. Este aviso sai uma vez quando a lista passa de 70% e outra quando passa de 85%.\n\nSituação a qualquer momento: https://sistema.ecobraz.org/health (osIndex e osArquivo).\n\nEcobraz · sistema`;
+  const situacao = `A lista de Ordens de Coleta (o índice que o sistema usa para montar as telas e as contagens) está em ${pct1.toLocaleString('pt-BR')}% do teto de tamanho: ${bytes.toLocaleString('pt-BR')} de ${LIMITE_INDICE_OS.toLocaleString('pt-BR')} caracteres, com ${qtd.toLocaleString('pt-BR')} OS.`;
+  const rodape = 'Situação a qualquer momento: https://sistema.ecobraz.org/health (osIndex e osArquivo).\n\nEcobraz · sistema';
+  const assunto = nivel === 100 ? 'Sistema Ecobraz: a lista de OS passou do teto e a poda não andou (verificar)' : `Sistema Ecobraz: a lista de OS passou de ${nivel}% do teto (nada a fazer agora)`;
+  const texto = nivel === 100
+    ? `${situacao}\n\nO que isso quer dizer: as OS fechadas mais antigas deveriam ter saído dessa lista e ficado guardadas à parte, mas a gravação no banco (D1) não aconteceu. Nada foi apagado: enquanto não forem guardadas, elas continuam na lista, e o sistema tenta de novo a cada gravação e toda madrugada.\n\nO que fazer: pedir a quem cuida do sistema para conferir o /health e o registro de erros (os_arquivo_gravacao). Este aviso volta a sair se acontecer de novo depois de normalizar.\n\n${rodape}`
+    : `${situacao}\n\nO que isso quer dizer: perto do teto (a partir de 95%), as OS fechadas mais antigas saem dessa lista de madrugada — e, antes de sair, cada uma é guardada à parte, inteira. Telas, busca, portal do cliente, documentos e as consultas do Claude continuam enxergando também as guardadas.\n\nNada a fazer agora. Este aviso sai uma vez quando a lista passa de 70% e outra quando passa de 85%.\n\n${rodape}`;
   const payload = { from: env.RESEND_FROM || 'Portal Ecobraz <acesso@ecobraz.org.br>', to: dest, subject: assunto, text: texto };
-  const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${env.RESEND_API_KEY}`, 'Idempotency-Key': `indice-os-${nivel}` }, body: JSON.stringify(payload) });
+  const idem = nivel === 100 ? `indice-os-100-${agora().slice(0, 10)}` : `indice-os-${nivel}`;
+  const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${env.RESEND_API_KEY}`, 'Idempotency-Key': idem }, body: JSON.stringify(payload) });
   if (!r.ok) throw new Error('resend_indice_os_' + r.status);
   const em = agora();
-  for (const n of NIVEIS_AVISO_INDICE) if (n <= nivel) await env.PORTAL_KV.put(`notif:indiceos:${n}`, em);
-  return { enviado: true, nivel, pct: Math.round(pct * 10) / 10, para: dest.length };
+  for (const n of NIVEIS_AVISO_INDICE) if (n <= nivel) await env.PORTAL_KV.put(marcaAvisoIndice(n), em);
+  return { enviado: true, nivel, pct: pct1, para: dest.length };
 }
 async function proximoNumero(env) {
   const ano = anoAtual();
@@ -433,15 +562,13 @@ export async function atualizarStatusOS(env, id, status, extra) {
   if (env.PORTAL_KV) {
     await env.PORTAL_KV.put(`os:${id}`, JSON.stringify(rec));
     const idx = await lerIndiceOS(env); const i = idx.findIndex((x) => x.id === id);
-    const aplicar = (e) => {
-      e.status = status; if (!e.clienteDoc && rec.clienteDoc) e.clienteDoc = rec.clienteDoc;
-      if (rec.concluidaEm) e.concluidaEm = rec.concluidaEm;
-      if (rec.canceladaEm) e.canceladaEm = rec.canceladaEm;
-    };
-    if (i >= 0) aplicar(idx[i]);
-    else { // sumiu do índice (ou está guardada à parte)? re-entra, em vez de ficar invisível para as listas; a cópia guardada acompanha
-      idx.unshift(resumoIndiceOS(rec));
-      await atualizarArquivadaOS(env, rec, aplicar);
+    if (i >= 0) {
+      idx[i].status = status; if (!idx[i].clienteDoc && rec.clienteDoc) idx[i].clienteDoc = rec.clienteDoc;
+      if (rec.concluidaEm) idx[i].concluidaEm = rec.concluidaEm;
+      if (rec.canceladaEm) idx[i].canceladaEm = rec.canceladaEm;
+    } else { // sumiu do índice (ou está guardada à parte)? re-entra, em vez de ficar invisível para as listas; a cópia guardada acompanha
+      const guardada = await atualizarArquivadaOS(env, rec);
+      idx.unshift(guardada ? { ...guardada } : resumoIndiceOS(rec));
     }
     await salvarIndiceOS(env, idx);
   }
@@ -501,9 +628,8 @@ export async function marcarReagendarOS(env, id, info) {
   if (env.PORTAL_KV) {
     await env.PORTAL_KV.put(`os:${id}`, JSON.stringify(rec));
     const idx = await lerIndiceOS(env); const i = idx.findIndex((x) => x.id === id);
-    const aplicar = (e) => { e.status = 'agendada'; e.reagendar = 1; };
-    if (i >= 0) { aplicar(idx[i]); await salvarIndiceOS(env, idx); }
-    else await atualizarArquivadaOS(env, rec, aplicar);
+    if (i >= 0) { idx[i].status = 'agendada'; idx[i].reagendar = 1; await salvarIndiceOS(env, idx); }
+    else await atualizarArquivadaOS(env, rec); // guardada à parte: a cópia guardada acompanha
   }
   return rec;
 }
@@ -514,7 +640,7 @@ export async function limparReagendarOS(env, id) {
     await env.PORTAL_KV.put(`os:${id}`, JSON.stringify(rec));
     const idx = await lerIndiceOS(env); const i = idx.findIndex((x) => x.id === id);
     if (i >= 0 && idx[i].reagendar) { delete idx[i].reagendar; await salvarIndiceOS(env, idx); }
-    else if (i < 0) await atualizarArquivadaOS(env, rec, (e) => { delete e.reagendar; });
+    else if (i < 0) await atualizarArquivadaOS(env, rec);
   }
   return rec;
 }
@@ -547,12 +673,12 @@ export async function definirCobrancaOS(env, id, cobranca) {
   if (env.PORTAL_KV) {
     await env.PORTAL_KV.put(`os:${rec.id}`, JSON.stringify(rec));
     const idx = await lerIndiceOS(env); const i = idx.findIndex((x) => x.id === rec.id);
-    const aplicar = (e) => {
-      if (rec.cobranca) e.cobranca = { valor: rec.cobranca.valor, status: rec.cobranca.status, link: rec.cobranca.link };
-      else delete e.cobranca;
-    };
-    if (i >= 0) { aplicar(idx[i]); await salvarIndiceOS(env, idx); }
-    else await atualizarArquivadaOS(env, rec, aplicar);
+    if (i >= 0) {
+      if (rec.cobranca) idx[i].cobranca = { valor: rec.cobranca.valor, status: rec.cobranca.status, link: rec.cobranca.link };
+      else delete idx[i].cobranca;
+      await salvarIndiceOS(env, idx);
+    }
+    else await atualizarArquivadaOS(env, rec);
   }
   return rec;
 }
@@ -584,9 +710,8 @@ export async function marcarCobrancaPagaOS(env, id, pagamento) {
   if (env.PORTAL_KV) {
     await env.PORTAL_KV.put(`os:${rec.id}`, JSON.stringify(rec));
     const idx = await lerIndiceOS(env); const i = idx.findIndex((x) => x.id === rec.id);
-    const aplicar = (e) => { if (e.cobranca) e.cobranca.status = 'pago'; e.status = rec.status; };
-    if (i >= 0) { aplicar(idx[i]); await salvarIndiceOS(env, idx); }
-    else await atualizarArquivadaOS(env, rec, aplicar);
+    if (i >= 0) { if (idx[i].cobranca) idx[i].cobranca.status = 'pago'; idx[i].status = rec.status; await salvarIndiceOS(env, idx); }
+    else await atualizarArquivadaOS(env, rec);
   }
   return rec;
 }
@@ -600,9 +725,8 @@ export async function definirMtrOS(env, id, mtr) {
   if (env.PORTAL_KV) {
     await env.PORTAL_KV.put(`os:${rec.id}`, JSON.stringify(rec));
     const idx = await lerIndiceOS(env); const i = idx.findIndex((x) => x.id === rec.id);
-    const aplicar = (e) => { if (mtr && mtr.numero) e.mtr = mtr.numero; else delete e.mtr; };
-    if (i >= 0) { aplicar(idx[i]); await salvarIndiceOS(env, idx); }
-    else await atualizarArquivadaOS(env, rec, aplicar);
+    if (i >= 0) { if (mtr && mtr.numero) idx[i].mtr = mtr.numero; else delete idx[i].mtr; await salvarIndiceOS(env, idx); }
+    else await atualizarArquivadaOS(env, rec);
   }
   return rec;
 }
@@ -640,9 +764,8 @@ export async function atualizarColetaOS(env, id, dados) {
   if (env.PORTAL_KV) {
     await env.PORTAL_KV.put(`os:${id}`, JSON.stringify(rec));
     const idx = await lerIndiceOS(env); const i = idx.findIndex((x) => x.id === id);
-    const aplicar = (e) => { if (rec.comoNosAchou) e.como = rec.comoNosAchou; e.cidade = cidadeDoEndereco(rec.endereco); e.dataAgendada = rec.dataAgendada; e.agenteNome = rec.agenteNome; e.agenteEmail = rec.agenteEmail; if (rec.transportadora) e.transp = rec.transportadora.nome; else delete e.transp; if (!e.clienteDoc && rec.clienteDoc) e.clienteDoc = rec.clienteDoc; e.mat = materialIndiceOS(rec); const placa = placaDaOS(rec); if (placa) e.placa = placa; else delete e.placa; };
-    if (i >= 0) { aplicar(idx[i]); await salvarIndiceOS(env, idx); }
-    else await atualizarArquivadaOS(env, rec, aplicar);
+    if (i >= 0) { if (rec.comoNosAchou) idx[i].como = rec.comoNosAchou; idx[i].cidade = cidadeDoEndereco(rec.endereco); idx[i].dataAgendada = rec.dataAgendada; idx[i].agenteNome = rec.agenteNome; idx[i].agenteEmail = rec.agenteEmail; if (rec.transportadora) idx[i].transp = rec.transportadora.nome; else delete idx[i].transp; if (!idx[i].clienteDoc && rec.clienteDoc) idx[i].clienteDoc = rec.clienteDoc; idx[i].mat = materialIndiceOS(rec); const placa = placaDaOS(rec); if (placa) idx[i].placa = placa; else delete idx[i].placa; await salvarIndiceOS(env, idx); }
+    else await atualizarArquivadaOS(env, rec);
   }
   return rec;
 }
@@ -693,7 +816,9 @@ function topo(sub) {
 const rotuloStatus = (status, dataAgendada) => (status === 'agendada' && !dataAgendada) ? 'Aguardando roteiro' : (STATUS[status] || status);
 const pill = (status, dataAgendada) => `<span style="flex:none;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;color:${STATUS_COR[status] || '#7c8a87;background:#EEF1F0'}">${esc(rotuloStatus(status, dataAgendada).toUpperCase())}</span>`;
 
-export function paginaColetasLista(user, coletas, q, cliCtx, negocios, aba) {
+// `extra.arquivoIncompleto`: as OS guardadas à parte (as fechadas mais antigas) não puderam ser lidas
+// agora — a página avisa, para ninguém recriar uma OS antiga que a busca não achou.
+export function paginaColetasLista(user, coletas, q, cliCtx, negocios, aba, extra) {
   q = q || '';
   const filtroCli = cliCtx && cliCtx.nome ? cliCtx : null;
   const negs = (filtroCli && Array.isArray(negocios)) ? negocios : [];
@@ -732,6 +857,7 @@ export function paginaColetasLista(user, coletas, q, cliCtx, negocios, aba) {
   ${filtroCli ? `<div style="background:#EAF2E6;border:1px solid #cfe6b8;border-radius:10px;padding:10px 13px;margin-bottom:12px;font-size:12.5px;color:#28413f;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><span>Mostrando as coletas de <b>${esc(filtroCli.nome)}</b></span><a href="/coletas" style="color:#0B5B66;font-weight:800;text-decoration:none;white-space:nowrap">ver todas as coletas →</a></div>
   <a href="/coletas/nova?cliente=${esc(filtroCli.id)}" class="btn btn-p" style="margin-bottom:14px">＋ Nova coleta para este cliente</a>` : `<form method="get" action="/coletas" style="margin:0 0 12px"><input type="hidden" name="aba" value="${esc(abaAtiva)}"><input name="q" value="${esc(q)}" placeholder="🔎 Buscar por número (ex.: OS-2026-0001) ou cliente… e aperte Enter" autocomplete="off" style="width:100%;border:1px solid #DDE1E6;border-radius:10px;padding:11px 12px;font-size:14px;font-family:inherit"></form>
   <a href="/cadastro" class="btn btn-g" style="margin-bottom:14px">Abrir coleta a partir de um cliente →</a>`}
+  ${extra && extra.arquivoIncompleto ? '<div style="background:#FFF4DE;border:1px solid #f0dca8;border-radius:10px;padding:10px 13px;margin-bottom:12px;font-size:12.5px;color:#6b5312;line-height:1.5">⚠️ As OS mais antigas (guardadas à parte) não puderam ser lidas agora: esta lista e a busca podem estar <b>sem elas</b>. Antes de criar uma OS que você não achou, recarregue a página em alguns minutos.</div>' : ''}
   ${abasHTML}
   <div>${linhas}</div>
   ${histBlock}

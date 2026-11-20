@@ -10,7 +10,7 @@
 
 import { tagsPWA } from './pwa.js';
 import { botaoGoogle } from './google-auth.js';
-import { listarColetasOS, lerColetaOS, atualizarStatusOS, blocoRegistroMotorista } from './coletas.js';
+import { listarIndiceOS, lerColetaOS, atualizarStatusOS, blocoRegistroMotorista } from './coletas.js';
 import { debitarPatrocinio } from './adote.js';
 import { METODOLOGIA } from './carbono-metodologia.js';
 
@@ -98,7 +98,8 @@ export async function atualizarEtapaOperacao(env, osId, etapa, patch) {
 export async function listarColetasRecebiveis(env) {
   // 2 leituras de índice em vez de 1 leitura POR OS concluída (a lentidão da tela
   // "Receber lote" crescia com o histórico — dezenas de idas ao KV em série).
-  const [todas, ops] = await Promise.all([listarColetasOS(env), listarOperacoes(env)]);
+  // Só o índice (como antes): as OS guardadas à parte (fechadas mais antigas) não entram na fila da doca.
+  const [todas, ops] = await Promise.all([listarIndiceOS(env), listarOperacoes(env)]);
   const jaNoIndiceDoca = new Set(ops.map((o) => String(o.osId)));
   const concluidas = todas.filter((c) => c.status === 'concluida');
   // Rede de segurança (caso real OS-2026-0124, 14/09): o motorista ENCERROU a coleta

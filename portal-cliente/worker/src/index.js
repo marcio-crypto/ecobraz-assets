@@ -78,7 +78,7 @@ import { amostraContatosPloomes, paginaAmostraContatos, importarLoteContatos, es
 import { importarLoteAnexos, importarLoteAnexosContatos, completarAnexos, importarAnexosJanela, reprocessarFalhas, importarLoteDocumentos, recuperarDocumentos, estatisticasArquivos, paginaMigrarArquivos, diagnosticoAnexos, paginaDiagAnexos } from './ploomes-arquivos.js';
 import { fiscalPermitido, nomeFiscal, listarNotas, lerNota, importarLote, vincularNota, sugerirVinculoSync, paginaFiscalLogin, paginaFiscalHome, paginaFiscalResultado, paginaFiscalNota } from './fiscal.js';
 import { escritorioPermitido, nomeEscritorio, consultarCNPJ, listarClientes, lerCliente, salvarCliente, emailsDoCliente, reindexarEmailsClientes, backfillEnderecos, paginaManutencao, paginaLoginEscritorio, paginaCadastroHome, paginaFormCliente, paginaClienteDetalhe, listarLeads, lerLead, salvarLead, ingestLead, clienteDeLead, arquivosDoCliente, paginaLeads, paginaLeadDetalhe, paginaInicio, listarClientesD1, contagensClientesD1, lerClienteD1, negociosDoCliente, espelharClienteD1, sincronizarKVparaD1, lerNegocioDetalheD1, paginaOSDetalhe, curarContatosKV, classificarPedido, atualizarIndexLead, excluirLead, acessosDaEmpresa, acessoRevogado, removerAcessoPelaFicha } from './cadastro.js';
-import { listarColetasOS, lerColetaOS, seloOS, criarColetaOS, atualizarStatusOS, atualizarColetaOS, anexarTelemetriaOS, registrarAnexoColeta, removerAnexoColeta, alvoAvisoColeta, salvarColetaOSDireto, paginaColetasLista, paginaGerarColeta, paginaEditarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga, definirCobrancaOS, anexarBoletoCobrancaOS, marcarCobrancaPagaOS, definirMtrOS, completarIndiceOS, saudeIndiceOS, avisoTetoIndiceOS } from './coletas.js';
+import { listarColetasOS, lerColetaOS, seloOS, criarColetaOS, atualizarStatusOS, atualizarColetaOS, anexarTelemetriaOS, registrarAnexoColeta, removerAnexoColeta, alvoAvisoColeta, salvarColetaOSDireto, paginaColetasLista, paginaGerarColeta, paginaEditarColeta, paginaColetaOSDetalhe, qrOS, validarOSPublico, paginaComprovanteOS, paginaCartaDescarte, paginaManifestoCarga, definirCobrancaOS, anexarBoletoCobrancaOS, marcarCobrancaPagaOS, definirMtrOS, completarIndiceOS, saudeIndiceOS, avisoTetoIndiceOS, listarColetasOSCompleta, listarIndiceOS, podarIndiceAgendado } from './coletas.js';
 import { lerComo, sugestaoComoDoPedido } from './como-nos-achou.js';
 import { listarVeiculos, lerVeiculo, salvarVeiculo, paginaFrota, paginaVeiculoForm, lerJornadaAtiva, abrirJornada, fecharJornada, registrarAbastecimento, tagColetaComVeiculo, servirFotoJornada, bannerJornada, paginaAbrirDia, paginaFecharDia, paginaAbastecer, placaDaColeta } from './frota.js';
 import { carregarEquipeNoEnv, listarUsuarios, lerUsuario, salvarUsuario, importarUsuarios, paginaEquipe, paginaUsuarioForm, paginaEquipeImportar } from './equipe.js';
@@ -125,6 +125,10 @@ export default {
     if (cron === '0 6 * * *') {
       try { const r = await completarIndiceOS(env, 800); console.log('cron_indice_os', r); }
       catch (error) { console.error('cron_indice_os_erro', safeError(error)); }
+      // Poda do índice de OS de madrugada (coletas.js): acima de 95% do teto, as OS fechadas mais
+      // antigas vão para o arquivo (guardadas à parte) e o índice volta a 90%. Abaixo disso, nada.
+      try { const r = await podarIndiceAgendado(env); if (r && (r.podou || r.ficaram)) console.log('cron_poda_indice_os', r); }
+      catch (error) { console.error('cron_poda_indice_os_erro', safeError(error)); }
       return;
     }
     // A cada 10 min (08:00–19:50 de Brasília): pedidos de avaliação no Google das coletas
@@ -156,8 +160,8 @@ export default {
         // Nº de usuários no cadastro de equipe (KV) — só a contagem, nunca dados.
         equipeCadastrada: await (async () => { try { return (await listarUsuarios(env)).length; } catch { return -1; } })(),
         // Integridade do índice de OS e das OS guardadas à parte (só contagem/tamanho — nunca
-        // dados): osIndex { qtd, bytes, teto, percentualDoTeto, aviso } e osArquivo { guardadas,
-        // voltaramAoIndice }.
+        // dados nem mensagem de erro): osIndex { qtd, bytes, teto, percentualDoTeto, aviso } e
+        // osArquivo { guardadas, foraDoIndice, desde, ultimo }.
         ...(await saudeIndiceOS(env)),
         // Só presença (true/false) — NUNCA os valores. Ajuda a confirmar a
         // configuração pelo navegador sem expor segredo nenhum.
@@ -2255,7 +2259,10 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         const q = (url.searchParams.get('q') || '').trim();
         const ql = q.toLowerCase();
         const cliId = (url.searchParams.get('cliente') || '').trim();
-        let coletas = await listarColetasOS(env);
+        // Índice + OS guardadas à parte; se as guardadas não puderem ser lidas agora, a página avisa
+        // (para ninguém recriar uma OS antiga que a busca não achou).
+        const listaOS = await listarColetasOSCompleta(env);
+        let coletas = listaOS.lista;
         let cliCtx = null, negociosCli = [];
         if (cliId) {
           const cli = await carregarClientePorId(env, cliId);
@@ -2266,7 +2273,7 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         } else if (ql) coletas = coletas.filter((c) => `${c.numero || ''} ${c.clienteNome || ''}`.toLowerCase().includes(ql)); // busca cobre canceladas
         // sem busca: passa todas; a página separa por abas (Agendadas / Concluídas / Canceladas)
         const aba = (url.searchParams.get('aba') || '').trim();
-        return html(paginaColetasLista(escOuEng, coletas, q, cliCtx, negociosCli, aba));
+        return html(paginaColetasLista(escOuEng, coletas, q, cliCtx, negociosCli, aba, { arquivoIncompleto: !!(listaOS.erroArquivo || listaOS.ilegiveis) }));
       }
       if (pathname === '/coletas/nova' && request.method === 'GET') {
         if (!escritorio) return new Response(null, { status: 302, headers: { Location: '/cadastro', 'cache-control': 'no-store' } });
@@ -2956,7 +2963,8 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         // coletas concluídas, fora de outras cargas; o fluxo antigo da doca só
         // bloqueia se tiver dado real (peso/fotos/etapa avançada) — um clique
         // acidental em "receber" não esconde a OS daqui.
-        const [todasOS, cargasTodas] = await Promise.all([listarColetasOS(env), listarCargas(env)]);
+        // Só o índice (como antes): as OS guardadas à parte são as fechadas mais antigas e não entram aqui.
+        const [todasOS, cargasTodas] = await Promise.all([listarIndiceOS(env), listarCargas(env)]);
         const emCargas = new Set();
         // Carga CANCELADA devolve as OSs para cá (não trava mais ninguém).
         cargasTodas.forEach((cg) => { if (cg.status === 'cancelada') return; (cg.oss || []).forEach((o) => emCargas.add(o.id)); });
@@ -4801,7 +4809,7 @@ async function enviarViaResend(cliente, link, env) {
 async function montarFrotaAoVivo(env) {
   const [veics, idx, posRes] = await Promise.all([
     listarVeiculos(env).catch(() => []),
-    listarColetasOS(env).catch(() => []),
+    listarIndiceOS(env).catch(() => []), // só o índice (como antes): a tela se atualiza a cada 20 s e só usa coletas recentes
     posicoesFrota(env),
   ]);
   const normP = (p) => String(p || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
