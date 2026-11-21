@@ -1,0 +1,33 @@
+name: Portal — Diagnóstico de ficha com CPF/CNPJ inválido (somente leitura)
+
+# Conta, com os dados REAIS de produção, as fichas que receberam OS ou pedidos com documento
+# inválido e se parecem juntar pessoas diferentes (pedido de 21/11/2026, Item 2: só verificar).
+# Lê o KV de produção SÓ COM LEITURA (GET): nada é gravado, o Worker não muda, nada é publicado.
+# O registro deste repositório é PÚBLICO: o script imprime só contagens, datas, números de OS e ids
+# de ficha — nenhum nome, documento, e-mail, telefone ou endereço.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - claude/ecobraz-carbon-tracking-system-dh28dx
+    paths:
+      - '.github/workflows/portal-diagnostico-ficha-documento.yml'
+      - 'portal-cliente/configuracao/diagnostico-ficha-documento.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostico:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Diagnóstico (somente leitura)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node --no-warnings portal-cliente/configuracao/diagnostico-ficha-documento.mjs
