@@ -1,0 +1,897 @@
+{
+ "descricao": "Cargas (op_cargas) lidas do D1 de produção em 21/11/2026, só leitura: data de criação, status e as OS de cada carga com o id trocado por uma impressão digital (sha256 de \"ecobraz-carga|\" + id, 16 primeiros caracteres). Sem nome, documento ou id real. Usado só pelo diagnóstico da tela \"Montar carga\".",
+ "lidoEm": "2026-11-21",
+ "cargas": [
+  {
+   "criadoEm": "2026-11-19T12:17:24.477Z",
+   "status": "aberta",
+   "os": [
+    "979fabf90eb4ed26",
+    "969221427094b679",
+    "327fda0e6975edab",
+    "d29089c8b94c1d95",
+    "befc286936f942cb"
+   ]
+  },
+  {
+   "criadoEm": "2026-11-18T12:53:57.956Z",
+   "status": "pesada",
+   "os": [
+    "fd206f995bc2e833",
+    "ca538b5f3dc7726e",
+    "f31d24d2037c213a",
+    "240549eed0a731c6",
+    "fb6e7de393a74e9c",
+    "a48a5eb8eaf9a930",
+    "901235038e23ea90",
+    "17634bb4c5d3b027"
+   ]
+  },
+  {
+   "criadoEm": "2026-11-17T13:19:03.479Z",
+   "status": "fracionada",
+   "os": [
+    "6d2c6aad8c307539",
+    "e650d7f62c592373",
+    "3af1e3520c77df60",
+    "b2dbe1bdef11e44d",
+    "2f8b942ec0b9d313",
+    "8336cdeb105cd734"
+   ]
+  },
+  {
+   "criadoEm": "2026-11-17T13:18:53.728Z",
+   "status": "fracionada",
+   "os": [
+    "895090dd84d8c9d6",
+    "0636ccdfc00ca664",
+    "6bf208d96b9a4e9d",
+    "ba10f847814a8b1c"
+   ]
+  },
+  {
+   "criadoEm": "2026-11-13T14:28:43.133Z",
+   "status": "fracionada",
+   "os": [
+    "9e03981551af0238",
+    "ba3ae4eb653735b0",
+    "3777036ff03c320a",
+    "a3e93ba04c78dd0e",
+    "4ca5d973fbda0960",
+    "6ecad33e928395c0"
+   ]
+  },
+  {
+   "criadoEm": "2026-11-12T12:58:33.849Z",
+   "status": "fracionada",
+   "os": [
+    "f41d5e456d0b2d04"
+   ]
+  },
+  {
+   "criadoEm": "2026-11-10T18:47:36.446Z",
+   "status": "fracionada",
+   "os": [
+    "80ba1ed4d3755f68",
+    "51cb226de1e0b7a6",
+    "3b4d73715d13b0fe",
+    "6ec2cb82f14946d2",
+    "70ca02ffb4f32c1d",
+    "5f4548e867df2e10"
+   ]
+  },
+  {
+   "criadoEm": "2026-11-09T19:20:58.763Z",
+   "status": "fracionada",
+   "os": [
+    "5d7b71317a1d74aa",
+    "7ba393c951a1db98",
+    "e68455d6718bbf7b",
+    "00b689db4341d976",
+    "bf007934c99cf94a"
+   ]
+  },
+  {
+   "criadoEm": "2026-11-09T14:15:06.955Z",
+   "status": "fracionada",
+   "os": [
+    "e2416ad6889e5f81",
+    "d2bdc1bfa2c72992",
+    "38e166f71a8ff1b4",
+    "ac6c3f1c51fd9061",
+    "7a5e63badda0e88a",
+    "b14adb9f2832f274",
+    "524bcd5ef396a261"
+   ]
+  },
+  {
+   "criadoEm": "2026-11-06T16:08:10.130Z",
+   "status": "fracionada",
+   "os": [
+    "5562c04619e5b42e",
+    "c35fe1e1a8d1b2c4",
+    "e30b875c53e09813",
+    "c1abc73a42137f42"
+   ]
+  },
+  {
+   "criadoEm": "2026-11-05T12:41:04.710Z",
+   "status": "fracionada",
+   "os": [
+    "709758e4bfbc5682",
+    "a42a2a5689cc6c33",
+    "a2d157b1014cee68"
+   ]
+  },
+  {
+   "criadoEm": "2026-11-05T12:37:46.866Z",
+   "status": "fracionada",
+   "os": [
+    "0218d994a4566515"
+   ]
+  },
+  {
+   "criadoEm": "2026-11-04T16:52:33.116Z",
+   "status": "fracionada",
+   "os": [
+    "f871ea130b1c0b53",
+    "aac01d5bde8117ec",
+    "2d906068363e164a",
+    "9aec1491de044249",
+    "235497bd687f83c8",
+    "598e53f916f484c5"
+   ]
+  },
+  {
+   "criadoEm": "2026-10-30T14:14:33.552Z",
+   "status": "fracionada",
+   "os": [
+    "571ed71731d5e574"
+   ]
+  },
+  {
+   "criadoEm": "2026-10-30T14:01:45.942Z",
+   "status": "fracionada",
+   "os": [
+    "92a8e4fa4e5bb938",
+    "4d8897d3f7d0d7a0",
+    "8e0787e7ba7e5617",
+    "f4669aba0102e1b9"
+   ]
+  },
+  {
+   "criadoEm": "2026-10-28T17:05:35.760Z",
+   "status": "fracionada",
+   "os": [
+    "40cb1e6e2b1c5362",
+    "3e70a00b23240ec7",
+    "ae38af2a0a2d5ef2",
+    "0aa71e382670039b",
+    "575da0d59e57d2ee"
+   ]
+  },
+  {
+   "criadoEm": "2026-10-28T14:42:12.406Z",
+   "status": "fracionada",
+   "os": [
+    "8675c5955e8bbafd",
+    "adf859103e7806a5",
+    "c75c9ad4abe22c5e"
+   ]
+  },
+  {
+   "criadoEm": "2026-10-27T13:29:33.380Z",
+   "status": "fracionada",
+   "os": [
+    "95b1d226a59ab9b3",
+    "af2ba2fc903cf57c",
+    "733e4f1430509c07",
+    "d0c060d00016fc1a"
+   ]
+  },
+  {
+   "criadoEm": "2026-10-26T15:02:15.211Z",
+   "status": "fracionada",
+   "os": [
+    "795c84c7b7deae0b"
+   ]
+  },
+  {
+   "criadoEm": "2026-10-23T17:09:06.120Z",
+   "status": "cancelada",
+   "os": [
+    "795c84c7b7deae0b"
+   ]
+  },
+  {
+   "criadoEm": "2026-10-23T17:09:01.418Z",
+   "status": "fracionada",
+   "os": [
+    "095c24fc6b58f58b",
+    "084a37d327db404c"
+   ]
+  },
+  {
+   "criadoEm": "2026-10-23T17:08:53.462Z",
+   "status": "fracionada",
+   "os": [
+    "a5792d16e34e2ece",
+    "78caaef52e6fb7b7",
+    "2b3940afe25cf72a",
+    "d6eb81d4257f44ba",
+    "2366de2e23af7bfb",
+    "6307489229af6e54"
+   ]
+  },
+  {
+   "criadoEm": "2026-10-23T17:08:39.427Z",
+   "status": "fracionada",
+   "os": [
+    "c73689f2759a7fb6"
+   ]
+  },
+  {
+   "criadoEm": "2026-10-23T17:08:19.134Z",
+   "status": "cancelada",
+   "os": [
+    "a5792d16e34e2ece",
+    "78caaef52e6fb7b7",
+    "c73689f2759a7fb6",
+    "2b3940afe25cf72a",
+    "d6eb81d4257f44ba",
+    "2366de2e23af7bfb",
+    "6307489229af6e54"
+   ]
+  },
+  {
+   "criadoEm": "2026-10-22T12:39:41.022Z",
+   "status": "fracionada",
+   "os": [
+    "7113c4c60f351110",
+    "c62351375dab7a28",
+    "0a0ebc2b2bc4a40e",
+    "f1cd281a59f1c8f0",
+    "43fa16a64390d556",
+    "22b90eeca7d4bb11"
+   ]
+  },
+  {
+   "criadoEm": "2026-10-21T12:11:14.510Z",
+   "status": "fracionada",
+   "os": [
+    "81a3936355ce99bb",
+    "e082e5f493308e2a",
+    "7d04f47978bcc92d",
+    "cc540b47c72dfe32",
+    "0d1506e32a61de36",
+    "751fe104f526add5",
+    "6264544856d4186f"
+   ]
+  },
+  {
+   "criadoEm": "2026-10-19T18:07:53.042Z",
+   "status": "fracionada",
+   "os": [
+    "9fecbc4e50058e5d"
+   ]
+  },
+  {
+   "criadoEm": "2026-10-19T18:07:33.915Z",
+   "status": "fracionada",
+   "os": [
+    "c7afe79d56fcd958"
+   ]
+  },
+  {
+   "criadoEm": "2026-10-19T11:47:18.855Z",
+   "status": "fracionada",
+   "os": [
+    "1175da6e788cc037",
+    "6991082240e594e1",
+    "a2a72765cf71043e",
+    "3d34c95c2c5d54fa",
+    "d0f7128f48db97bf"
+   ]
+  },
+  {
+   "criadoEm": "2026-10-19T11:39:42.187Z",
+   "status": "cancelada",
+   "os": [
+    "6991082240e594e1",
+    "a2a72765cf71043e",
+    "9fecbc4e50058e5d",
+    "3d34c95c2c5d54fa",
+    "d0f7128f48db97bf"
+   ]
+  },
+  {
+   "criadoEm": "2026-10-16T14:35:03.371Z",
+   "status": "fracionada",
+   "os": [
+    "a8066e6107be41a3",
+    "b6546cac086371cf",
+    "043457756809478b",
+    "6023e30c980542c9",
+    "f39f9b925b257cb4"
+   ]
+  },
+  {
+   "criadoEm": "2026-10-15T14:32:19.978Z",
+   "status": "fracionada",
+   "os": [
+    "5518beab748fc6ab"
+   ]
+  },
+  {
+   "criadoEm": "2026-10-15T11:51:07.038Z",
+   "status": "fracionada",
+   "os": [
+    "b2f87792eea8e0fd"
+   ]
+  },
+  {
+   "criadoEm": "2026-10-14T14:39:35.133Z",
+   "status": "fracionada",
+   "os": [
+    "756ed8e90f7c3d33",
+    "e84997ddd3e659fb",
+    "642475c5bf3018ad",
+    "40d6b0629bb95356",
+    "6c616188313e87bf",
+    "1ff053bb1e22d842"
+   ]
+  },
+  {
+   "criadoEm": "2026-10-09T16:34:23.520Z",
+   "status": "fracionada",
+   "os": [
+    "4c2967ca14049b1a"
+   ]
+  },
+  {
+   "criadoEm": "2026-10-08T16:21:38.135Z",
+   "status": "fracionada",
+   "os": [
+    "d67ee27acb86732f"
+   ]
+  },
+  {
+   "criadoEm": "2026-10-08T16:21:25.503Z",
+   "status": "fracionada",
+   "os": [
+    "78bf0b1c3d0e882e"
+   ]
+  },
+  {
+   "criadoEm": "2026-10-08T13:42:42.203Z",
+   "status": "fracionada",
+   "os": [
+    "5cb7bc6e59437060"
+   ]
+  },
+  {
+   "criadoEm": "2026-10-08T13:41:38.788Z",
+   "status": "fracionada",
+   "os": [
+    "ac35832bd4aaa545"
+   ]
+  },
+  {
+   "criadoEm": "2026-10-08T13:39:10.079Z",
+   "status": "fracionada",
+   "os": [
+    "3a646747dfbbe6ec",
+    "27ee707fe9cfc647",
+    "39e15e75138b8c86",
+    "ce36ae8b4e316c96",
+    "6dba1a3fd7bf4551",
+    "48b81c6593690fc2"
+   ]
+  },
+  {
+   "criadoEm": "2026-10-08T13:36:12.371Z",
+   "status": "fracionada",
+   "os": [
+    "e2c3dedd4ffafc6f",
+    "a3174b5e77b9f947",
+    "730d139ee2bda2fe",
+    "28589f046f6db1bf",
+    "7bede765754a401b",
+    "3054d3b6b10b8e79",
+    "6b674a29d3f75df2",
+    "e4b9859070e8f296",
+    "f6dce16d67c3e0ef",
+    "2665eaf0916c203a"
+   ]
+  },
+  {
+   "criadoEm": "2026-10-01T16:25:35.231Z",
+   "status": "fracionada",
+   "os": [
+    "ea2837a12a09789a"
+   ]
+  },
+  {
+   "criadoEm": "2026-10-01T11:29:00.388Z",
+   "status": "fracionada",
+   "os": [
+    "0fd605667e93be73",
+    "558ffbe3b0476d9a",
+    "7d6de39271d18115",
+    "c88978de881d4b0c",
+    "6935eedea62fbc28",
+    "b1b63b563938f671"
+   ]
+  },
+  {
+   "criadoEm": "2026-09-30T12:39:37.035Z",
+   "status": "fracionada",
+   "os": [
+    "cf772ca04cc64466",
+    "c21476e9d5552f9c",
+    "59fde4f9868d917e",
+    "3537c15b9c2aacde",
+    "237f3ed305659535"
+   ]
+  },
+  {
+   "criadoEm": "2026-09-29T17:13:30.076Z",
+   "status": "fracionada",
+   "os": [
+    "7173726252a41874",
+    "d7f5d857e452b1bc",
+    "9c5a6cb78f0f9d14",
+    "111ad196e10ca692",
+    "0e82eed1d3757b91",
+    "58e05285b623d459",
+    "41c7f0c1673824da",
+    "6041ac01f131c32c"
+   ]
+  },
+  {
+   "criadoEm": "2026-09-25T15:52:19.311Z",
+   "status": "fracionada",
+   "os": [
+    "d200756c43f7efcb"
+   ]
+  },
+  {
+   "criadoEm": "2026-09-25T15:30:52.697Z",
+   "status": "fracionada",
+   "os": [
+    "535234747d633523",
+    "6520a5a4b5095d56",
+    "430c57eb87884feb",
+    "e7d0b5bade78616d",
+    "7a1251a81c5cf30f",
+    "1913319b3dd05a68"
+   ]
+  },
+  {
+   "criadoEm": "2026-09-24T13:38:28.446Z",
+   "status": "fracionada",
+   "os": [
+    "e4e811066b6c22f3"
+   ]
+  },
+  {
+   "criadoEm": "2026-09-22T16:47:56.381Z",
+   "status": "fracionada",
+   "os": [
+    "57dcab9e778b6afa"
+   ]
+  },
+  {
+   "criadoEm": "2026-09-22T15:13:40.399Z",
+   "status": "fracionada",
+   "os": [
+    "c144ee00b5001381",
+    "49780a5396ab78a4",
+    "78a5d00b63e56f71",
+    "aacd342c2dc61466",
+    "63c9d3179e7d3a75",
+    "2fcdf1abd0556b04"
+   ]
+  },
+  {
+   "criadoEm": "2026-09-21T14:33:21.024Z",
+   "status": "fracionada",
+   "os": [
+    "29a9ebb4767b590c",
+    "e43e4a66bfe92f6d",
+    "d3e62c9f993ac1fc",
+    "6f6f2bf7233ae773",
+    "33f237d4704d497a",
+    "f09451fc3a84b753"
+   ]
+  },
+  {
+   "criadoEm": "2026-09-18T12:11:37.885Z",
+   "status": "fracionada",
+   "os": [
+    "37a42317fb2fd5d6"
+   ]
+  },
+  {
+   "criadoEm": "2026-09-18T11:30:04.241Z",
+   "status": "fracionada",
+   "os": [
+    "512c3d7c24241a89",
+    "3be4a4d67240ad30",
+    "3a9246fdb8b7c5e8",
+    "d4a3b83d387dc983",
+    "972e91bbb3782fe7"
+   ]
+  },
+  {
+   "criadoEm": "2026-09-16T19:11:05.892Z",
+   "status": "fracionada",
+   "os": [
+    "c9613596773dd112"
+   ]
+  },
+  {
+   "criadoEm": "2026-09-15T18:36:52.952Z",
+   "status": "fracionada",
+   "os": [
+    "a0c4c19433adab12",
+    "34441377cd6eab00",
+    "999aa75d7e52e432",
+    "541a823039f8d2a1",
+    "829b3e2502309ff3",
+    "c65a67017fedba09"
+   ]
+  },
+  {
+   "criadoEm": "2026-09-15T18:36:52.349Z",
+   "status": "cancelada",
+   "os": [
+    "a0c4c19433adab12",
+    "34441377cd6eab00",
+    "999aa75d7e52e432",
+    "541a823039f8d2a1",
+    "829b3e2502309ff3",
+    "c65a67017fedba09"
+   ]
+  },
+  {
+   "criadoEm": "2026-09-14T18:08:45.509Z",
+   "status": "fracionada",
+   "os": [
+    "86ace3d33f7f5645",
+    "4e95367a20d1c2de",
+    "f1dfe7c4c87152ca",
+    "7bb34c86027bf9a1",
+    "eadb95d94ace3321"
+   ]
+  },
+  {
+   "criadoEm": "2026-09-14T14:18:40.498Z",
+   "status": "fracionada",
+   "os": [
+    "a8edb51e3c949f5e",
+    "cf2d6b6349c6415c",
+    "c6a5ef523ded8101"
+   ]
+  },
+  {
+   "criadoEm": "2026-09-11T19:13:11.125Z",
+   "status": "fracionada",
+   "os": [
+    "dcf0fc20eec9c1d3",
+    "21a984f435831400",
+    "d190013e22948dba"
+   ]
+  },
+  {
+   "criadoEm": "2026-09-11T18:11:31.392Z",
+   "status": "fracionada",
+   "os": [
+    "0b474edf921c3ce2",
+    "4276dfad344e8139"
+   ]
+  },
+  {
+   "criadoEm": "2026-09-09T13:19:04.756Z",
+   "status": "fracionada",
+   "os": [
+    "fbd7fdc1dea65dab",
+    "46b272fc2d033fb2",
+    "1b630a63c4a2c964",
+    "0a2641e2dc0ea490",
+    "51b63f2d41ce74bb",
+    "c4dd8c7d42281843"
+   ]
+  },
+  {
+   "criadoEm": "2026-09-08T16:15:38.211Z",
+   "status": "fracionada",
+   "os": [
+    "563eede1001a8e06"
+   ]
+  },
+  {
+   "criadoEm": "2026-09-08T14:01:49.579Z",
+   "status": "fracionada",
+   "os": [
+    "b141b43c558d2560",
+    "a99a9bdf635edcf4",
+    "79202d17919bbb18",
+    "aa15c9e9c9a5b809",
+    "03ee82f7ed713d0b"
+   ]
+  },
+  {
+   "criadoEm": "2026-09-04T14:00:28.374Z",
+   "status": "fracionada",
+   "os": [
+    "fdd62e256a654de5",
+    "29c33cb3a0d68512"
+   ]
+  },
+  {
+   "criadoEm": "2026-09-03T16:13:53.475Z",
+   "status": "fracionada",
+   "os": [
+    "3f67dacb74ce4daf",
+    "4aca12fad1dbaa0f",
+    "58b42678397719d1",
+    "e3b7c579da50f639"
+   ]
+  },
+  {
+   "criadoEm": "2026-09-01T13:34:13.768Z",
+   "status": "fracionada",
+   "os": [
+    "c17aa5365ff1221f",
+    "f10507c0f3c1eae1",
+    "1b8be3ad78f0c729"
+   ]
+  },
+  {
+   "criadoEm": "2026-09-01T13:34:13.197Z",
+   "status": "cancelada",
+   "os": [
+    "c17aa5365ff1221f",
+    "f10507c0f3c1eae1",
+    "1b8be3ad78f0c729"
+   ]
+  },
+  {
+   "criadoEm": "2026-08-31T13:10:58.307Z",
+   "status": "fracionada",
+   "os": [
+    "3558bf2def557b68"
+   ]
+  },
+  {
+   "criadoEm": "2026-08-31T12:09:37.755Z",
+   "status": "fracionada",
+   "os": [
+    "c9083dbf6cb221bd",
+    "84e6f0afd9d6922c"
+   ]
+  },
+  {
+   "criadoEm": "2026-08-28T13:59:30.311Z",
+   "status": "fracionada",
+   "os": [
+    "f496601d94800952"
+   ]
+  },
+  {
+   "criadoEm": "2026-08-27T12:33:50.305Z",
+   "status": "fracionada",
+   "os": [
+    "9d2bec95b7d77dce",
+    "a5a4d739f92d5ec5",
+    "6ac7fe65f295f34b",
+    "099d9e116940f624",
+    "75e2ef614f4f7755"
+   ]
+  },
+  {
+   "criadoEm": "2026-08-27T12:31:14.601Z",
+   "status": "fracionada",
+   "os": [
+    "606b95e7f98ecadd"
+   ]
+  },
+  {
+   "criadoEm": "2026-08-26T12:53:07.966Z",
+   "status": "fracionada",
+   "os": [
+    "988cf86609fe735e",
+    "7af05fdab83d0580",
+    "61f77fcc80e2dafe",
+    "ff82abbe16038c9b"
+   ]
+  },
+  {
+   "criadoEm": "2026-08-25T11:55:26.000Z",
+   "status": "cancelada",
+   "os": [
+    "fb513545263fd4b4",
+    "a52c89e2bc25e6d8",
+    "86beb74764588258",
+    "e85871d4fdc85b65",
+    "d79a8c369d12a346",
+    "987a585c6124d1ff"
+   ]
+  },
+  {
+   "criadoEm": "2026-08-25T11:55:23.701Z",
+   "status": "fracionada",
+   "os": [
+    "fb513545263fd4b4",
+    "a52c89e2bc25e6d8",
+    "86beb74764588258",
+    "e85871d4fdc85b65",
+    "d79a8c369d12a346",
+    "987a585c6124d1ff"
+   ]
+  },
+  {
+   "criadoEm": "2026-08-20T17:18:48.018Z",
+   "status": "fracionada",
+   "os": [
+    "01d043562c06bb14"
+   ]
+  },
+  {
+   "criadoEm": "2026-08-20T13:05:03.561Z",
+   "status": "fracionada",
+   "os": [
+    "12df91a2ccc900f9",
+    "ae6a98075c4109cc",
+    "13f758d4a37b1c2e"
+   ]
+  },
+  {
+   "criadoEm": "2026-08-19T17:09:10.026Z",
+   "status": "fracionada",
+   "os": [
+    "1fb8060c4201bd6c",
+    "881b61e6c3f5e502",
+    "b9ce8e1b20d60bf7",
+    "1e4c64f5b163ee5e"
+   ]
+  },
+  {
+   "criadoEm": "2026-08-19T17:02:23.830Z",
+   "status": "fracionada",
+   "os": [
+    "385d4865b64526de"
+   ]
+  },
+  {
+   "criadoEm": "2026-08-19T16:59:28.762Z",
+   "status": "fracionada",
+   "os": [
+    "9f65af5ba0921b9f",
+    "07fb7163123664f8"
+   ]
+  },
+  {
+   "criadoEm": "2026-08-19T16:53:13.702Z",
+   "status": "fracionada",
+   "os": [
+    "a3cf0951e841896f"
+   ]
+  },
+  {
+   "criadoEm": "2026-08-19T16:47:29.228Z",
+   "status": "fracionada",
+   "os": [
+    "0565c5140968c288",
+    "18d733b71258b6e0"
+   ]
+  },
+  {
+   "criadoEm": "2026-08-19T16:43:40.835Z",
+   "status": "fracionada",
+   "os": [
+    "3f778a03ed4dfb36",
+    "0febaec7f9739de5",
+    "fcc4ae01b39c10a1"
+   ]
+  },
+  {
+   "criadoEm": "2026-08-19T16:35:50.599Z",
+   "status": "fracionada",
+   "os": [
+    "b432575e8cd47704"
+   ]
+  },
+  {
+   "criadoEm": "2026-08-19T12:31:19.755Z",
+   "status": "fracionada",
+   "os": [
+    "bd7e60886e93c69a"
+   ]
+  },
+  {
+   "criadoEm": "2026-08-17T12:14:07.335Z",
+   "status": "fracionada",
+   "os": [
+    "146c745b892114a2",
+    "86667991668f8a6d",
+    "86f72d967f6dd492",
+    "5306a4fafdec0861",
+    "e3020c7e22c054f0",
+    "2317ae9536d9fc96"
+   ]
+  },
+  {
+   "criadoEm": "2026-08-14T12:34:16.001Z",
+   "status": "fracionada",
+   "os": [
+    "02bbff647e7cf9e2",
+    "6f8cb7f21ed9d9ae",
+    "e316e668025a127d"
+   ]
+  },
+  {
+   "criadoEm": "2026-08-13T14:18:38.573Z",
+   "status": "cancelada",
+   "os": [
+    "b432575e8cd47704"
+   ]
+  },
+  {
+   "criadoEm": "2026-08-13T14:04:33.511Z",
+   "status": "fracionada",
+   "os": [
+    "a9bffbb8103d8a7d",
+    "21fe998281bef55e",
+    "50bd8518d1d0e4b8",
+    "724a11898bb7a6a4",
+    "7ff9ec299615b4b2"
+   ]
+  },
+  {
+   "criadoEm": "2026-08-13T14:01:26.692Z",
+   "status": "cancelada",
+   "os": [
+    "b432575e8cd47704"
+   ]
+  },
+  {
+   "criadoEm": "2026-08-13T13:26:05.565Z",
+   "status": "cancelada",
+   "os": [
+    "b432575e8cd47704"
+   ]
+  },
+  {
+   "criadoEm": "2026-08-13T13:17:39.067Z",
+   "status": "cancelada",
+   "os": [
+    "a9bffbb8103d8a7d",
+    "21fe998281bef55e",
+    "50bd8518d1d0e4b8",
+    "724a11898bb7a6a4",
+    "7ff9ec299615b4b2"
+   ]
+  },
+  {
+   "criadoEm": "2026-08-12T12:20:29.206Z",
+   "status": "fracionada",
+   "os": [
+    "05d1e934ba6ebd36",
+    "66d77d20c880f406"
+   ]
+  },
+  {
+   "criadoEm": "2026-08-11T12:51:31.139Z",
+   "status": "cancelada",
+   "os": [
+    "b432575e8cd47704",
+    "3f778a03ed4dfb36",
+    "0565c5140968c288",
+    "0febaec7f9739de5",
+    "9f65af5ba0921b9f"
+   ]
+  }
+ ]
+}

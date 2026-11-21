@@ -1,0 +1,50 @@
+name: Portal — Diagnóstico da tela Montar carga (somente leitura)
+
+# Mede, com os dados REAIS de produção, quantas leituras a tela "Montar carga" (/cargas/nova) faz
+# por acesso e qual lista ela mostra; quando o ramo tem a correção, prova que a lista sai exatamente
+# igual (itens, ordem e campos). Lê o KV de produção SÓ COM LEITURA (GET); as cargas vêm de uma cópia
+# lida do D1 em modo só leitura (sem nome nem id real: portal-cliente/configuracao/dados/). Nada é
+# gravado na produção. O registro deste repositório é PÚBLICO: o script imprime só contagens, datas,
+# números de OS e impressões digitais (SHA-256).
+
+on:
+  workflow_dispatch:
+    inputs:
+      antes:
+        description: 'Commit do código publicado (o "antes")'
+        default: '41f8258'
+  push:
+    branches:
+      - claude/ecobraz-carbon-tracking-system-dh28dx
+    paths:
+      - '.github/workflows/portal-diagnostico-montar-carga.yml'
+      - 'portal-cliente/configuracao/diagnostico-montar-carga.mjs'
+      - 'portal-cliente/configuracao/dados/montar-carga-cargas-*.json'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostico:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Dependências do Worker e código publicado (antes)
+        run: |
+          (cd portal-cliente/worker && npm install --no-audit --no-fund --silent)
+          ANTES="${{ github.event.inputs.antes }}"; [ -n "$ANTES" ] || ANTES=41f8258
+          mkdir -p /tmp/antes && git archive "$ANTES" portal-cliente/worker/src | tar -x -C /tmp/antes
+          ln -s "$GITHUB_WORKSPACE/portal-cliente/worker/node_modules" /tmp/antes/portal-cliente/worker/node_modules
+          echo "Código publicado (antes): $ANTES · código do ramo (depois): $(git rev-parse --short HEAD)"
+          if git diff --quiet "$ANTES" HEAD -- portal-cliente/worker/src; then echo "SRC_DEPOIS=" >> "$GITHUB_ENV"; echo "O ramo não muda o código do Worker: só a medição."; else echo "SRC_DEPOIS=$GITHUB_WORKSPACE/portal-cliente/worker/src" >> "$GITHUB_ENV"; fi
+      - name: Diagnóstico (somente leitura)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          SRC_ANTES: /tmp/antes/portal-cliente/worker/src
+        run: node --no-warnings portal-cliente/configuracao/diagnostico-montar-carga.mjs
