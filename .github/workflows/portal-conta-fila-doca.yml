@@ -1,0 +1,60 @@
+name: Portal — conta a fila da doca (somente leitura, só números)
+
+# TEMPORÁRIO (21/11/2026): mede quantas leituras de KV a fila da doca
+# (/operacao/receber) e a montagem de carga (/cargas/nova) fazem hoje.
+# Lê os:index, op:index (KV) e os ids das OS nas cargas (D1). Não grava nada.
+# Imprime SÓ contagens — nenhum nome, documento, e-mail ou id de cliente.
+# Sai do repositório logo depois da medição.
+
+on:
+  push:
+    branches:
+      - claude/awesome-newton-mq0qmo
+
+permissions:
+  contents: read
+
+jobs:
+  conta:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: portal-cliente/worker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Lê os índices e as cargas (só leitura) e imprime só contagens
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          npx --yes wrangler@3 kv:key get "os:index" --namespace-id=edd3746ffe5a49d585c60d99c18a25c7 > /tmp/os.json 2>/dev/null || echo "" > /tmp/os.json
+          npx --yes wrangler@3 kv:key get "op:index" --namespace-id=edd3746ffe5a49d585c60d99c18a25c7 > /tmp/op.json 2>/dev/null || echo "" > /tmp/op.json
+          npx --yes wrangler@3 d1 execute ecobraz-ploomes --remote --json --command "SELECT json_extract(j.value,'\$.id') AS id FROM (SELECT os_json, status FROM op_cargas ORDER BY criado_em DESC LIMIT 200) c, json_each(c.os_json) j WHERE COALESCE(c.status,'') <> 'cancelada'" > /tmp/cg.json 2>/dev/null || echo "" > /tmp/cg.json
+          node - <<'EOF'
+          const fs = require('fs');
+          const ler = (p) => { try { const t = fs.readFileSync(p, 'utf8').trim(); return { ok: true, bytes: t.length, v: t ? JSON.parse(t) : null }; } catch { return { ok: false, bytes: 0, v: null }; } };
+          const os = ler('/tmp/os.json'), op = ler('/tmp/op.json'), cg = ler('/tmp/cg.json');
+          const L = (s) => console.log(s);
+          if (!os.ok || !Array.isArray(os.v)) { L('os:index: NAO LIDO (' + (os.ok ? 'formato inesperado' : 'erro de leitura/JSON') + ')'); process.exit(0); }
+          if (!op.ok || !(op.v === null || Array.isArray(op.v))) { L('op:index: NAO LIDO'); process.exit(0); }
+          const todas = os.v, ops = op.v || [];
+          const conc = todas.filter((c) => c && c.status === 'concluida');
+          const emT = todas.filter((c) => c && c.status === 'em_transporte');
+          const naDoca = new Set(ops.map((o) => String(o && o.osId)));
+          const candDoca = conc.filter((c) => !naDoca.has(String(c.id)));
+          L('os:index: ' + todas.length + ' OS, ' + os.bytes + ' caracteres (teto 900000; media ' + Math.round(os.bytes / Math.max(1, todas.length)) + ' por OS => cabem ~' + Math.round(900000 / Math.max(1, os.bytes / Math.max(1, todas.length))) + ' OS)');
+          L('  concluidas: ' + conc.length + ' | em_transporte: ' + emT.length);
+          L('op:index: ' + ops.length + ' operacoes (teto 300)');
+          L('DOCA /operacao/receber: candidatas (concluidas fora do op:index) = ' + candDoca.length);
+          L('  leituras de KV por acesso hoje ~ 2 (indices) + ' + emT.length + ' (em transporte) + ' + candDoca.length + ' (candidatas) = ' + (2 + emT.length + candDoca.length));
+          let ids = null;
+          try { const r = Array.isArray(cg.v) ? cg.v : [cg.v]; ids = new Set(); for (const b of r) for (const x of ((b && b.results) || [])) if (x && x.id != null) ids.add(String(x.id)); } catch { ids = null; }
+          if (!cg.ok || !ids) { L('CARGAS: ids das cargas NAO LIDOS (D1) — sem contagem de /cargas/nova'); process.exit(0); }
+          const candCargas = conc.filter((c) => !ids.has(String(c.id)));
+          L('CARGAS: OS distintas nas cargas ativas (200 mais recentes) = ' + ids.size);
+          L('CARGAS /cargas/nova: candidatas (concluidas fora de carga ativa) = ' + candCargas.length);
+          L('  leituras de KV por acesso hoje ~ 1 (indice) + ' + candCargas.length + ' (candidatas) = ' + (1 + candCargas.length));
+          EOF
