@@ -55,7 +55,7 @@ import { paginaAcompanhamento, colunaClienteDe, lerGestores, gestorPorEmail, sal
 import { DEMO_CLIENTE_HTML, DEMO_OG_PNG_B64 } from './demo-cliente.js';
 import { listarPropostas, lerProposta, salvarProposta, paginaPropostas, paginaPropostaForm, paginaPropostaVer, paginaContratoVer, garantirTokenAceite, registrarAceite, paginaAceite, paginaAceiteVerificar } from './proposta.js';
 import { lerEmpresaDocs, salvarEmpresaDoc, anexarEmpresaDoc, paginaEmpresaDocs, alertasEmpresaDocs } from './empresa-docs.js';
-import { listarCargas, lerCarga, lotesDaCarga, lerLote, listarLotesPorDestino, novaCarga, pesarCarga, fotoCarga, criarLote, excluirLote, editarLote, cancelarCarga, mudarStatusLote, expedirLote, sincronizarCargasComValidacao, estoqueDestinacao, registrarSaidaEstoque, listarSaidasEstoque, paginaEstoqueDestinacao, listarFornecedores, paginaExpedirLote, seloLote, qrLoteGif, paginaCargas, paginaNovaCarga, paginaCarga, paginaEtiqueta, paginaFilas, paginaValidarLote } from './cargas.js';
+import { listarCargas, osLivresParaNovaCarga, lerCarga, lotesDaCarga, lerLote, listarLotesPorDestino, novaCarga, pesarCarga, fotoCarga, criarLote, excluirLote, editarLote, cancelarCarga, mudarStatusLote, expedirLote, sincronizarCargasComValidacao, estoqueDestinacao, registrarSaidaEstoque, listarSaidasEstoque, paginaEstoqueDestinacao, listarFornecedores, paginaExpedirLote, seloLote, qrLoteGif, paginaCargas, paginaNovaCarga, paginaCarga, paginaEtiqueta, paginaFilas, paginaValidarLote } from './cargas.js';
 import { acharPacote, precoPacote, acharModuloAdote, precoModuloAdote, paginaLojaAdote, paginaObrigadoAdote, paginaDiagnostico, lerCredito, salvarCredito, novoCredito, aplicarCompra, aplicarRecarga, precisaRecarga, listarPatrocinadores, resumoPatrocinio, lerCreditoPorDoc } from './adote.js';
 import { paginaLojaESG, paginaESGContato, paginaESGObrigado, relatorioESG, precoRelatorioESG } from './esg.js';
 import { statusDaEtapa, valorProp, CAMPOS_OS } from './os-utils.js';
@@ -2968,13 +2968,10 @@ b.disabled=false;}).catch(function(){m.textContent='Sem conexão. Tente de novo.
         const emCargas = new Set();
         // Carga CANCELADA devolve as OSs para cá (não trava mais ninguém).
         cargasTodas.forEach((cg) => { if (cg.status === 'cancelada') return; (cg.oss || []).forEach((o) => emCargas.add(o.id)); });
-        // Conferência do fluxo antigo da doca em PARALELO (antes: uma ida ao KV por OS, em série).
+        // Conferência do fluxo antigo da doca EM LOTE — 100 OS por operação de KV (cargas.js);
+        // antes, uma leitura por OS concluída fora de carga, que crescia com o histórico.
         const candidatas = todasOS.filter((x) => x.status === 'concluida' && !emCargas.has(x.id));
-        const livres = (await Promise.all(candidatas.map(async (c) => {
-          let opAntiga = null; try { opAntiga = await lerOperacao(env, c.id); } catch { opAntiga = null; }
-          if (opAntiga && (opAntiga.entrada || (opAntiga.fotos && Object.keys(opAntiga.fotos).length) || (opAntiga.etapa && opAntiga.etapa !== 'recepcao'))) return null;
-          return c;
-        }))).filter(Boolean);
+        const livres = await osLivresParaNovaCarga(env, candidatas);
         return html(paginaNovaCarga(docaOk, livres));
       }
       if (pathname === '/cargas/carga' && request.method === 'GET') {

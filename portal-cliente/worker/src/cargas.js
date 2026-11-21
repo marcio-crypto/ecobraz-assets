@@ -11,7 +11,7 @@
 
 import qrcode from 'qrcode-generator';
 import { abasEquipe } from './os-utils.js';
-import { lerOperacao, iniciarOperacao, atualizarEtapaOperacao } from './operacional.js';
+import { lerOperacao, lerOperacoesEmLote, iniciarOperacao, atualizarEtapaOperacao } from './operacional.js';
 
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const limpar = (s) => String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
@@ -92,6 +92,20 @@ const rowLote = (r) => {
 export async function listarCargas(env) {
   const d = await db(env); if (!d) return [];
   try { const r = await d.prepare('SELECT * FROM op_cargas ORDER BY criado_em DESC LIMIT 200').all(); return (r.results || []).map(rowCarga); } catch { return []; }
+}
+// Tela /cargas/nova: das OS concluídas fora de outras cargas (`candidatas`), tira só as
+// que têm dado REAL no fluxo antigo da doca (peso, fotos ou etapa além da recepção) — um
+// clique acidental em "receber" não esconde a OS. A conferência das operações (op:{id})
+// é em LOTE (100 OS por operação de KV): uma leitura por OS cresceria com o histórico de
+// OS concluídas até o limite de 1.000 operações de KV por acesso. Mesma regra de antes:
+// operação que não existe, ou leitura que falhou, conta como sem dado (a OS fica).
+export async function osLivresParaNovaCarga(env, candidatas) {
+  const ops = await lerOperacoesEmLote(env, candidatas.map((c) => c.id));
+  return candidatas.filter((c) => {
+    const opAntiga = ops.get(String(c.id));
+    if (opAntiga && (opAntiga.entrada || (opAntiga.fotos && Object.keys(opAntiga.fotos).length) || (opAntiga.etapa && opAntiga.etapa !== 'recepcao'))) return false;
+    return true;
+  });
 }
 export async function lerCarga(env, id) {
   const d = await db(env); if (!d) return null;
