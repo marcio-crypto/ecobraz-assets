@@ -13,6 +13,7 @@ import { botaoGoogle } from './google-auth.js';
 import { listarIndiceOS, lerColetaOS, atualizarStatusOS, blocoRegistroMotorista } from './coletas.js';
 import { debitarPatrocinio } from './adote.js';
 import { METODOLOGIA } from './carbono-metodologia.js';
+import { lerChavesKV } from './kv-lote.js';
 
 // Subtipos de FATOR DE CARBONO marcáveis na triagem (ex.: aco_lata). Quando o
 // operador marca o subtipo, o motor de carbono usa o fator EXATO daquela massa
@@ -71,6 +72,35 @@ export const FASES = {
 async function lerIndice(env) { if (!env.PORTAL_KV) return []; const raw = await env.PORTAL_KV.get('op:index'); try { return raw ? JSON.parse(raw) : []; } catch { return []; } }
 async function salvarIndice(env, lista) { if (env.PORTAL_KV) await env.PORTAL_KV.put('op:index', JSON.stringify(lista.slice(0, 300))); }
 export async function lerOperacao(env, osId) { if (!env.PORTAL_KV) return null; const raw = await env.PORTAL_KV.get(`op:${osId}`); return raw ? JSON.parse(raw) : null; }
+// As operações (op:{id}) de MUITAS OS de uma vez, em LOTE: 100 chaves por operação de KV
+// (lerChavesKV), em vez de uma leitura por OS. A plataforma aceita até 1.000 operações de KV
+// por acesso, e as listas que conferem uma OS por vez (fila da doca, montagem de carga)
+// crescem com o histórico de OS concluídas.
+// Devolve Map String(osId) → o que lerOperacao devolveria (mesma regra de leitura). Quando a
+// leitura de uma OS falha ou o texto guardado está ilegível, o valor é null — os dois usos
+// já tratavam essa falha como "sem operação" (o try/catch em volta de lerOperacao).
+// Um lerChavesKV por bloco de 100: se a leitura em lote de um bloco falhar (erro passageiro,
+// resposta grande demais), só esse bloco cai para a leitura uma a uma — os outros continuam em
+// lote, e o acesso não volta a passar do limite por causa de uma falha só.
+export async function lerOperacoesEmLote(env, osIds) {
+  const ids = (osIds || []).map((id) => String(id));
+  const textos = new Map();
+  if (env.PORTAL_KV) {
+    const chaves = [...new Set(ids.map((id) => `op:${id}`))];
+    for (let i = 0; i < chaves.length; i += 100) {
+      let parte; try { parte = await lerChavesKV(env.PORTAL_KV, chaves.slice(i, i + 100)); } catch { parte = new Map(); }
+      for (const [k, v] of parte) textos.set(k, v);
+    }
+  }
+  const out = new Map();
+  for (const id of ids) {
+    const raw = textos.get(`op:${id}`);
+    let op = null;
+    try { op = raw ? JSON.parse(raw) : null; } catch { op = null; }
+    out.set(id, op);
+  }
+  return out;
+}
 async function salvarOperacao(env, op) {
   if (!env.PORTAL_KV) return;
   op.atualizadoEm = agora();
@@ -120,13 +150,15 @@ export async function listarColetasRecebiveis(env) {
     catch (err) { console.error('doca_cura_encerrada_falhou', c.id, String((err && err.message) || err).slice(0, 140)); }
   }
   // Quem está no índice da doca (op:index) já foi recebida — filtra em memória.
-  // Só as POUCAS fora do índice recebem a conferência direta (e em paralelo), porque
-  // o índice guarda as 300 operações mais recentes: uma operação antiga fora dele
-  // ainda é encontrada pela leitura direta (nada re-aparece indevidamente na fila).
+  // As fora do índice recebem a conferência direta, porque o índice guarda as 300
+  // operações mais recentes: uma operação antiga fora dele ainda é encontrada pela
+  // leitura direta (nada re-aparece indevidamente na fila). Essa conferência é em LOTE
+  // (100 OS por operação de KV): o número de candidatas cresce com o histórico de OS
+  // concluídas, e uma leitura por OS passaria do limite de 1.000 operações por acesso.
+  // Mesma regra de antes: com operação → sai; sem operação, ou leitura que falhou → fica.
   const candidatas = concluidas.filter((c) => !jaNoIndiceDoca.has(String(c.id)));
-  const livres = (await Promise.all(candidatas.map(async (c) => {
-    try { return (await lerOperacao(env, c.id)) ? null : c; } catch { return c; }
-  }))).filter(Boolean);
+  const opsCandidatas = await lerOperacoesEmLote(env, candidatas.map((c) => c.id));
+  const livres = candidatas.filter((c) => !opsCandidatas.get(String(c.id)));
   return livres.map((c) => ({ osId: c.id, numero: c.numero, cliente: c.clienteNome || '' }));
 }
 
