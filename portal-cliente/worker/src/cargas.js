@@ -103,7 +103,7 @@ export async function listarCargas(env) {
 // sozinha (antes, uma só entre as 200 mais recentes fazia a leitura inteira falhar).
 export async function cargasParaMontar(env) {
   const d = await db(env); if (!d) return [];
-  let r; try { r = await d.prepare('SELECT status, os_json FROM op_cargas').all(); } catch { return []; }
+  let r; try { r = await d.prepare('SELECT status, os_json FROM op_cargas').all(); } catch (e) { console.error('montar_carga_leitura_falhou', String((e && e.message) || e).slice(0, 140)); return []; }
   const out = [];
   for (const row of (r && r.results) || []) {
     let oss; try { oss = JSON.parse(row.os_json || '[]'); } catch { console.error('montar_carga_lista_ilegivel'); continue; }
@@ -112,12 +112,14 @@ export async function cargasParaMontar(env) {
   return out;
 }
 // As OS que estão em carga NÃO cancelada — mesma regra de antes: carga CANCELADA devolve as OS para a
-// lista (não trava mais ninguém). Lista de OS que não é lista fica de fora (antes, derrubava a tela).
+// lista (não trava mais ninguém). Carga não cancelada cuja lista de OS não é uma lista: ERRO na tela,
+// como antes (não dá para saber quais OS ela tem — mostrar a lista arriscaria pôr uma OS em duas cargas).
+// Item vazio (null) dentro da lista não tem OS: é ignorado (antes, derrubava a tela).
 export function osEmCargas(cargas) {
   const emCargas = new Set();
   for (const cg of cargas || []) {
     if (cg.status === 'cancelada') continue;
-    if (!Array.isArray(cg.oss)) { if (cg.oss) console.error('montar_carga_lista_ilegivel'); continue; }
+    if (!Array.isArray(cg.oss)) { if (cg.oss) throw new TypeError('montar_carga_lista_invalida'); continue; }
     for (const o of cg.oss) if (o != null) emCargas.add(o.id);
   }
   return emCargas;
