@@ -34,7 +34,7 @@ jobs:
           npx --yes wrangler@3 kv:key get "op:index" --namespace-id=edd3746ffe5a49d585c60d99c18a25c7 > /tmp/op.json 2>/dev/null || echo "" > /tmp/op.json
           npx --yes wrangler@3 d1 execute ecobraz-ploomes --remote --json --command "SELECT json_extract(j.value,'\$.id') AS id FROM (SELECT os_json, status FROM op_cargas ORDER BY criado_em DESC LIMIT 200) c, json_each(c.os_json) j WHERE COALESCE(c.status,'') <> 'cancelada'" > /tmp/cg.json 2>/tmp/cg.err || echo "" > /tmp/cg.json
           # Se o D1 falhar: só o código/linha de erro do wrangler (sem dados), para saber o motivo.
-          if [ ! -s /tmp/cg.json ]; then echo "D1 falhou; motivo (wrangler):"; grep -oiE "(error|erro)[^\"]{0,160}" /tmp/cg.err | head -3 | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g'; fi
+          if [ -z "$(tr -d '[:space:]' < /tmp/cg.json)" ]; then echo "D1 falhou; motivo (wrangler):"; grep -oiE "(error|erro|code|auth|permission|not found)[^\"]{0,160}" /tmp/cg.err | head -4 | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/[email]/g'; echo "(stderr: $(wc -c < /tmp/cg.err) bytes)"; fi
           node - <<'EOF'
           const fs = require('fs');
           const ler = (p) => { try { const t = fs.readFileSync(p, 'utf8').trim(); return { ok: true, bytes: t.length, v: t ? JSON.parse(t) : null }; } catch { return { ok: false, bytes: 0, v: null }; } };
