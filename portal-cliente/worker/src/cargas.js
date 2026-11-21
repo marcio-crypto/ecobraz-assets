@@ -12,6 +12,7 @@
 import qrcode from 'qrcode-generator';
 import { abasEquipe } from './os-utils.js';
 import { lerOperacao, iniciarOperacao, atualizarEtapaOperacao } from './operacional.js';
+import { lerChavesKV } from './kv-lote.js';
 
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const limpar = (s) => String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
@@ -92,6 +93,47 @@ const rowLote = (r) => {
 export async function listarCargas(env) {
   const d = await db(env); if (!d) return [];
   try { const r = await d.prepare('SELECT * FROM op_cargas ORDER BY criado_em DESC LIMIT 200').all(); return (r.results || []).map(rowCarga); } catch { return []; }
+}
+
+// --- "Montar carga" (/cargas/nova) — pedido de 21/11/2026 (decisão 1a do Marcio) -------------------
+// Antes, a tela usava listarCargas, que traz só as 200 cargas MAIS RECENTES: passando de 200 cargas,
+// as OS das cargas mais antigas voltariam a aparecer como disponíveis. Agora contam TODAS as cargas.
+// Lê só o status e a lista de OS de cada carga (~0,4 KB por carga; o D1 aceita até 50 MB por resposta).
+// Falha do banco = como antes: nenhuma carga lida. Uma carga com a lista de OS ilegível fica de fora
+// sozinha (antes, uma só entre as 200 mais recentes fazia a leitura inteira falhar).
+export async function cargasParaMontar(env) {
+  const d = await db(env); if (!d) return [];
+  let r; try { r = await d.prepare('SELECT status, os_json FROM op_cargas').all(); } catch { return []; }
+  const out = [];
+  for (const row of (r && r.results) || []) {
+    let oss; try { oss = JSON.parse(row.os_json || '[]'); } catch { console.error('montar_carga_lista_ilegivel'); continue; }
+    out.push({ status: row.status, oss });
+  }
+  return out;
+}
+// As OS que estão em carga NÃO cancelada — mesma regra de antes: carga CANCELADA devolve as OS para a
+// lista (não trava mais ninguém). Lista de OS que não é lista fica de fora (antes, derrubava a tela).
+export function osEmCargas(cargas) {
+  const emCargas = new Set();
+  for (const cg of cargas || []) {
+    if (cg.status === 'cancelada') continue;
+    if (!Array.isArray(cg.oss)) { if (cg.oss) console.error('montar_carga_lista_ilegivel'); continue; }
+    for (const o of cg.oss) if (o != null) emCargas.add(o.id);
+  }
+  return emCargas;
+}
+// OS concluídas que não estão em carga e que o fluxo antigo da doca não tratou de verdade (ficha op:{id}
+// com entrada, fotos ou etapa além de "recepção" tira a OS daqui). A conferência das fichas é EM LOTE
+// (até 100 por leitura; antes, uma leitura por OS — e a plataforma corta em 1.000 operações por acesso).
+// Mesma regra e mesma ordem de antes: sem ficha, ficha vazia, ilegível ou que não pôde ser lida = a OS
+// pode entrar na carga; os itens são os do índice de OS, sem mudança.
+export async function osLivresParaCarga(env, todasOS, emCargas) {
+  const candidatas = todasOS.filter((x) => x.status === 'concluida' && !emCargas.has(x.id));
+  const fichas = await lerChavesKV(env.PORTAL_KV, candidatas.map((c) => `op:${c.id}`));
+  return candidatas.filter((c) => {
+    let opAntiga = null; try { const raw = fichas.get(`op:${c.id}`); opAntiga = raw ? JSON.parse(raw) : null; } catch { opAntiga = null; }
+    return !(opAntiga && (opAntiga.entrada || (opAntiga.fotos && Object.keys(opAntiga.fotos).length) || (opAntiga.etapa && opAntiga.etapa !== 'recepcao')));
+  });
 }
 export async function lerCarga(env, id) {
   const d = await db(env); if (!d) return null;
