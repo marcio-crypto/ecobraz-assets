@@ -79,10 +79,19 @@ export async function lerOperacao(env, osId) { if (!env.PORTAL_KV) return null; 
 // Devolve Map String(osId) → o que lerOperacao devolveria (mesma regra de leitura). Quando a
 // leitura de uma OS falha ou o texto guardado está ilegível, o valor é null — os dois usos
 // já tratavam essa falha como "sem operação" (o try/catch em volta de lerOperacao).
+// Um lerChavesKV por bloco de 100: se a leitura em lote de um bloco falhar (erro passageiro,
+// resposta grande demais), só esse bloco cai para a leitura uma a uma — os outros continuam em
+// lote, e o acesso não volta a passar do limite por causa de uma falha só.
 export async function lerOperacoesEmLote(env, osIds) {
   const ids = (osIds || []).map((id) => String(id));
-  let textos = new Map();
-  try { if (env.PORTAL_KV) textos = await lerChavesKV(env.PORTAL_KV, ids.map((id) => `op:${id}`)); } catch { textos = new Map(); }
+  const textos = new Map();
+  if (env.PORTAL_KV) {
+    const chaves = [...new Set(ids.map((id) => `op:${id}`))];
+    for (let i = 0; i < chaves.length; i += 100) {
+      let parte; try { parte = await lerChavesKV(env.PORTAL_KV, chaves.slice(i, i + 100)); } catch { parte = new Map(); }
+      for (const [k, v] of parte) textos.set(k, v);
+    }
+  }
   const out = new Map();
   for (const id of ids) {
     const raw = textos.get(`op:${id}`);
