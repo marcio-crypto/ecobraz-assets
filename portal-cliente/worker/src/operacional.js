@@ -11,6 +11,7 @@
 import { tagsPWA } from './pwa.js';
 import { botaoGoogle } from './google-auth.js';
 import { listarIndiceOS, lerColetaOS, atualizarStatusOS, blocoRegistroMotorista } from './coletas.js';
+import { lerChavesKV } from './kv-lote.js';
 import { debitarPatrocinio } from './adote.js';
 import { METODOLOGIA } from './carbono-metodologia.js';
 
@@ -120,13 +121,17 @@ export async function listarColetasRecebiveis(env) {
     catch (err) { console.error('doca_cura_encerrada_falhou', c.id, String((err && err.message) || err).slice(0, 140)); }
   }
   // Quem está no índice da doca (op:index) já foi recebida — filtra em memória.
-  // Só as POUCAS fora do índice recebem a conferência direta (e em paralelo), porque
-  // o índice guarda as 300 operações mais recentes: uma operação antiga fora dele
-  // ainda é encontrada pela leitura direta (nada re-aparece indevidamente na fila).
+  // As de fora do índice recebem a conferência direta, porque o índice guarda as 300
+  // operações mais recentes: uma operação antiga fora dele ainda é encontrada pela
+  // leitura direta (nada re-aparece indevidamente na fila). A conferência é EM LOTE
+  // (até 100 fichas por leitura; antes, uma leitura por OS — e a plataforma corta em
+  // 1.000 operações por acesso): o número de leituras quase não cresce com as concluídas.
+  // Mesma regra de antes: sem ficha, ficha vazia, ilegível ou que não pôde ser lida = sem
+  // operação (fica na fila); mesma ordem do índice de OS.
   const candidatas = concluidas.filter((c) => !jaNoIndiceDoca.has(String(c.id)));
-  const livres = (await Promise.all(candidatas.map(async (c) => {
-    try { return (await lerOperacao(env, c.id)) ? null : c; } catch { return c; }
-  }))).filter(Boolean);
+  const fichasOp = await lerChavesKV(env.PORTAL_KV, candidatas.map((c) => `op:${c.id}`));
+  const temOperacao = (raw) => { if (!raw) return false; try { return !!JSON.parse(raw); } catch { return false; } };
+  const livres = candidatas.filter((c) => !temOperacao(fichasOp.get(`op:${c.id}`)));
   return livres.map((c) => ({ osId: c.id, numero: c.numero, cliente: c.clienteNome || '' }));
 }
 
