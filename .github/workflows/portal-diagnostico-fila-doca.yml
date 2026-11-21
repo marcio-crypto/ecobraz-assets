@@ -1,0 +1,48 @@
+name: Portal — Diagnóstico da fila da doca (somente leitura)
+
+# Mede, com os dados REAIS de produção, quantas operações de KV um acesso à tela "Receber lote"
+# faz e prova (quando o ramo tem a correção) que a fila sai exatamente igual. Lê o KV e o D1 de
+# produção SÓ COM LEITURA e roda o código das telas numa cópia em memória: nada é gravado na
+# produção. O registro deste repositório é PÚBLICO: o script imprime só contagens, datas,
+# números de OS e uma impressão digital (SHA-256) — nenhum nome, documento, e-mail ou endereço.
+
+on:
+  workflow_dispatch:
+    inputs:
+      antes:
+        description: 'Commit do código publicado (o "antes")'
+        default: 'd19759a'
+  push:
+    branches:
+      - claude/ecobraz-carbon-tracking-system-dh28dx
+    paths:
+      - '.github/workflows/portal-diagnostico-fila-doca.yml'
+      - 'portal-cliente/configuracao/diagnostico-fila-doca.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostico:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Dependências do Worker e código publicado (antes)
+        run: |
+          (cd portal-cliente/worker && npm install --no-audit --no-fund --silent)
+          ANTES="${{ github.event.inputs.antes }}"; [ -n "$ANTES" ] || ANTES=d19759a
+          mkdir -p /tmp/antes && git archive "$ANTES" portal-cliente/worker/src | tar -x -C /tmp/antes
+          ln -s "$GITHUB_WORKSPACE/portal-cliente/worker/node_modules" /tmp/antes/portal-cliente/worker/node_modules
+          echo "Código publicado (antes): $ANTES · código do ramo (depois): $(git rev-parse --short HEAD)"
+          if git diff --quiet "$ANTES" HEAD -- portal-cliente/worker/src; then echo "SRC_DEPOIS=" >> "$GITHUB_ENV"; echo "O ramo não muda o código do Worker: só a medição."; else echo "SRC_DEPOIS=$GITHUB_WORKSPACE/portal-cliente/worker/src" >> "$GITHUB_ENV"; fi
+      - name: Diagnóstico (somente leitura)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          SRC_ANTES: /tmp/antes/portal-cliente/worker/src
+        run: node --no-warnings portal-cliente/configuracao/diagnostico-fila-doca.mjs
