@@ -107,6 +107,15 @@ console.log('\n== Produção agora ==');
 console.log(`Índice de OS: ${osIndice.length} OS — ${concluidas.length} concluídas, ${emTransporte.length} em transporte (${presas.length} delas já encerradas pelo motorista: a tela as conserta ao abrir).`);
 console.log(`Índice da doca (op:index, guarda as 300 operações mais recentes): ${opIndice.length} operações.`);
 console.log(`Concluídas FORA do índice da doca (cada uma = 1 leitura individual por acesso hoje): ${candidatas.length} — ${comOperacao} já recebidas antes (operação antiga) e ${candidatas.length - comOperacao} sem operação (estas formam a fila).`);
+// Validade das fichas de operação (já existia; nada muda com a correção): salvarOperacao grava op:{id}
+// com validade de 1 ano a partir da última gravação. Para as já recebidas que estão FORA do índice da
+// doca, é a ficha que as segura fora da fila; quando ela vencer, a OS volta a aparecer em "Receber lote".
+const vencimentos = candidatas.filter((c) => temOperacao(cache.get(`op:${c.id}`))).map((c) => {
+  let op = null; try { op = JSON.parse(cache.get(`op:${c.id}`)); } catch { op = null; }
+  const t = DataReal.parse(String((op && (op.atualizadoEm || op.em || op.criadoEm)) || ''));
+  return { numero: c.numero, vence: Number.isFinite(t) ? new DataReal(t + 365 * 86400e3).toISOString().slice(0, 10) : 'sem data na ficha' };
+}).sort((a, b) => (a.vence < b.vence ? -1 : a.vence > b.vence ? 1 : 0));
+if (vencimentos.length) console.log(`Validade dessas ${vencimentos.length} fichas (1 ano após a última gravação; quando vencer, a OS volta para a fila — já era assim): ${vencimentos.map((v) => `${v.numero} em ${v.vence}`).join(', ')}.`);
 const datasOp = opIndice.map((o) => String((o && o.criadoEm) || '')).filter(Boolean).sort();
 if (datasOp.length) console.log(`Operação mais antiga ainda no índice da doca: ${datasOp[0].slice(0, 10)}; mais nova: ${datasOp[datasOp.length - 1].slice(0, 10)}.`);
 
